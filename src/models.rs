@@ -67,11 +67,15 @@ pub struct Tests {
 
 impl fmt::Display for Requirement {
     fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<p id='requirement'>
-        <p id='RegNum'>Num: {}</p>
-        <p id='ReqTitle'>Title: {}</p><p id='ReqDesc'>Description: {}</p>
-        <p id='ReqAuthor'>Author: {}</p><p id='ReqRef'>Reference {}</p>
-        <p id='ReqDate'>Date: {}</p>", 
+        write!(f, "
+        <div class='requirement'>
+            <div class='ReqNum'>Num: {}</div>
+            <div class='ReqTitle'>Title: {}</div>
+            <div class='ReqDesc'>Description: {}</div>
+            <div class='ReqAuthor'>Author: {}</div>
+            <div class='ReqRef'>Reference {}</div>
+            <div class='ReqDate'>Date: {}</div>
+        </div>",
         self.req_id, self.req_title, self.req_description, self.req_author, self.req_reference, self.req_creation_date)
     }
 }
@@ -79,30 +83,32 @@ impl fmt::Display for Requirement {
 
 impl fmt::Display for NewRequirement {
     fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<p id='requirement'>
-        <p id='ReqTitle'>Title: {}</p><p id='ReqDesc'>Description: {}</p>
-        <p id='ReqAuthor'>Author: {}</p>",
+        write!(f, "
+        <div class='requirement'>
+            <div class='ReqTitle'>Title: {}</div><div class='ReqDesc'>Description: {}</div>
+            <div class='ReqAuthor'>Author: {}</div>
+        </div>",
         self.req_title, self.req_description, self.req_author)
     }
 }
 
 impl fmt::Display for Category {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<p id='category'>Category: {}</p>", self.cat_title)       
+        write!(f, "<div class='category'>Category: {}</div>", self.cat_title)       
     }
 }
 
 impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<p id='status'>Status: {}</p>", self.st_title)
+        write!(f, "<div class='status'>Status: {}</div>", self.st_title)
     }       
 }
 
 impl fmt::Display for Matrix {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "
-        <p id='matrixID'>Req ID: {}</p>
-        <p id='matrixID'>Test ID: {}</p>", 
+        <div class='matrixID'>Req ID: {}</div>
+        <div class='matrixID'>Test ID: {}</div>", 
         self.matrix_req_id, self.matrix_test_id)
     }
 }
@@ -110,10 +116,10 @@ impl fmt::Display for Matrix {
 impl fmt::Display for Tests {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "
-        <p id='testID'>{}</p>
-        <p id='testName'>{}</p>
-        <p id='testDescription'>{}</p>
-        <p id='testSource'>{}</p>
+        <div class='testID'>{}</div>
+        <div class='testName'>{}</div>
+        <div class='testDescription'>{}</div>
+        <div class='testSource'>{}</div>
         ", self.test_id, self.test_name, self.test_description, self.test_source)
     }
 }

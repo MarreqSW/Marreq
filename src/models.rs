@@ -61,7 +61,17 @@ pub struct Tests {
     pub test_id: i32,
     pub test_name: String,
     pub test_description: String,
-    pub test_source: i32,
+    pub test_source: String,
+    pub test_status: i32
+}
+
+#[derive(Serialize, Deserialize, Insertable)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = tests)]
+pub struct NewTest{
+    pub test_name: String,
+    pub test_description: String,
+    pub test_source: String,
     pub test_status: i32
 }
 
@@ -116,10 +126,12 @@ impl fmt::Display for Matrix {
 impl fmt::Display for Tests {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "
-        <div class='testID'>{}</div>
-        <div class='testName'>{}</div>
-        <div class='testDescription'>{}</div>
-        <div class='testSource'>{}</div>
+        <div class='TestDiv'>
+        <div class='testID'>Test ID: {}</div>
+        <div class='testName'>Name: {}</div>
+        <div class='testDescription'>Description: {}</div>
+        <div class='testSource'>Source: {}</div>
+        </div>
         ", self.test_id, self.test_name, self.test_description, self.test_source)
     }
 }

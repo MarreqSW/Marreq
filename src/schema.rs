@@ -48,7 +48,7 @@ diesel::table! {
         test_id -> Int4,
         test_name -> Varchar,
         test_description -> Varchar,
-        test_source -> Int4,
+        test_source -> Varchar,
         test_status -> Int4,
     }
 }

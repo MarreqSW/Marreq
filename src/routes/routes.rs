@@ -31,7 +31,6 @@ pub fn index() -> content::RawHtml<String> {
 
 }
 
-
 use rocket::response::content;
 #[get("/requirements")]
 pub fn show_requirements() -> content::RawHtml<String> {
@@ -79,7 +78,7 @@ pub fn show_requirements() -> content::RawHtml<String> {
 }
 
 #[get("/requirements/edit/<req_id_ed>")]
-pub fn requirement_edit(req_id_ed: i32) -> content::RawHtml<String> {
+pub fn edit_requirement(req_id_ed: i32) -> content::RawHtml<String> {
     use crate::schema::requirements::dsl::*;
     
     let mut out_str = print_header();
@@ -102,6 +101,70 @@ pub fn requirement_edit(req_id_ed: i32) -> content::RawHtml<String> {
     out_str = format!("{} {}",out_str, print_footer());
     content::RawHtml(out_str)
 }
+
+#[get("/tests")]
+pub fn show_tests() -> content::RawHtml<String> {
+    use crate::schema::tests::dsl::*;
+    use crate::schema::status::dsl::*;
+
+    let mut out_str = print_header();
+    let connection = &mut establish_connection();
+
+    let all_test =
+    tests
+    .load::<Tests>(connection)
+    .map_err(|err| -> String {
+        println!("Error querying page views: {:?}", err);
+        "Error querying page views from the database".into()
+    }).unwrap();
+
+    for req in all_test.iter() {
+
+        let act_status =
+        status
+        .filter(st_id.eq(req.test_status))
+        .limit(1)
+        .load::<Status>(connection).unwrap();
+
+        out_str = format!("{}
+        <div class='AllTests'>{}{}</div>",
+        out_str, req, act_status[0]);
+    }
+
+    out_str = format!("{} {}",out_str, print_footer());
+    content::RawHtml(out_str)
+}
+
+#[get("/status")]
+pub fn show_status() -> content::RawHtml<String> {
+    use crate::schema::status::dsl::*;
+
+    let mut out_str = print_header();
+    let connection = &mut establish_connection();
+
+    let all_status =
+    status
+    .load::<Status>(connection)
+    .map_err(|err| -> String {
+        println!("Error querying page views: {:?}", err);
+        "Error querying page views from the database".into()
+    }).unwrap();
+
+    for st in all_status.iter() {
+        out_str = format!("{}
+        <div class='AllStatus'>
+            <div>Id: {}</div>
+            <div>Title: {}</div>
+            <div>Description: {}</div>
+        </div>",
+        out_str, st.st_id, st.st_title, st.st_description);
+    }
+
+    out_str = format!("{} {}",out_str, print_footer());
+    content::RawHtml(out_str)
+}
+
+
 
 #[get("/matrix")]
 pub fn get_matrix() -> content::RawHtml<String> {
@@ -181,7 +244,6 @@ pub async fn get_matrix_xls() -> (ContentType, NamedFile) {
 
         Err(error) => panic!("Problem with file {:?}", error),
     }
-
 }
 
 // --------------------------------
@@ -248,7 +310,28 @@ pub fn api_get_status() -> Result<Json<Vec<Status>>, String> {
         "Error querying page views from the database".into()
     }).map(Json)
 }
- 
+
+#[get("/tests")]
+pub fn api_get_tests() -> Result<Json<Vec<Tests>>, String> {
+    use crate::schema::tests::dsl::*;
+    let connection = &mut establish_connection();
+
+    tests
+    .load::<Tests>(connection)
+    .map_err(|err| -> String {
+        println!("Error querying page views: {:?}", err);
+        "Error querying page views from the database".into()
+    }).map(Json)
+}
+
+#[post("/tests", data = "<new_test>")]
+pub async fn api_post_test(new_test: Json<NewTest>) -> Value {
+    let connection = &mut establish_connection();
+    create_test (connection, &new_test).unwrap();
+
+    json!({ "status": "ok", "id": 5 })
+}
+
 #[get("/matrix")]
 pub fn api_get_matrix() -> Result<Json<Vec<Matrix>>, String> {
     use crate::schema::matrix::dsl::*;

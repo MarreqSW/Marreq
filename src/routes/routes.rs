@@ -14,9 +14,23 @@ use crate::html::*;
 use crate::lib::helper_functions::*;
 
 #[get("/")]
-pub fn index() -> &'static str {
-    "Hello, world!"
+pub fn index() -> content::RawHtml<String> {
+    let mut out_str = print_header();
+
+    out_str = format!("{}
+        <h1>Requirements Manager</h1>
+        <ul>
+        <li><a href='requirements'>Show requirements</a></li>
+        <li><a href='matrix'>Show matrix</a></li>
+        <li><a href='matrix/xls'>Get matrix xls</a></li>
+        </ul>
+        ", out_str);
+
+    out_str = format!("{} {}",out_str, print_footer());
+        content::RawHtml(out_str)
+
 }
+
 
 use rocket::response::content;
 #[get("/requirements")]
@@ -51,8 +65,10 @@ pub fn show_requirements() -> content::RawHtml<String> {
         .limit(1)
         .load::<Category>(connection).unwrap();
 
-        out_str = format!("{}{}{}{}
-        <p id='ReqEdit'><a href='{}{}'>Edit</a></p>", 
+        out_str = format!("{}
+        <div class='AllReqs'>{}{}{}
+        <p class='ReqEdit'><a href='{}{}'>Edit</a></p>
+        </div>", 
         out_str, req, act_status[0], act_category[0],
         "http://localhost:8000/requirements/edit/", req.req_id);
     }
@@ -109,21 +125,22 @@ pub fn get_matrix() -> content::RawHtml<String> {
     out_str = format!("{}<table>", out_str);
     out_str = format!("{}<tr><th>Req ID</th><th>Title</th><th>Reference</th>", out_str);
 
-    for i in 1..total_tests+1 {
-        
-
+    /* Prepare table headers */
+    for i in 1..total_tests+1 {        
         let ts:Tests = tests
         .filter(test_id.eq(i as i32))
         .get_result(connection).unwrap();
 
         let test_status_name = get_status_name_by_id(ts.test_status);
         out_str = format!("{}<th>Test #{} ({})</th>", out_str, i, test_status_name);
-
-        //test_status_vec.push(ts.test_status);
     }
 
     out_str = format!("{}</tr>", out_str);
 
+    /* 
+     * Show all test (M) for every requirement (N)
+     * NOTE: Not efficient O(N*M) !!!
+     */
     for req in all_reqs.iter() {
         
         out_str = format!("{}<tr><td>{}</td><td>{}</td><td>{}</td>", 

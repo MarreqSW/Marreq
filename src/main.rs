@@ -46,6 +46,7 @@ async fn main() -> Result<(), rocket::Error> {
             show_requirements,
             requirement_edit,
             get_matrix,
+            get_matrix_xls,
             ])
         .mount("/api", routes![
             api_get_reqs, 

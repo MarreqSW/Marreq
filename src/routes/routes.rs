@@ -1,5 +1,10 @@
 use diesel::prelude::*;
+use rocket::fs::NamedFile;
+use rocket::http::ContentType;
 use rocket::serde::json::{Json, Value, json};
+use rocket::response::status::NotFound;
+
+use std::path;
 
 use crate::models::*;
 use crate::routes::routes::html::*;
@@ -146,6 +151,21 @@ pub fn get_matrix() -> content::RawHtml<String> {
     content::RawHtml(out_str)
 }
 
+#[get("/matrix/xls")]
+pub async fn get_matrix_xls() -> (ContentType, NamedFile) {
+    let file = create_matrix_workbook().expect("file can be created");
+    let path_to_file = path::Path::new("target/matrix.xlsx");
+    let res = NamedFile::open(&path_to_file).await.map_err(|e| NotFound(e.to_string()));
+    match res {
+        Ok(file) => {
+            let content_type = ContentType::new("application", "vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            (content_type, file)
+        }
+
+        Err(error) => panic!("Problem with file {:?}", error),
+    }
+
+}
 
 // --------------------------------
 // API

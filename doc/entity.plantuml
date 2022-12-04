@@ -1,0 +1,59 @@
+@startuml
+
+hide circle
+
+entity "Requirement" as req {
+* req_id
+---
+* req_title
+* req_description
+* req_current_status
+* req_author
+* req_author_email
+* req_link
+* req_reference
+* req_category
+* req_creation_date
+* req_update_date
+* req_deadline_date
+}
+
+entity "Status" as st {
+* st_id
+---
+* st_title
+* st_description
+* st_short_name
+}
+
+entity "Categories" as cat {
+* cat_id
+---
+* cat_title
+* cat_description
+* cat_tag
+}
+
+entity "Tests" as test {
+* test_id
+---
+* test_name
+* test_description
+* test_source
+* test_status
+}
+
+entity "Matrix" as matrix {
+* matrix_req_id
+* matrix_test_id
+---
+* matrix_creation_date
+}
+
+req  }|--|| st
+req  }|--|| cat
+test   }|--|| st
+matrix ||--|| req
+matrix ||--|| test
+
+@enduml

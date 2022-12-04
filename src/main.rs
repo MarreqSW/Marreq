@@ -1,6 +1,7 @@
 #[macro_use] 
 extern crate rocket;
 extern crate diesel;
+use rocket::fs::{FileServer, relative};
 
 pub mod bbdd;
 pub mod html;
@@ -60,6 +61,7 @@ async fn main() -> Result<(), rocket::Error> {
             api_get_tests,
             api_post_test,
             ])
+        .mount("/static", FileServer::from(relative!("src/html/static")))
         .attach(CorsFairing) 
         //.attach(DbConn::fairing())
         .launch()

@@ -4,27 +4,8 @@ pub fn print_header() -> String {
     "<!DOCTYPE html>
     <html lang='en'><head>
     <title>Req Manager</title>
-    <style>
-    table, th, td {
-      border: 1px solid black;
-    }
-    table.center {
-        margin-left: auto;
-        margin-right: auto;
-    }
-    .AllReqs {
-      border: 1px solid black;
-      padding: 5px;
-    }
-    .AllTests {
-      border: 1px solid black;
-      padding: 5px;
-    }
-    .AllStatus {
-      border: 1px solid black;
-      padding: 5px;
-    }
-    </style>
+    <link rel='stylesheet' href='/static/reqman.css'>
+    <link rel='icon' type='image/x-icon' href='/static/favicon.ico'>
     </head>
     <body>".to_string()
 }

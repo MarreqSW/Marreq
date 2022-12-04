@@ -23,7 +23,7 @@ INSERT INTO requirements (req_title, req_description, req_current_status, req_au
 
 CREATE TABLE status
 (
-    st_id     SERIAL PRIMARY KEY,
+    st_id            SERIAL PRIMARY KEY,
     st_title         VARCHAR NOT NULL DEFAULT ' ',
     st_description   VARCHAR NOT NULL DEFAULT ' ',
     st_short_name    VARCHAR NOT NULL DEFAULT ' '
@@ -35,12 +35,14 @@ INSERT INTO status (st_title, st_description, st_short_name) VALUES
     ('Accepted', 'The requirement is accepted and must be processed', 'Acc'),
     ('Rejected', 'The requirement is not accepted', 'Rej'),
     ('Cancelled', 'The requirement is cancelled', 'Can'),
-    ('Finished', 'The requirement is finished', 'Fsh');
+    ('Finished', 'The requirement is finished', 'Fsh'),
+    ('Passed', 'The test has passed', 'Pass'),
+    ('Failed', 'The test has failed', 'Fail');
 
 
 CREATE TABLE categories 
 (
-    cat_id        SERIAL PRIMARY KEY,
+    cat_id            SERIAL PRIMARY KEY,
     cat_title         VARCHAR NOT NULL DEFAULT ' ',
     cat_description   VARCHAR NOT NULL DEFAULT ' ',
     cat_tag           VARCHAR NOT NULL DEFAULT ' '
@@ -54,18 +56,18 @@ INSERT INTO categories (cat_title, cat_description, cat_tag)  VALUES
 
 CREATE TABLE tests
 (
-    test_id SERIAL PRIMARY KEY,
-    test_name VARCHAR NOT NULL DEFAULT ' ',
-    test_description VARCHAR NOT NULL DEFAULT ' ',
-    test_source INTEGER NOT NULL DEFAULT 0,
-    test_status INTEGER NOT NULL DEFAULT 0
+    test_id             SERIAL PRIMARY KEY,
+    test_name           VARCHAR NOT NULL DEFAULT ' ',
+    test_description    VARCHAR NOT NULL DEFAULT ' ',
+    test_source         VARCHAR NOT NULL DEFAULT ' ',
+    test_status         INTEGER NOT NULL DEFAULT 0
 );
 
 INSERT INTO tests (test_name, test_description, test_source, test_status) VALUES
-    ('SW_Test_SPI', 'My nice test for SPI', 1, 3),
-    ('SW_Test_I2C', 'My nice test for I2C', 1, 3),
-    ('SW_Test_Comms', ' ', 2, 4),
-    ('Unused Test', ' Nobody is expecting this test', 0, 3);
+    ('SW_Test_SPI', 'My nice test for SPI', 'my_test_spi.c:32', 7),
+    ('SW_Test_I2C', 'My nice test for I2C', 'my_test_i2c.c:32', 7),
+    ('SW_Test_Comms', ' ', 'Test Report.PDF', 8),
+    ('Unused Test', ' Nobody is expecting this test', 'Some email', 7);
 
 CREATE TABLE matrix
 (

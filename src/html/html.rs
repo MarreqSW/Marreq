@@ -16,6 +16,14 @@ pub fn print_header() -> String {
       border: 1px solid black;
       padding: 5px;
     }
+    .AllTests {
+      border: 1px solid black;
+      padding: 5px;
+    }
+    .AllStatus {
+      border: 1px solid black;
+      padding: 5px;
+    }
     </style>
     </head>
     <body>".to_string()

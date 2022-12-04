@@ -73,6 +73,18 @@ pub fn update_requirement(conn: &mut PgConnection, req: i32) -> Result<(), Box<d
     Ok(())
 }
 
+pub fn create_test(conn: &mut PgConnection, new: &NewTest)
+            -> Result<(), Box<dyn Error>>
+{
+    diesel::insert_into(crate::schema::tests::table)
+    .values(new)
+    .execute(conn)?;
+
+    Ok(())
+}
+
+
+
 pub fn create_matrix_workbook()->Result<Vec<u8>,xlsxwriter::XlsxError> {
     use crate::schema::requirements::dsl::*;
     use crate::schema::matrix::dsl::*;

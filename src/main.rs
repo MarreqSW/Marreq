@@ -44,7 +44,9 @@ async fn main() -> Result<(), rocket::Error> {
         .mount("/", routes![ 
             index,
             show_requirements,
-            requirement_edit,
+            show_tests,
+            show_status,
+            edit_requirement,
             get_matrix,
             get_matrix_xls,
             ])
@@ -55,6 +57,8 @@ async fn main() -> Result<(), rocket::Error> {
             api_get_reqs_by_id,
             api_post_requirement,
             api_get_matrix,
+            api_get_tests,
+            api_post_test,
             ])
         .attach(CorsFairing) 
         //.attach(DbConn::fairing())

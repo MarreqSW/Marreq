@@ -64,7 +64,8 @@ pub struct Tests {
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
-    pub test_status: i32
+    pub test_status: i32,
+    pub test_parent: i32,
 }
 
 #[derive(Serialize, Deserialize, Insertable)]
@@ -74,7 +75,8 @@ pub struct NewTest{
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
-    pub test_status: i32
+    pub test_status: i32,
+    pub test_parent: i32,
 }
 
 impl fmt::Display for Requirement {
@@ -133,7 +135,8 @@ impl fmt::Display for Tests {
         <div class='testName'>Name: {}</div>
         <div class='testDescription'>Description: {}</div>
         <div class='testSource'>Source: {}</div>
+        <div class='testParent'>Parent: {}</div>
         </div>
-        ", self.test_id, self.test_id, self.test_name, self.test_description, self.test_source)
+        ", self.test_id, self.test_id, self.test_name, self.test_description, self.test_source, self.test_parent)
     }
 }

@@ -9,9 +9,11 @@ use std::path;
 use crate::models::*;
 use crate::routes::routes::html::*;
 use crate::html::*;
+use crate::generators::*;
+
 // use crate::DbConn;
 
-use crate::lib::helper_functions::*;
+use crate::helper_functions::*;
 
 #[get("/")]
 pub fn index() -> content::RawHtml<String> {
@@ -265,7 +267,7 @@ pub fn get_matrix() -> content::RawHtml<String> {
 
 #[get("/matrix/xls")]
 pub async fn get_matrix_xls() -> (ContentType, NamedFile) {
-    let _file = create_matrix_workbook().expect("file can be created");
+    let _file = excel::create_matrix_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/matrix.xlsx");
     let res = NamedFile::open(&path_to_file).await.map_err(|e| NotFound(e.to_string()));
     match res {

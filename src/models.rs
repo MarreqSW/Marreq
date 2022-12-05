@@ -79,17 +79,16 @@ impl fmt::Display for Requirement {
     fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "
         <div class='requirement'>
-            <div class='ReqNum'>Num: {}</div>
+            <div class='ReqNum'>Num: <a href='requirements/{}'>{}</a></div>
             <div class='ReqTitle'>Title: {}</div>
             <div class='ReqDesc'>Description: {}</div>
             <div class='ReqAuthor'>Author: {}</div>
             <div class='ReqRef'>Reference {}</div>
             <div class='ReqDate'>Date: {}</div>
         </div>",
-        self.req_id, self.req_title, self.req_description, self.req_author, self.req_reference, self.req_creation_date)
+        self.req_id, self.req_id, self.req_title, self.req_description, self.req_author, self.req_reference, self.req_creation_date)
     }
 }
-
 
 impl fmt::Display for NewRequirement {
     fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -127,11 +126,11 @@ impl fmt::Display for Tests {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "
         <div class='TestDiv'>
-        <div class='testID'>Test ID: {}</div>
+        <div class='testID'>Test ID: <a href='tests/{}'>{}</a></div>
         <div class='testName'>Name: {}</div>
         <div class='testDescription'>Description: {}</div>
         <div class='testSource'>Source: {}</div>
         </div>
-        ", self.test_id, self.test_name, self.test_description, self.test_source)
+        ", self.test_id, self.test_id, self.test_name, self.test_description, self.test_source)
     }
 }

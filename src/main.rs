@@ -46,6 +46,7 @@ async fn main() -> Result<(), rocket::Error> {
             index,
             show_requirements,
             show_tests,
+            show_test_id,
             show_status,
             edit_requirement,
             get_matrix,

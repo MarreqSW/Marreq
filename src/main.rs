@@ -8,7 +8,9 @@ pub mod html;
 pub mod routes;
 pub mod models;
 pub mod schema;
-pub mod lib;
+pub mod generators;
+pub mod helper_functions;
+//pub mod lib;
 
 use crate::routes::routes::*;
 use crate::html::cors::*;

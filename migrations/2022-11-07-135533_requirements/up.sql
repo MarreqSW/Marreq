@@ -61,7 +61,8 @@ CREATE TABLE tests
     test_name           VARCHAR NOT NULL DEFAULT ' ',
     test_description    VARCHAR NOT NULL DEFAULT ' ',
     test_source         VARCHAR NOT NULL DEFAULT ' ',
-    test_status         INTEGER NOT NULL DEFAULT 0
+    test_status         INTEGER NOT NULL DEFAULT 0,
+    test_parent         INTEGER NOT NULL DEFAULT 0
 );
 
 INSERT INTO tests (test_name, test_description, test_source, test_status) VALUES

@@ -10,16 +10,17 @@ CREATE TABLE requirements
     req_link            VARCHAR NOT NULL DEFAULT ' ',
     req_reference       VARCHAR NOT NULL DEFAULT ' ',
     req_category        INTEGER NOT NULL DEFAULT 1,
+    req_parent          INTEGER NOT NULL DEFAULT 0,
     req_creation_date   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     req_update_date     timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     req_deadline_date   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO requirements (req_title, req_description, req_current_status, req_author, req_reference) VALUES
-    ('The SW must manage requirements', 'Blablabla', 1, 'Màrius', 'REQ-SYS-010'),
-    ('The SW must implement an API REST', 'API REST, blablabla', 1, 'Màrius', 'REQ-API-010' ),
-    ('The SW must implement a Web app', 'Web app', 2, 'Màrius', 'REQ-SYS-020'),
-    ('The Sw must export compliance matrix in excel format', 'Excel, blabla', 3, 'Victor', 'REQ-SYS-030');
+INSERT INTO requirements (req_title, req_description, req_current_status, req_author, req_reference, req_category) VALUES
+    ('The SW must manage requirements', 'Blablabla', 3, 'Màrius', 'REQ-SYS-010', 1),
+    ('The SW must implement an API REST', 'API REST, blablabla', 3, 'Màrius', 'REQ-API-010' , 5),
+    ('The SW must implement a Web app', 'Web app', 3, 'Màrius', 'REQ-SYS-020', 2),
+    ('The SW must export compliance matrix in excel format', 'Excel, blabla', 3, 'Victor', 'REQ-SYS-030', 1);
 
 CREATE TABLE status
 (
@@ -39,8 +40,7 @@ INSERT INTO status (st_title, st_description, st_short_name) VALUES
     ('Passed', 'The test has passed', 'Pass'),
     ('Failed', 'The test has failed', 'Fail');
 
-
-CREATE TABLE categories 
+CREATE TABLE categories
 (
     cat_id            SERIAL PRIMARY KEY,
     cat_title         VARCHAR NOT NULL DEFAULT ' ',
@@ -48,11 +48,12 @@ CREATE TABLE categories
     cat_tag           VARCHAR NOT NULL DEFAULT ' '
 );
 
-INSERT INTO categories (cat_title, cat_description, cat_tag)  VALUES 
+INSERT INTO categories (cat_title, cat_description, cat_tag) VALUES
+    ('General', '', 'G'),
+    ('System', '', 'SYS'),
     ('HW', '', 'HW'),
     ('SW', '', 'SW'),
-    ('General', '', 'G'),
-    ('System', '', 'SYS'); 
+    ('API', '', 'API');
 
 CREATE TABLE tests
 (

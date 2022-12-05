@@ -198,8 +198,6 @@ pub fn show_status() -> content::RawHtml<String> {
     content::RawHtml(out_str)
 }
 
-
-
 #[get("/matrix")]
 pub fn get_matrix() -> content::RawHtml<String> {
     use crate::schema::requirements::dsl::*;
@@ -267,7 +265,7 @@ pub fn get_matrix() -> content::RawHtml<String> {
 
 #[get("/matrix/xls")]
 pub async fn get_matrix_xls() -> (ContentType, NamedFile) {
-    let file = create_matrix_workbook().expect("file can be created");
+    let _file = create_matrix_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/matrix.xlsx");
     let res = NamedFile::open(&path_to_file).await.map_err(|e| NotFound(e.to_string()));
     match res {
@@ -351,6 +349,20 @@ pub fn api_get_tests() -> Result<Json<Vec<Tests>>, String> {
     let connection = &mut establish_connection();
 
     tests
+    .load::<Tests>(connection)
+    .map_err(|err| -> String {
+        println!("Error querying page views: {:?}", err);
+        "Error querying page views from the database".into()
+    }).map(Json)
+}
+
+#[get("/tests/<ident>")]
+pub fn api_get_tests_by_id(ident: i32) -> Result<Json<Vec<Tests>>, String> {
+    use crate::schema::tests::dsl::*;
+    let connection = &mut establish_connection();
+
+    tests
+    .filter(test_id.eq(ident))
     .load::<Tests>(connection)
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);

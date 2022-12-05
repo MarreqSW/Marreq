@@ -1,4 +1,4 @@
-@startuml
+@startuml ER diagram
 
 hide circle
 
@@ -13,6 +13,7 @@ entity "Requirement" as req {
 * req_link
 * req_reference
 * req_category
+* req_parent
 * req_creation_date
 * req_update_date
 * req_deadline_date
@@ -41,6 +42,7 @@ entity "Tests" as test {
 * test_description
 * test_source
 * test_status
+* test_parent
 }
 
 entity "Matrix" as matrix {

@@ -28,6 +28,7 @@ diesel::table! {
         req_link -> Varchar,
         req_reference -> Varchar,
         req_category -> Int4,
+        req_parent -> Int4,
         req_creation_date -> Timestamp,
         req_update_date -> Timestamp,
         req_deadline_date -> Timestamp,

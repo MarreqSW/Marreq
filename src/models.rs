@@ -15,6 +15,7 @@ pub struct Requirement {
     pub req_link: String,
     pub req_reference: String,
     pub req_category: i32,
+    pub req_parent: i32,
     pub req_creation_date: chrono::NaiveDateTime,
     pub req_update_date: chrono::NaiveDateTime,
     pub req_deadline_date: chrono::NaiveDateTime,
@@ -30,7 +31,8 @@ pub struct NewRequirement {
     pub req_author_email: String,
     pub req_link: String,
     pub req_category: i32,
-    pub req_current_status: i32,   
+    pub req_current_status: i32,
+    pub req_parent: i32,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]
@@ -79,14 +81,15 @@ impl fmt::Display for Requirement {
     fn fmt (&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "
         <div class='requirement'>
-            <div class='ReqNum'>Num: <a href='requirements/{}'>{}</a></div>
+            <div class='ReqNum'>Num: <a href='http://localhost:8000/requirements/{}'>{}</a></div>
             <div class='ReqTitle'>Title: {}</div>
             <div class='ReqDesc'>Description: {}</div>
             <div class='ReqAuthor'>Author: {}</div>
             <div class='ReqRef'>Reference {}</div>
             <div class='ReqDate'>Date: {}</div>
+            <div class='ReqParent'>Parent: {}</div>
         </div>",
-        self.req_id, self.req_id, self.req_title, self.req_description, self.req_author, self.req_reference, self.req_creation_date)
+        self.req_id, self.req_id, self.req_title, self.req_description, self.req_author, self.req_reference, self.req_creation_date, self.req_parent)
     }
 }
 
@@ -126,7 +129,7 @@ impl fmt::Display for Tests {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "
         <div class='TestDiv'>
-        <div class='testID'>Test ID: <a href='tests/{}'>{}</a></div>
+        <div class='testID'>Test ID: <a href='http://localhost:8000/tests/{}'>{}</a></div>
         <div class='testName'>Name: {}</div>
         <div class='testDescription'>Description: {}</div>
         <div class='testSource'>Source: {}</div>

@@ -17,12 +17,12 @@ use crate::html::cors::*;
 // Following the example on https://cprimozic.net/blog/rust-rocket-cloud-run/
 // with github code at https://github.com/Ameobea/rust-cloud-run-demo/blob/master/src/routes.rs
 
-
 // use rocket_db_pools::sqlx::{self, Row};
 // use rocket_db_pools::{Database, Connection};
+// use rocket_sync_db_pools::{database, Connection};
 
-// #[database("requirements_db")]
-pub struct DbConn(diesel::PgConnection);
+//#[database("requirements_db")]
+//pub struct DbConn(diesel::PgConnection);
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
@@ -54,12 +54,13 @@ async fn main() -> Result<(), rocket::Error> {
             ])
         .mount("/api", routes![
             api_get_reqs, 
+            api_get_reqs_by_id,
             api_get_status, 
             api_get_categories,
-            api_get_reqs_by_id,
-            api_post_requirement,
-            api_get_matrix,
             api_get_tests,
+            api_get_tests_by_id,
+            api_get_matrix,
+            api_post_requirement,
             api_post_test,
             ])
         .mount("/static", FileServer::from(relative!("src/html/static")))

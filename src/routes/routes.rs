@@ -21,8 +21,9 @@ pub fn index() -> content::RawHtml<String> {
         <h1>Requirements Manager</h1>
         <ul>
         <li><a href='requirements'>Show requirements</a></li>
+        <li><a href='tests'>Show tests</a></li>
         <li><a href='matrix'>Show matrix</a></li>
-        <li><a href='matrix/xls'>Get matrix xls</a></li>
+        <li><a href='matrix/xls'>Get matrix xls</a></li>       
         </ul>
         ", out_str);
 
@@ -66,10 +67,8 @@ pub fn show_requirements() -> content::RawHtml<String> {
 
         out_str = format!("{}
         <div class='AllReqs'>{}{}{}
-        <p class='ReqEdit'><a href='{}{}'>Edit</a></p>
         </div>", 
-        out_str, req, act_status[0], act_category[0],
-        "http://localhost:8000/requirements/edit/", req.req_id);
+        out_str, req, act_status[0], act_category[0]);
     }
 
     out_str = format!("{} {}",out_str, print_footer());
@@ -77,7 +76,7 @@ pub fn show_requirements() -> content::RawHtml<String> {
     content::RawHtml(out_str)
 }
 
-#[get("/requirements/edit/<req_id_ed>")]
+#[get("/requirements/<req_id_ed>")]
 pub fn edit_requirement(req_id_ed: i32) -> content::RawHtml<String> {
     use crate::schema::requirements::dsl::*;
     
@@ -112,6 +111,41 @@ pub fn show_tests() -> content::RawHtml<String> {
 
     let all_test =
     tests
+    .load::<Tests>(connection)
+    .map_err(|err| -> String {
+        println!("Error querying page views: {:?}", err);
+        "Error querying page views from the database".into()
+    }).unwrap();
+
+    for req in all_test.iter() {
+
+        let act_status =
+        status
+        .filter(st_id.eq(req.test_status))
+        .limit(1)
+        .load::<Status>(connection).unwrap();
+
+        out_str = format!("{}
+        <div class='AllTests'>{}{}</div>",
+        out_str, req, act_status[0]);
+    }
+
+    out_str = format!("{} {}",out_str, print_footer());
+    content::RawHtml(out_str)
+}
+
+
+#[get("/tests/<test_id_param>")]
+pub fn show_test_id(test_id_param: i32) -> content::RawHtml<String> {
+    use crate::schema::tests::dsl::*;
+    use crate::schema::status::dsl::*;
+
+    let mut out_str = print_header();
+    let connection = &mut establish_connection();
+
+    let all_test =
+    tests
+    .filter(test_id.eq(test_id_param))
     .load::<Tests>(connection)
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
@@ -195,7 +229,7 @@ pub fn get_matrix() -> content::RawHtml<String> {
         .get_result(connection).unwrap();
 
         let test_status_name = get_status_name_by_id(ts.test_status);
-        out_str = format!("{}<th>Test #{} ({})</th>", out_str, i, test_status_name);
+        out_str = format!("{}<th><a href='tests/{}'>Test #{}</a> ({})</th>", out_str, i, i, test_status_name);
     }
 
     out_str = format!("{}</tr>", out_str);
@@ -206,8 +240,8 @@ pub fn get_matrix() -> content::RawHtml<String> {
      */
     for req in all_reqs.iter() {
         
-        out_str = format!("{}<tr><td>{}</td><td>{}</td><td>{}</td>", 
-        out_str,req.req_id, req.req_title, req.req_reference);
+        out_str = format!("{}<tr><td><a href='requirements/{}'>{}</a></td><td>{}</td><td>{}</td>", 
+        out_str, req.req_id, req.req_id, req.req_title, req.req_reference);
         
         for indx in 1..total_tests+1 {   
             let test_present :i64 = matrix

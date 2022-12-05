@@ -3,15 +3,17 @@
 This software is a basic management for requirements and tests. 
 
 ## ToDo List
-+ [ ] Hierarchy for
-  + [ ] Requirements
-  + [ ] Tests  
-+ [ ] Operations log
++ [X] Hierarchy for
+  + [X] Requirements
+  + [X] Tests
++ [ ] Operations logging
 + [ ] Parsers for requirements
   + [ ] Latex files (Write a command)
   + [ ] Word files (Write a macro)
-+ [ ] Parser for tests
+  + [ ] Excel files
++ [ ] Parsers for tests
   + [ ] Doxygen documentation
+  + [ ] ...
 + [ ] Better webpage 
 + [ ] Reports generator
   + [ ] Latex template
@@ -25,17 +27,21 @@ This software is a basic management for requirements and tests.
 + [ ] Security
   + [ ] Use https
   + [ ] users/admin
-+ ...
++ Snapshots
+  + [ ] Configuration management
++ Better error management (remove all unwrap())
 
 ## API 
 
-At http://localhost:8080/api there is a REST API with the following endpoints:
+At http://localhost:8000/api there is a REST API with the following endpoints:
 
-+ api/requirements  (GET/POST)
++ api/requirements        (GET/POST)
 + api/requirements/\<id\> (GET)
-+ api/status        (GET)
-+ api/categories    (GET)
-+ api/matrixID      (GET)
++ api/tests               (GET)
++ api/tests/\<id\>        (GET)
++ api/status              (GET)
++ api/categories          (GET)
++ api/matrix              (GET)
 
 ## JSON format
 
@@ -48,7 +54,7 @@ This prototype is based on Postgres. See docker container for set-up the databas
 ## Schema
 
 See entity diagram
-![](doc/entity.png)
+![](doc/ER%20diagram.png)
 
 # Running
 
@@ -66,5 +72,5 @@ Terminal 2
 > cargo run
 ```
 
-It should publish a webpage at http://localhost:8000 
+It should publish a webpage at http://localhost:8000
 

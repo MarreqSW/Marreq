@@ -3,8 +3,10 @@
 This software is a basic management for requirements and tests. 
 
 ## ToDo List
-+ [ ] Requirements hierarchy 
-+ [ ] Operations history
++ [ ] Hierarchy for
+  + [ ] Requirements
+  + [ ] Tests  
++ [ ] Operations log
 + [ ] Parsers for requirements
   + [ ] Latex files (Write a command)
   + [ ] Word files (Write a macro)
@@ -23,18 +25,7 @@ This software is a basic management for requirements and tests.
 + [ ] Security
   + [ ] Use https
   + [ ] users/admin
-
-
-## Installation
-
-```
-> diesel setup
-> diesel migration redo
-> cargo run
-```
-
-It should publish a webpage at http://localhost:8080 
-
++ ...
 
 ## API 
 
@@ -48,20 +39,32 @@ At http://localhost:8080/api there is a REST API with the following endpoints:
 
 ## JSON format
 
-
-
+TBD
 
 # Database
 
 This prototype is based on Postgres. See docker container for set-up the database.
 
-## Running
+## Schema
+
+See entity diagram
+![](doc/entity.png)
+
+# Running
+
+Terminal 1
 
 ```
 > docker-compose run
 ```
 
-## Schema
+Terminal 2
 
-See entity diagram
-![](doc/entity.png)
+```
+> diesel setup
+> diesel migration redo
+> cargo run
+```
+
+It should publish a webpage at http://localhost:8000 
+

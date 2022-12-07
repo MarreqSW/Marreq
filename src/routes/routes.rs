@@ -4,6 +4,7 @@ use rocket::http::ContentType;
 use rocket::serde::json::{Json, Value, json};
 use rocket::response::status::NotFound;
 use rocket::response::content;
+use rocket::form::Form;
 
 use rocket_dyn_templates::{Template, context, handlebars};
 //use self::handlebars::{Handlebars, JsonRender};
@@ -20,23 +21,50 @@ use crate::helper_functions::*;
 
 #[get("/")]
 pub fn index() -> Template {
-    let a = json!({ "title": "Main"});
-    Template::render("index", a)
+    let ctx = json!({ "title": "Main"});
+    Template::render("index", ctx)
 }
 
 
 #[get("/requirements")]
 pub fn show_requirements() -> Template {
-    let a = get_requirements_all();
-    let a = json!(a);
-    Template::render("requirements", a )
+    let ctx = get_requirements_all();
+    let ctx = json!(ctx);
+    Template::render("requirements", ctx)
 }
 
 #[get("/requirements/<req_id>")]
 pub fn show_requirement_id(req_id: i32) -> Template {
-    let a = get_requirement_by_id(req_id);
-    let a = json!(a);
-    Template::render("requirement_by_id", a)
+    let ctx = get_requirement_by_id(req_id);
+    let ctx = json!(ctx);
+    Template::render("requirement_by_id", ctx)
+}
+
+#[get("/new_requirement")]
+pub fn new_requirement() -> Template {
+    let status = get_all_status().unwrap();
+    let status_json = json!(status);
+
+    let categories = get_all_categories().unwrap();
+    let categories_json = json!(categories);
+
+    let parents = get_requirements_all().unwrap();
+    let parents_json = json!(parents);
+    
+    let ctx = json!({"categories": categories_json, "status": status_json, "parent": parents_json});
+
+    Template::render("new_requirement", ctx)
+}
+
+#[post("/new_requirement", data = "<new_req>")]
+pub fn post_requirement(new_req: Form<NewRequirement>) -> content::RawHtml<String> {
+
+    println!("Data: {:#?}", new_req);
+
+    let connection = &mut establish_connection();
+    create_requirement (connection, &new_req).unwrap();
+
+    content::RawHtml("OK!".to_string())
 }
 
 #[get("/tests")]

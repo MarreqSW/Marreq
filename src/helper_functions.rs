@@ -8,6 +8,32 @@ use diesel::pg::PgConnection;
 
 use crate::models::*;
 
+pub fn get_all_status() -> Result<Vec<Status>, String> {
+    use crate::schema::status::dsl::*;
+
+    let connection = &mut establish_connection();
+
+    status
+    .get_results(connection)
+    .map_err(|err| -> String {
+        println!("Error querying page views: {:?}", err);
+        "Error querying page views from the database".into()
+    })
+}
+
+pub fn get_all_categories() -> Result<Vec<Category>, String> {
+    use crate::schema::categories::dsl::*;
+
+    let connection = &mut establish_connection();
+
+    categories
+    .get_results(connection)
+    .map_err(|err| -> String {
+        println!("Error querying page views: {:?}", err);
+        "Error querying page views from the database".into()
+    })
+} 
+
 pub fn get_status_by_id(id: i32) -> Status {
     use crate::schema::status::dsl::*;
 

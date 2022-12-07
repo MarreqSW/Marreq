@@ -31,6 +31,8 @@ async fn main() -> Result<(), rocket::Error> {
             show_test_id,
             show_status,
             //edit_requirement,
+            new_requirement,
+            post_requirement,
             get_matrix,
             get_matrix_xls,
             ])

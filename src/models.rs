@@ -4,12 +4,12 @@ use std::fmt;
 
 use serde::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize, Queryable)]
+#[derive(Serialize, Deserialize, Queryable, AsChangeset)]
 pub struct Requirement {
     pub req_id: i32,
     pub req_title: String,
     pub req_description: String,
-    pub req_status: i32,
+    pub req_current_status: i32,
     pub req_author: String,
     pub req_author_email: String,
     pub req_link: String,
@@ -21,7 +21,7 @@ pub struct Requirement {
     pub req_deadline_date: chrono::NaiveDateTime,
 }
 
-#[derive(Serialize, Deserialize, Insertable)]
+#[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm,  Debug)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = requirements)]
 pub struct NewRequirement {

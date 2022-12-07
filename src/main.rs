@@ -1,10 +1,9 @@
-//use rocket_sync_db_pools::{database};
 #[macro_use] 
 extern crate rocket;
 extern crate diesel;
 use rocket::fs::{FileServer, relative};
-use rocket_dyn_templates::{Template};
-//use diesel::PgConnection;
+use rocket_dyn_templates::Template;
+use rocket_sync_db_pools::database;
 
 pub mod bbdd;
 pub mod html;
@@ -17,26 +16,12 @@ pub mod helper_functions;
 use crate::routes::routes::*;
 use crate::html::cors::*;
 
-//#[database("my_db")]
-//struct Db(PgConnection);
+#[database("my_db")]
+pub struct DbConn(rocket_sync_db_pools::diesel::PgConnection);
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
-/* 
-    let connection = &mut establish_connection();
-
-    let a = NewRequirement {
-        author : "Charles".to_owned(),
-        description : "New description".to_owned(),
-        author_email : "bla@example.com".to_owned(),
-        title : "a brand new requirement".to_owned(),
-        link: "http://ieec.cat".to_owned(),
-        category: 3,
-        current_status: 5,
-    };
-    create_requirement (connection, &a).unwrap();
-*/    
-
+  
     let _rocket = rocket::build()
         .mount("/", routes![ 
             index,
@@ -63,45 +48,10 @@ async fn main() -> Result<(), rocket::Error> {
         .mount("/static", FileServer::from(relative!("src/html/static")))
         .attach(CorsFairing) 
         .attach(Template::fairing())
-        //.attach(DbConn::fairing())
+        .attach(DbConn::fairing())
         .launch()
         .await?;
 
     Ok(())
 }
-
-/* 
-fn main() {
-    println!("Requirements manager");
-
-    let connection = &mut establish_connection();
-    let results = requirements
-        .filter(author.eq("Màrius"))
-        .limit(5)
-        .load::<Requirement>(connection)
-        .expect("Error loading requirements");
-
-    println!("Displaying {} requirements", results.len());
-    for post in results {
-        println!("{:?}", post.id);
-        println!("-----------\n");
-        println!("{:?}", post.title);
-    }
-
-    let a = NewRequirement {
-        author : "Màrius".to_owned(),
-        description : "description long long long text".to_owned(),
-        author_email : "bla@example.com".to_owned(),
-        title : "a brand new requirement".to_owned(),
-        link: "http://example.com".to_owned(),
-    };
-
-    create_requirement (connection, &a).unwrap();
-    
-    update_requirement (connection, 7).unwrap();
-
-} */
-
-
-
 

@@ -1,7 +1,10 @@
+//use rocket_sync_db_pools::{database};
 #[macro_use] 
 extern crate rocket;
 extern crate diesel;
 use rocket::fs::{FileServer, relative};
+use rocket_dyn_templates::{Template};
+//use diesel::PgConnection;
 
 pub mod bbdd;
 pub mod html;
@@ -10,21 +13,12 @@ pub mod models;
 pub mod schema;
 pub mod generators;
 pub mod helper_functions;
-//pub mod lib;
 
 use crate::routes::routes::*;
 use crate::html::cors::*;
 
-// This cannot be used with mysqlite https://github.com/eaze/tide-sqlx/issues/7
-// Following the example on https://cprimozic.net/blog/rust-rocket-cloud-run/
-// with github code at https://github.com/Ameobea/rust-cloud-run-demo/blob/master/src/routes.rs
-
-// use rocket_db_pools::sqlx::{self, Row};
-// use rocket_db_pools::{Database, Connection};
-// use rocket_sync_db_pools::{database, Connection};
-
-//#[database("requirements_db")]
-//pub struct DbConn(diesel::PgConnection);
+//#[database("my_db")]
+//struct Db(PgConnection);
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
@@ -47,10 +41,11 @@ async fn main() -> Result<(), rocket::Error> {
         .mount("/", routes![ 
             index,
             show_requirements,
+            show_requirement_id,
             show_tests,
             show_test_id,
             show_status,
-            edit_requirement,
+            //edit_requirement,
             get_matrix,
             get_matrix_xls,
             ])
@@ -67,6 +62,7 @@ async fn main() -> Result<(), rocket::Error> {
             ])
         .mount("/static", FileServer::from(relative!("src/html/static")))
         .attach(CorsFairing) 
+        .attach(Template::fairing())
         //.attach(DbConn::fairing())
         .launch()
         .await?;

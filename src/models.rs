@@ -2,6 +2,7 @@ use diesel::prelude::*;
 use crate::schema::*;
 use std::fmt;
 
+
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Queryable)]

@@ -3,6 +3,10 @@ use rocket::fs::NamedFile;
 use rocket::http::ContentType;
 use rocket::serde::json::{Json, Value, json};
 use rocket::response::status::NotFound;
+use rocket::response::content;
+
+use rocket_dyn_templates::{Template, context, handlebars};
+//use self::handlebars::{Handlebars, JsonRender};
 
 use std::path;
 
@@ -10,74 +14,47 @@ use crate::models::*;
 use crate::routes::routes::html::*;
 use crate::html::*;
 use crate::generators::*;
+use crate::helper_functions::*;
 
 // use crate::DbConn;
 
-use crate::helper_functions::*;
-
 #[get("/")]
-pub fn index() -> content::RawHtml<String> {
-    let mut out_str = print_header();
-
-    out_str = format!("{}
-        <h1>Requirements Manager</h1>
-        <ul>
-        <li><a href='requirements'>Show requirements</a></li>
-        <li><a href='tests'>Show tests</a></li>
-        <li><a href='matrix'>Show matrix</a></li>
-        <li><a href='matrix/xls'>Get matrix xls</a></li>       
-        </ul>
-        ", out_str);
-
-    out_str = format!("{} {}",out_str, print_footer());
-        content::RawHtml(out_str)
-
+pub fn index() -> Template {
+    let a = json!({ "title": "Main"});
+    Template::render("index", a)
 }
 
-use rocket::response::content;
+
 #[get("/requirements")]
-pub fn show_requirements() -> content::RawHtml<String> {
-    use crate::schema::requirements::dsl::*;
-    use crate::schema::status::dsl::*;
-    use crate::schema::categories::dsl::*;
-    
-    let mut out_str = print_header();
-    let connection = &mut establish_connection();
-    
-    let all_reqs = 
-    requirements
-    .load::<Requirement>(connection)
-    .map_err(|err| -> String {
-        println!("Error querying page views: {:?}", err);
-        "Error querying page views from the database".into()
-    }).unwrap();
-    
-    for req in all_reqs.iter() {
-
-        let act_status = 
-        status
-        .filter(st_id.eq(req.req_status))
-        .limit(1)
-        .load::<Status>(connection).unwrap();
-        
-        
-        let act_category = 
-        categories
-        .filter(cat_id.eq(req.req_category))
-        .limit(1)
-        .load::<Category>(connection).unwrap();
-
-        out_str = format!("{}
-        <div class='AllReqs'>{}{}{}
-        </div>", 
-        out_str, req, act_status[0], act_category[0]);
-    }
-
-    out_str = format!("{} {}",out_str, print_footer());
-    
-    content::RawHtml(out_str)
+pub fn show_requirements() -> Template {
+    let a = get_requirements_all();
+    let a = json!(a);
+    Template::render("requirements", a )
 }
 
+#[get("/requirements/<req_id>")]
+pub fn show_requirement_id(req_id: i32) -> Template {
+    let a = get_requirement_by_id(req_id);
+    let a = json!(a);
+    Template::render("requirement_by_id", a)
+}
+
+#[get("/tests")]
+pub fn show_tests() -> Template {
+    let tests = get_tests_all();
+    let tests = json!(tests);
+
+    Template::render("tests", tests)
+}
+
+#[get("/tests/<test_id_param>")]
+pub fn show_test_id(test_id_param: i32) -> Template {
+    let tests = get_tests_by_id(test_id_param);
+    let tests = json!(tests);
+
+    Template::render("test_by_id", tests)
+}
+/* 
 #[get("/requirements/<req_id_ed>")]
 pub fn edit_requirement(req_id_ed: i32) -> content::RawHtml<String> {
     use crate::schema::requirements::dsl::*;
@@ -102,7 +79,8 @@ pub fn edit_requirement(req_id_ed: i32) -> content::RawHtml<String> {
     out_str = format!("{} {}",out_str, print_footer());
     content::RawHtml(out_str)
 }
-
+*/
+/* 
 #[get("/tests")]
 pub fn show_tests() -> content::RawHtml<String> {
     use crate::schema::tests::dsl::*;
@@ -135,8 +113,11 @@ pub fn show_tests() -> content::RawHtml<String> {
     out_str = format!("{} {}",out_str, print_footer());
     content::RawHtml(out_str)
 }
+*/
 
 
+
+/* 
 #[get("/tests/<test_id_param>")]
 pub fn show_test_id(test_id_param: i32) -> content::RawHtml<String> {
     use crate::schema::tests::dsl::*;
@@ -170,6 +151,7 @@ pub fn show_test_id(test_id_param: i32) -> content::RawHtml<String> {
     out_str = format!("{} {}",out_str, print_footer());
     content::RawHtml(out_str)
 }
+*/
 
 #[get("/status")]
 pub fn show_status() -> content::RawHtml<String> {

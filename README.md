@@ -15,6 +15,7 @@ This software is a basic management for requirements and tests.
   + [ ] Doxygen documentation
   + [ ] ...
 + [ ] Better webpage 
+  + [X] Use templates (based on hbs)
 + [ ] Reports generator
   + [ ] Latex template
   + [X] Excel 

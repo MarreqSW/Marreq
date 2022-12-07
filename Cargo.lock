@@ -1536,6 +1536,7 @@ dependencies = [
  "diesel 2.0.2",
  "dotenvy",
  "rocket",
+ "rocket-multipart-form-data",
  "rocket_dyn_templates",
  "rocket_sync_db_pools",
  "serde",
@@ -1581,6 +1582,18 @@ dependencies = [
  "ubyte",
  "version_check",
  "yansi",
+]
+
+[[package]]
+name = "rocket-multipart-form-data"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a8148192183eb2a7c1438e603fb8db1d9020739776aecd11a4f821b578575c3"
+dependencies = [
+ "mime",
+ "multer",
+ "rocket",
+ "tokio-util",
 ]
 
 [[package]]

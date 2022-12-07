@@ -16,7 +16,7 @@ use crate::html::*;
 use crate::generators::*;
 use crate::helper_functions::*;
 
-// use crate::DbConn;
+//use crate::DbConn;
 
 #[get("/")]
 pub fn index() -> Template {

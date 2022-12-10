@@ -5,8 +5,8 @@ CREATE TABLE requirements
     req_title           VARCHAR NOT NULL DEFAULT ' ',
     req_description     VARCHAR NOT NULL DEFAULT ' ',
     req_current_status  INTEGER NOT NULL DEFAULT 1,
-    req_author          VARCHAR NOT NULL DEFAULT ' ',
-    req_author_email    VARCHAR NOT NULL DEFAULT ' ',
+    req_author          INTEGER NOT NULL DEFAULT 0,
+    req_reviewer        INTEGER NOT NULL DEFAULT 0,
     req_link            VARCHAR NOT NULL DEFAULT ' ',
     req_reference       VARCHAR NOT NULL DEFAULT ' ',
     req_category        INTEGER NOT NULL DEFAULT 1,
@@ -17,10 +17,25 @@ CREATE TABLE requirements
 );
 
 INSERT INTO requirements (req_title, req_description, req_current_status, req_author, req_reference, req_category) VALUES
-    ('The SW must manage requirements', 'Blablabla', 3, 'Màrius', 'REQ-SYS-010', 1),
-    ('The SW must implement an API REST', 'API REST, blablabla', 3, 'Màrius', 'REQ-API-010' , 5),
-    ('The SW must implement a Web app', 'Web app', 3, 'Màrius', 'REQ-SYS-020', 2),
-    ('The SW must export compliance matrix in excel format', 'Excel, blabla', 3, 'Victor', 'REQ-SYS-030', 1);
+    ('The SW must manage requirements', 'Blablabla', 3, 1, 'REQ-SYS-010', 1),
+    ('The SW must implement an API REST', 'API REST, blablabla', 3, 1, 'REQ-API-010' , 5),
+    ('The SW must implement a Web app', 'Web app', 3, 1, 'REQ-SYS-020', 2),
+    ('The SW must export compliance matrix in excel format', 'Excel, blabla', 3, 2, 'REQ-SYS-030', 1);
+
+CREATE TABLE users
+(
+    user_id              SERIAL PRIMARY KEY,
+    user_username        VARCHAR NOT NULL,
+    user_name            VARCHAR NOT NULL,
+    user_email           VARCHAR NOT NULL DEFAULT ' ',
+    user_level           INTEGER NOT NULL DEFAULT 0,
+    user_creation_date   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    user_last_login      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO users (user_username, user_name, user_email, user_level) VALUES
+    ('marius', 'Màrius Montón', 'marius.monton@gmail.com', 1),
+    ('victor', 'Victor Martín', 'victor@ieec.cat', 0);
 
 CREATE TABLE status
 (

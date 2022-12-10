@@ -4,3 +4,4 @@ DROP TABLE categories;
 DROP TABLE status;
 DROP TABLE tests;
 DROP TABLE matrix;
+DROP TABLE users;

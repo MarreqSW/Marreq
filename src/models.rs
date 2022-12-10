@@ -86,7 +86,7 @@ pub struct User {
 }
 
 #[derive(Serialize, Deserialize, Queryable)]
-pub struct Tests {
+pub struct Test {
     pub test_id: i32,
     pub test_name: String,
     pub test_description: String,
@@ -154,7 +154,7 @@ impl fmt::Display for Matrix {
     }
 }
 
-impl fmt::Display for Tests {
+impl fmt::Display for Test {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "
         <div class='TestDiv'>

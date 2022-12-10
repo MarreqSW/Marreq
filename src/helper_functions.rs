@@ -145,13 +145,13 @@ pub fn get_requirements_all() -> Result<Vec<Requirement> , String> {
     })
 }
 
-pub fn get_tests_all() -> Result<Vec<Tests> , String> {
+pub fn get_tests_all() -> Result<Vec<Test> , String> {
     use crate::schema::tests::dsl::*;
 
     let connection = &mut establish_connection();
 
     tests
-    .load::<Tests>(connection)
+    .load::<Test>(connection)
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
         "Error querying page views from the database".into()
@@ -171,11 +171,11 @@ pub fn get_users_all() -> Result<Vec<User>, String> {
     })
 }
 
-pub fn get_tests_by_id(id: i32) -> Tests {
+pub fn get_tests_by_id(id: i32) -> Test {
     use crate::schema::tests::dsl::*;
 
     let connection = &mut establish_connection();
-    let result:Tests = tests
+    let result:Test = tests
     .filter(test_id.eq(id))
     .get_result(connection).unwrap();
 
@@ -189,7 +189,7 @@ pub fn get_test_status_by_id(id: i32) -> String {
 
     let connection = &mut establish_connection();
 
-    let ts:Tests = tests
+    let ts:Test = tests
     .filter(test_id.eq(id))
     .get_result(connection).unwrap();
 
@@ -214,7 +214,7 @@ pub fn insert_new_requirement(conn: &mut PgConnection, new: &NewRequirement)
 
 pub fn insert_new_test( conn: &mut PgConnection, new: &NewTest) -> Result<i32, Box<dyn Error>> 
 {
-    let a:Tests = diesel::insert_into(crate::schema::tests::table)
+    let a:Test = diesel::insert_into(crate::schema::tests::table)
     .values(new)
     .get_result(conn)?;
 

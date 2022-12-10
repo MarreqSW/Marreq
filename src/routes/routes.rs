@@ -170,7 +170,7 @@ pub fn get_matrix() -> content::RawHtml<String> {
 
     /* Prepare table headers */
     for i in 1..total_tests+1 {        
-        let ts:Tests = tests
+        let ts:Test = tests
         .filter(test_id.eq(i as i32))
         .get_result(connection).unwrap();
 
@@ -281,7 +281,7 @@ pub fn api_get_status() -> Result<Json<Vec<Status>>, String> {
 }
 
 #[get("/tests")]
-pub fn api_get_tests() -> Result<Json<Vec<Tests>>, String> {
+pub fn api_get_tests() -> Result<Json<Vec<Test>>, String> {
 
     get_tests_all()
     .map_err(|err| -> String {
@@ -291,13 +291,13 @@ pub fn api_get_tests() -> Result<Json<Vec<Tests>>, String> {
 }
 
 #[get("/tests/<ident>")]
-pub fn api_get_tests_by_id(ident: i32) -> Result<Json<Vec<Tests>>, String> {
+pub fn api_get_tests_by_id(ident: i32) -> Result<Json<Vec<Test>>, String> {
     use crate::schema::tests::dsl::*;
     let connection = &mut establish_connection();
 
     tests
     .filter(test_id.eq(ident))
-    .load::<Tests>(connection)
+    .load::<Test>(connection)
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
         "Error querying page views from the database".into()

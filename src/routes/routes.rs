@@ -25,27 +25,46 @@ pub fn index() -> Template {
     Template::render("index", ctx)
 }
 
-
 #[get("/requirements")]
 pub fn show_requirements() -> Template {
-    let ctx = get_requirements_all();
-    let ctx = json!(ctx);
+
+    let status = get_status_all().unwrap();
+    let status_json = json!(status);
+
+    let categories = get_categories_all().unwrap();
+    let categories_json = json!(categories);
+
+    let requirements = get_requirements_all().unwrap();
+    let requirements_json = json!(requirements);
+    
+    let ctx = json!({"categories": categories_json, "status": status_json, "requirements": requirements_json});
+    
     Template::render("requirements", ctx)
 }
 
 #[get("/requirements/<req_id>")]
 pub fn show_requirement_id(req_id: i32) -> Template {
-    let ctx = get_requirement_by_id(req_id);
-    let ctx = json!(ctx);
+    let req = get_requirement_by_id(req_id);
+    let req_json = json!(req);
+
+    let cat = get_category_by_id(req.req_category);
+    let cat_json = json!(cat);
+    
+    let author = get_author_by_id(req.req_author);
+    let author_json = json!(author);
+
+    let ctx = json!({"requirements": req_json, "categories": cat_json, "author": author_json});
+
+    println!("CTX: {:#}", ctx);
     Template::render("requirement_by_id", ctx)
 }
 
 #[get("/new_requirement")]
 pub fn new_requirement() -> Template {
-    let status = get_all_status().unwrap();
+    let status = get_status_all().unwrap();
     let status_json = json!(status);
 
-    let categories = get_all_categories().unwrap();
+    let categories = get_categories_all().unwrap();
     let categories_json = json!(categories);
 
     let parents = get_requirements_all().unwrap();
@@ -58,8 +77,6 @@ pub fn new_requirement() -> Template {
 
 #[post("/new_requirement", data = "<new_req>")]
 pub fn post_requirement(new_req: Form<NewRequirement>) -> content::RawHtml<String> {
-
-    println!("Data: {:#?}", new_req);
 
     let connection = &mut establish_connection();
     create_requirement (connection, &new_req).unwrap();
@@ -295,12 +312,8 @@ pub async fn get_matrix_xls() -> (ContentType, NamedFile) {
 // --------------------------------
 #[get("/requirements")]
 pub fn api_get_reqs() -> Result<Json<Vec<Requirement>>, String> {
-    use crate::schema::requirements::dsl::*;
-
-    let connection = &mut establish_connection();
-
-    requirements
-    .load::<Requirement>(connection)
+    
+    get_requirements_all()
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
         "Error querying page views from the database".into()
@@ -331,11 +344,7 @@ pub fn api_get_reqs_by_id(ident: i32) -> Result<Json<Vec<Requirement>>, String> 
 
 #[get("/categories")]
 pub fn api_get_categories() -> Result<Json<Vec<Category>>, String> {
-    use crate::schema::categories::dsl::*;
-    let connection = &mut establish_connection();
-
-    categories
-    .load::<Category>(connection)
+    get_categories_all()
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
         "Error querying page views from the database".into()
@@ -344,11 +353,8 @@ pub fn api_get_categories() -> Result<Json<Vec<Category>>, String> {
 
 #[get("/status")]
 pub fn api_get_status() -> Result<Json<Vec<Status>>, String> {
-    use crate::schema::status::dsl::*;
-    let connection = &mut establish_connection();
-
-    status
-    .load::<Status>(connection)
+    
+    get_status_all()
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
         "Error querying page views from the database".into()
@@ -357,11 +363,8 @@ pub fn api_get_status() -> Result<Json<Vec<Status>>, String> {
 
 #[get("/tests")]
 pub fn api_get_tests() -> Result<Json<Vec<Tests>>, String> {
-    use crate::schema::tests::dsl::*;
-    let connection = &mut establish_connection();
 
-    tests
-    .load::<Tests>(connection)
+    get_tests_all()
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
         "Error querying page views from the database".into()

@@ -8,7 +8,8 @@ use diesel::pg::PgConnection;
 
 use crate::models::*;
 
-pub fn get_all_status() -> Result<Vec<Status>, String> {
+/// Returns the status list 
+pub fn get_status_all() -> Result<Vec<Status>, String> {
     use crate::schema::status::dsl::*;
 
     let connection = &mut establish_connection();
@@ -21,7 +22,8 @@ pub fn get_all_status() -> Result<Vec<Status>, String> {
     })
 }
 
-pub fn get_all_categories() -> Result<Vec<Category>, String> {
+/// Returns the categories list
+pub fn get_categories_all() -> Result<Vec<Category>, String> {
     use crate::schema::categories::dsl::*;
 
     let connection = &mut establish_connection();
@@ -33,6 +35,25 @@ pub fn get_all_categories() -> Result<Vec<Category>, String> {
         "Error querying page views from the database".into()
     })
 } 
+
+pub fn get_category_by_id(id: i32) -> Category {
+    use crate::schema::categories::dsl::*;
+
+    let connection = &mut establish_connection();
+
+    categories
+    .filter(cat_id.eq(id))
+    .get_result(connection)
+    .map_err(|err| -> String {
+        println!("Error querying page views: {:?}", err);
+        "Error querying page views from the database".into()
+    }).unwrap()
+}
+
+
+pub fn get_author_by_id(id: i32) -> String {
+    "Màrius".to_string()
+}
 
 pub fn get_status_by_id(id: i32) -> Status {
     use crate::schema::status::dsl::*;
@@ -64,6 +85,7 @@ pub fn get_requirement_title_by_id(id: i32) -> String {
     get_requirement_by_id(id).req_title
 }
 
+/// Return all requirements 
 pub fn get_requirements_all() -> Result<Vec<Requirement> , String> {
     use crate::schema::requirements::dsl::*;
 

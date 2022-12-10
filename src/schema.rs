@@ -23,8 +23,8 @@ diesel::table! {
         req_title -> Varchar,
         req_description -> Varchar,
         req_current_status -> Int4,
-        req_author -> Varchar,
-        req_author_email -> Varchar,
+        req_author -> Int4,
+        req_reviewer -> Int4,
         req_link -> Varchar,
         req_reference -> Varchar,
         req_category -> Int4,
@@ -55,10 +55,23 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    users (user_id) {
+        user_id -> Int4,
+        user_username -> Varchar,
+        user_name -> Varchar,
+        user_email -> Varchar,
+        user_level -> Int4,
+        user_creation_date -> Timestamp,
+        user_last_login -> Timestamp,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     categories,
     matrix,
     requirements,
     status,
     tests,
+    users,
 );

@@ -10,8 +10,8 @@ pub struct Requirement {
     pub req_title: String,
     pub req_description: String,
     pub req_current_status: i32,
-    pub req_author: String,
-    pub req_author_email: String,
+    pub req_author: i32,
+    pub req_reviewer: i32,
     pub req_link: String,
     pub req_reference: String,
     pub req_category: i32,
@@ -21,14 +21,13 @@ pub struct Requirement {
     pub req_deadline_date: chrono::NaiveDateTime,
 }
 
-#[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm,  Debug)]
+#[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = requirements)]
 pub struct NewRequirement {
     pub req_title: String,
     pub req_description: String,
-    pub req_author: String,
-    pub req_author_email: String,
+    pub req_author: i32,
     pub req_link: String,
     pub req_category: i32,
     pub req_current_status: i32,
@@ -56,6 +55,17 @@ pub struct Matrix {
     pub matrix_req_id: i32,
     pub matrix_test_id: i32,
     pub matrix_creation_date: chrono::NaiveDateTime
+}
+
+#[derive(Serialize, Deserialize, Queryable, AsChangeset)]
+pub struct User {
+    user_id : i32,
+    user_username : String,
+    user_name : String,
+    user_email : String,
+    user_level : i32,
+    user_creation_date : chrono::NaiveDateTime,
+    user_last_login : chrono::NaiveDateTime,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]

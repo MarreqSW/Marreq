@@ -1,0 +1,38 @@
+{{#*inline "page"}}
+
+<section id="Tests">
+<h1>New test</h1>
+	
+
+<form method="post">
+    <div class='ReqTitle'> 
+        <label for="test_name">Title: </label>
+        <input type="text" name="test_name" id="test_nam">
+    </div>
+    <div class='ReqDesc'>
+        <label for='test_description'>Description: </label>
+        <input type="text" name ="test_description" id="test_description">
+    </div>
+    <div class='ReqSource'>
+        <label for='test_source'>Source: </label>
+        <input type="text" name="test_source" id="test_source">
+    </div>
+    <label for='test_status'>Status: </label>
+    <select name="test_status" id="test_status">
+        {{#each status }}
+            <option value="{{st_id}}"> {{st_title}}</option>
+        {{/each}}
+    </select>
+    <label for='test_parent'>Parent: </label>
+    <select name="test_parent" id="test_parent">
+        {{#each parent }}
+            <option value="{{test_id}}"> {{test_name}}</option>
+        {{/each}}
+    </select>
+    <input type="submit" value="Create new Test">
+</form>
+
+</section>
+
+{{/inline}}
+{{> layout}}

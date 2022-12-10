@@ -3,7 +3,7 @@ use rocket::fs::NamedFile;
 use rocket::http::ContentType;
 use rocket::serde::json::{Json, Value, json};
 use rocket::response::status::NotFound;
-use rocket::response::content;
+use rocket::response::{content, Redirect};
 use rocket::form::Form;
 
 use rocket_dyn_templates::{Template, context, handlebars};
@@ -28,16 +28,10 @@ pub fn index() -> Template {
 #[get("/requirements")]
 pub fn show_requirements() -> Template {
 
-    let status = get_status_all().unwrap();
-    let status_json = json!(status);
-
-    let categories = get_categories_all().unwrap();
-    let categories_json = json!(categories);
-
     let requirements = get_requirements_all().unwrap();
-    let requirements_json = json!(requirements);
-    
-    let ctx = json!({"categories": categories_json, "status": status_json, "requirements": requirements_json});
+    let requirements_decorate = decorate_requirements(requirements);
+    let requirements_json = json!(requirements_decorate);
+    let ctx = json!({"requirements": requirements_json});
     
     Template::render("requirements", ctx)
 }
@@ -45,17 +39,9 @@ pub fn show_requirements() -> Template {
 #[get("/requirements/<req_id>")]
 pub fn show_requirement_id(req_id: i32) -> Template {
     let req = get_requirement_by_id(req_id);
-    let req_json = json!(req);
+    let req_decorate = decorate_requirements(vec!(req));
+    let ctx = json!({"requirements": req_decorate});
 
-    let cat = get_category_by_id(req.req_category);
-    let cat_json = json!(cat);
-    
-    let author = get_author_by_id(req.req_author);
-    let author_json = json!(author);
-
-    let ctx = json!({"requirements": req_json, "categories": cat_json, "author": author_json});
-
-    println!("CTX: {:#}", ctx);
     Template::render("requirement_by_id", ctx)
 }
 
@@ -70,18 +56,21 @@ pub fn new_requirement() -> Template {
     let parents = get_requirements_all().unwrap();
     let parents_json = json!(parents);
     
-    let ctx = json!({"categories": categories_json, "status": status_json, "parent": parents_json});
+    let users = get_users_all().unwrap();
+    let users_json = json!(users);
+
+    let ctx = json!({"categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json});
 
     Template::render("new_requirement", ctx)
 }
 
 #[post("/new_requirement", data = "<new_req>")]
-pub fn post_requirement(new_req: Form<NewRequirement>) -> content::RawHtml<String> {
+pub fn post_requirement(new_req: Form<NewRequirement>) -> Redirect {
 
     let connection = &mut establish_connection();
-    create_requirement (connection, &new_req).unwrap();
+    let my_id = insert_new_requirement (connection, &new_req).unwrap();
 
-    content::RawHtml("OK!".to_string())
+    Redirect::to(uri!(show_requirement_id(my_id)))
 }
 
 #[get("/tests")]
@@ -99,104 +88,34 @@ pub fn show_test_id(test_id_param: i32) -> Template {
 
     Template::render("test_by_id", tests)
 }
-/* 
-#[get("/requirements/<req_id_ed>")]
-pub fn edit_requirement(req_id_ed: i32) -> content::RawHtml<String> {
-    use crate::schema::requirements::dsl::*;
+
+#[get("/new_test")]
+pub fn new_test() -> Template {
+    let status = get_status_all().unwrap();
+    let status_json = json!(status);
+
+    let categories = get_categories_all().unwrap();
+    let categories_json = json!(categories);
+
+    let parents = get_tests_all().unwrap();
+    let parents_json = json!(parents);
     
-    let mut out_str = print_header();
+    let users = get_users_all().unwrap();
+    let users_json = json!(users);
+
+    let ctx = json!({"categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json});
+
+    Template::render("new_test", ctx)
+}
+
+#[post("/new_test", data = "<new_test>")]
+pub fn post_test(new_test: Form<NewTest>) -> Redirect {
 
     let connection = &mut establish_connection();
-    let requirement = requirements
-    .filter(req_id.eq(req_id_ed))
-    .limit(1)
-    .load::<Requirement>(connection)
-    .map_err(|err| -> String {
-        println!("Error querying page views: {:?}", err);
-        "Error querying page views from the database".into()
-    }).unwrap();
+    let my_id = insert_new_test (connection, &new_test).unwrap();
 
-    for req in requirement.iter() {
-        out_str = format!("{}{}", out_str, req
-        );
-    }
-
-    out_str = format!("{} {}",out_str, print_footer());
-    content::RawHtml(out_str)
+    Redirect::to(uri!(show_test_id(my_id)))
 }
-*/
-/* 
-#[get("/tests")]
-pub fn show_tests() -> content::RawHtml<String> {
-    use crate::schema::tests::dsl::*;
-    use crate::schema::status::dsl::*;
-
-    let mut out_str = print_header();
-    let connection = &mut establish_connection();
-
-    let all_test =
-    tests
-    .load::<Tests>(connection)
-    .map_err(|err| -> String {
-        println!("Error querying page views: {:?}", err);
-        "Error querying page views from the database".into()
-    }).unwrap();
-
-    for req in all_test.iter() {
-
-        let act_status =
-        status
-        .filter(st_id.eq(req.test_status))
-        .limit(1)
-        .load::<Status>(connection).unwrap();
-
-        out_str = format!("{}
-        <div class='AllTests'>{}{}</div>",
-        out_str, req, act_status[0]);
-    }
-
-    out_str = format!("{} {}",out_str, print_footer());
-    content::RawHtml(out_str)
-}
-*/
-
-
-
-/* 
-#[get("/tests/<test_id_param>")]
-pub fn show_test_id(test_id_param: i32) -> content::RawHtml<String> {
-    use crate::schema::tests::dsl::*;
-    use crate::schema::status::dsl::*;
-
-    let mut out_str = print_header();
-    let connection = &mut establish_connection();
-
-    let all_test =
-    tests
-    .filter(test_id.eq(test_id_param))
-    .load::<Tests>(connection)
-    .map_err(|err| -> String {
-        println!("Error querying page views: {:?}", err);
-        "Error querying page views from the database".into()
-    }).unwrap();
-
-    for req in all_test.iter() {
-
-        let act_status =
-        status
-        .filter(st_id.eq(req.test_status))
-        .limit(1)
-        .load::<Status>(connection).unwrap();
-
-        out_str = format!("{}
-        <div class='AllTests'>{}{}</div>",
-        out_str, req, act_status[0]);
-    }
-
-    out_str = format!("{} {}",out_str, print_footer());
-    content::RawHtml(out_str)
-}
-*/
 
 #[get("/status")]
 pub fn show_status() -> content::RawHtml<String> {
@@ -245,7 +164,7 @@ pub fn get_matrix() -> content::RawHtml<String> {
 
     let total_tests:i64 = tests.count().get_result(connection).unwrap();    
 
-    out_str = format!("{}<p id'title1'>Total Tests: {}</p>", out_str, total_tests);
+    out_str = format!("{}<p id='title1'>Total Tests: {}</p>", out_str, total_tests);
     out_str = format!("{}<table>", out_str);
     out_str = format!("{}<tr><th>Req ID</th><th>Title</th><th>Reference</th>", out_str);
 
@@ -323,7 +242,7 @@ pub fn api_get_reqs() -> Result<Json<Vec<Requirement>>, String> {
 #[post("/requirements", data = "<new_req>")]
 pub async fn api_post_requirement(new_req: Json<NewRequirement>) -> Value {
     let connection = &mut establish_connection();
-    create_requirement (connection, &new_req).unwrap();
+    insert_new_requirement (connection, &new_req).unwrap();
 
     json!({ "status": "ok", "id": 5 })
 }

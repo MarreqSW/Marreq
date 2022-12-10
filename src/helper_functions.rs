@@ -50,9 +50,55 @@ pub fn get_category_by_id(id: i32) -> Category {
     }).unwrap()
 }
 
+/// Returns a DecorateRequirement vector for a given requirement vector
+/// This function never fails, but if some requirement data is not found 
+/// is filled with default value.
+pub fn decorate_requirements (reqs: Vec<Requirement>) -> Vec<DecoratedRequirement> {
 
-pub fn get_author_by_id(id: i32) -> String {
-    "Màrius".to_string()
+    let mut result = Vec::new();
+
+    for r in reqs {
+        let a = DecoratedRequirement {
+            req_id: r.req_id,
+            req_title: r.req_title,
+            req_description: r.req_description,
+            req_current_status: get_status_by_id(r.req_id).st_title,
+            req_author : 
+                if r.req_author != 0 {
+                    get_user_by_id(r.req_author).user_name
+                } else {
+                    "".to_string()
+                },
+            req_reviewer: 
+                if r.req_reviewer != 0 {
+                    get_user_by_id(r.req_reviewer).user_name
+                } else {
+                    "".to_string()
+                },
+            req_link: r.req_link,
+            req_reference: r.req_reference,
+            req_category: get_category_by_id(r.req_category).cat_title,
+            req_parent: r.req_parent,
+            req_creation_date: r.req_creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+            req_update_date: r.req_update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+            req_deadline_date: r.req_deadline_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+        };
+        result.push(a);
+    }
+
+    result
+}
+
+pub fn get_user_by_id(id: i32) -> User {
+    
+    use crate::schema::users::dsl::*;
+    
+    let connection = &mut establish_connection();
+    let result:User = users
+    .filter(user_id.eq(id))
+    .get_result(connection).unwrap();
+
+    result
 }
 
 pub fn get_status_by_id(id: i32) -> Status {
@@ -112,6 +158,19 @@ pub fn get_tests_all() -> Result<Vec<Tests> , String> {
     })
 }
 
+pub fn get_users_all() -> Result<Vec<User>, String> {
+    use crate::schema::users::dsl::*;
+
+    let connection = &mut establish_connection();
+
+    users
+    .load::<User>(connection)
+    .map_err(|err| -> String {
+        println!("Error querying page views: {:?}", err);
+        "Error querying page views from the database".into()
+    })
+}
+
 pub fn get_tests_by_id(id: i32) -> Tests {
     use crate::schema::tests::dsl::*;
 
@@ -141,14 +200,27 @@ pub fn get_test_status_by_id(id: i32) -> String {
     result.st_title
 }
 
-pub fn create_requirement(conn: &mut PgConnection, new: &NewRequirement) 
-            -> Result<(), Box<dyn Error>> 
+pub fn insert_new_requirement(conn: &mut PgConnection, new: &NewRequirement) 
+            -> Result<i32, Box<dyn Error>> 
 {
-    diesel::insert_into(crate::schema::requirements::table)
+    let a:Requirement = diesel::insert_into(crate::schema::requirements::table)
     .values(new)
-    .execute(conn)?;
+    .get_result(conn)?;
 
-    Ok(())
+    println!("New requirement id {}", a.req_id);
+
+    Ok(a.req_id)
+}
+
+pub fn insert_new_test( conn: &mut PgConnection, new: &NewTest) -> Result<i32, Box<dyn Error>> 
+{
+    let a:Tests = diesel::insert_into(crate::schema::tests::table)
+    .values(new)
+    .get_result(conn)?;
+
+    println!("New test id {}", a.test_id);
+
+    Ok(a.test_id)
 }
 
 pub fn update_requirement(conn: &mut PgConnection, req: i32) -> Result<(), Box<dyn Error>> 

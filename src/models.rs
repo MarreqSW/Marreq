@@ -34,6 +34,23 @@ pub struct NewRequirement {
     pub req_parent: i32,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct DecoratedRequirement{
+    pub req_id: i32,
+    pub req_title: String,
+    pub req_description: String,
+    pub req_current_status: String,
+    pub req_author: String,
+    pub req_reviewer: String,
+    pub req_link: String,
+    pub req_reference: String,
+    pub req_category: String,
+    pub req_parent: i32,
+    pub req_creation_date: String,
+    pub req_update_date: String,
+    pub req_deadline_date: String,
+}
+
 #[derive(Serialize, Deserialize, Queryable)]
 pub struct Category {
     pub cat_id: i32,
@@ -59,13 +76,13 @@ pub struct Matrix {
 
 #[derive(Serialize, Deserialize, Queryable, AsChangeset)]
 pub struct User {
-    user_id : i32,
-    user_username : String,
-    user_name : String,
-    user_email : String,
-    user_level : i32,
-    user_creation_date : chrono::NaiveDateTime,
-    user_last_login : chrono::NaiveDateTime,
+    pub user_id : i32,
+    pub user_username : String,
+    pub user_name : String,
+    pub user_email : String,
+    pub user_level : i32,
+    pub user_creation_date : chrono::NaiveDateTime,
+    pub user_last_login : chrono::NaiveDateTime,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]
@@ -78,7 +95,7 @@ pub struct Tests {
     pub test_parent: i32,
 }
 
-#[derive(Serialize, Deserialize, Insertable)]
+#[derive(Serialize, Deserialize, Insertable, FromForm)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = tests)]
 pub struct NewTest{

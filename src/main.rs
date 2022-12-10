@@ -33,6 +33,8 @@ async fn main() -> Result<(), rocket::Error> {
             //edit_requirement,
             new_requirement,
             post_requirement,
+            new_test,
+            post_test,
             get_matrix,
             get_matrix_xls,
             ])

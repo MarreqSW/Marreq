@@ -15,7 +15,11 @@
     </div>
     <div class='ReqAuthor'>
         <label for='req_author'>Author: </label>
-        <input type="text" name="req_author" id="req_author">
+        <select name="req_author" id="req_author">
+        {{#each users }}
+            <option value="{{user_id}}"> {{user_name}}</option>
+        {{/each}}
+    </select>
     </div>
     <div class='ReqRef'>
         <label for='req_reference'>Reference: </label>
@@ -25,21 +29,21 @@
     <label for='req_current_status'>Status: </label>
     <select name="req_current_status" id="req_current_status">
         {{#each status }}
-        <option value="{{st_id}}"> {{st_title}}</option>
+            <option value="{{st_id}}"> {{st_title}}</option>
         {{/each}}
     </select>
 
     <label for='req_category'>Category: </label>
     <select name="req_category" id="req_category">
         {{#each categories }}
-        <option value="{{cat_id}}"> {{cat_title}}</option>
+            <option value="{{cat_id}}"> {{cat_title}}</option>
         {{/each}}
     </select>
 
     <label for='req_parent'>Parent: </label>
     <select name="req_parent" id="req_parent">
         {{#each parent }}
-        <option value="{{req_id}}"> {{req_title}}</option>
+            <option value="{{req_id}}"> {{req_title}}</option>
         {{/each}}
     </select>
 

@@ -31,7 +31,7 @@ pub fn create_matrix_workbook()->Result<Vec<u8>,xlsxwriter::XlsxError> {
 
 
     for i in 1..total_tests+1 {
-        let ts:Tests = tests
+        let ts:Test = tests
         .filter(test_id.eq(i as i32))
         .get_result(connection).unwrap();
 

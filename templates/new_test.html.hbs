@@ -25,8 +25,14 @@
     </select>
     <label for='test_parent'>Parent: </label>
     <select name="test_parent" id="test_parent">
-        {{#each parent }}
+        {{#each parents}}
             <option value="{{test_id}}"> {{test_name}}</option>
+        {{/each}}
+    </select>
+    <label for="test_req">Requirement:</label>
+    <select name="test_req" id="test_req" multiple>
+        {{#each requirements}}
+        	<option value="{{req_id}}">{{req_title}}</option>
         {{/each}}
     </select>
     <input type="submit" value="Create new Test">

@@ -223,6 +223,17 @@ pub fn insert_new_test( conn: &mut PgConnection, new: &NewTest) -> Result<i32, B
     Ok(a.test_id)
 }
 
+pub fn insert_new_matrix_item (conn: &mut PgConnection, new: &NewMatrix) 
+        -> Result<(), Box<dyn Error>> 
+{
+    println!("Inserting, ({}, {})", new.matrix_req_id, new.matrix_test_id);
+    diesel::insert_into(crate::schema::matrix::table)
+    .values(new)
+    .execute(conn)?;
+
+    Ok(())
+}
+
 pub fn update_requirement(conn: &mut PgConnection, req: i32) -> Result<(), Box<dyn Error>> 
 {
     use crate::schema::requirements::dsl::*;

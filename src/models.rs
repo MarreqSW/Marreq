@@ -74,6 +74,14 @@ pub struct Matrix {
     pub matrix_creation_date: chrono::NaiveDateTime
 }
 
+#[derive(Serialize, Deserialize, Insertable)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = matrix)]
+pub struct NewMatrix {
+    pub matrix_req_id: i32,
+    pub matrix_test_id: i32,
+}
+
 #[derive(Serialize, Deserialize, Queryable, AsChangeset)]
 pub struct User {
     pub user_id : i32,
@@ -104,6 +112,17 @@ pub struct NewTest{
     pub test_source: String,
     pub test_status: i32,
     pub test_parent: i32,
+}
+
+#[derive(Serialize, Deserialize, FromForm)]
+#[serde(crate = "rocket::serde")]
+pub struct NewTestForm {
+    pub test_name: String,
+    pub test_description: String,
+    pub test_source: String,
+    pub test_status: i32,
+    pub test_parent: i32,
+    pub test_req: Vec<i32>,
 }
 
 impl fmt::Display for Requirement {

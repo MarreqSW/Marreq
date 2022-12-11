@@ -6,8 +6,8 @@ use rocket::response::status::NotFound;
 use rocket::response::{content, Redirect};
 use rocket::form::Form;
 
-use rocket_dyn_templates::{Template, context, handlebars};
-//use self::handlebars::{Handlebars, JsonRender};
+//use rocket_dyn_templates::{Template, context, handlebars};
+use rocket_dyn_templates::Template;
 
 use std::path;
 
@@ -103,16 +103,35 @@ pub fn new_test() -> Template {
     let users = get_users_all().unwrap();
     let users_json = json!(users);
 
-    let ctx = json!({"categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json});
+    let requirements = get_requirements_all().unwrap();
+    let requirements_json = json!(requirements);
+
+    let ctx = json!({"categories": categories_json, "status": status_json, "parents": parents_json, "users": users_json, "requirements": requirements_json});
 
     Template::render("new_test", ctx)
 }
 
 #[post("/new_test", data = "<new_test>")]
-pub fn post_test(new_test: Form<NewTest>) -> Redirect {
+pub fn post_test(new_test: Form<NewTestForm>) -> Redirect {
 
     let connection = &mut establish_connection();
-    let my_id = insert_new_test (connection, &new_test).unwrap();
+    let my_new_test = NewTest {
+        test_name: new_test.test_name.clone(),
+        test_description: new_test.test_description.clone(),
+        test_source : new_test.test_source.clone(),
+        test_status : new_test.test_status,
+        test_parent : new_test.test_parent,
+    };
+    let my_id = insert_new_test (connection, &my_new_test).unwrap();
+
+    println!("NewTestForm requirements: {:#?}", new_test.test_req);
+    for req in new_test.test_req.iter() {
+        let matrix_item = NewMatrix {
+            matrix_req_id: *req,
+            matrix_test_id: my_id,
+        };
+        insert_new_matrix_item (connection, &matrix_item).unwrap();
+    }
 
     Redirect::to(uri!(show_test_id(my_id)))
 }

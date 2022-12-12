@@ -9,7 +9,7 @@ entity "Requirement" as req {
 * req_description
 * req_current_status
 * req_author
-* req_author_email
+* req_reviewer
 * req_link
 * req_reference
 * req_category
@@ -17,6 +17,17 @@ entity "Requirement" as req {
 * req_creation_date
 * req_update_date
 * req_deadline_date
+}
+
+entity "Users" as user {
+* user_id
+---
+* user_username
+* user_name
+* user_email
+* user_level
+* user_creation_date
+* user_last_login
 }
 
 entity "Status" as st {
@@ -54,6 +65,7 @@ entity "Matrix" as matrix {
 
 req  }|--|| st
 req  }|--|| cat
+req  }|--|| user
 test   }|--|| st
 matrix ||--|| req
 matrix ||--|| test

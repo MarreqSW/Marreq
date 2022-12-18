@@ -58,7 +58,10 @@ pub fn new_requirement() -> Template {
     let users = get_users_all().unwrap();
     let users_json = json!(users);
 
-    let ctx = json!({"categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json});
+    let verification_types = get_verification_all().unwrap();
+    let verification_json = json!(verification_types);
+
+    let ctx = json!({"categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json, "verification": verification_json});
 
     Template::render("new_requirement", ctx)
 }

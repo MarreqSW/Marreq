@@ -40,7 +40,7 @@ pub struct DecoratedRequirement{
     pub req_id: i32,
     pub req_title: String,
     pub req_description: String,
-    pub req_verification: i32,
+    pub req_verification: String,
     pub req_current_status: String,
     pub req_author: String,
     pub req_reviewer: String,
@@ -70,7 +70,7 @@ pub struct Status {
 }
 
 #[derive(Serialize, Deserialize, Queryable)]
-pub struct Verfication {
+pub struct Verification {
     pub ver_id: i32,
     pub ver_title: String,
     pub ver_description: String,

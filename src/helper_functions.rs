@@ -61,7 +61,7 @@ pub fn decorate_requirements (reqs: Vec<Requirement>) -> Vec<DecoratedRequiremen
         let a = DecoratedRequirement {
             req_id: r.req_id,
             req_title: r.req_title,
-            req_verification: r.req_verification,
+            req_verification: get_verification_by_id(r.req_verification).ver_title,
             req_description: r.req_description,
             req_current_status: get_status_by_id(r.req_id).st_title,
             req_author : 
@@ -111,6 +111,17 @@ pub fn get_status_by_id(id: i32) -> Status {
     .get_result(connection).unwrap();
 
     result
+}
+
+pub fn get_verification_by_id(id: i32) -> Verification {
+    use crate::schema::verification::dsl::*;
+
+    let connection = &mut establish_connection();
+    let result:Verification = verification
+    .filter(verification_id.eq(id))
+    .get_result(connection).unwrap();
+
+    result   
 }
 
 pub fn get_status_name_by_id(id: i32) -> String {
@@ -166,6 +177,20 @@ pub fn get_users_all() -> Result<Vec<User>, String> {
 
     users
     .load::<User>(connection)
+    .map_err(|err| -> String {
+        println!("Error querying page views: {:?}", err);
+        "Error querying page views from the database".into()
+    })
+}
+
+/// Return all verification types 
+pub fn get_verification_all() -> Result<Vec<Verification> , String> {
+    use crate::schema::verification::dsl::*;
+
+    let connection = &mut establish_connection();
+
+    verification
+    .load::<Verification>(connection)
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
         "Error querying page views from the database".into()

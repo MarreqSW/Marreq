@@ -13,7 +13,7 @@ pub mod schema;
 pub mod generators;
 pub mod helper_functions;
 
-use crate::routes::routes::*;
+use crate::routes::*;
 use crate::html::cors::*;
 
 #[database("my_db")]

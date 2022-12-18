@@ -21,6 +21,14 @@
         {{/each}}
     </select>
     </div>
+    <div class='ReqVerification'>
+        <label for='req_verification'>Verification mode</label>
+        <select name='req_verification' id='req_verification'>
+            {{#each verification}}
+            <option value="{{ver_id}}">{{ver_title}}</option>
+            {{/each}}
+        </select>
+    </div>
     <div class='ReqRef'>
         <label for='req_reference'>Reference: </label>
         <input type="text" name="req_reference" id="req_reference">

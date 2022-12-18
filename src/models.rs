@@ -9,6 +9,7 @@ pub struct Requirement {
     pub req_id: i32,
     pub req_title: String,
     pub req_description: String,
+    pub req_verification: i32,
     pub req_current_status: i32,
     pub req_author: i32,
     pub req_reviewer: i32,
@@ -39,6 +40,7 @@ pub struct DecoratedRequirement{
     pub req_id: i32,
     pub req_title: String,
     pub req_description: String,
+    pub req_verification: i32,
     pub req_current_status: String,
     pub req_author: String,
     pub req_reviewer: String,
@@ -65,6 +67,13 @@ pub struct Status {
     pub st_title: String,
     pub st_description: String,
     pub st_short_name: String,
+}
+
+#[derive(Serialize, Deserialize, Queryable)]
+pub struct Verfication {
+    pub ver_id: i32,
+    pub ver_title: String,
+    pub ver_description: String,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]

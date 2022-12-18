@@ -63,7 +63,7 @@ pub fn decorate_requirements (reqs: Vec<Requirement>) -> Vec<DecoratedRequiremen
             req_title: r.req_title,
             req_verification: get_verification_by_id(r.req_verification).ver_title,
             req_description: r.req_description,
-            req_current_status: get_status_by_id(r.req_id).st_title,
+            req_current_status: get_status_by_id(r.req_current_status).st_title,
             req_author : 
                 if r.req_author != 0 {
                     get_user_by_id(r.req_author).user_name
@@ -236,6 +236,19 @@ pub fn insert_new_requirement(conn: &mut PgConnection, new: &NewRequirement)
     println!("New requirement id {}", a.req_id);
 
     Ok(a.req_id)
+}
+
+pub fn edit_requirement(conn: &mut PgConnection, new: &NewRequirement) 
+            -> Result<bool, Box<dyn Error>> {
+    use crate::schema::requirements::dsl::*;
+
+    diesel::update(requirements)
+    .filter(req_id.eq(new.req_id))
+    .set(new)
+    .execute(conn)?;
+
+    Ok(true)
+
 }
 
 pub fn insert_new_test( conn: &mut PgConnection, new: &NewTest) -> Result<i32, Box<dyn Error>> 

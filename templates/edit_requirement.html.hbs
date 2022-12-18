@@ -1,17 +1,16 @@
-{{#*inline "page"}}
-
-<section id="Requirements">
-<h1>New requirement</h1>
-	
 
 <form method="post">
     <div class='ReqTitle'> 
         <label for="req_title">Title: </label>
+        {{#each requirements}}
         <input type="text" name="req_title" id="req_title" value="{{req_title}}">
+        {{/each}}
     </div>
     <div class='ReqDesc'>
-        <label for='req_description'>Description: </label>
+        <label for='req_description'>Description:</label>
+        {{#each requirements}}
         <input type="text" name ="req_description" id="req_description" value="{{req_description}}">
+        {{/each}}
     </div>
     <div class='ReqAuthor'>
         <label for='req_author'>Author: </label>
@@ -31,7 +30,9 @@
     </div>
     <div class='ReqRef'>
         <label for='req_reference'>Reference: </label>
+        {{#each requirements}}
         <input type="text" name="req_reference" id="req_reference" value="{{req_reference}}">
+        {{/each}}
     </div>
 
     <label for='req_current_status'>Status: </label>
@@ -57,10 +58,12 @@
 
     <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
     <input type="hidden" id="req_link" name="req_link" value="http://www.google.com">
-    <input type="submit" value="Create new Requirement">
+
+    {{#each requirements}}
+    <input type="hidden" id="req_id" name="req_id" value="{{req_id}}">
+    {{/each}}
+
+    <input type="submit" value="Edit Requirement">
 </form>
 
-</section>
 
-{{/inline}}
-{{> layout}}

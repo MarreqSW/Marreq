@@ -61,6 +61,7 @@ pub fn decorate_requirements (reqs: Vec<Requirement>) -> Vec<DecoratedRequiremen
         let a = DecoratedRequirement {
             req_id: r.req_id,
             req_title: r.req_title,
+            req_verification: r.req_verification,
             req_description: r.req_description,
             req_current_status: get_status_by_id(r.req_id).st_title,
             req_author : 

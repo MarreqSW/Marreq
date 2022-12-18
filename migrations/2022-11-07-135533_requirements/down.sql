@@ -5,3 +5,4 @@ DROP TABLE status;
 DROP TABLE tests;
 DROP TABLE matrix;
 DROP TABLE users;
+DROP TABLE verification;

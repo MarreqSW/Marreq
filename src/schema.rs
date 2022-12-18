@@ -22,6 +22,7 @@ diesel::table! {
         req_id -> Int4,
         req_title -> Varchar,
         req_description -> Varchar,
+        req_verification -> Int4,
         req_current_status -> Int4,
         req_author -> Int4,
         req_reviewer -> Int4,
@@ -67,6 +68,14 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    verification (verification_id) {
+        verification_id -> Int4,
+        verification_name -> Varchar,
+        verification_description -> Varchar,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     categories,
     matrix,
@@ -74,4 +83,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     status,
     tests,
     users,
+    verification,
 );

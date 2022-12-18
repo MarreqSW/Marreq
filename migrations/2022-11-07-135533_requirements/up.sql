@@ -4,6 +4,7 @@ CREATE TABLE requirements
     req_id              SERIAL PRIMARY KEY,
     req_title           VARCHAR NOT NULL DEFAULT ' ',
     req_description     VARCHAR NOT NULL DEFAULT ' ',
+    req_verification    INTEGER NOT NULL DEFAULT 0,
     req_current_status  INTEGER NOT NULL DEFAULT 1,
     req_author          INTEGER NOT NULL DEFAULT 0,
     req_reviewer        INTEGER NOT NULL DEFAULT 0,
@@ -69,6 +70,19 @@ INSERT INTO categories (cat_title, cat_description, cat_tag) VALUES
     ('HW', '', 'HW'),
     ('SW', '', 'SW'),
     ('API', '', 'API');
+
+CREATE TABLE verification
+(
+    verification_id             SERIAL PRIMARY KEY,
+    verification_name           VARCHAR NOT NULL DEFAULT ' ',
+    verification_description    VARCHAR NOT NULL DEFAULT ' '
+);
+
+INSERT INTO verification (verification_name, verification_description) VALUES
+    ('Inspection', 'Nondestructive examination of a system'),
+    ('Analisys', 'Verification of a product or system using models, calculations and testing equipment'),
+    ('Demonstration', 'The manipulation of the product or system as it is intended to be used to verify that the results are as planned or expected.'),
+    ('Test', 'Verification of a product or system using a controlled and predefined series of inputs, data, or stimuli ');
 
 CREATE TABLE tests
 (

@@ -44,6 +44,42 @@ pub fn show_requirement_id(req_id: i32) -> Template {
     Template::render("requirement_by_id", ctx)
 }
 
+#[get("/edit_requirement/<req_id>")]
+pub fn get_edit_requirement(req_id: i32) -> Template {
+    let req = get_requirement_by_id(req_id);
+    let req_decorate = decorate_requirements(vec!(req));
+    let req_decorate_json = json!(req_decorate);
+
+    let status = get_status_all().unwrap();
+    let status_json = json!(status);
+
+    let categories = get_categories_all().unwrap();
+    let categories_json = json!(categories);
+
+    let parents = get_requirements_all().unwrap();
+    let parents_json = json!(parents);
+    
+    let users = get_users_all().unwrap();
+    let users_json = json!(users);
+
+    let verification_types = get_verification_all().unwrap();
+    let verification_json = json!(verification_types);
+
+    let ctx = json!({"requirements": req_decorate_json, "categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json, "verification": verification_json});
+
+    Template::render("edit_requirement_by_id", ctx)
+}
+
+#[post("/edit_requirement/<req_id>", data = "<new_req>")]
+pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>)  -> Redirect{
+    let my_id = new_req.req_id;
+
+    let connection = &mut establish_connection();
+    edit_requirement(connection, &new_req).unwrap();
+
+    Redirect::to(uri!(show_requirement_id(my_id)))
+}
+
 #[get("/new_requirement")]
 pub fn new_requirement() -> Template {
     let status = get_status_all().unwrap();

@@ -26,13 +26,16 @@ pub struct Requirement {
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = requirements)]
 pub struct NewRequirement {
+    pub req_id: i32,
     pub req_title: String,
     pub req_description: String,
+    pub req_verification: i32,
     pub req_author: i32,
     pub req_link: String,
     pub req_category: i32,
     pub req_current_status: i32,
     pub req_parent: i32,
+    pub req_reference: String,
 }
 
 #[derive(Serialize, Deserialize)]

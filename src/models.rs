@@ -36,6 +36,7 @@ pub struct NewRequirement {
     pub req_current_status: i32,
     pub req_parent: i32,
     pub req_reference: String,
+    pub req_reviewer: i32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -50,7 +51,8 @@ pub struct DecoratedRequirement{
     pub req_link: String,
     pub req_reference: String,
     pub req_category: String,
-    pub req_parent: i32,
+    pub req_parent_id: i32,
+    pub req_parent_title: String,
     pub req_creation_date: String,
     pub req_update_date: String,
     pub req_deadline_date: String,

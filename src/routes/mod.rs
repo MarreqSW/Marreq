@@ -48,7 +48,7 @@ pub fn show_requirement_id(req_id: i32) -> Template {
 pub fn get_edit_requirement(req_id: i32) -> Template {
     let req = get_requirement_by_id(req_id);
     let req_decorate = decorate_requirements(vec!(req));
-    let req_decorate_json = json!(req_decorate);
+    let req_decorate_json = json!(req_decorate[0]);
 
     let status = get_status_all().unwrap();
     let status_json = json!(status);
@@ -67,6 +67,7 @@ pub fn get_edit_requirement(req_id: i32) -> Template {
 
     let ctx = json!({"requirements": req_decorate_json, "categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json, "verification": verification_json});
 
+    println!("Requirement: {:#}", ctx);
     Template::render("edit_requirement_by_id", ctx)
 }
 

@@ -2,15 +2,11 @@
 <form method="post">
     <div class='ReqTitle'> 
         <label for="req_title">Title: </label>
-        {{#each requirements}}
-        <input type="text" name="req_title" id="req_title" value="{{req_title}}">
-        {{/each}}
+        <input type="text" name="req_title" id="req_title" value="{{requirements.req_title}}">    
     </div>
     <div class='ReqDesc'>
         <label for='req_description'>Description:</label>
-        {{#each requirements}}
-        <input type="text" name ="req_description" id="req_description" value="{{req_description}}">
-        {{/each}}
+        <input type="text" name ="req_description" id="req_description" value="{{requirements.req_description}}">
     </div>
     <div class='ReqAuthor'>
         <label for='req_author'>Author: </label>
@@ -30,9 +26,7 @@
     </div>
     <div class='ReqRef'>
         <label for='req_reference'>Reference: </label>
-        {{#each requirements}}
-        <input type="text" name="req_reference" id="req_reference" value="{{req_reference}}">
-        {{/each}}
+        <input type="text" name="req_reference" id="req_reference" value="{{requirements.req_reference}}">
     </div>
 
     <label for='req_current_status'>Status: </label>
@@ -56,13 +50,19 @@
         {{/each}}
     </select>
 
+    <div class='ReqReviewer'>
+        <label for='req_reviewer'>Reviewer: </label>
+        <select name="req_reviewer" id="req_reviewer">
+        {{#each users }}
+            <option value="{{user_id}}"> {{user_name}}</option>
+        {{/each}}
+    </select>
+    </div>
+
+
     <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
     <input type="hidden" id="req_link" name="req_link" value="http://www.google.com">
-
-    {{#each requirements}}
-    <input type="hidden" id="req_id" name="req_id" value="{{req_id}}">
-    {{/each}}
-
+    <input type="hidden" id="req_id" name="req_id" value="{{requirements.req_id}}">
     <input type="submit" value="Edit Requirement">
 </form>
 

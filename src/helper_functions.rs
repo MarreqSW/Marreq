@@ -79,7 +79,14 @@ pub fn decorate_requirements (reqs: Vec<Requirement>) -> Vec<DecoratedRequiremen
             req_link: r.req_link,
             req_reference: r.req_reference,
             req_category: get_category_by_id(r.req_category).cat_title,
-            req_parent: r.req_parent,
+            req_parent_id: r.req_parent,
+            
+            req_parent_title: 
+                if r.req_parent != 0 {
+                    get_requirement_by_id(r.req_parent).req_title
+                } else {
+                    "".to_string()
+                },
             req_creation_date: r.req_creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
             req_update_date: r.req_update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
             req_deadline_date: r.req_deadline_date.format("%d-%m-%Y %H:%M:%S").to_string(),

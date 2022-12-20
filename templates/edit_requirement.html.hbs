@@ -58,12 +58,14 @@
         {{/each}}
     </select>
     </div>
-
+    <div class="ReqLink">
+        <label for="req_link">Link: </label>
+        <input type="text" id="req_link" name="req_link" value="{{requirements.req_link}}">
+    </div>
 
     <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
-    <input type="hidden" id="req_link" name="req_link" value="http://www.google.com">
     <input type="hidden" id="req_id" name="req_id" value="{{requirements.req_id}}">
-    <input type="submit" value="Edit Requirement">
+    <input type="submit" value="Update Requirement">
 </form>
 
 

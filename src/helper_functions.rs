@@ -157,11 +157,13 @@ pub fn get_requirements_all() -> Result<Vec<Requirement> , String> {
     let connection = &mut establish_connection();
 
     requirements
+    .order(req_id)
     .load::<Requirement>(connection)
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
         "Error querying page views from the database".into()
     })
+
 }
 
 pub fn get_tests_all() -> Result<Vec<Test> , String> {
@@ -170,6 +172,7 @@ pub fn get_tests_all() -> Result<Vec<Test> , String> {
     let connection = &mut establish_connection();
 
     tests
+    .order(test_id)
     .load::<Test>(connection)
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);

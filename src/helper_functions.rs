@@ -15,6 +15,7 @@ pub fn get_status_all() -> Result<Vec<Status>, String> {
     let connection = &mut establish_connection();
 
     status
+    .order(st_id)
     .get_results(connection)
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
@@ -29,6 +30,7 @@ pub fn get_categories_all() -> Result<Vec<Category>, String> {
     let connection = &mut establish_connection();
 
     categories
+    .order(cat_id)
     .get_results(connection)
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
@@ -186,6 +188,7 @@ pub fn get_users_all() -> Result<Vec<User>, String> {
     let connection = &mut establish_connection();
 
     users
+    .order(user_username)
     .load::<User>(connection)
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
@@ -200,6 +203,7 @@ pub fn get_verification_all() -> Result<Vec<Verification> , String> {
     let connection = &mut establish_connection();
 
     verification
+    .order(verification_id)
     .load::<Verification>(connection)
     .map_err(|err| -> String {
         println!("Error querying page views: {:?}", err);
@@ -252,8 +256,12 @@ pub fn edit_requirement(conn: &mut PgConnection, new: &NewRequirement)
             -> Result<bool, Box<dyn Error>> {
     use crate::schema::requirements::dsl::*;
 
+    let id = match new.req_id {
+        Some(x) => x,
+        None => 0,
+    };
     diesel::update(requirements)
-    .filter(req_id.eq(new.req_id))
+    .filter(req_id.eq(id))
     .set(new)
     .execute(conn)?;
 

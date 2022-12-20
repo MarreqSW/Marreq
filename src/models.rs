@@ -25,8 +25,9 @@ pub struct Requirement {
 #[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = requirements)]
+#[diesel(primary_key(req_id))]
 pub struct NewRequirement {
-    pub req_id: i32,
+    pub req_id: Option<i32>,
     pub req_title: String,
     pub req_description: String,
     pub req_verification: i32,

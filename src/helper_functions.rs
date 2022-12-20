@@ -256,10 +256,8 @@ pub fn edit_requirement(conn: &mut PgConnection, new: &NewRequirement)
             -> Result<bool, Box<dyn Error>> {
     use crate::schema::requirements::dsl::*;
 
-    let id = match new.req_id {
-        Some(x) => x,
-        None => 0,
-    };
+    let id = new.req_id.unwrap_or(0);
+
     diesel::update(requirements)
     .filter(req_id.eq(id))
     .set(new)

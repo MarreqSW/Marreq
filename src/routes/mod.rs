@@ -58,19 +58,19 @@ pub fn get_edit_requirement(req_id: i32) -> Template {
     let req_decorate = decorate_requirements(vec!(req));
     let req_decorate_json = json!(req_decorate[0]);
 
-    let status = get_status_all().unwrap();
+    let status = get_status_all().unwrap_or_default();
     let status_json = json!(status);
 
-    let categories = get_categories_all().unwrap();
+    let categories = get_categories_all().unwrap_or_default();
     let categories_json = json!(categories);
 
-    let parents = get_requirements_all().unwrap();
+    let parents = get_requirements_all().unwrap_or_default();
     let parents_json = json!(parents);
     
-    let users = get_users_all().unwrap();
+    let users = get_users_all().unwrap_or_default();
     let users_json = json!(users);
 
-    let verification_types = get_verification_all().unwrap();
+    let verification_types = get_verification_all().unwrap_or_default();
     let verification_json = json!(verification_types);
 
     let ctx = json!({"requirements": req_decorate_json, "categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json, "verification": verification_json});
@@ -79,8 +79,8 @@ pub fn get_edit_requirement(req_id: i32) -> Template {
     Template::render("edit_requirement_by_id", ctx)
 }
 
-#[post("/edit_requirement/<req_id>", data = "<new_req>")]
-pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>)  -> Redirect{
+#[post("/edit_requirement/<_req_id>", data = "<new_req>")]
+pub fn post_edit_requirement(_req_id: i32, new_req: Form<NewRequirement>)  -> Redirect{
     let my_id = new_req.req_id.unwrap_or(0);
 
     let connection = &mut establish_connection();
@@ -91,19 +91,19 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>)  -> Red
 
 #[get("/new_requirement")]
 pub fn new_requirement() -> Template {
-    let status = get_status_all().unwrap();
+    let status = get_status_all().unwrap_or_default();
     let status_json = json!(status);
 
-    let categories = get_categories_all().unwrap();
+    let categories = get_categories_all().unwrap_or_default();
     let categories_json = json!(categories);
 
-    let parents = get_requirements_all().unwrap();
+    let parents = get_requirements_all().unwrap_or_default();
     let parents_json = json!(parents);
     
-    let users = get_users_all().unwrap();
+    let users = get_users_all().unwrap_or_default();
     let users_json = json!(users);
 
-    let verification_types = get_verification_all().unwrap();
+    let verification_types = get_verification_all().unwrap_or_default();
     let verification_json = json!(verification_types);
 
     let ctx = json!({"categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json, "verification": verification_json});
@@ -138,19 +138,19 @@ pub fn show_test_id(test_id_param: i32) -> Template {
 
 #[get("/new_test")]
 pub fn new_test() -> Template {
-    let status = get_status_all().unwrap();
+    let status = get_status_all().unwrap_or_default();
     let status_json = json!(status);
 
-    let categories = get_categories_all().unwrap();
+    let categories = get_categories_all().unwrap_or_default();
     let categories_json = json!(categories);
 
-    let parents = get_tests_all().unwrap();
+    let parents = get_tests_all().unwrap_or_default();
     let parents_json = json!(parents);
     
-    let users = get_users_all().unwrap();
+    let users = get_users_all().unwrap_or_default();
     let users_json = json!(users);
 
-    let requirements = get_requirements_all().unwrap();
+    let requirements = get_requirements_all().unwrap_or_default();
     let requirements_json = json!(requirements);
 
     let ctx = json!({"categories": categories_json, "status": status_json, "parents": parents_json, "users": users_json, "requirements": requirements_json});

@@ -54,7 +54,16 @@
             <option value="{{req_id}}"> {{req_title}}</option>
         {{/each}}
     </select>
+    <div class='ReqReviewer'>
+        <label for='req_reviewer'>Author: </label>
+        <select name="req_reviewer" id="req_reviewer">
+            {{#each users }}
+                <option value="{{user_id}}"> {{user_name}}</option>
+            {{/each}}
+        </select>
+    </div>
 
+    <input type="hidden" id="req_id" name="req_id" value="None">
     <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
     <input type="hidden" id="req_link" name="req_link" value="http://www.google.com">
     <input type="submit" value="Create new Requirement">

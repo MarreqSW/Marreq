@@ -27,10 +27,18 @@ pub fn index() -> Template {
 #[get("/requirements")]
 pub fn show_requirements() -> Template {
 
-    let requirements = get_requirements_all().unwrap();
-    let requirements_decorate = decorate_requirements(requirements);
-    let requirements_json = json!(requirements_decorate);
-    let ctx = json!({"requirements": requirements_json});
+    let requirements = get_requirements_all();
+
+    let ctx = match requirements {
+        Ok(req) => {
+            let requirements_decorate = decorate_requirements(req);
+            let requirements_json = json!(requirements_decorate);
+            json!({"requirements": requirements_json})
+        },
+        Err(_) => {
+            json!({})
+        }
+    };
     
     Template::render("requirements", ctx)
 }
@@ -73,7 +81,7 @@ pub fn get_edit_requirement(req_id: i32) -> Template {
 
 #[post("/edit_requirement/<req_id>", data = "<new_req>")]
 pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>)  -> Redirect{
-    let my_id = new_req.req_id;
+    let my_id = new_req.req_id.unwrap_or(0);
 
     let connection = &mut establish_connection();
     edit_requirement(connection, &new_req).unwrap();

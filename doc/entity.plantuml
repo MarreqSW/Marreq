@@ -1,12 +1,14 @@
 @startuml ER diagram
 
 hide circle
+skinparam linetype ortho
 
 entity "Requirement" as req {
 * req_id
 ---
 * req_title
 * req_description
+* req_verification
 * req_current_status
 * req_author
 * req_reviewer
@@ -63,9 +65,17 @@ entity "Matrix" as matrix {
 * matrix_creation_date
 }
 
+entity "Verification" as verification {
+* verification_id
+---
+* verification_name
+* verification_description
+}
+
 req  }|--|| st
 req  }|--|| cat
 req  }|--|| user
+req  }|--|| verification
 test   }|--|| st
 matrix ||--|| req
 matrix ||--|| test

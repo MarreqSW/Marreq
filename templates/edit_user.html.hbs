@@ -1,0 +1,16 @@
+
+<form method="post">
+    <div class='UserName'> 
+        <label for="user_name">Name: </label>
+        <input type="text" name="user_name" id="user_name" value="{{tests.user_name}}">    
+    </div>
+    <div class='TestDesc'>
+        <label for='user_description'>Description:</label>
+        <input type="text" name ="user_description" id="user_description" value="{{tests.user_description}}">
+    </div> 
+
+    <input type="hidden" id="user_id" name="user_id" value="{{tests.user_id}}">
+    <input type="submit" value="Update Test">
+</form>
+
+

@@ -1,0 +1,57 @@
+
+<form method="post">
+    <div class='TestTitle'> 
+        <label for="test_title">Title: </label>
+        <input type="text" name="test_name" id="test_name" value="{{tests.test_name}}">    
+    </div>
+    <div class='TestDesc'>
+        <label for='test_description'>Description:</label>
+        <input type="text" name ="test_description" id="test_description" value="{{tests.test_description}}">
+    </div>
+    <div class='TestVerification'>
+        <label for='test_verification'>Verification mode</label>
+        <select name='test_verification' id='test_verification'>
+            {{#each verification}}
+            <option value="{{ver_id}}">{{ver_title}}</option>
+            {{/each}}
+        </select>
+    </div>
+    <label for='test_status'>Status: </label>
+    <select name="test_status" id="test_status">
+        {{#each status }}
+            <option value="{{st_id}}"> {{st_title}}</option>
+        {{/each}}
+    </select>
+
+    <label for='test_category'>Category: </label>
+    <select name="test_category" id="test_category">
+        {{#each categories }}
+            <option value="{{cat_id}}"> {{cat_title}}</option>
+        {{/each}}
+    </select>
+
+    <label for='test_parent'>Parent: </label>
+    <select name="test_parent" id="test_parent">
+        {{#each parent }}
+            <option value="{{test_id}}"> {{test_name}}</option>
+        {{/each}}
+    </select>
+
+    <div class='TestReviewer'>
+        <label for='test_reviewer'>Reviewer: </label>
+        <select name="test_reviewer" id="test_reviewer">
+        {{#each users }}
+            <option value="{{user_id}}"> {{user_name}}</option>
+        {{/each}}
+    </select>
+    </div>
+    <div class="TestSource">
+        <label for="test_source">Source: </label>
+        <input type="text" id="test_source" name="test_source" value="{{tests.test_source}}">
+    </div>
+
+    <input type="hidden" id="test_id" name="test_id" value="{{tests.test_id}}">
+    <input type="submit" value="Update Test">
+</form>
+
+

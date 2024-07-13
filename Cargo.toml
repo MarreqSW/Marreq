@@ -9,24 +9,24 @@ license = "GNU General Public License"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diesel = { version = "2.0.2", features = ["postgres","chrono", "r2d2"] }
-dotenvy = "0.15.6"
-chrono = {version = "0.4.22", features = ["serde"] }
-serde = "1.0.147"
-serde_json = "1.0.39"
-serde_derive = "1.0.90"
-rocket = {version = "0.5.0-rc.2",  features = ["json"]}
-rocket-multipart-form-data = "0.10.5"
-xlsxwriter = "0.5.0"
+diesel = { version = "2.2.1", features = ["postgres","chrono", "r2d2"] }
+dotenvy = "0.15.7"
+chrono = {version = "0.4.38", features = ["serde"] }
+serde = "1.0.204"
+serde_json = "1.0.120"
+serde_derive = "1.0.204"
+rocket = {version = "0.5.1",  features = ["json"]}
+rocket-multipart-form-data = "0.10.7"
+xlsxwriter = "0.6.1"
 
 # [dependencies.rocket_db_pools]
 # version = "0.1.0-rc.2"
 # features = ["sqlx_postgres"]
 
 [dependencies.rocket_sync_db_pools]
-version = "0.1.0-rc.2"
+version = "0.1.0"
 features = ["diesel_postgres_pool"]
 
 [dependencies.rocket_dyn_templates]
-version = "0.1.0-rc.2"
+version = "0.2.0"
 features = ["handlebars"]

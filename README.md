@@ -59,17 +59,28 @@ See entity diagram
 
 # Running
 
+## Dependences
+
++ Postgresql
++ Postgresql-lib
++ Postgressql-client-16
+```
+> sudo apt install libpq-dev libpq5 postgresql-client-16 postgresql-client-common  
+```
+
+## Execution
+
 Terminal 1
 
 ```
-> docker-compose run
+> docker-compose up
 ```
 
 Terminal 2
 
 ```
 > diesel setup
-> diesel migration redo
+> diesel migration redo (or diesel migration run if it is the first time)
 > cargo run
 ```
 

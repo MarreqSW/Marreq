@@ -14,8 +14,8 @@ pub mod routes;
 pub mod schema;
 
 use crate::html::cors::*;
-use crate::routes::routes::*;
 use crate::routes::routes_api::*;
+use crate::routes::routes_html::*;
 
 #[database("my_db")]
 pub struct DbConn(rocket_sync_db_pools::diesel::PgConnection);

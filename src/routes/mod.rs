@@ -1,2 +1,2 @@
-pub mod routes;
 pub mod routes_api;
+pub mod routes_html;

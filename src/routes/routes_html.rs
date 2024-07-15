@@ -91,8 +91,9 @@ pub fn get_edit_requirement(req_id: i32) -> Template {
     Template::render("edit_requirement_by_id", ctx)
 }
 
-#[post("/edit_requirement/<_req_id>", data = "<new_req>")]
-pub fn post_edit_requirement(_req_id: i32, new_req: Form<NewRequirement>) -> Redirect {
+#[allow(unused_variables)]
+#[post("/edit_requirement/<req_id>", data = "<new_req>")]
+pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>) -> Redirect {
     let my_id = new_req.req_id.unwrap_or(0);
 
     let connection = &mut establish_connection();
@@ -198,8 +199,9 @@ pub fn get_edit_test(test_id: i32) -> Template {
     Template::render("edit_test_by_id", ctx)
 }
 
-#[post("/edit_test/<_req_id>", data = "<new_test>")]
-pub fn post_edit_test(_req_id: i32, new_test: Form<NewTest>) -> Redirect {
+#[allow(unused_variables)]
+#[post("/edit_test/<req_id>", data = "<new_test>")]
+pub fn post_edit_test(req_id: i32, new_test: Form<NewTest>) -> Redirect {
     let my_id = new_test.test_id.unwrap_or(0);
     let connection = &mut establish_connection();
     edit_test(connection, &new_test).unwrap();

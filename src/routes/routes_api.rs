@@ -7,7 +7,7 @@ use rocket_dyn_templates::Template;
 
 use crate::helper_functions::*;
 use crate::models::*;
-use crate::routes::routes::*;
+use crate::routes::routes_html::*;
 
 #[get("/requirements")]
 pub fn api_get_reqs() -> Result<Json<Vec<Requirement>>, String> {

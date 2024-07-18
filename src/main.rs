@@ -4,7 +4,6 @@ extern crate diesel;
 use rocket::fs::{relative, FileServer};
 use rocket_dyn_templates::Template;
 use rocket_sync_db_pools::database;
-
 pub mod bbdd;
 pub mod generators;
 pub mod helper_functions;
@@ -17,9 +16,8 @@ use crate::html::cors::*;
 use crate::routes::routes_api::*;
 use crate::routes::routes_html::*;
 
-#[database("my_db")]
-pub struct DbConn(rocket_sync_db_pools::diesel::PgConnection);
-
+//#[database("my_db")]
+//pub struct myDbConn(rocket_sync_db_pools::diesel::PgConnection);
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
     let _rocket = rocket::build()
@@ -49,25 +47,27 @@ async fn main() -> Result<(), rocket::Error> {
             ],
         )
         .mount(
-            "/api",
+            "/api/v1",
             routes![
-                api_get_reqs,
-                api_get_reqs_by_id,
+                api_get_requirement,
+                api_get_requirement_by_id,
+                api_post_requirement,
+                api_delete_requirement_by_id,
                 api_get_status,
                 api_get_categories,
-                api_get_tests,
-                api_get_tests_by_id,
+                api_get_test,
+                api_get_test_by_id,
+                api_post_test,
+                api_delete_test_by_id,
                 api_get_matrix,
                 api_get_users,
                 api_get_users_by_id,
-                api_post_requirement,
-                api_post_test,
             ],
         )
         .mount("/static", FileServer::from(relative!("src/html/static")))
         .attach(CorsFairing)
         .attach(Template::fairing())
-        .attach(DbConn::fairing())
+        //.attach(myDbConn::fairing())
         .launch()
         .await?;
 

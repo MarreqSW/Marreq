@@ -15,6 +15,10 @@ use crate::helper_functions::*;
 use crate::html::*;
 use crate::models::*;
 
+// --------------------------------
+// Html Routes (TBD)
+// --------------------------------
+
 #[get("/")]
 pub fn index() -> Template {
     let ctx = json!({ "title": "Main"});
@@ -360,6 +364,32 @@ pub async fn get_matrix_xls() -> (ContentType, NamedFile) {
     }
 }
 
-// --------------------------------
-// API
-// --------------------------------
+#[get("/new_user")]
+pub fn new_user() -> Template {
+    let status = get_status_all().unwrap_or_default();
+    let status_json = json!(status);
+
+    let categories = get_categories_all().unwrap_or_default();
+    let categories_json = json!(categories);
+
+    let parents = get_tests_all().unwrap_or_default();
+    let parents_json = json!(parents);
+
+    let users = get_users_all().unwrap_or_default();
+    let users_json = json!(users);
+
+    let requirements = get_requirements_all().unwrap_or_default();
+    let requirements_json = json!(requirements);
+
+    let ctx = json!({"categories": categories_json, "status": status_json, "parents": parents_json, "users": users_json, "requirements": requirements_json});
+
+    Template::render("new_user", ctx)
+}
+
+#[post("/new_user", data = "<new_user>")]
+pub fn post_user(new_user: Form<NewUser>) -> Redirect {
+    let connection = &mut establish_connection();
+    let my_id = insert_new_user(connection, &new_user).unwrap();
+
+    Redirect::to(uri!(show_user_id(my_id)))
+}

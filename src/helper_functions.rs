@@ -1,12 +1,10 @@
+use crate::models::*;
 use diesel::dsl::now;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenvy::dotenv;
 use std::env;
 use std::error::Error;
-//use rocket::serde::json::{Json, Value, json};
-
-use crate::models::*;
 
 /// Returns the status list
 pub fn get_status_all() -> Result<Vec<Status>, String> {
@@ -264,6 +262,42 @@ pub fn edit_requirement(
     Ok(true)
 }
 
+pub fn delete_requirement(conn: &mut PgConnection, id: &i32) -> Result<bool, Box<dyn Error>> {
+    use crate::schema::requirements::dsl::*;
+
+    let ret_value = diesel::delete(requirements.filter(req_id.eq(id))).execute(conn);
+
+    if ret_value == Ok(1) {
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+pub fn delete_test(conn: &mut PgConnection, id: &i32) -> Result<bool, Box<dyn Error>> {
+    use crate::schema::tests::dsl::*;
+
+    let ret_value = diesel::delete(tests.filter(test_id.eq(id))).execute(conn);
+
+    if ret_value == Ok(1) {
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+pub fn delete_user(conn: &mut PgConnection, id: &i32) -> Result<bool, Box<dyn Error>> {
+    use crate::schema::users::dsl::*;
+
+    let ret_value = diesel::delete(users.filter(user_id.eq(id))).execute(conn);
+
+    if ret_value == Ok(1) {
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
 pub fn insert_new_test(conn: &mut PgConnection, new: &NewTest) -> Result<i32, Box<dyn Error>> {
     let a: Test = diesel::insert_into(crate::schema::tests::table)
         .values(new)
@@ -343,19 +377,20 @@ pub fn update_requirement(conn: &mut PgConnection, req: i32) -> Result<(), Box<d
     Ok(())
 }
 
-pub fn create_test(conn: &mut PgConnection, new: &NewTest) -> Result<(), Box<dyn Error>> {
-    diesel::insert_into(crate::schema::tests::table)
+pub fn create_test(conn: &mut PgConnection, new: &NewTest) -> Result<i32, Box<dyn Error>> {
+    let a: Test = diesel::insert_into(crate::schema::tests::table)
         .values(new)
-        .execute(conn)?;
+        .get_result(conn)?;
 
-    Ok(())
+    Ok(a.test_id)
 }
 
-pub fn create_user(conn: &mut PgConnection, new: &NewUser) -> Result<(), Box<dyn Error>> {
-    diesel::insert_into(crate::schema::users::table)
+pub fn create_user(conn: &mut PgConnection, new: &NewUser) -> Result<i32, Box<dyn Error>> {
+    let a: User = diesel::insert_into(crate::schema::users::table)
         .values(new)
-        .execute(conn)?;
-    Ok(())
+        .get_result(conn)?;
+
+    Ok(a.user_id)
 }
 pub fn establish_connection() -> diesel::PgConnection {
     dotenv().ok();

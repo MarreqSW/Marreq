@@ -36,7 +36,7 @@ CREATE TABLE users
 
 INSERT INTO users (user_username, user_name, user_email, user_level) VALUES
     ('marius', 'Màrius Montón', 'marius.monton@gmail.com', 1),
-    ('victor', 'Victor Martín', 'victor@ieec.cat', 0);
+    ('victor', 'Victor Martín', 'victor@mail.com', 0);
 
 CREATE TABLE status
 (

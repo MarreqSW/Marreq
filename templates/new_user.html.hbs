@@ -1,0 +1,27 @@
+{{#*inline "page"}}
+
+<section id="Users">
+<h1>New user</h1>
+	
+
+<form method="post">
+    <div class='UserUsername'> 
+        <label for="user_username">Username: </label>
+        <input type="text" name="user_username" id="user_username">
+    </div>
+    <div class='UserName'>
+        <label for='user_name'>Name: </label>
+        <input type="text" name ="user_name" id="user_name">
+    </div>
+    <div class='Useremail'>
+        <label for='user_email'>E-mail: </label>
+        <input type="text" name="user_email" id="user_email">
+    </div>
+    <input type="hidden" id="user_level" name="user_level" value=2>
+    <input type="submit" value="Create new Test">
+</form>
+
+</section>
+
+{{/inline}}
+{{> layout}}

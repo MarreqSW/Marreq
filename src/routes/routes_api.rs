@@ -120,6 +120,14 @@ pub fn api_get_status() -> Result<Json<Vec<Status>>, rocket::http::Status> {
     }
 }
 
+#[post("/status", data= "<new_status>")]
+pub async fn api_post_status(new_status: Json<NewStatus>) -> Value {
+    let connection = &mut establish_connection();
+    let new_id = create_status (connection, &new_status).unwrap();
+
+    json!({ "status": "ok", "id": new_id })
+}
+
 /// Tests
 #[get("/tests")]
 pub fn api_get_test() -> Result<Json<Vec<Test>>, rocket::http::Status> {

@@ -28,9 +28,9 @@ This software is a basic management for requirements and tests.
 + [ ] Security
   + [ ] Use https
   + [ ] users/admin
-+ Snapshots
++ [ ] Snapshots
   + [ ] Configuration management
-+ Better error management (remove all unwrap())
++ [ ] Better error management (remove all unwrap())
 
 ## API 
 

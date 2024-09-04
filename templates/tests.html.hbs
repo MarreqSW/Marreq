@@ -1,11 +1,13 @@
 {{#*inline "page"}}
 
-<section id="Requirements">
+<section id="Tests">
 <h1>Tests</h1>
-	{{#each Ok }}
-    {{> test}}
+	{{#each tests }}
+    	{{> test}}
 	{{/each}}
 </section>
 
 {{/inline}}
 {{> layout}}
+
+

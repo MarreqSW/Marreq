@@ -75,6 +75,15 @@ pub struct Status {
     pub st_short_name: String,
 }
 
+#[derive(Serialize, Deserialize, Insertable, FromForm)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = status)]
+pub struct NewStatus{
+    pub st_title: String,
+    pub st_description: String,
+    pub st_short_name: String,
+}
+
 #[derive(Serialize, Deserialize, Queryable)]
 pub struct Verification {
     pub ver_id: i32,

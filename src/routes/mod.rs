@@ -295,6 +295,23 @@ pub async fn get_matrix_xls() -> (ContentType, NamedFile) {
 // --------------------------------
 // API
 // --------------------------------
+
+#[get("/")]
+pub fn api_get_index() -> Value {
+    json!(
+        {
+            "GET": {
+            "requirements/" : "id",
+            "categories/" : "" ,
+            "status/" : "",
+            "tests/" : "id",
+            "matrix/": "",
+            },
+
+        }
+    )
+}
+
 #[get("/requirements")]
 pub fn api_get_reqs() -> Result<Json<Vec<Requirement>>, String> {
     
@@ -308,9 +325,9 @@ pub fn api_get_reqs() -> Result<Json<Vec<Requirement>>, String> {
 #[post("/requirements", data = "<new_req>")]
 pub async fn api_post_requirement(new_req: Json<NewRequirement>) -> Value {
     let connection = &mut establish_connection();
-    insert_new_requirement (connection, &new_req).unwrap();
+    let new_id = insert_new_requirement (connection, &new_req).unwrap();
 
-    json!({ "status": "ok", "id": 5 })
+    json!({ "status": "ok", "id": new_id })
 }
 
 #[get("/requirements/<ident>")]
@@ -373,11 +390,18 @@ pub fn api_get_tests_by_id(ident: i32) -> Result<Json<Vec<Test>>, String> {
 #[post("/tests", data = "<new_test>")]
 pub async fn api_post_test(new_test: Json<NewTest>) -> Value {
     let connection = &mut establish_connection();
-    create_test (connection, &new_test).unwrap();
+    let new_id = create_test (connection, &new_test).unwrap();
 
-    json!({ "status": "ok", "id": 5 })
+    json!({ "status": "ok", "id": new_id })
 }
 
+#[post("/status", data= "<new_status>")]
+pub async fn api_post_status(new_status: Json<NewStatus>) -> Value {
+    let connection = &mut establish_connection();
+    let new_id = create_status (connection, &new_status).unwrap();
+
+    json!({ "status": "ok", "id": new_id })
+}
 #[get("/matrix")]
 pub fn api_get_matrix() -> Result<Json<Vec<Matrix>>, String> {
     use crate::schema::matrix::dsl::*;

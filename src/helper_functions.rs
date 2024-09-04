@@ -243,13 +243,11 @@ pub fn get_test_status_by_id(id: i32) -> String {
 pub fn insert_new_requirement(conn: &mut PgConnection, new: &NewRequirement) 
             -> Result<i32, Box<dyn Error>> 
 {
-    let a:Requirement = diesel::insert_into(crate::schema::requirements::table)
+    let res:Requirement = diesel::insert_into(crate::schema::requirements::table)
     .values(new)
     .get_result(conn)?;
-
-    println!("New requirement id {}", a.req_id);
-
-    Ok(a.req_id)
+    
+    Ok(res.req_id)
 }
 
 pub fn edit_requirement(conn: &mut PgConnection, new: &NewRequirement) 
@@ -269,13 +267,11 @@ pub fn edit_requirement(conn: &mut PgConnection, new: &NewRequirement)
 
 pub fn insert_new_test( conn: &mut PgConnection, new: &NewTest) -> Result<i32, Box<dyn Error>> 
 {
-    let a:Test = diesel::insert_into(crate::schema::tests::table)
+    let res:Test = diesel::insert_into(crate::schema::tests::table)
     .values(new)
     .get_result(conn)?;
 
-    println!("New test id {}", a.test_id);
-
-    Ok(a.test_id)
+    Ok(res.test_id)
 }
 
 pub fn insert_new_matrix_item (conn: &mut PgConnection, new: &NewMatrix) 
@@ -302,13 +298,23 @@ pub fn update_requirement(conn: &mut PgConnection, req: i32) -> Result<(), Box<d
 }
 
 pub fn create_test(conn: &mut PgConnection, new: &NewTest)
-            -> Result<(), Box<dyn Error>>
+            -> Result<i32, Box<dyn Error>>
 {
-    diesel::insert_into(crate::schema::tests::table)
+    let res : Test = diesel::insert_into(crate::schema::tests::table)
     .values(new)
-    .execute(conn)?;
+    .get_result(conn)?;
 
-    Ok(())
+    Ok(res.test_id)
+}
+
+pub fn create_status(conn: &mut PgConnection, new: &NewStatus)
+-> Result<i32, Box<dyn Error>>
+{
+    let res: Status = diesel::insert_into(crate::schema::status::table)
+    .values(new)
+    .get_result(conn)?;
+
+    Ok(res.st_id)
 }
 
 pub fn establish_connection() -> diesel::PgConnection {

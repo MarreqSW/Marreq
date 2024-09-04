@@ -39,7 +39,8 @@ async fn main() -> Result<(), rocket::Error> {
             get_matrix,
             get_matrix_xls,
             ])
-        .mount("/api", routes![
+        .mount("/api/v1/", routes![
+            api_get_index,
             api_get_reqs, 
             api_get_reqs_by_id,
             api_get_status, 
@@ -49,6 +50,7 @@ async fn main() -> Result<(), rocket::Error> {
             api_get_matrix,
             api_post_requirement,
             api_post_test,
+            api_post_status,
             ])
         .mount("/static", FileServer::from(relative!("src/html/static")))
         .attach(CorsFairing) 

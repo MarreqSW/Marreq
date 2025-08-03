@@ -1,6 +1,20 @@
 <nav class="navbar">
   <div class="nav-container">
     <a href="/" class="nav-brand">ReqMan</a>
+    
+    {{#if user}}
+    <div class="nav-project-selector">
+      <select id="project-selector" class="form-select" onchange="changeProject(this.value)">
+        <option value="">Select Project</option>
+        {{#each projects}}
+          <option value="{{project_id}}" {{#if (eq project_id ../selected_project_id)}}selected{{/if}}>
+            {{project_name}}
+          </option>
+        {{/each}}
+      </select>
+    </div>
+    {{/if}}
+    
     <ul class="nav-menu">
                   <li><a href="/" class="nav-link">Home</a></li>
             <li><a href="/projects" class="nav-link">Projects</a></li>
@@ -22,3 +36,34 @@
     {{/if}}
   </div>
 </nav>
+
+<script>
+function changeProject(projectId) {
+    if (projectId) {
+        // Set the selected project in a cookie
+        document.cookie = `selected_project_id=${projectId}; path=/; max-age=86400`;
+        // Reload the current page to show filtered data
+        window.location.reload();
+    }
+}
+
+// Set default project if none selected and no cookie exists
+document.addEventListener('DOMContentLoaded', function() {
+    const projectSelector = document.getElementById('project-selector');
+    if (projectSelector && !projectSelector.value) {
+        // Check if we already have a project selected in cookie
+        const cookies = document.cookie.split(';');
+        const hasProjectCookie = cookies.some(cookie => 
+            cookie.trim().startsWith('selected_project_id=')
+        );
+        
+        if (!hasProjectCookie) {
+            const firstOption = projectSelector.querySelector('option[value]:not([value=""])');
+            if (firstOption) {
+                projectSelector.value = firstOption.value;
+                changeProject(firstOption.value);
+            }
+        }
+    }
+});
+</script>

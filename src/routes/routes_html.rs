@@ -52,6 +52,22 @@ pub fn show_requirement_id(req_id: i32) -> Template {
     Template::render("requirement_by_id", ctx)
 }
 
+#[get("/users")]
+pub fn show_users() -> Template {
+    let users = get_users_all();
+
+    let ctx = match users {
+        Ok(users_list) => {
+            json!({"users": users_list})
+        }
+        Err(_) => {
+            json!({"users": []})
+        }
+    };
+
+    Template::render("users", ctx)
+}
+
 #[get("/users/<user_id>")]
 pub fn show_user_id(user_id: i32) -> Template {
     let user = get_user_by_id(user_id);

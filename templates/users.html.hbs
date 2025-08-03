@@ -1,0 +1,15 @@
+{{#*inline "page"}}
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1>Users</h1>
+    <a href="/new_user" class="btn btn-primary">New User</a>
+  </div>
+</div>
+
+<section id="Users">
+  {{#each users }}
+    {{> user}}
+  {{/each}}
+</section>
+{{/inline}}
+{{> layout}} 

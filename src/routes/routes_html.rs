@@ -1050,3 +1050,64 @@ pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Resul
     }
 }
 
+#[get("/requirements/tree")]
+pub fn show_requirements_tree(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Get all requirements
+    let all_requirements = get_requirements_all().unwrap_or_default();
+    
+    // Build tree structure
+    let mut tree_data = Vec::new();
+    let mut children_map: std::collections::HashMap<i32, Vec<&Requirement>> = std::collections::HashMap::new();
+    
+    // Group requirements by parent
+    for req in &all_requirements {
+        if req.req_parent == 0 {
+            // Root requirements
+            tree_data.push(req);
+        } else {
+            // Child requirements
+            children_map.entry(req.req_parent).or_insert_with(Vec::new).push(req);
+        }
+    }
+    
+    // Sort requirements by ID
+    tree_data.sort_by(|a, b| a.req_id.cmp(&b.req_id));
+    
+    // Create tree structure with children
+    let mut tree_structure = Vec::new();
+    for root_req in tree_data {
+        let mut node = json!({
+            "requirement": root_req,
+            "children": Vec::<serde_json::Value>::new()
+        });
+        
+        // Add children if any
+        if let Some(children) = children_map.get(&root_req.req_id) {
+            let mut sorted_children = children.clone();
+            sorted_children.sort_by(|a, b| a.req_id.cmp(&b.req_id));
+            
+            let children_json: Vec<serde_json::Value> = sorted_children
+                .iter()
+                .map(|child| json!({
+                    "requirement": child,
+                    "children": Vec::<serde_json::Value>::new()
+                }))
+                .collect();
+            
+            node["children"] = json!(children_json);
+        }
+        
+        tree_structure.push(node);
+    }
+    
+    let ctx = json!({
+        "tree_data": tree_structure,
+        "total_requirements": all_requirements.len(),
+        "user": user
+    });
+    
+    Ok(Template::render("requirements_tree", ctx))
+}
+

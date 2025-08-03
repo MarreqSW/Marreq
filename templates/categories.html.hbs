@@ -1,0 +1,15 @@
+{{#*inline "page"}}
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1>Categories</h1>
+    <a href="/new_category" class="btn btn-primary">New Category</a>
+  </div>
+</div>
+
+<section id="Categories">
+  {{#each categories }}
+    {{> category}}
+  {{/each}}
+</section>
+{{/inline}}
+{{> layout}} 

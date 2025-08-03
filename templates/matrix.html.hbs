@@ -24,9 +24,42 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Req ID</th>
-              <th>Title</th>
-              <th>Reference</th>
+              <th class="sortable" data-sort="req_id">
+                <a href="/matrix?sort_by=req_id&sort_order={{#if (eq current_sort_by "req_id")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}" class="text-decoration-none d-flex align-items-center justify-content-between">
+                  Req ID
+                  <span class="sort-indicator">
+                    {{#if (eq current_sort_by "req_id")}}
+                      {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
+                    {{else}}
+                      ↕
+                    {{/if}}
+                  </span>
+                </a>
+              </th>
+              <th class="sortable" data-sort="req_title">
+                <a href="/matrix?sort_by=req_title&sort_order={{#if (eq current_sort_by "req_title")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}" class="text-decoration-none d-flex align-items-center justify-content-between">
+                  Title
+                  <span class="sort-indicator">
+                    {{#if (eq current_sort_by "req_title")}}
+                      {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
+                    {{else}}
+                      ↕
+                    {{/if}}
+                  </span>
+                </a>
+              </th>
+              <th class="sortable" data-sort="req_reference">
+                <a href="/matrix?sort_by=req_reference&sort_order={{#if (eq current_sort_by "req_reference")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}" class="text-decoration-none d-flex align-items-center justify-content-between">
+                  Reference
+                  <span class="sort-indicator">
+                    {{#if (eq current_sort_by "req_reference")}}
+                      {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
+                    {{else}}
+                      ↕
+                    {{/if}}
+                  </span>
+                </a>
+              </th>
               {{#each tests}}
                 <th class="text-center">
                   <a href="/tests/{{test_id}}" class="text-decoration-none">

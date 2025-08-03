@@ -1,14 +1,115 @@
 {{#*inline "page"}}
+<div class="text-center mb-5">
+  <h1>Requirements Manager</h1>
+  <p class="text-secondary">Manage your software requirements and tests efficiently</p>
+</div>
 
-<h1>Requirements Manager</h1>
-    <ul>
-    <li><a href='requirements'>Show requirements</a></li>
-    <li><a href='tests'>Show tests</a></li>
-    <li><a href='matrix'>Show matrix</a></li>
-    <li><a href='matrix/xls'>Get matrix xls</a></li>     
-    <li><a href='/new_requirement'>New Requirement</a></li>  
-    <li><a href='/new_test'>New Test</a></li>
-    <li><a href='/new_user'>New User</a></li>
-    </ul>
+<div class="grid grid-3">
+  <div class="card">
+    <div class="card-header">
+      <h3>Requirements</h3>
+    </div>
+    <div class="card-body">
+      <p>View and manage all your software requirements</p>
+      <div class="mt-3">
+        <a href="/requirements" class="btn btn-primary">View Requirements</a>
+        <a href="/requirements.xls" class="btn btn-success mt-2">Export Excel</a>
+        <a href="/new_requirement" class="btn btn-outline mt-2">New Requirement</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3>Tests</h3>
+    </div>
+    <div class="card-body">
+      <p>Manage test cases and verification methods</p>
+      <div class="mt-3">
+        <a href="/tests" class="btn btn-primary">View Tests</a>
+        <a href="/new_test" class="btn btn-outline mt-2">New Test</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3>Traceability Matrix</h3>
+    </div>
+    <div class="card-body">
+      <p>Link requirements to tests and generate reports</p>
+      <div class="mt-3">
+        <a href="/matrix" class="btn btn-primary">View Matrix</a>
+        <a href="/matrix.xls" class="btn btn-outline mt-2">Export Excel</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3>Categories</h3>
+    </div>
+    <div class="card-body">
+      <p>Organize requirements with categories</p>
+      <div class="mt-3">
+        <a href="/categories" class="btn btn-primary">View Categories</a>
+        <a href="/new_category" class="btn btn-outline mt-2">New Category</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3>Applicability</h3>
+    </div>
+    <div class="card-body">
+      <p>Define which products/systems requirements apply to</p>
+      <div class="mt-3">
+        <a href="/applicability" class="btn btn-primary">View Applicability</a>
+        <a href="/new_applicability" class="btn btn-outline mt-2">New Applicability</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3>Users</h3>
+    </div>
+    <div class="card-body">
+      <p>Manage user accounts and permissions</p>
+      <div class="mt-3">
+        <a href="/new_user" class="btn btn-primary">New User</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3>API Access</h3>
+    </div>
+    <div class="card-body">
+      <p>Programmatic access to all data</p>
+      <div class="mt-3">
+        <a href="/api/v1/requirements" class="btn btn-outline">API Endpoints</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3>Quick Actions</h3>
+    </div>
+    <div class="card-body">
+      <div class="grid grid-2">
+        <a href="/new_requirement" class="btn btn-outline btn-sm">New Requirement</a>
+        <a href="/new_test" class="btn btn-outline btn-sm">New Test</a>
+        <a href="/new_category" class="btn btn-outline btn-sm">New Category</a>
+        <a href="/new_user" class="btn btn-outline btn-sm">New User</a>
+        <a href="/requirements.xls" class="btn btn-outline btn-sm">Export Requirements</a>
+        <a href="/matrix.xls" class="btn btn-outline btn-sm">Export Matrix</a>
+      </div>
+    </div>
+  </div>
+</div>
 {{/inline}}
 {{> layout}}

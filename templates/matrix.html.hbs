@@ -5,7 +5,20 @@
       <h1>Traceability Matrix</h1>
       <p class="text-secondary">Requirements to Tests mapping</p>
     </div>
-    <div>
+    <div class="d-flex gap-3 align-items-center">
+      <form method="get" class="d-flex gap-2 align-items-center">
+        <label for="test_status_filter" class="form-label mb-0">Filter by Test Status:</label>
+        <select name="test_status_filter" id="test_status_filter" class="form-select form-select-sm" style="width: auto;">
+          <option value="">All Statuses</option>
+          {{#each statuses}}
+            <option value="{{st_id}}" {{#if (eq ../test_status_filter st_id)}}selected{{/if}}>{{st_title}}</option>
+          {{/each}}
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        {{#if test_status_filter}}
+          <a href="/matrix" class="btn btn-outline-secondary btn-sm">Clear</a>
+        {{/if}}
+      </form>
       <a href="/matrix.xls" class="btn btn-success">Export Excel</a>
     </div>
   </div>
@@ -134,10 +147,11 @@
 </section>
 
 <script>
-  // Update sort indicators for test columns
+  // Update sort indicators for test columns and handle filter
   document.addEventListener('DOMContentLoaded', function() {
     const currentSortBy = '{{current_sort_by}}';
     const currentSortOrder = '{{current_sort_order}}';
+    const currentFilter = '{{test_status_filter}}';
     
     // Update test column sort indicators
     const testIndicators = document.querySelectorAll('.sort-indicator[data-test-id]');
@@ -150,6 +164,21 @@
       } else {
         indicator.textContent = '↕';
       }
+    });
+
+    // Update all sort links to preserve the current filter
+    const sortLinks = document.querySelectorAll('a[href*="/matrix?sort_by="]');
+    sortLinks.forEach(link => {
+      if (currentFilter) {
+        const url = new URL(link.href);
+        url.searchParams.set('test_status_filter', currentFilter);
+        link.href = url.toString();
+      }
+    });
+
+    // Auto-submit form when filter changes
+    document.getElementById('test_status_filter').addEventListener('change', function() {
+      this.form.submit();
     });
   });
 </script>

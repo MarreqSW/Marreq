@@ -585,8 +585,8 @@ pub fn show_status() -> content::RawHtml<String> {
     content::RawHtml(out_str)
 }
 
-#[get("/matrix?<sort_by>&<sort_order>")]
-pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: Option<String>) -> Result<Template, Redirect> {
+#[get("/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
+pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: Option<String>, test_status_filter: Option<i32>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     use crate::schema::matrix::dsl::*;
     use crate::schema::requirements::dsl::*;
@@ -603,7 +603,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
         })
         .expect("Error getting matrix table");
 
-    let all_tests = tests
+    let mut all_tests = tests
         .load::<Test>(connection)
         .map_err(|err| -> String {
             #[cfg(debug_assertions)]
@@ -611,6 +611,14 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
             "Error querying tests from the database".into()
         })
         .expect("Error getting tests");
+
+    // Always sort tests by test_id (number)
+    all_tests.sort_by(|a, b| a.test_id.cmp(&b.test_id));
+
+    // Filter tests by status if filter is provided
+    if let Some(status_filter) = test_status_filter {
+        all_tests.retain(|test| test.test_status == status_filter);
+    }
 
     // Apply sorting
     let sort_by = sort_by.unwrap_or_else(|| "req_id".to_string());
@@ -737,6 +745,10 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
         }));
     }
 
+    // Get all statuses for the filter dropdown
+    let all_statuses = get_status_all().unwrap_or_default();
+    let statuses_json = json!(all_statuses);
+
     let ctx = json!({
         "requirements": requirements_with_matrix,
         "tests": tests_with_status,
@@ -745,6 +757,8 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
         "total_links": total_links,
         "current_sort_by": sort_by,
         "current_sort_order": sort_order,
+        "test_status_filter": test_status_filter,
+        "statuses": statuses_json,
         "user": user
     });
 

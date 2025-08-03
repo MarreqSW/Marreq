@@ -61,11 +61,14 @@
                 </a>
               </th>
               {{#each tests}}
-                <th class="text-center">
-                  <a href="/tests/{{test_id}}" class="text-decoration-none">
-                    Test #{{test_id}}
+                <th class="text-center sortable" data-sort="test_{{test_id}}">
+                  <a href="/matrix?sort_by=test_{{test_id}}&sort_order={{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}" class="text-decoration-none d-flex flex-column align-items-center">
+                    <div class="d-flex align-items-center justify-content-between w-100">
+                      <span>Test #{{test_id}}</span>
+                      <span class="sort-indicator" data-test-id="{{test_id}}">↕</span>
+                    </div>
+                    <div class="text-xs text-secondary">{{test_status}}</div>
                   </a>
-                  <div class="text-xs text-secondary">{{test_status}}</div>
                 </th>
               {{/each}}
             </tr>
@@ -123,5 +126,26 @@
     </div>
   </div>
 </section>
+
+<script>
+  // Update sort indicators for test columns
+  document.addEventListener('DOMContentLoaded', function() {
+    const currentSortBy = '{{current_sort_by}}';
+    const currentSortOrder = '{{current_sort_order}}';
+    
+    // Update test column sort indicators
+    const testIndicators = document.querySelectorAll('.sort-indicator[data-test-id]');
+    testIndicators.forEach(indicator => {
+      const testId = indicator.getAttribute('data-test-id');
+      const testSortKey = 'test_' + testId;
+      
+      if (currentSortBy === testSortKey) {
+        indicator.textContent = currentSortOrder === 'asc' ? '↑' : '↓';
+      } else {
+        indicator.textContent = '↕';
+      }
+    });
+  });
+</script>
 {{/inline}}
 {{> layout}} 

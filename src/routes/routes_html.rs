@@ -607,32 +607,73 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
     let sort_by = sort_by.unwrap_or_else(|| "req_id".to_string());
     let sort_order = sort_order.unwrap_or_else(|| "asc".to_string());
     
-    // Sort requirements
-    match sort_by.as_str() {
-        "req_id" => {
+    // Check if sorting by test column
+    if sort_by.starts_with("test_") {
+        // Extract test ID from sort_by (e.g., "test_1" -> test_id = 1)
+        if let Ok(target_test_id) = sort_by.trim_start_matches("test_").parse::<i32>() {
+            // Sort requirements based on their link status to the specified test
             if sort_order == "desc" {
-                all_reqs.sort_by(|a, b| b.req_id.cmp(&a.req_id));
+                all_reqs.sort_by(|a, b| {
+                    let a_has_link: i64 = matrix
+                        .filter(matrix_req_id.eq(a.req_id))
+                        .filter(matrix_test_id.eq(target_test_id))
+                        .count()
+                        .get_result(connection)
+                        .unwrap();
+                    let b_has_link: i64 = matrix
+                        .filter(matrix_req_id.eq(b.req_id))
+                        .filter(matrix_test_id.eq(target_test_id))
+                        .count()
+                        .get_result(connection)
+                        .unwrap();
+                    b_has_link.cmp(&a_has_link)
+                });
             } else {
+                all_reqs.sort_by(|a, b| {
+                    let a_has_link: i64 = matrix
+                        .filter(matrix_req_id.eq(a.req_id))
+                        .filter(matrix_test_id.eq(target_test_id))
+                        .count()
+                        .get_result(connection)
+                        .unwrap();
+                    let b_has_link: i64 = matrix
+                        .filter(matrix_req_id.eq(b.req_id))
+                        .filter(matrix_test_id.eq(target_test_id))
+                        .count()
+                        .get_result(connection)
+                        .unwrap();
+                    a_has_link.cmp(&b_has_link)
+                });
+            }
+        }
+    } else {
+        // Sort requirements by requirement fields
+        match sort_by.as_str() {
+            "req_id" => {
+                if sort_order == "desc" {
+                    all_reqs.sort_by(|a, b| b.req_id.cmp(&a.req_id));
+                } else {
+                    all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
+                }
+            }
+            "req_title" => {
+                if sort_order == "desc" {
+                    all_reqs.sort_by(|a, b| b.req_title.cmp(&a.req_title));
+                } else {
+                    all_reqs.sort_by(|a, b| a.req_title.cmp(&b.req_title));
+                }
+            }
+            "req_reference" => {
+                if sort_order == "desc" {
+                    all_reqs.sort_by(|a, b| b.req_reference.cmp(&a.req_reference));
+                } else {
+                    all_reqs.sort_by(|a, b| a.req_reference.cmp(&b.req_reference));
+                }
+            }
+            _ => {
+                // Default sort by req_id ascending
                 all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
             }
-        }
-        "req_title" => {
-            if sort_order == "desc" {
-                all_reqs.sort_by(|a, b| b.req_title.cmp(&a.req_title));
-            } else {
-                all_reqs.sort_by(|a, b| a.req_title.cmp(&b.req_title));
-            }
-        }
-        "req_reference" => {
-            if sort_order == "desc" {
-                all_reqs.sort_by(|a, b| b.req_reference.cmp(&a.req_reference));
-            } else {
-                all_reqs.sort_by(|a, b| a.req_reference.cmp(&b.req_reference));
-            }
-        }
-        _ => {
-            // Default sort by req_id ascending
-            all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
         }
     }
 

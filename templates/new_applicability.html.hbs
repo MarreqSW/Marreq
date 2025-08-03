@@ -1,0 +1,39 @@
+{{#*inline "page"}}
+<div class="mb-4">
+  <h1>New Applicability</h1>
+  <p class="text-secondary">Create a new applicability option for organizing requirements</p>
+</div>
+
+<section id="Applicability">
+  <div class="card">
+    <div class="card-header">
+      <h3>Applicability Details</h3>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        <div class="form-group">
+          <label for="app_title" class="form-label">Applicability Title</label>
+          <input type="text" name="app_title" id="app_title" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="app_description" class="form-label">Description</label>
+          <textarea name="app_description" id="app_description" class="form-control" rows="4" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="app_tag" class="form-label">Tag</label>
+          <input type="text" name="app_tag" id="app_tag" class="form-control" placeholder="e.g., ALL, PROD_A, LEGACY" required>
+          <small class="text-secondary">A short identifier for the applicability</small>
+        </div>
+
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">Create Applicability</button>
+          <a href="/applicability" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{{/inline}}
+{{> layout}} 

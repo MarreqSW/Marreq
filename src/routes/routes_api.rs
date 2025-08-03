@@ -289,3 +289,135 @@ pub fn api_get_matrix() -> Result<Json<Vec<Matrix>>, rocket::http::Status> {
         Err(rocket::http::Status::InternalServerError)
     }
 }
+
+/// Categories - Enhanced API endpoints
+
+#[get("/categories/<ident>")]
+pub fn api_get_category_by_id(ident: i32) -> Result<Json<Category>, rocket::http::Status> {
+    let ret_val = get_category_by_id(ident);
+    Ok(Json(ret_val))
+}
+
+#[post("/categories", data = "<new_category>")]
+pub async fn api_post_category(new_category: Json<NewCategory>) -> Result<Value, rocket::http::Status> {
+    let connection = &mut establish_connection();
+    let ret_value = insert_new_category(connection, &new_category);
+
+    if let Ok(val) = ret_value {
+        Ok(json!({ "status": "ok", "id": val }))
+    } else {
+        Err(rocket::http::Status::BadRequest)
+    }
+}
+
+#[put("/categories/<ident>", data = "<category>")]
+pub async fn api_put_category(ident: i32, category: Json<NewCategory>) -> Result<Value, rocket::http::Status> {
+    let connection = &mut establish_connection();
+    
+    let mut category_with_id = category.into_inner();
+    category_with_id.cat_id = Some(ident);
+    
+    let ret_value = edit_category(connection, &category_with_id);
+
+    if let Ok(val) = ret_value {
+        if val {
+            Ok(json!({ "status": "ok", "message": "Category updated successfully" }))
+        } else {
+            Err(rocket::http::Status::NotFound)
+        }
+    } else {
+        Err(rocket::http::Status::BadRequest)
+    }
+}
+
+#[delete("/categories/<ident>")]
+pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
+    let connection = &mut establish_connection();
+    let ret_value = delete_category(connection, &ident);
+
+    if let Ok(val) = ret_value {
+        if val {
+            rocket::http::Status::NoContent
+        } else {
+            rocket::http::Status::NotFound
+        }
+    } else {
+        rocket::http::Status::BadRequest
+    }
+}
+
+/// Applicability - Complete API endpoints
+
+#[get("/applicability")]
+pub fn api_get_applicability() -> Result<Json<Vec<Applicability>>, rocket::http::Status> {
+    let ret_val = get_applicability_all()
+        .map_err(|err| -> String {
+            println!("Error querying applicability: {:?}", err);
+            "Error querying applicability from the database".into()
+        })
+        .map(Json);
+
+    if let Ok(val) = ret_val {
+        if val.is_empty() {
+            Err(rocket::http::Status::NotFound)
+        } else {
+            Ok(val)
+        }
+    } else {
+        Err(rocket::http::Status::InternalServerError)
+    }
+}
+
+#[get("/applicability/<ident>")]
+pub fn api_get_applicability_by_id(ident: i32) -> Result<Json<Applicability>, rocket::http::Status> {
+    let ret_val = get_applicability_by_id(ident);
+    Ok(Json(ret_val))
+}
+
+#[post("/applicability", data = "<new_applicability>")]
+pub async fn api_post_applicability(new_applicability: Json<NewApplicability>) -> Result<Value, rocket::http::Status> {
+    let connection = &mut establish_connection();
+    let ret_value = insert_new_applicability(connection, &new_applicability);
+
+    if let Ok(val) = ret_value {
+        Ok(json!({ "status": "ok", "id": val }))
+    } else {
+        Err(rocket::http::Status::BadRequest)
+    }
+}
+
+#[put("/applicability/<ident>", data = "<applicability>")]
+pub async fn api_put_applicability(ident: i32, applicability: Json<NewApplicability>) -> Result<Value, rocket::http::Status> {
+    let connection = &mut establish_connection();
+    
+    let mut applicability_with_id = applicability.into_inner();
+    applicability_with_id.app_id = Some(ident);
+    
+    let ret_value = edit_applicability(connection, &applicability_with_id);
+
+    if let Ok(val) = ret_value {
+        if val {
+            Ok(json!({ "status": "ok", "message": "Applicability updated successfully" }))
+        } else {
+            Err(rocket::http::Status::NotFound)
+        }
+    } else {
+        Err(rocket::http::Status::BadRequest)
+    }
+}
+
+#[delete("/applicability/<ident>")]
+pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status {
+    let connection = &mut establish_connection();
+    let ret_value = delete_applicability(connection, &ident);
+
+    if let Ok(val) = ret_value {
+        if val {
+            rocket::http::Status::NoContent
+        } else {
+            rocket::http::Status::NotFound
+        }
+    } else {
+        rocket::http::Status::BadRequest
+    }
+}

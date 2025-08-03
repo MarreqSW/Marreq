@@ -1216,7 +1216,7 @@ pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 }
 
 #[get("/reports/pdf")]
-pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<rocket::response::content::RawHtml<String>, Redirect> {
+pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
     let _user = require_auth(cookies)?;
     
     // Get the same data as the reports page
@@ -1224,7 +1224,7 @@ pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<rocket::response::
     let all_tests = get_tests_all().unwrap_or_default();
     let all_categories = get_categories_all().unwrap_or_default();
     let all_users = get_users_all().unwrap_or_default();
-    let all_statuses = get_status_all().unwrap_or_default();
+    let _all_statuses = get_status_all().unwrap_or_default();
     
     // Calculate the same metrics
     let total_requirements = all_requirements.len();
@@ -1277,8 +1277,8 @@ pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<rocket::response::
         0.0
     };
     
-    // Generate PDF content
-    let pdf_content = generate_pdf_content(
+    // Generate HTML content
+    let html_content = generate_pdf_content(
         total_requirements,
         total_tests,
         total_categories,
@@ -1292,8 +1292,19 @@ pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<rocket::response::
         requirements_by_category
     );
     
-    // For now, return the HTML content
-    // In a real implementation, you would generate and return the actual PDF
-    Ok(rocket::response::content::RawHtml(pdf_content))
+    // Generate PDF using wkhtmltopdf
+    match generate_pdf_from_html(&html_content) {
+        Ok(pdf_bytes) => {
+            let content_type = rocket::http::ContentType::new("application", "pdf");
+            Ok((content_type, pdf_bytes))
+        }
+        Err(e) => {
+            #[cfg(debug_assertions)]
+            println!("PDF generation failed: {:?}", e);
+            // Fallback to HTML if PDF generation fails
+            let content_type = rocket::http::ContentType::new("text", "html");
+            Ok((content_type, html_content.into_bytes()))
+        }
+    }
 }
 

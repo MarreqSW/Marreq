@@ -882,3 +882,17 @@ select[multiple] option:hover {
 .sortable a:hover .sort-indicator {
   color: var(--primary-color);
 }
+
+/* Test column sorting styles */
+.sortable a.d-flex.flex-column {
+  min-height: 60px;
+  justify-content: space-between;
+}
+
+.sortable a.d-flex.flex-column .d-flex.align-items-center.justify-content-between {
+  margin-bottom: 0.25rem;
+}
+
+.sortable a.d-flex.flex-column .text-xs {
+  margin-top: 0.25rem;
+}

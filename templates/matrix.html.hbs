@@ -6,20 +6,52 @@
       <p class="text-secondary">Requirements to Tests mapping</p>
     </div>
     <div class="d-flex gap-3 align-items-center">
-      <form method="get" class="d-flex gap-2 align-items-center">
-        <label for="test_status_filter" class="form-label mb-0">Filter by Test Status:</label>
-        <select name="test_status_filter" id="test_status_filter" class="form-select form-select-sm" style="width: auto;">
-          <option value="">All Statuses</option>
-          {{#each statuses}}
-            <option value="{{st_id}}" {{#if (eq ../test_status_filter st_id)}}selected{{/if}}>{{st_title}}</option>
-          {{/each}}
-        </select>
-        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-        {{#if test_status_filter}}
-          <a href="/matrix" class="btn btn-outline-secondary btn-sm">Clear</a>
-        {{/if}}
-      </form>
-      <a href="/matrix.xls" class="btn btn-success">Export Excel</a>
+      <div class="filter-card">
+        <form method="get" class="filter-form">
+          <div class="filter-group">
+            <label for="test_status_filter" class="filter-label">
+              <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
+              </svg>
+              Test Status
+            </label>
+            <select name="test_status_filter" id="test_status_filter" class="filter-select">
+              <option value="">All Statuses</option>
+              {{#each statuses}}
+                <option value="{{st_id}}" {{#if (eq ../test_status_filter st_id)}}selected{{/if}}>{{st_title}}</option>
+              {{/each}}
+            </select>
+          </div>
+          <div class="filter-actions">
+            <button type="submit" class="btn-filter">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              Apply
+            </button>
+            {{#if test_status_filter}}
+              <a href="/matrix" class="btn-clear">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                Clear
+              </a>
+            {{/if}}
+          </div>
+        </form>
+      </div>
+      <a href="/matrix.xls" class="btn btn-success">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14,2 14,8 20,8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10,9 9,9 8,9"></polyline>
+        </svg>
+        Export Excel
+      </a>
     </div>
   </div>
 </div>
@@ -34,8 +66,12 @@
     </div>
     <div class="card-body p-0">
       <div class="table-container">
-        <!-- Top horizontal scroll bar -->
-        <div class="table-scroll-top" id="tableScrollTop"></div>
+        <!-- Top scroll indicator -->
+        <div class="scroll-indicator" id="scrollIndicator">
+          <div class="scroll-track">
+            <div class="scroll-thumb" id="scrollThumb"></div>
+          </div>
+        </div>
         <table class="table" id="matrixTable">
           <thead>
             <tr>
@@ -183,50 +219,79 @@
       this.form.submit();
     });
 
-    // Synchronize horizontal scroll between top scroll bar and table
+    // Setup custom scroll indicator
     const tableContainer = document.querySelector('.table-container');
-    const topScrollBar = document.getElementById('tableScrollTop');
+    const scrollIndicator = document.getElementById('scrollIndicator');
+    const scrollThumb = document.getElementById('scrollThumb');
     const matrixTable = document.getElementById('matrixTable');
 
-    if (tableContainer && topScrollBar && matrixTable) {
-      // Create a hidden div to measure the full width of the table
-      const measureDiv = document.createElement('div');
-      measureDiv.style.position = 'absolute';
-      measureDiv.style.visibility = 'hidden';
-      measureDiv.style.height = '0';
-      measureDiv.style.overflow = 'hidden';
-      measureDiv.innerHTML = matrixTable.outerHTML;
-      tableContainer.appendChild(measureDiv);
-
-      // Set the width of the top scroll bar to match the table width
-      const tableWidth = measureDiv.scrollWidth;
-      const containerWidth = tableContainer.clientWidth;
-      
-      if (tableWidth > containerWidth) {
-        topScrollBar.style.display = 'block';
-        topScrollBar.style.width = '100%';
+    if (tableContainer && scrollIndicator && scrollThumb && matrixTable) {
+      // Wait for the table to be fully rendered
+      setTimeout(() => {
+        const tableWidth = matrixTable.scrollWidth;
+        const containerWidth = tableContainer.clientWidth;
         
-        // Create a spacer div inside the top scroll bar to match table width
-        const spacer = document.createElement('div');
-        spacer.style.width = tableWidth + 'px';
-        spacer.style.height = '1px';
-        topScrollBar.appendChild(spacer);
-
-        // Synchronize scroll events
-        tableContainer.addEventListener('scroll', function() {
-          topScrollBar.scrollLeft = this.scrollLeft;
-        });
-
-        topScrollBar.addEventListener('scroll', function() {
-          tableContainer.scrollLeft = this.scrollLeft;
-        });
-      } else {
-        topScrollBar.style.display = 'none';
-      }
-
-      // Clean up the measure div
-      tableContainer.removeChild(measureDiv);
+        if (tableWidth > containerWidth) {
+          // Show the scroll indicator
+          scrollIndicator.style.display = 'block';
+          
+          // Calculate thumb width and position
+          const maxScroll = tableWidth - containerWidth;
+          const thumbWidth = Math.max(20, (containerWidth / tableWidth) * containerWidth);
+          const thumbMaxLeft = containerWidth - thumbWidth;
+          
+          scrollThumb.style.width = thumbWidth + 'px';
+          
+          // Update thumb position when table scrolls
+          tableContainer.addEventListener('scroll', function() {
+            const scrollPercent = this.scrollLeft / maxScroll;
+            const thumbLeft = scrollPercent * thumbMaxLeft;
+            scrollThumb.style.left = thumbLeft + 'px';
+          });
+          
+          // Handle thumb dragging
+          let isDragging = false;
+          let startX, startLeft;
+          
+          scrollThumb.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            startX = e.clientX;
+            startLeft = parseFloat(scrollThumb.style.left) || 0;
+            e.preventDefault();
+          });
+          
+          document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startX;
+            const newLeft = Math.max(0, Math.min(thumbMaxLeft, startLeft + deltaX));
+            scrollThumb.style.left = newLeft + 'px';
+            
+            const scrollPercent = newLeft / thumbMaxLeft;
+            tableContainer.scrollLeft = scrollPercent * maxScroll;
+          });
+          
+          document.addEventListener('mouseup', function() {
+            isDragging = false;
+          });
+          
+          // Handle track clicking
+          scrollIndicator.addEventListener('click', function(e) {
+            if (e.target === scrollThumb) return;
+            
+            const rect = scrollIndicator.getBoundingClientRect();
+            const clickX = e.clientX - rect.left - 4; // Account for margin
+            const trackWidth = rect.width - 8; // Account for margins
+            const clickPercent = Math.max(0, Math.min(1, clickX / trackWidth));
+            
+            tableContainer.scrollLeft = clickPercent * maxScroll;
+          });
+        } else {
+          scrollIndicator.style.display = 'none';
+        }
+      }, 200);
     }
+
   });
 </script>
 {{/inline}}

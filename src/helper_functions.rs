@@ -660,6 +660,169 @@ pub fn delete_category(conn: &mut PgConnection, id: &i32) -> Result<bool, Box<dy
     Ok(deleted > 0)
 }
 
+pub fn generate_pdf_content(
+    total_requirements: usize,
+    total_tests: usize,
+    total_categories: usize,
+    total_users: usize,
+    coverage_percentage: f64,
+    avg_tests_per_requirement: f64,
+    covered_requirements: usize,
+    total_links: usize,
+    requirements_by_status: std::collections::HashMap<String, i32>,
+    tests_by_status: std::collections::HashMap<String, i32>,
+    requirements_by_category: std::collections::HashMap<String, i32>,
+) -> String {
+    let mut content = String::new();
+    
+    // Header
+    content.push_str("
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset='utf-8'>
+        <title>ReqMan - Project Report</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+            .section { margin-bottom: 30px; }
+            .section h2 { color: #2c3e50; border-bottom: 1px solid #bdc3c7; padding-bottom: 10px; }
+            .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+            .metric-card { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; text-align: center; }
+            .metric-value { font-size: 2em; font-weight: bold; color: #007bff; margin-bottom: 10px; }
+            .metric-label { color: #6c757d; font-size: 0.9em; }
+            .chart-container { margin: 20px 0; }
+            .status-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }
+            .status-name { font-weight: bold; }
+            .status-count { color: #007bff; }
+            .coverage-bar { background: #e9ecef; height: 20px; border-radius: 10px; overflow: hidden; margin: 10px 0; }
+            .coverage-fill { background: #28a745; height: 100%; transition: width 0.3s ease; }
+            .footer { margin-top: 40px; text-align: center; color: #6c757d; font-size: 0.8em; }
+        </style>
+    </head>
+    <body>
+        <div class='header'>
+            <h1>ReqMan Project Report</h1>
+            <p>Generated on: ");
+    
+    content.push_str(&chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string());
+    content.push_str("</p>
+        </div>
+        
+        <div class='section'>
+            <h2>Executive Summary</h2>
+            <div class='metric-grid'>
+                <div class='metric-card'>
+                    <div class='metric-value'>");
+    content.push_str(&total_requirements.to_string());
+    content.push_str("</div>
+                    <div class='metric-label'>Total Requirements</div>
+                </div>
+                <div class='metric-card'>
+                    <div class='metric-value'>");
+    content.push_str(&total_tests.to_string());
+    content.push_str("</div>
+                    <div class='metric-label'>Total Tests</div>
+                </div>
+                <div class='metric-card'>
+                    <div class='metric-value'>");
+    content.push_str(&format!("{:.1}%", coverage_percentage));
+    content.push_str("</div>
+                    <div class='metric-label'>Coverage</div>
+                </div>
+                <div class='metric-card'>
+                    <div class='metric-value'>");
+    content.push_str(&format!("{:.1}", avg_tests_per_requirement));
+    content.push_str("</div>
+                    <div class='metric-label'>Avg Tests/Req</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class='section'>
+            <h2>Requirements by Status</h2>");
+    
+    for (status, count) in requirements_by_status {
+        content.push_str(&format!("
+            <div class='status-item'>
+                <span class='status-name'>{}</span>
+                <span class='status-count'>{}</span>
+            </div>", status, count));
+    }
+    
+    content.push_str("
+        </div>
+        
+        <div class='section'>
+            <h2>Tests by Status</h2>");
+    
+    for (status, count) in tests_by_status {
+        content.push_str(&format!("
+            <div class='status-item'>
+                <span class='status-name'>{}</span>
+                <span class='status-count'>{}</span>
+            </div>", status, count));
+    }
+    
+    content.push_str("
+        </div>
+        
+        <div class='section'>
+            <h2>Requirements by Category</h2>");
+    
+    for (category, count) in requirements_by_category {
+        content.push_str(&format!("
+            <div class='status-item'>
+                <span class='status-name'>{}</span>
+                <span class='status-count'>{}</span>
+            </div>", category, count));
+    }
+    
+    content.push_str(&format!("
+        </div>
+        
+        <div class='section'>
+            <h2>Coverage Analysis</h2>
+            <p><strong>Covered Requirements:</strong> {} out of {} ({:.1}%)</p>
+            <div class='coverage-bar'>
+                <div class='coverage-fill' style='width: {:.1}%'></div>
+            </div>
+            <p><strong>Total Test Links:</strong> {}</p>
+            <p><strong>Average Tests per Requirement:</strong> {:.1}</p>
+        </div>
+        
+        <div class='section'>
+            <h2>Project Statistics</h2>
+            <div class='metric-grid'>
+                <div class='metric-card'>
+                    <div class='metric-value'>{}</div>
+                    <div class='metric-label'>Categories</div>
+                </div>
+                <div class='metric-card'>
+                    <div class='metric-value'>{}</div>
+                    <div class='metric-label'>Users</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class='footer'>
+            <p>This report was generated automatically by ReqMan</p>
+        </div>
+    </body>
+    </html>", 
+        covered_requirements, 
+        total_requirements, 
+        coverage_percentage,
+        coverage_percentage,
+        total_links,
+        avg_tests_per_requirement,
+        total_categories,
+        total_users
+    ));
+    
+    content
+}
+
 pub fn insert_new_applicability(conn: &mut PgConnection, new: &NewApplicability) -> Result<i32, Box<dyn Error>> {
     use crate::schema::applicability::dsl::*;
 

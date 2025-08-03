@@ -66,6 +66,8 @@ async fn main() -> Result<(), rocket::Error> {
                 post_edit_applicability,
                 delete_applicability_route,
                 show_requirements_tree,
+                show_reports,
+                generate_pdf_report,
             ],
         )
         .mount(

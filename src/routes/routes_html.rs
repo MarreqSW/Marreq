@@ -395,14 +395,20 @@ pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Templ
     let user = require_auth(cookies)?;
     let test = get_test_by_id(test_id_param);
     let test_decorate = decorate_tests(vec![test]);
-    let test_decorate_json = json!(test_decorate[0]);
     
     // Get linked requirements for this test
     let linked_requirements = get_requirements_for_test(test_id_param).unwrap_or_default();
     let linked_requirements_json = json!(linked_requirements);
     
+    let decorated_test = &test_decorate[0];
     let ctx = json!({
-        "tests": test_decorate_json,
+        "test_id": decorated_test.test_id,
+        "test_name": decorated_test.test_name,
+        "test_description": decorated_test.test_description,
+        "test_source": decorated_test.test_source,
+        "test_status": decorated_test.test_status,
+        "test_parent_id": decorated_test.test_parent_id,
+        "test_parent_title": decorated_test.test_parent_title,
         "linked_requirements": linked_requirements_json,
         "user": user
     });

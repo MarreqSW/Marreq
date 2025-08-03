@@ -578,8 +578,8 @@ pub fn show_status() -> content::RawHtml<String> {
     content::RawHtml(out_str)
 }
 
-#[get("/matrix")]
-pub fn get_matrix(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+#[get("/matrix?<sort_by>&<sort_order>")]
+pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: Option<String>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     use crate::schema::matrix::dsl::*;
     use crate::schema::requirements::dsl::*;
@@ -587,7 +587,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 
     let connection = &mut establish_connection();
 
-    let all_reqs = requirements
+    let mut all_reqs = requirements
         .load::<Requirement>(connection)
         .map_err(|err| -> String {
             println!("Error querying page views: {:?}", err);
@@ -602,6 +602,39 @@ pub fn get_matrix(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
             "Error querying tests from the database".into()
         })
         .expect("Error getting tests");
+
+    // Apply sorting
+    let sort_by = sort_by.unwrap_or_else(|| "req_id".to_string());
+    let sort_order = sort_order.unwrap_or_else(|| "asc".to_string());
+    
+    // Sort requirements
+    match sort_by.as_str() {
+        "req_id" => {
+            if sort_order == "desc" {
+                all_reqs.sort_by(|a, b| b.req_id.cmp(&a.req_id));
+            } else {
+                all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
+            }
+        }
+        "req_title" => {
+            if sort_order == "desc" {
+                all_reqs.sort_by(|a, b| b.req_title.cmp(&a.req_title));
+            } else {
+                all_reqs.sort_by(|a, b| a.req_title.cmp(&b.req_title));
+            }
+        }
+        "req_reference" => {
+            if sort_order == "desc" {
+                all_reqs.sort_by(|a, b| b.req_reference.cmp(&a.req_reference));
+            } else {
+                all_reqs.sort_by(|a, b| a.req_reference.cmp(&b.req_reference));
+            }
+        }
+        _ => {
+            // Default sort by req_id ascending
+            all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
+        }
+    }
 
     let total_tests = all_tests.len() as i32;
     let total_requirements = all_reqs.len() as i32;
@@ -654,6 +687,8 @@ pub fn get_matrix(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         "total_tests": total_tests,
         "total_requirements": total_requirements,
         "total_links": total_links,
+        "current_sort_by": sort_by,
+        "current_sort_order": sort_order,
         "user": user
     });
 

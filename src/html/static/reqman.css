@@ -843,3 +843,42 @@ select[multiple] option:hover {
   font-size: 0.875rem;
   margin-top: 0.25rem;
 }
+
+/* Sortable table columns */
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable a {
+  color: var(--text-primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+.sortable a:hover {
+  color: var(--primary-color);
+}
+
+.sort-indicator {
+  font-size: 0.75rem;
+  margin-left: 0.5rem;
+  opacity: 0.7;
+}
+
+.sortable a:hover .sort-indicator {
+  opacity: 1;
+}
+
+/* Sort indicator colors */
+.sort-indicator {
+  color: var(--text-secondary);
+}
+
+.sortable a:hover .sort-indicator {
+  color: var(--primary-color);
+}

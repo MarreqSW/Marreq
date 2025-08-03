@@ -22,6 +22,7 @@ pub struct Requirement {
     pub req_deadline_date: chrono::NaiveDateTime,
     pub req_applicability: i32,
     pub req_justification: Option<String>,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm)]
@@ -43,6 +44,7 @@ pub struct NewRequirement {
     pub req_reviewer: i32,
     pub req_applicability: i32,
     pub req_justification: Option<String>,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -73,6 +75,7 @@ pub struct Category {
     pub cat_title: String,
     pub cat_description: String,
     pub cat_tag: String,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
@@ -85,6 +88,7 @@ pub struct NewCategory {
     pub cat_title: String,
     pub cat_description: String,
     pub cat_tag: String,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]
@@ -94,6 +98,7 @@ pub struct Applicability {
     pub app_title: String,
     pub app_description: String,
     pub app_tag: String,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
@@ -106,6 +111,7 @@ pub struct NewApplicability {
     pub app_title: String,
     pub app_description: String,
     pub app_tag: String,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]
@@ -140,6 +146,7 @@ pub struct Matrix {
     pub matrix_req_id: i32,
     pub matrix_test_id: i32,
     pub matrix_creation_date: chrono::NaiveDateTime,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Insertable)]
@@ -149,6 +156,7 @@ pub struct Matrix {
 pub struct NewMatrix {
     pub matrix_req_id: i32,
     pub matrix_test_id: i32,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Queryable, AsChangeset, Debug)]
@@ -161,6 +169,7 @@ pub struct User {
     pub user_creation_date: chrono::NaiveDateTime,
     pub user_last_login: chrono::NaiveDateTime,
     pub user_password: String,
+    pub project_id: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, AsChangeset, FromForm)]
@@ -175,6 +184,7 @@ pub struct NewUser {
     pub user_email: String,
     pub user_level: i32,
     pub user_password: String,
+    pub project_id: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, FromForm)]
@@ -196,6 +206,7 @@ pub struct Test {
     pub test_source: String,
     pub test_status: i32,
     pub test_parent: i32,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -220,6 +231,7 @@ pub struct NewTest {
     pub test_source: String,
     pub test_status: i32,
     pub test_parent: i32,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, FromForm)]
@@ -231,6 +243,7 @@ pub struct NewTestForm {
     pub test_status: i32,
     pub test_parent: i32,
     pub test_req: Vec<i32>,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, FromForm)]
@@ -243,6 +256,7 @@ pub struct EditTestForm {
     pub test_status: i32,
     pub test_parent: i32,
     pub linked_requirements: Vec<i32>,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, FromForm)]
@@ -366,9 +380,9 @@ pub struct Project {
     pub project_id: i32,
     pub project_name: String,
     pub project_description: Option<String>,
-    pub project_creation_date: chrono::NaiveDateTime,
-    pub project_update_date: chrono::NaiveDateTime,
-    pub project_status: String,
+    pub project_creation_date: Option<chrono::NaiveDateTime>,
+    pub project_update_date: Option<chrono::NaiveDateTime>,
+    pub project_status: Option<String>,
     pub project_owner_id: Option<i32>,
 }
 

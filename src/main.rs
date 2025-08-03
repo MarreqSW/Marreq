@@ -44,6 +44,7 @@ async fn main() -> Result<(), rocket::Error> {
                 get_tests_xls,
                 new_user,
                 post_user,
+                show_users,
                 show_user_id,
                 edit_user,
                 show_categories,

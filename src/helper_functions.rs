@@ -105,6 +105,7 @@ pub fn get_status_all() -> Result<Vec<Status>, String> {
         .order(st_id)
         .get_results(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", err);
             "Error querying page views from the database".into()
         })
@@ -120,6 +121,7 @@ pub fn get_categories_all() -> Result<Vec<Category>, String> {
         .order(cat_id)
         .get_results(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", err);
             "Error querying page views from the database".into()
         })
@@ -134,6 +136,7 @@ pub fn get_applicability_all() -> Result<Vec<Applicability>, String> {
         .order(app_id)
         .get_results(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying applicability: {:?}", err);
             "Error querying applicability from the database".into()
         })
@@ -148,6 +151,7 @@ pub fn get_applicability_by_id(id: i32) -> Applicability {
         .filter(app_id.eq(id))
         .get_result(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying applicability: {:?}", err);
             "Error querying applicability from the database".into()
         })
@@ -163,6 +167,7 @@ pub fn get_category_by_id(id: i32) -> Category {
         .filter(cat_id.eq(id))
         .get_result(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", err);
             "Error querying page views from the database".into()
         })
@@ -280,6 +285,7 @@ pub fn get_requirements_all() -> Result<Vec<Requirement>, String> {
         .order(req_id)
         .load::<Requirement>(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", err);
             "Error querying page views from the database".into()
         })
@@ -294,6 +300,7 @@ pub fn get_tests_all() -> Result<Vec<Test>, String> {
         .order(test_id)
         .load::<Test>(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", err);
             "Error querying page views from the database".into()
         })
@@ -308,6 +315,7 @@ pub fn get_users_all() -> Result<Vec<User>, String> {
         .order(user_id)
         .load::<User>(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", err);
             "Error querying page views from the database".into()
         })
@@ -323,6 +331,7 @@ pub fn get_verification_all() -> Result<Vec<Verification>, String> {
         .order(verification_id)
         .load::<Verification>(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", err);
             "Error querying page views from the database".into()
         })
@@ -452,6 +461,7 @@ pub fn decorate_tests(tests: Vec<Test>) -> Vec<DecoratedTest> {
                 "".to_string()
             },
         };
+        #[cfg(debug_assertions)]
         println!("Decorate: {:?}", a);
         result.push(a);
     }
@@ -463,6 +473,7 @@ pub fn insert_new_matrix_item(
     conn: &mut PgConnection,
     new: &NewMatrix,
 ) -> Result<(), Box<dyn Error>> {
+    #[cfg(debug_assertions)]
     println!("Inserting, ({}, {})", new.matrix_req_id, new.matrix_test_id);
     diesel::insert_into(crate::schema::matrix::table)
         .values(new)
@@ -532,6 +543,7 @@ pub fn insert_new_user(conn: &mut PgConnection, new: &NewUser) -> Result<i32, Bo
         .values(new)
         .get_result(conn)?;
 
+    #[cfg(debug_assertions)]
     println!("New user id {}", a.user_id);
 
     Ok(a.user_id)

@@ -252,11 +252,13 @@ pub fn show_user_id(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, R
 pub fn edit_user(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let current_user = require_auth(cookies)?;
     let user = get_user_by_id(user_id);
+    #[cfg(debug_assertions)]
     println!("USer: {:?}", user);
     let ctx = json!({
         "users": user,
         "user": current_user
     });
+    #[cfg(debug_assertions)]
     println!("edit user: {:?}", ctx);
     Ok(Template::render("edit_user_by_id", ctx))
 }
@@ -275,6 +277,7 @@ pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &Cooki
     match update_user_without_password(connection, &user_data) {
         Ok(_) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
         Err(e) => {
+            #[cfg(debug_assertions)]
             println!("Error updating user: {:?}", e);
             Ok(Redirect::to(uri!(edit_user(user_id))))
         }
@@ -317,6 +320,7 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
         "user": user
     });
 
+    #[cfg(debug_assertions)]
     println!("Requirement: {:#}", ctx);
     Ok(Template::render("edit_requirement_by_id", ctx))
 }
@@ -493,6 +497,7 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
         "user": user
     });
 
+    #[cfg(debug_assertions)]
     println!("Tests: {:#}", ctx);
     Ok(Template::render("edit_test_by_id", ctx))
 }
@@ -535,6 +540,7 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
     };
     let my_id = insert_new_test(connection, &my_new_test).unwrap();
 
+    #[cfg(debug_assertions)]
     println!("NewTestForm requirements: {:#?}", new_test.test_req);
     for req in new_test.test_req.iter() {
         let matrix_item = NewMatrix {
@@ -557,6 +563,7 @@ pub fn show_status() -> content::RawHtml<String> {
     let all_status = status
         .load::<Status>(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", err);
             "Error querying page views from the database".into()
         })
@@ -590,6 +597,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
     let mut all_reqs = requirements
         .load::<Requirement>(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", err);
             "Error querying page views from the database".into()
         })
@@ -598,6 +606,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
     let all_tests = tests
         .load::<Test>(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying tests: {:?}", err);
             "Error querying tests from the database".into()
         })
@@ -859,6 +868,7 @@ pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -
     match result {
         Ok(_) => Ok(Redirect::to(uri!(show_categories))),
         Err(e) => {
+            #[cfg(debug_assertions)]
             println!("Error creating category: {:?}", e);
             Ok(Redirect::to(uri!(new_category)))
         }
@@ -888,6 +898,7 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
     match result {
         Ok(_) => Ok(Redirect::to(uri!(show_categories))),
         Err(e) => {
+            #[cfg(debug_assertions)]
             println!("Error updating category: {:?}", e);
             Ok(Redirect::to(uri!(get_edit_category(cat_id))))
         }
@@ -903,6 +914,7 @@ pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<roc
     match result {
         Ok(_) => Ok(rocket::http::Status::Ok),
         Err(e) => {
+            #[cfg(debug_assertions)]
             println!("Error deleting category: {:?}", e);
             Ok(rocket::http::Status::InternalServerError)
         }
@@ -923,6 +935,7 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
             Ok(Redirect::to(uri!(show_user_id(my_id))))
         }
         Err(e) => {
+            #[cfg(debug_assertions)]
             println!("Error hashing password: {:?}", e);
             Ok(Redirect::to(uri!(new_user)))
         }
@@ -970,6 +983,7 @@ pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &C
     match result {
         Ok(_) => Ok(Redirect::to(uri!(show_applicability))),
         Err(e) => {
+            #[cfg(debug_assertions)]
             println!("Error creating applicability: {:?}", e);
             Ok(Redirect::to(uri!(new_applicability)))
         }
@@ -999,6 +1013,7 @@ pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability
     match result {
         Ok(_) => Ok(Redirect::to(uri!(show_applicability))),
         Err(e) => {
+            #[cfg(debug_assertions)]
             println!("Error updating applicability: {:?}", e);
             Ok(Redirect::to(uri!(get_edit_applicability(app_id))))
         }
@@ -1014,6 +1029,7 @@ pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Resul
     match result {
         Ok(_) => Ok(rocket::http::Status::Ok),
         Err(e) => {
+            #[cfg(debug_assertions)]
             println!("Error deleting applicability: {:?}", e);
             Ok(rocket::http::Status::InternalServerError)
         }

@@ -140,36 +140,36 @@ INSERT INTO matrix (matrix_req_id, matrix_test_id) VALUES
 (3, 3), (3, 4),          -- REQ-PWR-003 -> Redundant paths and system efficiency tests
 
 -- Communication System Requirements -> Tests
-(4, 5), (4, 6), (4, 8),  -- REQ-COMM-001 -> S-band, X-band, and end-to-end tests
-(5, 7), (5, 8),          -- REQ-COMM-002 -> Data rate and end-to-end tests
-(6, 5), (6, 6), (6, 8),  -- REQ-COMM-003 -> Dual frequency and end-to-end tests
+(4, 1), (4, 2), (4, 4),  -- REQ-COMM-001 -> S-band, X-band, and end-to-end tests
+(5, 3), (5, 4),          -- REQ-COMM-002 -> Data rate and end-to-end tests
+(6, 1), (6, 2), (6, 4),  -- REQ-COMM-003 -> Dual frequency and end-to-end tests
 
 -- Attitude Control Requirements -> Tests
-(7, 9), (7, 11), (7, 12),  -- REQ-ACS-001 -> Star tracker, control loop, and integration tests
-(8, 9), (8, 12),          -- REQ-ACS-002 -> Star tracker and integration tests
-(9, 10), (9, 11), (9, 12),  -- REQ-ACS-003 -> Reaction wheel, control loop, and integration tests
+(7, 1), (7, 3), (7, 4),  -- REQ-ACS-001 -> Star tracker, control loop, and integration tests
+(8, 1), (8, 4),          -- REQ-ACS-002 -> Star tracker and integration tests
+(9, 2), (9, 3), (9, 4),  -- REQ-ACS-003 -> Reaction wheel, control loop, and integration tests
 
 -- Thermal Control Requirements -> Tests
-(10, 13), (10, 15),        -- REQ-THERM-001 -> Thermal vacuum and passive control tests
-(11, 14), (11, 16),        -- REQ-THERM-002 -> Payload temperature and blanket tests
-(12, 15), (12, 16),        -- REQ-THERM-003 -> Passive control and blanket tests
+(10, 1), (10, 3),        -- REQ-THERM-001 -> Thermal vacuum and passive control tests
+(11, 2), (11, 4),        -- REQ-THERM-002 -> Payload temperature and blanket tests
+(12, 3), (12, 4),        -- REQ-THERM-003 -> Passive control and blanket tests
 
 -- Payload Requirements -> Tests
-(13, 17), (13, 20),        -- REQ-PAY-001 -> Resolution and pointing accuracy tests
-(14, 18), (14, 20),        -- REQ-PAY-002 -> Multi-spectral and pointing accuracy tests
-(15, 19), (15, 20),        -- REQ-PAY-003 -> Data storage and pointing accuracy tests
+(13, 1), (13, 4),        -- REQ-PAY-001 -> Resolution and pointing accuracy tests
+(14, 2), (14, 4),        -- REQ-PAY-002 -> Multi-spectral and pointing accuracy tests
+(15, 3), (15, 4),        -- REQ-PAY-003 -> Data storage and pointing accuracy tests
 
 -- Propulsion Requirements -> Tests
-(16, 21), (16, 22),        -- REQ-PROP-001 -> Thrust and delta-V tests
-(17, 21), (17, 23),        -- REQ-PROP-002 -> Thrust and compatibility tests
-(18, 23), (18, 24),        -- REQ-PROP-003 -> Compatibility and safety tests
+(16, 1), (16, 2),        -- REQ-PROP-001 -> Thrust and delta-V tests
+(17, 1), (17, 3),        -- REQ-PROP-002 -> Thrust and compatibility tests
+(18, 3), (18, 4),        -- REQ-PROP-003 -> Compatibility and safety tests
 
 -- Structure Requirements -> Tests
-(19, 25), (19, 28),        -- REQ-STRUCT-001 -> Vibration and thermal structural tests
-(20, 26), (20, 27),        -- REQ-STRUCT-002 -> Deployment and dimensional tests
-(21, 27), (21, 28),        -- REQ-STRUCT-003 -> Dimensional and thermal structural tests
+(19, 1), (19, 4),        -- REQ-STRUCT-001 -> Vibration and thermal structural tests
+(20, 2), (20, 3),        -- REQ-STRUCT-002 -> Deployment and dimensional tests
+(21, 3), (21, 4),        -- REQ-STRUCT-003 -> Dimensional and thermal structural tests
 
 -- Software Requirements -> Tests
-(22, 29), (22, 32),        -- REQ-SW-001 -> Fault detection and integration tests
-(23, 30), (23, 32),        -- REQ-SW-002 -> Update capability and integration tests
-(24, 31), (24, 32);        -- REQ-SW-003 -> Time synchronization and integration tests 
+(22, 1), (22, 4),        -- REQ-SW-001 -> Fault detection and integration tests
+(23, 2), (23, 4),        -- REQ-SW-002 -> Update capability and integration tests
+(24, 3), (24, 4);        -- REQ-SW-003 -> Time synchronization and integration tests 

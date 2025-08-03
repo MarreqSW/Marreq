@@ -1,6 +1,15 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    applicability (app_id) {
+        app_id -> Int4,
+        app_title -> Varchar,
+        app_description -> Varchar,
+        app_tag -> Varchar,
+    }
+}
+
+diesel::table! {
     categories (cat_id) {
         cat_id -> Int4,
         cat_title -> Varchar,
@@ -33,6 +42,8 @@ diesel::table! {
         req_creation_date -> Timestamp,
         req_update_date -> Timestamp,
         req_deadline_date -> Timestamp,
+        req_applicability -> Int4,
+        req_justification -> Nullable<Text>,
     }
 }
 
@@ -76,7 +87,10 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(requirements -> applicability (req_applicability));
+
 diesel::allow_tables_to_appear_in_same_query!(
+    applicability,
     categories,
     matrix,
     requirements,

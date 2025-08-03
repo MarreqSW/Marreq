@@ -3,7 +3,6 @@ extern crate rocket;
 extern crate diesel;
 use rocket::fs::{relative, FileServer};
 use rocket_dyn_templates::Template;
-use rocket_sync_db_pools::database;
 pub mod bbdd;
 pub mod generators;
 pub mod helper_functions;
@@ -41,10 +40,23 @@ async fn main() -> Result<(), rocket::Error> {
                 post_test,
                 get_matrix,
                 get_matrix_xls,
+                get_requirements_xls,
                 new_user,
                 post_user,
                 show_user_id,
                 edit_user,
+                show_categories,
+                new_category,
+                post_category,
+                get_edit_category,
+                post_edit_category,
+                delete_category_route,
+                show_applicability,
+                new_applicability,
+                post_applicability,
+                get_edit_applicability,
+                post_edit_applicability,
+                delete_applicability_route,
             ],
         )
         .mount(
@@ -64,6 +76,15 @@ async fn main() -> Result<(), rocket::Error> {
                 api_get_matrix,
                 api_get_users,
                 api_get_users_by_id,
+                api_get_category_by_id,
+                api_post_category,
+                api_put_category,
+                api_delete_category_by_id,
+                api_get_applicability,
+                api_get_applicability_by_id,
+                api_post_applicability,
+                api_put_applicability,
+                api_delete_applicability_by_id,
             ],
         )
         .mount("/static", FileServer::from(relative!("src/html/static")))

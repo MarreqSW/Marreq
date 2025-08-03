@@ -36,6 +36,35 @@ pub fn get_categories_all() -> Result<Vec<Category>, String> {
         })
 }
 
+pub fn get_applicability_all() -> Result<Vec<Applicability>, String> {
+    use crate::schema::applicability::dsl::*;
+
+    let connection = &mut establish_connection();
+
+    applicability
+        .order(app_id)
+        .get_results(connection)
+        .map_err(|err| -> String {
+            println!("Error querying applicability: {:?}", err);
+            "Error querying applicability from the database".into()
+        })
+}
+
+pub fn get_applicability_by_id(id: i32) -> Applicability {
+    use crate::schema::applicability::dsl::*;
+
+    let connection = &mut establish_connection();
+
+    applicability
+        .filter(app_id.eq(id))
+        .get_result(connection)
+        .map_err(|err| -> String {
+            println!("Error querying applicability: {:?}", err);
+            "Error querying applicability from the database".into()
+        })
+        .unwrap()
+}
+
 pub fn get_category_by_id(id: i32) -> Category {
     use crate::schema::categories::dsl::*;
 
@@ -77,6 +106,7 @@ pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement
             req_link: r.req_link,
             req_reference: r.req_reference,
             req_category: get_category_by_id(r.req_category).cat_title,
+            req_applicability: get_applicability_by_id(r.req_applicability).app_title,
             req_parent_id: r.req_parent,
 
             req_parent_title: if r.req_parent != 0 {
@@ -87,6 +117,7 @@ pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement
             req_creation_date: r.req_creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
             req_update_date: r.req_update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
             req_deadline_date: r.req_deadline_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+            req_justification: r.req_justification,
         };
         result.push(a);
     }
@@ -399,6 +430,83 @@ pub fn create_user(conn: &mut PgConnection, new: &NewUser) -> Result<i32, Box<dy
 
     Ok(res.user_id)
 }
+
+pub fn insert_new_category(conn: &mut PgConnection, new: &NewCategory) -> Result<i32, Box<dyn Error>> {
+    use crate::schema::categories::dsl::*;
+
+    let result = diesel::insert_into(categories)
+        .values(new)
+        .get_result::<Category>(conn)?;
+
+    Ok(result.cat_id)
+}
+
+pub fn edit_category(conn: &mut PgConnection, new: &NewCategory) -> Result<bool, Box<dyn Error>> {
+    use crate::schema::categories::dsl::*;
+
+    let category_id = new.cat_id.unwrap_or(0);
+    if category_id == 0 {
+        return Err("Category ID is required for editing".into());
+    }
+
+    let updated = diesel::update(categories.filter(cat_id.eq(category_id)))
+        .set((
+            cat_title.eq(&new.cat_title),
+            cat_description.eq(&new.cat_description),
+            cat_tag.eq(&new.cat_tag),
+        ))
+        .execute(conn)?;
+
+    Ok(updated > 0)
+}
+
+pub fn delete_category(conn: &mut PgConnection, id: &i32) -> Result<bool, Box<dyn Error>> {
+    use crate::schema::categories::dsl::*;
+
+    let deleted = diesel::delete(categories.filter(cat_id.eq(id)))
+        .execute(conn)?;
+
+    Ok(deleted > 0)
+}
+
+pub fn insert_new_applicability(conn: &mut PgConnection, new: &NewApplicability) -> Result<i32, Box<dyn Error>> {
+    use crate::schema::applicability::dsl::*;
+
+    let result = diesel::insert_into(applicability)
+        .values(new)
+        .get_result::<Applicability>(conn)?;
+
+    Ok(result.app_id)
+}
+
+pub fn edit_applicability(conn: &mut PgConnection, new: &NewApplicability) -> Result<bool, Box<dyn Error>> {
+    use crate::schema::applicability::dsl::*;
+
+    let applicability_id = new.app_id.unwrap_or(0);
+    if applicability_id == 0 {
+        return Err("Applicability ID is required for editing".into());
+    }
+
+    let updated = diesel::update(applicability.filter(app_id.eq(applicability_id)))
+        .set((
+            app_title.eq(&new.app_title),
+            app_description.eq(&new.app_description),
+            app_tag.eq(&new.app_tag),
+        ))
+        .execute(conn)?;
+
+    Ok(updated > 0)
+}
+
+pub fn delete_applicability(conn: &mut PgConnection, id: &i32) -> Result<bool, Box<dyn Error>> {
+    use crate::schema::applicability::dsl::*;
+
+    let deleted = diesel::delete(applicability.filter(app_id.eq(id)))
+        .execute(conn)?;
+
+    Ok(deleted > 0)
+}
+
 pub fn establish_connection() -> diesel::PgConnection {
     dotenv().ok();
 

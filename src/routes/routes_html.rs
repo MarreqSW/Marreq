@@ -393,14 +393,16 @@ pub fn show_tests(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 #[get("/tests/<test_id_param>")]
 pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let tests = get_test_by_id(test_id_param);
+    let test = get_test_by_id(test_id_param);
+    let test_decorate = decorate_tests(vec![test]);
+    let test_decorate_json = json!(test_decorate[0]);
     
     // Get linked requirements for this test
     let linked_requirements = get_requirements_for_test(test_id_param).unwrap_or_default();
     let linked_requirements_json = json!(linked_requirements);
     
     let ctx = json!({
-        "tests": tests,
+        "tests": test_decorate_json,
         "linked_requirements": linked_requirements_json,
         "user": user
     });

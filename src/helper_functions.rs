@@ -878,6 +878,67 @@ pub fn generate_pdf_from_html(html_content: &str) -> Result<Vec<u8>, Box<dyn std
     Ok(pdf_bytes)
 }
 
+// Project management functions
+pub fn get_projects_all() -> Result<Vec<Project>, String> {
+    use crate::schema::projects::dsl::*;
+    
+    let connection = &mut establish_connection();
+    
+    projects
+        .load::<Project>(connection)
+        .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
+            println!("Error querying projects: {:?}", err);
+            "Error querying projects from the database".into()
+        })
+}
+
+pub fn get_project_by_id(project_id_param: i32) -> Project {
+    use crate::schema::projects::dsl::*;
+    
+    let connection = &mut establish_connection();
+    
+    projects
+        .filter(project_id.eq(project_id_param))
+        .first::<Project>(connection)
+        .expect("Error loading project")
+}
+
+pub fn insert_new_project(conn: &mut PgConnection, new: &NewProject) -> Result<i32, Box<dyn Error>> {
+    use crate::schema::projects::dsl::*;
+    
+    let result = diesel::insert_into(projects)
+        .values(new)
+        .get_result::<Project>(conn)?;
+    
+    Ok(result.project_id)
+}
+
+pub fn edit_project(conn: &mut PgConnection, project_id_param: i32, update: &UpdateProject) -> Result<bool, Box<dyn Error>> {
+    use crate::schema::projects::dsl::*;
+    
+    let updated = diesel::update(projects.filter(project_id.eq(project_id_param)))
+        .set((
+            project_name.eq(&update.project_name),
+            project_description.eq(&update.project_description),
+            project_status.eq(&update.project_status),
+            project_owner_id.eq(&update.project_owner_id),
+            project_update_date.eq(chrono::Utc::now().naive_utc()),
+        ))
+        .execute(conn)?;
+    
+    Ok(updated > 0)
+}
+
+pub fn delete_project(conn: &mut PgConnection, project_id_param: &i32) -> Result<bool, Box<dyn Error>> {
+    use crate::schema::projects::dsl::*;
+    
+    let deleted = diesel::delete(projects.filter(project_id.eq(project_id_param)))
+        .execute(conn)?;
+    
+    Ok(deleted > 0)
+}
+
 pub fn insert_new_applicability(conn: &mut PgConnection, new: &NewApplicability) -> Result<i32, Box<dyn Error>> {
     use crate::schema::applicability::dsl::*;
 

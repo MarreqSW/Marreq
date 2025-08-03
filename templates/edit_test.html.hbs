@@ -80,6 +80,20 @@
 
         <input type="hidden" id="test_id" name="test_id" value="{{tests.test_id}}">
 
+        {{#if linked_requirements}}
+        <div class="linked-requirements mt-4">
+          <h4>Linked Requirements</h4>
+          <div class="requirements-list">
+            {{#each linked_requirements}}
+            <div class="requirement-link">
+              <a href="/requirements/{{req_id}}" class="requirement-id">REQ-{{req_id}}</a>
+              <span class="requirement-title">{{req_title}}</span>
+            </div>
+            {{/each}}
+          </div>
+        </div>
+        {{/if}}
+
         <div class="mt-4">
           <button type="submit" class="btn btn-primary">Update Test</button>
           <a href="/tests/{{tests.test_id}}" class="btn btn-outline">Cancel</a>

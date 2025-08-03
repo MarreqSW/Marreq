@@ -341,6 +341,12 @@ h3 {
   color: #dc2626;
 }
 
+.status-warning {
+  background-color: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fed7aa;
+}
+
 /* Forms */
 .form-group {
   margin-bottom: 1.5rem;

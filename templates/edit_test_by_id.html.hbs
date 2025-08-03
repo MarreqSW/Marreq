@@ -1,11 +1,117 @@
 {{#*inline "page"}}
+<div class="mb-4">
+  <h1>Edit Test</h1>
+  <p class="text-secondary">Update test case details</p>
+</div>
 
-<section id="Test">
-    <h1>Edit Test</h2>
-    
-    {{> edit_test}}
-    
+<section id="Tests">
+  <div class="card">
+    <div class="card-header">
+      <h3>Test Details</h3>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        <div class="form-group">
+          <label for="test_name" class="form-label">Test Name</label>
+          <input type="text" name="test_name" id="test_name" value="{{tests.test_name}}" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="test_description" class="form-label">Description</label>
+          <textarea name="test_description" id="test_description" class="form-control" rows="4" required>{{tests.test_description}}</textarea>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label for="test_source" class="form-label">Source</label>
+            <input type="text" id="test_source" name="test_source" value="{{tests.test_source}}" class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label for="test_status" class="form-label">Status</label>
+            <select name="test_status" id="test_status" class="form-control" required>
+              {{#each status }}
+                <option value="{{st_id}}" {{#if (eq st_id ../tests.test_status)}}selected{{/if}}>{{st_title}}</option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label for="test_parent" class="form-label">Parent Test</label>
+            <select name="test_parent" id="test_parent" class="form-control">
+              <option value="0" {{#if (eq ../tests.test_parent 0)}}selected{{/if}}>None</option>
+              {{#each parent }}
+                <option value="{{test_id}}" {{#if (eq test_id ../tests.test_parent)}}selected{{/if}}>{{test_name}}</option>
+              {{/each}}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="test_category" class="form-label">Category</label>
+            <select name="test_category" id="test_category" class="form-control">
+              {{#each categories }}
+                <option value="{{cat_id}}" {{#if (eq cat_id ../tests.test_category)}}selected{{/if}}>{{cat_title}}</option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label for="test_verification" class="form-label">Verification Mode</label>
+            <select name="test_verification" id="test_verification" class="form-control">
+              {{#each verification}}
+                <option value="{{ver_id}}" {{#if (eq ver_id ../tests.test_verification)}}selected{{/if}}>{{ver_title}}</option>
+              {{/each}}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="test_reviewer" class="form-label">Reviewer</label>
+            <select name="test_reviewer" id="test_reviewer" class="form-control">
+              {{#each users }}
+                <option value="{{user_id}}" {{#if (eq user_id ../tests.test_reviewer)}}selected{{/if}}>{{user_name}}</option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+
+        <input type="hidden" id="test_id" name="test_id" value="{{tests.test_id}}">
+
+        <div class="form-group mt-4">
+          <label for="linked_requirements" class="form-label">Linked Requirements</label>
+          <select name="linked_requirements" id="linked_requirements" class="form-control" multiple size="8">
+            {{#each requirements}}
+              <option value="{{req_id}}">REQ-{{req_id}}: {{req_title}}</option>
+            {{/each}}
+          </select>
+          <small class="form-text">Hold Ctrl (or Cmd on Mac) to select multiple requirements</small>
+        </div>
+        
+        <script>
+          // Pre-select currently linked requirements
+          document.addEventListener('DOMContentLoaded', function() {
+            const linkedReqIds = {{#each linked_req_ids}}[{{this}}]{{/each}};
+            const select = document.getElementById('linked_requirements');
+            
+            Array.from(select.options).forEach(option => {
+              if (linkedReqIds.includes(parseInt(option.value))) {
+                option.selected = true;
+              }
+            });
+          });
+        </script>
+
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">Update Test</button>
+          <a href="/tests/{{tests.test_id}}" class="btn btn-outline">Cancel</a>
+          <a href="/tests" class="btn btn-outline">Back to Tests</a>
+        </div>
+      </form>
+    </div>
+  </div>
 </section>
-
 {{/inline}}
 {{> layout}}

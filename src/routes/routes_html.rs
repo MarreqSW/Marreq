@@ -395,6 +395,26 @@ pub async fn get_requirements_xls() -> (ContentType, NamedFile) {
     }
 }
 
+#[get("/tests.xls")]
+pub async fn get_tests_xls() -> (ContentType, NamedFile) {
+    let _file = excel::create_tests_workbook().expect("file can be created");
+    let path_to_file = path::Path::new("target/tests.xls");
+    let res = NamedFile::open(&path_to_file)
+        .await
+        .map_err(|e| NotFound(e.to_string()));
+    match res {
+        Ok(file) => {
+            let content_type = ContentType::new(
+                "application",
+                "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            );
+            (content_type, file)
+        }
+
+        Err(error) => panic!("Problem with file {:?}", error),
+    }
+}
+
 #[get("/new_user")]
 pub fn new_user() -> Template {
     let status = get_status_all().unwrap_or_default();

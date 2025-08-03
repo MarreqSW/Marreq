@@ -41,6 +41,7 @@ async fn main() -> Result<(), rocket::Error> {
                 get_matrix,
                 get_matrix_xls,
                 get_requirements_xls,
+                get_tests_xls,
                 new_user,
                 post_user,
                 show_user_id,

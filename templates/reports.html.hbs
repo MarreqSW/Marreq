@@ -1,0 +1,231 @@
+{{#*inline "page"}}
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1>Project Reports & Analytics</h1>
+      <p class="text-secondary">Comprehensive metrics and KPIs for your requirements management project</p>
+    </div>
+    <div class="d-flex gap-3 align-items-center">
+      <a href="/reports/pdf" class="btn btn-primary" target="_blank">
+        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14,2 14,8 20,8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10,9 9,9 8,9"></polyline>
+        </svg>
+        Generate PDF Report
+      </a>
+    </div>
+  </div>
+</div>
+
+<section id="Reports">
+  <!-- Executive Summary -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3>Executive Summary</h3>
+    </div>
+    <div class="card-body">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 11H1l8-8 8 8h-8v8z"></path>
+            </svg>
+          </div>
+          <div class="metric-content">
+            <div class="metric-value">{{metrics.total_requirements}}</div>
+            <div class="metric-label">Total Requirements</div>
+          </div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 12l2 2 4-4"></path>
+              <path d="M21 12c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2z"></path>
+              <path d="M3 12c1 0 2-1 2-2s-1-2-2-2-2 1-2 2 1 2 2 2z"></path>
+            </svg>
+          </div>
+          <div class="metric-content">
+            <div class="metric-value">{{metrics.total_tests}}</div>
+            <div class="metric-label">Total Tests</div>
+          </div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22,4 12,14.01 9,11.01"></polyline>
+            </svg>
+          </div>
+          <div class="metric-content">
+            <div class="metric-value">{{metrics.coverage_percentage}}%</div>
+            <div class="metric-label">Coverage</div>
+          </div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+          </div>
+          <div class="metric-content">
+            <div class="metric-value">{{metrics.avg_tests_per_requirement}}</div>
+            <div class="metric-label">Avg Tests/Req</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coverage Analysis -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3>Coverage Analysis</h3>
+    </div>
+    <div class="card-body">
+      <div class="coverage-section">
+        <div class="coverage-stats">
+          <div class="coverage-stat">
+            <span class="stat-label">Covered Requirements:</span>
+            <span class="stat-value">{{metrics.covered_requirements}} out of {{metrics.total_requirements}} ({{metrics.coverage_percentage}}%)</span>
+          </div>
+          <div class="coverage-stat">
+            <span class="stat-label">Total Test Links:</span>
+            <span class="stat-value">{{metrics.total_links}}</span>
+          </div>
+        </div>
+        <div class="coverage-bar">
+          <div class="coverage-fill" style="width: {{metrics.coverage_percentage}}%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Requirements by Status -->
+    <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3>Requirements by Status</h3>
+        </div>
+        <div class="card-body">
+          <div class="status-list">
+            {{#each requirements_by_status}}
+              <div class="status-item">
+                <span class="status-name">{{@key}}</span>
+                <span class="status-count">{{this}}</span>
+              </div>
+            {{/each}}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tests by Status -->
+    <div class="col-md-6">
+      <div class="card mb-4">
+        <div class="card-header">
+          <h3>Tests by Status</h3>
+        </div>
+        <div class="card-body">
+          <div class="status-list">
+            {{#each tests_by_status}}
+              <div class="status-item">
+                <span class="status-name">{{@key}}</span>
+                <span class="status-count">{{this}}</span>
+              </div>
+            {{/each}}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Requirements by Category -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3>Requirements by Category</h3>
+    </div>
+    <div class="card-body">
+      <div class="category-grid">
+        {{#each requirements_by_category}}
+          <div class="category-item">
+            <div class="category-name">{{@key}}</div>
+            <div class="category-count">{{this}}</div>
+          </div>
+        {{/each}}
+      </div>
+    </div>
+  </div>
+
+  <!-- Project Statistics -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h3>Project Statistics</h3>
+    </div>
+    <div class="card-body">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 3h18v18H3zM21 9H3M21 15H3M12 3v18"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{metrics.total_categories}}</div>
+            <div class="stat-label">Categories</div>
+          </div>
+        </div>
+        
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{metrics.total_users}}</div>
+            <div class="stat-label">Users</div>
+          </div>
+        </div>
+        
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{metrics.recent_requirements}}</div>
+            <div class="stat-label">Recent Requirements (30d)</div>
+          </div>
+        </div>
+        
+        <div class="stat-item">
+          <div class="stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 12l2 2 4-4"></path>
+              <path d="M21 12c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2z"></path>
+              <path d="M3 12c1 0 2-1 2-2s-1-2-2-2-2 1-2 2 1 2 2 2z"></path>
+            </svg>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{metrics.recent_tests}}</div>
+            <div class="stat-label">Recent Tests (30d)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{{/inline}}
+{{> layout}} 

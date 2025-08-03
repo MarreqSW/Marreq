@@ -1111,3 +1111,189 @@ pub fn show_requirements_tree(cookies: &CookieJar<'_>) -> Result<Template, Redir
     Ok(Template::render("requirements_tree", ctx))
 }
 
+#[get("/reports")]
+pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Get all data for metrics
+    let all_requirements = get_requirements_all().unwrap_or_default();
+    let all_tests = get_tests_all().unwrap_or_default();
+    let all_categories = get_categories_all().unwrap_or_default();
+    let all_users = get_users_all().unwrap_or_default();
+    let all_statuses = get_status_all().unwrap_or_default();
+    
+    // Calculate metrics
+    let total_requirements = all_requirements.len();
+    let total_tests = all_tests.len();
+    let total_categories = all_categories.len();
+    let total_users = all_users.len();
+    
+    // Requirements by status
+    let mut requirements_by_status = std::collections::HashMap::new();
+    for req in &all_requirements {
+        let status_name = get_status_name_by_id(req.req_current_status);
+        *requirements_by_status.entry(status_name).or_insert(0) += 1;
+    }
+    
+    // Tests by status
+    let mut tests_by_status = std::collections::HashMap::new();
+    for test in &all_tests {
+        let status_name = get_status_name_by_id(test.test_status);
+        *tests_by_status.entry(status_name).or_insert(0) += 1;
+    }
+    
+    // Requirements by category
+    let mut requirements_by_category = std::collections::HashMap::new();
+    for req in &all_requirements {
+        let category = get_category_by_id(req.req_category);
+        let category_name = category.cat_title;
+        *requirements_by_category.entry(category_name).or_insert(0) += 1;
+    }
+    
+    // Coverage metrics
+    let mut covered_requirements = 0;
+    let mut total_links = 0;
+    for req in &all_requirements {
+        let links = get_requirements_for_test(req.req_id).unwrap_or_default();
+        if !links.is_empty() {
+            covered_requirements += 1;
+        }
+        total_links += links.len();
+    }
+    
+    let coverage_percentage = if total_requirements > 0 {
+        (covered_requirements as f64 / total_requirements as f64) * 100.0
+    } else {
+        0.0
+    };
+    
+    let avg_tests_per_requirement = if total_requirements > 0 {
+        total_links as f64 / total_requirements as f64
+    } else {
+        0.0
+    };
+    
+    // Recent activity (last 30 days)
+    let now = chrono::Utc::now();
+    let thirty_days_ago = now - chrono::Duration::days(30);
+    
+    let mut recent_requirements = 0;
+    let mut recent_tests = 0;
+    
+    for req in &all_requirements {
+        // For now, we'll use a placeholder since creation_date might not be available
+        recent_requirements += 1; // Placeholder
+    }
+    
+    for test in &all_tests {
+        // Assuming test has creation date - you might need to add this field
+        // For now, we'll use a placeholder
+        recent_tests += 1; // Placeholder
+    }
+    
+    let ctx = json!({
+        "user": user,
+        "metrics": {
+            "total_requirements": total_requirements,
+            "total_tests": total_tests,
+            "total_categories": total_categories,
+            "total_users": total_users,
+            "coverage_percentage": coverage_percentage,
+            "avg_tests_per_requirement": avg_tests_per_requirement,
+            "covered_requirements": covered_requirements,
+            "total_links": total_links,
+            "recent_requirements": recent_requirements,
+            "recent_tests": recent_tests
+        },
+        "requirements_by_status": requirements_by_status,
+        "tests_by_status": tests_by_status,
+        "requirements_by_category": requirements_by_category,
+        "all_statuses": all_statuses,
+        "all_categories": all_categories
+    });
+    
+    Ok(Template::render("reports", ctx))
+}
+
+#[get("/reports/pdf")]
+pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<rocket::response::content::RawHtml<String>, Redirect> {
+    let _user = require_auth(cookies)?;
+    
+    // Get the same data as the reports page
+    let all_requirements = get_requirements_all().unwrap_or_default();
+    let all_tests = get_tests_all().unwrap_or_default();
+    let all_categories = get_categories_all().unwrap_or_default();
+    let all_users = get_users_all().unwrap_or_default();
+    let all_statuses = get_status_all().unwrap_or_default();
+    
+    // Calculate the same metrics
+    let total_requirements = all_requirements.len();
+    let total_tests = all_tests.len();
+    let total_categories = all_categories.len();
+    let total_users = all_users.len();
+    
+    // Requirements by status
+    let mut requirements_by_status = std::collections::HashMap::new();
+    for req in &all_requirements {
+        let status_name = get_status_name_by_id(req.req_current_status);
+        *requirements_by_status.entry(status_name).or_insert(0) += 1;
+    }
+    
+    // Tests by status
+    let mut tests_by_status = std::collections::HashMap::new();
+    for test in &all_tests {
+        let status_name = get_status_name_by_id(test.test_status);
+        *tests_by_status.entry(status_name).or_insert(0) += 1;
+    }
+    
+    // Requirements by category
+    let mut requirements_by_category = std::collections::HashMap::new();
+    for req in &all_requirements {
+        let category = get_category_by_id(req.req_category);
+        let category_name = category.cat_title;
+        *requirements_by_category.entry(category_name).or_insert(0) += 1;
+    }
+    
+    // Coverage metrics
+    let mut covered_requirements = 0;
+    let mut total_links = 0;
+    for req in &all_requirements {
+        let links = get_requirements_for_test(req.req_id).unwrap_or_default();
+        if !links.is_empty() {
+            covered_requirements += 1;
+        }
+        total_links += links.len();
+    }
+    
+    let coverage_percentage = if total_requirements > 0 {
+        (covered_requirements as f64 / total_requirements as f64) * 100.0
+    } else {
+        0.0
+    };
+    
+    let avg_tests_per_requirement = if total_requirements > 0 {
+        total_links as f64 / total_requirements as f64
+    } else {
+        0.0
+    };
+    
+    // Generate PDF content
+    let pdf_content = generate_pdf_content(
+        total_requirements,
+        total_tests,
+        total_categories,
+        total_users,
+        coverage_percentage,
+        avg_tests_per_requirement,
+        covered_requirements,
+        total_links,
+        requirements_by_status,
+        tests_by_status,
+        requirements_by_category
+    );
+    
+    // For now, return the HTML content
+    // In a real implementation, you would generate and return the actual PDF
+    Ok(rocket::response::content::RawHtml(pdf_content))
+}
+

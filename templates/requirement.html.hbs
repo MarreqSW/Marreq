@@ -1,18 +1,86 @@
 
-<div class='AllReqs'>
-    <div class='ReqNum'>Num: <a href='http://localhost:8000/requirements/{{req_id}}'>
-    {{req_id}}</a></div>
-    <div class='ReqTitle'>Title: {{req_title}}</div>
-    <div class='ReqDesc'>Description: {{req_description}}</div>
-    <div class='ReqAuthor'>Author: {{req_author}}</div>
-    <div class='ReqRef'>Reference: {{req_reference}}</div>
-    <div class='ReqParent'>Parent: <a href='/requirements/{{req_parent_id}}'>{{req_parent_title}}</a></div>
-    <div class='ReqDate'>Date: {{req_creation_date}}</div>
-    <div class='ReqCat'>Category: {{req_category}}</div>
-    <div class='ReqVerification'>Verification mode: {{req_verification}}</div>
-    <div class='ReqStat'>Status: {{req_current_status}}</div>
-    <div class='ReqURL'>Link: {{req_link}}</div>
-    <div class='ReqReviewer'>Reviewer: {{req_reviewer}}</div>
-    <a href="/edit_requirement/{{req_id}}">Edit</a>
+<div class="card requirement-card">
+  <div class="card-body">
+    <div class="requirement-header">
+      <div>
+        <a href="/requirements/{{req_id}}" class="requirement-id">REQ-{{req_id}}</a>
+        <h3 class="requirement-title">{{req_title}}</h3>
+      </div>
+      <div class="requirement-actions">
+        <a href="/edit_requirement/{{req_id}}" class="btn btn-outline btn-sm">Edit</a>
+      </div>
+    </div>
+    
+    <p class="requirement-description">{{req_description}}</p>
+    
+    <div class="requirement-meta">
+      <div class="meta-item">
+        <span class="meta-label">Author</span>
+        <span class="meta-value">{{req_author}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Reviewer</span>
+        <span class="meta-value">{{req_reviewer}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Category</span>
+        <span class="meta-value">{{req_category}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Applicability</span>
+        <span class="meta-value">{{req_applicability}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Status</span>
+        <span class="status-badge status-{{req_current_status}}">{{req_current_status}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Verification</span>
+        <span class="meta-value">{{req_verification}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Reference</span>
+        <span class="meta-value">{{req_reference}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Parent</span>
+        <span class="meta-value">
+          {{#if req_parent_id}}
+            <a href="/requirements/{{req_parent_id}}">{{req_parent_title}}</a>
+          {{else}}
+            None
+          {{/if}}
+        </span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Created</span>
+        <span class="meta-value">{{req_creation_date}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Updated</span>
+        <span class="meta-value">{{req_update_date}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Deadline</span>
+        <span class="meta-value">{{req_deadline_date}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Link</span>
+        <span class="meta-value">
+          {{#if req_link}}
+            <a href="{{req_link}}" target="_blank" rel="noopener">View</a>
+          {{else}}
+            None
+          {{/if}}
+        </span>
+      </div>
+      {{#if req_justification}}
+      <div class="meta-item">
+        <span class="meta-label">Justification</span>
+        <span class="meta-value">{{req_justification}}</span>
+      </div>
+      {{/if}}
+    </div>
+  </div>
 </div>
 

@@ -1,0 +1,94 @@
+{{#*inline "page"}}
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <h1>Traceability Matrix</h1>
+      <p class="text-secondary">Requirements to Tests mapping</p>
+    </div>
+    <div>
+      <a href="/matrix.xls" class="btn btn-primary">Export Excel</a>
+    </div>
+  </div>
+</div>
+
+<section id="Matrix">
+  <div class="card">
+    <div class="card-header">
+      <div class="d-flex justify-content-between align-items-center">
+        <h3>Matrix Overview</h3>
+        <span class="text-secondary">Total Tests: {{total_tests}}</span>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Req ID</th>
+              <th>Title</th>
+              <th>Reference</th>
+              {{#each tests}}
+                <th class="text-center">
+                  <a href="/tests/{{test_id}}" class="text-decoration-none">
+                    Test #{{test_id}}
+                  </a>
+                  <div class="text-xs text-secondary">{{test_status}}</div>
+                </th>
+              {{/each}}
+            </tr>
+          </thead>
+          <tbody>
+            {{#each requirements}}
+              <tr>
+                <td>
+                  <a href="/requirements/{{req_id}}" class="requirement-id">REQ-{{req_id}}</a>
+                </td>
+                <td>
+                  <div class="font-medium">{{req_title}}</div>
+                </td>
+                <td>
+                  <span class="text-secondary">{{req_reference}}</span>
+                </td>
+                {{#each matrix}}
+                  <td class="text-center">
+                    {{#if this}}
+                      <span class="status-badge status-approved">✓</span>
+                    {{else}}
+                      <span class="text-secondary">-</span>
+                    {{/if}}
+                  </td>
+                {{/each}}
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <div class="card">
+      <div class="card-header">
+        <h3>Matrix Statistics</h3>
+      </div>
+      <div class="card-body">
+        <div class="grid grid-3">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary">{{total_requirements}}</div>
+            <div class="text-secondary">Total Requirements</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary">{{total_tests}}</div>
+            <div class="text-secondary">Total Tests</div>
+          </div>
+          <div class="text-center">
+            <div class="text-2xl font-bold text-primary">{{total_links}}</div>
+            <div class="text-secondary">Total Links</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{{/inline}}
+{{> layout}} 

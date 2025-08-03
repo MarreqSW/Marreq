@@ -1,75 +1,118 @@
 {{#*inline "page"}}
+<div class="mb-4">
+  <h1>New Requirement</h1>
+  <p class="text-secondary">Create a new software requirement</p>
+</div>
 
 <section id="Requirements">
-<h1>New requirement</h1>
-	
-
-<form method="post">
-    <div class='ReqTitle'> 
-        <label for="req_title">Title: </label>
-        <input type="text" name="req_title" id="req_title" value="{{req_title}}">
+  <div class="card">
+    <div class="card-header">
+      <h3>Requirement Details</h3>
     </div>
-    <div class='ReqDesc'>
-        <label for='req_description'>Description: </label>
-        <input type="text" name ="req_description" id="req_description" value="{{req_description}}">
-    </div>
-    <div class='ReqAuthor'>
-        <label for='req_author'>Author: </label>
-        <select name="req_author" id="req_author">
-        {{#each users }}
-            <option value="{{user_id}}"> {{user_name}}</option>
-        {{/each}}
-    </select>
-    </div>
-    <div class='ReqVerification'>
-        <label for='req_verification'>Verification mode</label>
-        <select name='req_verification' id='req_verification'>
-            {{#each verification}}
-            <option value="{{ver_id}}">{{ver_title}}</option>
-            {{/each}}
-        </select>
-    </div>
-    <div class='ReqRef'>
-        <label for='req_reference'>Reference: </label>
-        <input type="text" name="req_reference" id="req_reference" value="{{req_reference}}">
-    </div>
+    <div class="card-body">
+      <form method="post">
+        <div class="grid grid-2">
+          <div class="form-group">
+            <label for="req_title" class="form-label">Title</label>
+            <input type="text" name="req_title" id="req_title" value="{{req_title}}" class="form-control" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="req_reference" class="form-label">Reference</label>
+            <input type="text" name="req_reference" id="req_reference" value="{{req_reference}}" class="form-control">
+          </div>
+        </div>
 
-    <label for='req_current_status'>Status: </label>
-    <select name="req_current_status" id="req_current_status">
-        {{#each status }}
-            <option value="{{st_id}}"> {{st_title}}</option>
-        {{/each}}
-    </select>
+        <div class="form-group">
+          <label for="req_description" class="form-label">Description</label>
+          <textarea name="req_description" id="req_description" class="form-control" rows="4" required>{{req_description}}</textarea>
+        </div>
 
-    <label for='req_category'>Category: </label>
-    <select name="req_category" id="req_category">
-        {{#each categories }}
-            <option value="{{cat_id}}"> {{cat_title}}</option>
-        {{/each}}
-    </select>
+        <div class="form-group">
+          <label for="req_justification" class="form-label">Justification (Optional)</label>
+          <textarea name="req_justification" id="req_justification" class="form-control" rows="3">{{req_justification}}</textarea>
+          <small class="text-secondary">Explain the rationale behind this requirement</small>
+        </div>
 
-    <label for='req_parent'>Parent: </label>
-    <select name="req_parent" id="req_parent">
-        {{#each parent }}
-            <option value="{{req_id}}"> {{req_title}}</option>
-        {{/each}}
-    </select>
-    <div class='ReqReviewer'>
-        <label for='req_reviewer'>Author: </label>
-        <select name="req_reviewer" id="req_reviewer">
-            {{#each users }}
-                <option value="{{user_id}}"> {{user_name}}</option>
-            {{/each}}
-        </select>
+        <div class="grid grid-3">
+          <div class="form-group">
+            <label for="req_author" class="form-label">Author</label>
+            <select name="req_author" id="req_author" class="form-control" required>
+              {{#each users }}
+                <option value="{{user_id}}">{{user_name}}</option>
+              {{/each}}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="req_reviewer" class="form-label">Reviewer</label>
+            <select name="req_reviewer" id="req_reviewer" class="form-control" required>
+              {{#each users }}
+                <option value="{{user_id}}">{{user_name}}</option>
+              {{/each}}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="req_category" class="form-label">Category</label>
+            <select name="req_category" id="req_category" class="form-control" required>
+              {{#each categories }}
+                <option value="{{cat_id}}">{{cat_title}}</option>
+              {{/each}}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="req_applicability" class="form-label">Applicability</label>
+            <select name="req_applicability" id="req_applicability" class="form-control" required>
+              {{#each applicability }}
+                <option value="{{app_id}}">{{app_title}}</option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-3">
+          <div class="form-group">
+            <label for="req_current_status" class="form-label">Status</label>
+            <select name="req_current_status" id="req_current_status" class="form-control" required>
+              {{#each status }}
+                <option value="{{st_id}}">{{st_title}}</option>
+              {{/each}}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="req_verification" class="form-label">Verification Mode</label>
+            <select name="req_verification" id="req_verification" class="form-control" required>
+              {{#each verification}}
+                <option value="{{ver_id}}">{{ver_title}}</option>
+              {{/each}}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="req_parent" class="form-label">Parent Requirement</label>
+            <select name="req_parent" id="req_parent" class="form-control">
+              <option value="0">None</option>
+              {{#each parent }}
+                <option value="{{req_id}}">{{req_title}}</option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+
+        <input type="hidden" id="req_id" name="req_id" value="None">
+        <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
+        <input type="hidden" id="req_link" name="req_link" value="http://www.google.com">
+
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">Create Requirement</button>
+          <a href="/requirements" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
     </div>
-
-    <input type="hidden" id="req_id" name="req_id" value="None">
-    <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
-    <input type="hidden" id="req_link" name="req_link" value="http://www.google.com">
-    <input type="submit" value="Create new Requirement">
-</form>
-
+  </div>
 </section>
-
 {{/inline}}
 {{> layout}}

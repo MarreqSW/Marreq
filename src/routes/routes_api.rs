@@ -12,9 +12,9 @@ use crate::models::*;
 #[get("/requirements")]
 pub fn api_get_requirement() -> Result<Json<Vec<Requirement>>, rocket::http::Status> {
     let ret_val = get_requirements_all()
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying page views: {:?}", _err);
             "Error querying page views from the database".into()
         })
         .map(Json);
@@ -64,9 +64,9 @@ pub fn api_get_requirement_by_id(
     let ret_val = requirements
         .filter(req_id.eq(ident))
         .load::<Requirement>(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying page views: {:?}", _err);
             "Error querying page views from the database".into()
         })
         .map(Json);
@@ -86,9 +86,9 @@ pub fn api_get_requirement_by_id(
 #[get("/categories")]
 pub fn api_get_categories() -> Result<Json<Vec<Category>>, rocket::http::Status> {
     let ret_val = get_categories_all()
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying page views: {:?}", _err);
             "Error querying page views from the database".into()
         })
         .map(Json);
@@ -108,9 +108,9 @@ pub fn api_get_categories() -> Result<Json<Vec<Category>>, rocket::http::Status>
 #[get("/status")]
 pub fn api_get_status() -> Result<Json<Vec<Status>>, rocket::http::Status> {
     let ret_val = get_status_all()
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying page views: {:?}", _err);
             "Error querying page views from the database".into()
         })
         .map(Json);
@@ -137,9 +137,9 @@ pub async fn api_post_status(new_status: Json<NewStatus>) -> Value {
 #[get("/tests")]
 pub fn api_get_test() -> Result<Json<Vec<Test>>, rocket::http::Status> {
     let ret_val = get_tests_all()
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying page views: {:?}", _err);
             "Error querying page views from the database".into()
         })
         .map(Json);
@@ -159,9 +159,9 @@ pub fn api_get_test_by_id(ident: i32) -> Result<Json<Vec<Test>>, rocket::http::S
     let ret_val = tests
         .filter(test_id.eq(ident))
         .load::<Test>(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying page views: {:?}", _err);
             "Error querying page views from the database".into()
         })
         .map(Json);
@@ -205,9 +205,9 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
 #[get("/users")]
 pub fn api_get_users() -> Result<Json<Vec<User>>, rocket::http::Status> {
     let ret_val = get_users_all()
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying page views: {:?}", _err);
             "Error querying page views from the database".into()
         })
         .map(Json);
@@ -227,9 +227,9 @@ pub fn api_get_users_by_id(ident: i32) -> Result<Json<Vec<User>>, rocket::http::
     let ret_val = users
         .filter(user_id.eq(ident))
         .load::<User>(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying page views: {:?}", _err);
             "Error querying page views from the database".into()
         })
         .map(Json);
@@ -282,9 +282,9 @@ pub fn api_get_matrix() -> Result<Json<Vec<Matrix>>, rocket::http::Status> {
 
     let ret_val = matrix
         .load::<Matrix>(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying page views: {:?}", _err);
             "Error querying page views from the database".into()
         })
         .map(Json);
@@ -361,9 +361,9 @@ pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
 #[get("/applicability")]
 pub fn api_get_applicability() -> Result<Json<Vec<Applicability>>, rocket::http::Status> {
     let ret_val = get_applicability_all()
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying applicability: {:?}", err);
+            println!("Error querying applicability: {:?}", _err);
             "Error querying applicability from the database".into()
         })
         .map(Json);

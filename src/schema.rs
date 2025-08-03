@@ -76,6 +76,8 @@ diesel::table! {
         user_level -> Int4,
         user_creation_date -> Timestamp,
         user_last_login -> Timestamp,
+        #[max_length = 255]
+        user_password -> Varchar,
     }
 }
 

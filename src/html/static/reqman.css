@@ -483,6 +483,35 @@ select.form-control[multiple] option:checked {
 .table-container {
   overflow-x: auto;
   max-width: 100%;
+  position: relative;
+}
+
+/* Top horizontal scroll bar */
+.table-scroll-top {
+  height: 8px;
+  background-color: #f1f5f9;
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) #f1f5f9;
+}
+
+.table-scroll-top::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-scroll-top::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.table-scroll-top::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 4px;
+}
+
+.table-scroll-top::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
 }
 
 /* Lists */

@@ -34,7 +34,9 @@
     </div>
     <div class="card-body p-0">
       <div class="table-container">
-        <table class="table">
+        <!-- Top horizontal scroll bar -->
+        <div class="table-scroll-top" id="tableScrollTop"></div>
+        <table class="table" id="matrixTable">
           <thead>
             <tr>
               <th class="sortable" data-sort="req_id">
@@ -180,6 +182,51 @@
     document.getElementById('test_status_filter').addEventListener('change', function() {
       this.form.submit();
     });
+
+    // Synchronize horizontal scroll between top scroll bar and table
+    const tableContainer = document.querySelector('.table-container');
+    const topScrollBar = document.getElementById('tableScrollTop');
+    const matrixTable = document.getElementById('matrixTable');
+
+    if (tableContainer && topScrollBar && matrixTable) {
+      // Create a hidden div to measure the full width of the table
+      const measureDiv = document.createElement('div');
+      measureDiv.style.position = 'absolute';
+      measureDiv.style.visibility = 'hidden';
+      measureDiv.style.height = '0';
+      measureDiv.style.overflow = 'hidden';
+      measureDiv.innerHTML = matrixTable.outerHTML;
+      tableContainer.appendChild(measureDiv);
+
+      // Set the width of the top scroll bar to match the table width
+      const tableWidth = measureDiv.scrollWidth;
+      const containerWidth = tableContainer.clientWidth;
+      
+      if (tableWidth > containerWidth) {
+        topScrollBar.style.display = 'block';
+        topScrollBar.style.width = '100%';
+        
+        // Create a spacer div inside the top scroll bar to match table width
+        const spacer = document.createElement('div');
+        spacer.style.width = tableWidth + 'px';
+        spacer.style.height = '1px';
+        topScrollBar.appendChild(spacer);
+
+        // Synchronize scroll events
+        tableContainer.addEventListener('scroll', function() {
+          topScrollBar.scrollLeft = this.scrollLeft;
+        });
+
+        topScrollBar.addEventListener('scroll', function() {
+          tableContainer.scrollLeft = this.scrollLeft;
+        });
+      } else {
+        topScrollBar.style.display = 'none';
+      }
+
+      // Clean up the measure div
+      tableContainer.removeChild(measureDiv);
+    }
   });
 </script>
 {{/inline}}

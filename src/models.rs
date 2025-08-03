@@ -20,6 +20,8 @@ pub struct Requirement {
     pub req_creation_date: chrono::NaiveDateTime,
     pub req_update_date: chrono::NaiveDateTime,
     pub req_deadline_date: chrono::NaiveDateTime,
+    pub req_applicability: i32,
+    pub req_justification: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm)]
@@ -39,6 +41,8 @@ pub struct NewRequirement {
     pub req_parent: i32,
     pub req_reference: String,
     pub req_reviewer: i32,
+    pub req_applicability: i32,
+    pub req_justification: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -53,11 +57,13 @@ pub struct DecoratedRequirement {
     pub req_link: String,
     pub req_reference: String,
     pub req_category: String,
+    pub req_applicability: String,
     pub req_parent_id: i32,
     pub req_parent_title: String,
     pub req_creation_date: String,
     pub req_update_date: String,
     pub req_deadline_date: String,
+    pub req_justification: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]
@@ -67,6 +73,39 @@ pub struct Category {
     pub cat_title: String,
     pub cat_description: String,
     pub cat_tag: String,
+}
+
+#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = categories)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(primary_key(cat_id))]
+pub struct NewCategory {
+    pub cat_id: Option<i32>,
+    pub cat_title: String,
+    pub cat_description: String,
+    pub cat_tag: String,
+}
+
+#[derive(Serialize, Deserialize, Queryable)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Applicability {
+    pub app_id: i32,
+    pub app_title: String,
+    pub app_description: String,
+    pub app_tag: String,
+}
+
+#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = applicability)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(primary_key(app_id))]
+pub struct NewApplicability {
+    pub app_id: Option<i32>,
+    pub app_title: String,
+    pub app_description: String,
+    pub app_tag: String,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]
@@ -228,6 +267,16 @@ impl fmt::Display for Category {
             f,
             "<div class='category'>Category: {}</div>",
             self.cat_title
+        )
+    }
+}
+
+impl fmt::Display for Applicability {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "<div class='applicability'>Applicability: {}</div>",
+            self.app_title
         )
     }
 }

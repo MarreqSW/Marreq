@@ -89,7 +89,10 @@ pub fn get_edit_requirement(req_id: i32) -> Template {
     let verification_types = get_verification_all().unwrap_or_default();
     let verification_json = json!(verification_types);
 
-    let ctx = json!({"requirements": req_decorate_json, "categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json, "verification": verification_json});
+    let applicability = get_applicability_all().unwrap_or_default();
+    let applicability_json = json!(applicability);
+
+    let ctx = json!({"requirements": req_decorate_json, "categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json, "verification": verification_json, "applicability": applicability_json});
 
     println!("Requirement: {:#}", ctx);
     Template::render("edit_requirement_by_id", ctx)
@@ -123,7 +126,10 @@ pub fn new_requirement() -> Template {
     let verification_types = get_verification_all().unwrap_or_default();
     let verification_json = json!(verification_types);
 
-    let ctx = json!({"categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json, "verification": verification_json});
+    let applicability = get_applicability_all().unwrap_or_default();
+    let applicability_json = json!(applicability);
+
+    let ctx = json!({"categories": categories_json, "status": status_json, "parent": parents_json, "users": users_json, "verification": verification_json, "applicability": applicability_json});
 
     Template::render("new_requirement", ctx)
 }
@@ -270,12 +276,11 @@ pub fn show_status() -> content::RawHtml<String> {
 }
 
 #[get("/matrix")]
-pub fn get_matrix() -> content::RawHtml<String> {
+pub fn get_matrix() -> Template {
     use crate::schema::matrix::dsl::*;
     use crate::schema::requirements::dsl::*;
     use crate::schema::tests::dsl::*;
 
-    let mut out_str = print_header();
     let connection = &mut establish_connection();
 
     let all_reqs = requirements
@@ -284,70 +289,96 @@ pub fn get_matrix() -> content::RawHtml<String> {
             println!("Error querying page views: {:?}", err);
             "Error querying page views from the database".into()
         })
-        .expect("Error gettint matrix table");
+        .expect("Error getting matrix table");
 
-    let total_tests: i64 = tests.count().get_result(connection).unwrap();
+    let all_tests = tests
+        .load::<Test>(connection)
+        .map_err(|err| -> String {
+            println!("Error querying tests: {:?}", err);
+            "Error querying tests from the database".into()
+        })
+        .expect("Error getting tests");
 
-    out_str = format!("{}<p id='title1'>Total Tests: {}</p>", out_str, total_tests);
-    out_str = format!("{}<table>", out_str);
-    out_str = format!(
-        "{}<tr><th>Req ID</th><th>Title</th><th>Reference</th>",
-        out_str
-    );
+    let total_tests = all_tests.len() as i32;
+    let total_requirements = all_reqs.len() as i32;
 
-    /* Prepare table headers */
-    for i in 1..total_tests + 1 {
-        let ts: Test = tests
-            .filter(test_id.eq(i as i32))
-            .get_result(connection)
-            .unwrap();
+    // Create matrix data structure
+    let mut total_links = 0;
+    let mut requirements_with_matrix = Vec::new();
 
-        let test_status_name = get_status_name_by_id(ts.test_status);
-        out_str = format!(
-            "{}<th><a href='tests/{}'>Test #{}</a> ({})</th>",
-            out_str, i, i, test_status_name
-        );
-    }
-
-    out_str = format!("{}</tr>", out_str);
-
-    /*
-     * Show all test (M) for every requirement (N)
-     * NOTE: Not efficient O(N*M) !!!
-     */
-    for req in all_reqs.iter() {
-        out_str = format!(
-            "{}<tr><td><a href='requirements/{}'>{}</a></td><td>{}</td><td>{}</td>",
-            out_str, req.req_id, req.req_id, req.req_title, req.req_reference
-        );
-
-        for indx in 1..total_tests + 1 {
+    for req in &all_reqs {
+        let mut req_matrix = Vec::new();
+        
+        for test in &all_tests {
             let test_present: i64 = matrix
                 .filter(matrix_req_id.eq(req.req_id))
-                .filter(matrix_test_id.eq(indx as i32))
+                .filter(matrix_test_id.eq(test.test_id))
                 .count()
                 .get_result(connection)
                 .unwrap();
 
             if test_present > 0 {
-                out_str = format!("{}<td>Yes</td>", out_str);
+                req_matrix.push(true);
+                total_links += 1;
             } else {
-                out_str = format!("{}<td>No</td>", out_str);
+                req_matrix.push(false);
             }
         }
-        out_str = format!("{}</tr>\n", out_str);
+        
+        requirements_with_matrix.push(json!({
+            "req_id": req.req_id,
+            "req_title": req.req_title,
+            "req_reference": req.req_reference,
+            "matrix": req_matrix
+        }));
     }
 
-    out_str = format!("{}</table>", out_str);
-    out_str = format!("{} {}", out_str, print_footer());
+    // Prepare tests with status names
+    let mut tests_with_status = Vec::new();
+    for test in all_tests {
+        let test_status_name = get_status_name_by_id(test.test_status);
+        tests_with_status.push(json!({
+            "test_id": test.test_id,
+            "test_name": test.test_name,
+            "test_status": test_status_name
+        }));
+    }
 
-    content::RawHtml(out_str)
+    let ctx = json!({
+        "requirements": requirements_with_matrix,
+        "tests": tests_with_status,
+        "total_tests": total_tests,
+        "total_requirements": total_requirements,
+        "total_links": total_links
+    });
+
+    Template::render("matrix", ctx)
 }
 
-#[get("/matrix/xls")]
+#[get("/matrix.xls")]
 pub async fn get_matrix_xls() -> (ContentType, NamedFile) {
     let _file = excel::create_matrix_workbook().expect("file can be created");
-    let path_to_file = path::Path::new("target/matrix.xlsx");
+    let path_to_file = path::Path::new("target/matrix.xls");
+    let res = NamedFile::open(&path_to_file)
+        .await
+        .map_err(|e| NotFound(e.to_string()));
+    match res {
+        Ok(file) => {
+            let content_type = ContentType::new(
+                "application",
+                "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            );
+            (content_type, file)
+        }
+
+        Err(error) => panic!("Problem with file {:?}", error),
+    }
+}
+
+#[get("/requirements.xls")]
+pub async fn get_requirements_xls() -> (ContentType, NamedFile) {
+    let _file = excel::create_requirements_workbook().expect("file can be created");
+    let path_to_file = path::Path::new("target/requirements.xls");
     let res = NamedFile::open(&path_to_file)
         .await
         .map_err(|e| NotFound(e.to_string()));
@@ -369,21 +400,82 @@ pub fn new_user() -> Template {
     let status = get_status_all().unwrap_or_default();
     let status_json = json!(status);
 
-    let categories = get_categories_all().unwrap_or_default();
-    let categories_json = json!(categories);
-
-    let parents = get_tests_all().unwrap_or_default();
-    let parents_json = json!(parents);
-
-    let users = get_users_all().unwrap_or_default();
-    let users_json = json!(users);
-
-    let requirements = get_requirements_all().unwrap_or_default();
-    let requirements_json = json!(requirements);
-
-    let ctx = json!({"categories": categories_json, "status": status_json, "parents": parents_json, "users": users_json, "requirements": requirements_json});
-
+    let ctx = json!({"status": status_json});
     Template::render("new_user", ctx)
+}
+
+#[get("/categories")]
+pub fn show_categories() -> Template {
+    let categories = get_categories_all();
+
+    let ctx = match categories {
+        Ok(cats) => {
+            json!({"categories": cats})
+        }
+        Err(_) => {
+            json!({"categories": []})
+        }
+    };
+
+    Template::render("categories", ctx)
+}
+
+#[get("/new_category")]
+pub fn new_category() -> Template {
+    let ctx = json!({});
+    Template::render("new_category", ctx)
+}
+
+#[post("/new_category", data = "<new_category>")]
+pub fn post_category(new_category: Form<NewCategory>) -> Redirect {
+    let connection = &mut establish_connection();
+    
+    let result = insert_new_category(connection, &new_category);
+    match result {
+        Ok(_) => Redirect::to(uri!(show_categories)),
+        Err(e) => {
+            println!("Error creating category: {:?}", e);
+            Redirect::to(uri!(new_category))
+        }
+    }
+}
+
+#[get("/edit_category/<cat_id>")]
+pub fn get_edit_category(cat_id: i32) -> Template {
+    let category = get_category_by_id(cat_id);
+    let ctx = json!({"categories": category});
+    Template::render("edit_category", ctx)
+}
+
+#[post("/edit_category/<cat_id>", data = "<category>")]
+pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>) -> Redirect {
+    let connection = &mut establish_connection();
+    
+    let mut category_with_id = category.into_inner();
+    category_with_id.cat_id = Some(cat_id);
+    
+    let result = edit_category(connection, &category_with_id);
+    match result {
+        Ok(_) => Redirect::to(uri!(show_categories)),
+        Err(e) => {
+            println!("Error updating category: {:?}", e);
+            Redirect::to(uri!(get_edit_category(cat_id)))
+        }
+    }
+}
+
+#[delete("/delete_category/<cat_id>")]
+pub fn delete_category_route(cat_id: i32) -> rocket::http::Status {
+    let connection = &mut establish_connection();
+    
+    let result = delete_category(connection, &cat_id);
+    match result {
+        Ok(_) => rocket::http::Status::Ok,
+        Err(e) => {
+            println!("Error deleting category: {:?}", e);
+            rocket::http::Status::InternalServerError
+        }
+    }
 }
 
 #[post("/new_user", data = "<new_user>")]
@@ -393,3 +485,78 @@ pub fn post_user(new_user: Form<NewUser>) -> Redirect {
 
     Redirect::to(uri!(show_user_id(my_id)))
 }
+
+#[get("/applicability")]
+pub fn show_applicability() -> Template {
+    let applicability = get_applicability_all();
+
+    let ctx = match applicability {
+        Ok(apps) => {
+            json!({"applicability": apps})
+        }
+        Err(_) => {
+            json!({"applicability": []})
+        }
+    };
+
+    Template::render("applicability", ctx)
+}
+
+#[get("/new_applicability")]
+pub fn new_applicability() -> Template {
+    let ctx = json!({});
+    Template::render("new_applicability", ctx)
+}
+
+#[post("/new_applicability", data = "<new_applicability>")]
+pub fn post_applicability(new_applicability: Form<NewApplicability>) -> Redirect {
+    let connection = &mut establish_connection();
+    
+    let result = insert_new_applicability(connection, &new_applicability);
+    match result {
+        Ok(_) => Redirect::to(uri!(show_applicability)),
+        Err(e) => {
+            println!("Error creating applicability: {:?}", e);
+            Redirect::to(uri!(new_applicability))
+        }
+    }
+}
+
+#[get("/edit_applicability/<app_id>")]
+pub fn get_edit_applicability(app_id: i32) -> Template {
+    let applicability = get_applicability_by_id(app_id);
+    let ctx = json!({"applicability": applicability});
+    Template::render("edit_applicability", ctx)
+}
+
+#[post("/edit_applicability/<app_id>", data = "<applicability>")]
+pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability>) -> Redirect {
+    let connection = &mut establish_connection();
+    
+    let mut applicability_with_id = applicability.into_inner();
+    applicability_with_id.app_id = Some(app_id);
+    
+    let result = edit_applicability(connection, &applicability_with_id);
+    match result {
+        Ok(_) => Redirect::to(uri!(show_applicability)),
+        Err(e) => {
+            println!("Error updating applicability: {:?}", e);
+            Redirect::to(uri!(get_edit_applicability(app_id)))
+        }
+    }
+}
+
+#[delete("/delete_applicability/<app_id>")]
+pub fn delete_applicability_route(app_id: i32) -> rocket::http::Status {
+    let connection = &mut establish_connection();
+    
+    let result = delete_applicability(connection, &app_id);
+    match result {
+        Ok(_) => rocket::http::Status::Ok,
+        Err(e) => {
+            println!("Error deleting applicability: {:?}", e);
+            rocket::http::Status::InternalServerError
+        }
+    }
+}
+

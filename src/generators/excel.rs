@@ -18,9 +18,9 @@ pub fn create_matrix_workbook()->Result<Vec<u8>,xlsxwriter::XlsxError> {
     
     let mut all_reqs = requirements
     .load::<Requirement>(connection)
-    .map_err(|err| -> String {
+    .map_err(|_err| -> String {
         #[cfg(debug_assertions)]
-        println!("Error querying page views: {:?}", err);
+        println!("Error querying page views: {:?}", _err);
         "Error querying page views from the database".into()
     }).unwrap();
 
@@ -93,9 +93,9 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> 
     // Get all requirements with decorated data
     let mut all_reqs = requirements
         .load::<Requirement>(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying requirements: {:?}", err);
+            println!("Error querying requirements: {:?}", _err);
             "Error querying requirements from the database".into()
         }).unwrap();
 
@@ -200,9 +200,9 @@ pub fn create_tests_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> {
     // Get all tests
     let mut all_tests = tests
         .load::<Test>(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying tests: {:?}", err);
+            println!("Error querying tests: {:?}", _err);
             "Error querying tests from the database".into()
         }).unwrap();
 

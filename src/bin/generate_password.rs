@@ -3,15 +3,15 @@ use bcrypt::{hash, DEFAULT_COST};
 fn main() {
     let password = "password123";
     match hash(password, DEFAULT_COST) {
-        Ok(hashed) => {
+        Ok(_hashed) => {
             #[cfg(debug_assertions)]
             println!("Password: {}", password);
             #[cfg(debug_assertions)]
-            println!("Hash: {}", hashed);
+            println!("Hash: {}", _hashed);
         }
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error hashing password: {:?}", e);
+            println!("Error hashing password: {:?}", _e);
         }
     }
 } 

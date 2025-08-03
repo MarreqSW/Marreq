@@ -5,6 +5,7 @@ use diesel::prelude::*;
 use dotenvy::dotenv;
 use std::env;
 use std::error::Error;
+use serde::{Deserialize, Serialize};
 
 // Authentication helper functions
 use bcrypt::{hash, verify, DEFAULT_COST};
@@ -50,7 +51,7 @@ pub fn authenticate_user(username: &str, password: &str) -> Result<Option<User>,
         .filter(user_username.eq(username))
         .first::<User>(connection)
         .optional()
-        .map_err(|e| format!("Database error: {}", e))?;
+        .map_err(|_e| format!("Database error: {}", _e))?;
     
     match user {
         Some(user) => {
@@ -73,20 +74,20 @@ pub fn change_user_password(_user_id: i32, current_password: &str, new_password:
     let user = users
         .filter(user_id.eq(user_id))
         .first::<User>(connection)
-        .map_err(|e| format!("User not found: {}", e))?;
+        .map_err(|_e| format!("User not found: {}", _e))?;
     
     // Verify current password
     match verify_password(current_password, &user.user_password) {
         Ok(true) => {
             // Hash new password
             let hashed_password = hash_password(new_password)
-                .map_err(|e| format!("Password hashing error: {}", e))?;
+                .map_err(|_e| format!("Password hashing error: {}", _e))?;
             
             // Update password in database
             diesel::update(users.filter(user_id.eq(user_id)))
                 .set(user_password.eq(hashed_password))
                 .execute(connection)
-                .map_err(|e| format!("Database update error: {}", e))?;
+                .map_err(|_e| format!("Database update error: {}", _e))?;
             
             Ok(())
         }
@@ -104,9 +105,9 @@ pub fn get_status_all() -> Result<Vec<Status>, String> {
     status
         .order(st_id)
         .get_results(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying.*: {:?}", _err);
             "Error querying page views from the database".into()
         })
 }
@@ -120,9 +121,9 @@ pub fn get_categories_all() -> Result<Vec<Category>, String> {
     categories
         .order(cat_id)
         .get_results(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying.*: {:?}", _err);
             "Error querying page views from the database".into()
         })
 }
@@ -135,9 +136,9 @@ pub fn get_applicability_all() -> Result<Vec<Applicability>, String> {
     applicability
         .order(app_id)
         .get_results(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying applicability: {:?}", err);
+            println!("Error querying.*: {:?}", _err);
             "Error querying applicability from the database".into()
         })
 }
@@ -150,9 +151,9 @@ pub fn get_applicability_by_id(id: i32) -> Applicability {
     applicability
         .filter(app_id.eq(id))
         .get_result(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying applicability: {:?}", err);
+            println!("Error querying.*: {:?}", _err);
             "Error querying applicability from the database".into()
         })
         .unwrap()
@@ -166,9 +167,9 @@ pub fn get_category_by_id(id: i32) -> Category {
     categories
         .filter(cat_id.eq(id))
         .get_result(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying.*: {:?}", _err);
             "Error querying page views from the database".into()
         })
         .unwrap()
@@ -184,7 +185,7 @@ pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement
         let a = DecoratedRequirement {
             req_id: r.req_id,
             req_title: r.req_title,
-            req_verification: get_verification_by_id(r.req_verification).ver_title,
+            req_verification: get_verification_by_id(r.req_verification).verification_name,
             req_description: r.req_description,
             req_current_status: get_status_by_id(r.req_current_status).st_title,
             req_author: if r.req_author != 0 {
@@ -243,11 +244,36 @@ pub fn get_status_by_id(id: i32) -> Status {
     result
 }
 
-pub fn get_verification_by_id(id: i32) -> Verification {
+/// Struct for verification data that matches the database schema
+#[derive(Serialize, Deserialize, Queryable)]
+pub struct VerificationData {
+    pub verification_id: i32,
+    pub verification_name: String,
+    pub verification_description: String,
+}
+
+/// Return all verification types with correct database mapping
+pub fn get_verification_all() -> Result<Vec<VerificationData>, String> {
     use crate::schema::verification::dsl::*;
 
     let connection = &mut establish_connection();
-    let result: Verification = verification
+
+    verification
+        .order(verification_id)
+        .load::<VerificationData>(connection)
+        .map_err(|_err| -> String {
+            #[cfg(debug_assertions)]
+            println!("Error querying verification: {:?}", _err);
+            "Error querying verification from the database".into()
+        })
+}
+
+/// Get verification by ID with correct database mapping
+pub fn get_verification_by_id(id: i32) -> VerificationData {
+    use crate::schema::verification::dsl::*;
+
+    let connection = &mut establish_connection();
+    let result: VerificationData = verification
         .filter(verification_id.eq(id))
         .get_result(connection)
         .unwrap();
@@ -284,9 +310,9 @@ pub fn get_requirements_all() -> Result<Vec<Requirement>, String> {
     requirements
         .order(req_id)
         .load::<Requirement>(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying.*: {:?}", _err);
             "Error querying page views from the database".into()
         })
 }
@@ -299,9 +325,9 @@ pub fn get_tests_all() -> Result<Vec<Test>, String> {
     tests
         .order(test_id)
         .load::<Test>(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying.*: {:?}", _err);
             "Error querying page views from the database".into()
         })
 }
@@ -314,28 +340,14 @@ pub fn get_users_all() -> Result<Vec<User>, String> {
     users
         .order(user_id)
         .load::<User>(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying.*: {:?}", _err);
             "Error querying page views from the database".into()
         })
 }
 
-/// Return all verification types
-pub fn get_verification_all() -> Result<Vec<Verification>, String> {
-    use crate::schema::verification::dsl::*;
 
-    let connection = &mut establish_connection();
-
-    verification
-        .order(verification_id)
-        .load::<Verification>(connection)
-        .map_err(|err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
-            "Error querying page views from the database".into()
-        })
-}
 
 pub fn get_test_by_id(id: i32) -> Test {
     use crate::schema::tests::dsl::*;
@@ -508,9 +520,10 @@ pub fn get_requirements_for_test(test_id: i32) -> Result<Vec<Requirement>, Strin
             req_deadline_date,
             req_applicability,
             req_justification,
+            crate::schema::requirements::project_id,
         ))
         .load::<Requirement>(connection)
-        .map_err(|e| format!("Error getting requirements for test: {}", e))?;
+        .map_err(|_e| format!("Error getting requirements for test: {}", _e))?;
 
     Ok(linked_requirements)
 }
@@ -531,6 +544,7 @@ pub fn update_test_requirement_links(
         let matrix_item = NewMatrix {
             matrix_req_id: *req_id,
             matrix_test_id: test_id,
+            project_id: 1, // Default to project 1 for now
         };
         insert_new_matrix_item(conn, &matrix_item)?;
     }
@@ -886,9 +900,9 @@ pub fn get_projects_all() -> Result<Vec<Project>, String> {
     
     projects
         .load::<Project>(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying projects: {:?}", err);
+            println!("Error querying.*: {:?}", _err);
             "Error querying projects from the database".into()
         })
 }
@@ -983,4 +997,125 @@ pub fn establish_connection() -> diesel::PgConnection {
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     PgConnection::establish(&database_url)
         .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
+}
+
+pub fn get_selected_project_id(cookies: &rocket::http::CookieJar<'_>) -> Option<i32> {
+    cookies.get("selected_project_id")
+        .and_then(|cookie| cookie.value().parse::<i32>().ok())
+}
+
+pub fn get_projects_for_nav() -> Result<Vec<Project>, String> {
+    get_projects_all()
+}
+
+pub fn get_requirements_by_project(_project_id: i32) -> Result<Vec<Requirement>, String> {
+    use crate::schema::requirements::dsl::*;
+    
+    let connection = &mut establish_connection();
+    
+    requirements
+        .filter(crate::schema::requirements::project_id.eq(_project_id))
+        .load::<Requirement>(connection)
+        .map_err(|_err| -> String {
+            #[cfg(debug_assertions)]
+            println!("Error querying.*: {:?}", _err);
+            "Error querying requirements from the database".into()
+        })
+}
+
+pub fn get_tests_by_project(_project_id: i32) -> Result<Vec<Test>, String> {
+    use crate::schema::tests::dsl::*;
+    
+    let connection = &mut establish_connection();
+    
+    tests
+        .filter(crate::schema::tests::project_id.eq(_project_id))
+        .load::<Test>(connection)
+        .map_err(|_err| -> String {
+            #[cfg(debug_assertions)]
+            println!("Error querying.*: {:?}", _err);
+            "Error querying tests from the database".into()
+        })
+}
+
+pub fn get_categories_by_project(_project_id: i32) -> Result<Vec<Category>, String> {
+    use crate::schema::categories::dsl::*;
+    
+    let connection = &mut establish_connection();
+    
+    categories
+        .filter(crate::schema::categories::project_id.eq(_project_id))
+        .load::<Category>(connection)
+        .map_err(|_err| -> String {
+            #[cfg(debug_assertions)]
+            println!("Error querying.*: {:?}", _err);
+            "Error querying categories from the database".into()
+        })
+}
+
+pub fn get_applicability_by_project(_project_id: i32) -> Result<Vec<Applicability>, String> {
+    use crate::schema::applicability::dsl::*;
+    
+    let connection = &mut establish_connection();
+    
+    applicability
+        .filter(crate::schema::applicability::project_id.eq(_project_id))
+        .load::<Applicability>(connection)
+        .map_err(|_err| -> String {
+            #[cfg(debug_assertions)]
+            println!("Error querying.*: {:?}", _err);
+            "Error querying applicability from the database".into()
+        })
+}
+
+pub fn get_matrix_by_project(_project_id: i32) -> Result<Vec<Matrix>, String> {
+    use crate::schema::matrix::dsl::*;
+    
+    let connection = &mut establish_connection();
+    
+    matrix
+        .filter(crate::schema::matrix::project_id.eq(_project_id))
+        .load::<Matrix>(connection)
+        .map_err(|_err| -> String {
+            #[cfg(debug_assertions)]
+            println!("Error querying.*: {:?}", _err);
+            "Error querying matrix from the database".into()
+        })
+}
+
+/// Filter requirements by status, verification mode, and category
+pub fn filter_requirements(
+    requirements: Vec<Requirement>,
+    status_filter: Option<i32>,
+    verification_filter: Option<i32>,
+    category_filter: Option<i32>,
+) -> Vec<Requirement> {
+    requirements
+        .into_iter()
+        .filter(|req| {
+            let status_match = status_filter.map_or(true, |status_id| req.req_current_status == status_id);
+            let verification_match = verification_filter.map_or(true, |verification_id| req.req_verification == verification_id);
+            let category_match = category_filter.map_or(true, |category_id| req.req_category == category_id);
+            
+            status_match && verification_match && category_match
+        })
+        .collect()
+}
+
+/// Filter tests by status, verification mode, and category
+pub fn filter_tests(
+    tests: Vec<Test>,
+    status_filter: Option<i32>,
+    _verification_filter: Option<i32>,
+    _category_filter: Option<i32>,
+) -> Vec<Test> {
+    tests
+        .into_iter()
+        .filter(|test| {
+            let status_match = status_filter.map_or(true, |status_id| test.test_status == status_id);
+            // Note: Tests don't have direct verification or category fields, 
+            // but we can filter by status for now
+            status_match
+        })
+        .collect()
 }

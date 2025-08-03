@@ -1,3 +1,5 @@
+
+
 use diesel::prelude::*;
 use rocket::form::Form;
 use rocket::fs::NamedFile;
@@ -25,6 +27,17 @@ fn require_auth(cookies: &CookieJar<'_>) -> Result<User, Redirect> {
         Some(user) => Ok(user),
         None => Err(Redirect::to(uri!(login_page)))
     }
+}
+
+fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::serde::json::Value {
+    let projects = get_projects_for_nav().unwrap_or_default();
+    let selected_project_id = get_selected_project_id(cookies);
+    
+    json!({
+        "user": user,
+        "projects": projects,
+        "selected_project_id": selected_project_id
+    })
 }
 
 // --------------------------------
@@ -55,10 +68,10 @@ pub fn login(login_form: Form<LoginForm>, cookies: &CookieJar<'_>) -> Result<Red
             });
             Err(Template::render("login", ctx))
         }
-        Err(e) => {
+        Err(_e) => {
             let ctx = json!({
                 "title": "Login",
-                "error": format!("Authentication error: {}", e)
+                "error": format!("Authentication error: {}", _e)
             });
             Err(Template::render("login", ctx))
         }
@@ -146,10 +159,10 @@ pub fn change_password(password_form: Form<ChangePasswordForm>, cookies: &Cookie
             });
             Ok(Template::render("change_password", ctx))
         }
-        Err(e) => {
+        Err(_e) => {
             let ctx = json!({
                 "title": "Change Password",
-                "error": e
+                "error": _e
             });
             Err(Template::render("change_password", ctx))
         }
@@ -163,33 +176,53 @@ pub fn change_password(password_form: Form<ChangePasswordForm>, cookies: &Cookie
 #[get("/")]
 pub fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let ctx = json!({ 
-        "title": "Main",
-        "user": user
-    });
+    let mut ctx = build_context_with_projects(user, cookies);
+    ctx["title"] = json!("Main");
     Ok(Template::render("index", ctx))
 }
 
-#[get("/requirements")]
-pub fn show_requirements(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+#[get("/requirements?<status_filter>&<verification_filter>&<category_filter>")]
+pub fn show_requirements(
+    cookies: &CookieJar<'_>,
+    status_filter: Option<i32>,
+    verification_filter: Option<i32>,
+    category_filter: Option<i32>,
+) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let requirements = get_requirements_all();
+    let mut ctx = build_context_with_projects(user, cookies);
+    
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+    
+    let requirements = if let Some(project_id) = selected_project_id {
+        get_requirements_by_project(project_id)
+    } else {
+        get_requirements_all()
+    };
 
-    let ctx = match requirements {
+    match requirements {
         Ok(req) => {
-            let requirements_decorate = decorate_requirements(req);
-            let requirements_json = json!(requirements_decorate);
-            json!({
-                "requirements": requirements_json,
-                "user": user
-            })
+            // Apply filters
+            let filtered_requirements = filter_requirements(req, status_filter, verification_filter, category_filter);
+            let requirements_decorate = decorate_requirements(filtered_requirements);
+            ctx["requirements"] = json!(requirements_decorate);
         }
         Err(_) => {
-            json!({
-                "user": user
-            })
+            ctx["requirements"] = json!([]);
         }
     };
+
+    // Add filter data to context for the template
+    let statuses = get_status_all().unwrap_or_default();
+    let verifications = get_verification_all().unwrap_or_default();
+    let categories = get_categories_all().unwrap_or_default();
+    
+    ctx["statuses"] = json!(statuses);
+    ctx["verifications"] = json!(verifications);
+    ctx["categories"] = json!(categories);
+    ctx["current_status_filter"] = json!(status_filter);
+    ctx["current_verification_filter"] = json!(verification_filter);
+    ctx["current_category_filter"] = json!(category_filter);
 
     Ok(Template::render("requirements", ctx))
 }
@@ -276,9 +309,9 @@ pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &Cooki
     // Update the user in the database
     match update_user_without_password(connection, &user_data) {
         Ok(_) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error updating user: {:?}", e);
+            println!("Error.*: {:?}", _e);
             Ok(Redirect::to(uri!(edit_user(user_id))))
         }
     }
@@ -380,16 +413,42 @@ pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) 
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
 
-#[get("/tests")]
-pub fn show_tests(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+#[get("/tests?<status_filter>&<verification_filter>&<category_filter>")]
+pub fn show_tests(
+    cookies: &CookieJar<'_>,
+    status_filter: Option<i32>,
+    verification_filter: Option<i32>,
+    category_filter: Option<i32>,
+) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let tests = get_tests_all().unwrap_or_default();
-    let tests_decorate = decorate_tests(tests);
-    let tests = json!(tests_decorate);
-    let ctx = json!({
-        "tests": tests,
-        "user": user
-    });
+    let mut ctx = build_context_with_projects(user, cookies);
+    
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+    
+    let tests = if let Some(project_id) = selected_project_id {
+        get_tests_by_project(project_id)
+    } else {
+        get_tests_all()
+    };
+    
+    let tests_data = tests.unwrap_or_default();
+    // Apply filters
+    let filtered_tests = filter_tests(tests_data, status_filter, verification_filter, category_filter);
+    let tests_decorate = decorate_tests(filtered_tests);
+    ctx["tests"] = json!(tests_decorate);
+
+    // Add filter data to context for the template
+    let statuses = get_status_all().unwrap_or_default();
+    let verifications = get_verification_all().unwrap_or_default();
+    let categories = get_categories_all().unwrap_or_default();
+    
+    ctx["statuses"] = json!(statuses);
+    ctx["verifications"] = json!(verifications);
+    ctx["categories"] = json!(categories);
+    ctx["current_status_filter"] = json!(status_filter);
+    ctx["current_verification_filter"] = json!(verification_filter);
+    ctx["current_category_filter"] = json!(category_filter);
 
     Ok(Template::render("tests", ctx))
 }
@@ -516,6 +575,7 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
         test_source: edit_test_form.test_source.clone(),
         test_status: edit_test_form.test_status,
         test_parent: edit_test_form.test_parent,
+        project_id: edit_test_form.project_id,
     };
     
     edit_test(connection, &new_test).unwrap();
@@ -537,6 +597,7 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
         test_source: new_test.test_source.clone(),
         test_status: new_test.test_status,
         test_parent: new_test.test_parent,
+        project_id: new_test.project_id,
     };
     let my_id = insert_new_test(connection, &my_new_test).unwrap();
 
@@ -546,6 +607,7 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
         let matrix_item = NewMatrix {
             matrix_req_id: *req,
             matrix_test_id: my_id,
+            project_id: new_test.project_id,
         };
         insert_new_matrix_item(connection, &matrix_item).unwrap();
     }
@@ -562,9 +624,9 @@ pub fn show_status() -> content::RawHtml<String> {
 
     let all_status = status
         .load::<Status>(connection)
-        .map_err(|err| -> String {
+        .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
+            println!("Error querying page views: {:?}", _err);
             "Error querying page views from the database".into()
         })
         .unwrap();
@@ -594,23 +656,50 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
 
     let connection = &mut establish_connection();
 
-    let mut all_reqs = requirements
-        .load::<Requirement>(connection)
-        .map_err(|err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", err);
-            "Error querying page views from the database".into()
-        })
-        .expect("Error getting matrix table");
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+    
+    let mut all_reqs = if let Some(selected_pid) = selected_project_id {
+        requirements
+            .filter(crate::schema::requirements::project_id.eq(selected_pid))
+            .load::<Requirement>(connection)
+            .map_err(|_err| -> String {
+                #[cfg(debug_assertions)]
+                println!("Error querying requirements by project: {:?}", _err);
+                "Error querying requirements from the database".into()
+            })
+            .expect("Error getting matrix table")
+    } else {
+        requirements
+            .load::<Requirement>(connection)
+            .map_err(|_err| -> String {
+                #[cfg(debug_assertions)]
+                println!("Error querying page views: {:?}", _err);
+                "Error querying page views from the database".into()
+            })
+            .expect("Error getting matrix table")
+    };
 
-    let mut all_tests = tests
-        .load::<Test>(connection)
-        .map_err(|err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying tests: {:?}", err);
-            "Error querying tests from the database".into()
-        })
-        .expect("Error getting tests");
+    let mut all_tests = if let Some(selected_pid) = selected_project_id {
+        tests
+            .filter(crate::schema::tests::project_id.eq(selected_pid))
+            .load::<Test>(connection)
+            .map_err(|_err| -> String {
+                #[cfg(debug_assertions)]
+                println!("Error querying tests by project: {:?}", _err);
+                "Error querying tests from the database".into()
+            })
+            .expect("Error getting tests")
+    } else {
+        tests
+            .load::<Test>(connection)
+            .map_err(|_err| -> String {
+                #[cfg(debug_assertions)]
+                println!("Error querying tests: {:?}", _err);
+                "Error querying tests from the database".into()
+            })
+            .expect("Error getting tests")
+    };
 
     // Always sort tests by test_id (number)
     all_tests.sort_by(|a, b| a.test_id.cmp(&b.test_id));
@@ -749,18 +838,16 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
     let all_statuses = get_status_all().unwrap_or_default();
     let statuses_json = json!(all_statuses);
 
-    let ctx = json!({
-        "requirements": requirements_with_matrix,
-        "tests": tests_with_status,
-        "total_tests": total_tests,
-        "total_requirements": total_requirements,
-        "total_links": total_links,
-        "current_sort_by": sort_by,
-        "current_sort_order": sort_order,
-        "test_status_filter": test_status_filter,
-        "statuses": statuses_json,
-        "user": user
-    });
+    let mut ctx = build_context_with_projects(user, cookies);
+    ctx["requirements"] = json!(requirements_with_matrix);
+    ctx["tests"] = json!(tests_with_status);
+    ctx["total_tests"] = json!(total_tests);
+    ctx["total_requirements"] = json!(total_requirements);
+    ctx["total_links"] = json!(total_links);
+    ctx["current_sort_by"] = json!(sort_by);
+    ctx["current_sort_order"] = json!(sort_order);
+    ctx["test_status_filter"] = json!(test_status_filter);
+    ctx["statuses"] = json!(statuses_json);
 
     Ok(Template::render("matrix", ctx))
 }
@@ -844,20 +931,23 @@ pub fn new_user(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 #[get("/categories")]
 pub fn show_categories(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let categories = get_categories_all();
+    let mut ctx = build_context_with_projects(user, cookies);
+    
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+    
+    let categories = if let Some(project_id) = selected_project_id {
+        get_categories_by_project(project_id)
+    } else {
+        get_categories_all()
+    };
 
-    let ctx = match categories {
+    match categories {
         Ok(cats) => {
-            json!({
-                "categories": cats,
-                "user": user
-            })
+            ctx["categories"] = json!(cats);
         }
         Err(_) => {
-            json!({
-                "categories": [],
-                "user": user
-            })
+            ctx["categories"] = json!([]);
         }
     };
 
@@ -881,9 +971,9 @@ pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -
     let result = insert_new_category(connection, &new_category);
     match result {
         Ok(_) => Ok(Redirect::to(uri!(show_categories))),
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error creating category: {:?}", e);
+            println!("Error.*: {:?}", _e);
             Ok(Redirect::to(uri!(new_category)))
         }
     }
@@ -911,9 +1001,9 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
     let result = edit_category(connection, &category_with_id);
     match result {
         Ok(_) => Ok(Redirect::to(uri!(show_categories))),
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error updating category: {:?}", e);
+            println!("Error.*: {:?}", _e);
             Ok(Redirect::to(uri!(get_edit_category(cat_id))))
         }
     }
@@ -927,9 +1017,9 @@ pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<roc
     let result = delete_category(connection, &cat_id);
     match result {
         Ok(_) => Ok(rocket::http::Status::Ok),
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error deleting category: {:?}", e);
+            println!("Error.*: {:?}", _e);
             Ok(rocket::http::Status::InternalServerError)
         }
     }
@@ -948,9 +1038,9 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
             let my_id = insert_new_user(connection, &user_with_hashed_password).unwrap();
             Ok(Redirect::to(uri!(show_user_id(my_id))))
         }
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error hashing password: {:?}", e);
+            println!("Error.*: {:?}", _e);
             Ok(Redirect::to(uri!(new_user)))
         }
     }
@@ -959,20 +1049,23 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
 #[get("/applicability")]
 pub fn show_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let applicability = get_applicability_all();
+    let mut ctx = build_context_with_projects(user, cookies);
+    
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+    
+    let applicability = if let Some(project_id) = selected_project_id {
+        get_applicability_by_project(project_id)
+    } else {
+        get_applicability_all()
+    };
 
-    let ctx = match applicability {
+    match applicability {
         Ok(apps) => {
-            json!({
-                "applicability": apps,
-                "user": user
-            })
+            ctx["applicability"] = json!(apps);
         }
         Err(_) => {
-            json!({
-                "applicability": [],
-                "user": user
-            })
+            ctx["applicability"] = json!([]);
         }
     };
 
@@ -996,9 +1089,9 @@ pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &C
     let result = insert_new_applicability(connection, &new_applicability);
     match result {
         Ok(_) => Ok(Redirect::to(uri!(show_applicability))),
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error creating applicability: {:?}", e);
+            println!("Error.*: {:?}", _e);
             Ok(Redirect::to(uri!(new_applicability)))
         }
     }
@@ -1026,9 +1119,9 @@ pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability
     let result = edit_applicability(connection, &applicability_with_id);
     match result {
         Ok(_) => Ok(Redirect::to(uri!(show_applicability))),
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error updating applicability: {:?}", e);
+            println!("Error.*: {:?}", _e);
             Ok(Redirect::to(uri!(get_edit_applicability(app_id))))
         }
     }
@@ -1042,9 +1135,9 @@ pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Resul
     let result = delete_applicability(connection, &app_id);
     match result {
         Ok(_) => Ok(rocket::http::Status::Ok),
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error deleting applicability: {:?}", e);
+            println!("Error.*: {:?}", _e);
             Ok(rocket::http::Status::InternalServerError)
         }
     }
@@ -1175,17 +1268,17 @@ pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     
     // Recent activity (last 30 days)
     let now = chrono::Utc::now();
-    let thirty_days_ago = now - chrono::Duration::days(30);
+    let _thirty_days_ago = now - chrono::Duration::days(30);
     
     let mut recent_requirements = 0;
     let mut recent_tests = 0;
     
-    for req in &all_requirements {
+    for _req in &all_requirements {
         // For now, we'll use a placeholder since creation_date might not be available
         recent_requirements += 1; // Placeholder
     }
     
-    for test in &all_tests {
+    for _test in &all_tests {
         // Assuming test has creation date - you might need to add this field
         // For now, we'll use a placeholder
         recent_tests += 1; // Placeholder
@@ -1298,9 +1391,9 @@ pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<(rocket::http::Con
             let content_type = rocket::http::ContentType::new("application", "pdf");
             Ok((content_type, pdf_bytes))
         }
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("PDF generation failed: {:?}", e);
+            println!("PDF generation failed: {:?}", _e);
             // Fallback to HTML if PDF generation fails
             let content_type = rocket::http::ContentType::new("text", "html");
             Ok((content_type, html_content.into_bytes()))
@@ -1365,9 +1458,9 @@ pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> R
     let result = insert_new_project(connection, &new_project);
     match result {
         Ok(_) => Ok(Redirect::to(uri!(show_projects))),
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error creating project: {:?}", e);
+            println!("Error.*: {:?}", _e);
             Ok(Redirect::to(uri!(new_project)))
         }
     }
@@ -1395,9 +1488,9 @@ pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies:
     let result = edit_project(connection, project_id, &project);
     match result {
         Ok(_) => Ok(Redirect::to(uri!(show_projects))),
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error updating project: {:?}", e);
+            println!("Error.*: {:?}", _e);
             Ok(Redirect::to(uri!(get_edit_project(project_id))))
         }
     }
@@ -1411,9 +1504,9 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
     let result = delete_project(connection, &project_id);
     match result {
         Ok(_) => Ok(rocket::http::Status::Ok),
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error deleting project: {:?}", e);
+            println!("Error.*: {:?}", _e);
             Ok(rocket::http::Status::InternalServerError)
         }
     }

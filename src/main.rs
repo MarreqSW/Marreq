@@ -24,6 +24,11 @@ async fn main() -> Result<(), rocket::Error> {
         .mount(
             "/",
             routes![
+                login_page,
+                login,
+                logout,
+                change_password_page,
+                change_password,
                 index,
                 show_requirements,
                 show_requirement_id,

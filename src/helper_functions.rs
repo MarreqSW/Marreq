@@ -6,6 +6,71 @@ use dotenvy::dotenv;
 use std::env;
 use std::error::Error;
 
+// Authentication helper functions
+use bcrypt::{hash, verify, DEFAULT_COST};
+
+pub fn hash_password(password: &str) -> Result<String, bcrypt::BcryptError> {
+    hash(password, DEFAULT_COST)
+}
+
+pub fn verify_password(password: &str, hash: &str) -> Result<bool, bcrypt::BcryptError> {
+    verify(password, hash)
+}
+
+pub fn authenticate_user(username: &str, password: &str) -> Result<Option<User>, String> {
+    use crate::schema::users::dsl::*;
+    
+    let connection = &mut establish_connection();
+    
+    let user = users
+        .filter(user_username.eq(username))
+        .first::<User>(connection)
+        .optional()
+        .map_err(|e| format!("Database error: {}", e))?;
+    
+    match user {
+        Some(user) => {
+            match verify_password(password, &user.user_password) {
+                Ok(true) => Ok(Some(user)),
+                Ok(false) => Ok(None),
+                Err(e) => Err(format!("Password verification error: {}", e)),
+            }
+        }
+        None => Ok(None),
+    }
+}
+
+pub fn change_user_password(user_id: i32, current_password: &str, new_password: &str) -> Result<(), String> {
+    use crate::schema::users::dsl::*;
+    
+    let connection = &mut establish_connection();
+    
+    // Get the user
+    let user = users
+        .filter(user_id.eq(user_id))
+        .first::<User>(connection)
+        .map_err(|e| format!("User not found: {}", e))?;
+    
+    // Verify current password
+    match verify_password(current_password, &user.user_password) {
+        Ok(true) => {
+            // Hash new password
+            let hashed_password = hash_password(new_password)
+                .map_err(|e| format!("Password hashing error: {}", e))?;
+            
+            // Update password in database
+            diesel::update(users.filter(user_id.eq(user_id)))
+                .set(user_password.eq(hashed_password))
+                .execute(connection)
+                .map_err(|e| format!("Database update error: {}", e))?;
+            
+            Ok(())
+        }
+        Ok(false) => Err("Current password is incorrect".to_string()),
+        Err(e) => Err(format!("Password verification error: {}", e)),
+    }
+}
+
 /// Returns the status list
 pub fn get_status_all() -> Result<Vec<Status>, String> {
     use crate::schema::status::dsl::*;

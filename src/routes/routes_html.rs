@@ -5,6 +5,7 @@ use rocket::http::ContentType;
 use rocket::response::status::NotFound;
 use rocket::response::{content, Redirect};
 use rocket::serde::json::json;
+use rocket::http::{Cookie, CookieJar};
 
 use rocket_dyn_templates::Template;
 
@@ -14,6 +15,118 @@ use crate::generators::*;
 use crate::helper_functions::*;
 use crate::html::*;
 use crate::models::*;
+
+// --------------------------------
+// Authentication Routes
+// --------------------------------
+
+#[get("/login")]
+pub fn login_page() -> Template {
+    let ctx = json!({ "title": "Login" });
+    Template::render("login", ctx)
+}
+
+#[post("/login", data = "<login_form>")]
+pub fn login(login_form: Form<LoginForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Template> {
+    match authenticate_user(&login_form.username, &login_form.password) {
+        Ok(Some(user)) => {
+            // Set session cookie
+            cookies.add_private(Cookie::new("user_id", user.user_id.to_string()));
+            cookies.add_private(Cookie::new("username", user.user_username.clone()));
+            cookies.add_private(Cookie::new("user_name", user.user_name.clone()));
+            
+            Ok(Redirect::to(uri!(index)))
+        }
+        Ok(None) => {
+            let ctx = json!({
+                "title": "Login",
+                "error": "Invalid username or password"
+            });
+            Err(Template::render("login", ctx))
+        }
+        Err(e) => {
+            let ctx = json!({
+                "title": "Login",
+                "error": format!("Authentication error: {}", e)
+            });
+            Err(Template::render("login", ctx))
+        }
+    }
+}
+
+#[get("/logout")]
+pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
+    cookies.remove_private(Cookie::from("user_id"));
+    cookies.remove_private(Cookie::from("username"));
+    cookies.remove_private(Cookie::from("user_name"));
+    Redirect::to(uri!(login_page))
+}
+
+#[get("/change_password")]
+pub fn change_password_page() -> Template {
+    let ctx = json!({ "title": "Change Password" });
+    Template::render("change_password", ctx)
+}
+
+#[post("/change_password", data = "<password_form>")]
+pub fn change_password(password_form: Form<ChangePasswordForm>, cookies: &CookieJar<'_>) -> Result<Template, Template> {
+    // Get user ID from cookie
+    let user_id_cookie = cookies.get_private("user_id");
+    let user_id = match user_id_cookie {
+        Some(cookie) => match cookie.value().parse::<i32>() {
+            Ok(id) => id,
+            Err(_) => {
+                let ctx = json!({
+                    "title": "Change Password",
+                    "error": "Invalid session"
+                });
+                return Err(Template::render("change_password", ctx));
+            }
+        },
+        None => {
+            let ctx = json!({
+                "title": "Change Password",
+                "error": "Not logged in"
+            });
+            return Err(Template::render("change_password", ctx));
+        }
+    };
+    
+    // Validate passwords
+    if password_form.new_password != password_form.confirm_password {
+        let ctx = json!({
+            "title": "Change Password",
+            "error": "New passwords do not match"
+        });
+        return Err(Template::render("change_password", ctx));
+    }
+    
+    if password_form.new_password.len() < 8 {
+        let ctx = json!({
+            "title": "Change Password",
+            "error": "New password must be at least 8 characters long"
+        });
+        return Err(Template::render("change_password", ctx));
+    }
+    
+    // Change password
+    match change_user_password(user_id, &password_form.current_password, &password_form.new_password) {
+        Ok(_) => {
+            let ctx = json!({
+                "title": "Change Password",
+                "success": "Password changed successfully"
+            });
+            Ok(Template::render("change_password", ctx))
+        }
+        Err(e) => {
+            let ctx = json!({
+                "title": "Change Password",
+                "error": e
+            });
+            Err(Template::render("change_password", ctx))
+        }
+    }
+}
 
 // --------------------------------
 // Html Routes (TBD)
@@ -517,9 +630,20 @@ pub fn delete_category_route(cat_id: i32) -> rocket::http::Status {
 #[post("/new_user", data = "<new_user>")]
 pub fn post_user(new_user: Form<NewUser>) -> Redirect {
     let connection = &mut establish_connection();
-    let my_id = insert_new_user(connection, &new_user).unwrap();
-
-    Redirect::to(uri!(show_user_id(my_id)))
+    
+    // Hash the password before inserting
+    let mut user_with_hashed_password = new_user.into_inner();
+    match hash_password(&user_with_hashed_password.user_password) {
+        Ok(hashed_password) => {
+            user_with_hashed_password.user_password = hashed_password;
+            let my_id = insert_new_user(connection, &user_with_hashed_password).unwrap();
+            Redirect::to(uri!(show_user_id(my_id)))
+        }
+        Err(e) => {
+            println!("Error hashing password: {:?}", e);
+            Redirect::to(uri!(new_user))
+        }
+    }
 }
 
 #[get("/applicability")]

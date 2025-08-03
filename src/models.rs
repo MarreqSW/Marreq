@@ -160,6 +160,7 @@ pub struct User {
     pub user_level: i32,
     pub user_creation_date: chrono::NaiveDateTime,
     pub user_last_login: chrono::NaiveDateTime,
+    pub user_password: String,
 }
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, AsChangeset, FromForm)]
@@ -173,6 +174,7 @@ pub struct NewUser {
     pub user_name: String,
     pub user_email: String,
     pub user_level: i32,
+    pub user_password: String,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]
@@ -219,6 +221,21 @@ pub struct NewTestForm {
     pub test_status: i32,
     pub test_parent: i32,
     pub test_req: Vec<i32>,
+}
+
+#[derive(Serialize, Deserialize, FromForm)]
+#[serde(crate = "rocket::serde")]
+pub struct LoginForm {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Serialize, Deserialize, FromForm)]
+#[serde(crate = "rocket::serde")]
+pub struct ChangePasswordForm {
+    pub current_password: String,
+    pub new_password: String,
+    pub confirm_password: String,
 }
 
 impl fmt::Display for Requirement {

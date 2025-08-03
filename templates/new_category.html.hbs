@@ -1,0 +1,39 @@
+{{#*inline "page"}}
+<div class="mb-4">
+  <h1>New Category</h1>
+  <p class="text-secondary">Create a new category for organizing requirements</p>
+</div>
+
+<section id="Categories">
+  <div class="card">
+    <div class="card-header">
+      <h3>Category Details</h3>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        <div class="form-group">
+          <label for="cat_title" class="form-label">Category Title</label>
+          <input type="text" name="cat_title" id="cat_title" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="cat_description" class="form-label">Description</label>
+          <textarea name="cat_description" id="cat_description" class="form-control" rows="4" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="cat_tag" class="form-label">Tag</label>
+          <input type="text" name="cat_tag" id="cat_tag" class="form-control" placeholder="e.g., FEATURE, BUG, ENHANCEMENT" required>
+          <small class="text-secondary">A short identifier for the category</small>
+        </div>
+
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">Create Category</button>
+          <a href="/categories" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{{/inline}}
+{{> layout}} 

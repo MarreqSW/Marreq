@@ -1,0 +1,35 @@
+{{#*inline "page"}}
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>Welcome to ReqMan</h1>
+      <p>Please sign in to continue</p>
+    </div>
+    
+    <form method="POST" action="/login" class="login-form">
+      <div class="form-group">
+        <label for="username" class="form-label">Username</label>
+        <input type="text" id="username" name="username" class="form-control" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" id="password" name="password" class="form-control" required>
+      </div>
+      
+      {{#if error}}
+        <div class="alert alert-error">
+          {{error}}
+        </div>
+      {{/if}}
+      
+      <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+    </form>
+    
+    <div class="login-footer">
+      <p>Default credentials: alice / password123</p>
+    </div>
+  </div>
+</div>
+{{/inline}}
+{{> layout}} 

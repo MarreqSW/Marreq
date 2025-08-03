@@ -15,7 +15,8 @@ chrono = {version = "0.4.38", features = ["serde"] }
 serde = "1.0.209"
 serde_json = "1.0.127"
 serde_derive = "1.0.209"
-rocket = {version = "0.5.1",  features = ["json"]}
+rocket = {version = "0.5.1",  features = ["json", "secrets"]}
+bcrypt = "0.15"
 rocket-multipart-form-data = "0.10.7"
 xlsxwriter = "0.6.1"
 

@@ -13,7 +13,7 @@ pub fn create_matrix_workbook()->Result<Vec<u8>,xlsxwriter::XlsxError> {
     
     let connection = &mut establish_connection();
 
-    let workbook = Workbook::new("target/matrix.xlsx")?;
+    let workbook = Workbook::new("target/matrix.xls")?;
     let mut sheet1 = workbook.add_worksheet(None)?;
     
     let all_reqs = requirements
@@ -74,6 +74,109 @@ pub fn create_matrix_workbook()->Result<Vec<u8>,xlsxwriter::XlsxError> {
     }
 
     workbook.close().expect("workbook can be closed");
-    let result = fs::read("target/matrix.xlsx").expect("can read file");
+    let result = fs::read("target/matrix.xls").expect("can read file");
+    Ok(result)
+}
+
+pub fn create_requirements_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> {
+    use crate::schema::requirements::dsl::*;
+    
+    let connection = &mut establish_connection();
+
+    let workbook = Workbook::new("target/requirements.xls")?;
+    let mut sheet1 = workbook.add_worksheet(None)?;
+    
+    // Get all requirements with decorated data
+    let all_reqs = requirements
+        .load::<Requirement>(connection)
+        .map_err(|err| -> String {
+            println!("Error querying requirements: {:?}", err);
+            "Error querying requirements from the database".into()
+        }).unwrap();
+
+    let decorated_reqs = decorate_requirements(all_reqs);
+
+    // Define headers
+    let headers = vec![
+        "Req ID", "Title", "Description", "Reference", "Category", "Applicability",
+        "Status", "Verification", "Author", "Reviewer", "Parent", "Parent Title",
+        "Link", "Creation Date", "Update Date", "Deadline Date", "Justification"
+    ];
+
+    // Write headers
+    for (col, header) in headers.iter().enumerate() {
+        sheet1.write_string(0, col as u16, header, None)?;
+    }
+
+    // Write data rows
+    for (row, req) in decorated_reqs.iter().enumerate() {
+        let row_num = (row + 1) as u32;
+        let mut col = 0;
+
+        sheet1.write_number(row_num, col, req.req_id as f64, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_title, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_description, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_reference, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_category, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_applicability, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_current_status, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_verification, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_author, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_reviewer, None)?;
+        col += 1;
+        
+        if req.req_parent_id != 0 {
+            sheet1.write_number(row_num, col, req.req_parent_id as f64, None)?;
+        } else {
+            sheet1.write_string(row_num, col, "None", None)?;
+        }
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_parent_title, None)?;
+        col += 1;
+        
+        if !req.req_link.is_empty() && req.req_link != " " {
+            sheet1.write_string(row_num, col, &req.req_link, None)?;
+        } else {
+            sheet1.write_string(row_num, col, "None", None)?;
+        }
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_creation_date, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_update_date, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &req.req_deadline_date, None)?;
+        col += 1;
+        
+        if let Some(ref justification) = req.req_justification {
+            sheet1.write_string(row_num, col, justification, None)?;
+        } else {
+            sheet1.write_string(row_num, col, "None", None)?;
+        }
+    }
+
+    workbook.close().expect("workbook can be closed");
+    let result = fs::read("target/requirements.xls").expect("can read file");
     Ok(result)
 }

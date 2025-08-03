@@ -360,3 +360,33 @@ impl fmt::Display for Test {
         )
     }
 }
+
+#[derive(Queryable, Serialize, Deserialize, Debug)]
+pub struct Project {
+    pub project_id: i32,
+    pub project_name: String,
+    pub project_description: Option<String>,
+    pub project_creation_date: chrono::NaiveDateTime,
+    pub project_update_date: chrono::NaiveDateTime,
+    pub project_status: String,
+    pub project_owner_id: Option<i32>,
+}
+
+#[derive(Insertable, Serialize, Deserialize, FromForm)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = crate::schema::projects)]
+pub struct NewProject {
+    pub project_name: String,
+    pub project_description: Option<String>,
+    pub project_status: String,
+    pub project_owner_id: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, FromForm)]
+#[serde(crate = "rocket::serde")]
+pub struct UpdateProject {
+    pub project_name: String,
+    pub project_description: Option<String>,
+    pub project_status: String,
+    pub project_owner_id: Option<i32>,
+}

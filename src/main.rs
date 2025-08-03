@@ -68,6 +68,13 @@ async fn main() -> Result<(), rocket::Error> {
                 show_requirements_tree,
                 show_reports,
                 generate_pdf_report,
+                show_projects,
+                show_project_id,
+                new_project,
+                post_project,
+                get_edit_project,
+                post_edit_project,
+                delete_project_route,
             ],
         )
         .mount(

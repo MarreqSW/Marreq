@@ -1308,3 +1308,114 @@ pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<(rocket::http::Con
     }
 }
 
+// Project management routes
+#[get("/projects")]
+pub fn show_projects(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let projects = get_projects_all();
+
+    let ctx = match projects {
+        Ok(projs) => {
+            json!({
+                "projects": projs,
+                "user": user
+            })
+        }
+        Err(_) => {
+            json!({
+                "projects": [],
+                "user": user
+            })
+        }
+    };
+
+    Ok(Template::render("projects", ctx))
+}
+
+#[get("/projects/<project_id>")]
+pub fn show_project_id(project_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let project = get_project_by_id(project_id);
+    
+    let ctx = json!({
+        "project": project,
+        "user": user
+    });
+    
+    Ok(Template::render("project_detail", ctx))
+}
+
+#[get("/new_project")]
+pub fn new_project(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let users = get_users_all().unwrap_or_default();
+    
+    let ctx = json!({
+        "users": users,
+        "user": user
+    });
+    Ok(Template::render("new_project", ctx))
+}
+
+#[post("/new_project", data = "<new_project>")]
+pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+    let _user = require_auth(cookies)?;
+    let connection = &mut establish_connection();
+    
+    let result = insert_new_project(connection, &new_project);
+    match result {
+        Ok(_) => Ok(Redirect::to(uri!(show_projects))),
+        Err(e) => {
+            #[cfg(debug_assertions)]
+            println!("Error creating project: {:?}", e);
+            Ok(Redirect::to(uri!(new_project)))
+        }
+    }
+}
+
+#[get("/edit_project/<project_id>")]
+pub fn get_edit_project(project_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let project = get_project_by_id(project_id);
+    let users = get_users_all().unwrap_or_default();
+    
+    let ctx = json!({
+        "project": project,
+        "users": users,
+        "user": user
+    });
+    Ok(Template::render("edit_project", ctx))
+}
+
+#[post("/edit_project/<project_id>", data = "<project>")]
+pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+    let _user = require_auth(cookies)?;
+    let connection = &mut establish_connection();
+    
+    let result = edit_project(connection, project_id, &project);
+    match result {
+        Ok(_) => Ok(Redirect::to(uri!(show_projects))),
+        Err(e) => {
+            #[cfg(debug_assertions)]
+            println!("Error updating project: {:?}", e);
+            Ok(Redirect::to(uri!(get_edit_project(project_id))))
+        }
+    }
+}
+
+#[delete("/delete_project/<project_id>")]
+pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
+    let _user = require_auth(cookies)?;
+    let connection = &mut establish_connection();
+    
+    let result = delete_project(connection, &project_id);
+    match result {
+        Ok(_) => Ok(rocket::http::Status::Ok),
+        Err(e) => {
+            #[cfg(debug_assertions)]
+            println!("Error deleting project: {:?}", e);
+            Ok(rocket::http::Status::InternalServerError)
+        }
+    }
+}
+

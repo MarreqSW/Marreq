@@ -84,10 +84,7 @@
           <label for="linked_requirements" class="form-label">Linked Requirements</label>
           <select name="linked_requirements" id="linked_requirements" class="form-control" multiple size="8">
             {{#each requirements}}
-              <option value="{{req_id}}" 
-                {{#if (in ../linked_requirements req_id)}}selected{{/if}}>
-                REQ-{{req_id}}: {{req_title}}
-              </option>
+              <option value="{{req_id}}">REQ-{{req_id}}: {{req_title}}</option>
             {{/each}}
           </select>
           <small class="form-text">Hold Ctrl (or Cmd on Mac) to select multiple requirements</small>

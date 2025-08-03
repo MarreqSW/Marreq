@@ -504,6 +504,29 @@ pub fn get_requirements_for_test(test_id: i32) -> Result<Vec<Requirement>, Strin
     Ok(linked_requirements)
 }
 
+pub fn update_test_requirement_links(
+    conn: &mut PgConnection,
+    test_id: i32,
+    requirement_ids: &[i32],
+) -> Result<(), Box<dyn Error>> {
+    use crate::schema::matrix::dsl::*;
+
+    // First, delete all existing links for this test
+    diesel::delete(matrix.filter(matrix_test_id.eq(test_id)))
+        .execute(conn)?;
+
+    // Then, insert the new links
+    for req_id in requirement_ids {
+        let matrix_item = NewMatrix {
+            matrix_req_id: *req_id,
+            matrix_test_id: test_id,
+        };
+        insert_new_matrix_item(conn, &matrix_item)?;
+    }
+
+    Ok(())
+}
+
 pub fn insert_new_user(conn: &mut PgConnection, new: &NewUser) -> Result<i32, Box<dyn Error>> {
     let a: User = diesel::insert_into(crate::schema::users::table)
         .values(new)

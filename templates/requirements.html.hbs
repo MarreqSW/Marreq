@@ -1,11 +1,18 @@
 {{#*inline "page"}}
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1>Requirements</h1>
+    <div>
+      <a href="/requirements.xls" class="btn btn-success">Export Excel</a>
+      <a href="/new_requirement" class="btn btn-primary">New Requirement</a>
+    </div>
+  </div>
+</div>
 
 <section id="Requirements">
-	<h1>Requirements</h1>
-	{{#each requirements }}
-    	{{> requirement}}
-	{{/each}}
+  {{#each requirements }}
+    {{> requirement}}
+  {{/each}}
 </section>
-
 {{/inline}}
 {{> layout}}

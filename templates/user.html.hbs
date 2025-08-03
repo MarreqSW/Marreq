@@ -1,13 +1,37 @@
 
-<div class='AllUser'>
-    <div class='UserDiv'>
-    <div class='userID'>User ID: <a href='http://localhost:8000/users/{{user_id}}'>{{user_id}}</a></div>
-    <div class='userName'>Name: {{user_name}}</div>
-    <div class='userusername'>Username: {{user_username}}</div>
-    <div class='userDescription'>e-mail: {{user_email}}</div>
-    <div class='userSource'>Level: {{user_level}}</div>
-    <div class='userCreationDate'>Creation date: {{user_creation_date}}</div>
-    <div class='userLastLoginDate'>Last login date: {{user_last_login_date}}</div>
-    <a href="/edit_user/{{user_id}}">Edit</a>
+<div class="card requirement-card">
+  <div class="card-body">
+    <div class="requirement-header">
+      <div>
+        <a href="/users/{{user_id}}" class="requirement-id">USER-{{user_id}}</a>
+        <h3 class="requirement-title">{{user_name}}</h3>
+      </div>
+      <div class="requirement-actions">
+        <a href="/edit_user/{{user_id}}" class="btn btn-outline btn-sm">Edit</a>
+      </div>
     </div>
+    
+    <div class="requirement-meta">
+      <div class="meta-item">
+        <span class="meta-label">Username</span>
+        <span class="meta-value">{{user_username}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Email</span>
+        <span class="meta-value">{{user_email}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Level</span>
+        <span class="meta-value">{{user_level}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Created</span>
+        <span class="meta-value">{{user_creation_date}}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Last Login</span>
+        <span class="meta-value">{{user_last_login_date}}</span>
+      </div>
+    </div>
+  </div>
 </div>

@@ -6,6 +6,7 @@ diesel::table! {
         app_title -> Varchar,
         app_description -> Varchar,
         app_tag -> Varchar,
+        project_id -> Int4,
     }
 }
 
@@ -15,6 +16,7 @@ diesel::table! {
         cat_title -> Varchar,
         cat_description -> Varchar,
         cat_tag -> Varchar,
+        project_id -> Int4,
     }
 }
 
@@ -23,6 +25,21 @@ diesel::table! {
         matrix_req_id -> Int4,
         matrix_test_id -> Int4,
         matrix_creation_date -> Timestamp,
+        project_id -> Int4,
+    }
+}
+
+diesel::table! {
+    projects (project_id) {
+        project_id -> Int4,
+        #[max_length = 255]
+        project_name -> Varchar,
+        project_description -> Nullable<Text>,
+        project_creation_date -> Nullable<Timestamp>,
+        project_update_date -> Nullable<Timestamp>,
+        #[max_length = 50]
+        project_status -> Nullable<Varchar>,
+        project_owner_id -> Nullable<Int4>,
     }
 }
 
@@ -44,6 +61,7 @@ diesel::table! {
         req_deadline_date -> Timestamp,
         req_applicability -> Int4,
         req_justification -> Nullable<Text>,
+        project_id -> Int4,
     }
 }
 
@@ -64,6 +82,7 @@ diesel::table! {
         test_source -> Varchar,
         test_status -> Int4,
         test_parent -> Int4,
+        project_id -> Int4,
     }
 }
 
@@ -78,6 +97,7 @@ diesel::table! {
         user_last_login -> Timestamp,
         #[max_length = 255]
         user_password -> Varchar,
+        project_id -> Nullable<Int4>,
     }
 }
 
@@ -89,12 +109,18 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(applicability -> projects (project_id));
+diesel::joinable!(categories -> projects (project_id));
+diesel::joinable!(matrix -> projects (project_id));
 diesel::joinable!(requirements -> applicability (req_applicability));
+diesel::joinable!(requirements -> projects (project_id));
+diesel::joinable!(tests -> projects (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
     categories,
     matrix,
+    projects,
     requirements,
     status,
     tests,

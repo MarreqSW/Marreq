@@ -89,6 +89,20 @@
           </select>
           <small class="form-text">Hold Ctrl (or Cmd on Mac) to select multiple requirements</small>
         </div>
+        
+        <script>
+          // Pre-select currently linked requirements
+          document.addEventListener('DOMContentLoaded', function() {
+            const linkedReqIds = {{#each linked_req_ids}}[{{this}}]{{/each}};
+            const select = document.getElementById('linked_requirements');
+            
+            Array.from(select.options).forEach(option => {
+              if (linkedReqIds.includes(parseInt(option.value))) {
+                option.selected = true;
+              }
+            });
+          });
+        </script>
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary">Update Test</button>

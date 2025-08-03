@@ -696,10 +696,16 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
                 .unwrap();
 
             if test_present > 0 {
-                req_matrix.push(true);
+                req_matrix.push(json!({
+                    "linked": true,
+                    "test_status": test.test_status
+                }));
                 total_links += 1;
             } else {
-                req_matrix.push(false);
+                req_matrix.push(json!({
+                    "linked": false,
+                    "test_status": null
+                }));
             }
         }
         

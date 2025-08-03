@@ -8,6 +8,30 @@ use std::error::Error;
 
 // Authentication helper functions
 use bcrypt::{hash, verify, DEFAULT_COST};
+use rocket::http::CookieJar;
+
+pub fn is_authenticated(cookies: &CookieJar<'_>) -> Option<User> {
+    let user_id_cookie = cookies.get_private("user_id");
+    let username_cookie = cookies.get_private("username");
+    
+    match (user_id_cookie, username_cookie) {
+        (Some(user_id_cookie), Some(username_cookie)) => {
+            match user_id_cookie.value().parse::<i32>() {
+                Ok(user_id) => {
+                    // Verify the user still exists in the database
+                    let user = get_user_by_id(user_id);
+                    if user.user_username == username_cookie.value() {
+                        Some(user)
+                    } else {
+                        None
+                    }
+                }
+                Err(_) => None
+            }
+        }
+        _ => None
+    }
+}
 
 pub fn hash_password(password: &str) -> Result<String, bcrypt::BcryptError> {
     hash(password, DEFAULT_COST)
@@ -40,7 +64,7 @@ pub fn authenticate_user(username: &str, password: &str) -> Result<Option<User>,
     }
 }
 
-pub fn change_user_password(user_id: i32, current_password: &str, new_password: &str) -> Result<(), String> {
+pub fn change_user_password(_user_id: i32, current_password: &str, new_password: &str) -> Result<(), String> {
     use crate::schema::users::dsl::*;
     
     let connection = &mut establish_connection();
@@ -447,6 +471,39 @@ pub fn insert_new_matrix_item(
     Ok(())
 }
 
+pub fn get_requirements_for_test(test_id: i32) -> Result<Vec<Requirement>, String> {
+    use crate::schema::matrix::dsl::*;
+    use crate::schema::requirements::dsl::*;
+
+    let connection = &mut establish_connection();
+    
+    let linked_requirements = matrix
+        .filter(matrix_test_id.eq(test_id))
+        .inner_join(requirements.on(matrix_req_id.eq(req_id)))
+        .select((
+            req_id,
+            req_title,
+            req_description,
+            req_verification,
+            req_current_status,
+            req_author,
+            req_reviewer,
+            req_link,
+            req_reference,
+            req_category,
+            req_parent,
+            req_creation_date,
+            req_update_date,
+            req_deadline_date,
+            req_applicability,
+            req_justification,
+        ))
+        .load::<Requirement>(connection)
+        .map_err(|e| format!("Error getting requirements for test: {}", e))?;
+
+    Ok(linked_requirements)
+}
+
 pub fn insert_new_user(conn: &mut PgConnection, new: &NewUser) -> Result<i32, Box<dyn Error>> {
     let a: User = diesel::insert_into(crate::schema::users::table)
         .values(new)
@@ -455,6 +512,40 @@ pub fn insert_new_user(conn: &mut PgConnection, new: &NewUser) -> Result<i32, Bo
     println!("New user id {}", a.user_id);
 
     Ok(a.user_id)
+}
+
+pub fn update_user(conn: &mut PgConnection, user_data: &NewUser) -> Result<bool, Box<dyn Error>> {
+    use crate::schema::users::dsl::*;
+
+    let user_id_value = user_data.user_id.ok_or("User ID is required")?;
+
+    let result = diesel::update(users.filter(user_id.eq(user_id_value)))
+        .set((
+            user_name.eq(&user_data.user_name),
+            user_username.eq(&user_data.user_username),
+            user_email.eq(&user_data.user_email),
+            user_level.eq(user_data.user_level),
+        ))
+        .execute(conn)?;
+
+    Ok(result > 0)
+}
+
+pub fn update_user_without_password(conn: &mut PgConnection, user_data: &crate::models::UpdateUser) -> Result<bool, Box<dyn Error>> {
+    use crate::schema::users::dsl::*;
+
+    let user_id_value = user_data.user_id.ok_or("User ID is required")?;
+
+    let result = diesel::update(users.filter(user_id.eq(user_id_value)))
+        .set((
+            user_name.eq(&user_data.user_name),
+            user_username.eq(&user_data.user_username),
+            user_email.eq(&user_data.user_email),
+            user_level.eq(user_data.user_level),
+        ))
+        .execute(conn)?;
+
+    Ok(result > 0)
 }
 
 pub fn update_requirement(conn: &mut PgConnection, req: i32) -> Result<(), Box<dyn Error>> {

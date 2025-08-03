@@ -19,6 +19,7 @@ pub fn create_matrix_workbook()->Result<Vec<u8>,xlsxwriter::XlsxError> {
     let all_reqs = requirements
     .load::<Requirement>(connection)
     .map_err(|err| -> String {
+        #[cfg(debug_assertions)]
         println!("Error querying page views: {:?}", err);
         "Error querying page views from the database".into()
     }).unwrap();
@@ -90,6 +91,7 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> 
     let all_reqs = requirements
         .load::<Requirement>(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying requirements: {:?}", err);
             "Error querying requirements from the database".into()
         }).unwrap();
@@ -193,6 +195,7 @@ pub fn create_tests_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> {
     let all_tests = tests
         .load::<Test>(connection)
         .map_err(|err| -> String {
+            #[cfg(debug_assertions)]
             println!("Error querying tests: {:?}", err);
             "Error querying tests from the database".into()
         }).unwrap();

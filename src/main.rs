@@ -52,6 +52,7 @@ async fn main() -> Result<(), rocket::Error> {
                 show_users,
                 show_user_id,
                 edit_user,
+                post_edit_user,
                 show_categories,
                 new_category,
                 post_category,

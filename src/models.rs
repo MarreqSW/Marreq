@@ -177,6 +177,16 @@ pub struct NewUser {
     pub user_password: String,
 }
 
+#[derive(Serialize, Deserialize, FromForm)]
+#[serde(crate = "rocket::serde")]
+pub struct UpdateUser {
+    pub user_id: Option<i32>,
+    pub user_username: String,
+    pub user_name: String,
+    pub user_email: String,
+    pub user_level: i32,
+}
+
 #[derive(Serialize, Deserialize, Queryable)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Test {

@@ -464,6 +464,10 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
     let linked_requirements = get_requirements_for_test(test_id).unwrap_or_default();
     let linked_requirements_json = json!(linked_requirements);
 
+    // Create a simple array of linked requirement IDs for template checking
+    let linked_req_ids: Vec<i32> = linked_requirements.iter().map(|r| r.req_id).collect();
+    let linked_req_ids_json = json!(linked_req_ids);
+
     // Get all requirements for the multi-select
     let all_requirements = get_requirements_all().unwrap_or_default();
     let all_requirements_json = json!(all_requirements);
@@ -476,6 +480,7 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
         "users": users_json, 
         "verification": verification_json,
         "linked_requirements": linked_requirements_json,
+        "linked_req_ids": linked_req_ids_json,
         "requirements": all_requirements_json,
         "user": user
     });
@@ -485,8 +490,8 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
 }
 
 #[allow(unused_variables)]
-#[post("/edit_test/<req_id>", data = "<edit_test_form>")]
-pub fn post_edit_test(req_id: i32, edit_test_form: Form<EditTestForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+#[post("/edit_test/<test_id>", data = "<edit_test_form>")]
+pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let _user = require_auth(cookies)?;
     let connection = &mut establish_connection();
     

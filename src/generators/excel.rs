@@ -16,13 +16,16 @@ pub fn create_matrix_workbook()->Result<Vec<u8>,xlsxwriter::XlsxError> {
     let workbook = Workbook::new("target/matrix.xls")?;
     let mut sheet1 = workbook.add_worksheet(None)?;
     
-    let all_reqs = requirements
+    let mut all_reqs = requirements
     .load::<Requirement>(connection)
     .map_err(|err| -> String {
         #[cfg(debug_assertions)]
         println!("Error querying page views: {:?}", err);
         "Error querying page views from the database".into()
     }).unwrap();
+
+    // Sort requirements by ID
+    all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
 
     let total_tests:i64 = tests.count().get_result(connection).unwrap();    
 
@@ -88,13 +91,16 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> 
     let mut sheet1 = workbook.add_worksheet(None)?;
     
     // Get all requirements with decorated data
-    let all_reqs = requirements
+    let mut all_reqs = requirements
         .load::<Requirement>(connection)
         .map_err(|err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying requirements: {:?}", err);
             "Error querying requirements from the database".into()
         }).unwrap();
+
+    // Sort requirements by ID
+    all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
 
     let decorated_reqs = decorate_requirements(all_reqs);
 
@@ -192,13 +198,16 @@ pub fn create_tests_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> {
     let mut sheet1 = workbook.add_worksheet(None)?;
     
     // Get all tests
-    let all_tests = tests
+    let mut all_tests = tests
         .load::<Test>(connection)
         .map_err(|err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying tests: {:?}", err);
             "Error querying tests from the database".into()
         }).unwrap();
+
+    // Sort tests by ID
+    all_tests.sort_by(|a, b| a.test_id.cmp(&b.test_id));
 
     // Define headers
     let headers = vec![

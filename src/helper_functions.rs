@@ -823,6 +823,61 @@ pub fn generate_pdf_content(
     content
 }
 
+pub fn generate_pdf_from_html(html_content: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    use std::process::Command;
+    use std::fs;
+    use std::io::Write;
+    
+    // Check if wkhtmltopdf is available
+    let wkhtmltopdf_check = Command::new("which").arg("wkhtmltopdf").output();
+    
+    if wkhtmltopdf_check.is_err() || !wkhtmltopdf_check.unwrap().status.success() {
+        // wkhtmltopdf not available, return error
+        return Err("wkhtmltopdf is not installed. Please install it to generate PDFs.".into());
+    }
+    
+    // Create a temporary HTML file
+    let temp_html_path = "/tmp/report_temp.html";
+    let temp_pdf_path = "/tmp/report_temp.pdf";
+    
+    // Write HTML content to temporary file
+    let mut html_file = fs::File::create(temp_html_path)?;
+    html_file.write_all(html_content.as_bytes())?;
+    
+    // Use wkhtmltopdf command line tool
+    let output = Command::new("wkhtmltopdf")
+        .arg("--page-size")
+        .arg("A4")
+        .arg("--orientation")
+        .arg("Portrait")
+        .arg("--margin-top")
+        .arg("20")
+        .arg("--margin-bottom")
+        .arg("20")
+        .arg("--margin-left")
+        .arg("20")
+        .arg("--margin-right")
+        .arg("20")
+        .arg("--encoding")
+        .arg("UTF-8")
+        .arg(temp_html_path)
+        .arg(temp_pdf_path)
+        .output()?;
+    
+    if !output.status.success() {
+        return Err(format!("wkhtmltopdf failed: {}", String::from_utf8_lossy(&output.stderr)).into());
+    }
+    
+    // Read the generated PDF
+    let pdf_bytes = fs::read(temp_pdf_path)?;
+    
+    // Clean up temporary files
+    let _ = fs::remove_file(temp_html_path);
+    let _ = fs::remove_file(temp_pdf_path);
+    
+    Ok(pdf_bytes)
+}
+
 pub fn insert_new_applicability(conn: &mut PgConnection, new: &NewApplicability) -> Result<i32, Box<dyn Error>> {
     use crate::schema::applicability::dsl::*;
 

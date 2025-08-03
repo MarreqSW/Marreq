@@ -180,3 +180,80 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> 
     let result = fs::read("target/requirements.xls").expect("can read file");
     Ok(result)
 }
+
+pub fn create_tests_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> {
+    use crate::schema::tests::dsl::*;
+    
+    let connection = &mut establish_connection();
+
+    let workbook = Workbook::new("target/tests.xls")?;
+    let mut sheet1 = workbook.add_worksheet(None)?;
+    
+    // Get all tests
+    let all_tests = tests
+        .load::<Test>(connection)
+        .map_err(|err| -> String {
+            println!("Error querying tests: {:?}", err);
+            "Error querying tests from the database".into()
+        }).unwrap();
+
+    // Define headers
+    let headers = vec![
+        "Test ID", "Name", "Description", "Status", "Source", "Parent ID", "Parent Name"
+    ];
+
+    // Write headers
+    for (col, header) in headers.iter().enumerate() {
+        sheet1.write_string(0, col as u16, header, None)?;
+    }
+
+    // Write data rows
+    for (row, test) in all_tests.iter().enumerate() {
+        let row_num = (row + 1) as u32;
+        let mut col = 0;
+
+        sheet1.write_number(row_num, col, test.test_id as f64, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &test.test_name, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &test.test_description, None)?;
+        col += 1;
+        
+        // Get status name
+        let status_name = get_status_name_by_id(test.test_status);
+        sheet1.write_string(row_num, col, &status_name, None)?;
+        col += 1;
+        
+        sheet1.write_string(row_num, col, &test.test_source, None)?;
+        col += 1;
+        
+        if test.test_parent != 0 {
+            sheet1.write_number(row_num, col, test.test_parent as f64, None)?;
+        } else {
+            sheet1.write_string(row_num, col, "None", None)?;
+        }
+        col += 1;
+        
+        // Get parent test name if exists
+        if test.test_parent != 0 {
+            let parent_test = tests
+                .filter(test_id.eq(test.test_parent))
+                .first::<Test>(connection)
+                .ok();
+            
+            if let Some(parent) = parent_test {
+                sheet1.write_string(row_num, col, &parent.test_name, None)?;
+            } else {
+                sheet1.write_string(row_num, col, "Unknown", None)?;
+            }
+        } else {
+            sheet1.write_string(row_num, col, "None", None)?;
+        }
+    }
+
+    workbook.close().expect("workbook can be closed");
+    let result = fs::read("target/tests.xls").expect("can read file");
+    Ok(result)
+}

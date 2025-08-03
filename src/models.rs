@@ -235,6 +235,18 @@ pub struct NewTestForm {
 
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
+pub struct EditTestForm {
+    pub test_id: i32,
+    pub test_name: String,
+    pub test_description: String,
+    pub test_source: String,
+    pub test_status: i32,
+    pub test_parent: i32,
+    pub linked_requirements: Vec<i32>,
+}
+
+#[derive(Serialize, Deserialize, FromForm)]
+#[serde(crate = "rocket::serde")]
 pub struct LoginForm {
     pub username: String,
     pub password: String,

@@ -464,6 +464,10 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
     let linked_requirements = get_requirements_for_test(test_id).unwrap_or_default();
     let linked_requirements_json = json!(linked_requirements);
 
+    // Get all requirements for the multi-select
+    let all_requirements = get_requirements_all().unwrap_or_default();
+    let all_requirements_json = json!(all_requirements);
+
     let ctx = json!({
         "tests": test_decorate_json, 
         "categories": categories_json, 
@@ -472,6 +476,7 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
         "users": users_json, 
         "verification": verification_json,
         "linked_requirements": linked_requirements_json,
+        "requirements": all_requirements_json,
         "user": user
     });
 
@@ -480,14 +485,27 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
 }
 
 #[allow(unused_variables)]
-#[post("/edit_test/<req_id>", data = "<new_test>")]
-pub fn post_edit_test(req_id: i32, new_test: Form<NewTest>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+#[post("/edit_test/<req_id>", data = "<edit_test_form>")]
+pub fn post_edit_test(req_id: i32, edit_test_form: Form<EditTestForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let _user = require_auth(cookies)?;
-    let my_id = new_test.test_id.unwrap_or(0);
     let connection = &mut establish_connection();
+    
+    // First, update the test details
+    let new_test = NewTest {
+        test_id: Some(edit_test_form.test_id),
+        test_name: edit_test_form.test_name.clone(),
+        test_description: edit_test_form.test_description.clone(),
+        test_source: edit_test_form.test_source.clone(),
+        test_status: edit_test_form.test_status,
+        test_parent: edit_test_form.test_parent,
+    };
+    
     edit_test(connection, &new_test).unwrap();
+    
+    // Then, update the requirement links
+    update_test_requirement_links(connection, edit_test_form.test_id, &edit_test_form.linked_requirements).unwrap();
 
-    Ok(Redirect::to(uri!(show_test_id(my_id))))
+    Ok(Redirect::to(uri!(show_test_id(edit_test_form.test_id))))
 }
 
 #[post("/new_test", data = "<new_test>")]

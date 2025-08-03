@@ -80,19 +80,18 @@
 
         <input type="hidden" id="test_id" name="test_id" value="{{tests.test_id}}">
 
-        {{#if linked_requirements}}
-        <div class="linked-requirements mt-4">
-          <h4>Linked Requirements</h4>
-          <div class="requirements-list">
-            {{#each linked_requirements}}
-            <div class="requirement-link">
-              <a href="/requirements/{{req_id}}" class="requirement-id">REQ-{{req_id}}</a>
-              <span class="requirement-title">{{req_title}}</span>
-            </div>
+        <div class="form-group mt-4">
+          <label for="linked_requirements" class="form-label">Linked Requirements</label>
+          <select name="linked_requirements" id="linked_requirements" class="form-control" multiple size="8">
+            {{#each requirements}}
+              <option value="{{req_id}}" 
+                {{#if (in ../linked_requirements req_id)}}selected{{/if}}>
+                REQ-{{req_id}}: {{req_title}}
+              </option>
             {{/each}}
-          </div>
+          </select>
+          <small class="form-text">Hold Ctrl (or Cmd on Mac) to select multiple requirements</small>
         </div>
-        {{/if}}
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary">Update Test</button>

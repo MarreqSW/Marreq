@@ -97,6 +97,33 @@ body {
   font-weight: 500;
 }
 
+.nav-project-selector {
+  margin-right: 2rem;
+}
+
+.nav-project-selector .form-select {
+  min-width: 200px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-project-selector .form-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.nav-project-selector .form-select:hover {
+  border-color: var(--primary-light);
+}
+
 /* Main Container */
 .container {
   max-width: 1200px;
@@ -1559,4 +1586,77 @@ select[multiple] option:hover {
 
 .sortable a.d-flex.flex-column .text-xs {
   margin-top: 0.25rem;
+}
+
+/* Filter Section Styles */
+.filter-section {
+  background-color: var(--surface-color);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.5rem;
+}
+
+.filter-section .card-header {
+  background-color: var(--background-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+}
+
+.filter-section .card-header h5 {
+  margin: 0;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.filter-section .card-body {
+  padding: 1.5rem;
+}
+
+.filter-section .form-label {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.filter-section .form-select {
+  border: 1px solid var(--border-color);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.filter-section .form-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.filter-section .form-select:hover {
+  border-color: var(--primary-light);
+}
+
+.filter-section .btn {
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+}
+
+.filter-section .gap-2 {
+  gap: 0.5rem;
+}
+
+/* Responsive adjustments for filters */
+@media (max-width: 768px) {
+  .filter-section form {
+    flex-direction: column;
+    gap: 1rem !important;
+  }
+  
+  .filter-section .flex-grow-1 {
+    width: 100%;
+  }
+  
+  .filter-section .d-flex.gap-2 {
+    justify-content: center;
+  }
 }

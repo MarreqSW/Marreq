@@ -3,6 +3,17 @@
 hide circle
 skinparam linetype ortho
 
+entity "Projects" as proj {
+* project_id
+---
+* project_name
+project_description
+project_creation_date
+project_update_date
+project_status
+project_owner_id
+}
+
 entity "Requirement" as req {
 * req_id
 ---
@@ -19,6 +30,9 @@ entity "Requirement" as req {
 * req_creation_date
 * req_update_date
 * req_deadline_date
+* req_applicability
+req_justification
+* project_id
 }
 
 entity "Users" as user {
@@ -30,6 +44,8 @@ entity "Users" as user {
 * user_level
 * user_creation_date
 * user_last_login
+* user_password
+project_id
 }
 
 entity "Status" as st {
@@ -46,6 +62,16 @@ entity "Categories" as cat {
 * cat_title
 * cat_description
 * cat_tag
+* project_id
+}
+
+entity "Applicability" as app {
+* app_id
+---
+* app_title
+* app_description
+* app_tag
+* project_id
 }
 
 entity "Tests" as test {
@@ -56,6 +82,7 @@ entity "Tests" as test {
 * test_source
 * test_status
 * test_parent
+* project_id
 }
 
 entity "Matrix" as matrix {
@@ -63,6 +90,7 @@ entity "Matrix" as matrix {
 * matrix_test_id
 ---
 * matrix_creation_date
+* project_id
 }
 
 entity "Verification" as verification {
@@ -72,10 +100,18 @@ entity "Verification" as verification {
 * verification_description
 }
 
+proj ||--o{ req
+proj ||--o{ user
+proj ||--o{ cat
+proj ||--o{ app
+proj ||--o{ test
+proj ||--o{ matrix
+
 req  }|--|| st
 req  }|--|| cat
 req  }|--|| user
 req  }|--|| verification
+req  }|--|| app
 test   }|--|| st
 matrix ||--|| req
 matrix ||--|| test

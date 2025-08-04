@@ -991,6 +991,49 @@ pub fn delete_applicability(conn: &mut PgConnection, id: &i32) -> Result<bool, B
     Ok(deleted > 0)
 }
 
+pub fn get_linked_tests_for_requirement(conn: &mut PgConnection, req_id: i32) -> Result<Vec<DecoratedTest>, Box<dyn Error>> {
+    use crate::schema::matrix::dsl::*;
+    use crate::schema::tests::dsl::*;
+
+    // Get test IDs linked to this requirement
+    let linked_test_ids: Vec<i32> = matrix
+        .filter(matrix_req_id.eq(req_id))
+        .select(matrix_test_id)
+        .load(conn)?;
+
+    if linked_test_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    // Get the actual test data for these IDs
+    let tests_data: Vec<Test> = tests
+        .filter(test_id.eq_any(linked_test_ids))
+        .load(conn)?;
+
+    // Decorate the tests with status names and parent titles
+    let mut decorated_tests = Vec::new();
+    for test in tests_data {
+        let status_name = get_status_name_by_id(test.test_status);
+        let parent_title = if test.test_parent > 0 {
+            get_test_by_id(test.test_parent).test_name
+        } else {
+            "None".to_string()
+        };
+
+        decorated_tests.push(DecoratedTest {
+            test_id: test.test_id,
+            test_name: test.test_name,
+            test_description: test.test_description,
+            test_source: test.test_source,
+            test_status: status_name,
+            test_parent_id: test.test_parent,
+            test_parent_title: parent_title,
+        });
+    }
+
+    Ok(decorated_tests)
+}
+
 pub fn establish_connection() -> diesel::PgConnection {
     dotenv().ok();
 

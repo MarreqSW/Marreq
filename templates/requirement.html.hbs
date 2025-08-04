@@ -82,5 +82,22 @@
       {{/if}}
     </div>
   </div>
+
+  {{#if linked_tests}}
+  <div class="linked-tests-section">
+    <h4>Linked Tests</h4>
+    <div class="linked-tests-list">
+      {{#each linked_tests}}
+      <div class="linked-test-item">
+        <div class="test-info">
+          <span class="test-id">TEST-{{test_id}}</span>
+          <a href="/tests/{{test_id}}" class="test-name-link">{{test_name}}</a>
+          <span class="test-status status-badge status-{{test_status}}">{{test_status}}</span>
+        </div>
+      </div>
+      {{/each}}
+    </div>
+  </div>
+  {{/if}}
 </div>
 

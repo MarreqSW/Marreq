@@ -19,13 +19,8 @@
                   <li><a href="/" class="nav-link">Home</a></li>
             <li><a href="/projects" class="nav-link">Projects</a></li>
             <li><a href="/requirements" class="nav-link">Requirements</a></li>
-            <li><a href="/requirements/tree" class="nav-link">Tree View</a></li>
             <li><a href="/tests" class="nav-link">Tests</a></li>
-            <li><a href="/matrix" class="nav-link">Matrix</a></li>
             <li><a href="/reports" class="nav-link">Reports</a></li>
-            <li><a href="/categories" class="nav-link">Categories</a></li>
-            <li><a href="/applicability" class="nav-link">Applicability</a></li>
-      <li><a href="/users" class="nav-link">Users</a></li>
       <li><a href="/change_password" class="nav-link">Change Password</a></li>
       <li><a href="/logout" class="nav-link">Logout</a></li>
     </ul>
@@ -50,14 +45,15 @@ function changeProject(projectId) {
 // Set default project if none selected and no cookie exists
 document.addEventListener('DOMContentLoaded', function() {
     const projectSelector = document.getElementById('project-selector');
-    if (projectSelector && !projectSelector.value) {
+    if (projectSelector) {
         // Check if we already have a project selected in cookie
         const cookies = document.cookie.split(';');
         const hasProjectCookie = cookies.some(cookie => 
             cookie.trim().startsWith('selected_project_id=')
         );
         
-        if (!hasProjectCookie) {
+        // If no project is selected and no cookie exists, select the first project
+        if ((!projectSelector.value || projectSelector.value === "") && !hasProjectCookie) {
             const firstOption = projectSelector.querySelector('option[value]:not([value=""])');
             if (firstOption) {
                 projectSelector.value = firstOption.value;

@@ -232,8 +232,15 @@ pub fn show_requirement_id(req_id: i32, cookies: &CookieJar<'_>) -> Result<Templ
     let user = require_auth(cookies)?;
     let req = get_requirement_by_id(req_id);
     let req_decorate = decorate_requirements(vec![req]);
+
+    // Get linked tests for this requirement
+    let connection = &mut establish_connection();
+    let linked_tests = get_linked_tests_for_requirement(connection, req_id).unwrap_or_default();
+    let linked_tests_json = json!(linked_tests);
+
     let ctx = json!({
         "requirements": req_decorate,
+        "linked_tests": linked_tests_json,
         "user": user
     });
 

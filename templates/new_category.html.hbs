@@ -12,6 +12,19 @@
     <div class="card-body">
       <form method="post">
         <div class="form-group">
+          <label for="project_id" class="form-label">Project</label>
+          <select name="project_id" id="project_id" class="form-control" required>
+            <option value="">-- Select Project --</option>
+            {{#each projects}}
+              <option value="{{project_id}}" {{#if (eq project_id ../selected_project_id)}}selected{{/if}}>
+                {{project_name}}
+              </option>
+            {{/each}}
+          </select>
+          <small class="text-secondary">Select the project this category belongs to</small>
+        </div>
+
+        <div class="form-group">
           <label for="cat_title" class="form-label">Category Title</label>
           <input type="text" name="cat_title" id="cat_title" class="form-control" required>
         </div>
@@ -27,16 +40,8 @@
           <small class="text-secondary">A short identifier for the category</small>
         </div>
 
-        {{#if selected_project_id}}
-        <input type="hidden" name="project_id" value="{{selected_project_id}}">
-        {{else}}
-        <div class="alert alert-warning">
-          <strong>Warning:</strong> No project selected. Please select a project from the dropdown above before creating a category.
-        </div>
-        {{/if}}
-
         <div class="mt-4">
-          <button type="submit" class="btn btn-primary" {{#unless selected_project_id}}disabled{{/unless}}>Create Category</button>
+          <button type="submit" class="btn btn-primary">Create Category</button>
           <a href="/categories" class="btn btn-outline">Cancel</a>
         </div>
       </form>

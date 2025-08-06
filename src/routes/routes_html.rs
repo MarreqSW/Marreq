@@ -1111,9 +1111,13 @@ pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
     
+    // Get all projects for the dropdown
+    let projects = get_projects_all().unwrap_or_default();
+    
     let ctx = json!({
         "user": user,
-        "selected_project_id": selected_project_id
+        "selected_project_id": selected_project_id,
+        "projects": projects
     });
     Ok(Template::render("new_category", ctx))
 }
@@ -1246,9 +1250,13 @@ pub fn new_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
     
+    // Get all projects for the dropdown
+    let projects = get_projects_all().unwrap_or_default();
+    
     let ctx = json!({
         "user": user,
-        "selected_project_id": selected_project_id
+        "selected_project_id": selected_project_id,
+        "projects": projects
     });
     Ok(Template::render("new_applicability", ctx))
 }

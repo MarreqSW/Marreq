@@ -65,7 +65,7 @@ A comprehensive web-based requirements and test management system built with Rus
 + [X] Parsers for requirements
   + [ ] Latex files (Write a command)
   + [ ] Word files (Write a macro)
-  + [X] Excel files (Standalone Excel parser application)
+  + [X] Excel files
 + [ ] Parsers for tests
   + [ ] Doxygen documentation
   + [ ] ...

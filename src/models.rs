@@ -66,6 +66,7 @@ pub struct DecoratedRequirement {
     pub req_update_date: String,
     pub req_deadline_date: String,
     pub req_justification: Option<String>,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]

@@ -1144,14 +1144,14 @@ pub fn get_matrix_by_project(_project_id: i32) -> Result<Vec<Matrix>, String> {
         })
 }
 
-/// Filter requirements by status, verification mode, and category
+/// Filter requirements by status, verification mode, and category, then sort by reference
 pub fn filter_requirements(
     requirements: Vec<Requirement>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
 ) -> Vec<Requirement> {
-    requirements
+    let mut filtered_requirements: Vec<Requirement> = requirements
         .into_iter()
         .filter(|req| {
             let status_match = status_filter.map_or(true, |status_id| req.req_current_status == status_id);
@@ -1160,7 +1160,19 @@ pub fn filter_requirements(
             
             status_match && verification_match && category_match
         })
-        .collect()
+        .collect();
+    
+    // Sort by reference (empty references come last)
+    filtered_requirements.sort_by(|a, b| {
+        match (a.req_reference.is_empty(), b.req_reference.is_empty()) {
+            (false, false) => a.req_reference.cmp(&b.req_reference),
+            (false, true) => std::cmp::Ordering::Less,
+            (true, false) => std::cmp::Ordering::Greater,
+            (true, true) => a.req_id.cmp(&b.req_id), // Fallback to ID if both are empty
+        }
+    });
+    
+    filtered_requirements
 }
 
 /// Filter tests by status, verification mode, and category

@@ -1,5 +1,4 @@
-{{> layout}}
-
+{{#*inline "page"}}
 <div class="container mt-4">
     <div class="row">
         <div class="col-12">
@@ -52,9 +51,9 @@
                                 <div class="col-md-6">
                                     <h6>Recent Activity Trends</h6>
                                     <ul class="list-unstyled">
-                                        <li><strong>7-day average:</strong> {{divide last_7_days 7}} entries/day</li>
-                                        <li><strong>30-day average:</strong> {{divide last_30_days 30}} entries/day</li>
-                                        <li><strong>90-day average:</strong> {{divide last_90_days 90}} entries/day</li>
+                                        <li><strong>7-day average:</strong> <span class="average-7" data-value="{{last_7_days}}" data-divisor="7">{{last_7_days}}</span> entries/day</li>
+                                        <li><strong>30-day average:</strong> <span class="average-30" data-value="{{last_30_days}}" data-divisor="30">{{last_30_days}}</span> entries/day</li>
+                                        <li><strong>90-day average:</strong> <span class="average-90" data-value="{{last_90_days}}" data-divisor="90">{{last_90_days}}</span> entries/day</li>
                                     </ul>
                                 </div>
                                 <div class="col-md-6">
@@ -100,13 +99,19 @@ function divide(a, b) {
     return Math.round((a / b) * 100) / 100;
 }
 
-// Apply division to all elements with divide helper
+// Apply division to all elements with average classes
 document.addEventListener('DOMContentLoaded', function() {
-    const elements = document.querySelectorAll('[data-divide]');
-    elements.forEach(element => {
-        const values = element.getAttribute('data-divide').split(',');
-        const result = divide(parseInt(values[0]), parseInt(values[1]));
-        element.textContent = result;
+    const averageElements = document.querySelectorAll('.average-7, .average-30, .average-90');
+    averageElements.forEach(element => {
+        const value = parseInt(element.getAttribute('data-value'));
+        const divisor = parseInt(element.getAttribute('data-divisor'));
+        if (!isNaN(value) && !isNaN(divisor) && divisor > 0) {
+            const result = divide(value, divisor);
+            element.textContent = result;
+        }
     });
 });
-</script> 
+</script>
+{{/inline}}
+
+{{> layout}} 

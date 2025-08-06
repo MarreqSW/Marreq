@@ -1180,3 +1180,31 @@ pub fn filter_tests(
         })
         .collect()
 }
+
+/// Generate automatic reference code for a requirement based on category tag and project
+pub fn generate_requirement_reference(category_id: i32, project_id: i32) -> Result<String, Box<dyn Error>> {
+    use crate::schema::categories;
+    use crate::schema::requirements;
+    
+    let connection = &mut establish_connection();
+    
+    // Get the category to find its tag
+    let category = categories::table
+        .filter(categories::cat_id.eq(category_id))
+        .first::<Category>(connection)
+        .map_err(|_e| Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, "Category not found")))?;
+    
+    // Count existing requirements with the same category and project
+    let existing_count = requirements::table
+        .filter(requirements::req_category.eq(category_id))
+        .filter(requirements::project_id.eq(project_id))
+        .count()
+        .get_result::<i64>(connection)
+        .map_err(|_e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Database error")))?;
+    
+    // Generate reference: REQ-{CATEGORY_TAG}-{NEXT_NUMBER}
+    let next_number = existing_count + 1;
+    let reference = format!("REQ-{}-{}", category.cat_tag, next_number);
+    
+    Ok(reference)
+}

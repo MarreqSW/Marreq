@@ -593,6 +593,11 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         "verification": verification_json, 
         "applicability": applicability_json,
         "selected_project_id": selected_project_id.unwrap_or(1),
+        "req_title": "",
+        "req_description": "",
+        "req_justification": "",
+        "req_reference": "",
+        "req_link": "",
         "user": user
     });
 

@@ -35,6 +35,19 @@
           <li><a class="dropdown-item" href="/new_user">New User</a></li>
         </ul>
       </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          Admin
+        </a>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="/admin">Dashboard</a></li>
+          <li><a class="dropdown-item" href="/admin/users">User Management</a></li>
+          <li><a class="dropdown-item" href="/admin/backup">Database Backup</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="/logs">System Logs</a></li>
+          <li><a class="dropdown-item" href="/log_analytics">Log Analytics</a></li>
+        </ul>
+      </li>
       {{/if}}
       <li><a href="/change_password" class="nav-link">Change Password</a></li>
       <li><a href="/logout" class="nav-link">Logout</a></li>

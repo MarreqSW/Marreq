@@ -35,7 +35,7 @@ pub async fn api_post_requirement(
 
     if let Ok(val) = ret_value {
         // Log the requirement creation via API
-        if let Ok(new_values) = crate::logger::Logger::to_json_value(&*new_req) {
+        if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_req) {
             let _ = crate::logger::Logger::log_create(
                 connection,
                 0, // API user ID (system)
@@ -66,7 +66,7 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
     println!("Delete value: {}", ret_value);
     if ret_value {
         // Log the requirement deletion via API
-        if let Ok(old_values) = crate::logger::Logger::to_json_value(&requirement) {
+        if let Ok(old_values) = crate::logger::Logger::to_json_string(&requirement) {
             let _ = crate::logger::Logger::log_delete(
                 connection,
                 0, // API user ID (system)
@@ -214,7 +214,7 @@ pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::htt
 
     if let Ok(val) = ret_value {
         // Log the test creation via API
-        if let Ok(new_values) = crate::logger::Logger::to_json_value(&*new_test) {
+        if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_test) {
             let _ = crate::logger::Logger::log_create(
                 connection,
                 0, // API user ID (system)
@@ -243,7 +243,7 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
 
     if ret_value {
         // Log the test deletion via API
-        if let Ok(old_values) = crate::logger::Logger::to_json_value(&test) {
+        if let Ok(old_values) = crate::logger::Logger::to_json_string(&test) {
             let _ = crate::logger::Logger::log_delete(
                 connection,
                 0, // API user ID (system)
@@ -375,7 +375,7 @@ pub async fn api_post_category(new_category: Json<NewCategory>) -> Result<Value,
 
     if let Ok(val) = ret_value {
         // Log the category creation via API
-        if let Ok(new_values) = crate::logger::Logger::to_json_value(&*new_category) {
+        if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_category) {
             let _ = crate::logger::Logger::log_create(
                 connection,
                 0, // API user ID (system)
@@ -425,7 +425,7 @@ pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
     if let Ok(val) = ret_value {
         if val {
             // Log the category deletion via API
-            if let Ok(old_values) = crate::logger::Logger::to_json_value(&category) {
+            if let Ok(old_values) = crate::logger::Logger::to_json_string(&category) {
                 let _ = crate::logger::Logger::log_delete(
                     connection,
                     0, // API user ID (system)
@@ -482,7 +482,7 @@ pub async fn api_post_applicability(new_applicability: Json<NewApplicability>) -
 
     if let Ok(val) = ret_value {
         // Log the applicability creation via API
-        if let Ok(new_values) = crate::logger::Logger::to_json_value(&*new_applicability) {
+        if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_applicability) {
             let _ = crate::logger::Logger::log_create(
                 connection,
                 0, // API user ID (system)
@@ -532,7 +532,7 @@ pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status 
     if let Ok(val) = ret_value {
         if val {
             // Log the applicability deletion via API
-            if let Ok(old_values) = crate::logger::Logger::to_json_value(&applicability) {
+            if let Ok(old_values) = crate::logger::Logger::to_json_string(&applicability) {
                 let _ = crate::logger::Logger::log_delete(
                     connection,
                     0, // API user ID (system)

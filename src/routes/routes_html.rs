@@ -441,7 +441,7 @@ pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &Cooki
     match update_user_without_password(connection, &user_data) {
         Ok(_) => {
             // Log the user update
-            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_value(&old_user), Logger::to_json_value(&user_data)) {
+            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_user), Logger::to_json_string(&user_data)) {
                 let _ = Logger::log_update(
                     connection,
                     current_user.user_id,
@@ -556,7 +556,7 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
     let user = require_auth(cookies)?;
     let my_id = new_req.req_id.unwrap_or(0);
 
-    let mut requirement_data = new_req.into_inner();
+    let requirement_data = new_req.into_inner();
     
     // Server-side validation: Check if reference matches category
     if !requirement_data.req_reference.is_empty() {
@@ -587,8 +587,8 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
 
     // Log the requirement update
     if let (Ok(old_values), Ok(new_values)) = (
-        Logger::to_json_value(&old_requirement),
-        Logger::to_json_value(&requirement_data)
+                    Logger::to_json_string(&old_requirement),
+            Logger::to_json_string(&requirement_data)
     ) {
         let _ = Logger::log_update(
             connection,
@@ -618,7 +618,7 @@ pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<
     match result {
         Ok(_) => {
             // Log the requirement deletion
-            if let Ok(old_values) = Logger::to_json_value(&requirement) {
+            if let Ok(old_values) = Logger::to_json_string(&requirement) {
                 let _ = Logger::log_delete(
                     connection,
                     user.user_id,
@@ -768,7 +768,7 @@ pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) 
     let my_id = insert_new_requirement(connection, &requirement_data).unwrap();
 
     // Log the requirement creation
-    if let Ok(new_values) = Logger::to_json_value(&requirement_data) {
+            if let Ok(new_values) = Logger::to_json_string(&requirement_data) {
         let _ = Logger::log_create(
             connection,
             user.user_id,
@@ -1061,7 +1061,7 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
     edit_test(connection, &new_test).unwrap();
     
     // Log the test update
-    if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_value(&old_test), Logger::to_json_value(&new_test)) {
+            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_test), Logger::to_json_string(&new_test)) {
         let _ = Logger::log_update(
             connection,
             user.user_id,
@@ -1097,7 +1097,7 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
     let my_id = insert_new_test(connection, &my_new_test).unwrap();
 
     // Log the test creation
-    if let Ok(new_values) = Logger::to_json_value(&my_new_test) {
+            if let Ok(new_values) = Logger::to_json_string(&my_new_test) {
         let _ = Logger::log_create(
             connection,
             user.user_id,
@@ -1508,7 +1508,7 @@ pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -
     match result {
         Ok(category_id) => {
             // Log the category creation
-            if let Ok(new_values) = Logger::to_json_value(&category_data) {
+            if let Ok(new_values) = Logger::to_json_string(&category_data) {
                 let _ = Logger::log_create(
                     connection,
                     user.user_id,
@@ -1556,7 +1556,7 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
     match result {
         Ok(_) => {
             // Log the category update
-            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_value(&old_category), Logger::to_json_value(&category_with_id)) {
+            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_category), Logger::to_json_string(&category_with_id)) {
                 let _ = Logger::log_update(
                     connection,
                     user.user_id,
@@ -1591,7 +1591,7 @@ pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<roc
     match result {
         Ok(_) => {
             // Log the category deletion
-            if let Ok(old_values) = Logger::to_json_value(&category) {
+            if let Ok(old_values) = Logger::to_json_string(&category) {
                 let _ = Logger::log_delete(
                     connection,
                     user.user_id,
@@ -1626,7 +1626,7 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
             let my_id = insert_new_user(connection, &user_with_hashed_password).unwrap();
             
             // Log the user creation
-            if let Ok(new_values) = Logger::to_json_value(&user_with_hashed_password) {
+            if let Ok(new_values) = Logger::to_json_string(&user_with_hashed_password) {
                 let _ = Logger::log_create(
                     connection,
                     user.user_id,
@@ -1720,7 +1720,7 @@ pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &C
     match result {
         Ok(applicability_id) => {
             // Log the applicability creation
-            if let Ok(new_values) = Logger::to_json_value(&applicability_data) {
+            if let Ok(new_values) = Logger::to_json_string(&applicability_data) {
                 let _ = Logger::log_create(
                     connection,
                     user.user_id,
@@ -1768,7 +1768,7 @@ pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability
     match result {
         Ok(_) => {
             // Log the applicability update
-            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_value(&old_applicability), Logger::to_json_value(&applicability_with_id)) {
+            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_applicability), Logger::to_json_string(&applicability_with_id)) {
                 let _ = Logger::log_update(
                     connection,
                     user.user_id,
@@ -1803,7 +1803,7 @@ pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Resul
     match result {
         Ok(_) => {
             // Log the applicability deletion
-            if let Ok(old_values) = Logger::to_json_value(&applicability) {
+            if let Ok(old_values) = Logger::to_json_string(&applicability) {
                 let _ = Logger::log_delete(
                     connection,
                     user.user_id,
@@ -2158,7 +2158,7 @@ pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> R
     match result {
         Ok(project_id) => {
             // Log the project creation
-            if let Ok(new_values) = Logger::to_json_value(&project_data) {
+            if let Ok(new_values) = Logger::to_json_string(&project_data) {
                 let _ = Logger::log_create(
                     connection,
                     user.user_id,
@@ -2222,19 +2222,20 @@ pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies:
     match result {
         Ok(_) => {
             // Log the project update
-            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_value(&old_project), Logger::to_json_value(&project)) {
-                let _ = Logger::log_update(
-                    connection,
-                    user.user_id,
-                    EntityType::Project,
-                    project_id,
-                    None,
-                    old_values,
-                    new_values,
-                    Some(format!("Updated project: {}", project.project_name)),
-                    None,
-                );
-            }
+                    let project_data = project.into_inner();
+        if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_project), Logger::to_json_string(&project_data)) {
+            let _ = Logger::log_update(
+                connection,
+                user.user_id,
+                EntityType::Project,
+                project_id,
+                None,
+                old_values,
+                new_values,
+                Some(format!("Updated project: {}", project_data.project_name)),
+                None,
+            );
+        }
             Ok(Redirect::to(uri!(show_projects)))
         },
         Err(_e) => {
@@ -2263,7 +2264,7 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
     match result {
         Ok(_) => {
             // Log the project deletion
-            if let Ok(old_values) = Logger::to_json_value(&project) {
+            if let Ok(old_values) = Logger::to_json_string(&project) {
                 let _ = Logger::log_delete(
                     connection,
                     user.user_id,

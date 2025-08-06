@@ -30,8 +30,8 @@ diesel::table! {
         entity_type -> Varchar,
         entity_id -> Nullable<Int4>,
         project_id -> Nullable<Int4>,
-        old_values -> Nullable<Jsonb>,
-        new_values -> Nullable<Jsonb>,
+        old_values -> Nullable<Text>,
+        new_values -> Nullable<Text>,
         description -> Nullable<Text>,
         #[max_length = 45]
         ip_address -> Nullable<Varchar>,

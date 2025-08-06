@@ -2,6 +2,19 @@
 <div class="mb-4">
   <h1>New Category</h1>
   <p class="text-secondary">Create a new category for organizing requirements</p>
+  
+  {{#unless selected_project_id}}
+  <div class="alert alert-info">
+    <strong>Project Selection Required:</strong> Please select a project from the dropdown in the navigation bar above before creating a category.
+    <br><br>
+    <strong>Available Projects:</strong>
+    <ul class="mb-0 mt-2">
+      {{#each projects}}
+        <li><strong>{{project_name}}</strong> (ID: {{project_id}})</li>
+      {{/each}}
+    </ul>
+  </div>
+  {{/unless}}
 </div>
 
 <section id="Categories">

@@ -1108,7 +1108,22 @@ pub fn show_categories(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     
-    let ctx = build_context_with_projects(user, cookies);
+    // Get projects and selected project
+    let projects = get_projects_for_nav().unwrap_or_default();
+    let mut selected_project_id = get_selected_project_id(cookies);
+    
+    // If no project is selected and there are projects available, select the first one
+    if selected_project_id.is_none() && !projects.is_empty() {
+        selected_project_id = Some(projects[0].project_id);
+        // Set the cookie for the selected project
+        cookies.add(Cookie::new("selected_project_id", projects[0].project_id.to_string()));
+    }
+    
+    let ctx = json!({
+        "user": user,
+        "projects": projects,
+        "selected_project_id": selected_project_id
+    });
     Ok(Template::render("new_category", ctx))
 }
 
@@ -1237,7 +1252,22 @@ pub fn show_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect>
 pub fn new_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     
-    let ctx = build_context_with_projects(user, cookies);
+    // Get projects and selected project
+    let projects = get_projects_for_nav().unwrap_or_default();
+    let mut selected_project_id = get_selected_project_id(cookies);
+    
+    // If no project is selected and there are projects available, select the first one
+    if selected_project_id.is_none() && !projects.is_empty() {
+        selected_project_id = Some(projects[0].project_id);
+        // Set the cookie for the selected project
+        cookies.add(Cookie::new("selected_project_id", projects[0].project_id.to_string()));
+    }
+    
+    let ctx = json!({
+        "user": user,
+        "projects": projects,
+        "selected_project_id": selected_project_id
+    });
     Ok(Template::render("new_applicability", ctx))
 }
 

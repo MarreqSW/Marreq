@@ -1,5 +1,4 @@
-{{> layout}}
-
+{{#*inline "page"}}
 <div class="container mt-4">
     <div class="row">
         <div class="col-12">
@@ -35,10 +34,10 @@
                                 <tbody>
                                     {{#each logs}}
                                     <tr>
-                                        <td>{{format_datetime created_at}}</td>
+                                        <td class="datetime-cell" data-datetime="{{created_at}}">{{created_at}}</td>
                                         <td>{{user_id}}</td>
                                         <td>
-                                            <span class="badge bg-{{get_action_color action_type}}">
+                                            <span class="badge action-badge" data-action="{{action_type}}">
                                                 {{action_type}}
                                             </span>
                                         </td>
@@ -130,13 +129,25 @@ function showChanges(logId) {
 
 // Apply formatting to all rows
 document.addEventListener('DOMContentLoaded', function() {
-    const rows = document.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-        const actionCell = row.querySelector('td:nth-child(3) .badge');
-        if (actionCell) {
-            const actionType = actionCell.textContent.trim();
-            actionCell.className = `badge bg-${get_action_color(actionType)}`;
+    // Format datetime cells
+    const datetimeCells = document.querySelectorAll('.datetime-cell');
+    datetimeCells.forEach(cell => {
+        const datetime = cell.getAttribute('data-datetime');
+        if (datetime) {
+            cell.textContent = format_datetime(datetime);
+        }
+    });
+
+    // Apply action color formatting
+    const actionBadges = document.querySelectorAll('.action-badge');
+    actionBadges.forEach(badge => {
+        const actionType = badge.getAttribute('data-action');
+        if (actionType) {
+            badge.className = `badge bg-${get_action_color(actionType)}`;
         }
     });
 });
-</script> 
+</script>
+{{/inline}}
+
+{{> layout}} 

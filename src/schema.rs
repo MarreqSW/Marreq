@@ -98,6 +98,7 @@ diesel::table! {
         #[max_length = 255]
         user_password -> Varchar,
         project_id -> Nullable<Int4>,
+        is_admin -> Bool,
     }
 }
 

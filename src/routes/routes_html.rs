@@ -446,17 +446,50 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
     };
     let categories_json = json!(categories.unwrap_or_default());
 
-    let parents = get_requirements_all().unwrap_or_default();
-    let parents_json = json!(parents);
+    // Get parent requirements filtered by project
+    let parents = if let Some(project_id) = selected_project_id {
+        get_requirements_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_requirements_by_project(first_project.project_id)
+        } else {
+            get_requirements_all()
+        }
+    };
+    let parents_json = json!(parents.unwrap_or_default());
 
     let users = get_users_all().unwrap_or_default();
     let users_json = json!(users);
 
-    let verification_types = get_verification_all().unwrap_or_default();
-    let verification_json = json!(verification_types);
+    // Get verification types filtered by project
+    let verification_types = if let Some(project_id) = selected_project_id {
+        get_verification_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_verification_by_project(first_project.project_id)
+        } else {
+            get_verification_all()
+        }
+    };
+    let verification_json = json!(verification_types.unwrap_or_default());
 
-    let applicability = get_applicability_all().unwrap_or_default();
-    let applicability_json = json!(applicability);
+    // Get applicability filtered by project
+    let applicability = if let Some(project_id) = selected_project_id {
+        get_applicability_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_applicability_by_project(first_project.project_id)
+        } else {
+            get_applicability_all()
+        }
+    };
+    let applicability_json = json!(applicability.unwrap_or_default());
 
     let ctx = json!({
         "requirements": req_decorate_json, 

@@ -81,6 +81,8 @@ async fn main() -> Result<(), rocket::Error> {
                 process_excel_import,
                 admin_dashboard,
                 admin_users_page,
+                admin_backup_page,
+                generate_backup,
             ],
         )
         .mount(

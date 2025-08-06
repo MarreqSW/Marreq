@@ -7,6 +7,7 @@ use rocket::response::{content, Redirect};
 use rocket::serde::json::json;
 use rocket::http::{Cookie, CookieJar};
 use regex::Regex;
+use chrono;
 
 use rocket_dyn_templates::Template;
 
@@ -2692,7 +2693,7 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
     // Set environment variable for password
     std::env::set_var("PGPASSWORD", password);
     
-    // Execute pg_dump command
+    // Execute pg_dump command with explicit table inclusion to ensure logs are included
     let output = std::process::Command::new("pg_dump")
         .args(&[
             "-h", host,
@@ -2700,13 +2701,31 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
             "-U", username,
             "-d", database,
             "-f", &backup_path,
-            "--no-password"
+            "--no-password",
+            "--verbose",  // Add verbose output for debugging
+            "--no-owner",  // Don't include ownership information
+            "--no-privileges"  // Don't include privilege information
         ])
         .output();
     
     match output {
         Ok(output) => {
             if output.status.success() {
+                // Log the successful backup
+                let mut conn = establish_connection();
+                let _ = Logger::log_action(
+                    &mut conn,
+                    user.user_id,
+                    crate::models::ActionType::StatusChange,
+                    crate::models::EntityType::User,
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some(format!("Database backup generated: {}", filename)),
+                    None,
+                );
+                
                 // Return the backup file for download
                 let file = NamedFile::open(&backup_path)
                     .await
@@ -2715,11 +2734,41 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
                 let content_type = ContentType::new("application", "sql");
                 Ok((content_type, file))
             } else {
+                // Log the failed backup
+                let mut conn = establish_connection();
+                let _ = Logger::log_action(
+                    &mut conn,
+                    user.user_id,
+                    crate::models::ActionType::StatusChange,
+                    crate::models::EntityType::User,
+                    None,
+                    None,
+                    None,
+                    None,
+                    Some(format!("Database backup failed: {}", String::from_utf8_lossy(&output.stderr))),
+                    None,
+                );
+                
                 // If backup failed, redirect to backup page with error
                 Err(Redirect::to(uri!(admin_backup_page)))
             }
         }
-        Err(_) => {
+        Err(e) => {
+            // Log the command failure
+            let mut conn = establish_connection();
+            let _ = Logger::log_action(
+                &mut conn,
+                user.user_id,
+                crate::models::ActionType::StatusChange,
+                crate::models::EntityType::User,
+                None,
+                None,
+                None,
+                None,
+                Some(format!("Database backup command failed: {}", e)),
+                None,
+            );
+            
             // If command failed, redirect to backup page with error
             Err(Redirect::to(uri!(admin_backup_page)))
         }
@@ -2778,8 +2827,8 @@ pub fn show_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJar
     Ok(Template::render("entity_logs", ctx))
 }
 
-#[get("/export_logs")]
-pub fn export_logs(cookies: &CookieJar<'_>) -> Result<(rocket::http::ContentType, String), Redirect> {
+#[get("/export_logs?<filename>")]
+pub async fn export_logs(filename: Option<String>, cookies: &CookieJar<'_>) -> Result<(ContentType, NamedFile), Redirect> {
     let user = require_auth(cookies)?;
     
     // Check if user is admin
@@ -2793,8 +2842,52 @@ pub fn export_logs(cookies: &CookieJar<'_>) -> Result<(rocket::http::ContentType
     // Convert logs to JSON
     let logs_json = serde_json::to_string_pretty(&logs).unwrap_or_default();
     
-    let content_type = rocket::http::ContentType::new("application", "json");
-    Ok((content_type, logs_json))
+    // Generate filename if not provided
+    let filename = filename.unwrap_or_else(|| {
+        let now = chrono::Utc::now();
+        format!("reqman-logs_{}.json", now.format("%Y%m%d_%H%M%S"))
+    });
+    
+    // Ensure filename has .json extension
+    let filename = if filename.ends_with(".json") {
+        filename
+    } else {
+        format!("{}.json", filename)
+    };
+    
+    // Create exports directory if it doesn't exist
+    let export_dir = "exports";
+    if !std::path::Path::new(export_dir).exists() {
+        std::fs::create_dir(export_dir).map_err(|_| Redirect::to(uri!(show_logs)))?;
+    }
+    
+    let export_path = format!("{}/{}", export_dir, filename);
+    
+    // Write JSON to file
+    std::fs::write(&export_path, logs_json)
+        .map_err(|_| Redirect::to(uri!(show_logs)))?;
+    
+    // Log the successful export
+    let _ = Logger::log_action(
+        connection,
+        user.user_id,
+        crate::models::ActionType::StatusChange,
+        crate::models::EntityType::User,
+        None,
+        None,
+        None,
+        None,
+        Some(format!("Logs exported to: {}", filename)),
+        None,
+    );
+    
+    // Return the file for download
+    let file = NamedFile::open(&export_path)
+        .await
+        .map_err(|_| Redirect::to(uri!(show_logs)))?;
+    
+    let content_type = ContentType::new("application", "json");
+    Ok((content_type, file))
 }
 
 #[get("/export_logs/<entity_type>/<entity_id>")]

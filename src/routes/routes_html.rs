@@ -289,7 +289,17 @@ pub fn show_requirements(
 
     // Add filter data to context for the template
     let statuses = get_status_all().unwrap_or_default();
-    let verifications = get_verification_all().unwrap_or_default();
+    let verifications = if let Some(project_id) = selected_project_id {
+        get_verification_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_verification_by_project(first_project.project_id)
+        } else {
+            get_verification_all()
+        }
+    };
     
     // Get categories filtered by selected project
     let categories = if let Some(project_id) = selected_project_id {
@@ -305,7 +315,7 @@ pub fn show_requirements(
     };
     
     ctx["statuses"] = json!(statuses);
-    ctx["verifications"] = json!(verifications);
+    ctx["verifications"] = json!(verifications.unwrap_or_default());
     ctx["categories"] = json!(categories.unwrap_or_default());
     ctx["current_status_filter"] = json!(status_filter);
     ctx["current_verification_filter"] = json!(verification_filter);
@@ -497,17 +507,50 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     };
     let categories_json = json!(categories.unwrap_or_default());
 
-    let parents = get_requirements_all().unwrap_or_default();
-    let parents_json = json!(parents);
+    // Get parent requirements filtered by project
+    let parents = if let Some(project_id) = selected_project_id {
+        get_requirements_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_requirements_by_project(first_project.project_id)
+        } else {
+            get_requirements_all()
+        }
+    };
+    let parents_json = json!(parents.unwrap_or_default());
 
     let users = get_users_all().unwrap_or_default();
     let users_json = json!(users);
 
-    let verification_types = get_verification_all().unwrap_or_default();
-    let verification_json = json!(verification_types);
+    // Get verification types filtered by project
+    let verification_types = if let Some(project_id) = selected_project_id {
+        get_verification_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_verification_by_project(first_project.project_id)
+        } else {
+            get_verification_all()
+        }
+    };
+    let verification_json = json!(verification_types.unwrap_or_default());
 
-    let applicability = get_applicability_all().unwrap_or_default();
-    let applicability_json = json!(applicability);
+    // Get applicability filtered by project
+    let applicability = if let Some(project_id) = selected_project_id {
+        get_applicability_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_applicability_by_project(first_project.project_id)
+        } else {
+            get_applicability_all()
+        }
+    };
+    let applicability_json = json!(applicability.unwrap_or_default());
 
     let ctx = json!({
         "categories": categories_json, 
@@ -564,7 +607,17 @@ pub fn show_tests(
 
     // Add filter data to context for the template
     let statuses = get_status_all().unwrap_or_default();
-    let verifications = get_verification_all().unwrap_or_default();
+    let verifications = if let Some(project_id) = selected_project_id {
+        get_verification_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_verification_by_project(first_project.project_id)
+        } else {
+            get_verification_all()
+        }
+    };
     
     // Get categories filtered by selected project
     let categories = if let Some(project_id) = selected_project_id {
@@ -580,7 +633,7 @@ pub fn show_tests(
     };
     
     ctx["statuses"] = json!(statuses);
-    ctx["verifications"] = json!(verifications);
+    ctx["verifications"] = json!(verifications.unwrap_or_default());
     ctx["categories"] = json!(categories.unwrap_or_default());
     ctx["current_status_filter"] = json!(status_filter);
     ctx["current_verification_filter"] = json!(verification_filter);
@@ -636,14 +689,36 @@ pub fn new_test(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     };
     let categories_json = json!(categories.unwrap_or_default());
 
-    let parents = get_tests_all().unwrap_or_default();
-    let parents_json = json!(parents);
+    // Get parent tests filtered by project
+    let parents = if let Some(project_id) = selected_project_id {
+        get_tests_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_tests_by_project(first_project.project_id)
+        } else {
+            get_tests_all()
+        }
+    };
+    let parents_json = json!(parents.unwrap_or_default());
 
     let users = get_users_all().unwrap_or_default();
     let users_json = json!(users);
 
-    let requirements = get_requirements_all().unwrap_or_default();
-    let requirements_json = json!(requirements);
+    // Get requirements filtered by project
+    let requirements = if let Some(project_id) = selected_project_id {
+        get_requirements_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_requirements_by_project(first_project.project_id)
+        } else {
+            get_requirements_all()
+        }
+    };
+    let requirements_json = json!(requirements.unwrap_or_default());
 
     let ctx = json!({
         "categories": categories_json, 
@@ -682,14 +757,36 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
     };
     let categories_json = json!(categories.unwrap_or_default());
 
-    let parents = get_tests_all().unwrap_or_default();
-    let parents_json = json!(parents);
+    // Get parent tests filtered by project
+    let parents = if let Some(project_id) = selected_project_id {
+        get_tests_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_tests_by_project(first_project.project_id)
+        } else {
+            get_tests_all()
+        }
+    };
+    let parents_json = json!(parents.unwrap_or_default());
 
     let users = get_users_all().unwrap_or_default();
     let users_json = json!(users);
 
-    let verification_types = get_verification_all().unwrap_or_default();
-    let verification_json = json!(verification_types);
+    // Get verification types filtered by project
+    let verification_types = if let Some(project_id) = selected_project_id {
+        get_verification_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_verification_by_project(first_project.project_id)
+        } else {
+            get_verification_all()
+        }
+    };
+    let verification_json = json!(verification_types.unwrap_or_default());
 
     // Get linked requirements for this test
     let linked_requirements = get_requirements_for_test(test_id).unwrap_or_default();
@@ -699,9 +796,19 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
     let linked_req_ids: Vec<i32> = linked_requirements.iter().map(|r| r.req_id).collect();
     let linked_req_ids_json = json!(linked_req_ids);
 
-    // Get all requirements for the multi-select
-    let all_requirements = get_requirements_all().unwrap_or_default();
-    let all_requirements_json = json!(all_requirements);
+    // Get all requirements for the multi-select (filtered by project)
+    let all_requirements = if let Some(project_id) = selected_project_id {
+        get_requirements_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_requirements_by_project(first_project.project_id)
+        } else {
+            get_requirements_all()
+        }
+    };
+    let all_requirements_json = json!(all_requirements.unwrap_or_default());
 
     let ctx = json!({
         "tests": test_decorate_json, 

@@ -107,6 +107,7 @@ diesel::table! {
         verification_id -> Int4,
         verification_name -> Varchar,
         verification_description -> Varchar,
+        project_id -> Int4,
     }
 }
 
@@ -116,6 +117,7 @@ diesel::joinable!(matrix -> projects (project_id));
 diesel::joinable!(requirements -> applicability (req_applicability));
 diesel::joinable!(requirements -> projects (project_id));
 diesel::joinable!(tests -> projects (project_id));
+diesel::joinable!(verification -> projects (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,

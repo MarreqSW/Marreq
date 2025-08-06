@@ -8,6 +8,7 @@ use rocket::response::status::NotFound;
 use rocket::response::{content, Redirect};
 use rocket::serde::json::json;
 use rocket::http::{Cookie, CookieJar};
+use regex::Regex;
 
 use rocket_dyn_templates::Template;
 
@@ -513,8 +514,30 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
     let _user = require_auth(cookies)?;
     let my_id = new_req.req_id.unwrap_or(0);
 
+    let mut requirement_data = new_req.into_inner();
+    
+    // Server-side validation: Check if reference matches category
+    if !requirement_data.req_reference.is_empty() {
+        // Get the category to validate the reference
+        let category = get_category_by_id(requirement_data.req_category);
+        let expected_prefix = format!("REQ-{}-", category.cat_tag);
+        
+        if !requirement_data.req_reference.starts_with(&expected_prefix) {
+            // Invalid reference format - redirect back to form with error
+            return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
+        }
+        
+        // Validate format: REQ-TAG-NUMBER
+        let reference_pattern = format!("^REQ-{}-\\d+$", category.cat_tag);
+        let regex = Regex::new(&reference_pattern).unwrap();
+        if !regex.is_match(&requirement_data.req_reference) {
+            // Invalid reference format - redirect back to form with error
+            return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
+        }
+    }
+
     let connection = &mut establish_connection();
-    edit_requirement(connection, &new_req).unwrap();
+    edit_requirement(connection, &requirement_data).unwrap();
 
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
@@ -609,8 +632,29 @@ pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) 
     let _user = require_auth(cookies)?;
     let connection = &mut establish_connection();
     
-    // Generate automatic reference code if not provided
     let mut requirement_data = new_req.into_inner();
+    
+    // Server-side validation: Check if reference matches category
+    if !requirement_data.req_reference.is_empty() {
+        // Get the category to validate the reference
+        let category = get_category_by_id(requirement_data.req_category);
+        let expected_prefix = format!("REQ-{}-", category.cat_tag);
+        
+        if !requirement_data.req_reference.starts_with(&expected_prefix) {
+            // Invalid reference format - redirect back to form with error
+            return Err(Redirect::to(uri!(new_requirement)));
+        }
+        
+        // Validate format: REQ-TAG-NUMBER
+        let reference_pattern = format!("^REQ-{}-\\d+$", category.cat_tag);
+        let regex = Regex::new(&reference_pattern).unwrap();
+        if !regex.is_match(&requirement_data.req_reference) {
+            // Invalid reference format - redirect back to form with error
+            return Err(Redirect::to(uri!(new_requirement)));
+        }
+    }
+    
+    // Generate automatic reference code if not provided
     if requirement_data.req_reference.is_empty() {
         match generate_requirement_reference(requirement_data.req_category, requirement_data.project_id) {
             Ok(reference) => {

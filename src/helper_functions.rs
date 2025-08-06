@@ -250,6 +250,7 @@ pub struct VerificationData {
     pub verification_id: i32,
     pub verification_name: String,
     pub verification_description: String,
+    pub project_id: i32,
 }
 
 /// Return all verification types with correct database mapping
@@ -259,6 +260,22 @@ pub fn get_verification_all() -> Result<Vec<VerificationData>, String> {
     let connection = &mut establish_connection();
 
     verification
+        .order(verification_id)
+        .load::<VerificationData>(connection)
+        .map_err(|_err| -> String {
+            #[cfg(debug_assertions)]
+            println!("Error querying verification: {:?}", _err);
+            "Error querying verification from the database".into()
+        })
+}
+
+pub fn get_verification_by_project(_project_id: i32) -> Result<Vec<VerificationData>, String> {
+    use crate::schema::verification::dsl::*;
+
+    let connection = &mut establish_connection();
+
+    verification
+        .filter(project_id.eq(_project_id))
         .order(verification_id)
         .load::<VerificationData>(connection)
         .map_err(|_err| -> String {

@@ -170,6 +170,7 @@ pub struct User {
     pub user_last_login: chrono::NaiveDateTime,
     pub user_password: String,
     pub project_id: Option<i32>,
+    pub is_admin: bool,
 }
 
 #[derive(Serialize, Deserialize, Queryable, Insertable, AsChangeset, FromForm)]
@@ -185,6 +186,7 @@ pub struct NewUser {
     pub user_level: i32,
     pub user_password: String,
     pub project_id: Option<i32>,
+    pub is_admin: bool,
 }
 
 #[derive(Serialize, Deserialize, FromForm)]
@@ -195,6 +197,7 @@ pub struct UpdateUser {
     pub user_name: String,
     pub user_email: String,
     pub user_level: i32,
+    pub is_admin: bool,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]

@@ -79,6 +79,8 @@ async fn main() -> Result<(), rocket::Error> {
                 import_excel_page,
                 upload_excel_file,
                 process_excel_import,
+                admin_dashboard,
+                admin_users_page,
             ],
         )
         .mount(

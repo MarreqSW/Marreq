@@ -1107,8 +1107,13 @@ pub fn show_categories(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 #[get("/new_category")]
 pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
+    
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+    
     let ctx = json!({
-        "user": user
+        "user": user,
+        "selected_project_id": selected_project_id
     });
     Ok(Template::render("new_category", ctx))
 }
@@ -1116,6 +1121,12 @@ pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 #[post("/new_category", data = "<new_category>")]
 pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let _user = require_auth(cookies)?;
+    
+    // Check if project_id is provided
+    if new_category.project_id == 0 {
+        return Ok(Redirect::to(uri!(new_category)));
+    }
+    
     let connection = &mut establish_connection();
     
     let result = insert_new_category(connection, &new_category);
@@ -1231,8 +1242,13 @@ pub fn show_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect>
 #[get("/new_applicability")]
 pub fn new_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
+    
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+    
     let ctx = json!({
-        "user": user
+        "user": user,
+        "selected_project_id": selected_project_id
     });
     Ok(Template::render("new_applicability", ctx))
 }
@@ -1240,6 +1256,12 @@ pub fn new_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> 
 #[post("/new_applicability", data = "<new_applicability>")]
 pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let _user = require_auth(cookies)?;
+    
+    // Check if project_id is provided
+    if new_applicability.project_id == 0 {
+        return Ok(Redirect::to(uri!(new_applicability)));
+    }
+    
     let connection = &mut establish_connection();
     
     let result = insert_new_applicability(connection, &new_applicability);

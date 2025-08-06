@@ -21,6 +21,26 @@ diesel::table! {
 }
 
 diesel::table! {
+    logs (log_id) {
+        log_id -> Int4,
+        user_id -> Int4,
+        #[max_length = 50]
+        action_type -> Varchar,
+        #[max_length = 50]
+        entity_type -> Varchar,
+        entity_id -> Nullable<Int4>,
+        project_id -> Nullable<Int4>,
+        old_values -> Nullable<Jsonb>,
+        new_values -> Nullable<Jsonb>,
+        description -> Nullable<Text>,
+        #[max_length = 45]
+        ip_address -> Nullable<Varchar>,
+        user_agent -> Nullable<Text>,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     matrix (matrix_req_id, matrix_test_id) {
         matrix_req_id -> Int4,
         matrix_test_id -> Int4,
@@ -113,6 +133,8 @@ diesel::table! {
 
 diesel::joinable!(applicability -> projects (project_id));
 diesel::joinable!(categories -> projects (project_id));
+diesel::joinable!(logs -> projects (project_id));
+diesel::joinable!(logs -> users (user_id));
 diesel::joinable!(matrix -> projects (project_id));
 diesel::joinable!(requirements -> applicability (req_applicability));
 diesel::joinable!(requirements -> projects (project_id));
@@ -122,6 +144,7 @@ diesel::joinable!(verification -> projects (project_id));
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
     categories,
+    logs,
     matrix,
     projects,
     requirements,

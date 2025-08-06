@@ -3,7 +3,11 @@
   <div class="card-body">
     <div class="requirement-header">
       <div>
-        <a href="/requirements/{{req_id}}" class="requirement-id">REQ-{{req_id}}</a>
+        {{#if req_reference}}
+          <a href="/requirements/{{req_id}}" class="requirement-reference-tag">{{req_reference}}</a>
+        {{else}}
+          <a href="/requirements/{{req_id}}" class="requirement-id">REQ-{{req_id}}</a>
+        {{/if}}
         <h3 class="requirement-title">{{req_title}}</h3>
       </div>
       <div class="requirement-actions">

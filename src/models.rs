@@ -404,3 +404,10 @@ pub struct UpdateProject {
     pub project_status: String,
     pub project_owner_id: Option<i32>,
 }
+
+#[derive(FromForm)]
+pub struct ImportMappingForm {
+    pub column_mappings: String,
+    pub import_type: String,
+    pub temp_file: String,
+}

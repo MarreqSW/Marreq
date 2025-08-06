@@ -1972,3 +1972,49 @@ pub fn process_excel_import(
     Ok(content::RawHtml(html))
 }
 
+// Admin Dashboard Routes
+#[get("/admin")]
+pub fn admin_dashboard(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+    
+    let context = json!({
+        "user": user,
+        "title": "Admin Dashboard"
+    });
+    
+    Ok(Template::render("admin/dashboard", context))
+}
+
+#[get("/admin/users")]
+pub fn admin_users_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+    
+    let users = get_users_all().unwrap_or_default();
+    
+    let context = json!({
+        "user": user,
+        "users": users,
+        "title": "User Management"
+    });
+    
+    Ok(Template::render("admin/users", context))
+}
+

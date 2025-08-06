@@ -12,19 +12,6 @@
     <div class="card-body">
       <form method="post">
         <div class="form-group">
-          <label for="project_id" class="form-label">Project</label>
-          <select name="project_id" id="project_id" class="form-control" required>
-            <option value="">-- Select Project --</option>
-            {{#each projects}}
-              <option value="{{project_id}}" {{#if (eq project_id ../selected_project_id)}}selected{{/if}}>
-                {{project_name}}
-              </option>
-            {{/each}}
-          </select>
-          <small class="text-secondary">Select the project this applicability belongs to</small>
-        </div>
-
-        <div class="form-group">
           <label for="app_title" class="form-label">Applicability Title</label>
           <input type="text" name="app_title" id="app_title" class="form-control" required>
         </div>
@@ -40,8 +27,16 @@
           <small class="text-secondary">A short identifier for the applicability</small>
         </div>
 
+        {{#if selected_project_id}}
+        <input type="hidden" name="project_id" value="{{selected_project_id}}">
+        {{else}}
+        <div class="alert alert-warning">
+          <strong>Warning:</strong> No project selected. Please select a project from the dropdown above before creating an applicability.
+        </div>
+        {{/if}}
+
         <div class="mt-4">
-          <button type="submit" class="btn btn-primary">Create Applicability</button>
+          <button type="submit" class="btn btn-primary" {{#unless selected_project_id}}disabled{{/unless}}>Create Applicability</button>
           <a href="/applicability" class="btn btn-outline">Cancel</a>
         </div>
       </form>

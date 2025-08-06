@@ -46,7 +46,15 @@ fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::s
 
 #[get("/login")]
 pub fn login_page() -> Template {
-    let ctx = json!({ "title": "Login" });
+    // Get projects for navigation (even on login page)
+    let projects = get_projects_for_nav().unwrap_or_default();
+    let selected_project_id: Option<i32> = None; // No project selected on login page
+    
+    let ctx = json!({
+        "title": "Login",
+        "projects": projects,
+        "selected_project_id": selected_project_id
+    });
     Template::render("login", ctx)
 }
 
@@ -105,7 +113,15 @@ pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
 
 #[get("/change_password")]
 pub fn change_password_page() -> Template {
-    let ctx = json!({ "title": "Change Password" });
+    // Get projects for navigation
+    let projects = get_projects_for_nav().unwrap_or_default();
+    let selected_project_id: Option<i32> = None; // No project selected on change password page
+    
+    let ctx = json!({
+        "title": "Change Password",
+        "projects": projects,
+        "selected_project_id": selected_project_id
+    });
     Template::render("change_password", ctx)
 }
 

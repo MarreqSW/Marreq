@@ -550,7 +550,6 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
     Ok(Template::render("edit_requirement_by_id", ctx))
 }
 
-#[allow(unused_variables)]
 #[post("/edit_requirement/<req_id>", data = "<new_req>")]
 pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
@@ -558,23 +557,24 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
 
     let requirement_data = new_req.into_inner();
     
-    // Server-side validation: Check if reference matches category
+    // Server-side validation: Check if reference follows general format
     if !requirement_data.req_reference.is_empty() {
-        // Get the category to validate the reference
-        let category = get_category_by_id(requirement_data.req_category);
-        let expected_prefix = format!("REQ-{}-", category.cat_tag);
-        
-        if !requirement_data.req_reference.starts_with(&expected_prefix) {
+        // Check general format: REQ-TAG-NUMBER
+        let general_pattern = Regex::new(r"^REQ-[A-Z]+-\d+$").unwrap();
+        if !general_pattern.is_match(&requirement_data.req_reference) {
             // Invalid reference format - redirect back to form with error
             return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
         }
         
-        // Validate format: REQ-TAG-NUMBER
-        let reference_pattern = format!("^REQ-{}-\\d+$", category.cat_tag);
-        let regex = Regex::new(&reference_pattern).unwrap();
-        if !regex.is_match(&requirement_data.req_reference) {
-            // Invalid reference format - redirect back to form with error
-            return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
+        // Get the category to check if reference matches
+        let category = get_category_by_id(requirement_data.req_category);
+        let expected_prefix = format!("REQ-{}-", category.cat_tag);
+        
+        // Only warn if reference doesn't match category, but don't block the update
+        if !requirement_data.req_reference.starts_with(&expected_prefix) {
+            // Log a warning but continue with the update
+            println!("Warning: Reference '{}' doesn't match category tag '{}' for requirement {}", 
+                     requirement_data.req_reference, category.cat_tag, req_id);
         }
     }
 

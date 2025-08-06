@@ -20,7 +20,7 @@
           <div class="form-group">
             <label for="req_reference" class="form-label">Reference</label>
             <input type="text" name="req_reference" id="req_reference" value="{{requirements.req_reference}}" class="form-control">
-            <small class="text-secondary">Must follow format REQ-{CATEGORY_TAG}-NUMBER (e.g., REQ-SYS-1)</small>
+            <small class="text-secondary">Must follow format REQ-{CATEGORY_TAG}-NUMBER (e.g., REQ-SYS-1). Leave empty to auto-generate.</small>
             <div id="reference-error" class="text-danger" style="display: none;"></div>
           </div>
         </div>
@@ -157,22 +157,23 @@ function validateReference() {
     return true; // Can't validate without category
   }
   
-  // Check if reference starts with the correct prefix
-  const expectedPrefix = `REQ-${selectedCategory.tag}-`;
-  if (!reference.startsWith(expectedPrefix)) {
-    errorDiv.textContent = `Reference must start with "${expectedPrefix}" for the selected category.`;
+  // Check if reference follows the general format (REQ-TAG-NUMBER)
+  const generalPattern = /^REQ-[A-Z]+-\d+$/;
+  if (!generalPattern.test(reference)) {
+    errorDiv.textContent = `Reference must follow the format "REQ-TAG-NUMBER" (e.g., REQ-${selectedCategory.tag}-1).`;
     errorDiv.style.display = 'block';
     submitButton.disabled = true;
     return false;
   }
   
-  // Check if reference follows the correct format (REQ-TAG-NUMBER)
-  const referencePattern = new RegExp(`^REQ-${selectedCategory.tag}-\\d+$`);
-  if (!referencePattern.test(reference)) {
-    errorDiv.textContent = `Reference must follow the format "REQ-${selectedCategory.tag}-NUMBER" (e.g., REQ-${selectedCategory.tag}-1).`;
+  // For new references, check if they match the selected category
+  // For existing references, be more lenient
+  const expectedPrefix = `REQ-${selectedCategory.tag}-`;
+  if (!reference.startsWith(expectedPrefix)) {
+    errorDiv.textContent = `Warning: Reference "${reference}" doesn't match the selected category "${selectedCategory.tag}". Consider updating the reference to match the category.`;
     errorDiv.style.display = 'block';
-    submitButton.disabled = true;
-    return false;
+    // Don't disable submit for existing references
+    return true;
   }
   
   return true;

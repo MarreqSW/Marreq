@@ -425,9 +425,12 @@ pub fn edit_user(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redi
 
 #[post("/edit_user/<user_id>", data = "<user_form>")]
 pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _current_user = require_auth(cookies)?;
+    let current_user = require_auth(cookies)?;
     
     let connection = &mut establish_connection();
+    
+    // Get the old values before updating
+    let old_user = get_user_by_id(user_id);
     
     // Create an UpdateUser with the user_id
     let mut user_data = user_form.into_inner();
@@ -435,7 +438,23 @@ pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &Cooki
     
     // Update the user in the database
     match update_user_without_password(connection, &user_data) {
-        Ok(_) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
+        Ok(_) => {
+            // Log the user update
+            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_value(&old_user), Logger::to_json_value(&user_data)) {
+                let _ = Logger::log_update(
+                    connection,
+                    current_user.user_id,
+                    EntityType::User,
+                    user_id,
+                    None,
+                    old_values,
+                    new_values,
+                    Some(format!("Updated user: {}", user_data.user_username)),
+                    None,
+                );
+            }
+            Ok(Redirect::to(uri!(show_user_id(user_id))))
+        },
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -584,6 +603,40 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
     }
 
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
+}
+
+#[delete("/delete_requirement/<req_id>")]
+pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
+    let user = require_auth(cookies)?;
+    let connection = &mut establish_connection();
+    
+    // Get the requirement details before deleting
+    let requirement = get_requirement_by_id(req_id);
+    
+    let result = delete_requirement(connection, &req_id);
+    match result {
+        Ok(_) => {
+            // Log the requirement deletion
+            if let Ok(old_values) = Logger::to_json_value(&requirement) {
+                let _ = Logger::log_delete(
+                    connection,
+                    user.user_id,
+                    EntityType::Requirement,
+                    req_id,
+                    Some(requirement.project_id),
+                    old_values,
+                    Some(format!("Deleted requirement: {}", requirement.req_title)),
+                    None,
+                );
+            }
+            Ok(rocket::http::Status::Ok)
+        },
+        Err(_e) => {
+            #[cfg(debug_assertions)]
+            println!("Error.*: {:?}", _e);
+            Ok(rocket::http::Status::InternalServerError)
+        }
+    }
 }
 
 #[get("/new_requirement")]
@@ -987,8 +1040,11 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
 #[allow(unused_variables)]
 #[post("/edit_test/<test_id>", data = "<edit_test_form>")]
 pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
     let connection = &mut establish_connection();
+    
+    // Get the old values before updating
+    let old_test = get_test_by_id(test_id);
     
     // First, update the test details
     let new_test = NewTest {
@@ -1003,6 +1059,21 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
     
     edit_test(connection, &new_test).unwrap();
     
+    // Log the test update
+    if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_value(&old_test), Logger::to_json_value(&new_test)) {
+        let _ = Logger::log_update(
+            connection,
+            user.user_id,
+            EntityType::Test,
+            test_id,
+            Some(edit_test_form.project_id),
+            old_values,
+            new_values,
+            Some(format!("Updated test: {}", new_test.test_name)),
+            None,
+        );
+    }
+    
     // Then, update the requirement links
     update_test_requirement_links(connection, edit_test_form.test_id, &edit_test_form.linked_requirements).unwrap();
 
@@ -1011,7 +1082,7 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
 
 #[post("/new_test", data = "<new_test>")]
 pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
     let connection = &mut establish_connection();
     let my_new_test = NewTest {
         test_id: None,
@@ -1023,6 +1094,20 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
         project_id: new_test.project_id,
     };
     let my_id = insert_new_test(connection, &my_new_test).unwrap();
+
+    // Log the test creation
+    if let Ok(new_values) = Logger::to_json_value(&my_new_test) {
+        let _ = Logger::log_create(
+            connection,
+            user.user_id,
+            EntityType::Test,
+            my_id,
+            Some(new_test.project_id),
+            new_values,
+            Some(format!("Created test: {}", my_new_test.test_name)),
+            None,
+        );
+    }
 
     #[cfg(debug_assertions)]
     println!("NewTestForm requirements: {:#?}", new_test.test_req);
@@ -1408,7 +1493,7 @@ pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 
 #[post("/new_category", data = "<new_category>")]
 pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
     
     // Check if project_id is provided
     if new_category.project_id == 0 {
@@ -1417,9 +1502,25 @@ pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -
     
     let connection = &mut establish_connection();
     
-    let result = insert_new_category(connection, &new_category);
+    let category_data = new_category.into_inner();
+    let result = insert_new_category(connection, &category_data);
     match result {
-        Ok(_) => Ok(Redirect::to(uri!(show_categories))),
+        Ok(category_id) => {
+            // Log the category creation
+            if let Ok(new_values) = Logger::to_json_value(&category_data) {
+                let _ = Logger::log_create(
+                    connection,
+                    user.user_id,
+                    EntityType::Category,
+                    category_id,
+                    Some(category_data.project_id),
+                    new_values,
+                    Some(format!("Created category: {}", category_data.cat_title)),
+                    None,
+                );
+            }
+            Ok(Redirect::to(uri!(show_categories)))
+        },
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -1441,15 +1542,34 @@ pub fn get_edit_category(cat_id: i32, cookies: &CookieJar<'_>) -> Result<Templat
 
 #[post("/edit_category/<cat_id>", data = "<category>")]
 pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
     let connection = &mut establish_connection();
+    
+    // Get the old values before updating
+    let old_category = get_category_by_id(cat_id);
     
     let mut category_with_id = category.into_inner();
     category_with_id.cat_id = Some(cat_id);
     
     let result = edit_category(connection, &category_with_id);
     match result {
-        Ok(_) => Ok(Redirect::to(uri!(show_categories))),
+        Ok(_) => {
+            // Log the category update
+            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_value(&old_category), Logger::to_json_value(&category_with_id)) {
+                let _ = Logger::log_update(
+                    connection,
+                    user.user_id,
+                    EntityType::Category,
+                    cat_id,
+                    Some(category_with_id.project_id),
+                    old_values,
+                    new_values,
+                    Some(format!("Updated category: {}", category_with_id.cat_title)),
+                    None,
+                );
+            }
+            Ok(Redirect::to(uri!(show_categories)))
+        },
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -1460,12 +1580,30 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
 
 #[delete("/delete_category/<cat_id>")]
 pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
     let connection = &mut establish_connection();
+    
+    // Get the category details before deleting
+    let category = get_category_by_id(cat_id);
     
     let result = delete_category(connection, &cat_id);
     match result {
-        Ok(_) => Ok(rocket::http::Status::Ok),
+        Ok(_) => {
+            // Log the category deletion
+            if let Ok(old_values) = Logger::to_json_value(&category) {
+                let _ = Logger::log_delete(
+                    connection,
+                    user.user_id,
+                    EntityType::Category,
+                    cat_id,
+                    Some(category.project_id),
+                    old_values,
+                    Some(format!("Deleted category: {}", category.cat_title)),
+                    None,
+                );
+            }
+            Ok(rocket::http::Status::Ok)
+        },
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -1476,7 +1614,7 @@ pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<roc
 
 #[post("/new_user", data = "<new_user>")]
 pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
     let connection = &mut establish_connection();
     
     // Hash the password before inserting
@@ -1485,6 +1623,21 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
         Ok(hashed_password) => {
             user_with_hashed_password.user_password = hashed_password;
             let my_id = insert_new_user(connection, &user_with_hashed_password).unwrap();
+            
+            // Log the user creation
+            if let Ok(new_values) = Logger::to_json_value(&user_with_hashed_password) {
+                let _ = Logger::log_create(
+                    connection,
+                    user.user_id,
+                    EntityType::User,
+                    my_id,
+                    None,
+                    new_values,
+                    Some(format!("Created user: {}", user_with_hashed_password.user_username)),
+                    None,
+                );
+            }
+            
             Ok(Redirect::to(uri!(show_user_id(my_id))))
         }
         Err(_e) => {
@@ -1552,7 +1705,7 @@ pub fn new_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> 
 
 #[post("/new_applicability", data = "<new_applicability>")]
 pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
     
     // Check if project_id is provided
     if new_applicability.project_id == 0 {
@@ -1561,9 +1714,25 @@ pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &C
     
     let connection = &mut establish_connection();
     
-    let result = insert_new_applicability(connection, &new_applicability);
+    let applicability_data = new_applicability.into_inner();
+    let result = insert_new_applicability(connection, &applicability_data);
     match result {
-        Ok(_) => Ok(Redirect::to(uri!(show_applicability))),
+        Ok(applicability_id) => {
+            // Log the applicability creation
+            if let Ok(new_values) = Logger::to_json_value(&applicability_data) {
+                let _ = Logger::log_create(
+                    connection,
+                    user.user_id,
+                    EntityType::Applicability,
+                    applicability_id,
+                    Some(applicability_data.project_id),
+                    new_values,
+                    Some(format!("Created applicability: {}", applicability_data.app_title)),
+                    None,
+                );
+            }
+            Ok(Redirect::to(uri!(show_applicability)))
+        },
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -1585,15 +1754,34 @@ pub fn get_edit_applicability(app_id: i32, cookies: &CookieJar<'_>) -> Result<Te
 
 #[post("/edit_applicability/<app_id>", data = "<applicability>")]
 pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
     let connection = &mut establish_connection();
+    
+    // Get the old values before updating
+    let old_applicability = get_applicability_by_id(app_id);
     
     let mut applicability_with_id = applicability.into_inner();
     applicability_with_id.app_id = Some(app_id);
     
     let result = edit_applicability(connection, &applicability_with_id);
     match result {
-        Ok(_) => Ok(Redirect::to(uri!(show_applicability))),
+        Ok(_) => {
+            // Log the applicability update
+            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_value(&old_applicability), Logger::to_json_value(&applicability_with_id)) {
+                let _ = Logger::log_update(
+                    connection,
+                    user.user_id,
+                    EntityType::Applicability,
+                    app_id,
+                    Some(applicability_with_id.project_id),
+                    old_values,
+                    new_values,
+                    Some(format!("Updated applicability: {}", applicability_with_id.app_title)),
+                    None,
+                );
+            }
+            Ok(Redirect::to(uri!(show_applicability)))
+        },
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -1604,12 +1792,30 @@ pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability
 
 #[delete("/delete_applicability/<app_id>")]
 pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
     let connection = &mut establish_connection();
+    
+    // Get the applicability details before deleting
+    let applicability = get_applicability_by_id(app_id);
     
     let result = delete_applicability(connection, &app_id);
     match result {
-        Ok(_) => Ok(rocket::http::Status::Ok),
+        Ok(_) => {
+            // Log the applicability deletion
+            if let Ok(old_values) = Logger::to_json_value(&applicability) {
+                let _ = Logger::log_delete(
+                    connection,
+                    user.user_id,
+                    EntityType::Applicability,
+                    app_id,
+                    Some(applicability.project_id),
+                    old_values,
+                    Some(format!("Deleted applicability: {}", applicability.app_title)),
+                    None,
+                );
+            }
+            Ok(rocket::http::Status::Ok)
+        },
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -2008,9 +2214,28 @@ pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies:
     
     let connection = &mut establish_connection();
     
+    // Get the old values before updating
+    let old_project = get_project_by_id(project_id);
+    
     let result = edit_project(connection, project_id, &project);
     match result {
-        Ok(_) => Ok(Redirect::to(uri!(show_projects))),
+        Ok(_) => {
+            // Log the project update
+            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_value(&old_project), Logger::to_json_value(&project)) {
+                let _ = Logger::log_update(
+                    connection,
+                    user.user_id,
+                    EntityType::Project,
+                    project_id,
+                    None,
+                    old_values,
+                    new_values,
+                    Some(format!("Updated project: {}", project.project_name)),
+                    None,
+                );
+            }
+            Ok(Redirect::to(uri!(show_projects)))
+        },
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -2030,9 +2255,27 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
     
     let connection = &mut establish_connection();
     
+    // Get the project details before deleting
+    let project = get_project_by_id(project_id);
+    
     let result = delete_project(connection, &project_id);
     match result {
-        Ok(_) => Ok(rocket::http::Status::Ok),
+        Ok(_) => {
+            // Log the project deletion
+            if let Ok(old_values) = Logger::to_json_value(&project) {
+                let _ = Logger::log_delete(
+                    connection,
+                    user.user_id,
+                    EntityType::Project,
+                    project_id,
+                    None,
+                    old_values,
+                    Some(format!("Deleted project: {}", project.project_name)),
+                    None,
+                );
+            }
+            Ok(rocket::http::Status::Ok)
+        },
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -2533,5 +2776,122 @@ pub fn show_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJar
     });
     
     Ok(Template::render("entity_logs", ctx))
+}
+
+#[get("/export_logs")]
+pub fn export_logs(cookies: &CookieJar<'_>) -> Result<(rocket::http::ContentType, String), Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_logs)));
+    }
+    
+    let connection = &mut establish_connection();
+    let logs = Logger::get_recent_logs(connection, Some(1000), None, None).unwrap_or_default();
+    
+    // Convert logs to JSON
+    let logs_json = serde_json::to_string_pretty(&logs).unwrap_or_default();
+    
+    let content_type = rocket::http::ContentType::new("application", "json");
+    Ok((content_type, logs_json))
+}
+
+#[get("/export_logs/<entity_type>/<entity_id>")]
+pub fn export_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJar<'_>) -> Result<(rocket::http::ContentType, String), Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_logs)));
+    }
+    
+    let connection = &mut establish_connection();
+    let logs = Logger::get_logs_for_entity(connection, &entity_type, entity_id, Some(1000)).unwrap_or_default();
+    
+    // Convert logs to JSON
+    let logs_json = serde_json::to_string_pretty(&logs).unwrap_or_default();
+    
+    let content_type = rocket::http::ContentType::new("application", "json");
+    Ok((content_type, logs_json))
+}
+
+#[post("/cleanup_logs")]
+pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_logs)));
+    }
+    
+    let connection = &mut establish_connection();
+    
+    // Clean up logs older than 90 days
+    match Logger::cleanup_old_logs(connection, 90) {
+        Ok(deleted_count) => {
+            // Log the cleanup action
+            let _ = Logger::log_action(
+                connection,
+                user.user_id,
+                crate::models::ActionType::StatusChange,
+                crate::models::EntityType::User,
+                None,
+                None,
+                None,
+                None,
+                Some(format!("Cleaned up {} old log entries", deleted_count)),
+                None,
+            );
+        },
+        Err(_) => {
+            // Log the failed cleanup
+            let _ = Logger::log_action(
+                connection,
+                user.user_id,
+                crate::models::ActionType::StatusChange,
+                crate::models::EntityType::User,
+                None,
+                None,
+                None,
+                None,
+                Some("Failed to clean up old log entries".to_string()),
+                None,
+            );
+        }
+    }
+    
+    Ok(Redirect::to(uri!(show_logs)))
+}
+
+#[get("/log_analytics")]
+pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+    
+    let connection = &mut establish_connection();
+    
+    // Get basic statistics
+    let last_7_days = Logger::get_log_count(connection, 7).unwrap_or(0);
+    let last_30_days = Logger::get_log_count(connection, 30).unwrap_or(0);
+    let last_90_days = Logger::get_log_count(connection, 90).unwrap_or(0);
+    
+    let ctx = json!({
+        "user": user,
+        "last_7_days": last_7_days,
+        "last_30_days": last_30_days,
+        "last_90_days": last_90_days,
+        "title": "Log Analytics"
+    });
+    
+    Ok(Template::render("log_analytics", ctx))
 }
 

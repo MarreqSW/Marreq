@@ -1,0 +1,112 @@
+{{> layout}}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Log Analytics</h1>
+                <div>
+                    <a href="/logs" class="btn btn-secondary me-2">Back to Logs</a>
+                    <a href="/admin" class="btn btn-outline-secondary">Admin</a>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Last 7 Days</h5>
+                            <h2 class="text-primary">{{last_7_days}}</h2>
+                            <p class="card-text">Log entries</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Last 30 Days</h5>
+                            <h2 class="text-success">{{last_30_days}}</h2>
+                            <p class="card-text">Log entries</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">Last 90 Days</h5>
+                            <h2 class="text-info">{{last_90_days}}</h2>
+                            <p class="card-text">Log entries</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">System Activity Overview</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Recent Activity Trends</h6>
+                                    <ul class="list-unstyled">
+                                        <li><strong>7-day average:</strong> {{divide last_7_days 7}} entries/day</li>
+                                        <li><strong>30-day average:</strong> {{divide last_30_days 30}} entries/day</li>
+                                        <li><strong>90-day average:</strong> {{divide last_90_days 90}} entries/day</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>System Health</h6>
+                                    <div class="alert alert-info">
+                                        <strong>Log Retention:</strong> 90 days<br>
+                                        <strong>Storage:</strong> Active monitoring<br>
+                                        <strong>Status:</strong> Healthy
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Maintenance Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" action="/cleanup_logs" class="d-inline">
+                                <button type="submit" class="btn btn-warning" onclick="return confirm('Are you sure you want to clean up logs older than 90 days? This action cannot be undone.')">
+                                    <i class="fas fa-broom"></i> Clean Up Old Logs
+                                </button>
+                            </form>
+                            <p class="text-muted mt-2">
+                                <small>This will remove log entries older than 90 days to free up database space.</small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Helper function to divide numbers (for averages)
+function divide(a, b) {
+    return Math.round((a / b) * 100) / 100;
+}
+
+// Apply division to all elements with divide helper
+document.addEventListener('DOMContentLoaded', function() {
+    const elements = document.querySelectorAll('[data-divide]');
+    elements.forEach(element => {
+        const values = element.getAttribute('data-divide').split(',');
+        const result = divide(parseInt(values[0]), parseInt(values[1]));
+        element.textContent = result;
+    });
+});
+</script> 

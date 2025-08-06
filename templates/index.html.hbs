@@ -7,6 +7,10 @@
         Quick Actions
       </button>
       <ul class="dropdown-menu" aria-labelledby="quickActionsDropdown">
+        {{#if user.is_admin}}
+        <li><a class="dropdown-item" href="/new_project">New Project</a></li>
+        <li><hr class="dropdown-divider"></li>
+        {{/if}}
         <li><a class="dropdown-item" href="/new_requirement">New Requirement</a></li>
         <li><a class="dropdown-item" href="/new_test">New Test</a></li>
         <li><a class="dropdown-item" href="/new_category">New Category</a></li>
@@ -108,6 +112,21 @@
       </div>
     </div>
   </div>
+
+  {{#if user.is_admin}}
+  <div class="card">
+    <div class="card-header">
+      <h3>Projects</h3>
+    </div>
+    <div class="card-body">
+      <p>Manage projects and their configurations</p>
+      <div class="mt-3">
+        <a href="/projects" class="btn btn-primary">View Projects</a>
+        <a href="/new_project" class="btn btn-outline mt-2">New Project</a>
+      </div>
+    </div>
+  </div>
+  {{/if}}
 </div>
 {{/inline}}
 {{> layout}}

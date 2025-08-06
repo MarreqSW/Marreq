@@ -1731,7 +1731,7 @@ pub async fn upload_excel_file(
     let importer = crate::importers::excel::ExcelImporter::new(&temp_path).map_err(|_| Redirect::to(uri!(import_excel_page)))?;
     
     // Create HTML for column mapping
-    let columns_html = importer.columns.iter()
+    let _columns_html = importer.columns.iter()
         .map(|col| format!("<option value=\"{}\">{}</option>", col.name, col.name))
         .collect::<Vec<_>>()
         .join("");
@@ -1820,12 +1820,12 @@ pub async fn upload_excel_file(
     </html>
     "#,
     importer.import_type,
-    importer.data_rows,
+    importer.data.len(),
     importer.import_type,
     temp_path,
     importer.columns.iter()
         .map(|col| {
-            let sample_data = col.sample_data.as_ref().unwrap_or(&"".to_string());
+            let sample_data = &col.sample_value;
             format!(
                 r#"<tr>
                     <td>{}</td>
@@ -2064,6 +2064,14 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
     }
     
     let backup_path = format!("{}/{}", backup_dir, filename);
+    
+    // Database configuration from Rocket.toml
+    let _db_url = "postgres://rust:rust@127.0.0.1:5432/rust";
+    let password = "rust";
+    let host = "127.0.0.1";
+    let port = "5432";
+    let username = "rust";
+    let database = "rust";
     
     // Set environment variable for password
     std::env::set_var("PGPASSWORD", password);

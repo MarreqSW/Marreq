@@ -4,54 +4,142 @@
         <div class="col-12">
             <h1 class="mb-4">Database Backup</h1>
             
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-download"></i> Generate Database Backup
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <h6>Backup Information:</h6>
-                        <ul class="mb-0">
-                            <li>Backup format: PostgreSQL SQL dump</li>
-                            <li>Compatible with: PostgreSQL 9.5+</li>
-                            <li>Backup filename format: <code>reqman-backup_YYYYMMDD_HHMMSS.sql</code></li>
-                            <li>Includes: All tables, data, and schema</li>
-                        </ul>
+            <div class="row">
+                <!-- Database Backup Card -->
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-database"></i> Full Database Backup
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <h6>Backup Information:</h6>
+                                <ul class="mb-0">
+                                    <li>Backup format: PostgreSQL SQL dump</li>
+                                    <li>Compatible with: PostgreSQL 9.5+</li>
+                                    <li>Backup filename format: <code>reqman-backup_YYYYMMDD_HHMMSS.sql</code></li>
+                                    <li>Includes: All tables, data, schema, and <strong>system logs</strong></li>
+                                    <li>Complete system state preservation</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <form method="post" action="/admin/backup/generate" id="backupForm">
+                                    <button type="submit" class="btn btn-primary" onclick="generateBackup(event)">
+                                        <i class="fas fa-download"></i> Generate Full Backup
+                                    </button>
+                                </form>
+                                
+                                <script>
+                                function generateBackup(event) {
+                                    event.preventDefault();
+                                    
+                                    // Generate timestamp for filename
+                                    const now = new Date();
+                                    const year = now.getFullYear();
+                                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                                    const day = String(now.getDate()).padStart(2, '0');
+                                    const hours = String(now.getHours()).padStart(2, '0');
+                                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                                    const seconds = String(now.getSeconds()).padStart(2, '0');
+                                    
+                                    const timestamp = `${year}${month}${day}_${hours}${minutes}${seconds}`;
+                                    const filename = `reqman-backup_${timestamp}.sql`;
+                                    
+                                    // Update form action with filename
+                                    const form = document.getElementById('backupForm');
+                                    form.action = `/admin/backup/generate/${filename}`;
+                                    
+                                    // Submit the form
+                                    form.submit();
+                                }
+                                </script>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div class="mt-3">
-                        <form method="post" action="/admin/backup/generate" id="backupForm">
-                            <button type="submit" class="btn btn-primary" onclick="generateBackup(event)">
-                                <i class="fas fa-download"></i> Generate Backup
-                            </button>
-                        </form>
-                        
-                        <script>
-                        function generateBackup(event) {
-                            event.preventDefault();
+                </div>
+                
+                <!-- Logs Export Card -->
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-file-alt"></i> Logs Export
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <h6>Logs Export Information:</h6>
+                                <ul class="mb-0">
+                                    <li>Export format: JSON</li>
+                                    <li>Filename format: <code>reqman-logs_YYYYMMDD_HHMMSS.json</code></li>
+                                    <li>Includes: All system activity logs</li>
+                                    <li>Useful for: Audit trails, analysis, external processing</li>
+                                </ul>
+                            </div>
                             
-                            // Generate timestamp for filename
-                            const now = new Date();
-                            const year = now.getFullYear();
-                            const month = String(now.getMonth() + 1).padStart(2, '0');
-                            const day = String(now.getDate()).padStart(2, '0');
-                            const hours = String(now.getHours()).padStart(2, '0');
-                            const minutes = String(now.getMinutes()).padStart(2, '0');
-                            const seconds = String(now.getSeconds()).padStart(2, '0');
-                            
-                            const timestamp = `${year}${month}${day}_${hours}${minutes}${seconds}`;
-                            const filename = `reqman-backup_${timestamp}.sql`;
-                            
-                            // Update form action with filename
-                            const form = document.getElementById('backupForm');
-                            form.action = `/admin/backup/generate/${filename}`;
-                            
-                            // Submit the form
-                            form.submit();
-                        }
-                        </script>
+                            <div class="mt-3">
+                                <a href="/export_logs" class="btn btn-success" onclick="generateLogsExport(event)">
+                                    <i class="fas fa-file-export"></i> Export Logs (JSON)
+                                </a>
+                                
+                                <script>
+                                function generateLogsExport(event) {
+                                    // Generate timestamp for filename
+                                    const now = new Date();
+                                    const year = now.getFullYear();
+                                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                                    const day = String(now.getDate()).padStart(2, '0');
+                                    const hours = String(now.getHours()).padStart(2, '0');
+                                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                                    const seconds = String(now.getSeconds()).padStart(2, '0');
+                                    
+                                    const timestamp = `${year}${month}${day}_${hours}${minutes}${seconds}`;
+                                    const filename = `reqman-logs_${timestamp}.json`;
+                                    
+                                    // Update the link to include filename
+                                    event.target.href = `/export_logs?filename=${filename}`;
+                                }
+                                </script>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Additional Information -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-info-circle"></i> Backup Strategy
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Full Database Backup:</h6>
+                                    <ul>
+                                        <li>Complete system state preservation</li>
+                                        <li>Includes all data, schema, and logs</li>
+                                        <li>Best for: Disaster recovery, system migration</li>
+                                        <li>Can be restored to recreate the entire system</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Logs Export:</h6>
+                                    <ul>
+                                        <li>Human-readable JSON format</li>
+                                        <li>Easy to analyze and process externally</li>
+                                        <li>Best for: Audit compliance, data analysis</li>
+                                        <li>Can be imported into log analysis tools</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -42,7 +42,7 @@ pub async fn api_post_requirement(
                 crate::models::EntityType::Requirement,
                 val,
                 Some(new_req.project_id),
-                new_values,
+                Some(new_values),
                 Some(format!("Created requirement via API: {}", new_req.req_title)),
                 None,
             );
@@ -73,7 +73,7 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
                 crate::models::EntityType::Requirement,
                 ident,
                 Some(requirement.project_id),
-                old_values,
+                Some(old_values),
                 Some(format!("Deleted requirement via API: {}", requirement.req_title)),
                 None,
             );
@@ -221,7 +221,7 @@ pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::htt
                 crate::models::EntityType::Test,
                 val,
                 Some(new_test.project_id),
-                new_values,
+                Some(new_values),
                 Some(format!("Created test via API: {}", new_test.test_name)),
                 None,
             );
@@ -250,7 +250,7 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
                 crate::models::EntityType::Test,
                 ident,
                 Some(test.project_id),
-                old_values,
+                Some(old_values),
                 Some(format!("Deleted test via API: {}", test.test_name)),
                 None,
             );
@@ -311,6 +311,19 @@ pub async fn api_post_user(new_user: Json<NewUser>) -> Result<Value, rocket::htt
     let ret_value = create_user(connection, &new_user);
 
     if let Ok(val) = ret_value {
+        // Log the user creation via API
+        if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_user) {
+            let _ = crate::logger::Logger::log_create(
+                connection,
+                0, // API user ID (system)
+                crate::models::EntityType::User,
+                val,
+                new_user.project_id,
+                Some(new_values),
+                Some(format!("Created user via API: {}", new_user.user_username)),
+                None,
+            );
+        }
         Ok(json!({ "status": "ok", "id": val }))
     } else {
         Err(rocket::http::Status::BadRequest)
@@ -382,7 +395,7 @@ pub async fn api_post_category(new_category: Json<NewCategory>) -> Result<Value,
                 crate::models::EntityType::Category,
                 val,
                 Some(new_category.project_id),
-                new_values,
+                Some(new_values),
                 Some(format!("Created category via API: {}", new_category.cat_title)),
                 None,
             );
@@ -432,7 +445,7 @@ pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
                     crate::models::EntityType::Category,
                     ident,
                     Some(category.project_id),
-                    old_values,
+                    Some(old_values),
                     Some(format!("Deleted category via API: {}", category.cat_title)),
                     None,
                 );
@@ -489,7 +502,7 @@ pub async fn api_post_applicability(new_applicability: Json<NewApplicability>) -
                 crate::models::EntityType::Applicability,
                 val,
                 Some(new_applicability.project_id),
-                new_values,
+                Some(new_values),
                 Some(format!("Created applicability via API: {}", new_applicability.app_title)),
                 None,
             );
@@ -539,7 +552,7 @@ pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status 
                     crate::models::EntityType::Applicability,
                     ident,
                     Some(applicability.project_id),
-                    old_values,
+                    Some(old_values),
                     Some(format!("Deleted applicability via API: {}", applicability.app_title)),
                     None,
                 );

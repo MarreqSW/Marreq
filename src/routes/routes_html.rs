@@ -73,7 +73,6 @@ pub fn login(login_form: Form<LoginForm>, cookies: &CookieJar<'_>) -> Result<Red
             let _ = Logger::log_login(
                 &mut conn,
                 user.user_id,
-                Some(format!("User {} logged in successfully", user.user_username)),
                 None,
             );
             
@@ -128,8 +127,8 @@ pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
     // Log logout if we have user info
     if let Some(uid) = user_id {
         let mut conn = establish_connection();
-        let description = username.map(|name| format!("User {} logged out", name));
-        let _ = Logger::log_logout(&mut conn, uid, description, None);
+        let _description = username.map(|name| format!("User {} logged out", name));
+        let _ = Logger::log_logout(&mut conn, uid, None);
     }
     
     Redirect::to(uri!(login_page))
@@ -448,8 +447,8 @@ pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &Cooki
                     EntityType::User,
                     user_id,
                     None,
-                    old_values,
-                    new_values,
+                    Some(old_values),
+                    Some(new_values),
                     Some(format!("Updated user: {}", user_data.user_username)),
                     None,
                 );
@@ -468,7 +467,7 @@ pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &Cooki
 pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     let req = get_requirement_by_id(req_id);
-    let req_decorate = decorate_requirements(vec![req]);
+    let req_decorate = decorate_requirements(vec![req.clone()]);
     let req_decorate_json = json!(req_decorate[0]);
 
     let status = get_status_all().unwrap_or_default();
@@ -536,6 +535,13 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
 
     let ctx = json!({
         "requirements": req_decorate_json, 
+        "req_author_id": req.req_author,
+        "req_reviewer_id": req.req_reviewer,
+        "req_category_id": req.req_category,
+        "req_applicability_id": req.req_applicability,
+        "req_current_status_id": req.req_current_status,
+        "req_verification_id": req.req_verification,
+        "req_parent_id": req.req_parent,
         "categories": categories_json, 
         "status": status_json, 
         "parent": parents_json, 
@@ -596,8 +602,8 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
             EntityType::Requirement,
             req_id,
             Some(requirement_data.project_id),
-            old_values,
-            new_values,
+            Some(old_values),
+            Some(new_values),
             Some(format!("Updated requirement: {}", requirement_data.req_title)),
             None,
         );
@@ -625,7 +631,7 @@ pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<
                     EntityType::Requirement,
                     req_id,
                     Some(requirement.project_id),
-                    old_values,
+                    Some(old_values),
                     Some(format!("Deleted requirement: {}", requirement.req_title)),
                     None,
                 );
@@ -775,7 +781,7 @@ pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) 
             EntityType::Requirement,
             my_id,
             Some(requirement_data.project_id),
-            new_values,
+            Some(new_values),
             Some(format!("Created requirement: {}", requirement_data.req_title)),
             None,
         );
@@ -1068,8 +1074,8 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
             EntityType::Test,
             test_id,
             Some(edit_test_form.project_id),
-            old_values,
-            new_values,
+            Some(old_values),
+            Some(new_values),
             Some(format!("Updated test: {}", new_test.test_name)),
             None,
         );
@@ -1104,7 +1110,7 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
             EntityType::Test,
             my_id,
             Some(new_test.project_id),
-            new_values,
+            Some(new_values),
             Some(format!("Created test: {}", my_new_test.test_name)),
             None,
         );
@@ -1515,7 +1521,7 @@ pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -
                     EntityType::Category,
                     category_id,
                     Some(category_data.project_id),
-                    new_values,
+                    Some(new_values),
                     Some(format!("Created category: {}", category_data.cat_title)),
                     None,
                 );
@@ -1563,8 +1569,8 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
                     EntityType::Category,
                     cat_id,
                     Some(category_with_id.project_id),
-                    old_values,
-                    new_values,
+                    Some(old_values),
+                    Some(new_values),
                     Some(format!("Updated category: {}", category_with_id.cat_title)),
                     None,
                 );
@@ -1598,7 +1604,7 @@ pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<roc
                     EntityType::Category,
                     cat_id,
                     Some(category.project_id),
-                    old_values,
+                    Some(old_values),
                     Some(format!("Deleted category: {}", category.cat_title)),
                     None,
                 );
@@ -1633,7 +1639,7 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
                     EntityType::User,
                     my_id,
                     None,
-                    new_values,
+                    Some(new_values),
                     Some(format!("Created user: {}", user_with_hashed_password.user_username)),
                     None,
                 );
@@ -1727,7 +1733,7 @@ pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &C
                     EntityType::Applicability,
                     applicability_id,
                     Some(applicability_data.project_id),
-                    new_values,
+                    Some(new_values),
                     Some(format!("Created applicability: {}", applicability_data.app_title)),
                     None,
                 );
@@ -1775,8 +1781,8 @@ pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability
                     EntityType::Applicability,
                     app_id,
                     Some(applicability_with_id.project_id),
-                    old_values,
-                    new_values,
+                    Some(old_values),
+                    Some(new_values),
                     Some(format!("Updated applicability: {}", applicability_with_id.app_title)),
                     None,
                 );
@@ -1810,7 +1816,7 @@ pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Resul
                     EntityType::Applicability,
                     app_id,
                     Some(applicability.project_id),
-                    old_values,
+                    Some(old_values),
                     Some(format!("Deleted applicability: {}", applicability.app_title)),
                     None,
                 );
@@ -2165,7 +2171,7 @@ pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> R
                     EntityType::Project,
                     project_id,
                     None,
-                    new_values,
+                    Some(new_values),
                     Some(format!("Created project: {}", project_data.project_name)),
                     None,
                 );
@@ -2230,8 +2236,8 @@ pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies:
                 EntityType::Project,
                 project_id,
                 None,
-                old_values,
-                new_values,
+                Some(old_values),
+                Some(new_values),
                 Some(format!("Updated project: {}", project_data.project_name)),
                 None,
             );
@@ -2271,7 +2277,7 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
                     EntityType::Project,
                     project_id,
                     None,
-                    old_values,
+                    Some(old_values),
                     Some(format!("Deleted project: {}", project.project_name)),
                     None,
                 );
@@ -2790,11 +2796,22 @@ pub fn show_logs(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     }
     
     let connection = &mut establish_connection();
-    let logs = Logger::get_recent_logs(connection, Some(100), None, None).unwrap_or_default();
+    let logs = Logger::get_recent_logs(connection, 1000).unwrap_or_default();
+    
+    // Enhance logs with user information
+    let mut enhanced_logs = Vec::new();
+    for log in logs {
+        let username = get_user_by_id(log.user_id).user_username;
+        let mut log_json = serde_json::to_value(log).unwrap_or_default();
+        if let Some(log_obj) = log_json.as_object_mut() {
+            log_obj.insert("username".to_string(), serde_json::Value::String(username));
+        }
+        enhanced_logs.push(log_json);
+    }
     
     let ctx = json!({
         "user": user,
-        "logs": logs,
+        "logs": enhanced_logs,
         "title": "System Logs"
     });
     
@@ -2815,11 +2832,22 @@ pub fn show_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJar
     }
     
     let connection = &mut establish_connection();
-    let logs = Logger::get_logs_for_entity(connection, &entity_type, entity_id, Some(50)).unwrap_or_default();
+    let logs = Logger::get_logs_for_entity(connection, &entity_type, entity_id).unwrap_or_default();
+    
+    // Enhance logs with user information
+    let mut enhanced_logs = Vec::new();
+    for log in logs {
+        let username = get_user_by_id(log.user_id).user_username;
+        let mut log_json = serde_json::to_value(log).unwrap_or_default();
+        if let Some(log_obj) = log_json.as_object_mut() {
+            log_obj.insert("username".to_string(), serde_json::Value::String(username));
+        }
+        enhanced_logs.push(log_json);
+    }
     
     let ctx = json!({
         "user": user,
-        "logs": logs,
+        "logs": enhanced_logs,
         "entity_type": entity_type,
         "entity_id": entity_id,
         "title": format!("Logs for {} {}", entity_type, entity_id)
@@ -2838,7 +2866,7 @@ pub async fn export_logs(filename: Option<String>, cookies: &CookieJar<'_>) -> R
     }
     
     let connection = &mut establish_connection();
-    let logs = Logger::get_recent_logs(connection, Some(1000), None, None).unwrap_or_default();
+    let logs = Logger::get_recent_logs(connection, 1000).unwrap_or_default();
     
     // Convert logs to JSON
     let logs_json = serde_json::to_string_pretty(&logs).unwrap_or_default();
@@ -2869,26 +2897,17 @@ pub async fn export_logs(filename: Option<String>, cookies: &CookieJar<'_>) -> R
         .map_err(|_| Redirect::to(uri!(show_logs)))?;
     
     // Log the successful export
-    let _ = Logger::log_action(
+    let _ = Logger::log_export(
         connection,
         user.user_id,
-        crate::models::ActionType::StatusChange,
         crate::models::EntityType::User,
         None,
         None,
-        None,
-        None,
-        Some(format!("Logs exported to: {}", filename)),
+        Some(format!("Exported logs to {}", filename)),
         None,
     );
     
-    // Return the file for download
-    let file = NamedFile::open(&export_path)
-        .await
-        .map_err(|_| Redirect::to(uri!(show_logs)))?;
-    
-    let content_type = ContentType::new("application", "json");
-    Ok((content_type, file))
+    Ok((ContentType::JSON, NamedFile::open(export_path).await.map_err(|_| Redirect::to(uri!(show_logs)))?))
 }
 
 #[get("/export_logs/<entity_type>/<entity_id>")]
@@ -2901,7 +2920,7 @@ pub fn export_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJ
     }
     
     let connection = &mut establish_connection();
-    let logs = Logger::get_logs_for_entity(connection, &entity_type, entity_id, Some(1000)).unwrap_or_default();
+    let logs = Logger::get_logs_for_entity(connection, &entity_type, entity_id).unwrap_or_default();
     
     // Convert logs to JSON
     let logs_json = serde_json::to_string_pretty(&logs).unwrap_or_default();
@@ -2922,7 +2941,7 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let connection = &mut establish_connection();
     
     // Clean up logs older than 90 days
-    match Logger::cleanup_old_logs(connection, 90) {
+    match crate::logger::cleanup_old_logs(connection, 90) {
         Ok(deleted_count) => {
             // Log the cleanup action
             let _ = Logger::log_action(
@@ -2939,7 +2958,7 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
             );
         },
         Err(_) => {
-            // Log the failed cleanup
+            // Log the failed cleanup action
             let _ = Logger::log_action(
                 connection,
                 user.user_id,

@@ -1,15 +1,13 @@
-use crate::models::{ActionType, EntityType, Log, NewLog};
-use crate::schema::logs;
 use diesel::prelude::*;
-use diesel::PgConnection;
-use rocket::request::Request;
-
+use diesel::pg::PgConnection;
+use crate::schema::logs;
+use crate::models::{Log, NewLog, ActionType, EntityType};
+use chrono::{Utc, Duration, DateTime};
 
 
 pub struct Logger;
 
 impl Logger {
-    /// Log an action to the database
     pub fn log_action(
         conn: &mut PgConnection,
         user_id: i32,
@@ -20,18 +18,15 @@ impl Logger {
         old_values: Option<String>,
         new_values: Option<String>,
         description: Option<String>,
-        request: Option<&Request<'_>>,
-    ) -> Result<(), diesel::result::Error> {
+        request: Option<&rocket::Request<'_>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let ip_address = request.and_then(|req| {
-            req.headers()
-                .get_one("X-Real-IP")
-                .or_else(|| req.headers().get_one("X-Forwarded-For"))
-                .map(|s| s.to_string())
-                .or_else(|| req.remote().map(|addr| addr.ip().to_string()))
+            req.remote().map(|addr| addr.ip().to_string())
         });
-
-        let user_agent = request
-            .and_then(|req| req.headers().get_one("User-Agent"));
+        
+        let user_agent = request.and_then(|req| {
+            req.headers().get_one("User-Agent").map(|s| s.to_string())
+        });
 
         let new_log = NewLog {
             user_id,
@@ -42,8 +37,8 @@ impl Logger {
             old_values,
             new_values,
             description,
-            ip_address: ip_address.map(|s| s.to_string()),
-            user_agent: user_agent.map(|s| s.to_string()),
+            ip_address,
+            user_agent,
         };
 
         diesel::insert_into(logs::table)
@@ -53,17 +48,16 @@ impl Logger {
         Ok(())
     }
 
-    /// Log a creation action
     pub fn log_create(
         conn: &mut PgConnection,
         user_id: i32,
         entity_type: EntityType,
         entity_id: i32,
         project_id: Option<i32>,
-        new_values: String,
+        new_values: Option<String>,
         description: Option<String>,
-        request: Option<&Request<'_>>,
-    ) -> Result<(), diesel::result::Error> {
+        request: Option<&rocket::Request<'_>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Self::log_action(
             conn,
             user_id,
@@ -72,24 +66,23 @@ impl Logger {
             Some(entity_id),
             project_id,
             None,
-            Some(new_values),
+            new_values,
             description,
             request,
         )
     }
 
-    /// Log an update action
     pub fn log_update(
         conn: &mut PgConnection,
         user_id: i32,
         entity_type: EntityType,
         entity_id: i32,
         project_id: Option<i32>,
-        old_values: String,
-        new_values: String,
+        old_values: Option<String>,
+        new_values: Option<String>,
         description: Option<String>,
-        request: Option<&Request<'_>>,
-    ) -> Result<(), diesel::result::Error> {
+        request: Option<&rocket::Request<'_>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Self::log_action(
             conn,
             user_id,
@@ -97,24 +90,23 @@ impl Logger {
             entity_type,
             Some(entity_id),
             project_id,
-            Some(old_values),
-            Some(new_values),
+            old_values,
+            new_values,
             description,
             request,
         )
     }
 
-    /// Log a deletion action
     pub fn log_delete(
         conn: &mut PgConnection,
         user_id: i32,
         entity_type: EntityType,
         entity_id: i32,
         project_id: Option<i32>,
-        old_values: String,
+        old_values: Option<String>,
         description: Option<String>,
-        request: Option<&Request<'_>>,
-    ) -> Result<(), diesel::result::Error> {
+        request: Option<&rocket::Request<'_>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Self::log_action(
             conn,
             user_id,
@@ -122,20 +114,18 @@ impl Logger {
             entity_type,
             Some(entity_id),
             project_id,
-            Some(old_values),
+            old_values,
             None,
             description,
             request,
         )
     }
 
-    /// Log a login action
     pub fn log_login(
         conn: &mut PgConnection,
         user_id: i32,
-        description: Option<String>,
-        request: Option<&Request<'_>>,
-    ) -> Result<(), diesel::result::Error> {
+        request: Option<&rocket::Request<'_>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Self::log_action(
             conn,
             user_id,
@@ -145,18 +135,16 @@ impl Logger {
             None,
             None,
             None,
-            description,
+            Some("User logged in".to_string()),
             request,
         )
     }
 
-    /// Log a logout action
     pub fn log_logout(
         conn: &mut PgConnection,
         user_id: i32,
-        description: Option<String>,
-        request: Option<&Request<'_>>,
-    ) -> Result<(), diesel::result::Error> {
+        request: Option<&rocket::Request<'_>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Self::log_action(
             conn,
             user_id,
@@ -166,26 +154,26 @@ impl Logger {
             None,
             None,
             None,
-            description,
+            Some("User logged out".to_string()),
             request,
         )
     }
 
-    /// Log an export action
     pub fn log_export(
         conn: &mut PgConnection,
         user_id: i32,
         entity_type: EntityType,
+        entity_id: Option<i32>,
         project_id: Option<i32>,
         description: Option<String>,
-        request: Option<&Request<'_>>,
-    ) -> Result<(), diesel::result::Error> {
+        request: Option<&rocket::Request<'_>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Self::log_action(
             conn,
             user_id,
             ActionType::Export,
             entity_type,
-            None,
+            entity_id,
             project_id,
             None,
             None,
@@ -194,15 +182,14 @@ impl Logger {
         )
     }
 
-    /// Log an import action
     pub fn log_import(
         conn: &mut PgConnection,
         user_id: i32,
         entity_type: EntityType,
         project_id: Option<i32>,
         description: Option<String>,
-        request: Option<&Request<'_>>,
-    ) -> Result<(), diesel::result::Error> {
+        request: Option<&rocket::Request<'_>>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         Self::log_action(
             conn,
             user_id,
@@ -217,134 +204,129 @@ impl Logger {
         )
     }
 
-    /// Get logs for a specific entity
     pub fn get_logs_for_entity(
         conn: &mut PgConnection,
-        entity_type: &str,
-        entity_id: i32,
-        limit: Option<i64>,
-    ) -> Result<Vec<Log>, diesel::result::Error> {
-        let mut query = logs::table
-            .filter(logs::entity_type.eq(entity_type))
-            .filter(logs::entity_id.eq(entity_id))
-            .order(logs::created_at.desc())
-            .into_boxed();
+        entity_type_param: &str,
+        entity_id_param: i32,
+    ) -> Result<Vec<Log>, Box<dyn std::error::Error>> {
+        use crate::schema::logs::dsl::*;
 
-        if let Some(limit_val) = limit {
-            query = query.limit(limit_val);
-        }
+        let logs_list = logs
+            .filter(entity_type.eq(entity_type_param))
+            .filter(entity_id.eq(entity_id_param))
+            .order(created_at.desc())
+            .load::<Log>(conn)?;
 
-        query.load::<Log>(conn)
+        Ok(logs_list)
     }
 
-    /// Get logs for a specific project
     pub fn get_logs_for_project(
         conn: &mut PgConnection,
-        project_id: i32,
-        limit: Option<i64>,
-    ) -> Result<Vec<Log>, diesel::result::Error> {
-        let mut query = logs::table
-            .filter(logs::project_id.eq(project_id))
-            .order(logs::created_at.desc())
-            .into_boxed();
+        project_id_param: i32,
+    ) -> Result<Vec<Log>, Box<dyn std::error::Error>> {
+        use crate::schema::logs::dsl::*;
 
-        if let Some(limit_val) = limit {
-            query = query.limit(limit_val);
-        }
+        let logs_list = logs
+            .filter(project_id.eq(project_id_param))
+            .order(created_at.desc())
+            .load::<Log>(conn)?;
 
-        query.load::<Log>(conn)
+        Ok(logs_list)
     }
 
-    /// Get logs for a specific user
     pub fn get_logs_for_user(
         conn: &mut PgConnection,
-        user_id: i32,
-        limit: Option<i64>,
-    ) -> Result<Vec<Log>, diesel::result::Error> {
-        let mut query = logs::table
-            .filter(logs::user_id.eq(user_id))
-            .order(logs::created_at.desc())
-            .into_boxed();
+        user_id_param: i32,
+    ) -> Result<Vec<Log>, Box<dyn std::error::Error>> {
+        use crate::schema::logs::dsl::*;
 
-        if let Some(limit_val) = limit {
-            query = query.limit(limit_val);
-        }
+        let logs_list = logs
+            .filter(user_id.eq(user_id_param))
+            .order(created_at.desc())
+            .load::<Log>(conn)?;
 
-        query.load::<Log>(conn)
+        return Ok(logs_list);
     }
 
-    /// Get recent logs with optional filtering
     pub fn get_recent_logs(
         conn: &mut PgConnection,
-        limit: Option<i64>,
-        action_type: Option<&str>,
-        entity_type: Option<&str>,
-    ) -> Result<Vec<Log>, diesel::result::Error> {
-        let mut query = logs::table.order(logs::created_at.desc()).into_boxed();
-
-        if let Some(limit_val) = limit {
-            query = query.limit(limit_val);
-        }
-
-        if let Some(action) = action_type {
-            query = query.filter(logs::action_type.eq(action));
-        }
-
-        if let Some(entity) = entity_type {
-            query = query.filter(logs::entity_type.eq(entity));
-        }
-
-        query.load::<Log>(conn)
-    }
-
-    /// Convert a struct to JSON Value for logging
-    pub fn to_json_string<T: serde::Serialize>(value: &T) -> Result<String, serde_json::Error> {
-        serde_json::to_string(value)
-    }
-
-    /// Create a description for common actions
-    pub fn create_description(action_type: ActionType, entity_type: EntityType, _entity_id: Option<i32>) -> String {
-        match action_type {
-            ActionType::Create => format!("Created new {}", entity_type.to_string().to_lowercase()),
-            ActionType::Update => format!("Updated {}", entity_type.to_string().to_lowercase()),
-            ActionType::Delete => format!("Deleted {}", entity_type.to_string().to_lowercase()),
-            ActionType::Login => "User logged in".to_string(),
-            ActionType::Logout => "User logged out".to_string(),
-            ActionType::Export => format!("Exported {}", entity_type.to_string().to_lowercase()),
-            ActionType::Import => format!("Imported {}", entity_type.to_string().to_lowercase()),
-            ActionType::StatusChange => format!("Changed status of {}", entity_type.to_string().to_lowercase()),
-        }
-    }
-    
-    /// Clean up old logs based on retention policy
-    /// Deletes logs older than the specified number of days
-    pub fn cleanup_old_logs(conn: &mut PgConnection, days_to_keep: i64) -> Result<usize, diesel::result::Error> {
+        limit: i64,
+    ) -> Result<Vec<Log>, Box<dyn std::error::Error>> {
         use crate::schema::logs::dsl::*;
-        use chrono::{Duration, Utc};
-        
-        let cutoff_date = Utc::now() - Duration::days(days_to_keep);
-        let cutoff_timestamp = cutoff_date.timestamp();
-        
-        let deleted_count = diesel::delete(
-            logs.filter(created_at.lt(chrono::NaiveDateTime::from_timestamp_opt(cutoff_timestamp, 0).unwrap_or_default()))
-        ).execute(conn)?;
-        
-        Ok(deleted_count)
+
+        let logs_list = logs
+            .order(created_at.desc())
+            .limit(limit)
+            .load::<Log>(conn)?;
+
+        Ok(logs_list)
     }
+
+    pub fn to_json_string<T: serde::Serialize>(value: &T) -> Result<String, Box<dyn std::error::Error>> {
+        Ok(serde_json::to_string_pretty(value)?)
+    }
+
+    pub fn get_log_count(conn: &mut PgConnection, days: i64) -> Result<i64, Box<dyn std::error::Error>> {
+        get_log_count(conn, Some(days))
+    }
+
+    pub fn create_description(
+        action_type: &ActionType,
+        entity_type: &EntityType,
+        _entity_id: Option<i32>,
+    ) -> String {
+        match (action_type, entity_type) {
+            (ActionType::Create, EntityType::Requirement) => "Created new requirement".to_string(),
+            (ActionType::Update, EntityType::Requirement) => "Updated requirement".to_string(),
+            (ActionType::Delete, EntityType::Requirement) => "Deleted requirement".to_string(),
+            (ActionType::Create, EntityType::Test) => "Created new test".to_string(),
+            (ActionType::Update, EntityType::Test) => "Updated test".to_string(),
+            (ActionType::Delete, EntityType::Test) => "Deleted test".to_string(),
+            (ActionType::Create, EntityType::Category) => "Created new category".to_string(),
+            (ActionType::Update, EntityType::Category) => "Updated category".to_string(),
+            (ActionType::Delete, EntityType::Category) => "Deleted category".to_string(),
+            (ActionType::Create, EntityType::Project) => "Created new project".to_string(),
+            (ActionType::Update, EntityType::Project) => "Updated project".to_string(),
+            (ActionType::Delete, EntityType::Project) => "Deleted project".to_string(),
+            (ActionType::Create, EntityType::User) => "Created new user".to_string(),
+            (ActionType::Update, EntityType::User) => "Updated user".to_string(),
+            (ActionType::Delete, EntityType::User) => "Deleted user".to_string(),
+            (ActionType::Create, EntityType::Applicability) => "Created new applicability".to_string(),
+            (ActionType::Update, EntityType::Applicability) => "Updated applicability".to_string(),
+            (ActionType::Delete, EntityType::Applicability) => "Deleted applicability".to_string(),
+            _ => format!("{:?} {:?}", action_type, entity_type),
+        }
+    }
+}
+
+pub fn cleanup_old_logs(conn: &mut PgConnection, days: i64) -> Result<usize, Box<dyn std::error::Error>> {
+    use crate::schema::logs::dsl::*;
     
-    /// Get basic log count for analytics
-    pub fn get_log_count(conn: &mut PgConnection, days: i64) -> Result<i64, diesel::result::Error> {
-        use crate::schema::logs::dsl::*;
-        use chrono::{Duration, Utc};
+    let cutoff_timestamp = Utc::now() - Duration::days(days);
+    let cutoff_datetime = DateTime::from_timestamp(cutoff_timestamp.timestamp(), 0)
+        .ok_or("Invalid timestamp")?
+        .naive_utc();
+
+    let deleted_count = diesel::delete(logs.filter(created_at.lt(cutoff_datetime)))
+        .execute(conn)?;
+
+    Ok(deleted_count)
+}
+
+pub fn get_log_count(conn: &mut PgConnection, days: Option<i64>) -> Result<i64, Box<dyn std::error::Error>> {
+    use crate::schema::logs::dsl::*;
+    
+    let query = if let Some(days) = days {
+        let cutoff_timestamp = Utc::now() - Duration::days(days);
+        let cutoff_datetime = DateTime::from_timestamp(cutoff_timestamp.timestamp(), 0)
+            .ok_or("Invalid timestamp")?
+            .naive_utc();
         
-        let cutoff_date = Utc::now() - Duration::days(days);
-        let cutoff_timestamp = cutoff_date.timestamp();
-        
-        let total_logs: i64 = logs
-            .filter(created_at.ge(chrono::NaiveDateTime::from_timestamp_opt(cutoff_timestamp, 0).unwrap_or_default()))
-            .count()
-            .get_result(conn)?;
-        
-        Ok(total_logs)
-    }
+        logs.filter(created_at.ge(cutoff_datetime)).into_boxed()
+    } else {
+        logs.into_boxed()
+    };
+
+    let count = query.count().get_result(conn)?;
+    Ok(count)
 } 

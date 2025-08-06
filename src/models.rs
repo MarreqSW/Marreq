@@ -4,7 +4,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Queryable, AsChangeset)]
+#[derive(Serialize, Deserialize, Queryable, AsChangeset, Clone)]
 pub struct Requirement {
     pub req_id: i32,
     pub req_title: String,

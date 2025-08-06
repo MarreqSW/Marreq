@@ -21,6 +21,8 @@ time = "0.3"
 rocket-multipart-form-data = "0.10.7"
 xlsxwriter = "0.6.1"
 wkhtmltopdf = "0.4"
+calamine = "0.22"
+anyhow = "1.0"
 
 # [dependencies.rocket_db_pools]
 # version = "0.1.0-rc.2"

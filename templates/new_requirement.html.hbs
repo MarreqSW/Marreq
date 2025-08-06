@@ -105,7 +105,7 @@
         <input type="hidden" id="req_id" name="req_id" value="None">
         <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
         <input type="hidden" id="req_link" name="req_link" value="http://www.google.com">
-        <input type="hidden" id="project_id" name="project_id" value="{{selected_project_id}}">
+        <input type="hidden" id="project_id" name="project_id" value="{{#if selected_project_id}}{{selected_project_id}}{{else}}1{{/if}}">
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary">Create Requirement</button>

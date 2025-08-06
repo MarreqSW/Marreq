@@ -1597,6 +1597,16 @@ pub fn show_project_id(project_id: i32, cookies: &CookieJar<'_>) -> Result<Templ
 #[get("/new_project")]
 pub fn new_project(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+    
     let users = get_users_all().unwrap_or_default();
     
     let ctx = json!({
@@ -1608,7 +1618,13 @@ pub fn new_project(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 
 #[post("/new_project", data = "<new_project>")]
 pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_projects)));
+    }
+    
     let connection = &mut establish_connection();
     
     let result = insert_new_project(connection, &new_project);
@@ -1625,6 +1641,16 @@ pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> R
 #[get("/edit_project/<project_id>")]
 pub fn get_edit_project(project_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+    
     let project = get_project_by_id(project_id);
     let users = get_users_all().unwrap_or_default();
     
@@ -1638,7 +1664,13 @@ pub fn get_edit_project(project_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
 
 #[post("/edit_project/<project_id>", data = "<project>")]
 pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_projects)));
+    }
+    
     let connection = &mut establish_connection();
     
     let result = edit_project(connection, project_id, &project);
@@ -1654,7 +1686,13 @@ pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies:
 
 #[delete("/delete_project/<project_id>")]
 pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_projects)));
+    }
+    
     let connection = &mut establish_connection();
     
     let result = delete_project(connection, &project_id);

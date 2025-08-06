@@ -1,5 +1,3 @@
-
-
 use diesel::prelude::*;
 use rocket::form::Form;
 use rocket::fs::NamedFile;
@@ -17,6 +15,7 @@ use std::path;
 use crate::generators::*;
 use crate::helper_functions::*;
 use crate::html::*;
+use crate::logger::Logger;
 use crate::models::*;
 
 // --------------------------------
@@ -68,6 +67,15 @@ pub fn login(login_form: Form<LoginForm>, cookies: &CookieJar<'_>) -> Result<Red
             cookies.add_private(Cookie::new("username", user.user_username.clone()));
             cookies.add_private(Cookie::new("user_name", user.user_name.clone()));
             
+            // Log successful login
+            let mut conn = establish_connection();
+            let _ = Logger::log_login(
+                &mut conn,
+                user.user_id,
+                Some(format!("User {} logged in successfully", user.user_username)),
+                None,
+            );
+            
             Ok(Redirect::to(uri!(index)))
         }
         Ok(None) => {
@@ -91,6 +99,13 @@ pub fn login(login_form: Form<LoginForm>, cookies: &CookieJar<'_>) -> Result<Red
 pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
     use rocket::http::Cookie;
     
+    // Get user info before clearing cookies for logging
+    let user_id = cookies.get_private("user_id")
+        .and_then(|cookie| cookie.value().parse::<i32>().ok());
+    
+    let username = cookies.get_private("username")
+        .map(|cookie| cookie.value().to_string());
+    
     // Create cookies with empty values and immediate expiration
     let mut user_id_cookie = Cookie::new("user_id", "");
     user_id_cookie.set_max_age(time::Duration::seconds(0));
@@ -108,6 +123,13 @@ pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
     cookies.add_private(user_id_cookie);
     cookies.add_private(username_cookie);
     cookies.add_private(user_name_cookie);
+    
+    // Log logout if we have user info
+    if let Some(uid) = user_id {
+        let mut conn = establish_connection();
+        let description = username.map(|name| format!("User {} logged out", name));
+        let _ = Logger::log_logout(&mut conn, uid, description, None);
+    }
     
     Redirect::to(uri!(login_page))
 }
@@ -511,7 +533,7 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
 #[allow(unused_variables)]
 #[post("/edit_requirement/<req_id>", data = "<new_req>")]
 pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
     let my_id = new_req.req_id.unwrap_or(0);
 
     let mut requirement_data = new_req.into_inner();
@@ -537,7 +559,29 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
     }
 
     let connection = &mut establish_connection();
+    
+    // Get the old values before updating
+    let old_requirement = get_requirement_by_id(req_id);
+    
     edit_requirement(connection, &requirement_data).unwrap();
+
+    // Log the requirement update
+    if let (Ok(old_values), Ok(new_values)) = (
+        Logger::to_json_value(&old_requirement),
+        Logger::to_json_value(&requirement_data)
+    ) {
+        let _ = Logger::log_update(
+            connection,
+            user.user_id,
+            EntityType::Requirement,
+            req_id,
+            Some(requirement_data.project_id),
+            old_values,
+            new_values,
+            Some(format!("Updated requirement: {}", requirement_data.req_title)),
+            None,
+        );
+    }
 
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
@@ -629,7 +673,7 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 
 #[post("/new_requirement", data = "<new_req>")]
 pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let _user = require_auth(cookies)?;
+    let user = require_auth(cookies)?;
     let connection = &mut establish_connection();
     
     let mut requirement_data = new_req.into_inner();
@@ -668,6 +712,20 @@ pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) 
     }
     
     let my_id = insert_new_requirement(connection, &requirement_data).unwrap();
+
+    // Log the requirement creation
+    if let Ok(new_values) = Logger::to_json_value(&requirement_data) {
+        let _ = Logger::log_create(
+            connection,
+            user.user_id,
+            EntityType::Requirement,
+            my_id,
+            Some(requirement_data.project_id),
+            new_values,
+            Some(format!("Created requirement: {}", requirement_data.req_title)),
+            None,
+        );
+    }
 
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
@@ -1888,9 +1946,25 @@ pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> R
     
     let connection = &mut establish_connection();
     
-    let result = insert_new_project(connection, &new_project);
+    let project_data = new_project.into_inner();
+    let result = insert_new_project(connection, &project_data);
     match result {
-        Ok(_) => Ok(Redirect::to(uri!(show_projects))),
+        Ok(project_id) => {
+            // Log the project creation
+            if let Ok(new_values) = Logger::to_json_value(&project_data) {
+                let _ = Logger::log_create(
+                    connection,
+                    user.user_id,
+                    EntityType::Project,
+                    project_id,
+                    None,
+                    new_values,
+                    Some(format!("Created project: {}", project_data.project_name)),
+                    None,
+                );
+            }
+            Ok(Redirect::to(uri!(show_projects)))
+        },
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -2407,5 +2481,57 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
             Err(Redirect::to(uri!(admin_backup_page)))
         }
     }
+}
+
+#[get("/logs")]
+pub fn show_logs(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+    
+    let connection = &mut establish_connection();
+    let logs = Logger::get_recent_logs(connection, Some(100), None, None).unwrap_or_default();
+    
+    let ctx = json!({
+        "user": user,
+        "logs": logs,
+        "title": "System Logs"
+    });
+    
+    Ok(Template::render("logs", ctx))
+}
+
+#[get("/logs/<entity_type>/<entity_id>")]
+pub fn show_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+    
+    let connection = &mut establish_connection();
+    let logs = Logger::get_logs_for_entity(connection, &entity_type, entity_id, Some(50)).unwrap_or_default();
+    
+    let ctx = json!({
+        "user": user,
+        "logs": logs,
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "title": format!("Logs for {} {}", entity_type, entity_id)
+    });
+    
+    Ok(Template::render("entity_logs", ctx))
 }
 

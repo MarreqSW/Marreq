@@ -37,11 +37,9 @@
         <div class="grid grid-3">
           <div class="form-group">
             <label for="req_author" class="form-label">Author</label>
-            <select name="req_author" id="req_author" class="form-control" required>
-              {{#each users }}
-                <option value="{{user_id}}">{{user_name}}</option>
-              {{/each}}
-            </select>
+            <input type="text" id="req_author_display" value="{{user.user_name}}" class="form-control" readonly>
+            <input type="hidden" name="req_author" id="req_author" value="{{user.user_id}}">
+            <small class="text-secondary">You are the author of this requirement</small>
           </div>
 
           <div class="form-group">

@@ -34,6 +34,19 @@ pub async fn api_post_requirement(
     let ret_value = insert_new_requirement(connection, &new_req);
 
     if let Ok(val) = ret_value {
+        // Log the requirement creation via API
+        if let Ok(new_values) = crate::logger::Logger::to_json_value(&*new_req) {
+            let _ = crate::logger::Logger::log_create(
+                connection,
+                0, // API user ID (system)
+                crate::models::EntityType::Requirement,
+                val,
+                Some(new_req.project_id),
+                new_values,
+                Some(format!("Created requirement via API: {}", new_req.req_title)),
+                None,
+            );
+        }
         Ok(json!({ "status": "ok", "id": val }))
     } else {
         Err(rocket::http::Status::BadRequest)
@@ -43,11 +56,28 @@ pub async fn api_post_requirement(
 #[delete("/requirements/<ident>")]
 pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
     let connection = &mut establish_connection();
+    
+    // Get the requirement details before deleting
+    let requirement = get_requirement_by_id(ident);
+    
     let ret_value = delete_requirement(connection, &ident).unwrap();
 
     #[cfg(debug_assertions)]
     println!("Delete value: {}", ret_value);
     if ret_value {
+        // Log the requirement deletion via API
+        if let Ok(old_values) = crate::logger::Logger::to_json_value(&requirement) {
+            let _ = crate::logger::Logger::log_delete(
+                connection,
+                0, // API user ID (system)
+                crate::models::EntityType::Requirement,
+                ident,
+                Some(requirement.project_id),
+                old_values,
+                Some(format!("Deleted requirement via API: {}", requirement.req_title)),
+                None,
+            );
+        }
         rocket::http::Status::NoContent
     } else {
         rocket::http::Status::Accepted
@@ -183,6 +213,19 @@ pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::htt
     let ret_value = create_test(connection, &new_test);
 
     if let Ok(val) = ret_value {
+        // Log the test creation via API
+        if let Ok(new_values) = crate::logger::Logger::to_json_value(&*new_test) {
+            let _ = crate::logger::Logger::log_create(
+                connection,
+                0, // API user ID (system)
+                crate::models::EntityType::Test,
+                val,
+                Some(new_test.project_id),
+                new_values,
+                Some(format!("Created test via API: {}", new_test.test_name)),
+                None,
+            );
+        }
         Ok(json!({ "status": "ok", "id": val }))
     } else {
         Err(rocket::http::Status::BadRequest)
@@ -192,9 +235,26 @@ pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::htt
 #[delete("/tests/<ident>")]
 pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
     let connection = &mut establish_connection();
+    
+    // Get the test details before deleting
+    let test = get_test_by_id(ident);
+    
     let ret_value = delete_test(connection, &ident).unwrap();
 
     if ret_value {
+        // Log the test deletion via API
+        if let Ok(old_values) = crate::logger::Logger::to_json_value(&test) {
+            let _ = crate::logger::Logger::log_delete(
+                connection,
+                0, // API user ID (system)
+                crate::models::EntityType::Test,
+                ident,
+                Some(test.project_id),
+                old_values,
+                Some(format!("Deleted test via API: {}", test.test_name)),
+                None,
+            );
+        }
         rocket::http::Status::NoContent
     } else {
         rocket::http::Status::Accepted
@@ -314,6 +374,19 @@ pub async fn api_post_category(new_category: Json<NewCategory>) -> Result<Value,
     let ret_value = insert_new_category(connection, &new_category);
 
     if let Ok(val) = ret_value {
+        // Log the category creation via API
+        if let Ok(new_values) = crate::logger::Logger::to_json_value(&*new_category) {
+            let _ = crate::logger::Logger::log_create(
+                connection,
+                0, // API user ID (system)
+                crate::models::EntityType::Category,
+                val,
+                Some(new_category.project_id),
+                new_values,
+                Some(format!("Created category via API: {}", new_category.cat_title)),
+                None,
+            );
+        }
         Ok(json!({ "status": "ok", "id": val }))
     } else {
         Err(rocket::http::Status::BadRequest)
@@ -343,10 +416,27 @@ pub async fn api_put_category(ident: i32, category: Json<NewCategory>) -> Result
 #[delete("/categories/<ident>")]
 pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
     let connection = &mut establish_connection();
+    
+    // Get the category details before deleting
+    let category = get_category_by_id(ident);
+    
     let ret_value = delete_category(connection, &ident);
 
     if let Ok(val) = ret_value {
         if val {
+            // Log the category deletion via API
+            if let Ok(old_values) = crate::logger::Logger::to_json_value(&category) {
+                let _ = crate::logger::Logger::log_delete(
+                    connection,
+                    0, // API user ID (system)
+                    crate::models::EntityType::Category,
+                    ident,
+                    Some(category.project_id),
+                    old_values,
+                    Some(format!("Deleted category via API: {}", category.cat_title)),
+                    None,
+                );
+            }
             rocket::http::Status::NoContent
         } else {
             rocket::http::Status::NotFound
@@ -391,6 +481,19 @@ pub async fn api_post_applicability(new_applicability: Json<NewApplicability>) -
     let ret_value = insert_new_applicability(connection, &new_applicability);
 
     if let Ok(val) = ret_value {
+        // Log the applicability creation via API
+        if let Ok(new_values) = crate::logger::Logger::to_json_value(&*new_applicability) {
+            let _ = crate::logger::Logger::log_create(
+                connection,
+                0, // API user ID (system)
+                crate::models::EntityType::Applicability,
+                val,
+                Some(new_applicability.project_id),
+                new_values,
+                Some(format!("Created applicability via API: {}", new_applicability.app_title)),
+                None,
+            );
+        }
         Ok(json!({ "status": "ok", "id": val }))
     } else {
         Err(rocket::http::Status::BadRequest)
@@ -420,10 +523,27 @@ pub async fn api_put_applicability(ident: i32, applicability: Json<NewApplicabil
 #[delete("/applicability/<ident>")]
 pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status {
     let connection = &mut establish_connection();
+    
+    // Get the applicability details before deleting
+    let applicability = get_applicability_by_id(ident);
+    
     let ret_value = delete_applicability(connection, &ident);
 
     if let Ok(val) = ret_value {
         if val {
+            // Log the applicability deletion via API
+            if let Ok(old_values) = crate::logger::Logger::to_json_value(&applicability) {
+                let _ = crate::logger::Logger::log_delete(
+                    connection,
+                    0, // API user ID (system)
+                    crate::models::EntityType::Applicability,
+                    ident,
+                    Some(applicability.project_id),
+                    old_values,
+                    Some(format!("Deleted applicability via API: {}", applicability.app_title)),
+                    None,
+                );
+            }
             rocket::http::Status::NoContent
         } else {
             rocket::http::Status::NotFound

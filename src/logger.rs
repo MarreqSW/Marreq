@@ -4,6 +4,7 @@ use diesel::prelude::*;
 use diesel::PgConnection;
 use rocket::request::Request;
 use serde_json::Value;
+use serde::Serialize;
 
 pub struct Logger;
 
@@ -312,5 +313,37 @@ impl Logger {
             ActionType::Import => format!("Imported {}", entity_type.to_string().to_lowercase()),
             ActionType::StatusChange => format!("Changed status of {}", entity_type.to_string().to_lowercase()),
         }
+    }
+    
+    /// Clean up old logs based on retention policy
+    /// Deletes logs older than the specified number of days
+    pub fn cleanup_old_logs(conn: &mut PgConnection, days_to_keep: i64) -> Result<usize, diesel::result::Error> {
+        use crate::schema::logs::dsl::*;
+        use chrono::{Duration, Utc};
+        
+        let cutoff_date = Utc::now() - Duration::days(days_to_keep);
+        let cutoff_timestamp = cutoff_date.timestamp();
+        
+        let deleted_count = diesel::delete(
+            logs.filter(created_at.lt(cutoff_timestamp))
+        ).execute(conn)?;
+        
+        Ok(deleted_count)
+    }
+    
+    /// Get basic log count for analytics
+    pub fn get_log_count(conn: &mut PgConnection, days: i64) -> Result<i64, diesel::result::Error> {
+        use crate::schema::logs::dsl::*;
+        use chrono::{Duration, Utc};
+        
+        let cutoff_date = Utc::now() - Duration::days(days);
+        let cutoff_timestamp = cutoff_date.timestamp();
+        
+        let total_logs: i64 = logs
+            .filter(created_at.gte(cutoff_timestamp))
+            .count()
+            .get_result(conn)?;
+        
+        Ok(total_logs)
     }
 } 

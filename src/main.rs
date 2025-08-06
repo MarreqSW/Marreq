@@ -41,6 +41,7 @@ async fn main() -> Result<(), rocket::Error> {
                 get_edit_requirement,
                 post_edit_requirement,
                 post_requirement,
+                delete_requirement_route,
                 new_test,
                 get_edit_test,
                 post_edit_test,
@@ -86,6 +87,10 @@ async fn main() -> Result<(), rocket::Error> {
                 generate_backup,
                 show_logs,
                 show_entity_logs,
+                export_logs,
+                export_entity_logs,
+                cleanup_logs,
+                log_analytics,
             ],
         )
         .mount(

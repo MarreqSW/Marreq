@@ -27,8 +27,16 @@
           <small class="text-secondary">A short identifier for the category</small>
         </div>
 
+        {{#if selected_project_id}}
+        <input type="hidden" name="project_id" value="{{selected_project_id}}">
+        {{else}}
+        <div class="alert alert-warning">
+          <strong>Warning:</strong> No project selected. Please select a project from the dropdown above before creating a category.
+        </div>
+        {{/if}}
+
         <div class="mt-4">
-          <button type="submit" class="btn btn-primary">Create Category</button>
+          <button type="submit" class="btn btn-primary" {{#unless selected_project_id}}disabled{{/unless}}>Create Category</button>
           <a href="/categories" class="btn btn-outline">Cancel</a>
         </div>
       </form>

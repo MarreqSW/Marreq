@@ -608,7 +608,22 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let _user = require_auth(cookies)?;
     let connection = &mut establish_connection();
-    let my_id = insert_new_requirement(connection, &new_req).unwrap();
+    
+    // Generate automatic reference code if not provided
+    let mut requirement_data = new_req.into_inner();
+    if requirement_data.req_reference.is_empty() {
+        match generate_requirement_reference(requirement_data.req_category, requirement_data.project_id) {
+            Ok(reference) => {
+                requirement_data.req_reference = reference;
+            }
+            Err(_e) => {
+                // If generation fails, use a fallback reference
+                requirement_data.req_reference = format!("REQ-UNKNOWN-{}", chrono::Utc::now().timestamp());
+            }
+        }
+    }
+    
+    let my_id = insert_new_requirement(connection, &requirement_data).unwrap();
 
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }

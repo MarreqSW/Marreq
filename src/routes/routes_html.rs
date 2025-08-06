@@ -559,6 +559,7 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         "users": users_json, 
         "verification": verification_json, 
         "applicability": applicability_json,
+        "selected_project_id": selected_project_id.unwrap_or(1),
         "user": user
     });
 

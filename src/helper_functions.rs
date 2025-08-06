@@ -213,6 +213,7 @@ pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement
             req_update_date: r.req_update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
             req_deadline_date: r.req_deadline_date.format("%d-%m-%Y %H:%M:%S").to_string(),
             req_justification: r.req_justification,
+            project_id: r.project_id,
         };
         result.push(a);
     }

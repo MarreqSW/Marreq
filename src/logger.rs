@@ -3,8 +3,8 @@ use crate::schema::logs;
 use diesel::prelude::*;
 use diesel::PgConnection;
 use rocket::request::Request;
-use serde_json::Value;
-use serde::Serialize;
+
+
 
 pub struct Logger;
 
@@ -17,8 +17,8 @@ impl Logger {
         entity_type: EntityType,
         entity_id: Option<i32>,
         project_id: Option<i32>,
-        old_values: Option<Value>,
-        new_values: Option<Value>,
+        old_values: Option<String>,
+        new_values: Option<String>,
         description: Option<String>,
         request: Option<&Request<'_>>,
     ) -> Result<(), diesel::result::Error> {
@@ -26,7 +26,8 @@ impl Logger {
             req.headers()
                 .get_one("X-Real-IP")
                 .or_else(|| req.headers().get_one("X-Forwarded-For"))
-                .or_else(|| req.remote().map(|addr| addr.ip().to_string().as_str()))
+                .map(|s| s.to_string())
+                .or_else(|| req.remote().map(|addr| addr.ip().to_string()))
         });
 
         let user_agent = request
@@ -59,7 +60,7 @@ impl Logger {
         entity_type: EntityType,
         entity_id: i32,
         project_id: Option<i32>,
-        new_values: Value,
+        new_values: String,
         description: Option<String>,
         request: Option<&Request<'_>>,
     ) -> Result<(), diesel::result::Error> {
@@ -84,8 +85,8 @@ impl Logger {
         entity_type: EntityType,
         entity_id: i32,
         project_id: Option<i32>,
-        old_values: Value,
-        new_values: Value,
+        old_values: String,
+        new_values: String,
         description: Option<String>,
         request: Option<&Request<'_>>,
     ) -> Result<(), diesel::result::Error> {
@@ -110,7 +111,7 @@ impl Logger {
         entity_type: EntityType,
         entity_id: i32,
         project_id: Option<i32>,
-        old_values: Value,
+        old_values: String,
         description: Option<String>,
         request: Option<&Request<'_>>,
     ) -> Result<(), diesel::result::Error> {
@@ -297,12 +298,12 @@ impl Logger {
     }
 
     /// Convert a struct to JSON Value for logging
-    pub fn to_json_value<T: serde::Serialize>(value: &T) -> Result<Value, serde_json::Error> {
-        serde_json::to_value(value)
+    pub fn to_json_string<T: serde::Serialize>(value: &T) -> Result<String, serde_json::Error> {
+        serde_json::to_string(value)
     }
 
     /// Create a description for common actions
-    pub fn create_description(action_type: ActionType, entity_type: EntityType, entity_id: Option<i32>) -> String {
+    pub fn create_description(action_type: ActionType, entity_type: EntityType, _entity_id: Option<i32>) -> String {
         match action_type {
             ActionType::Create => format!("Created new {}", entity_type.to_string().to_lowercase()),
             ActionType::Update => format!("Updated {}", entity_type.to_string().to_lowercase()),
@@ -325,7 +326,7 @@ impl Logger {
         let cutoff_timestamp = cutoff_date.timestamp();
         
         let deleted_count = diesel::delete(
-            logs.filter(created_at.lt(cutoff_timestamp))
+            logs.filter(created_at.lt(chrono::NaiveDateTime::from_timestamp_opt(cutoff_timestamp, 0).unwrap_or_default()))
         ).execute(conn)?;
         
         Ok(deleted_count)
@@ -340,7 +341,7 @@ impl Logger {
         let cutoff_timestamp = cutoff_date.timestamp();
         
         let total_logs: i64 = logs
-            .filter(created_at.gte(cutoff_timestamp))
+            .filter(created_at.ge(chrono::NaiveDateTime::from_timestamp_opt(cutoff_timestamp, 0).unwrap_or_default()))
             .count()
             .get_result(conn)?;
         

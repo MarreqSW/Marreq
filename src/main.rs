@@ -7,6 +7,7 @@ pub mod bbdd;
 pub mod generators;
 pub mod helper_functions;
 pub mod html;
+pub mod importers;
 pub mod models;
 pub mod routes;
 pub mod schema;
@@ -75,6 +76,9 @@ async fn main() -> Result<(), rocket::Error> {
                 get_edit_project,
                 post_edit_project,
                 delete_project_route,
+                import_excel_page,
+                upload_excel_file,
+                process_excel_import,
             ],
         )
         .mount(

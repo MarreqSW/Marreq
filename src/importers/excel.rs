@@ -1,4 +1,4 @@
-use calamine::{open_workbook, DataType, Reader, Xlsx};
+use calamine::{open_workbook, Reader, Xlsx};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
@@ -48,6 +48,7 @@ impl ExcelImporter {
         // Get the first sheet
         let sheet_name = workbook.sheet_names()[0].clone();
         let range = workbook.worksheet_range(&sheet_name)
+            .ok_or_else(|| anyhow!("Sheet not found: {}", sheet_name))?
             .map_err(|e| anyhow!("Failed to read sheet: {}", e))?;
         
         let mut columns = Vec::new();

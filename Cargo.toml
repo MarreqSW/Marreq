@@ -23,6 +23,7 @@ xlsxwriter = "0.6.1"
 wkhtmltopdf = "0.4"
 calamine = "0.22"
 anyhow = "1.0"
+regex = "1.10"
 
 # [dependencies.rocket_db_pools]
 # version = "0.1.0-rc.2"

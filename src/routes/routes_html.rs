@@ -1108,13 +1108,7 @@ pub fn show_categories(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
-    
-    let ctx = json!({
-        "user": user,
-        "selected_project_id": selected_project_id
-    });
+    let ctx = build_context_with_projects(user, cookies);
     Ok(Template::render("new_category", ctx))
 }
 
@@ -1243,13 +1237,7 @@ pub fn show_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect>
 pub fn new_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
-    
-    let ctx = json!({
-        "user": user,
-        "selected_project_id": selected_project_id
-    });
+    let ctx = build_context_with_projects(user, cookies);
     Ok(Template::render("new_applicability", ctx))
 }
 

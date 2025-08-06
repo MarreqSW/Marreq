@@ -1,5 +1,5 @@
 [default.databases.my_db]
-url = "postgres://rust:rust@127.0.0.1:5432/rust"
+url = "postgres://rust:rust@127.0.0.1:5432/reqman"
 
 [release]
 secret_key = "8XuiJDYi9m8KbwspBnjctshHtRnhMxTqc6QQGJ7asJE="

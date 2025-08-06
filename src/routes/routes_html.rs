@@ -1866,21 +1866,22 @@ pub fn process_excel_import(
             Redirect::to(uri!(import_excel_page))
         })?;
     
-    // Create import configuration
-    let config = crate::importers::excel::ImportConfig {
-        temp_file: mapping_data.temp_file.clone(),
-        import_type: mapping_data.import_type.clone(),
-        column_mappings,
-    };
-    
     // Create importer and import data
-    let importer = crate::importers::excel::ExcelImporter::new(&config.temp_file)
+    let importer = crate::importers::excel::ExcelImporter::new(&mapping_data.temp_file)
         .map_err(|e| {
             eprintln!("Excel importer creation error: {}", e);
             Redirect::to(uri!(import_excel_page))
         })?;
     
-    let result = importer.import_data(&config);
+    // Create import configuration
+    let config = crate::importers::excel::ImportConfig {
+        import_type: mapping_data.import_type.clone(),
+        column_mappings,
+        project_id: 1, // Default project ID - you might want to get this from user context
+    };
+    
+    let connection = &mut establish_connection();
+    let result = importer.import_data(&config, connection);
     
     eprintln!("Import result: {:?}", result);
     
@@ -2016,5 +2017,88 @@ pub fn admin_users_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     });
     
     Ok(Template::render("admin/users", context))
+}
+
+// Backup Routes
+#[get("/admin/backup")]
+pub fn admin_backup_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+    
+    let context = json!({
+        "user": user,
+        "title": "Database Backup"
+    });
+    
+    Ok(Template::render("admin/backup", context))
+}
+
+#[post("/admin/backup/generate/<filename>")]
+pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Result<(ContentType, NamedFile), Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(admin_backup_page)));
+    }
+    
+    // Use the filename from the URL parameter
+    let filename = if filename.ends_with(".sql") {
+        filename
+    } else {
+        format!("{}.sql", filename)
+    };
+    
+    // Create backup directory if it doesn't exist
+    let backup_dir = "backups";
+    if !std::path::Path::new(backup_dir).exists() {
+        std::fs::create_dir(backup_dir).map_err(|_| Redirect::to(uri!(admin_backup_page)))?;
+    }
+    
+    let backup_path = format!("{}/{}", backup_dir, filename);
+    
+    // Set environment variable for password
+    std::env::set_var("PGPASSWORD", password);
+    
+    // Execute pg_dump command
+    let output = std::process::Command::new("pg_dump")
+        .args(&[
+            "-h", host,
+            "-p", port,
+            "-U", username,
+            "-d", database,
+            "-f", &backup_path,
+            "--no-password"
+        ])
+        .output();
+    
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                // Return the backup file for download
+                let file = NamedFile::open(&backup_path)
+                    .await
+                    .map_err(|_| Redirect::to(uri!(admin_backup_page)))?;
+                
+                let content_type = ContentType::new("application", "sql");
+                Ok((content_type, file))
+            } else {
+                // If backup failed, redirect to backup page with error
+                Err(Redirect::to(uri!(admin_backup_page)))
+            }
+        }
+        Err(_) => {
+            // If command failed, redirect to backup page with error
+            Err(Redirect::to(uri!(admin_backup_page)))
+        }
+    }
 }
 

@@ -18,8 +18,10 @@
           </div>
           
           <div class="form-group">
-            <label for="req_reference" class="form-label">Reference</label>
-            <input type="text" name="req_reference" id="req_reference" value="{{req_reference}}" class="form-control">
+            <label for="req_reference" class="form-label">Reference (Optional)</label>
+            <input type="text" name="req_reference" id="req_reference" value="{{req_reference}}" class="form-control" placeholder="Will be auto-generated if left empty">
+            <small class="text-secondary">Leave empty to auto-generate reference based on category (e.g., REQ-PTP-1)</small>
+            <div id="reference-error" class="text-danger" style="display: none;"></div>
           </div>
         </div>
 
@@ -60,11 +62,7 @@
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="req_reference" class="form-label">Reference (Optional)</label>
-            <input type="text" name="req_reference" id="req_reference" value="{{req_reference}}" class="form-control" placeholder="Will be auto-generated if left empty">
-            <small class="text-secondary">Leave empty to auto-generate reference based on category (e.g., REQ-PTP-1)</small>
-          </div>
+
 
           <div class="form-group">
             <label for="req_applicability" class="form-label">Applicability</label>
@@ -124,5 +122,73 @@
     </div>
   </div>
 </section>
+
+<script>
+// Category data for validation
+const categoryData = [
+  {{#each categories}}
+    { id: {{cat_id}}, tag: "{{cat_tag}}" },
+  {{/each}}
+];
+
+// Reference validation function
+function validateReference() {
+  const referenceInput = document.getElementById('req_reference');
+  const categorySelect = document.getElementById('req_category');
+  const errorDiv = document.getElementById('reference-error');
+  const submitButton = document.querySelector('button[type="submit"]');
+  
+  const reference = referenceInput.value.trim();
+  const categoryId = parseInt(categorySelect.value);
+  
+  // Clear previous error
+  errorDiv.style.display = 'none';
+  errorDiv.textContent = '';
+  submitButton.disabled = false;
+  
+  // If reference is empty, it's valid (will be auto-generated)
+  if (reference === '') {
+    return true;
+  }
+  
+  // Find the selected category
+  const selectedCategory = categoryData.find(cat => cat.id === categoryId);
+  if (!selectedCategory) {
+    return true; // Can't validate without category
+  }
+  
+  // Check if reference starts with the correct prefix
+  const expectedPrefix = `REQ-${selectedCategory.tag}-`;
+  if (!reference.startsWith(expectedPrefix)) {
+    errorDiv.textContent = `Reference must start with "${expectedPrefix}" for the selected category.`;
+    errorDiv.style.display = 'block';
+    submitButton.disabled = true;
+    return false;
+  }
+  
+  // Check if reference follows the correct format (REQ-TAG-NUMBER)
+  const referencePattern = new RegExp(`^REQ-${selectedCategory.tag}-\\d+$`);
+  if (!referencePattern.test(reference)) {
+    errorDiv.textContent = `Reference must follow the format "REQ-${selectedCategory.tag}-NUMBER" (e.g., REQ-${selectedCategory.tag}-1).`;
+    errorDiv.style.display = 'block';
+    submitButton.disabled = true;
+    return false;
+  }
+  
+  return true;
+}
+
+// Add event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  const referenceInput = document.getElementById('req_reference');
+  const categorySelect = document.getElementById('req_category');
+  
+  referenceInput.addEventListener('input', validateReference);
+  categorySelect.addEventListener('change', validateReference);
+  
+  // Initial validation
+  validateReference();
+});
+</script>
 {{/inline}}
 {{> layout}}

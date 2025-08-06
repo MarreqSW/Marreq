@@ -8,6 +8,7 @@ pub mod generators;
 pub mod helper_functions;
 pub mod html;
 pub mod importers;
+pub mod logger;
 pub mod models;
 pub mod routes;
 pub mod schema;
@@ -83,6 +84,8 @@ async fn main() -> Result<(), rocket::Error> {
                 admin_users_page,
                 admin_backup_page,
                 generate_backup,
+                show_logs,
+                show_entity_logs,
             ],
         )
         .mount(

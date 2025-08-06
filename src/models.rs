@@ -415,3 +415,92 @@ pub struct ImportMappingForm {
     pub import_type: String,
     pub temp_file: String,
 }
+
+// Logging models
+#[derive(Queryable, Serialize, Deserialize, Debug)]
+pub struct Log {
+    pub log_id: i32,
+    pub user_id: i32,
+    pub action_type: String,
+    pub entity_type: String,
+    pub entity_id: Option<i32>,
+    pub project_id: Option<i32>,
+    pub old_values: Option<serde_json::Value>,
+    pub new_values: Option<serde_json::Value>,
+    pub description: Option<String>,
+    pub ip_address: Option<String>,
+    pub user_agent: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Insertable, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = crate::schema::logs)]
+pub struct NewLog {
+    pub user_id: i32,
+    pub action_type: String,
+    pub entity_type: String,
+    pub entity_id: Option<i32>,
+    pub project_id: Option<i32>,
+    pub old_values: Option<serde_json::Value>,
+    pub new_values: Option<serde_json::Value>,
+    pub description: Option<String>,
+    pub ip_address: Option<String>,
+    pub user_agent: Option<String>,
+}
+
+// Logging action types
+#[derive(Debug, Clone, Copy)]
+pub enum ActionType {
+    Create,
+    Update,
+    Delete,
+    Login,
+    Logout,
+    Export,
+    Import,
+    StatusChange,
+}
+
+impl std::fmt::Display for ActionType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ActionType::Create => write!(f, "CREATE"),
+            ActionType::Update => write!(f, "UPDATE"),
+            ActionType::Delete => write!(f, "DELETE"),
+            ActionType::Login => write!(f, "LOGIN"),
+            ActionType::Logout => write!(f, "LOGOUT"),
+            ActionType::Export => write!(f, "EXPORT"),
+            ActionType::Import => write!(f, "IMPORT"),
+            ActionType::StatusChange => write!(f, "STATUS_CHANGE"),
+        }
+    }
+}
+
+// Entity types
+#[derive(Debug, Clone, Copy)]
+pub enum EntityType {
+    Project,
+    Requirement,
+    Test,
+    Category,
+    Applicability,
+    User,
+    Matrix,
+    Verification,
+}
+
+impl std::fmt::Display for EntityType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EntityType::Project => write!(f, "PROJECT"),
+            EntityType::Requirement => write!(f, "REQUIREMENT"),
+            EntityType::Test => write!(f, "TEST"),
+            EntityType::Category => write!(f, "CATEGORY"),
+            EntityType::Applicability => write!(f, "APPLICABILITY"),
+            EntityType::User => write!(f, "USER"),
+            EntityType::Matrix => write!(f, "MATRIX"),
+            EntityType::Verification => write!(f, "VERIFICATION"),
+        }
+    }
+}

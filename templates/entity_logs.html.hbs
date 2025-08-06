@@ -1,0 +1,139 @@
+{{> layout}}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Logs for {{entity_type}} #{{entity_id}}</h1>
+                <div>
+                    <a href="/logs" class="btn btn-secondary">Back to Logs</a>
+                    <a href="/admin" class="btn btn-outline-secondary">Admin</a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Activity History</h5>
+                </div>
+                <div class="card-body">
+                    {{#if logs}}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>User</th>
+                                        <th>Action</th>
+                                        <th>Description</th>
+                                        <th>IP Address</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{#each logs}}
+                                    <tr>
+                                        <td>{{format_datetime created_at}}</td>
+                                        <td>{{user_id}}</td>
+                                        <td>
+                                            <span class="badge bg-{{get_action_color action_type}}">
+                                                {{action_type}}
+                                            </span>
+                                        </td>
+                                        <td>{{description}}</td>
+                                        <td>
+                                            <small class="text-muted">{{ip_address}}</small>
+                                        </td>
+                                        <td>
+                                            {{#if old_values}}
+                                                <button class="btn btn-sm btn-outline-info" 
+                                                        onclick="showChanges('{{log_id}}')">
+                                                    View Changes
+                                                </button>
+                                            {{/if}}
+                                        </td>
+                                    </tr>
+                                    {{/each}}
+                                </tbody>
+                            </table>
+                        </div>
+                    {{else}}
+                        <div class="text-center text-muted">
+                            <p>No logs found for this entity.</p>
+                        </div>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for showing changes -->
+<div class="modal fade" id="changesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Changes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="changesContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Helper function to format datetime
+function format_datetime(datetime_str) {
+    const date = new Date(datetime_str);
+    return date.toLocaleString();
+}
+
+// Helper function to get action color
+function get_action_color(action_type) {
+    switch(action_type) {
+        case 'CREATE': return 'success';
+        case 'UPDATE': return 'primary';
+        case 'DELETE': return 'danger';
+        case 'LOGIN': return 'info';
+        case 'LOGOUT': return 'secondary';
+        case 'EXPORT': return 'warning';
+        case 'IMPORT': return 'warning';
+        case 'STATUS_CHANGE': return 'info';
+        default: return 'secondary';
+    }
+}
+
+// Show changes in modal
+function showChanges(logId) {
+    // This would typically make an AJAX call to get the detailed changes
+    // For now, we'll show a placeholder
+    document.getElementById('changesContent').innerHTML = `
+        <div class="row">
+            <div class="col-6">
+                <h6>Old Values</h6>
+                <pre class="bg-light p-2 rounded"><code>Loading...</code></pre>
+            </div>
+            <div class="col-6">
+                <h6>New Values</h6>
+                <pre class="bg-light p-2 rounded"><code>Loading...</code></pre>
+            </div>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('changesModal'));
+    modal.show();
+}
+
+// Apply formatting to all rows
+document.addEventListener('DOMContentLoaded', function() {
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const actionCell = row.querySelector('td:nth-child(3) .badge');
+        if (actionCell) {
+            const actionType = actionCell.textContent.trim();
+            actionCell.className = `badge bg-${get_action_color(actionType)}`;
+        }
+    });
+});
+</script> 

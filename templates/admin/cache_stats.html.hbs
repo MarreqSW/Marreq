@@ -1,0 +1,219 @@
+{{#extend "layout"}}
+{{#content "title"}}Cache Statistics{{/content}}
+
+{{#content "content"}}
+<div class="container mt-4">
+    <h1>Cache Statistics</h1>
+    
+    {{#if message}}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        {{message}}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {{/if}}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Cache Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h3 class="text-primary">{{stats.total_entries}}</h3>
+                                <small class="text-muted">Total Entries</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h3 class="text-success">{{stats.active_entries}}</h3>
+                                <small class="text-muted">Active Entries</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h3 class="text-warning">{{stats.expired_entries}}</h3>
+                                <small class="text-muted">Expired Entries</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <h3 class="text-info">{{cleaned_entries}}</h3>
+                                <small class="text-muted">Just Cleaned</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Cache Actions</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="/admin/cache/cleanup" class="d-inline">
+                        <button type="submit" class="btn btn-warning me-2">
+                            <i class="fas fa-broom"></i> Cleanup Expired
+                        </button>
+                    </form>
+                    
+                    <form method="POST" action="/admin/cache/clear" class="d-inline" 
+                          onsubmit="return confirm('Are you sure you want to clear all cache entries? This will temporarily slow down the application until cache is rebuilt.')">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Clear All Cache
+                        </button>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="refreshStats()">
+                            <i class="fas fa-sync-alt"></i> Refresh Statistics
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Performance Metrics Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Performance Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-success">{{performance.hit_rate_percentage}}%</h4>
+                                <small class="text-muted">Hit Rate</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-info">{{performance.total_requests}}</h4>
+                                <small class="text-muted">Total Requests</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-primary">{{performance.average_access_time_ms}}ms</h4>
+                                <small class="text-muted">Avg Access Time</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-warning">{{performance.memory_usage_mb}}MB</h4>
+                                <small class="text-muted">Memory Usage</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <h5 class="text-secondary">{{performance.cache_efficiency}}%</h5>
+                                <small class="text-muted">Cache Efficiency</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <h5 class="text-secondary">{{performance.expired_entries_percentage}}%</h5>
+                                <small class="text-muted">Expired Entries %</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recommendations Section -->
+    {{#if recommendations.recommendations}}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        Optimization Recommendations
+                        <span class="badge bg-{{#if (eq recommendations.priority "high")}}danger{{else if (eq recommendations.priority "medium")}}warning{{else}}success{{/if}} float-end">
+                            {{recommendations.priority}}
+                        </span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {{#each recommendations.recommendations}}
+                        <li class="list-group-item">
+                            <i class="fas fa-lightbulb text-warning me-2"></i>
+                            {{this}}
+                        </li>
+                        {{/each}}
+                    </ul>
+                    <small class="text-muted mt-2 d-block">
+                        Analysis performed at: {{recommendations.analysis_timestamp}}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{/if}}
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Cache Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Cache Types</h6>
+                            <ul class="list-unstyled">
+                                <li><strong>Projects Navigation:</strong> 10 minutes TTL</li>
+                                <li><strong>Status Data:</strong> 15 minutes TTL</li>
+                                <li><strong>Categories:</strong> 10 minutes TTL</li>
+                                <li><strong>Applicability:</strong> 10 minutes TTL</li>
+                                <li><strong>Verification:</strong> 10 minutes TTL</li>
+                                <li><strong>Users:</strong> 10 minutes TTL</li>
+                                <li><strong>Requirements:</strong> 5 minutes TTL</li>
+                                <li><strong>Tests:</strong> 5 minutes TTL</li>
+                                <li><strong>Matrix Data:</strong> 2 minutes TTL</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Performance Tips</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>Cache is automatically cleaned every 5 minutes</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Frequently accessed data is pre-warmed</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Expired entries are automatically removed</li>
+                                <li><i class="fas fa-info text-info me-2"></i>Hit rate above 70% indicates good performance</li>
+                                <li><i class="fas fa-info text-info me-2"></i>Memory usage is automatically monitored</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshStats() {
+    location.reload();
+}
+
+// Auto-refresh every 30 seconds
+setTimeout(function() {
+    refreshStats();
+}, 30000);
+</script>
+{{/content}}
+{{/extend}}

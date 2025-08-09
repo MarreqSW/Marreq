@@ -629,6 +629,12 @@ pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<
     // Get the requirement details before deleting
     let requirement = get_requirement_by_id(req_id);
     
+    // Check if user can delete this requirement
+    // Only allow deletion if status is Draft (1) or Proposal (2), or if user is admin
+    if requirement.req_current_status > 2 && !user.is_admin {
+        return Ok(rocket::http::Status::Forbidden);
+    }
+    
     let result = delete_requirement(connection, &req_id);
     match result {
         Ok(_) => {
@@ -648,6 +654,50 @@ pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<
             
             // Invalidate related caches
             crate::cached_functions::invalidate_requirement_cache_complete(req_id);
+            
+            Ok(rocket::http::Status::Ok)
+        },
+        Err(_e) => {
+            #[cfg(debug_assertions)]
+            println!("Error.*: {:?}", _e);
+            Ok(rocket::http::Status::InternalServerError)
+        }
+    }
+}
+
+#[delete("/delete_test/<test_id>")]
+pub fn delete_test_route(test_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
+    let user = require_auth(cookies)?;
+    let connection = &mut get_connection_pooled_safe();
+    
+    // Get the test details before deleting
+    let test = get_test_by_id(test_id);
+    
+    // Check if user can delete this test
+    // Only allow deletion if status is Draft (1) or Proposal (2), or if user is admin
+    if test.test_status > 2 && !user.is_admin {
+        return Ok(rocket::http::Status::Forbidden);
+    }
+    
+    let result = delete_test(connection, &test_id);
+    match result {
+        Ok(_) => {
+            // Log the test deletion
+            if let Ok(old_values) = Logger::to_json_string(&test) {
+                let _ = Logger::log_delete(
+                    connection,
+                    user.user_id,
+                    EntityType::Test,
+                    test_id,
+                    Some(test.project_id),
+                    Some(old_values),
+                    Some(format!("Deleted test: {}", test.test_name)),
+                    None,
+                );
+            }
+            
+            // Invalidate related caches
+            crate::cached_functions::invalidate_test_cache_complete(test_id);
             
             Ok(rocket::http::Status::Ok)
         },

@@ -69,7 +69,7 @@ INSERT INTO requirements (req_title, req_description, req_reference, req_categor
 
 -- Propulsion Requirements
 ('REQ-PROP-001', 'The propulsion system shall provide delta-V capability of 500 m/s', 'Sufficient delta-V is required for orbit maintenance, collision avoidance, and end-of-life disposal.', 6, 1, 2, 1, 1, 2, 0, '', '2024-01-20', '2024-01-20', '2024-09-15'),
-('REQ-PROP-002', 'The thrusters shall provide minimum thrust of 1N for attitude control', 'Adequate thrust is required for attitude control during various mission phases.', 6, 1, 2, 1, 1, 2, 0, '', '2024-01-20', '2024-01-22', '2024-09-30'),
+('REQ-PROP-002', 'Adequate thrust is required for attitude control during various mission phases.', 'The thrusters shall provide minimum thrust of 1N for attitude control', 6, 1, 2, 1, 1, 2, 0, '', '2024-01-20', '2024-01-22', '2024-09-30'),
 ('REQ-PROP-003', 'The propulsion system shall use non-toxic propellants', 'Safety requirements mandate the use of non-toxic propellants for ground handling and launch operations.', 6, 1, 2, 1, 1, 2, 0, '', '2024-01-20', '2024-01-24', '2024-10-15'),
 
 -- Structure Requirements

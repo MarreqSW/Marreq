@@ -353,20 +353,36 @@ pub fn show_requirements(
 #[get("/requirements/<req_id>")]
 pub fn show_requirement_id(req_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let req = get_requirement_by_id_cached(req_id);
-    let req_decorate = decorate_requirements(vec![req]);
+    
+    // Use the safe function that returns a Result
+    match get_requirement_by_id_cached_safe(req_id) {
+        Ok(req) => {
+            let req_decorate = decorate_requirements(vec![req]);
 
-    // Get linked tests for this requirement
-    let linked_tests = get_linked_tests_for_requirement_cached(req_id).unwrap_or_default();
-    let linked_tests_json = json!(linked_tests);
+            // Get linked tests for this requirement
+            let linked_tests = get_linked_tests_for_requirement_cached(req_id).unwrap_or_default();
+            let linked_tests_json = json!(linked_tests);
 
-    let ctx = json!({
-        "requirements": req_decorate,
-        "linked_tests": linked_tests_json,
-        "user": user
-    });
+            let ctx = json!({
+                "requirements": req_decorate,
+                "linked_tests": linked_tests_json,
+                "user": user
+            });
 
-    Ok(Template::render("requirement_by_id", ctx))
+            Ok(Template::render("requirement_by_id", ctx))
+        },
+        Err(error_msg) => {
+            // Render error template instead of panicking
+            let ctx = json!({
+                "title": "Requirement Not Found",
+                "message": "The requirement you're looking for could not be found.",
+                "details": error_msg,
+                "user": user
+            });
+            
+            Ok(Template::render("error", ctx))
+        }
+    }
 }
 
 #[get("/users")]
@@ -472,7 +488,23 @@ pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &Cooki
 #[get("/edit_requirement/<req_id>")]
 pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let req = get_requirement_by_id(req_id);
+    
+    // Use the safe function that returns a Result
+    let req = match get_requirement_by_id_safe(req_id) {
+        Ok(req) => req,
+        Err(error_msg) => {
+            // Render error template instead of panicking
+            let ctx = json!({
+                "title": "Requirement Not Found",
+                "message": "The requirement you're trying to edit could not be found.",
+                "details": error_msg,
+                "user": user
+            });
+            
+            return Ok(Template::render("error", ctx));
+        }
+    };
+    
     let req_decorate = decorate_requirements(vec![req.clone()]);
     let req_decorate_json = json!(req_decorate[0]);
 
@@ -593,7 +625,13 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
     let connection = &mut get_connection_pooled_safe();
     
     // Get the old values before updating
-    let old_requirement = get_requirement_by_id(req_id);
+    let old_requirement = match get_requirement_by_id_safe(req_id) {
+        Ok(req) => req,
+        Err(_) => {
+            // Requirement not found - redirect back to requirements list
+            return Err(Redirect::to(uri!(show_requirements(None::<i32>, None::<i32>, None::<i32>))));
+        }
+    };
     
     edit_requirement(connection, &requirement_data).unwrap();
 
@@ -622,89 +660,125 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
 }
 
 #[delete("/delete_requirement/<req_id>")]
-pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<Redirect, rocket::http::Status> {
+    let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
     let connection = &mut get_connection_pooled_safe();
     
     // Get the requirement details before deleting
-    let requirement = get_requirement_by_id(req_id);
+    let requirement = match get_requirement_by_id_safe(req_id) {
+        Ok(req) => req,
+        Err(_) => {
+            // Requirement not found
+            return Err(rocket::http::Status::NotFound);
+        }
+    };
     
     // Check if user can delete this requirement
     // Only allow deletion if status is Draft (1) or Proposal (2), or if user is admin
     if requirement.req_current_status > 2 && !user.is_admin {
-        return Ok(rocket::http::Status::Forbidden);
+        return Err(rocket::http::Status::Forbidden);
     }
     
     let result = delete_requirement(connection, &req_id);
     match result {
-        Ok(_) => {
-            // Log the requirement deletion
-            if let Ok(old_values) = Logger::to_json_string(&requirement) {
-                let _ = Logger::log_delete(
-                    connection,
-                    user.user_id,
-                    EntityType::Requirement,
-                    req_id,
-                    Some(requirement.project_id),
-                    Some(old_values),
-                    Some(format!("Deleted requirement: {}", requirement.req_title)),
-                    None,
-                );
+        Ok(success) => {
+            if success {
+                // Log the requirement deletion
+                if let Ok(old_values) = Logger::to_json_string(&requirement) {
+                    let _ = Logger::log_delete(
+                        connection,
+                        user.user_id,
+                        EntityType::Requirement,
+                        req_id,
+                        Some(requirement.project_id),
+                        Some(old_values),
+                        Some(format!("Deleted requirement: {}", requirement.req_title)),
+                        None,
+                    );
+                }
+                
+                // Invalidate related caches - including project-level caches
+                crate::cached_functions::invalidate_requirement_cache_complete(req_id);
+                
+                // Also invalidate project-specific caches for the requirement's project
+                crate::cached_functions::invalidate_project_cache_complete(requirement.project_id);
+                
+                // Invalidate the requirements list cache
+                crate::cache::get_cache().remove(crate::cache::keys::REQUIREMENTS_ALL);
+                
+                // Redirect to requirements list page
+                Ok(Redirect::to(uri!(show_requirements(None::<i32>, None::<i32>, None::<i32>))))
+            } else {
+                // Requirement was not found or not deleted
+                Err(rocket::http::Status::NotFound)
             }
-            
-            // Invalidate related caches
-            crate::cached_functions::invalidate_requirement_cache_complete(req_id);
-            
-            Ok(rocket::http::Status::Ok)
         },
         Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error.*: {:?}", _e);
-            Ok(rocket::http::Status::InternalServerError)
+            println!("Error deleting requirement: {:?}", _e);
+            Err(rocket::http::Status::InternalServerError)
         }
     }
 }
 
 #[delete("/delete_test/<test_id>")]
-pub fn delete_test_route(test_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn delete_test_route(test_id: i32, cookies: &CookieJar<'_>) -> Result<Redirect, rocket::http::Status> {
+    let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
     let connection = &mut get_connection_pooled_safe();
     
     // Get the test details before deleting
-    let test = get_test_by_id(test_id);
+    let test = match get_test_by_id_safe(test_id) {
+        Ok(t) => t,
+        Err(_) => {
+            // Test not found
+            return Err(rocket::http::Status::NotFound);
+        }
+    };
     
     // Check if user can delete this test
     // Only allow deletion if status is Draft (1) or Proposal (2), or if user is admin
     if test.test_status > 2 && !user.is_admin {
-        return Ok(rocket::http::Status::Forbidden);
+        return Err(rocket::http::Status::Forbidden);
     }
     
     let result = delete_test(connection, &test_id);
     match result {
-        Ok(_) => {
-            // Log the test deletion
-            if let Ok(old_values) = Logger::to_json_string(&test) {
-                let _ = Logger::log_delete(
-                    connection,
-                    user.user_id,
-                    EntityType::Test,
-                    test_id,
-                    Some(test.project_id),
-                    Some(old_values),
-                    Some(format!("Deleted test: {}", test.test_name)),
-                    None,
-                );
+        Ok(success) => {
+            if success {
+                // Log the test deletion
+                if let Ok(old_values) = Logger::to_json_string(&test) {
+                    let _ = Logger::log_delete(
+                        connection,
+                        user.user_id,
+                        EntityType::Test,
+                        test_id,
+                        Some(test.project_id),
+                        Some(old_values),
+                        Some(format!("Deleted test: {}", test.test_name)),
+                        None,
+                    );
+                }
+                
+                // Invalidate related caches - including project-level caches
+                crate::cached_functions::invalidate_test_cache_complete(test_id);
+                
+                // Also invalidate project-specific caches for the test's project
+                crate::cached_functions::invalidate_project_cache_complete(test.project_id);
+                
+                // Invalidate the tests list cache
+                crate::cache::get_cache().remove(crate::cache::keys::TESTS_ALL);
+                
+                // Redirect to tests list page
+                Ok(Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>))))
+            } else {
+                // Test was not found or not deleted
+                Err(rocket::http::Status::NotFound)
             }
-            
-            // Invalidate related caches
-            crate::cached_functions::invalidate_test_cache_complete(test_id);
-            
-            Ok(rocket::http::Status::Ok)
         },
         Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("Error.*: {:?}", _e);
-            Ok(rocket::http::Status::InternalServerError)
+            println!("Error deleting test: {:?}", _e);
+            Err(rocket::http::Status::InternalServerError)
         }
     }
 }
@@ -927,27 +1001,43 @@ pub fn show_tests(
 #[get("/tests/<test_id_param>")]
 pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let test = get_test_by_id(test_id_param);
-    let test_decorate = decorate_tests(vec![test]);
     
-    // Get linked requirements for this test
-    let linked_requirements = get_requirements_for_test(test_id_param).unwrap_or_default();
-    let linked_requirements_json = json!(linked_requirements);
-    
-    let decorated_test = &test_decorate[0];
-    let ctx = json!({
-        "test_id": decorated_test.test_id,
-        "test_name": decorated_test.test_name,
-        "test_description": decorated_test.test_description,
-        "test_source": decorated_test.test_source,
-        "test_status": decorated_test.test_status,
-        "test_parent_id": decorated_test.test_parent_id,
-        "test_parent_title": decorated_test.test_parent_title,
-        "linked_requirements": linked_requirements_json,
-        "user": user
-    });
+    // Use the safe function that returns a Result
+    match get_test_by_id_cached_safe(test_id_param) {
+        Ok(test) => {
+            let test_decorate = decorate_tests(vec![test]);
+            
+            // Get linked requirements for this test
+            let linked_requirements = get_requirements_for_test(test_id_param).unwrap_or_default();
+            let linked_requirements_json = json!(linked_requirements);
+            
+            let decorated_test = &test_decorate[0];
+            let ctx = json!({
+                "test_id": decorated_test.test_id,
+                "test_name": decorated_test.test_name,
+                "test_description": decorated_test.test_description,
+                "test_source": decorated_test.test_source,
+                "test_status": decorated_test.test_status,
+                "test_parent_id": decorated_test.test_parent_id,
+                "test_parent_title": decorated_test.test_parent_title,
+                "linked_requirements": linked_requirements_json,
+                "user": user
+            });
 
-    Ok(Template::render("test_by_id", ctx))
+            Ok(Template::render("test_by_id", ctx))
+        },
+        Err(error_msg) => {
+            // Render error template instead of panicking
+            let ctx = json!({
+                "title": "Test Not Found",
+                "message": "The test you're looking for could not be found.",
+                "details": error_msg,
+                "user": user
+            });
+            
+            Ok(Template::render("error", ctx))
+        }
+    }
 }
 
 #[get("/new_test")]

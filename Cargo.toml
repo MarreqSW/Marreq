@@ -38,3 +38,4 @@ features = ["diesel_postgres_pool"]
 #version = "0.1.0-rc.2"
 version = "0.2.0"
 features = ["handlebars"]
+

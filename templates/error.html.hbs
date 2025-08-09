@@ -1,0 +1,41 @@
+{{#*inline "page"}}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        {{#if title}}{{title}}{{else}}Error{{/if}}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-exclamation-circle text-danger" style="font-size: 4rem;"></i>
+                    </div>
+                    
+                    <h5 class="card-title text-center mb-3">{{#if message}}{{message}}{{else}}An error occurred while processing your request.{{/if}}</h5>
+                    
+                    {{#if details}}
+                    <div class="alert alert-info">
+                        <strong>Details:</strong> {{details}}
+                    </div>
+                    {{/if}}
+                    
+                    <div class="text-center mt-4">
+                        <a href="/" class="btn btn-primary me-2">
+                            <i class="fas fa-home"></i> Go to Home
+                        </a>
+                        <button onclick="history.back()" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Go Back
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{/inline}}
+{{> layout}}

@@ -225,6 +225,7 @@ pub struct DecoratedTest {
     pub test_status_id: i32,  // Add numeric status ID for access control
     pub test_parent_id: i32,
     pub test_parent_title: String,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]

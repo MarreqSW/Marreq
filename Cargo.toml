@@ -15,6 +15,7 @@ chrono = {version = "0.4.38", features = ["serde"] }
 serde = "1.0.209"
 serde_json = "1.0.127"
 serde_derive = "1.0.209"
+lazy_static = "1.4"
 rocket = {version = "0.5.1",  features = ["json", "secrets"]}
 bcrypt = "0.15"
 time = "0.3"

@@ -1684,6 +1684,7 @@ dependencies = [
  "chrono",
  "diesel",
  "dotenvy",
+ "lazy_static",
  "regex",
  "rocket",
  "rocket-multipart-form-data",

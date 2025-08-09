@@ -136,9 +136,10 @@ pub struct NewStatus{
 #[derive(Serialize, Deserialize, Queryable)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Verification {
-    pub ver_id: i32,
-    pub ver_title: String,
-    pub ver_description: String,
+    pub verification_id: i32,
+    pub verification_name: String,
+    pub verification_description: String,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Queryable)]

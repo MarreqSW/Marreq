@@ -266,6 +266,30 @@ pub fn get_requirement_by_id_cached(id: i32) -> Requirement {
     requirement
 }
 
+/// Get requirement by ID with caching and proper error handling
+pub fn get_requirement_by_id_cached_safe(id: i32) -> Result<Requirement, String> {
+    let cache = get_cache();
+    let cache_key = keys::requirement_by_id(id);
+    
+    if let Some(cached_data) = cache.get(&cache_key) {
+        match serde_json::from_str::<Requirement>(&cached_data) {
+            Ok(requirement) => return Ok(requirement),
+            Err(_) => {
+                cache.remove(&cache_key);
+            }
+        }
+    }
+    
+    let requirement = get_requirement_by_id_safe(id)?;
+    let json_data = serde_json::to_string(&requirement)
+        .unwrap_or_default();
+    
+    // Cache for 5 minutes
+    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
+    
+    Ok(requirement)
+}
+
 /// Get test by ID with caching
 pub fn get_test_by_id_cached(id: i32) -> Test {
     let cache = get_cache();
@@ -288,6 +312,30 @@ pub fn get_test_by_id_cached(id: i32) -> Test {
     cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
     
     test
+}
+
+/// Get test by ID with caching and proper error handling
+pub fn get_test_by_id_cached_safe(id: i32) -> Result<Test, String> {
+    let cache = get_cache();
+    let cache_key = keys::test_by_id(id);
+    
+    if let Some(cached_data) = cache.get(&cache_key) {
+        match serde_json::from_str::<Test>(&cached_data) {
+            Ok(test) => return Ok(test),
+            Err(_) => {
+                cache.remove(&cache_key);
+            }
+        }
+    }
+    
+    let test = get_test_by_id_safe(id)?;
+    let json_data = serde_json::to_string(&test)
+        .unwrap_or_default();
+    
+    // Cache for 5 minutes
+    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
+    
+    Ok(test)
 }
 
 /// Get category by ID with caching

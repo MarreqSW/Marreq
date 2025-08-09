@@ -15,15 +15,18 @@ use std::path;
 
 use crate::generators::*;
 use crate::helper_functions::*;
+use crate::cached_functions::*;
 use crate::html::*;
 use crate::logger::Logger;
 use crate::models::*;
+use crate::db_operations::*;
+use crate::db::{get_pooled_connection, get_connection_pooled_safe};
 
 // --------------------------------
 // Authentication Helper Functions
 // --------------------------------
 
-fn require_auth(cookies: &CookieJar<'_>) -> Result<User, Redirect> {
+pub fn require_auth(cookies: &CookieJar<'_>) -> Result<User, Redirect> {
     match is_authenticated(cookies) {
         Some(user) => Ok(user),
         None => Err(Redirect::to(uri!(login_page)))
@@ -31,7 +34,7 @@ fn require_auth(cookies: &CookieJar<'_>) -> Result<User, Redirect> {
 }
 
 fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::serde::json::Value {
-    let projects = get_projects_for_nav().unwrap_or_default();
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
     let selected_project_id = get_selected_project_id(cookies);
     
     json!({
@@ -48,7 +51,7 @@ fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::s
 #[get("/login")]
 pub fn login_page() -> Template {
     // Get projects for navigation (even on login page)
-    let projects = get_projects_for_nav().unwrap_or_default();
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
     let selected_project_id: Option<i32> = None; // No project selected on login page
     
     let ctx = json!({
@@ -69,7 +72,7 @@ pub fn login(login_form: Form<LoginForm>, cookies: &CookieJar<'_>) -> Result<Red
             cookies.add_private(Cookie::new("user_name", user.user_name.clone()));
             
             // Log successful login
-            let mut conn = establish_connection();
+            let mut conn = get_connection_pooled_safe();
             let _ = Logger::log_login(
                 &mut conn,
                 user.user_id,
@@ -126,7 +129,7 @@ pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
     
     // Log logout if we have user info
     if let Some(uid) = user_id {
-        let mut conn = establish_connection();
+        let mut conn = get_connection_pooled_safe();
         let _description = username.map(|name| format!("User {} logged out", name));
         let _ = Logger::log_logout(&mut conn, uid, None);
     }
@@ -221,11 +224,11 @@ pub fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     
     // Get selected project name
     let selected_project_name = if let Some(project_id) = selected_project_id {
-        let project = get_project_by_id(project_id);
+        let project = get_project_by_id_pooled_safe(project_id);
         project.project_name
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             first_project.project_name.clone()
         } else {
@@ -238,11 +241,11 @@ pub fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         get_requirements_by_project(project_id).map(|reqs| reqs.len()).unwrap_or(0)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_requirements_by_project(first_project.project_id).map(|reqs| reqs.len()).unwrap_or(0)
         } else {
-            get_requirements_all().map(|reqs| reqs.len()).unwrap_or(0)
+            get_requirements_all_cached().map(|reqs| reqs.len()).unwrap_or(0)
         }
     };
     
@@ -250,11 +253,11 @@ pub fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         get_tests_by_project(project_id).map(|tests| tests.len()).unwrap_or(0)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_tests_by_project(first_project.project_id).map(|tests| tests.len()).unwrap_or(0)
         } else {
-            get_tests_all().map(|tests| tests.len()).unwrap_or(0)
+            get_tests_all_cached().map(|tests| tests.len()).unwrap_or(0)
         }
     };
     
@@ -287,14 +290,14 @@ pub fn show_requirements(
     let selected_project_id = get_selected_project_id(cookies);
     
     let requirements = if let Some(project_id) = selected_project_id {
-        get_requirements_by_project(project_id)
+        get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_requirements_by_project(first_project.project_id)
+            get_requirements_by_project_cached(first_project.project_id)
         } else {
-            get_requirements_all()
+            get_requirements_all_cached()
         }
     };
 
@@ -311,29 +314,29 @@ pub fn show_requirements(
     };
 
     // Add filter data to context for the template
-    let statuses = get_status_all().unwrap_or_default();
+    let statuses = get_status_all_cached().unwrap_or_default();
     let verifications = if let Some(project_id) = selected_project_id {
-        get_verification_by_project(project_id)
+        get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_verification_by_project(first_project.project_id)
+            get_verification_by_project_cached(first_project.project_id)
         } else {
-            get_verification_all()
+            get_verification_all_cached()
         }
     };
     
     // Get categories filtered by selected project
     let categories = if let Some(project_id) = selected_project_id {
-        get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            get_categories_all()
+            get_categories_all_cached()
         }
     };
     
@@ -350,12 +353,11 @@ pub fn show_requirements(
 #[get("/requirements/<req_id>")]
 pub fn show_requirement_id(req_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let req = get_requirement_by_id(req_id);
+    let req = get_requirement_by_id_cached(req_id);
     let req_decorate = decorate_requirements(vec![req]);
 
     // Get linked tests for this requirement
-    let connection = &mut establish_connection();
-    let linked_tests = get_linked_tests_for_requirement(connection, req_id).unwrap_or_default();
+    let linked_tests = get_linked_tests_for_requirement_cached(req_id).unwrap_or_default();
     let linked_tests_json = json!(linked_tests);
 
     let ctx = json!({
@@ -370,7 +372,7 @@ pub fn show_requirement_id(req_id: i32, cookies: &CookieJar<'_>) -> Result<Templ
 #[get("/users")]
 pub fn show_users(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let users = get_users_all();
+    let users = get_users_all_cached();
 
     let ctx = match users {
         Ok(users_list) => {
@@ -393,7 +395,7 @@ pub fn show_users(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 #[get("/users/<user_id>")]
 pub fn show_user_id(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let current_user = require_auth(cookies)?;
-    let user = get_user_by_id(user_id);
+    let user = get_user_by_id_cached(user_id);
     let ctx = json!({
         "user": current_user,
         "user_name": user.user_name,
@@ -427,7 +429,7 @@ pub fn edit_user(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redi
 pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let current_user = require_auth(cookies)?;
     
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     // Get the old values before updating
     let old_user = get_user_by_id(user_id);
@@ -453,6 +455,10 @@ pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &Cooki
                     None,
                 );
             }
+            
+            // Invalidate cache for the updated user
+            invalidate_user_cache_complete(user_id);
+            
             Ok(Redirect::to(uri!(show_user_id(user_id))))
         },
         Err(_e) => {
@@ -470,20 +476,20 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
     let req_decorate = decorate_requirements(vec![req.clone()]);
     let req_decorate_json = json!(req_decorate[0]);
 
-    let status = get_status_all().unwrap_or_default();
+    let status = get_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
     let selected_project_id = get_selected_project_id(cookies);
     let categories = if let Some(project_id) = selected_project_id {
-        get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            get_categories_all()
+            get_categories_all_cached()
         }
     };
     let categories_json = json!(categories.unwrap_or_default());
@@ -497,7 +503,7 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
         if let Some(first_project) = projects.first() {
             get_requirements_by_project(first_project.project_id)
         } else {
-            get_requirements_all()
+            get_requirements_all_cached()
         }
     };
     let parents_json = json!(parents.unwrap_or_default());
@@ -507,28 +513,28 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
 
     // Get verification types filtered by project
     let verification_types = if let Some(project_id) = selected_project_id {
-        get_verification_by_project(project_id)
+        get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_verification_by_project(first_project.project_id)
+            get_verification_by_project_cached(first_project.project_id)
         } else {
-            get_verification_all()
+            get_verification_all_cached()
         }
     };
     let verification_json = json!(verification_types.unwrap_or_default());
 
     // Get applicability filtered by project
     let applicability = if let Some(project_id) = selected_project_id {
-        get_applicability_by_project(project_id)
+        get_applicability_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_applicability_by_project(first_project.project_id)
+            get_applicability_by_project_cached(first_project.project_id)
         } else {
-            get_applicability_all()
+            get_applicability_all_cached()
         }
     };
     let applicability_json = json!(applicability.unwrap_or_default());
@@ -584,7 +590,7 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
         }
     }
 
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     // Get the old values before updating
     let old_requirement = get_requirement_by_id(req_id);
@@ -609,13 +615,16 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
         );
     }
 
+    // Invalidate cache for the updated requirement
+    invalidate_requirement_cache_complete(req_id);
+
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
 
 #[delete("/delete_requirement/<req_id>")]
 pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     // Get the requirement details before deleting
     let requirement = get_requirement_by_id(req_id);
@@ -636,6 +645,10 @@ pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<
                     None,
                 );
             }
+            
+            // Invalidate related caches
+            crate::cached_functions::invalidate_requirement_cache_complete(req_id);
+            
             Ok(rocket::http::Status::Ok)
         },
         Err(_e) => {
@@ -649,65 +662,65 @@ pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<
 #[get("/new_requirement")]
 pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let status = get_status_all().unwrap_or_default();
+    let status = get_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
     let selected_project_id = get_selected_project_id(cookies);
     let categories = if let Some(project_id) = selected_project_id {
-        get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            get_categories_all()
+            get_categories_all_cached()
         }
     };
     let categories_json = json!(categories.unwrap_or_default());
 
     // Get parent requirements filtered by project
     let parents = if let Some(project_id) = selected_project_id {
-        get_requirements_by_project(project_id)
+        get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_requirements_by_project(first_project.project_id)
+            get_requirements_by_project_cached(first_project.project_id)
         } else {
-            get_requirements_all()
+            get_requirements_all_cached()
         }
     };
     let parents_json = json!(parents.unwrap_or_default());
 
-    let users = get_users_all().unwrap_or_default();
+    let users = get_users_all_cached().unwrap_or_default();
     let users_json = json!(users);
 
     // Get verification types filtered by project
     let verification_types = if let Some(project_id) = selected_project_id {
-        get_verification_by_project(project_id)
+        get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_verification_by_project(first_project.project_id)
+            get_verification_by_project_cached(first_project.project_id)
         } else {
-            get_verification_all()
+            get_verification_all_cached()
         }
     };
     let verification_json = json!(verification_types.unwrap_or_default());
 
     // Get applicability filtered by project
     let applicability = if let Some(project_id) = selected_project_id {
-        get_applicability_by_project(project_id)
+        get_applicability_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_applicability_by_project(first_project.project_id)
+            get_applicability_by_project_cached(first_project.project_id)
         } else {
-            get_applicability_all()
+            get_applicability_all_cached()
         }
     };
     let applicability_json = json!(applicability.unwrap_or_default());
@@ -734,7 +747,7 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 #[post("/new_requirement", data = "<new_req>")]
 pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     let mut requirement_data = new_req.into_inner();
     
@@ -787,6 +800,9 @@ pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) 
         );
     }
 
+    // Invalidate cache for the new requirement
+    invalidate_requirement_cache_complete(my_id);
+
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
 
@@ -804,14 +820,14 @@ pub fn show_tests(
     let selected_project_id = get_selected_project_id(cookies);
     
     let tests = if let Some(project_id) = selected_project_id {
-        get_tests_by_project(project_id)
+        get_tests_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_tests_by_project(first_project.project_id)
+            get_tests_by_project_cached(first_project.project_id)
         } else {
-            get_tests_all()
+            get_tests_all_cached()
         }
     };
     
@@ -822,29 +838,29 @@ pub fn show_tests(
     ctx["tests"] = json!(tests_decorate);
 
     // Add filter data to context for the template
-    let statuses = get_status_all().unwrap_or_default();
+    let statuses = get_status_all_cached().unwrap_or_default();
     let verifications = if let Some(project_id) = selected_project_id {
-        get_verification_by_project(project_id)
+        get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_verification_by_project(first_project.project_id)
+            get_verification_by_project_cached(first_project.project_id)
         } else {
-            get_verification_all()
+            get_verification_all_cached()
         }
     };
     
     // Get categories filtered by selected project
     let categories = if let Some(project_id) = selected_project_id {
-        get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            get_categories_all()
+            get_categories_all_cached()
         }
     };
     
@@ -887,51 +903,51 @@ pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Templ
 #[get("/new_test")]
 pub fn new_test(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let status = get_status_all().unwrap_or_default();
+    let status = get_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
     let selected_project_id = get_selected_project_id(cookies);
     let categories = if let Some(project_id) = selected_project_id {
-        get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            get_categories_all()
+            get_categories_all_cached()
         }
     };
     let categories_json = json!(categories.unwrap_or_default());
 
     // Get parent tests filtered by project
     let parents = if let Some(project_id) = selected_project_id {
-        get_tests_by_project(project_id)
+        get_tests_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_tests_by_project(first_project.project_id)
+            get_tests_by_project_cached(first_project.project_id)
         } else {
-            get_tests_all()
+            get_tests_all_cached()
         }
     };
     let parents_json = json!(parents.unwrap_or_default());
 
-    let users = get_users_all().unwrap_or_default();
+    let users = get_users_all_cached().unwrap_or_default();
     let users_json = json!(users);
 
     // Get requirements filtered by project
     let requirements = if let Some(project_id) = selected_project_id {
-        get_requirements_by_project(project_id)
+        get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_requirements_by_project(first_project.project_id)
+            get_requirements_by_project_cached(first_project.project_id)
         } else {
-            get_requirements_all()
+            get_requirements_all_cached()
         }
     };
     let requirements_json = json!(requirements.unwrap_or_default());
@@ -955,57 +971,57 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
     let test_decorate = decorate_tests(vec![test]);
     let test_decorate_json = json!(test_decorate[0]);
 
-    let status = get_status_all().unwrap_or_default();
+    let status = get_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
     let selected_project_id = get_selected_project_id(cookies);
     let categories = if let Some(project_id) = selected_project_id {
-        get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            get_categories_all()
+            get_categories_all_cached()
         }
     };
     let categories_json = json!(categories.unwrap_or_default());
 
     // Get parent tests filtered by project
     let parents = if let Some(project_id) = selected_project_id {
-        get_tests_by_project(project_id)
+        get_tests_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_tests_by_project(first_project.project_id)
+            get_tests_by_project_cached(first_project.project_id)
         } else {
-            get_tests_all()
+            get_tests_all_cached()
         }
     };
     let parents_json = json!(parents.unwrap_or_default());
 
-    let users = get_users_all().unwrap_or_default();
+    let users = get_users_all_cached().unwrap_or_default();
     let users_json = json!(users);
 
     // Get verification types filtered by project
     let verification_types = if let Some(project_id) = selected_project_id {
-        get_verification_by_project(project_id)
+        get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_verification_by_project(first_project.project_id)
+            get_verification_by_project_cached(first_project.project_id)
         } else {
-            get_verification_all()
+            get_verification_all_cached()
         }
     };
     let verification_json = json!(verification_types.unwrap_or_default());
 
     // Get linked requirements for this test
-    let linked_requirements = get_requirements_for_test(test_id).unwrap_or_default();
+    let linked_requirements = get_requirements_for_test_cached(test_id).unwrap_or_default();
     let linked_requirements_json = json!(linked_requirements);
 
     // Create a simple array of linked requirement IDs for template checking
@@ -1014,14 +1030,14 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
 
     // Get all requirements for the multi-select (filtered by project)
     let all_requirements = if let Some(project_id) = selected_project_id {
-        get_requirements_by_project(project_id)
+        get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_requirements_by_project(first_project.project_id)
+            get_requirements_by_project_cached(first_project.project_id)
         } else {
-            get_requirements_all()
+            get_requirements_all_cached()
         }
     };
     let all_requirements_json = json!(all_requirements.unwrap_or_default());
@@ -1048,7 +1064,7 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
 #[post("/edit_test/<test_id>", data = "<edit_test_form>")]
 pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     // Get the old values before updating
     let old_test = get_test_by_id(test_id);
@@ -1084,13 +1100,16 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
     // Then, update the requirement links
     update_test_requirement_links(connection, edit_test_form.test_id, &edit_test_form.linked_requirements).unwrap();
 
+    // Invalidate cache for the updated test
+    invalidate_test_cache_complete(test_id);
+
     Ok(Redirect::to(uri!(show_test_id(edit_test_form.test_id))))
 }
 
 #[post("/new_test", data = "<new_test>")]
 pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     let my_new_test = NewTest {
         test_id: None,
         test_name: new_test.test_name.clone(),
@@ -1127,6 +1146,9 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
         insert_new_matrix_item(connection, &matrix_item).unwrap();
     }
 
+    // Invalidate cache for the new test
+    invalidate_test_cache_complete(my_id);
+
     Ok(Redirect::to(uri!(show_test_id(my_id))))
 }
 
@@ -1135,7 +1157,7 @@ pub fn show_status() -> content::RawHtml<String> {
     use crate::schema::status::dsl::*;
 
     let mut out_str = print_header();
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
 
     let all_status = status
         .load::<Status>(connection)
@@ -1169,7 +1191,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
     use crate::schema::requirements::dsl::*;
     use crate::schema::tests::dsl::*;
 
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
@@ -1350,7 +1372,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
     }
 
     // Get all statuses for the filter dropdown
-    let all_statuses = get_status_all().unwrap_or_default();
+    let all_statuses = get_status_all_cached().unwrap_or_default();
     let statuses_json = json!(all_statuses);
 
     let mut ctx = build_context_with_projects(user, cookies);
@@ -1433,7 +1455,7 @@ pub async fn get_tests_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, Name
 #[get("/new_user")]
 pub fn new_user(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let status = get_status_all().unwrap_or_default();
+    let status = get_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     let ctx = json!({
@@ -1459,7 +1481,7 @@ pub fn show_categories(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         if let Some(first_project) = projects.first() {
             get_categories_by_project(first_project.project_id)
         } else {
-            get_categories_all()
+            get_categories_all_cached()
         }
     };
 
@@ -1480,7 +1502,7 @@ pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     
     // Get projects and selected project
-    let projects = get_projects_for_nav().unwrap_or_default();
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
     let mut selected_project_id = get_selected_project_id(cookies);
     
     // If no project is selected and there are projects available, select the first one
@@ -1507,7 +1529,7 @@ pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -
         return Ok(Redirect::to(uri!(new_category)));
     }
     
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     let category_data = new_category.into_inner();
     let result = insert_new_category(connection, &category_data);
@@ -1526,6 +1548,10 @@ pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -
                     None,
                 );
             }
+            
+            // Invalidate cache for the new category
+            invalidate_category_cache_complete(category_id);
+            
             Ok(Redirect::to(uri!(show_categories)))
         },
         Err(_e) => {
@@ -1539,7 +1565,7 @@ pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -
 #[get("/edit_category/<cat_id>")]
 pub fn get_edit_category(cat_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let category = get_category_by_id(cat_id);
+    let category = get_category_by_id_cached(cat_id);
     let ctx = json!({
         "categories": category,
         "user": user
@@ -1550,7 +1576,7 @@ pub fn get_edit_category(cat_id: i32, cookies: &CookieJar<'_>) -> Result<Templat
 #[post("/edit_category/<cat_id>", data = "<category>")]
 pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     // Get the old values before updating
     let old_category = get_category_by_id(cat_id);
@@ -1575,6 +1601,10 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
                     None,
                 );
             }
+            
+            // Invalidate cache for the updated category
+            invalidate_category_cache_complete(cat_id);
+            
             Ok(Redirect::to(uri!(show_categories)))
         },
         Err(_e) => {
@@ -1588,7 +1618,7 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
 #[delete("/delete_category/<cat_id>")]
 pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     // Get the category details before deleting
     let category = get_category_by_id(cat_id);
@@ -1609,6 +1639,10 @@ pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<roc
                     None,
                 );
             }
+            
+            // Invalidate cache for the deleted category
+            invalidate_category_cache_complete(cat_id);
+            
             Ok(rocket::http::Status::Ok)
         },
         Err(_e) => {
@@ -1622,7 +1656,7 @@ pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<roc
 #[post("/new_user", data = "<new_user>")]
 pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     // Hash the password before inserting
     let mut user_with_hashed_password = new_user.into_inner();
@@ -1644,6 +1678,9 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
                     None,
                 );
             }
+            
+            // Invalidate cache for the new user
+            invalidate_user_cache_complete(my_id);
             
             Ok(Redirect::to(uri!(show_user_id(my_id))))
         }
@@ -1719,7 +1756,7 @@ pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &C
         return Ok(Redirect::to(uri!(new_applicability)));
     }
     
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     let applicability_data = new_applicability.into_inner();
     let result = insert_new_applicability(connection, &applicability_data);
@@ -1738,6 +1775,10 @@ pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &C
                     None,
                 );
             }
+            
+            // Invalidate cache for the new applicability
+            invalidate_applicability_cache_complete(applicability_id);
+            
             Ok(Redirect::to(uri!(show_applicability)))
         },
         Err(_e) => {
@@ -1762,7 +1803,7 @@ pub fn get_edit_applicability(app_id: i32, cookies: &CookieJar<'_>) -> Result<Te
 #[post("/edit_applicability/<app_id>", data = "<applicability>")]
 pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     // Get the old values before updating
     let old_applicability = get_applicability_by_id(app_id);
@@ -1800,7 +1841,7 @@ pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability
 #[delete("/delete_applicability/<app_id>")]
 pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     // Get the applicability details before deleting
     let applicability = get_applicability_by_id(app_id);
@@ -1821,6 +1862,10 @@ pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Resul
                     None,
                 );
             }
+            
+            // Invalidate cache for the deleted applicability
+            crate::cached_functions::invalidate_applicability_cache_complete(app_id);
+            
             Ok(rocket::http::Status::Ok)
         },
         Err(_e) => {
@@ -1836,7 +1881,7 @@ pub fn show_requirements_tree(cookies: &CookieJar<'_>) -> Result<Template, Redir
     let user = require_auth(cookies)?;
     
     // Get all requirements
-    let all_requirements = get_requirements_all().unwrap_or_default();
+    let all_requirements = get_requirements_all_cached().unwrap_or_default();
     
     // Build tree structure
     let mut tree_data = Vec::new();
@@ -1896,12 +1941,33 @@ pub fn show_requirements_tree(cookies: &CookieJar<'_>) -> Result<Template, Redir
 pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     
-    // Get all data for metrics
-    let all_requirements = get_requirements_all().unwrap_or_default();
-    let all_tests = get_tests_all().unwrap_or_default();
-    let all_categories = get_categories_all().unwrap_or_default();
-    let all_users = get_users_all().unwrap_or_default();
-    let all_statuses = get_status_all().unwrap_or_default();
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+    
+    // Get project-specific data for metrics
+    let (all_requirements, all_tests, all_categories) = if let Some(project_id) = selected_project_id {
+        let requirements = get_requirements_by_project(project_id).unwrap_or_default();
+        let tests = get_tests_by_project(project_id).unwrap_or_default();
+        let categories = get_categories_by_project(project_id).unwrap_or_default();
+        (requirements, tests, categories)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            let requirements = get_requirements_by_project(first_project.project_id).unwrap_or_default();
+            let tests = get_tests_by_project(first_project.project_id).unwrap_or_default();
+            let categories = get_categories_by_project(first_project.project_id).unwrap_or_default();
+            (requirements, tests, categories)
+        } else {
+            // Fallback to all data if no projects exist
+            (get_requirements_all_cached().unwrap_or_default(), 
+             get_tests_all_cached().unwrap_or_default(), 
+             get_categories_all_cached().unwrap_or_default())
+        }
+    };
+    
+    let all_users = get_users_all_cached().unwrap_or_default();
+    let all_statuses = get_status_all_cached().unwrap_or_default();
     
     // Calculate metrics
     let total_requirements = all_requirements.len();
@@ -1943,13 +2009,13 @@ pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     }
     
     let coverage_percentage = if total_requirements > 0 {
-        (covered_requirements as f64 / total_requirements as f64) * 100.0
+        ((covered_requirements as f64 / total_requirements as f64) * 100.0 * 10.0).round() / 10.0
     } else {
         0.0
     };
     
     let avg_tests_per_requirement = if total_requirements > 0 {
-        total_links as f64 / total_requirements as f64
+        ((total_links as f64 / total_requirements as f64) * 10.0).round() / 10.0
     } else {
         0.0
     };
@@ -1972,8 +2038,23 @@ pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         recent_tests += 1; // Placeholder
     }
     
+    // Get selected project name for display
+    let selected_project_name = if let Some(project_id) = selected_project_id {
+        let project = get_project_by_id_pooled_safe(project_id);
+        project.project_name
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            first_project.project_name.clone()
+        } else {
+            "All Projects".to_string()
+        }
+    };
+    
     let ctx = json!({
         "user": user,
+        "selected_project_name": selected_project_name,
         "metrics": {
             "total_requirements": total_requirements,
             "total_tests": total_tests,
@@ -2000,12 +2081,33 @@ pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
     let _user = require_auth(cookies)?;
     
-    // Get the same data as the reports page
-    let all_requirements = get_requirements_all().unwrap_or_default();
-    let all_tests = get_tests_all().unwrap_or_default();
-    let all_categories = get_categories_all().unwrap_or_default();
-    let all_users = get_users_all().unwrap_or_default();
-    let _all_statuses = get_status_all().unwrap_or_default();
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+    
+    // Get project-specific data for metrics
+    let (all_requirements, all_tests, all_categories) = if let Some(project_id) = selected_project_id {
+        let requirements = get_requirements_by_project(project_id).unwrap_or_default();
+        let tests = get_tests_by_project(project_id).unwrap_or_default();
+        let categories = get_categories_by_project(project_id).unwrap_or_default();
+        (requirements, tests, categories)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            let requirements = get_requirements_by_project(first_project.project_id).unwrap_or_default();
+            let tests = get_tests_by_project(first_project.project_id).unwrap_or_default();
+            let categories = get_categories_by_project(first_project.project_id).unwrap_or_default();
+            (requirements, tests, categories)
+        } else {
+            // Fallback to all data if no projects exist
+            (get_requirements_all_cached().unwrap_or_default(), 
+             get_tests_all_cached().unwrap_or_default(), 
+             get_categories_all_cached().unwrap_or_default())
+        }
+    };
+    
+    let all_users = get_users_all_cached().unwrap_or_default();
+    let _all_statuses = get_status_all_cached().unwrap_or_default();
     
     // Calculate the same metrics
     let total_requirements = all_requirements.len();
@@ -2047,13 +2149,13 @@ pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<(rocket::http::Con
     }
     
     let coverage_percentage = if total_requirements > 0 {
-        (covered_requirements as f64 / total_requirements as f64) * 100.0
+        ((covered_requirements as f64 / total_requirements as f64) * 100.0 * 10.0).round() / 10.0
     } else {
         0.0
     };
     
     let avg_tests_per_requirement = if total_requirements > 0 {
-        total_links as f64 / total_requirements as f64
+        ((total_links as f64 / total_requirements as f64) * 10.0).round() / 10.0
     } else {
         0.0
     };
@@ -2116,7 +2218,7 @@ pub fn show_projects(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 #[get("/projects/<project_id>")]
 pub fn show_project_id(project_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let project = get_project_by_id(project_id);
+    let project = get_project_by_id_pooled_safe(project_id);
     
     let ctx = json!({
         "project": project,
@@ -2157,7 +2259,7 @@ pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> R
         return Err(Redirect::to(uri!(show_projects)));
     }
     
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     let project_data = new_project.into_inner();
     let result = insert_new_project(connection, &project_data);
@@ -2176,6 +2278,10 @@ pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> R
                     None,
                 );
             }
+            
+            // Invalidate cache for the new project
+            invalidate_project_cache_complete(project_id);
+            
             Ok(Redirect::to(uri!(show_projects)))
         },
         Err(_e) => {
@@ -2199,8 +2305,8 @@ pub fn get_edit_project(project_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
         return Ok(Template::render("access_denied", context));
     }
     
-    let project = get_project_by_id(project_id);
-    let users = get_users_all().unwrap_or_default();
+    let project = get_project_by_id_pooled_safe(project_id);
+    let users = get_users_all_cached().unwrap_or_default();
     
     let ctx = json!({
         "project": project,
@@ -2219,7 +2325,7 @@ pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies:
         return Err(Redirect::to(uri!(show_projects)));
     }
     
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     // Get the old values before updating
     let old_project = get_project_by_id(project_id);
@@ -2228,20 +2334,24 @@ pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies:
     match result {
         Ok(_) => {
             // Log the project update
-                    let project_data = project.into_inner();
-        if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_project), Logger::to_json_string(&project_data)) {
-            let _ = Logger::log_update(
-                connection,
-                user.user_id,
-                EntityType::Project,
-                project_id,
-                None,
-                Some(old_values),
-                Some(new_values),
-                Some(format!("Updated project: {}", project_data.project_name)),
-                None,
-            );
-        }
+            let project_data = project.into_inner();
+            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_project), Logger::to_json_string(&project_data)) {
+                let _ = Logger::log_update(
+                    connection,
+                    user.user_id,
+                    EntityType::Project,
+                    project_id,
+                    None,
+                    Some(old_values),
+                    Some(new_values),
+                    Some(format!("Updated project: {}", project_data.project_name)),
+                    None,
+                );
+            }
+            
+            // Invalidate cache for the updated project
+            invalidate_project_cache_complete(project_id);
+            
             Ok(Redirect::to(uri!(show_projects)))
         },
         Err(_e) => {
@@ -2261,10 +2371,10 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
         return Err(Redirect::to(uri!(show_projects)));
     }
     
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     
     // Get the project details before deleting
-    let project = get_project_by_id(project_id);
+    let project = get_project_by_id_pooled_safe(project_id);
     
     let result = delete_project(connection, &project_id);
     match result {
@@ -2282,6 +2392,10 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
                     None,
                 );
             }
+            
+            // Invalidate cache for the deleted project
+            invalidate_project_cache_complete(project_id);
+            
             Ok(rocket::http::Status::Ok)
         },
         Err(_e) => {
@@ -2504,13 +2618,16 @@ pub fn process_excel_import(
         project_id: 1, // Default project ID - you might want to get this from user context
     };
     
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
     let result = importer.import_data(&config, connection);
     
     eprintln!("Import result: {:?}", result);
     
     let html = match result {
         Ok(import_result) => {
+            // Invalidate all caches after successful import since we don't know exactly what was imported
+            crate::cache::invalidate_all_cache();
+            
             format!(r#"
             <!doctype html>
             <html lang='en'>
@@ -2719,7 +2836,7 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
         Ok(output) => {
             if output.status.success() {
                 // Log the successful backup
-                let mut conn = establish_connection();
+                let mut conn = get_pooled_connection().unwrap();
                 let _ = Logger::log_action(
                     &mut conn,
                     user.user_id,
@@ -2742,7 +2859,7 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
                 Ok((content_type, file))
             } else {
                 // Log the failed backup
-                let mut conn = establish_connection();
+                let mut conn = get_pooled_connection().unwrap();
                 let _ = Logger::log_action(
                     &mut conn,
                     user.user_id,
@@ -2762,7 +2879,7 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
         }
         Err(e) => {
             // Log the command failure
-            let mut conn = establish_connection();
+            let mut conn = get_pooled_connection().unwrap();
             let _ = Logger::log_action(
                 &mut conn,
                 user.user_id,
@@ -2795,7 +2912,7 @@ pub fn show_logs(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         return Ok(Template::render("access_denied", context));
     }
     
-    let connection = &mut establish_connection();
+    let connection = &mut get_pooled_connection().unwrap();
     let logs = Logger::get_recent_logs(connection, 1000).unwrap_or_default();
     
     // Enhance logs with user information
@@ -2831,7 +2948,7 @@ pub fn show_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJar
         return Ok(Template::render("access_denied", context));
     }
     
-    let connection = &mut establish_connection();
+    let connection = &mut get_pooled_connection().unwrap();
     let logs = Logger::get_logs_for_entity(connection, &entity_type, entity_id).unwrap_or_default();
     
     // Enhance logs with user information
@@ -2865,7 +2982,7 @@ pub async fn export_logs(filename: Option<String>, cookies: &CookieJar<'_>) -> R
         return Err(Redirect::to(uri!(show_logs)));
     }
     
-    let connection = &mut establish_connection();
+    let connection = &mut get_pooled_connection().unwrap();
     let logs = Logger::get_recent_logs(connection, 1000).unwrap_or_default();
     
     // Convert logs to JSON
@@ -2919,8 +3036,8 @@ pub fn export_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJ
         return Err(Redirect::to(uri!(show_logs)));
     }
     
-    let connection = &mut establish_connection();
-    let logs = Logger::get_logs_for_entity(connection, &entity_type, entity_id).unwrap_or_default();
+    let mut connection = get_connection_pooled_safe();
+    let logs = Logger::get_logs_for_entity(&mut connection, &entity_type, entity_id).unwrap_or_default();
     
     // Convert logs to JSON
     let logs_json = serde_json::to_string_pretty(&logs).unwrap_or_default();
@@ -2938,14 +3055,14 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
         return Err(Redirect::to(uri!(show_logs)));
     }
     
-    let connection = &mut establish_connection();
+    let mut connection = get_connection_pooled_safe();
     
     // Clean up logs older than 90 days
-    match crate::logger::cleanup_old_logs(connection, 90) {
+    match crate::logger::cleanup_old_logs(&mut connection, 90) {
         Ok(deleted_count) => {
             // Log the cleanup action
             let _ = Logger::log_action(
-                connection,
+                &mut connection,
                 user.user_id,
                 crate::models::ActionType::StatusChange,
                 crate::models::EntityType::User,
@@ -2960,7 +3077,7 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
         Err(_) => {
             // Log the failed cleanup action
             let _ = Logger::log_action(
-                connection,
+                &mut connection,
                 user.user_id,
                 crate::models::ActionType::StatusChange,
                 crate::models::EntityType::User,
@@ -2990,12 +3107,12 @@ pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         return Ok(Template::render("access_denied", context));
     }
     
-    let connection = &mut establish_connection();
+    let mut connection = get_connection_pooled_safe();
     
     // Get basic statistics
-    let last_7_days = Logger::get_log_count(connection, 7).unwrap_or(0);
-    let last_30_days = Logger::get_log_count(connection, 30).unwrap_or(0);
-    let last_90_days = Logger::get_log_count(connection, 90).unwrap_or(0);
+    let last_7_days = Logger::get_log_count(&mut connection, 7).unwrap_or(0);
+    let last_30_days = Logger::get_log_count(&mut connection, 30).unwrap_or(0);
+    let last_90_days = Logger::get_log_count(&mut connection, 90).unwrap_or(0);
     
     let ctx = json!({
         "user": user,
@@ -3006,5 +3123,101 @@ pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     });
     
     Ok(Template::render("log_analytics", ctx))
+}
+
+// Cache Management Routes
+#[get("/admin/cache/warm")]
+pub fn admin_warm_cache(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(admin_dashboard)));
+    }
+    
+    // Warm the cache
+    crate::cache::warm_cache();
+    
+    Ok(Redirect::to(uri!(admin_dashboard)))
+}
+
+#[get("/admin/cache/warm_project/<project_id>")]
+pub fn admin_warm_project_cache(project_id: i32, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(admin_dashboard)));
+    }
+    
+    // Warm the project-specific cache
+    crate::cache::warm_project_cache(project_id);
+    
+    Ok(Redirect::to(uri!(admin_dashboard)))
+}
+
+#[get("/admin/cache/clear")]
+pub fn admin_clear_cache(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(admin_dashboard)));
+    }
+    
+    // Clear all caches
+    crate::cache::invalidate_all_cache();
+    
+    Ok(Redirect::to(uri!(admin_dashboard)))
+}
+
+#[get("/admin/cache/stats")]
+pub fn admin_cache_stats(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+    
+    // Get cache statistics
+    let cache_stats = crate::cache::get_cache_stats();
+    
+    let context = json!({
+        "user": user,
+        "cache_stats": cache_stats,
+        "title": "Cache Statistics"
+    });
+    
+    Ok(Template::render("admin/cache_stats", context))
+}
+
+#[get("/admin/cache/health")]
+pub fn admin_cache_health(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+    
+    // Get cache health information
+    let cache_health = crate::cache::get_cache_health();
+    
+    let context = json!({
+        "user": user,
+        "cache_health": cache_health,
+        "title": "Cache Health"
+    });
+    
+    Ok(Template::render("admin/cache_health", context))
 }
 

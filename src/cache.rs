@@ -347,6 +347,10 @@ pub mod keys {
     pub const CACHE_STATS: &str = "cache:stats";
     pub const CACHE_HEALTH: &str = "cache:health";
     pub const CACHE_PERFORMANCE: &str = "cache:performance";
+    
+    // Global lists
+    pub const REQUIREMENTS_ALL: &str = "requirements:all";
+    pub const TESTS_ALL: &str = "tests:all";
 }
 
 /// Cache utility functions
@@ -379,8 +383,9 @@ pub fn invalidate_requirement_cache(req_id: i32) {
     cache.remove(&keys::requirement_by_id(req_id));
     cache.remove(&keys::linked_tests_for_requirement(req_id));
     cache.remove(&keys::requirement_title_by_id(req_id));
-    // Also invalidate project-level caches since requirements are project-specific
-    // This is a simplified approach - in a real implementation you'd track which project the requirement belongs to
+    // Also invalidate global lists and project-level caches
+    cache.remove(keys::REQUIREMENTS_ALL);
+    // Note: In a real implementation, you'd need to track which project the requirement belongs to
 }
 
 /// Invalidate all test-related cache entries
@@ -389,7 +394,9 @@ pub fn invalidate_test_cache(test_id: i32) {
     cache.remove(&keys::test_by_id(test_id));
     cache.remove(&keys::linked_requirements_for_test(test_id));
     cache.remove(&keys::test_status_by_id(test_id));
-    // Also invalidate project-level caches since tests are project-specific
+    // Also invalidate global lists and project-level caches
+    cache.remove(keys::TESTS_ALL);
+    // Note: In a real implementation, you'd need to track which project the test belongs to
 }
 
 /// Invalidate all category-related cache entries

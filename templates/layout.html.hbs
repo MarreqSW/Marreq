@@ -30,11 +30,14 @@
             },
           })
           .then(response => {
-            if (response.ok) {
-              // Reload the page to show updated list
-              window.location.reload();
+            if (response.redirected) {
+              // Follow the redirect to the requirements list
+              window.location.href = response.url;
             } else if (response.status === 403) {
               alert('Access denied. Only admin users can delete requirements with status other than Draft or Proposal.');
+            } else if (response.status === 200) {
+              // If no redirect, reload the page
+              window.location.reload();
             } else {
               alert('Error deleting requirement. Please try again.');
             }
@@ -55,11 +58,14 @@
             },
           })
           .then(response => {
-            if (response.ok) {
-              // Reload the page to show updated list
-              window.location.reload();
+            if (response.redirected) {
+              // Follow the redirect to the tests list
+              window.location.href = response.url;
             } else if (response.status === 403) {
               alert('Access denied. Only admin users can delete tests with status other than Draft or Proposal.');
+            } else if (response.status === 200) {
+              // If no redirect, reload the page
+              window.location.reload();
             } else {
               alert('Error deleting test. Please try again.');
             }

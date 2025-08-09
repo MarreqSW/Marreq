@@ -206,7 +206,10 @@ pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement
             req_parent_id: r.req_parent,
 
             req_parent_title: if r.req_parent != 0 {
-                get_requirement_by_id(r.req_parent).req_title
+                match get_requirement_by_id_safe(r.req_parent) {
+                    Ok(parent_req) => parent_req.req_title,
+                    Err(_) => "[Deleted Parent]".to_string()
+                }
             } else {
                 "".to_string()
             },
@@ -316,8 +319,25 @@ pub fn get_requirement_by_id(id: i32) -> Requirement {
     result
 }
 
+/// Get requirement by ID with proper error handling
+pub fn get_requirement_by_id_safe(id: i32) -> Result<Requirement, String> {
+    use crate::schema::requirements::dsl::*;
+
+    let connection = &mut establish_connection();
+    match requirements
+        .filter(req_id.eq(id))
+        .get_result::<Requirement>(connection) {
+        Ok(requirement) => Ok(requirement),
+        Err(diesel::result::Error::NotFound) => Err(format!("Requirement with ID {} not found", id)),
+        Err(e) => Err(format!("Database error: {}", e))
+    }
+}
+
 pub fn get_requirement_title_by_id(id: i32) -> String {
-    get_requirement_by_id(id).req_title
+    match get_requirement_by_id_safe(id) {
+        Ok(req) => req.req_title,
+        Err(_) => "[Requirement Not Found]".to_string()
+    }
 }
 
 /// Return all requirements
@@ -377,18 +397,35 @@ pub fn get_test_by_id(id: i32) -> Test {
     result
 }
 
-pub fn get_test_status_by_id(id: i32) -> String {
-    use crate::schema::status::dsl::*;
+/// Get test by ID with proper error handling
+pub fn get_test_by_id_safe(id: i32) -> Result<Test, String> {
     use crate::schema::tests::dsl::*;
 
     let connection = &mut establish_connection();
+    match tests.filter(test_id.eq(id)).get_result::<Test>(connection) {
+        Ok(test) => Ok(test),
+        Err(diesel::result::Error::NotFound) => Err(format!("Test with ID {} not found", id)),
+        Err(e) => Err(format!("Database error: {}", e))
+    }
+}
 
-    let ts: Test = tests.filter(test_id.eq(id)).get_result(connection).unwrap();
+pub fn get_test_status_by_id(id: i32) -> String {
+    use crate::schema::tests::dsl::*;
+    use crate::models::Status;
 
-    let result: Status = status
-        .filter(st_id.eq(ts.test_status))
-        .get_result(connection)
-        .unwrap();
+    let connection = &mut establish_connection();
+
+    let ts: Test = match tests.filter(test_id.eq(id)).get_result(connection) {
+        Ok(test) => test,
+        Err(_) => return "[Test Not Found]".to_string()
+    };
+
+    let result: Status = match crate::schema::status::dsl::status
+        .filter(crate::schema::status::dsl::st_id.eq(ts.test_status))
+        .first(connection) {
+            Ok(status) => status,
+            Err(_) => return "[Status Not Found]".to_string()
+        };
 
     result.st_title
 }
@@ -492,6 +529,7 @@ pub fn decorate_tests(tests: Vec<Test>) -> Vec<DecoratedTest> {
             } else {
                 "".to_string()
             },
+            project_id: r.project_id,
         };
         #[cfg(debug_assertions)]
         println!("Decorate: {:?}", a);
@@ -1049,6 +1087,7 @@ pub fn get_linked_tests_for_requirement(conn: &mut PgConnection, req_id: i32) ->
             test_status_id: test.test_status,  // Add numeric status ID
             test_parent_id: test.test_parent,
             test_parent_title: parent_title,
+            project_id: test.project_id,
         });
     }
 

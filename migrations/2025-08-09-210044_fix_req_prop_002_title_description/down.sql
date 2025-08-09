@@ -4,4 +4,11 @@ UPDATE requirements
 SET 
     req_title = 'The thrusters shall provide minimum thrust of 1N for attitude control',
     req_description = 'Adequate thrust is required for attitude control during various mission phases.'
+WHERE req_id = 17;
+
+-- Also rollback by reference as backup
+UPDATE requirements 
+SET 
+    req_title = 'The thrusters shall provide minimum thrust of 1N for attitude control',
+    req_description = 'Adequate thrust is required for attitude control during various mission phases.'
 WHERE req_reference = 'REQ-PROP-002';

@@ -4,6 +4,10 @@ extern crate diesel;
 use rocket::fs::{relative, FileServer};
 use rocket_dyn_templates::Template;
 pub mod bbdd;
+pub mod cache;
+pub mod cached_functions;
+pub mod db;
+pub mod db_operations;
 pub mod generators;
 pub mod helper_functions;
 pub mod html;
@@ -16,12 +20,19 @@ pub mod schema;
 use crate::html::cors::*;
 use crate::routes::routes_api::*;
 use crate::routes::routes_html::*;
+use crate::routes::cache_routes::*;
 
-//#[database("my_db")]
-//pub struct myDbConn(rocket_sync_db_pools::diesel::PgConnection);
+#[rocket_sync_db_pools::database("my_db")]
+pub struct MyDbConn(rocket_sync_db_pools::diesel::PgConnection);
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
-  
+    
+    // Warm up the cache on startup
+    crate::cache::warm_cache();
+    
+    // Start background cache maintenance
+    crate::cache::start_cache_maintenance();
+    
     let _rocket = rocket::build()
         .mount(
             "/",
@@ -91,6 +102,11 @@ async fn main() -> Result<(), rocket::Error> {
                 export_entity_logs,
                 cleanup_logs,
                 log_analytics,
+                admin_cache_stats,
+                admin_clear_cache,
+                admin_warm_cache,
+                admin_warm_project_cache,
+                admin_cache_health,
             ],
         )
         .mount(
@@ -119,12 +135,19 @@ async fn main() -> Result<(), rocket::Error> {
                 api_post_applicability,
                 api_put_applicability,
                 api_delete_applicability_by_id,
+                api_cache_stats,
+                api_clear_cache,
+                api_cleanup_cache,
+                api_cache_health,
+                api_cache_performance,
+                api_cache_recommendations,
+                api_reset_cache_counters,
             ],
         )
         .mount("/static", FileServer::from(relative!("src/html/static")))
         .attach(CorsFairing)
         .attach(Template::fairing())
-        //.attach(myDbConn::fairing())
+        .attach(MyDbConn::fairing())
         .launch()
         .await?;
 

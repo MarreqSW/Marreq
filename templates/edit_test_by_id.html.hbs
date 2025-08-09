@@ -63,7 +63,7 @@
             <label for="test_verification" class="form-label">Verification Mode</label>
             <select name="test_verification" id="test_verification" class="form-control">
               {{#each verification}}
-                <option value="{{ver_id}}" {{#if (eq ver_id ../tests.test_verification)}}selected{{/if}}>{{ver_title}}</option>
+                <option value="{{verification_id}}" {{#if (eq verification_id ../tests.test_verification)}}selected{{/if}}>{{verification_name}}</option>
               {{/each}}
             </select>
           </div>

@@ -117,6 +117,15 @@
           <button type="submit" class="btn btn-primary">Update Requirement</button>
           <a href="/requirements/{{requirements.req_id}}" class="btn btn-outline">Cancel</a>
           <a href="/requirements" class="btn btn-outline">Back to Requirements</a>
+          
+          <!-- Delete Button with Access Control -->
+          {{#if (or (eq requirements.req_current_status 1) (eq requirements.req_current_status 2))}}
+            <button onclick="deleteRequirement({{requirements.req_id}}, '{{requirements.req_title}}')" class="btn btn-danger">Delete Requirement</button>
+          {{else}}
+            {{#if ../user.is_admin}}
+              <button onclick="deleteRequirement({{requirements.req_id}}, '{{requirements.req_title}}')" class="btn btn-danger">Delete Requirement</button>
+            {{/if}}
+          {{/if}}
         </div>
       </form>
     </div>

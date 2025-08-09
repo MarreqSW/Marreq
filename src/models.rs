@@ -54,6 +54,7 @@ pub struct DecoratedRequirement {
     pub req_description: String,
     pub req_verification: String,
     pub req_current_status: String,
+    pub req_current_status_id: i32,  // Add numeric status ID for access control
     pub req_author: String,
     pub req_reviewer: String,
     pub req_link: String,
@@ -221,6 +222,7 @@ pub struct DecoratedTest {
     pub test_description: String,
     pub test_source: String,
     pub test_status: String,
+    pub test_status_id: i32,  // Add numeric status ID for access control
     pub test_parent_id: i32,
     pub test_parent_title: String,
 }

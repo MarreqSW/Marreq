@@ -53,6 +53,7 @@ async fn main() -> Result<(), rocket::Error> {
                 post_edit_requirement,
                 post_requirement,
                 delete_requirement_route,
+                delete_test_route,
                 new_test,
                 get_edit_test,
                 post_edit_test,

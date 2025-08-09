@@ -188,6 +188,7 @@ pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement
             req_verification: get_verification_by_id(r.req_verification).verification_name,
             req_description: r.req_description,
             req_current_status: get_status_by_id(r.req_current_status).st_title,
+            req_current_status_id: r.req_current_status,  // Add numeric status ID
             req_author: if r.req_author != 0 {
                 get_user_by_id(r.req_author).user_name
             } else {
@@ -484,6 +485,7 @@ pub fn decorate_tests(tests: Vec<Test>) -> Vec<DecoratedTest> {
             test_description: r.test_description,
             test_source: r.test_source,
             test_status: get_status_by_id(r.test_status).st_title,
+            test_status_id: r.test_status,  // Add numeric status ID
             test_parent_id: r.test_parent,
             test_parent_title: if r.test_parent != 0 {
                 get_test_by_id(r.test_parent).test_name
@@ -1044,6 +1046,7 @@ pub fn get_linked_tests_for_requirement(conn: &mut PgConnection, req_id: i32) ->
             test_description: test.test_description,
             test_source: test.test_source,
             test_status: status_name,
+            test_status_id: test.test_status,  // Add numeric status ID
             test_parent_id: test.test_parent,
             test_parent_title: parent_title,
         });

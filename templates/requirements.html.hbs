@@ -4,6 +4,9 @@
     <h1>Requirements</h1>
     <div>
       <a href="/requirements.xls" class="btn btn-success">Export Excel</a>
+      {{#if user.is_admin}}
+      <a href="/import_excel" class="btn btn-warning">Import Excel</a>
+      {{/if}}
       <a href="/new_requirement" class="btn btn-primary">New Requirement</a>
     </div>
   </div>

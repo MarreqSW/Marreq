@@ -61,7 +61,7 @@ A comprehensive web-based requirements and test management system built with Rus
   + [X] Categories endpoints
   + [X] Applicability endpoints
   + [X] Matrix endpoints
-+ [ ] Operations logging
++ [x] Operations logging
 + [X] Parsers for requirements
   + [ ] Latex files (Write a command)
   + [ ] Word files (Write a macro)

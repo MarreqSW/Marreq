@@ -45,7 +45,7 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, bcrypt::Bcryp
 pub fn authenticate_user(username: &str, password: &str) -> Result<Option<User>, String> {
     use crate::schema::users::dsl::*;
     
-    let connection = &mut establish_connection();
+    let connection = &mut crate::db::get_connection_pooled_safe();
     
     let user = users
         .filter(user_username.eq(username))
@@ -1639,3 +1639,4 @@ pub fn generate_requirement_reference(category_id: i32, project_id: i32) -> Resu
     
     Ok(reference)
 }
+

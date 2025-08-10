@@ -2343,9 +2343,9 @@ pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<(rocket::http::Con
             let content_type = rocket::http::ContentType::new("application", "pdf");
             Ok((content_type, pdf_bytes))
         }
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            println!("PDF generation failed: {:?}", e);
+            println!("PDF generation failed: {:?}", _e);
             // Fallback to HTML if PDF generation fails
             let content_type = rocket::http::ContentType::new("text", "html");
             Ok((content_type, html_content.into_bytes()))

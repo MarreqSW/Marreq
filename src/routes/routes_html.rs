@@ -2310,20 +2310,32 @@ pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<(rocket::http::Con
         avg_tests_per_requirement,
         covered_requirements,
         total_links,
+        requirements_by_status.clone(),
+        tests_by_status.clone(),
+        requirements_by_category.clone()
+    );
+    
+    // Generate PDF using the new PDF generation function
+    match generate_pdf_report_data(
+        total_requirements,
+        total_tests,
+        total_categories,
+        total_users,
+        coverage_percentage,
+        avg_tests_per_requirement,
+        covered_requirements,
+        total_links,
         requirements_by_status,
         tests_by_status,
         requirements_by_category
-    );
-    
-    // Generate PDF using wkhtmltopdf
-    match generate_pdf_from_html(&html_content) {
+    ) {
         Ok(pdf_bytes) => {
             let content_type = rocket::http::ContentType::new("application", "pdf");
             Ok((content_type, pdf_bytes))
         }
-        Err(_e) => {
+        Err(e) => {
             #[cfg(debug_assertions)]
-            println!("PDF generation failed: {:?}", _e);
+            println!("PDF generation failed: {:?}", e);
             // Fallback to HTML if PDF generation fails
             let content_type = rocket::http::ContentType::new("text", "html");
             Ok((content_type, html_content.into_bytes()))
@@ -3359,5 +3371,58 @@ pub fn admin_cache_health(cookies: &CookieJar<'_>) -> Result<Template, Redirect>
     });
     
     Ok(Template::render("admin/cache_health", context))
+}
+
+// Test route for PDF generation (no authentication required)
+#[get("/test-pdf")]
+pub fn test_pdf_generation() -> Result<(rocket::http::ContentType, Vec<u8>), rocket::http::Status> {
+    // Test data
+    let total_requirements = 150;
+    let total_tests = 120;
+    let total_categories = 8;
+    let total_users = 12;
+    let coverage_percentage = 85.5;
+    let avg_tests_per_requirement = 1.2;
+    let covered_requirements = 128;
+    let total_links = 180;
+    
+    let mut requirements_by_status = std::collections::HashMap::new();
+    requirements_by_status.insert("Active".to_string(), 100);
+    requirements_by_status.insert("Draft".to_string(), 30);
+    requirements_by_status.insert("Deprecated".to_string(), 20);
+    
+    let mut tests_by_status = std::collections::HashMap::new();
+    tests_by_status.insert("Passed".to_string(), 80);
+    tests_by_status.insert("Failed".to_string(), 15);
+    tests_by_status.insert("Pending".to_string(), 25);
+    
+    let mut requirements_by_category = std::collections::HashMap::new();
+    requirements_by_category.insert("Functional".to_string(), 80);
+    requirements_by_category.insert("Non-Functional".to_string(), 40);
+    requirements_by_category.insert("Interface".to_string(), 30);
+    
+    // Generate PDF using the PDF generation function
+    match generate_pdf_report_data(
+        total_requirements,
+        total_tests,
+        total_categories,
+        total_users,
+        coverage_percentage,
+        avg_tests_per_requirement,
+        covered_requirements,
+        total_links,
+        requirements_by_status,
+        tests_by_status,
+        requirements_by_category
+    ) {
+        Ok(pdf_bytes) => {
+            let content_type = rocket::http::ContentType::new("application", "pdf");
+            Ok((content_type, pdf_bytes))
+        }
+        Err(e) => {
+            eprintln!("PDF generation failed: {:?}", e);
+            Err(rocket::http::Status::InternalServerError)
+        }
+    }
 }
 

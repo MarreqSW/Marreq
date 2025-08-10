@@ -65,13 +65,13 @@
       </div>
     </div>
     <div class="card-body p-0">
-      <div class="table-container">
-        <!-- Top scroll indicator -->
-        <div class="scroll-indicator" id="scrollIndicator">
-          <div class="scroll-track">
-            <div class="scroll-thumb" id="scrollThumb"></div>
-          </div>
+      <!-- Top scroll indicator - positioned outside table container -->
+      <div class="scroll-indicator" id="scrollIndicator">
+        <div class="scroll-track">
+          <div class="scroll-thumb" id="scrollThumb"></div>
         </div>
+      </div>
+      <div class="table-container">
         <table class="table" id="matrixTable">
           <thead>
             <tr>
@@ -219,45 +219,63 @@
       this.form.submit();
     });
 
-    // Setup custom scroll indicator
+    // Setup custom scroll indicator with improved handling
     const tableContainer = document.querySelector('.table-container');
     const scrollIndicator = document.getElementById('scrollIndicator');
     const scrollThumb = document.getElementById('scrollThumb');
     const matrixTable = document.getElementById('matrixTable');
 
     if (tableContainer && scrollIndicator && scrollThumb && matrixTable) {
-      // Wait for the table to be fully rendered
-      setTimeout(() => {
+      let maxScroll = 0;
+      let thumbMaxLeft = 0;
+      let isDragging = false;
+      let startX, startLeft;
+      
+      // Function to update scroll indicator
+      function updateScrollIndicator() {
         const tableWidth = matrixTable.scrollWidth;
         const containerWidth = tableContainer.clientWidth;
+        
+
         
         if (tableWidth > containerWidth) {
           // Show the scroll indicator
           scrollIndicator.style.display = 'block';
           
           // Calculate thumb width and position
-          const maxScroll = tableWidth - containerWidth;
-          const thumbWidth = Math.max(20, (containerWidth / tableWidth) * containerWidth);
-          const thumbMaxLeft = containerWidth - thumbWidth;
+          maxScroll = tableWidth - containerWidth;
+          const thumbWidth = Math.max(30, (containerWidth / tableWidth) * containerWidth);
+          thumbMaxLeft = containerWidth - thumbWidth - 8; // Account for padding
+          
+
           
           scrollThumb.style.width = thumbWidth + 'px';
           
           // Update thumb position when table scrolls
-          tableContainer.addEventListener('scroll', function() {
-            const scrollPercent = this.scrollLeft / maxScroll;
-            const thumbLeft = scrollPercent * thumbMaxLeft;
-            scrollThumb.style.left = thumbLeft + 'px';
-          });
+          const updateThumbPosition = () => {
+            if (maxScroll > 0) {
+              const scrollPercent = Math.min(1, Math.max(0, tableContainer.scrollLeft / maxScroll));
+              const thumbLeft = scrollPercent * thumbMaxLeft;
+              scrollThumb.style.left = thumbLeft + 'px';
+
+            }
+          };
+          
+          // Initial position
+          updateThumbPosition();
+          
+          // Remove existing scroll listener to prevent duplicates
+          tableContainer.removeEventListener('scroll', updateThumbPosition);
+          // Update on scroll
+          tableContainer.addEventListener('scroll', updateThumbPosition);
           
           // Handle thumb dragging
-          let isDragging = false;
-          let startX, startLeft;
-          
           scrollThumb.addEventListener('mousedown', function(e) {
             isDragging = true;
             startX = e.clientX;
             startLeft = parseFloat(scrollThumb.style.left) || 0;
             e.preventDefault();
+            e.stopPropagation();
           });
           
           document.addEventListener('mousemove', function(e) {
@@ -277,7 +295,7 @@
           
           // Handle track clicking
           scrollIndicator.addEventListener('click', function(e) {
-            if (e.target === scrollThumb) return;
+            if (e.target === scrollThumb || isDragging) return;
             
             const rect = scrollIndicator.getBoundingClientRect();
             const clickX = e.clientX - rect.left - 4; // Account for margin
@@ -289,7 +307,17 @@
         } else {
           scrollIndicator.style.display = 'none';
         }
-      }, 200);
+      }
+      
+      // Initial setup with a small delay to ensure rendering
+      setTimeout(updateScrollIndicator, 100);
+      
+      // Update on window resize
+      window.addEventListener('resize', updateScrollIndicator);
+      
+      // Also update when the table content changes
+      const observer = new MutationObserver(updateScrollIndicator);
+      observer.observe(matrixTable, { childList: true, subtree: true });
     }
 
   });

@@ -84,13 +84,36 @@ A comprehensive web-based requirements and test management system built with Rus
 
 ### Prerequisites
 
-+ **PostgreSQL**: Database backend
-+ **Diesel CLI**: Database migrations
++ **PostgreSQL**: Database backend (provided via Docker)
++ **Docker & Docker Compose**: For database containerization
 + **Rust**: Programming language
 
 ### Installation
 
-1. **Install PostgreSQL dependencies**:
+#### Option 1: Automated Setup (Recommended)
+
+1. **Start the database**:
+```bash
+docker-compose up -d
+```
+
+2. **Run the automated database setup**:
+```bash
+./setup_database.sh
+```
+
+3. **Start the application**:
+```bash
+cargo run --bin req_man
+```
+
+4. **Access the application**:
+   - URL: http://localhost:8000
+   - Login with any user using password: `password`
+
+#### Option 2: Manual Setup
+
+1. **Install PostgreSQL dependencies** (if not using Docker):
 ```bash
 sudo apt install libpq-dev libpq5 postgresql-client postgresql-client-common
 ```
@@ -105,15 +128,18 @@ cargo install diesel_cli --no-default-features --features postgres
 docker-compose up -d
 ```
 
-4. **Run database migrations**:
+4. **Create and initialize the database**:
 ```bash
-diesel setup
-diesel migration run
+# Create database
+docker exec reqman_db_1 psql -U rust -d postgres -c "CREATE DATABASE reqman;"
+
+# Run complete initialization
+docker exec -i reqman_db_1 psql -U rust -d reqman < init_complete.sql
 ```
 
 5. **Start the application**:
 ```bash
-cargo run
+cargo run --bin req_man
 ```
 
 The application will be available at **http://localhost:8000**
@@ -214,8 +240,76 @@ The application uses PostgreSQL with the following main entities:
 - **Users**: System users (authors, reviewers) with authentication
 - **Status**: Requirement and test status definitions
 - **Verification**: Verification method definitions
+- **Logs**: Audit trail for all system activities
 
 See the entity diagram: ![ER Diagram](doc/ER%20diagram.png)
+
+### Database Initialization System
+
+The project includes a comprehensive database initialization system that provides:
+
+#### 📁 Initialization Files
+
+- **`init_complete.sql`**: Complete database setup with all tables, constraints, indexes, and sample data
+- **`init_simple.sql`**: Simplified version with basic schema and data
+- **`setup_database.sh`**: Automated setup script that handles the entire initialization process
+- **`DATABASE_SETUP_README.md`**: Detailed documentation for database setup
+
+#### 🔧 Features
+
+- **Complete Schema**: All tables, foreign key constraints, and performance indexes
+- **Working Authentication**: Pre-configured users with working bcrypt password hashes
+- **Sample Data**: Comprehensive Space Project with requirements, tests, and traceability
+- **Multi-Project Support**: Multiple projects with isolated data
+- **Audit Logging**: Sample audit trail entries
+- **Performance Optimization**: Strategic indexes for common queries
+
+#### 👥 Pre-configured Users
+
+All users have password: `password`
+
+| Username | Name | Role | Project |
+|----------|------|------|---------|
+| `alice` | Alice Johnson | Admin | ReqMan Project |
+| `dr_smith` | Dr. Sarah Smith | Admin | Space Project |
+| `eng_jones` | Engineer Mike Jones | User | Space Project |
+| `tech_lee` | Technician Lisa Lee | User | Space Project |
+| `qa_wilson` | QA Specialist Tom Wilson | User | Space Project |
+| `admin` | System Administrator | Admin | ReqMan Project |
+
+#### 🚀 Sample Data
+
+**Space Project** includes:
+- **8 Categories**: Power, Communication, Attitude Control, Thermal, etc.
+- **6 Applicability**: All Missions, Earth Observation, Communication, etc.
+- **4 Verification Methods**: Inspection, Analysis, Demonstration, Test
+- **5 Requirements**: Power, communication, and thermal requirements
+- **5 Tests**: Corresponding test cases for each requirement
+- **5 Matrix Links**: Complete traceability mapping
+
+#### 🔄 Setup Options
+
+**Automated Setup (Recommended)**:
+```bash
+# Start database and run complete setup
+docker-compose up -d
+./setup_database.sh
+```
+
+**Manual Setup**:
+```bash
+# Create database and run initialization script
+docker exec reqman_db_1 psql -U rust -d postgres -c "CREATE DATABASE reqman;"
+docker exec -i reqman_db_1 psql -U rust -d reqman < init_complete.sql
+```
+
+**Reset Database**:
+```bash
+# Complete reset
+docker exec reqman_db_1 psql -U rust -d postgres -c "DROP DATABASE IF EXISTS reqman;"
+docker exec reqman_db_1 psql -U rust -d postgres -c "CREATE DATABASE reqman;"
+./setup_database.sh
+```
 
 ### Migrations
 Database schema changes are managed through Diesel migrations:
@@ -229,6 +323,8 @@ diesel migration run
 # Revert migrations
 diesel migration redo
 ```
+
+**Note**: The initialization scripts provide a complete, working database setup that bypasses the need for individual migrations during initial setup.
 
 ## 🛠️ Development
 
@@ -251,7 +347,12 @@ ReqMan/
 │   │   ├── parser.rs       # Excel parsing logic
 │   │   └── api_client.rs   # API integration
 │   └── README.md           # Parser documentation
-└── doc/                   # Documentation
+├── doc/                   # Documentation
+├── init_complete.sql      # Complete database initialization script
+├── init_simple.sql        # Simplified database initialization
+├── setup_database.sh      # Automated database setup script
+├── DATABASE_SETUP_README.md # Database setup documentation
+└── docker-compose.yml     # Docker database configuration
 ```
 
 ### Key Technologies
@@ -285,7 +386,74 @@ This project is open source. See LICENSE file for details.
 4. Add tests if applicable
 5. Submit a pull request
 
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### Database Connection Issues
+```bash
+# Check if database container is running
+docker ps | grep reqman_db_1
+
+# Check database connectivity
+docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT 1;"
+
+# Restart database container
+docker-compose restart
+```
+
+#### Application Startup Issues
+```bash
+# Check if port 8000 is in use
+lsof -i :8000
+
+# Kill existing process
+kill <PID>
+
+# Start application with specific binary
+cargo run --bin req_man
+```
+
+#### Login Issues
+- **Default credentials**: All users have password `password`
+- **Available users**: alice, dr_smith, eng_jones, tech_lee, qa_wilson, admin
+- **Reset passwords**: Update database directly or re-run setup script
+
+#### Database Reset
+```bash
+# Complete database reset
+docker exec reqman_db_1 psql -U rust -d postgres -c "DROP DATABASE IF EXISTS reqman;"
+./setup_database.sh
+```
+
+### Verification Commands
+
+```bash
+# Verify database setup
+docker exec reqman_db_1 psql -U rust -d reqman -c "\dt"
+
+# Check user creation
+docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT user_username, user_name, is_admin FROM users;"
+
+# Verify sample data
+docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT COUNT(*) as requirements FROM requirements;"
+```
+
+### Performance Issues
+
+- **Database indexes**: The initialization script includes optimized indexes
+- **Connection pooling**: Application uses connection pooling for better performance
+- **Query optimization**: Consider adding indexes for custom queries
+
 ## 📞 Support
 
 For issues and questions, please open an issue on the project repository.
+
+### Getting Help
+
+1. **Check troubleshooting section** above
+2. **Review application logs** for error messages
+3. **Verify database setup** using verification commands
+4. **Check Docker container status**
+5. **Open an issue** with detailed error information
 

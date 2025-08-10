@@ -28,6 +28,10 @@ struct Args {
     /// Skip API calls and only generate JSON
     #[arg(long)]
     json_only: bool,
+
+    /// Project ID to import data into (default: 1)
+    #[arg(short, long, default_value = "1")]
+    project_id: i32,
 }
 
 #[tokio::main]
@@ -40,6 +44,8 @@ async fn main() -> Result<()> {
     println!("📁 File: {}", args.file.display());
     #[cfg(debug_assertions)]
     println!("🌐 API URL: {}", args.api_url);
+    #[cfg(debug_assertions)]
+    println!("📋 Project ID: {}", args.project_id);
 
     // Parse the Excel file
     let data = parser::parse_excel_file(&args.file)?;
@@ -68,13 +74,19 @@ async fn main() -> Result<()> {
     if !args.json_only {
         // Send to API
         let client = api_client::ApiClient::new(&args.api_url);
-        let results = client.import_data(&data).await?;
+        let results = client.import_data(&data, args.project_id).await?;
         #[cfg(debug_assertions)]
         println!("📤 API Import Results:");
         for result in results {
             match result {
-                Ok(response) => #[cfg(debug_assertions)] println!("✅ Success: {}", response),
-                Err(e) => #[cfg(debug_assertions)] println!("❌ Error: {}", e),
+                Ok(response) => {
+                    #[cfg(debug_assertions)]
+                    println!("✅ Success: {}", response);
+                },
+                Err(e) => {
+                    #[cfg(debug_assertions)]
+                    println!("❌ Error: {}", e);
+                },
             }
         }
     }

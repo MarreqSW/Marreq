@@ -159,6 +159,39 @@ pub fn get_applicability_by_id(id: i32) -> Applicability {
         .unwrap()
 }
 
+/// Get applicability by ID with project filtering and fallback
+pub fn get_applicability_by_id_safe(id: i32, target_project_id: i32) -> Applicability {
+    use crate::schema::applicability::dsl::*;
+
+    let connection = &mut establish_connection();
+    
+    // First try to find the applicability in the specific project
+    match applicability
+        .filter(app_id.eq(id))
+        .filter(crate::schema::applicability::project_id.eq(target_project_id))
+        .get_result::<Applicability>(connection) {
+        Ok(result) => result,
+        Err(_) => {
+            // Fallback: try to find any applicability with this ID
+            match applicability
+                .filter(app_id.eq(id))
+                .get_result::<Applicability>(connection) {
+                Ok(result) => result,
+                Err(_) => {
+                    // Final fallback: return a default applicability
+                    Applicability {
+                        app_id: id,
+                        app_title: format!("Unknown Applicability ({})", id),
+                        app_description: "Applicability not found".to_string(),
+                        app_tag: "unknown".to_string(),
+                        project_id: target_project_id,
+                    }
+                }
+            }
+        }
+    }
+}
+
 pub fn get_category_by_id(id: i32) -> Category {
     use crate::schema::categories::dsl::*;
 
@@ -175,6 +208,39 @@ pub fn get_category_by_id(id: i32) -> Category {
         .unwrap()
 }
 
+/// Get category by ID with project filtering and fallback
+pub fn get_category_by_id_safe(id: i32, target_project_id: i32) -> Category {
+    use crate::schema::categories::dsl::*;
+
+    let connection = &mut establish_connection();
+    
+    // First try to find the category in the specific project
+    match categories
+        .filter(cat_id.eq(id))
+        .filter(crate::schema::categories::project_id.eq(target_project_id))
+        .get_result::<Category>(connection) {
+        Ok(result) => result,
+        Err(_) => {
+            // Fallback: try to find any category with this ID
+            match categories
+                .filter(cat_id.eq(id))
+                .get_result::<Category>(connection) {
+                Ok(result) => result,
+                Err(_) => {
+                    // Final fallback: return a default category
+                    Category {
+                        cat_id: id,
+                        cat_title: format!("Unknown Category ({})", id),
+                        cat_description: "Category not found".to_string(),
+                        cat_tag: "unknown".to_string(),
+                        project_id: target_project_id,
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Returns a DecorateRequirement vector for a given requirement vector
 /// This function never fails, but if some requirement data is not found
 /// is filled with default value.
@@ -185,7 +251,7 @@ pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement
         let a = DecoratedRequirement {
             req_id: r.req_id,
             req_title: r.req_title,
-            req_verification: get_verification_by_id(r.req_verification).verification_name,
+            req_verification: get_verification_by_id_safe(r.req_verification, r.project_id).verification_name,
             req_description: r.req_description,
             req_current_status: get_status_by_id(r.req_current_status).st_title,
             req_current_status_id: r.req_current_status,  // Add numeric status ID
@@ -201,8 +267,8 @@ pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement
             },
             req_link: r.req_link,
             req_reference: r.req_reference,
-            req_category: get_category_by_id(r.req_category).cat_title,
-            req_applicability: get_applicability_by_id(r.req_applicability).app_title,
+            req_category: get_category_by_id_safe(r.req_category, r.project_id).cat_title,
+            req_applicability: get_applicability_by_id_safe(r.req_applicability, r.project_id).app_title,
             req_parent_id: r.req_parent,
 
             req_parent_title: if r.req_parent != 0 {
@@ -301,6 +367,38 @@ pub fn get_verification_by_id(id: i32) -> VerificationData {
         .unwrap();
 
     result
+}
+
+/// Get verification by ID with project filtering and fallback
+pub fn get_verification_by_id_safe(id: i32, target_project_id: i32) -> VerificationData {
+    use crate::schema::verification::dsl::*;
+
+    let connection = &mut establish_connection();
+    
+    // First try to find the verification in the specific project
+    match verification
+        .filter(verification_id.eq(id))
+        .filter(crate::schema::verification::project_id.eq(target_project_id))
+        .get_result::<VerificationData>(connection) {
+        Ok(result) => result,
+        Err(_) => {
+            // Fallback: try to find any verification with this ID
+            match verification
+                .filter(verification_id.eq(id))
+                .get_result::<VerificationData>(connection) {
+                Ok(result) => result,
+                Err(_) => {
+                    // Final fallback: return a default verification
+                    VerificationData {
+                        verification_id: id,
+                        verification_name: format!("Unknown Verification ({})", id),
+                        verification_description: "Verification not found".to_string(),
+                        project_id: target_project_id,
+                    }
+                }
+            }
+        }
+    }
 }
 
 pub fn get_status_name_by_id(id: i32) -> String {

@@ -2573,7 +2573,22 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
 pub fn import_excel_page(cookies: &CookieJar<'_>) -> Result<content::RawHtml<String>, Redirect> {
     let _user = require_auth(cookies)?;
     
-    let html = r#"
+    // Get selected project ID and name
+    let selected_project_id = get_selected_project_id(cookies);
+    let (project_id, project_name) = if let Some(pid) = selected_project_id {
+        let project = get_project_by_id_pooled_safe(pid);
+        (pid, project.project_name)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            (first_project.project_id, first_project.project_name.clone())
+        } else {
+            (1, "Default Project".to_string())
+        }
+    };
+    
+    let html = format!(r#"
     <!doctype html>
     <html lang='en'>
     <head>
@@ -2592,7 +2607,12 @@ pub fn import_excel_page(cookies: &CookieJar<'_>) -> Result<content::RawHtml<Str
                             <h3>Import Excel File</h3>
                         </div>
                         <div class="card-body">
-                            <p>Upload an Excel file to import requirements or tests into the current project.</p>
+                            <div class="alert alert-info">
+                                <strong>Target Project:</strong> {} (ID: {})
+                                <br>
+                                <small class="text-muted">Requirements and tests will be imported into this project. You can change the project using the dropdown in the navigation bar above.</small>
+                            </div>
+                            <p>Upload an Excel file to import requirements or tests into the selected project.</p>
                             <form action="/import_excel/upload" method="post" enctype="multipart/form-data">
                                 <div class="mb-3">
                                     <label for="excel_file" class="form-label">Select Excel File</label>
@@ -2611,9 +2631,9 @@ pub fn import_excel_page(cookies: &CookieJar<'_>) -> Result<content::RawHtml<Str
         </div>
     </body>
     </html>
-    "#;
+    "#, project_name, project_id);
     
-    Ok(content::RawHtml(html.to_string()))
+    Ok(content::RawHtml(html))
 }
 
 #[post("/import_excel/upload", data = "<upload>")]
@@ -2773,11 +2793,25 @@ pub fn process_excel_import(
             Redirect::to(uri!(import_excel_page))
         })?;
     
+    // Get selected project ID from cookies
+    let selected_project_id = get_selected_project_id(cookies);
+    let project_id = if let Some(pid) = selected_project_id {
+        pid
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            first_project.project_id
+        } else {
+            1 // Fallback to project 1 if no projects exist
+        }
+    };
+    
     // Create import configuration
     let config = crate::importers::excel::ImportConfig {
         import_type: mapping_data.import_type.clone(),
         column_mappings,
-        project_id: 1, // Default project ID - you might want to get this from user context
+        project_id,
     };
     
     let connection = &mut get_connection_pooled_safe();
@@ -2789,6 +2823,9 @@ pub fn process_excel_import(
         Ok(import_result) => {
             // Invalidate all caches after successful import since we don't know exactly what was imported
             crate::cache::invalidate_all_cache();
+            
+            // Get project name for display
+            let project_name = get_project_by_id_pooled_safe(project_id).project_name;
             
             format!(r#"
             <!doctype html>
@@ -2813,6 +2850,7 @@ pub fn process_excel_import(
                                         <h5>Import completed successfully!</h5>
                                         <p><strong>Records imported:</strong> {}</p>
                                         <p><strong>Import type:</strong> {}</p>
+                                        <p><strong>Target project:</strong> {} (ID: {})</p>
                                     </div>
                                     
                                     <div class="mt-3">
@@ -2828,10 +2866,15 @@ pub fn process_excel_import(
             </html>
             "#,
             import_result.imported_count,
-            mapping_data.import_type
+            mapping_data.import_type,
+            project_name,
+            project_id
             )
         }
         Err(e) => {
+            // Get project name for display
+            let project_name = get_project_by_id_pooled_safe(project_id).project_name;
+            
             format!(r#"
             <!doctype html>
             <html lang='en'>
@@ -2854,6 +2897,7 @@ pub fn process_excel_import(
                                     <div class="alert alert-danger">
                                         <h5>Import failed!</h5>
                                         <p><strong>Error:</strong> {}</p>
+                                        <p><strong>Target project:</strong> {} (ID: {})</p>
                                     </div>
                                     
                                     <div class="mt-3">
@@ -2868,7 +2912,9 @@ pub fn process_excel_import(
             </body>
             </html>
             "#,
-            e
+            e,
+            project_name,
+            project_id
             )
         }
     };

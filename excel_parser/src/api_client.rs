@@ -17,13 +17,13 @@ impl ApiClient {
         }
     }
 
-    pub async fn import_data(&self, data: &[ImportData]) -> Result<Vec<Result<String, String>>> {
+    pub async fn import_data(&self, data: &[ImportData], project_id: i32) -> Result<Vec<Result<String, String>>> {
         let mut results = Vec::new();
 
         for item in data {
             let result = match item {
-                ImportData::Requirement(req) => self.import_requirement(req).await,
-                ImportData::Test(test) => self.import_test(test).await,
+                ImportData::Requirement(req) => self.import_requirement(req, project_id).await,
+                ImportData::Test(test) => self.import_test(test, project_id).await,
             };
             results.push(result);
         }
@@ -31,7 +31,7 @@ impl ApiClient {
         Ok(results)
     }
 
-    async fn import_requirement(&self, req: &RequirementData) -> Result<String, String> {
+    async fn import_requirement(&self, req: &RequirementData, project_id: i32) -> Result<String, String> {
         // First, resolve category ID
         let category_id = self.resolve_category(&req.req_category).await
             .map_err(|e| format!("Failed to resolve category '{}': {}", req.req_category, e))?;
@@ -75,7 +75,8 @@ impl ApiClient {
             "req_reviewer": reviewer_id,
             "req_parent": parent_id.unwrap_or(0),
             "req_link": req.req_link,
-            "req_justification": req.req_justification
+            "req_justification": req.req_justification,
+            "project_id": project_id
         });
 
         let response = self.client
@@ -95,7 +96,7 @@ impl ApiClient {
         }
     }
 
-    async fn import_test(&self, test: &TestData) -> Result<String, String> {
+    async fn import_test(&self, test: &TestData, project_id: i32) -> Result<String, String> {
         // Resolve status ID
         let status_id = self.resolve_status(&test.test_status).await
             .map_err(|e| format!("Failed to resolve status '{}': {}", test.test_status, e))?;
@@ -112,7 +113,8 @@ impl ApiClient {
             "test_description": test.test_description,
             "test_source": test.test_source,
             "test_status": status_id,
-            "test_parent": parent_id.unwrap_or(0)
+            "test_parent": parent_id.unwrap_or(0),
+            "project_id": project_id
         });
 
         let response = self.client

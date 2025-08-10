@@ -2,83 +2,111 @@ use diesel::prelude::*;
 
 use crate::models::*;
 use crate::helper_functions::*;
+use crate::db::get_connection_pooled_safe;
 
 use xlsxwriter::*;
 use std::fs;
 
-pub fn create_matrix_workbook()->Result<Vec<u8>,xlsxwriter::XlsxError> {
-    use crate::schema::requirements::dsl::*;
+pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+    eprintln!("Creating matrix workbook");
+    
     use crate::schema::matrix::dsl::*;
+    use crate::schema::requirements::dsl::*;
     use crate::schema::tests::dsl::*;
+    use crate::helper_functions::*;
     
-    let connection = &mut establish_connection();
+    let connection = &mut get_connection_pooled_safe();
+    
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+    
+    // Get requirements for the selected project
+    let mut all_reqs = if let Some(selected_pid) = selected_project_id {
+        requirements
+            .filter(crate::schema::requirements::project_id.eq(selected_pid))
+            .load::<Requirement>(connection)
+            .map_err(|e| format!("Error querying requirements by project: {:?}", e))?
+    } else {
+        requirements
+            .load::<Requirement>(connection)
+            .map_err(|e| format!("Error querying requirements: {:?}", e))?
+    };
 
-    let workbook = Workbook::new("target/matrix.xls")?;
-    let mut sheet1 = workbook.add_worksheet(None)?;
-    
-    let mut all_reqs = requirements
-    .load::<Requirement>(connection)
-    .map_err(|_err| -> String {
-        #[cfg(debug_assertions)]
-        println!("Error querying page views: {:?}", _err);
-        "Error querying page views from the database".into()
-    }).unwrap();
+    // Get tests for the selected project
+    let mut all_tests = if let Some(selected_pid) = selected_project_id {
+        tests
+            .filter(crate::schema::tests::project_id.eq(selected_pid))
+            .load::<Test>(connection)
+            .map_err(|e| format!("Error querying tests by project: {:?}", e))?
+    } else {
+        tests
+            .load::<Test>(connection)
+            .map_err(|e| format!("Error querying tests: {:?}", e))?
+    };
 
     // Sort requirements by ID
     all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
-
-    let total_tests:i64 = tests.count().get_result(connection).unwrap();    
-
-    sheet1.write_string(0,0, "Req ID", None)?;
-    sheet1.write_string(0,1, "Title", None)?;
-    sheet1.write_string(0,2, "Reference", None)?;
-
-
-    for i in 1..total_tests+1 {
-        let ts:Test = tests
-        .filter(test_id.eq(i as i32))
-        .get_result(connection).unwrap();
-
-        let test_status_name = get_status_name_by_id(ts.test_status);
-        let out_str = format!("Test #{} ({})", i, test_status_name);
-        sheet1.write_string(0, 2+i as u16, &out_str, None)?;
+    
+    // Sort tests by ID
+    all_tests.sort_by(|a, b| a.test_id.cmp(&b.test_id));
+    
+    eprintln!("Found {} requirements and {} tests", all_reqs.len(), all_tests.len());
+    
+    let workbook = Workbook::new("target/matrix.xls")?;
+    let mut sheet1 = workbook.add_worksheet(None)?;
+    
+    // Write headers
+    // First column headers (requirement info)
+    sheet1.write_string(0, 0, "Req ID", None)?;
+    sheet1.write_string(0, 1, "Title", None)?;
+    sheet1.write_string(0, 2, "Reference", None)?;
+    
+    // Test headers starting from column 3
+    for (col_idx, test) in all_tests.iter().enumerate() {
+        let col = (col_idx + 3) as u16;
+        let header = format!("Test #{} ({})", test.test_id, test.test_name);
+        sheet1.write_string(0, col, &header, None)?;
     }
-
-    let mut i = 1;
     
-    
-    for req in all_reqs.iter() {
-        let mut j = 0;    
-        sheet1.write_number(i, j, req.req_id as f64, None)?;
-        j += 1;
-        sheet1.write_string(i, j, &req.req_title, None)?;
-        j += 1;
-        sheet1.write_string(i, j, &req.req_reference, None)?;
-        j += 1;
-
-        for indx in 1..total_tests+1 {   
-            let test_present :i64 = matrix
-            .filter(matrix_req_id.eq(req.req_id))
-            .filter(matrix_test_id.eq(indx as i32))
-            .count()
-            .get_result(connection).unwrap();
+    // Write requirement rows
+    for (row_idx, req) in all_reqs.iter().enumerate() {
+        let row = (row_idx + 1) as u32;
+        
+        // Write requirement info
+        sheet1.write_number(row, 0, req.req_id as f64, None)?;
+        sheet1.write_string(row, 1, &req.req_title, None)?;
+        sheet1.write_string(row, 2, &req.req_reference, None)?;
+        
+        // Check matrix links for each test
+        for (col_idx, test) in all_tests.iter().enumerate() {
+            let col = (col_idx + 3) as u16;
+            
+            // Check if this requirement is linked to this test
+            let test_present: i64 = matrix
+                .filter(matrix_req_id.eq(req.req_id))
+                .filter(matrix_test_id.eq(test.test_id))
+                .count()
+                .get_result(connection)
+                .map_err(|e| format!("Error checking matrix link: {:?}", e))?;
             
             if test_present > 0 {
-                //out_str = format!("{}<td>Yes</td>", out_str);
-                sheet1.write_string(i, j, "Yes", None)?;
-                j += 1;
-            } else {
-                //out_str = format!("{}<td>No</td>", out_str);
-                sheet1.write_string(i, j, "No", None)?;
-                j += 1;
+                sheet1.write_string(row, col, "Yes", None)?;
             }
+            // Leave cell empty if no link exists
         }
-        //out_str = format!("{}</tr>\n", out_str);
-        i += 1;
     }
-
-    workbook.close().expect("workbook can be closed");
-    let result = fs::read("target/matrix.xls").expect("can read file");
+    
+    eprintln!("Matrix data written successfully");
+    
+    workbook.close().map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
+        format!("Error closing workbook: {:?}", e).into()
+    })?;
+    
+    let result = fs::read("target/matrix.xls").map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
+        format!("Error reading generated file: {:?}", e).into()
+    })?;
+    
+    eprintln!("Matrix workbook created successfully");
     Ok(result)
 }
 

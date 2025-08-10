@@ -1532,21 +1532,31 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
 #[get("/matrix.xls")]
 pub async fn get_matrix_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, NamedFile), Redirect> {
     let _user = require_auth(cookies)?;
-    let _file = excel::create_matrix_workbook().expect("file can be created");
-    let path_to_file = path::Path::new("target/matrix.xls");
-    let res = NamedFile::open(&path_to_file)
-        .await
-        .map_err(|e| NotFound(e.to_string()));
-    match res {
-        Ok(file) => {
-            let content_type = ContentType::new(
-                "application",
-                "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            );
-            Ok((content_type, file))
+    
+    match excel::create_matrix_workbook(cookies) {
+        Ok(_) => {
+            let path_to_file = path::Path::new("target/matrix.xls");
+            let res = NamedFile::open(&path_to_file)
+                .await
+                .map_err(|e| NotFound(e.to_string()));
+            match res {
+                Ok(file) => {
+                    let content_type = ContentType::new(
+                        "application",
+                        "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    );
+                    Ok((content_type, file))
+                }
+                Err(error) => {
+                    eprintln!("Error opening matrix file: {:?}", error);
+                    Err(Redirect::to("/matrix"))
+                }
+            }
         }
-
-        Err(error) => panic!("Problem with file {:?}", error),
+        Err(e) => {
+            eprintln!("Error creating matrix workbook: {:?}", e);
+            Err(Redirect::to("/matrix"))
+        }
     }
 }
 

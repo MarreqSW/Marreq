@@ -20,7 +20,6 @@ pub mod schema;
 use crate::html::cors::*;
 use crate::routes::routes_api::*;
 use crate::routes::routes_html::*;
-use crate::routes::cache_routes::*;
 
 #[rocket_sync_db_pools::database("my_db")]
 pub struct MyDbConn(rocket_sync_db_pools::diesel::PgConnection);
@@ -103,11 +102,7 @@ async fn main() -> Result<(), rocket::Error> {
                 export_entity_logs,
                 cleanup_logs,
                 log_analytics,
-                admin_cache_stats,
-                admin_clear_cache,
-                admin_warm_cache,
-                admin_warm_project_cache,
-                admin_cache_health,
+
             ],
         )
         .mount(
@@ -136,13 +131,7 @@ async fn main() -> Result<(), rocket::Error> {
                 api_post_applicability,
                 api_put_applicability,
                 api_delete_applicability_by_id,
-                api_cache_stats,
-                api_clear_cache,
-                api_cleanup_cache,
-                api_cache_health,
-                api_cache_performance,
-                api_cache_recommendations,
-                api_reset_cache_counters,
+
             ],
         )
         .mount("/static", FileServer::from(relative!("src/html/static")))

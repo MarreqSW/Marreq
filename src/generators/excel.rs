@@ -1,5 +1,4 @@
 use crate::models::*;
-use crate::schema::*;
 use diesel::prelude::*;
 use crate::db::get_connection_pooled_safe;
 use std::fs;
@@ -12,7 +11,8 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
     use crate::schema::tests::dsl::*;
     use crate::helper_functions::*;
     
-    let connection = &mut get_connection_pooled_safe();
+    let mut connection = get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
     
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
@@ -21,11 +21,11 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
     let mut all_reqs = if let Some(selected_pid) = selected_project_id {
         requirements
             .filter(crate::schema::requirements::project_id.eq(selected_pid))
-            .load::<Requirement>(connection)
+            .load::<Requirement>(connection.as_mut())
             .map_err(|e| format!("Error querying requirements by project: {:?}", e))?
     } else {
         requirements
-            .load::<Requirement>(connection)
+            .load::<Requirement>(connection.as_mut())
             .map_err(|e| format!("Error querying requirements: {:?}", e))?
     };
 
@@ -33,11 +33,11 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
     let mut all_tests = if let Some(selected_pid) = selected_project_id {
         tests
             .filter(crate::schema::tests::project_id.eq(selected_pid))
-            .load::<Test>(connection)
+            .load::<Test>(connection.as_mut())
             .map_err(|e| format!("Error querying tests by project: {:?}", e))?
     } else {
         tests
-            .load::<Test>(connection)
+            .load::<Test>(connection.as_mut())
             .map_err(|e| format!("Error querying tests: {:?}", e))?
     };
 
@@ -83,7 +83,7 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
                 .filter(matrix_req_id.eq(req.req_id))
                 .filter(matrix_test_id.eq(test.test_id))
                 .count()
-                .get_result(connection)
+                .get_result(connection.as_mut())
                 .map_err(|e| format!("Error checking matrix link: {:?}", e))?;
             
             if test_present > 0 {
@@ -109,11 +109,6 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
 
 pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     use crate::schema::requirements::dsl::*;
-    use crate::schema::categories::dsl::*;
-    use crate::schema::applicability::dsl::*;
-    use crate::schema::status::dsl::*;
-    use crate::schema::verification::dsl::*;
-    use crate::schema::users::dsl::*;
 
     let mut connection = get_connection_pooled_safe()?;
 
@@ -122,8 +117,8 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
     // Create workbook
-    let workbook = xlsxwriter::Workbook::new("target/requirements.xls");
-    let worksheet = workbook.add_worksheet(Some("Requirements"));
+    let workbook = xlsxwriter::Workbook::new("target/requirements.xls")?;
+    let mut worksheet = workbook.add_worksheet(Some("Requirements"))?;
 
     // Write headers
     worksheet.write_string(0, 0, "ID", None)?;
@@ -158,7 +153,7 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
         worksheet.write_string(row, 12, &req.req_deadline_date.to_string(), None)?;
     }
 
-    workbook.close().expect("workbook can be closed");
+    workbook.close()?;
     let result = fs::read("target/requirements.xls").expect("can read file");
     Ok(result)
 }
@@ -173,8 +168,8 @@ pub fn create_tests_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
     // Create workbook
-    let workbook = xlsxwriter::Workbook::new("target/tests.xls");
-    let worksheet = workbook.add_worksheet(Some("Tests"));
+    let workbook = xlsxwriter::Workbook::new("target/tests.xls")?;
+    let mut worksheet = workbook.add_worksheet(Some("Tests"))?;
 
     // Write headers
     worksheet.write_string(0, 0, "ID", None)?;
@@ -195,7 +190,7 @@ pub fn create_tests_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         worksheet.write_number(row, 5, test.test_parent as f64, None)?;
     }
 
-    workbook.close().expect("workbook can be closed");
+    workbook.close()?;
     let result = fs::read("target/tests.xls").expect("can read file");
     Ok(result)
 }

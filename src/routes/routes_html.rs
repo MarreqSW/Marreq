@@ -20,7 +20,16 @@ use crate::html::*;
 use crate::logger::Logger;
 use crate::models::*;
 use crate::db_operations::*;
-use crate::db::{get_pooled_connection, get_connection_pooled_safe};
+use crate::db::{get_pooled_connection, get_connection_pooled_safe, PooledConnectionWrapper};
+
+// --------------------------------
+// Helper Functions
+// --------------------------------
+
+/// Helper function to get a database connection with proper error handling
+fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Error>> {
+    get_connection_pooled_safe()
+}
 
 // --------------------------------
 // Authentication Helper Functions
@@ -72,7 +81,10 @@ pub fn login(login_form: Form<LoginForm>, cookies: &CookieJar<'_>) -> Result<Red
             cookies.add_private(Cookie::new("user_name", user.user_name.clone()));
             
             // Log successful login
-            let mut conn = get_connection_pooled_safe();
+            let mut conn = get_db_connection().map_err(|e| {
+                eprintln!("Database connection error: {}", e);
+                Template::render("error", json!({"error": "Database connection failed"}))
+            })?;
             let _ = Logger::log_login(
                 &mut conn,
                 user.user_id,
@@ -100,16 +112,13 @@ pub fn login(login_form: Form<LoginForm>, cookies: &CookieJar<'_>) -> Result<Red
 
 #[get("/logout")]
 pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
-    use rocket::http::Cookie;
-    
-    // Get user info before clearing cookies for logging
+    // Get user info from cookies before clearing them
     let user_id = cookies.get_private("user_id")
         .and_then(|cookie| cookie.value().parse::<i32>().ok());
-    
     let username = cookies.get_private("username")
         .map(|cookie| cookie.value().to_string());
     
-    // Create cookies with empty values and immediate expiration
+    // Clear all session cookies
     let mut user_id_cookie = Cookie::new("user_id", "");
     user_id_cookie.set_max_age(time::Duration::seconds(0));
     user_id_cookie.set_path("/");
@@ -129,9 +138,14 @@ pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
     
     // Log logout if we have user info
     if let Some(uid) = user_id {
-        let mut conn = get_connection_pooled_safe();
-        let _description = username.map(|name| format!("User {} logged out", name));
-        let _ = Logger::log_logout(&mut conn, uid, None);
+        if let Ok(mut conn) = get_db_connection() {
+            let _description = username.map(|name| format!("User {} logged out", name));
+            let _ = Logger::log_logout(
+                &mut conn,
+                uid,
+                None,
+            );
+        }
     }
     
     Redirect::to(uri!(login_page))
@@ -445,7 +459,10 @@ pub fn edit_user(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redi
 pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let current_user = require_auth(cookies)?;
     
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(edit_user(user_id)))
+    })?;
     
     // Get the old values before updating
     let old_user = get_user_by_id(user_id);
@@ -622,7 +639,10 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
         }
     }
 
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(post_edit_requirement(req_id)))
+    })?;
     
     // Get the old values before updating
     let old_requirement = match get_requirement_by_id_safe(req_id) {
@@ -662,7 +682,13 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
 #[delete("/delete_requirement/<req_id>")]
 pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<Redirect, rocket::http::Status> {
     let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
-    let connection = &mut get_connection_pooled_safe();
+    let mut connection = match get_db_connection() {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            return Err(rocket::http::Status::InternalServerError);
+        }
+    };
     
     // Get the requirement details before deleting
     let requirement = match get_requirement_by_id_safe(req_id) {
@@ -679,14 +705,14 @@ pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<
         return Err(rocket::http::Status::Forbidden);
     }
     
-    let result = delete_requirement(connection, &req_id);
+    let result = delete_requirement(connection.as_mut(), &req_id);
     match result {
         Ok(success) => {
             if success {
                 // Log the requirement deletion
                 if let Ok(old_values) = Logger::to_json_string(&requirement) {
                     let _ = Logger::log_delete(
-                        connection,
+                        connection.as_mut(),
                         user.user_id,
                         EntityType::Requirement,
                         req_id,
@@ -724,7 +750,10 @@ pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<
 #[delete("/delete_test/<test_id>")]
 pub fn delete_test_route(test_id: i32, cookies: &CookieJar<'_>) -> Result<Redirect, rocket::http::Status> {
     let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        rocket::http::Status::InternalServerError
+    })?;
     
     // Get the test details before deleting
     let test = match get_test_by_id_safe(test_id) {
@@ -871,7 +900,10 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 #[post("/new_requirement", data = "<new_req>")]
 pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(new_requirement))
+    })?;
     
     let mut requirement_data = new_req.into_inner();
     
@@ -1204,7 +1236,10 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
 #[post("/edit_test/<test_id>", data = "<edit_test_form>")]
 pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(get_edit_test(test_id)))
+    })?;
     
     // Get the old values before updating
     let old_test = get_test_by_id(test_id);
@@ -1249,7 +1284,10 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
 #[post("/new_test", data = "<new_test>")]
 pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(new_test))
+    })?;
     let my_new_test = NewTest {
         test_id: None,
         test_name: new_test.test_name.clone(),
@@ -1297,16 +1335,21 @@ pub fn show_status() -> content::RawHtml<String> {
     use crate::schema::status::dsl::*;
 
     let mut out_str = print_header();
-    let connection = &mut get_connection_pooled_safe();
+    let mut connection = match get_db_connection() {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            return content::RawHtml("Error: Database connection failed".to_string());
+        }
+    };
 
-    let all_status = status
-        .load::<Status>(connection)
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", _err);
-            "Error querying page views from the database".into()
-        })
-        .unwrap();
+    let all_status = match status.load::<Status>(connection.as_mut()) {
+        Ok(status_list) => status_list,
+        Err(e) => {
+            eprintln!("Database query error: {}", e);
+            return content::RawHtml("Error: Failed to load status data".to_string());
+        }
+    };
 
     for st in all_status.iter() {
         out_str = format!(
@@ -1331,7 +1374,13 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
     use crate::schema::requirements::dsl::*;
     use crate::schema::tests::dsl::*;
 
-    let connection = &mut get_connection_pooled_safe();
+    let mut connection = match get_db_connection() {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            return Err(Redirect::to(uri!(index)));
+        }
+    };
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
@@ -1339,19 +1388,17 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
     let mut all_reqs = if let Some(selected_pid) = selected_project_id {
         requirements
             .filter(crate::schema::requirements::project_id.eq(selected_pid))
-            .load::<Requirement>(connection)
-            .map_err(|_err| -> String {
-                #[cfg(debug_assertions)]
-                println!("Error querying requirements by project: {:?}", _err);
+            .load::<Requirement>(connection.as_mut())
+            .map_err(|e| {
+                eprintln!("Database connection error: {}", e);
                 "Error querying requirements from the database".into()
             })
             .expect("Error getting matrix table")
     } else {
         requirements
-            .load::<Requirement>(connection)
-            .map_err(|_err| -> String {
-                #[cfg(debug_assertions)]
-                println!("Error querying page views: {:?}", _err);
+            .load::<Requirement>(connection.as_mut())
+            .map_err(|e| {
+                eprintln!("Database connection error: {}", e);
                 "Error querying page views from the database".into()
             })
             .expect("Error getting matrix table")
@@ -1360,19 +1407,17 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
     let mut all_tests = if let Some(selected_pid) = selected_project_id {
         tests
             .filter(crate::schema::tests::project_id.eq(selected_pid))
-            .load::<Test>(connection)
-            .map_err(|_err| -> String {
-                #[cfg(debug_assertions)]
-                println!("Error querying tests by project: {:?}", _err);
+            .load::<Test>(connection.as_mut())
+            .map_err(|e| {
+                eprintln!("Database connection error: {}", e);
                 "Error querying tests from the database".into()
             })
             .expect("Error getting tests")
     } else {
         tests
-            .load::<Test>(connection)
-            .map_err(|_err| -> String {
-                #[cfg(debug_assertions)]
-                println!("Error querying tests: {:?}", _err);
+            .load::<Test>(connection.as_mut())
+            .map_err(|e| {
+                eprintln!("Database connection error: {}", e);
                 "Error querying tests from the database".into()
             })
             .expect("Error getting tests")
@@ -1679,7 +1724,10 @@ pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -
         return Ok(Redirect::to(uri!(new_category)));
     }
     
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(new_category))
+    })?;
     
     let category_data = new_category.into_inner();
     let result = insert_new_category(connection, &category_data);
@@ -1726,7 +1774,10 @@ pub fn get_edit_category(cat_id: i32, cookies: &CookieJar<'_>) -> Result<Templat
 #[post("/edit_category/<cat_id>", data = "<category>")]
 pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(get_edit_category(cat_id)))
+    })?;
     
     // Get the old values before updating
     let old_category = get_category_by_id(cat_id);
@@ -1768,7 +1819,10 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
 #[delete("/delete_category/<cat_id>")]
 pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        rocket::http::Status::InternalServerError
+    })?;
     
     // Get the category details before deleting
     let category = get_category_by_id(cat_id);
@@ -1806,7 +1860,10 @@ pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<roc
 #[post("/new_user", data = "<new_user>")]
 pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(new_user))
+    })?;
     
     // Hash the password before inserting
     let mut user_with_hashed_password = new_user.into_inner();
@@ -1906,7 +1963,10 @@ pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &C
         return Ok(Redirect::to(uri!(new_applicability)));
     }
     
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(new_applicability))
+    })?;
     
     let applicability_data = new_applicability.into_inner();
     let result = insert_new_applicability(connection, &applicability_data);
@@ -1953,7 +2013,10 @@ pub fn get_edit_applicability(app_id: i32, cookies: &CookieJar<'_>) -> Result<Te
 #[post("/edit_applicability/<app_id>", data = "<applicability>")]
 pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(get_edit_applicability(app_id)))
+    })?;
     
     // Get the old values before updating
     let old_applicability = get_applicability_by_id(app_id);
@@ -1991,7 +2054,10 @@ pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability
 #[delete("/delete_applicability/<app_id>")]
 pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        rocket::http::Status::InternalServerError
+    })?;
     
     // Get the applicability details before deleting
     let applicability = get_applicability_by_id(app_id);
@@ -2421,7 +2487,10 @@ pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> R
         return Err(Redirect::to(uri!(show_projects)));
     }
     
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(new_project))
+    })?;
     
     let project_data = new_project.into_inner();
     let result = insert_new_project(connection, &project_data);
@@ -2487,7 +2556,10 @@ pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies:
         return Err(Redirect::to(uri!(show_projects)));
     }
     
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(get_edit_project(project_id)))
+    })?;
     
     // Get the old values before updating
     let old_project = get_project_by_id(project_id);
@@ -2533,7 +2605,10 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
         return Err(Redirect::to(uri!(show_projects)));
     }
     
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        rocket::http::Status::InternalServerError
+    })?;
     
     // Get the project details before deleting
     let project = get_project_by_id_pooled_safe(project_id);
@@ -2814,7 +2889,10 @@ pub fn process_excel_import(
         project_id,
     };
     
-    let connection = &mut get_connection_pooled_safe();
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(import_excel_page))
+    })?;
     let result = importer.import_data(&config, connection);
     
     eprintln!("Import result: {:?}", result);

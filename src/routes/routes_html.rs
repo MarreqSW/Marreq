@@ -621,7 +621,13 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
     // Server-side validation: Check if reference follows general format
     if !requirement_data.req_reference.is_empty() {
         // Check general format: REQ-TAG-NUMBER
-        let general_pattern = Regex::new(r"^REQ-[A-Z]+-\d+$").unwrap();
+        let general_pattern = match Regex::new(r"^REQ-[A-Z]+-\d+$") {
+            Ok(pattern) => pattern,
+            Err(_) => {
+                eprintln!("Failed to compile regex pattern");
+                return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
+            }
+        };
         if !general_pattern.is_match(&requirement_data.req_reference) {
             // Invalid reference format - redirect back to form with error
             return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
@@ -924,7 +930,13 @@ pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) 
         
         // Validate format: REQ-TAG-NUMBER
         let reference_pattern = format!("^REQ-{}-\\d+$", category.cat_tag);
-        let regex = Regex::new(&reference_pattern).unwrap();
+        let regex = match Regex::new(&reference_pattern) {
+            Ok(pattern) => pattern,
+            Err(_) => {
+                eprintln!("Failed to compile regex pattern: {}", reference_pattern);
+                return Err(Redirect::to(uri!(new_requirement)));
+            }
+        };
         if !regex.is_match(&requirement_data.req_reference) {
             // Invalid reference format - redirect back to form with error
             return Err(Redirect::to(uri!(new_requirement)));
@@ -1897,7 +1909,11 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
     match hash_password(&user_with_hashed_password.user_password) {
         Ok(hashed_password) => {
             user_with_hashed_password.user_password = hashed_password;
-            let my_id = insert_new_user(connection, &user_with_hashed_password).unwrap();
+            let my_id = insert_new_user(connection, &user_with_hashed_password)
+                .map_err(|e| {
+                    eprintln!("Error inserting new user: {:?}", e);
+                    Redirect::to(uri!(new_user))
+                })?;
             
             // Log the user creation
             if let Ok(new_values) = Logger::to_json_string(&user_with_hashed_password) {
@@ -3155,19 +3171,20 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
         Ok(output) => {
             if output.status.success() {
                 // Log the successful backup
-                let mut conn = get_pooled_connection().unwrap();
-                let _ = Logger::log_action(
-                    &mut conn,
-                    user.user_id,
-                    crate::models::ActionType::StatusChange,
-                    crate::models::EntityType::User,
-                    None,
-                    None,
-                    None,
-                    None,
-                    Some(format!("Database backup generated: {}", filename)),
-                    None,
-                );
+                if let Ok(mut conn) = get_pooled_connection() {
+                    let _ = Logger::log_action(
+                        &mut conn,
+                        user.user_id,
+                        crate::models::ActionType::StatusChange,
+                        crate::models::EntityType::User,
+                        None,
+                        None,
+                        None,
+                        None,
+                        Some(format!("Database backup generated: {}", filename)),
+                        None,
+                    );
+                }
                 
                 // Return the backup file for download
                 let file = NamedFile::open(&backup_path)
@@ -3178,7 +3195,28 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
                 Ok((content_type, file))
             } else {
                 // Log the failed backup
-                let mut conn = get_pooled_connection().unwrap();
+                if let Ok(mut conn) = get_pooled_connection() {
+                    let _ = Logger::log_action(
+                        &mut conn,
+                        user.user_id,
+                        crate::models::ActionType::StatusChange,
+                        crate::models::EntityType::User,
+                        None,
+                        None,
+                        None,
+                        None,
+                        Some(format!("Database backup failed: {}", String::from_utf8_lossy(&output.stderr))),
+                        None,
+                    );
+                }
+                
+                // If backup failed, redirect to backup page with error
+                Err(Redirect::to(uri!(admin_backup_page)))
+            }
+        }
+        Err(e) => {
+            // Log the command failure
+            if let Ok(mut conn) = get_pooled_connection() {
                 let _ = Logger::log_action(
                     &mut conn,
                     user.user_id,
@@ -3188,29 +3226,10 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
                     None,
                     None,
                     None,
-                    Some(format!("Database backup failed: {}", String::from_utf8_lossy(&output.stderr))),
+                    Some(format!("Database backup command failed: {}", e)),
                     None,
                 );
-                
-                // If backup failed, redirect to backup page with error
-                Err(Redirect::to(uri!(admin_backup_page)))
             }
-        }
-        Err(e) => {
-            // Log the command failure
-            let mut conn = get_pooled_connection().unwrap();
-            let _ = Logger::log_action(
-                &mut conn,
-                user.user_id,
-                crate::models::ActionType::StatusChange,
-                crate::models::EntityType::User,
-                None,
-                None,
-                None,
-                None,
-                Some(format!("Database backup command failed: {}", e)),
-                None,
-            );
             
             // If command failed, redirect to backup page with error
             Err(Redirect::to(uri!(admin_backup_page)))
@@ -3231,7 +3250,10 @@ pub fn show_logs(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         return Ok(Template::render("access_denied", context));
     }
     
-    let connection = &mut get_pooled_connection().unwrap();
+    let connection = &mut get_pooled_connection().map_err(|e| {
+        eprintln!("Database connection error in show_logs: {}", e);
+        Redirect::to(uri!(admin_dashboard))
+    })?;
     let logs = Logger::get_recent_logs(connection, 1000).unwrap_or_default();
     
     // Enhance logs with user information
@@ -3267,7 +3289,10 @@ pub fn show_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJar
         return Ok(Template::render("access_denied", context));
     }
     
-    let connection = &mut get_pooled_connection().unwrap();
+    let connection = &mut get_pooled_connection().map_err(|e| {
+        eprintln!("Database connection error in show_entity_logs: {}", e);
+        Redirect::to(uri!(show_logs))
+    })?;
     let logs = Logger::get_logs_for_entity(connection, &entity_type, entity_id).unwrap_or_default();
     
     // Enhance logs with user information
@@ -3301,7 +3326,10 @@ pub async fn export_logs(filename: Option<String>, cookies: &CookieJar<'_>) -> R
         return Err(Redirect::to(uri!(show_logs)));
     }
     
-    let connection = &mut get_pooled_connection().unwrap();
+    let connection = &mut get_pooled_connection().map_err(|e| {
+        eprintln!("Database connection error in export_logs: {}", e);
+        Redirect::to(uri!(show_logs))
+    })?;
     let logs = Logger::get_recent_logs(connection, 1000).unwrap_or_default();
     
     // Convert logs to JSON

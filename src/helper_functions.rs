@@ -45,11 +45,12 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, bcrypt::Bcryp
 pub fn authenticate_user(username: &str, password: &str) -> Result<Option<User>, String> {
     use crate::schema::users::dsl::*;
     
-    let connection = &mut crate::db::get_connection_pooled_safe();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
     
     let user = users
         .filter(user_username.eq(username))
-        .first::<User>(connection)
+        .first::<User>(connection.as_mut())
         .optional()
         .map_err(|_e| format!("Database error: {}", _e))?;
     
@@ -68,12 +69,13 @@ pub fn authenticate_user(username: &str, password: &str) -> Result<Option<User>,
 pub fn change_user_password(_user_id: i32, current_password: &str, new_password: &str) -> Result<(), String> {
     use crate::schema::users::dsl::*;
     
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
     
     // Get the user
     let user = users
         .filter(user_id.eq(user_id))
-        .first::<User>(connection)
+        .first::<User>(connection.as_mut())
         .map_err(|_e| format!("User not found: {}", _e))?;
     
     // Verify current password
@@ -86,7 +88,7 @@ pub fn change_user_password(_user_id: i32, current_password: &str, new_password:
             // Update password in database
             diesel::update(users.filter(user_id.eq(user_id)))
                 .set(user_password.eq(hashed_password))
-                .execute(connection)
+                .execute(connection.as_mut())
                 .map_err(|_e| format!("Database update error: {}", _e))?;
             
             Ok(())
@@ -100,15 +102,16 @@ pub fn change_user_password(_user_id: i32, current_password: &str, new_password:
 pub fn get_status_all() -> Result<Vec<Status>, String> {
     use crate::schema::status::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
 
     status
         .order(st_id)
-        .get_results(connection)
+        .load::<Status>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying page views from the database".into()
+            println!("Error querying status: {:?}", _err);
+            "Error querying status from the database".into()
         })
 }
 
@@ -116,29 +119,32 @@ pub fn get_status_all() -> Result<Vec<Status>, String> {
 pub fn get_categories_all() -> Result<Vec<Category>, String> {
     use crate::schema::categories::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
 
     categories
         .order(cat_id)
-        .get_results(connection)
+        .load::<Category>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying page views from the database".into()
+            println!("Error querying categories: {:?}", _err);
+            "Error querying categories from the database".into()
         })
 }
 
+/// Returns the applicability list
 pub fn get_applicability_all() -> Result<Vec<Applicability>, String> {
     use crate::schema::applicability::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
 
     applicability
         .order(app_id)
-        .get_results(connection)
+        .load::<Applicability>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
+            println!("Error querying applicability: {:?}", _err);
             "Error querying applicability from the database".into()
         })
 }
@@ -146,14 +152,15 @@ pub fn get_applicability_all() -> Result<Vec<Applicability>, String> {
 pub fn get_applicability_by_id(id: i32) -> Applicability {
     use crate::schema::applicability::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
 
     applicability
         .filter(app_id.eq(id))
-        .get_result(connection)
+        .get_result(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
+            println!("Error querying applicability: {:?}", _err);
             "Error querying applicability from the database".into()
         })
         .unwrap()
@@ -163,19 +170,20 @@ pub fn get_applicability_by_id(id: i32) -> Applicability {
 pub fn get_applicability_by_id_safe(id: i32, target_project_id: i32) -> Applicability {
     use crate::schema::applicability::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
     
     // First try to find the applicability in the specific project
     match applicability
         .filter(app_id.eq(id))
         .filter(crate::schema::applicability::project_id.eq(target_project_id))
-        .get_result::<Applicability>(connection) {
+        .get_result::<Applicability>(connection.as_mut()) {
         Ok(result) => result,
         Err(_) => {
             // Fallback: try to find any applicability with this ID
             match applicability
                 .filter(app_id.eq(id))
-                .get_result::<Applicability>(connection) {
+                .get_result::<Applicability>(connection.as_mut()) {
                 Ok(result) => result,
                 Err(_) => {
                     // Final fallback: return a default applicability
@@ -195,11 +203,12 @@ pub fn get_applicability_by_id_safe(id: i32, target_project_id: i32) -> Applicab
 pub fn get_category_by_id(id: i32) -> Category {
     use crate::schema::categories::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
 
     categories
         .filter(cat_id.eq(id))
-        .get_result(connection)
+        .get_result(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying.*: {:?}", _err);
@@ -212,19 +221,20 @@ pub fn get_category_by_id(id: i32) -> Category {
 pub fn get_category_by_id_safe(id: i32, target_project_id: i32) -> Category {
     use crate::schema::categories::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
     
     // First try to find the category in the specific project
     match categories
         .filter(cat_id.eq(id))
         .filter(crate::schema::categories::project_id.eq(target_project_id))
-        .get_result::<Category>(connection) {
+        .get_result::<Category>(connection.as_mut()) {
         Ok(result) => result,
         Err(_) => {
             // Fallback: try to find any category with this ID
             match categories
                 .filter(cat_id.eq(id))
-                .get_result::<Category>(connection) {
+                .get_result::<Category>(connection.as_mut()) {
                 Ok(result) => result,
                 Err(_) => {
                     // Final fallback: return a default category
@@ -294,10 +304,11 @@ pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement
 pub fn get_user_by_id(id: i32) -> User {
     use crate::schema::users::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
     let result: User = users
         .filter(user_id.eq(id))
-        .get_result(connection)
+        .get_result(connection.as_mut())
         .expect("Error reading table Users");
 
     result
@@ -306,10 +317,11 @@ pub fn get_user_by_id(id: i32) -> User {
 pub fn get_status_by_id(id: i32) -> Status {
     use crate::schema::status::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
     let result: Status = status
         .filter(st_id.eq(id))
-        .get_result(connection)
+        .get_result(connection.as_mut())
         .expect("Error reading table Status");
 
     result
@@ -328,11 +340,12 @@ pub struct VerificationData {
 pub fn get_verification_all() -> Result<Vec<VerificationData>, String> {
     use crate::schema::verification::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
 
     verification
         .order(verification_id)
-        .load::<VerificationData>(connection)
+        .load::<VerificationData>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying verification: {:?}", _err);
@@ -343,12 +356,13 @@ pub fn get_verification_all() -> Result<Vec<VerificationData>, String> {
 pub fn get_verification_by_project(_project_id: i32) -> Result<Vec<VerificationData>, String> {
     use crate::schema::verification::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
 
     verification
         .filter(project_id.eq(_project_id))
         .order(verification_id)
-        .load::<VerificationData>(connection)
+        .load::<VerificationData>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying verification: {:?}", _err);
@@ -360,10 +374,11 @@ pub fn get_verification_by_project(_project_id: i32) -> Result<Vec<VerificationD
 pub fn get_verification_by_id(id: i32) -> VerificationData {
     use crate::schema::verification::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
     let result: VerificationData = verification
         .filter(verification_id.eq(id))
-        .get_result(connection)
+        .get_result(connection.as_mut())
         .unwrap();
 
     result
@@ -373,19 +388,20 @@ pub fn get_verification_by_id(id: i32) -> VerificationData {
 pub fn get_verification_by_id_safe(id: i32, target_project_id: i32) -> VerificationData {
     use crate::schema::verification::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
     
     // First try to find the verification in the specific project
     match verification
         .filter(verification_id.eq(id))
         .filter(crate::schema::verification::project_id.eq(target_project_id))
-        .get_result::<VerificationData>(connection) {
+        .get_result::<VerificationData>(connection.as_mut()) {
         Ok(result) => result,
         Err(_) => {
             // Fallback: try to find any verification with this ID
             match verification
                 .filter(verification_id.eq(id))
-                .get_result::<VerificationData>(connection) {
+                .get_result::<VerificationData>(connection.as_mut()) {
                 Ok(result) => result,
                 Err(_) => {
                     // Final fallback: return a default verification
@@ -408,10 +424,11 @@ pub fn get_status_name_by_id(id: i32) -> String {
 pub fn get_requirement_by_id(id: i32) -> Requirement {
     use crate::schema::requirements::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
     let result: Requirement = requirements
         .filter(req_id.eq(id))
-        .get_result(connection)
+        .get_result(connection.as_mut())
         .unwrap();
 
     result
@@ -421,10 +438,11 @@ pub fn get_requirement_by_id(id: i32) -> Requirement {
 pub fn get_requirement_by_id_safe(id: i32) -> Result<Requirement, String> {
     use crate::schema::requirements::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
     match requirements
         .filter(req_id.eq(id))
-        .get_result::<Requirement>(connection) {
+        .get_result::<Requirement>(connection.as_mut()) {
         Ok(requirement) => Ok(requirement),
         Err(diesel::result::Error::NotFound) => Err(format!("Requirement with ID {} not found", id)),
         Err(e) => Err(format!("Database error: {}", e))
@@ -442,11 +460,12 @@ pub fn get_requirement_title_by_id(id: i32) -> String {
 pub fn get_requirements_all() -> Result<Vec<Requirement>, String> {
     use crate::schema::requirements::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
 
     requirements
         .order(req_id)
-        .load::<Requirement>(connection)
+        .load::<Requirement>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying.*: {:?}", _err);
@@ -457,11 +476,12 @@ pub fn get_requirements_all() -> Result<Vec<Requirement>, String> {
 pub fn get_tests_all() -> Result<Vec<Test>, String> {
     use crate::schema::tests::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
 
     tests
         .order(test_id)
-        .load::<Test>(connection)
+        .load::<Test>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying.*: {:?}", _err);
@@ -472,11 +492,12 @@ pub fn get_tests_all() -> Result<Vec<Test>, String> {
 pub fn get_users_all() -> Result<Vec<User>, String> {
     use crate::schema::users::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
 
     users
         .order(user_id)
-        .load::<User>(connection)
+        .load::<User>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying.*: {:?}", _err);
@@ -489,8 +510,9 @@ pub fn get_users_all() -> Result<Vec<User>, String> {
 pub fn get_test_by_id(id: i32) -> Test {
     use crate::schema::tests::dsl::*;
 
-    let connection = &mut establish_connection();
-    let result: Test = tests.filter(test_id.eq(id)).get_result(connection).unwrap();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
+    let result: Test = tests.filter(test_id.eq(id)).get_result(connection.as_mut()).unwrap();
 
     result
 }
@@ -499,8 +521,9 @@ pub fn get_test_by_id(id: i32) -> Test {
 pub fn get_test_by_id_safe(id: i32) -> Result<Test, String> {
     use crate::schema::tests::dsl::*;
 
-    let connection = &mut establish_connection();
-    match tests.filter(test_id.eq(id)).get_result::<Test>(connection) {
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
+    match tests.filter(test_id.eq(id)).get_result::<Test>(connection.as_mut()) {
         Ok(test) => Ok(test),
         Err(diesel::result::Error::NotFound) => Err(format!("Test with ID {} not found", id)),
         Err(e) => Err(format!("Database error: {}", e))
@@ -511,16 +534,17 @@ pub fn get_test_status_by_id(id: i32) -> String {
     use crate::schema::tests::dsl::*;
     use crate::models::Status;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
 
-    let ts: Test = match tests.filter(test_id.eq(id)).get_result(connection) {
+    let ts: Test = match tests.filter(test_id.eq(id)).get_result(connection.as_mut()) {
         Ok(test) => test,
         Err(_) => return "[Test Not Found]".to_string()
     };
 
     let result: Status = match crate::schema::status::dsl::status
         .filter(crate::schema::status::dsl::st_id.eq(ts.test_status))
-        .first(connection) {
+        .first(connection.as_mut()) {
             Ok(status) => status,
             Err(_) => return "[Status Not Found]".to_string()
         };
@@ -654,7 +678,8 @@ pub fn get_requirements_for_test(test_id: i32) -> Result<Vec<Requirement>, Strin
     use crate::schema::matrix::dsl::*;
     use crate::schema::requirements::dsl::*;
 
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
     
     let linked_requirements = matrix
         .filter(matrix_test_id.eq(test_id))
@@ -678,7 +703,7 @@ pub fn get_requirements_for_test(test_id: i32) -> Result<Vec<Requirement>, Strin
             req_justification,
             crate::schema::requirements::project_id,
         ))
-        .load::<Requirement>(connection)
+        .load::<Requirement>(connection.as_mut())
         .map_err(|_e| format!("Error getting requirements for test: {}", _e))?;
 
     Ok(linked_requirements)
@@ -1331,10 +1356,11 @@ pub fn generate_pdf_report_data(
 pub fn get_projects_all() -> Result<Vec<Project>, String> {
     use crate::schema::projects::dsl::*;
     
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
     
     projects
-        .load::<Project>(connection)
+        .load::<Project>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying.*: {:?}", _err);
@@ -1345,11 +1371,12 @@ pub fn get_projects_all() -> Result<Vec<Project>, String> {
 pub fn get_project_by_id(project_id_param: i32) -> Project {
     use crate::schema::projects::dsl::*;
     
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
     
     projects
         .filter(project_id.eq(project_id_param))
-        .first::<Project>(connection)
+        .first::<Project>(connection.as_mut())
         .expect("Error loading project")
 }
 
@@ -1491,11 +1518,12 @@ pub fn get_projects_for_nav() -> Result<Vec<Project>, String> {
 pub fn get_requirements_by_project(_project_id: i32) -> Result<Vec<Requirement>, String> {
     use crate::schema::requirements::dsl::*;
     
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
     
     requirements
         .filter(crate::schema::requirements::project_id.eq(_project_id))
-        .load::<Requirement>(connection)
+        .load::<Requirement>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying.*: {:?}", _err);
@@ -1506,11 +1534,12 @@ pub fn get_requirements_by_project(_project_id: i32) -> Result<Vec<Requirement>,
 pub fn get_tests_by_project(_project_id: i32) -> Result<Vec<Test>, String> {
     use crate::schema::tests::dsl::*;
     
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
     
     tests
         .filter(crate::schema::tests::project_id.eq(_project_id))
-        .load::<Test>(connection)
+        .load::<Test>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying.*: {:?}", _err);
@@ -1521,11 +1550,12 @@ pub fn get_tests_by_project(_project_id: i32) -> Result<Vec<Test>, String> {
 pub fn get_categories_by_project(_project_id: i32) -> Result<Vec<Category>, String> {
     use crate::schema::categories::dsl::*;
     
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
     
     categories
         .filter(crate::schema::categories::project_id.eq(_project_id))
-        .load::<Category>(connection)
+        .load::<Category>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying.*: {:?}", _err);
@@ -1536,11 +1566,12 @@ pub fn get_categories_by_project(_project_id: i32) -> Result<Vec<Category>, Stri
 pub fn get_applicability_by_project(_project_id: i32) -> Result<Vec<Applicability>, String> {
     use crate::schema::applicability::dsl::*;
     
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
     
     applicability
         .filter(crate::schema::applicability::project_id.eq(_project_id))
-        .load::<Applicability>(connection)
+        .load::<Applicability>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying.*: {:?}", _err);
@@ -1551,11 +1582,12 @@ pub fn get_applicability_by_project(_project_id: i32) -> Result<Vec<Applicabilit
 pub fn get_matrix_by_project(_project_id: i32) -> Result<Vec<Matrix>, String> {
     use crate::schema::matrix::dsl::*;
     
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .map_err(|e| format!("Database connection error: {}", e))?;
     
     matrix
         .filter(crate::schema::matrix::project_id.eq(_project_id))
-        .load::<Matrix>(connection)
+        .load::<Matrix>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying.*: {:?}", _err);
@@ -1617,12 +1649,13 @@ pub fn generate_requirement_reference(category_id: i32, project_id: i32) -> Resu
     use crate::schema::categories;
     use crate::schema::requirements;
     
-    let connection = &mut establish_connection();
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
     
     // Get the category to find its tag
     let category = categories::table
         .filter(categories::cat_id.eq(category_id))
-        .first::<Category>(connection)
+        .first::<Category>(connection.as_mut())
         .map_err(|_e| Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, "Category not found")))?;
     
     // Count existing requirements with the same category and project
@@ -1630,7 +1663,7 @@ pub fn generate_requirement_reference(category_id: i32, project_id: i32) -> Resu
         .filter(requirements::req_category.eq(category_id))
         .filter(requirements::project_id.eq(project_id))
         .count()
-        .get_result::<i64>(connection)
+        .get_result::<i64>(connection.as_mut())
         .map_err(|_e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Database error")))?;
     
     // Generate reference: REQ-{CATEGORY_TAG}-{NEXT_NUMBER}

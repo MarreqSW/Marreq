@@ -1,10 +1,7 @@
-use diesel::prelude::*;
-
 use crate::models::*;
-use crate::helper_functions::*;
+use crate::schema::*;
+use diesel::prelude::*;
 use crate::db::get_connection_pooled_safe;
-
-use xlsxwriter::*;
 use std::fs;
 
 pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
@@ -52,7 +49,7 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
     
     eprintln!("Found {} requirements and {} tests", all_reqs.len(), all_tests.len());
     
-    let workbook = Workbook::new("target/matrix.xls")?;
+    let workbook = xlsxwriter::Workbook::new("target/matrix.xls")?;
     let mut sheet1 = workbook.add_worksheet(None)?;
     
     // Write headers
@@ -110,106 +107,55 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
     Ok(result)
 }
 
-pub fn create_requirements_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> {
+pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     use crate::schema::requirements::dsl::*;
-    
-    let connection = &mut establish_connection();
+    use crate::schema::categories::dsl::*;
+    use crate::schema::applicability::dsl::*;
+    use crate::schema::status::dsl::*;
+    use crate::schema::verification::dsl::*;
+    use crate::schema::users::dsl::*;
 
-    let workbook = Workbook::new("target/requirements.xls")?;
-    let mut sheet1 = workbook.add_worksheet(None)?;
-    
-    // Get all requirements with decorated data
-    let mut all_reqs = requirements
-        .load::<Requirement>(connection)
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying requirements: {:?}", _err);
-            "Error querying requirements from the database".into()
-        }).unwrap();
+    let mut connection = get_connection_pooled_safe()?;
 
-    // Sort requirements by ID
-    all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
+    let all_requirements = requirements
+        .load::<Requirement>(connection.as_mut())
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
-    let decorated_reqs = decorate_requirements(all_reqs);
-
-    // Define headers
-    let headers = vec![
-        "Req ID", "Title", "Description", "Reference", "Category", "Applicability",
-        "Status", "Verification", "Author", "Reviewer", "Parent", "Parent Title",
-        "Link", "Creation Date", "Update Date", "Deadline Date", "Justification"
-    ];
+    // Create workbook
+    let workbook = xlsxwriter::Workbook::new("target/requirements.xls");
+    let worksheet = workbook.add_worksheet(Some("Requirements"));
 
     // Write headers
-    for (col, header) in headers.iter().enumerate() {
-        sheet1.write_string(0, col as u16, header, None)?;
-    }
+    worksheet.write_string(0, 0, "ID", None)?;
+    worksheet.write_string(0, 1, "Title", None)?;
+    worksheet.write_string(0, 2, "Description", None)?;
+    worksheet.write_string(0, 3, "Reference", None)?;
+    worksheet.write_string(0, 4, "Category", None)?;
+    worksheet.write_string(0, 5, "Applicability", None)?;
+    worksheet.write_string(0, 6, "Status", None)?;
+    worksheet.write_string(0, 7, "Verification", None)?;
+    worksheet.write_string(0, 8, "Author", None)?;
+    worksheet.write_string(0, 9, "Link", None)?;
+    worksheet.write_string(0, 10, "Creation Date", None)?;
+    worksheet.write_string(0, 11, "Update Date", None)?;
+    worksheet.write_string(0, 12, "Deadline Date", None)?;
 
-    // Write data rows
-    for (row, req) in decorated_reqs.iter().enumerate() {
-        let row_num = (row + 1) as u32;
-        let mut col = 0;
-
-        sheet1.write_number(row_num, col, req.req_id as f64, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_title, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_description, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_reference, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_category, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_applicability, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_current_status, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_verification, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_author, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_reviewer, None)?;
-        col += 1;
-        
-        if req.req_parent_id != 0 {
-            sheet1.write_number(row_num, col, req.req_parent_id as f64, None)?;
-        } else {
-            sheet1.write_string(row_num, col, "None", None)?;
-        }
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_parent_title, None)?;
-        col += 1;
-        
-        if !req.req_link.is_empty() && req.req_link != " " {
-            sheet1.write_string(row_num, col, &req.req_link, None)?;
-        } else {
-            sheet1.write_string(row_num, col, "None", None)?;
-        }
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_creation_date, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_update_date, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &req.req_deadline_date, None)?;
-        col += 1;
-        
-        if let Some(ref justification) = req.req_justification {
-            sheet1.write_string(row_num, col, justification, None)?;
-        } else {
-            sheet1.write_string(row_num, col, "None", None)?;
-        }
+    // Write data
+    for (i, req) in all_requirements.iter().enumerate() {
+        let row = (i + 1) as u32;
+        worksheet.write_number(row, 0, req.req_id as f64, None)?;
+        worksheet.write_string(row, 1, &req.req_title, None)?;
+        worksheet.write_string(row, 2, &req.req_description, None)?;
+        worksheet.write_string(row, 3, &req.req_reference, None)?;
+        worksheet.write_string(row, 4, &req.req_category.to_string(), None)?;
+        worksheet.write_string(row, 5, &req.req_applicability.to_string(), None)?;
+        worksheet.write_string(row, 6, &req.req_current_status.to_string(), None)?;
+        worksheet.write_string(row, 7, &req.req_verification.to_string(), None)?;
+        worksheet.write_string(row, 8, &req.req_author.to_string(), None)?;
+        worksheet.write_string(row, 9, &req.req_link, None)?;
+        worksheet.write_string(row, 10, &req.req_creation_date.to_string(), None)?;
+        worksheet.write_string(row, 11, &req.req_update_date.to_string(), None)?;
+        worksheet.write_string(row, 12, &req.req_deadline_date.to_string(), None)?;
     }
 
     workbook.close().expect("workbook can be closed");
@@ -217,80 +163,36 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> 
     Ok(result)
 }
 
-pub fn create_tests_workbook() -> Result<Vec<u8>, xlsxwriter::XlsxError> {
+pub fn create_tests_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     use crate::schema::tests::dsl::*;
-    
-    let connection = &mut establish_connection();
 
-    let workbook = Workbook::new("target/tests.xls")?;
-    let mut sheet1 = workbook.add_worksheet(None)?;
-    
-    // Get all tests
-    let mut all_tests = tests
-        .load::<Test>(connection)
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying tests: {:?}", _err);
-            "Error querying tests from the database".into()
-        }).unwrap();
+    let mut connection = get_connection_pooled_safe()?;
 
-    // Sort tests by ID
-    all_tests.sort_by(|a, b| a.test_id.cmp(&b.test_id));
+    let all_tests = tests
+        .load::<Test>(connection.as_mut())
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
-    // Define headers
-    let headers = vec![
-        "Test ID", "Name", "Description", "Status", "Source", "Parent ID", "Parent Name"
-    ];
+    // Create workbook
+    let workbook = xlsxwriter::Workbook::new("target/tests.xls");
+    let worksheet = workbook.add_worksheet(Some("Tests"));
 
     // Write headers
-    for (col, header) in headers.iter().enumerate() {
-        sheet1.write_string(0, col as u16, header, None)?;
-    }
+    worksheet.write_string(0, 0, "ID", None)?;
+    worksheet.write_string(0, 1, "Name", None)?;
+    worksheet.write_string(0, 2, "Description", None)?;
+    worksheet.write_string(0, 3, "Source", None)?;
+    worksheet.write_string(0, 4, "Status", None)?;
+    worksheet.write_string(0, 5, "Parent", None)?;
 
-    // Write data rows
-    for (row, test) in all_tests.iter().enumerate() {
-        let row_num = (row + 1) as u32;
-        let mut col = 0;
-
-        sheet1.write_number(row_num, col, test.test_id as f64, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &test.test_name, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &test.test_description, None)?;
-        col += 1;
-        
-        // Get status name
-        let status_name = get_status_name_by_id(test.test_status);
-        sheet1.write_string(row_num, col, &status_name, None)?;
-        col += 1;
-        
-        sheet1.write_string(row_num, col, &test.test_source, None)?;
-        col += 1;
-        
-        if test.test_parent != 0 {
-            sheet1.write_number(row_num, col, test.test_parent as f64, None)?;
-        } else {
-            sheet1.write_string(row_num, col, "None", None)?;
-        }
-        col += 1;
-        
-        // Get parent test name if exists
-        if test.test_parent != 0 {
-            let parent_test = tests
-                .filter(test_id.eq(test.test_parent))
-                .first::<Test>(connection)
-                .ok();
-            
-            if let Some(parent) = parent_test {
-                sheet1.write_string(row_num, col, &parent.test_name, None)?;
-            } else {
-                sheet1.write_string(row_num, col, "Unknown", None)?;
-            }
-        } else {
-            sheet1.write_string(row_num, col, "None", None)?;
-        }
+    // Write data
+    for (i, test) in all_tests.iter().enumerate() {
+        let row = (i + 1) as u32;
+        worksheet.write_number(row, 0, test.test_id as f64, None)?;
+        worksheet.write_string(row, 1, &test.test_name, None)?;
+        worksheet.write_string(row, 2, &test.test_description, None)?;
+        worksheet.write_string(row, 3, &test.test_source, None)?;
+        worksheet.write_string(row, 4, &test.test_status.to_string(), None)?;
+        worksheet.write_number(row, 5, test.test_parent as f64, None)?;
     }
 
     workbook.close().expect("workbook can be closed");

@@ -211,10 +211,16 @@ pub fn get_category_by_id(id: i32) -> Category {
         .get_result(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying page views from the database".into()
+            println!("Error querying category: {:?}", _err);
+            format!("Error querying category with ID {} from the database", id)
         })
-        .unwrap()
+        .unwrap_or_else(|_| Category {
+            cat_id: id,
+            cat_title: format!("Unknown Category ({})", id),
+            cat_description: "Category not found".to_string(),
+            cat_tag: "unknown".to_string(),
+            project_id: 1,
+        })
 }
 
 /// Get category by ID with project filtering and fallback
@@ -376,12 +382,15 @@ pub fn get_verification_by_id(id: i32) -> VerificationData {
 
     let mut connection = crate::db::get_connection_pooled_safe()
         .unwrap_or_else(|_| panic!("Failed to get database connection"));
-    let result: VerificationData = verification
+    verification
         .filter(verification_id.eq(id))
         .get_result(connection.as_mut())
-        .unwrap();
-
-    result
+        .unwrap_or_else(|_| VerificationData {
+            verification_id: id,
+            verification_name: format!("Unknown Verification ({})", id),
+            verification_description: "Verification not found".to_string(),
+            project_id: 1,
+        })
 }
 
 /// Get verification by ID with project filtering and fallback
@@ -426,12 +435,28 @@ pub fn get_requirement_by_id(id: i32) -> Requirement {
 
     let mut connection = crate::db::get_connection_pooled_safe()
         .unwrap_or_else(|_| panic!("Failed to get database connection"));
-    let result: Requirement = requirements
+    requirements
         .filter(req_id.eq(id))
         .get_result(connection.as_mut())
-        .unwrap();
-
-    result
+        .unwrap_or_else(|_| Requirement {
+            req_id: id,
+            req_title: format!("Unknown Requirement ({})", id),
+            req_description: "Requirement not found".to_string(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 1,
+            req_reviewer: 1,
+            req_link: "".to_string(),
+            req_reference: format!("REQ-UNK-{}", id),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: chrono::Utc::now().naive_utc(),
+            req_update_date: chrono::Utc::now().naive_utc(),
+            req_deadline_date: chrono::Utc::now().naive_utc(),
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 1,
+        })
 }
 
 /// Get requirement by ID with proper error handling
@@ -512,9 +537,15 @@ pub fn get_test_by_id(id: i32) -> Test {
 
     let mut connection = crate::db::get_connection_pooled_safe()
         .unwrap_or_else(|_| panic!("Failed to get database connection"));
-    let result: Test = tests.filter(test_id.eq(id)).get_result(connection.as_mut()).unwrap();
-
-    result
+    tests.filter(test_id.eq(id)).get_result(connection.as_mut()).unwrap_or_else(|_| Test {
+        test_id: id,
+        test_name: format!("Unknown Test ({})", id),
+        test_description: "Test not found".to_string(),
+        test_source: "Unknown".to_string(),
+        test_status: 1,
+        test_parent: 0,
+        project_id: 1,
+    })
 }
 
 /// Get test by ID with proper error handling
@@ -1028,7 +1059,8 @@ pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn st
     let layer1 = page1.get_layer(layer1);
     
     // Add title
-    let title_font = doc.add_builtin_font(BuiltinFont::HelveticaBold).unwrap();
+    let title_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)
+        .map_err(|e| format!("Failed to load title font: {}", e))?;
     let title_font_size = 18.0;
     let title_text = "ReqMan Project Report";
     
@@ -1041,7 +1073,8 @@ pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn st
     );
     
     // Add generation date
-    let date_font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
+    let date_font = doc.add_builtin_font(BuiltinFont::Helvetica)
+        .map_err(|e| format!("Failed to load date font: {}", e))?;
     let date_font_size = 10.0;
     let current_date = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
     layer1.use_text(
@@ -1053,7 +1086,8 @@ pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn st
     );
     
     // Add content sections
-    let content_font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
+    let content_font = doc.add_builtin_font(BuiltinFont::Helvetica)
+        .map_err(|e| format!("Failed to load content font: {}", e))?;
     let content_font_size = 12.0;
     let mut y_position = Mm(250.0);
     
@@ -1069,7 +1103,8 @@ pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn st
     
     for (section_title, section_desc) in sections {
         // Section title
-        let section_font = doc.add_builtin_font(BuiltinFont::HelveticaBold).unwrap();
+        let section_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)
+            .map_err(|e| format!("Failed to load section font: {}", e))?;
         layer1.use_text(
             section_title,
             content_font_size + 2.0,
@@ -1110,7 +1145,8 @@ pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn st
     }
     
     // Add footer
-    let footer_font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
+    let footer_font = doc.add_builtin_font(BuiltinFont::Helvetica)
+        .map_err(|e| format!("Failed to load footer font: {}", e))?;
     layer1.use_text(
         "Generated by ReqMan - Requirements Management System",
         8.0,
@@ -1150,7 +1186,8 @@ pub fn generate_pdf_report_data(
     let layer1 = page1.get_layer(layer1);
     
     // Add title
-    let title_font = doc.add_builtin_font(BuiltinFont::HelveticaBold).unwrap();
+    let title_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)
+        .map_err(|e| format!("Failed to load title font: {}", e))?;
     let title_font_size = 18.0;
     let title_text = "ReqMan Project Report";
     
@@ -1163,7 +1200,8 @@ pub fn generate_pdf_report_data(
     );
     
     // Add generation date
-    let date_font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
+    let date_font = doc.add_builtin_font(BuiltinFont::Helvetica)
+        .map_err(|e| format!("Failed to load date font: {}", e))?;
     let date_font_size = 10.0;
     let current_date = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
     layer1.use_text(
@@ -1175,9 +1213,11 @@ pub fn generate_pdf_report_data(
     );
     
     // Add metrics overview
-    let metrics_font = doc.add_builtin_font(BuiltinFont::HelveticaBold).unwrap();
+    let metrics_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)
+        .map_err(|e| format!("Failed to load metrics font: {}", e))?;
     let metrics_font_size = 14.0;
-    let content_font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
+    let content_font = doc.add_builtin_font(BuiltinFont::Helvetica)
+        .map_err(|e| format!("Failed to load content font: {}", e))?;
     let content_font_size = 12.0;
     let mut y_position = Mm(250.0);
     
@@ -1334,7 +1374,8 @@ pub fn generate_pdf_report_data(
     }
     
     // Add footer to all pages
-    let footer_font = doc.add_builtin_font(BuiltinFont::Helvetica).unwrap();
+    let footer_font = doc.add_builtin_font(BuiltinFont::Helvetica)
+        .map_err(|e| format!("Failed to load footer font: {}", e))?;
     layer1.use_text(
         "Generated by ReqMan - Requirements Management System",
         8.0,

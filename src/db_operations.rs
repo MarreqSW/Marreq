@@ -1,4 +1,4 @@
-use crate::db::{get_pooled_connection, get_pooled_connection_wrapper, PooledConnectionWrapper};
+use crate::db::{get_pooled_connection_wrapper, PooledConnectionWrapper};
 use crate::models::*;
 use crate::schema::*;
 use diesel::prelude::*;

@@ -1391,7 +1391,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
             .load::<Requirement>(connection.as_mut())
             .map_err(|e| {
                 eprintln!("Database connection error: {}", e);
-                "Error querying requirements from the database".into()
+                "Error querying requirements from the database".to_string()
             })
             .expect("Error getting matrix table")
     } else {
@@ -1399,7 +1399,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
             .load::<Requirement>(connection.as_mut())
             .map_err(|e| {
                 eprintln!("Database connection error: {}", e);
-                "Error querying page views from the database".into()
+                "Error querying page views from the database".to_string()
             })
             .expect("Error getting matrix table")
     };
@@ -1410,7 +1410,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
             .load::<Test>(connection.as_mut())
             .map_err(|e| {
                 eprintln!("Database connection error: {}", e);
-                "Error querying tests from the database".into()
+                "Error querying tests from the database".to_string()
             })
             .expect("Error getting tests")
     } else {
@@ -1418,7 +1418,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
             .load::<Test>(connection.as_mut())
             .map_err(|e| {
                 eprintln!("Database connection error: {}", e);
-                "Error querying tests from the database".into()
+                "Error querying tests from the database".to_string()
             })
             .expect("Error getting tests")
     };
@@ -1446,13 +1446,13 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
                         .filter(matrix_req_id.eq(a.req_id))
                         .filter(matrix_test_id.eq(target_test_id))
                         .count()
-                        .get_result(connection)
+                        .get_result(connection.as_mut())
                         .unwrap();
                     let b_has_link: i64 = matrix
                         .filter(matrix_req_id.eq(b.req_id))
                         .filter(matrix_test_id.eq(target_test_id))
                         .count()
-                        .get_result(connection)
+                        .get_result(connection.as_mut())
                         .unwrap();
                     b_has_link.cmp(&a_has_link)
                 });
@@ -1462,13 +1462,13 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
                         .filter(matrix_req_id.eq(a.req_id))
                         .filter(matrix_test_id.eq(target_test_id))
                         .count()
-                        .get_result(connection)
+                        .get_result(connection.as_mut())
                         .unwrap();
                     let b_has_link: i64 = matrix
                         .filter(matrix_req_id.eq(b.req_id))
                         .filter(matrix_test_id.eq(target_test_id))
                         .count()
-                        .get_result(connection)
+                        .get_result(connection.as_mut())
                         .unwrap();
                     a_has_link.cmp(&b_has_link)
                 });
@@ -1520,7 +1520,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
                 .filter(matrix_req_id.eq(req.req_id))
                 .filter(matrix_test_id.eq(test.test_id))
                 .count()
-                .get_result(connection)
+                .get_result(connection.as_mut())
                 .unwrap();
 
             if test_present > 0 {
@@ -1819,21 +1819,24 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
 #[delete("/delete_category/<cat_id>")]
 pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut get_db_connection().map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        rocket::http::Status::InternalServerError
-    })?;
+    let mut connection = match get_db_connection() {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            return Err(Redirect::to(uri!(show_categories)));
+        }
+    };
     
     // Get the category details before deleting
     let category = get_category_by_id(cat_id);
     
-    let result = delete_category(connection, &cat_id);
+    let result = delete_category(connection.as_mut(), &cat_id);
     match result {
         Ok(_) => {
             // Log the category deletion
             if let Ok(old_values) = Logger::to_json_string(&category) {
                 let _ = Logger::log_delete(
-                    connection,
+                    connection.as_mut(),
                     user.user_id,
                     EntityType::Category,
                     cat_id,
@@ -2054,21 +2057,24 @@ pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability
 #[delete("/delete_applicability/<app_id>")]
 pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
     let user = require_auth(cookies)?;
-    let connection = &mut get_db_connection().map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        rocket::http::Status::InternalServerError
-    })?;
+    let mut connection = match get_db_connection() {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            return Err(Redirect::to(uri!(show_applicability)));
+        }
+    };
     
     // Get the applicability details before deleting
     let applicability = get_applicability_by_id(app_id);
     
-    let result = delete_applicability(connection, &app_id);
+    let result = delete_applicability(connection.as_mut(), &app_id);
     match result {
         Ok(_) => {
             // Log the applicability deletion
             if let Ok(old_values) = Logger::to_json_string(&applicability) {
                 let _ = Logger::log_delete(
-                    connection,
+                    connection.as_mut(),
                     user.user_id,
                     EntityType::Applicability,
                     app_id,
@@ -2605,21 +2611,24 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
         return Err(Redirect::to(uri!(show_projects)));
     }
     
-    let connection = &mut get_db_connection().map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        rocket::http::Status::InternalServerError
-    })?;
+    let mut connection = match get_db_connection() {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            return Err(Redirect::to(uri!(show_projects)));
+        }
+    };
     
     // Get the project details before deleting
     let project = get_project_by_id_pooled_safe(project_id);
     
-    let result = delete_project(connection, &project_id);
+    let result = delete_project(connection.as_mut(), &project_id);
     match result {
         Ok(_) => {
             // Log the project deletion
             if let Ok(old_values) = Logger::to_json_string(&project) {
                 let _ = Logger::log_delete(
-                    connection,
+                    connection.as_mut(),
                     user.user_id,
                     EntityType::Project,
                     project_id,
@@ -3322,8 +3331,14 @@ pub fn export_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJ
         return Err(Redirect::to(uri!(show_logs)));
     }
     
-    let mut connection = get_connection_pooled_safe();
-    let logs = Logger::get_logs_for_entity(&mut connection, &entity_type, entity_id).unwrap_or_default();
+    let mut connection = match get_connection_pooled_safe() {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            return Err(Redirect::to(uri!(show_logs)));
+        }
+    };
+    let logs = Logger::get_logs_for_entity(connection.as_mut(), &entity_type, entity_id).unwrap_or_default();
     
     // Convert logs to JSON
     let logs_json = serde_json::to_string_pretty(&logs).unwrap_or_default();
@@ -3341,14 +3356,20 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
         return Err(Redirect::to(uri!(show_logs)));
     }
     
-    let mut connection = get_connection_pooled_safe();
+    let mut connection = match get_connection_pooled_safe() {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            return Err(Redirect::to(uri!(show_logs)));
+        }
+    };
     
     // Clean up logs older than 90 days
-    match crate::logger::cleanup_old_logs(&mut connection, 90) {
+    match crate::logger::cleanup_old_logs(connection.as_mut(), 90) {
         Ok(deleted_count) => {
             // Log the cleanup action
             let _ = Logger::log_action(
-                &mut connection,
+                connection.as_mut(),
                 user.user_id,
                 crate::models::ActionType::StatusChange,
                 crate::models::EntityType::User,
@@ -3363,7 +3384,7 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
         Err(_) => {
             // Log the failed cleanup action
             let _ = Logger::log_action(
-                &mut connection,
+                connection.as_mut(),
                 user.user_id,
                 crate::models::ActionType::StatusChange,
                 crate::models::EntityType::User,
@@ -3393,12 +3414,18 @@ pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         return Ok(Template::render("access_denied", context));
     }
     
-    let mut connection = get_connection_pooled_safe();
+    let mut connection = match get_connection_pooled_safe() {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            return Err(Redirect::to(uri!(show_logs)));
+        }
+    };
     
     // Get basic statistics
-    let last_7_days = Logger::get_log_count(&mut connection, 7).unwrap_or(0);
-    let last_30_days = Logger::get_log_count(&mut connection, 30).unwrap_or(0);
-    let last_90_days = Logger::get_log_count(&mut connection, 90).unwrap_or(0);
+    let last_7_days = Logger::get_log_count(connection.as_mut(), 7).unwrap_or(0);
+    let last_30_days = Logger::get_log_count(connection.as_mut(), 30).unwrap_or(0);
+    let last_90_days = Logger::get_log_count(connection.as_mut(), 90).unwrap_or(0);
     
     let ctx = json!({
         "user": user,

@@ -65,7 +65,13 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
     // Get the requirement details before deleting
     let requirement = get_requirement_by_id(ident);
     
-    let ret_value = delete_requirement(connection, &ident).unwrap();
+    let ret_value = match delete_requirement(connection, &ident) {
+        Ok(success) => success,
+        Err(e) => {
+            eprintln!("Error deleting requirement via API: {:?}", e);
+            return rocket::http::Status::InternalServerError;
+        }
+    };
 
     #[cfg(debug_assertions)]
     println!("Delete value: {}", ret_value);
@@ -168,7 +174,13 @@ pub fn api_get_status() -> Result<Json<Vec<Status>>, rocket::http::Status> {
 #[post("/status", data= "<new_status>")]
 pub async fn api_post_status(new_status: Json<NewStatus>) -> Value {
     let connection = &mut establish_connection();
-    let new_id = create_status (connection, &new_status).unwrap();
+    let new_id = match create_status(connection, &new_status) {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Error creating status via API: {:?}", e);
+            return json!({ "status": "error", "message": "Failed to create status" });
+        }
+    };
 
     // Invalidate relevant caches
     crate::cache::invalidate_status_cache(new_id);
@@ -257,7 +269,13 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
     // Get the test details before deleting
     let test = get_test_by_id(ident);
     
-    let ret_value = delete_test(connection, &ident).unwrap();
+    let ret_value = match delete_test(connection, &ident) {
+        Ok(success) => success,
+        Err(e) => {
+            eprintln!("Error deleting test via API: {:?}", e);
+            return rocket::http::Status::InternalServerError;
+        }
+    };
 
     if ret_value {
         // Log the test deletion via API

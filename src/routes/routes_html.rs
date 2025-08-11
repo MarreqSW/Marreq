@@ -653,7 +653,11 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
         }
     };
     
-    edit_requirement(connection, &requirement_data).unwrap();
+    edit_requirement(connection, &requirement_data)
+        .map_err(|e| {
+            eprintln!("Error editing requirement: {:?}", e);
+            Redirect::to(uri!(show_requirements(None::<i32>, None::<i32>, None::<i32>)))
+        })?;
 
     // Log the requirement update
     if let (Ok(old_values), Ok(new_values)) = (
@@ -940,7 +944,11 @@ pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) 
         }
     }
     
-    let my_id = insert_new_requirement(connection, &requirement_data).unwrap();
+    let my_id = insert_new_requirement(connection, &requirement_data)
+        .map_err(|e| {
+            eprintln!("Error inserting new requirement: {:?}", e);
+            Redirect::to(uri!(show_requirements(None::<i32>, None::<i32>, None::<i32>)))
+        })?;
 
     // Log the requirement creation
             if let Ok(new_values) = Logger::to_json_string(&requirement_data) {
@@ -1255,7 +1263,11 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
         project_id: edit_test_form.project_id,
     };
     
-    edit_test(connection, &new_test).unwrap();
+    edit_test(connection, &new_test)
+        .map_err(|e| {
+            eprintln!("Error editing test: {:?}", e);
+            Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+        })?;
     
     // Log the test update
             if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_test), Logger::to_json_string(&new_test)) {
@@ -1273,7 +1285,11 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
     }
     
     // Then, update the requirement links
-    update_test_requirement_links(connection, edit_test_form.test_id, &edit_test_form.linked_requirements).unwrap();
+    update_test_requirement_links(connection, edit_test_form.test_id, &edit_test_form.linked_requirements)
+        .map_err(|e| {
+            eprintln!("Error updating test requirement links: {:?}", e);
+            Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+        })?;
 
     // Invalidate cache for the updated test
     invalidate_test_cache_complete(test_id);
@@ -1297,7 +1313,11 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
         test_parent: new_test.test_parent,
         project_id: new_test.project_id,
     };
-    let my_id = insert_new_test(connection, &my_new_test).unwrap();
+    let my_id = insert_new_test(connection, &my_new_test)
+        .map_err(|e| {
+            eprintln!("Error inserting new test: {:?}", e);
+            Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+        })?;
 
     // Log the test creation
             if let Ok(new_values) = Logger::to_json_string(&my_new_test) {
@@ -1321,7 +1341,11 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
             matrix_test_id: my_id,
             project_id: new_test.project_id,
         };
-        insert_new_matrix_item(connection, &matrix_item).unwrap();
+        insert_new_matrix_item(connection, &matrix_item)
+            .map_err(|e| {
+                eprintln!("Error inserting matrix item: {:?}", e);
+                Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+            })?;
     }
 
     // Invalidate cache for the new test

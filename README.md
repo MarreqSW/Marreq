@@ -87,6 +87,7 @@ A comprehensive web-based requirements and test management system built with Rus
 + **PostgreSQL**: Database backend (provided via Docker)
 + **Docker & Docker Compose**: For database containerization
 + **Rust**: Programming language
++ **clang** /  **libclang-dev**: Required by `xlsxwriter`
 
 ### Installation
 

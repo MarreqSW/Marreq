@@ -85,3 +85,24 @@ pub fn change_user_password(_user_id: i32, current_password: &str, new_password:
         Err(e) => Err(format!("Password verification error: {}", e)),
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hash_and_verify_password() {
+        let password = "s3cr3t";
+        let hashed = hash_password(password).expect("hashing failed");
+        assert!(verify_password(password, &hashed).unwrap());
+    }
+
+    #[test]
+    fn verify_password_rejects_invalid_password() {
+        let password = "correct";
+        let hashed = hash_password(password).expect("hashing failed");
+        assert!(!verify_password("wrong", &hashed).unwrap());
+    }
+
+}

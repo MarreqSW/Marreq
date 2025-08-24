@@ -11,8 +11,10 @@ pub mod auth;
 pub mod queries;
 pub mod mutations;
 pub mod filters;
+pub mod decorators;
 
 pub use auth::*;
 pub use queries::*;
 pub use mutations::*;
 pub use filters::*;
+pub use decorators::*;

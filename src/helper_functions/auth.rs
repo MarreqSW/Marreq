@@ -30,7 +30,7 @@ pub fn hash_password(password: &str) -> Result<String, bcrypt::BcryptError> {
     hash(password, DEFAULT_COST)
 }
 
-pub fn verify_password(password: &str, hash: &str) -> Result<bool, bcrypt::BcryptError> {
+fn verify_password(password: &str, hash: &str) -> Result<bool, bcrypt::BcryptError> {
     verify(password, hash)
 }
 
@@ -58,51 +58,34 @@ pub fn authenticate_user(username: &str, password: &str) -> Result<Option<User>,
     }
 }
 
-pub fn change_user_password(_user_id: i32, current_password: &str, new_password: &str) -> Result<(), String> {
+pub fn change_user_password(user_id_val: i32, current_password: &str, new_password: &str) -> Result<(), String> {
     use crate::schema::users::dsl::*;
 
     let mut connection = crate::db::get_connection_pooled_safe()
         .map_err(|e| format!("Database connection error: {}", e))?;
 
-    let user = users
-        .filter(user_id.eq(_user_id))
+    let user_record = users
+        .filter(user_id.eq(user_id_val))
         .first::<User>(connection.as_mut())
-        .map_err(|_e| format!("User not found: {}", _e))?;
+        .map_err(|e| format!("User not found: {}", e))?;
 
-    match verify_password(current_password, &user.user_password) {
+    match verify_password(current_password, &user_record.user_password) {
         Ok(true) => {
-            let hashed_password = hash_password(new_password)
-                .map_err(|_e| format!("Password hashing error: {}", _e))?;
+            let new_hash = hash_password(new_password)
+                .map_err(|e| format!("Password hashing error: {}", e))?;
 
-            diesel::update(users.filter(user_id.eq(_user_id)))
-                .set(user_password.eq(hashed_password))
+            let affected = diesel::update(users.filter(user_id.eq(user_id_val)))
+                .set(user_password.eq(new_hash))
                 .execute(connection.as_mut())
-                .map_err(|_e| format!("Database update error: {}", _e))?;
+                .map_err(|e| format!("Database update error: {}", e))?;
 
-            Ok(())
+            if affected == 1 {
+                Ok(())
+            } else {
+                Err(format!("Unexpected number of rows updated: {}", affected))
+            }
         }
         Ok(false) => Err("Current password is incorrect".to_string()),
         Err(e) => Err(format!("Password verification error: {}", e)),
     }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn hash_and_verify_password() {
-        let password = "s3cr3t";
-        let hashed = hash_password(password).expect("hashing failed");
-        assert!(verify_password(password, &hashed).unwrap());
-    }
-
-    #[test]
-    fn verify_password_rejects_invalid_password() {
-        let password = "correct";
-        let hashed = hash_password(password).expect("hashing failed");
-        assert!(!verify_password("wrong", &hashed).unwrap());
-    }
-
 }

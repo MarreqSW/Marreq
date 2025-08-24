@@ -10,7 +10,9 @@ use serde::{Deserialize, Serialize};
 pub mod auth;
 pub mod queries;
 pub mod mutations;
+pub mod filters;
 
 pub use auth::*;
 pub use queries::*;
 pub use mutations::*;
+pub use filters::*;

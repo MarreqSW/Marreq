@@ -1,0 +1,81 @@
+name: ReqMan CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+concurrency:
+  group: coverage-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-coverage:
+    if: ${{ github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://rust:rust@127.0.0.1:5432/reqman
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libclang-dev
+
+      - name: Start database
+        run: docker compose up -d db
+
+      - name: Set up Rust (nightly + llvm-tools)
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Initialize database
+        run: ./setup_database.sh
+
+      - name: Coverage (run, no report)
+        run: cargo llvm-cov --workspace --all-features --doctests --no-report
+
+      - name: Coverage (Cobertura XML)
+        run: cargo llvm-cov report --cobertura --output-path coverage.xml
+
+      - name: Coverage (HTML)
+        run: cargo llvm-cov report --html --output-dir coverage_html
+
+      - name: Build coverage summary (Markdown)
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: coverage.xml
+          badge: true
+          format: markdown
+          output: file
+
+      - name: Publish to Job Summary
+        run: cat code-coverage-results.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post coverage as PR comment
+        if: github.event_name == 'pull_request'
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-path: code-coverage-results.md
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Coverage gate (≥1% lines)
+        run: cargo llvm-cov --workspace --all-features --doctests --no-run --fail-under-lines 1
+
+      - name: Upload coverage HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: coverage_html
+          retention-days: 7

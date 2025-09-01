@@ -1,8 +1,14 @@
 use crate::models::*;
 use diesel::prelude::*;
-use rocket::http::CookieJar;
+use rocket::http::{Cookie, CookieJar};
+use rocket_dyn_templates::Template;
+use rocket::serde::json::json;
 use bcrypt::{hash, verify, DEFAULT_COST};
+use time::Duration;
+
 use super::queries::get_user_by_id;
+use crate::db::get_connection_pooled_safe;
+use crate::logger::Logger;
 
 
 pub fn is_authenticated(cookies: &CookieJar<'_>) -> Option<User> {
@@ -101,6 +107,149 @@ pub fn change_user_password(user_id_val: i32, current_password: &str, new_passwo
         }
         Ok(false) => Err("Current password is incorrect".to_string()),
         Err(e) => Err(format!("Password verification error: {}", e)),
+    }
+}
+
+// --------------------------------
+// Authentication Route Logic
+// --------------------------------
+
+/// Process a login attempt. On success, session cookies are set and an empty
+/// Ok is returned. On failure a rendered `Template` with the corresponding
+/// error is returned.
+pub fn login_user(login_form: &LoginForm, cookies: &CookieJar<'_>) -> Result<(), Template> {
+    match authenticate_user(&login_form.username, &login_form.password) {
+        Ok(Some(user)) => {
+            // Set session cookies
+            cookies.add_private(Cookie::new("user_id", user.user_id.to_string()));
+            cookies.add_private(Cookie::new("username", user.user_username.clone()));
+            cookies.add_private(Cookie::new("user_name", user.user_name.clone()));
+
+            // Log successful login
+            let mut conn = get_connection_pooled_safe().map_err(|e| {
+                eprintln!("Database connection error: {}", e);
+                Template::render("error", json!({"error": "Database connection failed"}))
+            })?;
+            let _ = Logger::log_login(&mut conn, user.user_id, None);
+
+            Ok(())
+        }
+        Ok(None) => {
+            let ctx = json!({
+                "title": "Login",
+                "error": "Invalid username or password",
+            });
+            Err(Template::render("login", ctx))
+        }
+        Err(_e) => {
+            let ctx = json!({
+                "title": "Login",
+                "error": format!("Authentication error: {}", _e),
+            });
+            Err(Template::render("login", ctx))
+        }
+    }
+}
+
+/// Clear session cookies and log the logout event.
+pub fn logout_user(cookies: &CookieJar<'_>) {
+    // Get user info before clearing cookies
+    let user_id = cookies
+        .get_private("user_id")
+        .and_then(|cookie| cookie.value().parse::<i32>().ok());
+    let username = cookies
+        .get_private("username")
+        .map(|cookie| cookie.value().to_string());
+
+    // Clear all session cookies
+    let mut user_id_cookie = Cookie::new("user_id", "");
+    user_id_cookie.set_max_age(Duration::seconds(0));
+    user_id_cookie.set_path("/");
+
+    let mut username_cookie = Cookie::new("username", "");
+    username_cookie.set_max_age(Duration::seconds(0));
+    username_cookie.set_path("/");
+
+    let mut user_name_cookie = Cookie::new("user_name", "");
+    user_name_cookie.set_max_age(Duration::seconds(0));
+    user_name_cookie.set_path("/");
+
+    cookies.add_private(user_id_cookie);
+    cookies.add_private(username_cookie);
+    cookies.add_private(user_name_cookie);
+
+    // Log logout if possible
+    if let Some(uid) = user_id {
+        if let Ok(mut conn) = get_connection_pooled_safe() {
+            let _description = username.map(|name| format!("User {} logged out", name));
+            let _ = Logger::log_logout(&mut conn, uid, None);
+        }
+    }
+}
+
+/// Handle a change password request, returning either a success or error template.
+pub fn change_password_user(
+    password_form: &ChangePasswordForm,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Template> {
+    // Get user ID from cookie
+    let user_id_cookie = cookies.get_private("user_id");
+    let user_id = match user_id_cookie {
+        Some(cookie) => match cookie.value().parse::<i32>() {
+            Ok(id) => id,
+            Err(_) => {
+                let ctx = json!({
+                    "title": "Change Password",
+                    "error": "Invalid session",
+                });
+                return Err(Template::render("change_password", ctx));
+            }
+        },
+        None => {
+            let ctx = json!({
+                "title": "Change Password",
+                "error": "Not logged in",
+            });
+            return Err(Template::render("change_password", ctx));
+        }
+    };
+
+    // Validate passwords
+    if password_form.new_password != password_form.confirm_password {
+        let ctx = json!({
+            "title": "Change Password",
+            "error": "New passwords do not match",
+        });
+        return Err(Template::render("change_password", ctx));
+    }
+
+    if password_form.new_password.len() < 8 {
+        let ctx = json!({
+            "title": "Change Password",
+            "error": "New password must be at least 8 characters long",
+        });
+        return Err(Template::render("change_password", ctx));
+    }
+
+    match change_user_password(
+        user_id,
+        &password_form.current_password,
+        &password_form.new_password,
+    ) {
+        Ok(_) => {
+            let ctx = json!({
+                "title": "Change Password",
+                "success": "Password changed successfully",
+            });
+            Ok(Template::render("change_password", ctx))
+        }
+        Err(_e) => {
+            let ctx = json!({
+                "title": "Change Password",
+                "error": _e,
+            });
+            Err(Template::render("change_password", ctx))
+        }
     }
 }
 

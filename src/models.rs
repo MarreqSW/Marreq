@@ -162,7 +162,7 @@ pub struct NewMatrix {
     pub project_id: i32,
 }
 
-#[derive(Serialize, Deserialize, Queryable, AsChangeset, Debug)]
+#[derive(Serialize, Deserialize, Queryable, AsChangeset, Debug, Clone)]
 pub struct User {
     pub user_id: i32,
     pub user_username: String,

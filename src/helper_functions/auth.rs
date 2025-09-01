@@ -202,7 +202,9 @@ pub fn logout_user(cookies: &CookieJar<'_>) {
 
 /// Handle a change password request, returning either a success or error template.
 pub fn change_password_user(
-    password_form: &ChangePasswordForm,
+    //password_form: &ChangePasswordForm,
+    current_password: &String,
+    new_password: &String,
     cookies: &CookieJar<'_>,
 ) -> Result<Template, Template> {
     // Get user ID from cookie
@@ -227,27 +229,10 @@ pub fn change_password_user(
         }
     };
 
-    // Validate passwords
-    if password_form.new_password != password_form.confirm_password {
-        let ctx = json!({
-            "title": "Change Password",
-            "error": "New passwords do not match",
-        });
-        return Err(Template::render("change_password", ctx));
-    }
-
-    if password_form.new_password.len() < 8 {
-        let ctx = json!({
-            "title": "Change Password",
-            "error": "New password must be at least 8 characters long",
-        });
-        return Err(Template::render("change_password", ctx));
-    }
-
     match change_user_password(
         user_id,
-        &password_form.current_password,
-        &password_form.new_password,
+        &current_password,
+        &new_password,
     ) {
         Ok(_) => {
             let ctx = json!({

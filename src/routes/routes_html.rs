@@ -98,7 +98,24 @@ pub fn change_password_page() -> Template {
 
 #[post("/change_password", data = "<password_form>")]
 pub fn change_password(password_form: Form<ChangePasswordForm>, cookies: &CookieJar<'_>) -> Result<Template, Template> {
-    change_password_user(&password_form, cookies)
+    // Validate passwords
+    if password_form.new_password != password_form.confirm_password {
+        let ctx = json!({
+            "title": "Change Password",
+            "error": "New passwords do not match",
+        });
+        return Err(Template::render("change_password", ctx));
+    }
+
+    if password_form.new_password.len() < 8 {
+        let ctx = json!({
+            "title": "Change Password",
+            "error": "New password must be at least 8 characters long",
+        });
+        return Err(Template::render("change_password", ctx));
+    }
+
+    change_password_user(&password_form.current_password, &password_form.new_password, cookies)
 }
 
 // --------------------------------

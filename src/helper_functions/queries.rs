@@ -168,6 +168,19 @@ pub fn get_user_by_id(id: i32) -> User {
         .expect("Error reading table Users")
 }
 
+pub fn get_user_by_username(uname: &str) -> Result<Option<User>, diesel::result::Error> {
+    use crate::schema::users::dsl::*;
+    let mut connection = crate::db::get_connection_pooled_safe()
+        .unwrap_or_else(|_| panic!("Failed to get database connection"));
+
+    users
+        .filter(user_username.eq(uname))
+        .first::<User>(connection.as_mut())
+        .optional()
+}
+
+
+
 pub fn get_status_by_id(id: i32) -> Status {
     use crate::schema::status::dsl::*;
 

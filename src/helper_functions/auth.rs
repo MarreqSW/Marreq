@@ -69,7 +69,7 @@ fn verify_password(password: &str, hash: &str) -> Result<bool, bcrypt::BcryptErr
 }
 
 /// Core auth logic, takes a fetcher function instead of talking to DB directly
-pub fn authenticate_user_with<F, E>(
+fn authenticate_user_with<F, E>(
     fetch_user: F,
     username: &str,
     password: &str,

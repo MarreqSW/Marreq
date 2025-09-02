@@ -37,7 +37,7 @@ impl Repository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn update_user_password(&self, id: i32, new_hash: &str) -> Result<(), RepoError> {
+    fn update_user_password(&mut self, id: i32, new_hash: &str) -> Result<(), RepoError> {
         use crate::schema::users::dsl::*;
         let mut conn = crate::db::get_connection_pooled_safe()
             .map_err(|e| RepoError::Pool(e.to_string()))?;

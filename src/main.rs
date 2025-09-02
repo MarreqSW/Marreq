@@ -16,6 +16,7 @@ pub mod logger;
 pub mod models;
 pub mod routes;
 pub mod schema;
+pub mod repository;
 
 use crate::html::cors::*;
 use crate::routes::routes_api::*;

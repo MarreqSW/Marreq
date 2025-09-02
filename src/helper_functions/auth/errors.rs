@@ -13,4 +13,7 @@ pub enum AuthError {
 
     #[error("logging error: {0}")]
     Audit(String),                     // optional: login logging failed
+
+    #[error(transparent)]
+    Repo(#[from] crate::repository::errors::RepoError),
 }

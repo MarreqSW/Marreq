@@ -1,6 +1,7 @@
 use bcrypt::{hash, verify, DEFAULT_COST};
-use crate::models::*;
-use diesel::prelude::*;
+//use crate::models::*;
+use super::errors::AuthError;
+use crate::{repository::Repository};
 use rocket::http::CookieJar;
 use rocket_dyn_templates::Template;
 use rocket::serde::json::json;
@@ -13,35 +14,25 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, bcrypt::Bcryp
     verify(password, hash)
 }
 
-pub fn change_user_password(user_id_val: i32, current_password: &str, new_password: &str) -> Result<(), String> {
-    use crate::schema::users::dsl::*;
+pub fn change_user_password<R: Repository>(
+    repo: &R,
+    uid: i32,
+    current_password: &str,
+    new_password: &str
+) -> Result<(), AuthError> {
 
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
+    let user = repo.get_user_by_id(uid)?;
 
-    let user_record = users
-        .filter(user_id.eq(user_id_val))
-        .first::<User>(connection.as_mut())
-        .map_err(|e| format!("User not found: {}", e))?;
-
-    match verify_password(current_password, &user_record.user_password) {
+    match verify_password(current_password, &user.user_password) {
         Ok(true) => {
             let new_hash = hash_password(new_password)
-                .map_err(|e| format!("Password hashing error: {}", e))?;
+                .map_err(|e| AuthError::Verify(e.to_string()))?;
 
-            let affected = diesel::update(users.filter(user_id.eq(user_id_val)))
-                .set(user_password.eq(new_hash))
-                .execute(connection.as_mut())
-                .map_err(|e| format!("Database update error: {}", e))?;
-
-            if affected == 1 {
-                Ok(())
-            } else {
-                Err(format!("Unexpected number of rows updated: {}", affected))
-            }
+            repo.update_user_password(uid, &new_hash)?;
+            Ok(())
         }
-        Ok(false) => Err("Current password is incorrect".to_string()),
-        Err(e) => Err(format!("Password verification error: {}", e)),
+        Ok(false) => Err(AuthError::InvalidCredentials),
+        Err(e) => Err(AuthError::Verify(e.to_string())),
     }
 }
 
@@ -74,7 +65,11 @@ pub fn change_password_user(
         }
     };
 
+    use crate::repository::diesel_repo::DieselRepo ;
+    let repo = DieselRepo{};
+
     match change_user_password(
+        &repo,
         user_id,
         &current_password,
         &new_password,
@@ -86,10 +81,10 @@ pub fn change_password_user(
             });
             Ok(Template::render("change_password", ctx))
         }
-        Err(_e) => {
+        Err(e) => {
             let ctx = json!({
                 "title": "Change Password",
-                "error": _e,
+                "error": e.to_string(),
             });
             Err(Template::render("change_password", ctx))
         }

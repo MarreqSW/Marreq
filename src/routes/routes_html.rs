@@ -67,7 +67,7 @@ fn render_login_error(err: AuthError) -> Template {
         AuthError::Verify(_)          => ("Login", "Password verification failed".to_string()),
         AuthError::Db(e)      => ("Error",  format!("Database error: {e}")),
         AuthError::Audit(_)           => ("Login", "Logged in but failed to audit login".to_string()),
-    };
+        AuthError::Repo(_)            => ("Login", "Internal server error".to_string())};
 
     Template::render("login", json!({ "title": title, "error": msg }))
 }

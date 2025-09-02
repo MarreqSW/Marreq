@@ -85,74 +85,16 @@ fn authenticate_user<R: Repository>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::repository::errors::RepoError;
+    use crate::repository::fake_repo::FakeRepo;
     use std::collections::HashMap;
-    use chrono::{NaiveDate, NaiveDateTime};
     use crate::helper_functions::hash_password;
-
-    #[derive(Default)]
-    struct FakeRepo {
-        users: HashMap<i32, User>,
-        force_err: bool,
-    }
-
-    impl FakeRepo {
-        fn with_users(users: impl IntoIterator<Item = User>) -> Self {
-            let mut map = HashMap::new();
-            for u in users {
-                map.insert(u.user_id, u);
-            }
-            Self { users: map, force_err: false }
-        }
-        fn with_error() -> Self {
-            Self { users: HashMap::new(), force_err: true }
-        }
-    }
-
-    impl Repository for FakeRepo {
-        fn get_user_by_id(&self, id: i32) -> Result<User, RepoError> {
-            self.users.get(&id).cloned().ok_or(RepoError::NotFound)
-        }
-        fn get_user_by_username(&self, uname: &str) -> Result<Option<User>, RepoError> {
-            if self.force_err {
-                return Err(RepoError::Pool("forced test error".into()));
-            }
-            let user = self.users.values().find(|u| u.user_username == uname).cloned();
-            Ok(user) // Ok(Some(..)) or Ok(None)
-        }
-        fn update_user_password(&self, _id: i32, _new_hash: &str) -> Result<(), RepoError> {
-            Ok(())
-        }
-    }
-
-    // --- Fixtures ------------------------------------------------------------
-
-    fn epoch() -> NaiveDateTime {
-        NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
-            .and_hms_opt(0, 0, 0).unwrap()
-    }
-
-    fn make_user(id: i32, username: &str, stored_pw: &str) -> User {
-        User {
-            user_id: id,
-            user_username: username.to_string(),
-            user_name: "name".into(),
-            user_email: "email@example.com".into(),
-            user_level: 0,
-            user_creation_date: epoch(),
-            user_last_login: epoch(),
-            user_password: stored_pw.into(),
-            project_id: None,
-            is_admin: false,
-        }
-    }
 
     // ---------- is_authenticated_impl tests ----------
 
     #[test]
     fn returns_user_on_match_core() {
         let mut map = HashMap::new();
-        map.insert(42, make_user(42, "alice", "pwd"));
+        map.insert(42, FakeRepo::make_user(42, "alice", "pwd"));
         let repo = FakeRepo { users: map, ..Default::default() };
 
         let got = is_authenticated_impl(&repo, Some("42"), Some("alice"));
@@ -163,7 +105,7 @@ mod tests {
     #[test]
     fn returns_none_on_username_mismatch_core() {
         let mut map = HashMap::new();
-        map.insert(42, make_user(42, "alice", "pwd"));
+        map.insert(42, FakeRepo::make_user(42, "alice", "pwd"));
         let repo = FakeRepo { users: map, ..Default::default() };
 
         let got = is_authenticated_impl(&repo, Some("42"), Some("bob"));
@@ -180,7 +122,7 @@ mod tests {
     #[test]
     fn returns_none_on_bad_user_id_parse_core() {
         let mut map = HashMap::new();
-        map.insert(42, make_user(42, "alice", "pwd"));
+        map.insert(42, FakeRepo::make_user(42, "alice", "pwd"));
         let repo = FakeRepo { users: map, ..Default::default() };
 
         let got = is_authenticated_impl(&repo, Some("not-an-int"), Some("alice"));
@@ -190,7 +132,7 @@ mod tests {
     #[test]
     fn returns_none_when_any_cookie_missing_core() {
         let mut map = HashMap::new();
-        map.insert(42, make_user(42, "alice", "pwd"));
+        map.insert(42, FakeRepo::make_user(42, "alice", "pwd"));
         let repo = FakeRepo { users: map, ..Default::default() };
 
         assert!(is_authenticated_impl(&repo, None, Some("alice")).is_none());
@@ -203,7 +145,7 @@ mod tests {
     #[test]
     fn auth_ok_when_password_matches() {
         let pwd: String = hash_password("secret").unwrap();
-        let repo = FakeRepo::with_users([make_user(1, "alice", &pwd)]);
+        let repo = FakeRepo::with_users([FakeRepo::make_user(1, "alice", &pwd)]);
         let got = authenticate_user(&repo, "alice", "secret");
         assert!(got.is_ok());
         let user = got.unwrap();
@@ -213,7 +155,7 @@ mod tests {
     #[test]
     fn auth_err_when_password_mismatch() {
         let pwd = hash_password("secret").unwrap();
-        let repo = FakeRepo::with_users([make_user(1, "alice", &pwd)]);
+        let repo = FakeRepo::with_users([FakeRepo::make_user(1, "alice", &pwd)]);
         let got = authenticate_user(&repo, "alice", "wrong");
         assert!(got.is_err());
         match got {
@@ -247,7 +189,7 @@ mod tests {
     #[test]
     fn returns_err_when_verifier_fails() {
         // stored "ERR" triggers verifier error in our stub
-        let repo = FakeRepo::with_users([make_user(1, "alice", "ERR")]);
+        let repo = FakeRepo::with_users([FakeRepo::make_user(1, "alice", "ERR")]);
         let err = authenticate_user(&repo, "alice", "doesnt_matter");
         assert!(err.is_err());
         match err {

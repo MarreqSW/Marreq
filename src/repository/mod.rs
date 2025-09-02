@@ -1,5 +1,6 @@
 pub mod errors;
 pub mod diesel_repo;
+pub mod fake_repo;
 
 pub use diesel_repo::*;
 

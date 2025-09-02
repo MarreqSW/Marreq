@@ -1,0 +1,62 @@
+// This is just for testing purposes
+
+use super::*;
+use crate::repository::errors::RepoError;
+use std::collections::HashMap;
+use chrono::{NaiveDate, NaiveDateTime};
+
+#[derive(Default)]
+pub struct FakeRepo {
+    pub users: HashMap<i32, User>,
+    pub force_err: bool,
+}
+
+fn epoch() -> NaiveDateTime {
+    NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
+        .and_hms_opt(0, 0, 0).unwrap()
+}
+
+impl FakeRepo {
+    pub fn with_users(users: impl IntoIterator<Item = User>) -> Self {
+        let mut map = HashMap::new();
+        for u in users {
+            map.insert(u.user_id, u);
+        }
+        Self { users: map, force_err: false }
+    }
+    pub fn with_error() -> Self {
+        Self { users: HashMap::new(), force_err: true }
+    }
+
+    pub fn make_user(id: i32, username: &str, stored_pw: &str) -> User {
+        User {
+            user_id: id,
+            user_username: username.to_string(),
+            user_name: "name".into(),
+            user_email: "email@example.com".into(),
+            user_level: 0,
+            user_creation_date: epoch(),
+            user_last_login: epoch(),
+            user_password: stored_pw.into(),
+            project_id: None,
+            is_admin: false,
+        }
+    }
+
+}
+
+impl Repository for FakeRepo {
+    fn get_user_by_id(&self, id: i32) -> Result<User, RepoError> {
+        self.users.get(&id).cloned().ok_or(RepoError::NotFound)
+    }
+    fn get_user_by_username(&self, uname: &str) -> Result<Option<User>, RepoError> {
+        if self.force_err {
+            return Err(RepoError::Pool("forced test error".into()));
+        }
+        let user = self.users.values().find(|u| u.user_username == uname).cloned();
+        Ok(user) // Ok(Some(..)) or Ok(None)
+    }
+    fn update_user_password(&self, _id: i32, _new_hash: &str) -> Result<(), RepoError> {
+        Ok(())
+    }
+}

@@ -45,6 +45,7 @@ impl FakeRepo {
 
 }
 
+use std::borrow::BorrowMut;
 impl Repository for FakeRepo {
     fn get_user_by_id(&self, id: i32) -> Result<User, RepoError> {
         self.users.get(&id).cloned().ok_or(RepoError::NotFound)
@@ -56,7 +57,17 @@ impl Repository for FakeRepo {
         let user = self.users.values().find(|u| u.user_username == uname).cloned();
         Ok(user) // Ok(Some(..)) or Ok(None)
     }
-    fn update_user_password(&self, _id: i32, _new_hash: &str) -> Result<(), RepoError> {
-        Ok(())
+    fn update_user_password(&mut self, id: i32, new_hash: &str) -> Result<(), RepoError> {
+        if self.force_err {
+            return Err(RepoError::Db(diesel::result::Error::RollbackTransaction));
+        }
+        let users = self.users.borrow_mut();
+        match users.get_mut(&id) {
+            Some(user) => {
+                user.user_password = new_hash.to_string();
+                Ok(())
+            }
+            None => Err(RepoError::NotFound),
+        }
     }
 }

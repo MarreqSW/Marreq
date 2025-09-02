@@ -15,7 +15,7 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, bcrypt::Bcryp
 }
 
 pub fn change_user_password<R: Repository>(
-    repo: &R,
+    repo: &mut R,
     uid: i32,
     current_password: &str,
     new_password: &str
@@ -66,10 +66,10 @@ pub fn change_password_user(
     };
 
     use crate::repository::diesel_repo::DieselRepo ;
-    let repo = DieselRepo{};
+    let mut repo = DieselRepo{};
 
     match change_user_password(
-        &repo,
+        &mut repo,
         user_id,
         &current_password,
         &new_password,

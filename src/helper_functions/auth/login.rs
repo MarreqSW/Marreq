@@ -120,6 +120,9 @@ mod tests {
             let user = self.users.values().find(|u| u.user_username == uname).cloned();
             Ok(user) // Ok(Some(..)) or Ok(None)
         }
+        fn update_user_password(&self, _id: i32, _new_hash: &str) -> Result<(), RepoError> {
+            Ok(())
+        }
     }
 
     // --- Fixtures ------------------------------------------------------------

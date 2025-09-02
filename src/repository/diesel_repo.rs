@@ -37,4 +37,24 @@ impl Repository for DieselRepo {
             .map_err(|e| e.into())
     }
 
+    fn update_user_password(&self, id: i32, new_hash: &str) -> Result<(), RepoError> {
+        use crate::schema::users::dsl::*;
+        let mut conn = crate::db::get_connection_pooled_safe()
+            .map_err(|e| RepoError::Pool(e.to_string()))?;
+
+        let affected = diesel::update(users.filter(user_id.eq(id)))
+            .set(user_password.eq(new_hash))
+            .execute(conn.as_mut())?;
+
+        if affected == 1 {
+            Ok(())
+        } else if affected == 0 {
+            Err(RepoError::NotFound)
+        } else {
+            Err(RepoError::Db(diesel::result::Error::DatabaseError(
+                diesel::result::DatabaseErrorKind::Unknown,
+                Box::new(format!("updated {} rows for user_id={}", affected, id)),
+            )))
+        }
+    }
 }

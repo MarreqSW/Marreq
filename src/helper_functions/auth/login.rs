@@ -1,53 +1,33 @@
 use rocket::http::{Cookie, CookieJar};
-use rocket_dyn_templates::Template;
-use rocket::serde::json::json;
+use super::errors::AuthError;
 use crate::models::*;
 use crate::db::get_connection_pooled_safe;
 use crate::logger::Logger;
 use crate::repository::Repository;
 
 // --------------------------------
-// Authentication Route Logic
+// API
 // --------------------------------
 
 /// Process a login attempt. On success, session cookies are set and an empty
 /// Ok is returned. On failure a rendered `Template` with the corresponding
 /// error is returned.
-pub fn login_user(login_form: &LoginForm, cookies: &CookieJar<'_>) -> Result<(), Template> {
-    use crate::repository::diesel_repo::DieselRepo ;
-    let repo = DieselRepo{};
+pub fn login_user<R: Repository>(
+    repo: &R,
+    login_form: &LoginForm,
+    cookies: &CookieJar<'_>,
+) -> Result<(), AuthError> {
+    let user = authenticate_user(repo, &login_form.username, &login_form.password)?;
 
-    match authenticate_user(&repo, &login_form.username, &login_form.password) {
-        Ok(Some(user)) => {
-            // Set session cookies
-            cookies.add_private(Cookie::new("user_id", user.user_id.to_string()));
-            cookies.add_private(Cookie::new("username", user.user_username.clone()));
-            cookies.add_private(Cookie::new("user_name", user.user_name.clone()));
+    // Set session cookies
+    cookies.add_private(Cookie::new("user_id", user.user_id.to_string()));
+    cookies.add_private(Cookie::new("username", user.user_username.clone()));
+    cookies.add_private(Cookie::new("user_name", user.user_name.clone()));
 
-            // Log successful login
-            let mut conn = get_connection_pooled_safe().map_err(|e| {
-                eprintln!("Database connection error: {}", e);
-                Template::render("error", json!({"error": "Database connection failed"}))
-            })?;
-            let _ = Logger::log_login(&mut conn, user.user_id, None);
+    let mut conn = get_connection_pooled_safe().map_err(|e| AuthError::Db(e.to_string()))?;
+    Logger::log_login(&mut conn, user.user_id, None).map_err(|e| AuthError::Audit(e.to_string()))?;
 
-            Ok(())
-        }
-        Ok(None) => {
-            let ctx = json!({
-                "title": "Login",
-                "error": "Invalid username or password",
-            });
-            Err(Template::render("login", ctx))
-        }
-        Err(_e) => {
-            let ctx = json!({
-                "title": "Login",
-                "error": format!("Authentication error: {}", _e),
-            });
-            Err(Template::render("login", ctx))
-        }
-    }
+    Ok(())
 }
 
 pub fn is_authenticated<R: Repository>(
@@ -64,6 +44,11 @@ pub fn is_authenticated<R: Repository>(
     )
 }
 
+
+// --------------------------------
+// Implementation
+// --------------------------------
+
 fn is_authenticated_impl<R: Repository>(
     repo: &R,
     user_id: Option<&str>,
@@ -75,22 +60,24 @@ fn is_authenticated_impl<R: Repository>(
     (user.user_username == uname).then_some(user)
 }
 
-pub fn authenticate_user<R: Repository>(
+fn authenticate_user<R: Repository>(
     repo: &R,
     username: &str,
     password: &str,
-) -> Result<Option<User>, String> {
-    let user = repo
+) -> Result<User, AuthError> {
+    let user_opt = repo
         .get_user_by_username(username)
-        .map_err(|e| format!("Database error: {e}"))?;
+        .map_err(|e| AuthError::Db(e.to_string()))?;
 
-    match user {
-        Some(user) => match super::verify_password(password, &user.user_password) {
-            Ok(true)  => Ok(Some(user)),
-            Ok(false) => Ok(None),
-            Err(e)    => Err(format!("Password verification error: {e}")),
-        },
-        None => Ok(None),
+    let user = match user_opt {
+        Some(u) => u,
+        None => return Err(AuthError::InvalidCredentials),
+    };
+
+    match super::verify_password(password, &user.user_password) {
+        Ok(true)  => Ok(user),
+        Ok(false) => Err(AuthError::InvalidCredentials),
+        Err(e)    => Err(AuthError::Verify(e.to_string())),
     }
 }
 
@@ -214,38 +201,55 @@ mod tests {
     fn auth_ok_when_password_matches() {
         let pwd: String = hash_password("secret").unwrap();
         let repo = FakeRepo::with_users([make_user(1, "alice", &pwd)]);
-        let got = authenticate_user(&repo, "alice", "secret").expect("no error");
-        assert!(got.is_some());
-        assert_eq!(got.unwrap().user_username, "alice");
+        let got = authenticate_user(&repo, "alice", "secret");
+        assert!(got.is_ok());
+        let user = got.unwrap();
+        assert_eq!(user.user_username, "alice");
     }
 
     #[test]
-    fn auth_none_when_password_mismatch() {
+    fn auth_err_when_password_mismatch() {
         let pwd = hash_password("secret").unwrap();
         let repo = FakeRepo::with_users([make_user(1, "alice", &pwd)]);
-        let got = authenticate_user(&repo, "alice", "wrong").expect("no error");
-        assert!(got.is_none());
+        let got = authenticate_user(&repo, "alice", "wrong");
+        assert!(got.is_err());
+        match got {
+            Err(AuthError::InvalidCredentials) => (),
+            _ => panic!("Expected InvalidCredentials error"),
+        }
     }
 
     #[test]
-    fn auth_none_when_user_not_found() {
+    fn auth_err_when_user_not_found() {
         let repo = FakeRepo::with_users([]);
-        let got = authenticate_user(&repo, "ghost", "anything").expect("no error");
-        assert!(got.is_none());
+        let got = authenticate_user(&repo, "ghost", "anything");
+        assert!(got.is_err());
+        match got {
+            Err(AuthError::InvalidCredentials) => (),
+            _ => panic!("Expected InvalidCredentials error"),
+        }
     }
 
     #[test]
     fn returns_err_on_repo_error() {
         let repo = FakeRepo::with_error();
-        let err = authenticate_user(&repo, "alice", "secret").unwrap_err();
-        assert!(err.contains("Database error"));
+        let err = authenticate_user(&repo, "alice", "secret");
+        assert!(err.is_err());
+        match err {
+            Err(AuthError::Db(_)) => (),
+            _ => panic!("Expected Db error"),
+        }
     }
 
     #[test]
     fn returns_err_when_verifier_fails() {
         // stored "ERR" triggers verifier error in our stub
         let repo = FakeRepo::with_users([make_user(1, "alice", "ERR")]);
-        let err = authenticate_user(&repo, "alice", "doesnt_matter").unwrap_err();
-        assert!(err.contains("Password verification error"));
+        let err = authenticate_user(&repo, "alice", "doesnt_matter");
+        assert!(err.is_err());
+        match err {
+            Err(AuthError::Verify(_)) => (),
+            _ => panic!("Expected Verify error"),
+        }
     }
 }

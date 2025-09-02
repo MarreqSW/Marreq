@@ -60,6 +60,18 @@ fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::s
 // Authentication Routes
 // --------------------------------
 
+fn render_login_error(err: AuthError) -> Template {
+    use crate::helper_functions::auth::AuthError;
+    let (title, msg) = match err {
+        AuthError::InvalidCredentials => ("Login", "Invalid username or password".to_string()),
+        AuthError::Verify(_)          => ("Login", "Password verification failed".to_string()),
+        AuthError::Db(e)      => ("Error",  format!("Database error: {e}")),
+        AuthError::Audit(_)           => ("Login", "Logged in but failed to audit login".to_string()),
+    };
+
+    Template::render("login", json!({ "title": title, "error": msg }))
+}
+
 #[get("/login")]
 pub fn login_page() -> Template {
     // Get projects for navigation (even on login page)
@@ -75,8 +87,19 @@ pub fn login_page() -> Template {
 }
 
 #[post("/login", data = "<login_form>")]
-pub fn login(login_form: Form<LoginForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Template> {
-    login_user(&login_form, cookies).map(|_| Redirect::to(uri!(index)))
+pub fn login(
+    login_form: rocket::form::Form<LoginForm>,
+    cookies: &rocket::http::CookieJar<'_>,
+) -> Result<rocket::response::Redirect, Template> {
+    use crate::repository::diesel_repo::DieselRepo ;
+    let repo = DieselRepo{};
+
+    let form = login_form.into_inner();
+
+    match login_user(&repo, &form, cookies) {
+        Ok(()) => Ok(rocket::response::Redirect::to(uri!(index))),
+        Err(err) => Err(render_login_error(err)),
+    }
 }
 
 #[get("/logout")]

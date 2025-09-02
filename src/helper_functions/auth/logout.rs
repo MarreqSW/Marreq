@@ -1,9 +1,12 @@
-use time::Duration;
 use rocket::http::{CookieJar, Cookie};
 use crate::db::get_connection_pooled_safe;
 use crate::logger::Logger;
 
 /// Clear session cookies and log the logout event.
+/// Note: login calls Cookie::new(..). By default, Rocket’s Cookie::new creates
+/// a cookie without any explicit path, and Rocket’s add_private will add it to
+/// the response as-is. The default path is handled by the browser: if no Path 
+/// is given, RFC 6265 says the default is the request’s path up to the rightmost “/”.
 pub fn logout_user(cookies: &CookieJar<'_>) {
     // Get user info before clearing cookies
     let user_id = cookies
@@ -13,22 +16,14 @@ pub fn logout_user(cookies: &CookieJar<'_>) {
         .get_private("username")
         .map(|cookie| cookie.value().to_string());
 
-    // Clear all session cookies
-    let mut user_id_cookie = Cookie::new("user_id", "");
-    user_id_cookie.set_max_age(Duration::seconds(0));
-    user_id_cookie.set_path("/");
-
-    let mut username_cookie = Cookie::new("username", "");
-    username_cookie.set_max_age(Duration::seconds(0));
-    username_cookie.set_path("/");
-
-    let mut user_name_cookie = Cookie::new("user_name", "");
-    user_name_cookie.set_max_age(Duration::seconds(0));
-    user_name_cookie.set_path("/");
-
-    cookies.add_private(user_id_cookie);
-    cookies.add_private(username_cookie);
-    cookies.add_private(user_name_cookie);
+    // Remove all session cookies
+    for name in &["user_id", "username", "user_name"] {
+        // Important: same path as set at login
+        let c = Cookie::build(*name)
+            .path("/")
+            .build();
+        cookies.remove_private(c);
+    }
 
     // Log logout if possible
     if let Some(uid) = user_id {

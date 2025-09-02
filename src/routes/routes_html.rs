@@ -36,7 +36,10 @@ fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Er
 // --------------------------------
 
 pub fn require_auth(cookies: &CookieJar<'_>) -> Result<User, Redirect> {
-    match is_authenticated(cookies) {
+    use crate::repository::diesel_repo::DieselRepo ;
+    let repo = DieselRepo{};
+
+    match is_authenticated(&repo, cookies) {
         Some(user) => Ok(user),
         None => Err(Redirect::to(uri!(login_page)))
     }

@@ -25,5 +25,16 @@ impl Repository for DieselRepo {
             })
     }
 
+    fn get_user_by_username(&self, uname: &str) -> Result<Option<User>, RepoError> {
+        use crate::schema::users::dsl::*;
+        let mut conn = crate::db::get_connection_pooled_safe()
+            .map_err(|e| RepoError::Pool(e.to_string()))?;
+
+        users
+            .filter(user_username.eq(uname))
+            .first::<User>(conn.as_mut())
+            .optional()
+            .map_err(|e| e.into())
+    }
 
 }

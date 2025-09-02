@@ -59,17 +59,27 @@ pub fn is_authenticated<R: Repository>(
     repo: &R,
     cookies: &CookieJar<'_>,
 ) -> Option<User> {
-    let (uid_cookie, uname_cookie) = (
-        cookies.get_private("user_id")?,
-        cookies.get_private("username")?,
-    );
+    let uid_cookie   = cookies.get_private("user_id");
+    let uname_cookie = cookies.get_private("username");
 
-    let uid = uid_cookie.value().parse::<i32>().ok()?;
-    let uname = uname_cookie.value();
+    is_authenticated_impl(
+        repo,
+        uid_cookie.as_ref().map(|c| c.value()),
+        uname_cookie.as_ref().map(|c| c.value()),
+    )
+}
 
+fn is_authenticated_impl<R: Repository>(
+    repo: &R,
+    user_id: Option<&str>,
+    username: Option<&str>,
+) -> Option<User> {
+    let (uid, uname) = (user_id?, username?);
+    let uid = uid.parse::<i32>().ok()?;
     let user = repo.get_user_by_id(uid).ok()?;
     (user.user_username == uname).then_some(user)
 }
+
 
 /// Core auth logic, takes a fetcher function instead of talking to DB directly
 fn authenticate_user_with<F, E>(
@@ -95,14 +105,23 @@ where
 }
 
 
-
-
-/*
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::helper_functions::hash_password;
-    use chrono::{NaiveDate, NaiveDateTime};
+    use crate::repository::errors::RepoError;
+    use std::collections::HashMap;
+    use chrono::{NaiveDateTime, NaiveDate};
+
+    struct FakeRepo {
+        users: HashMap<i32, User>,
+    }
+
+    impl Repository for FakeRepo {
+        fn get_user_by_id(&self, id: i32) -> Result<User, RepoError> {
+            self.users.get(&id).cloned().map(Ok).unwrap_or(Err(RepoError::NotFound))
+        }
+    }
+
 
     fn epoch() -> NaiveDateTime {
         NaiveDate::from_ymd_opt(1970, 1, 1)
@@ -127,123 +146,52 @@ mod tests {
         }
     }
 
-    // Fake implementation we control in tests
-    fn fake_get_user_by_id(id: i32) -> User {
-        match id {
-            42 => make_user(42, "alice"),
-            _ => make_user(id, "bob"),
-        }
+    #[test]
+    fn returns_user_on_match() {
+        let mut map = HashMap::new();
+        map.insert(42, make_user(42, "alice"));
+        let repo = FakeRepo { users: map };
+
+        let got = is_authenticated_impl(&repo, Some("42"), Some("alice"));
+        assert!(got.is_some());
+        assert_eq!(got.unwrap().user_username, "alice");
     }
 
     #[test]
-    fn returns_some_when_both_cookies_and_match() {
-        let out = super::auth_from_cookie_values(fake_get_user_by_id, Some("42"), Some("alice"));
-        let user = out.expect("should be Some");
-        assert_eq!(user.user_id, 42);
-        assert_eq!(user.user_username, "alice");
+    fn returns_none_on_username_mismatch() {
+        let mut map = HashMap::new();
+        map.insert(42, make_user(42, "alice"));
+        let repo = FakeRepo { users: map };
+
+        let got = is_authenticated_impl(&repo, Some("42"), Some("bob"));
+        assert!(got.is_none());
     }
 
     #[test]
-    fn returns_none_when_username_mismatch() {
-        let out = super::auth_from_cookie_values(fake_get_user_by_id, Some("42"), Some("wrong"));
-        assert!(out.is_none());
+    fn returns_none_when_user_missing() {
+        let repo = FakeRepo { users: HashMap::new() };
+        let got = is_authenticated_impl(&repo, Some("42"), Some("alice"));
+        assert!(got.is_none());
     }
 
     #[test]
-    fn returns_none_when_user_id_not_parseable() {
-        let out =
-            super::auth_from_cookie_values(fake_get_user_by_id, Some("not-an-int"), Some("alice"));
-        assert!(out.is_none());
+    fn returns_none_on_bad_user_id_parse() {
+        let mut map = HashMap::new();
+        map.insert(42, make_user(42, "alice"));
+        let repo = FakeRepo { users: map };
+
+        let got = is_authenticated_impl(&repo, Some("not-an-int"), Some("alice"));
+        assert!(got.is_none());
     }
 
     #[test]
     fn returns_none_when_any_cookie_missing() {
-        assert!(super::auth_from_cookie_values(fake_get_user_by_id, None, Some("alice")).is_none());
-        assert!(super::auth_from_cookie_values(fake_get_user_by_id, Some("42"), None).is_none());
-        assert!(super::auth_from_cookie_values(fake_get_user_by_id, None, None).is_none());
-    }
+        let mut map = HashMap::new();
+        map.insert(42, make_user(42, "alice"));
+        let repo = FakeRepo { users: map };
 
-    // --- authenticate_user_with tests ---
-
-    #[test]
-    fn auth_returns_some_when_password_matches() {
-        // use your own bcrypt wrapper so no extra imports are needed
-        let hashed = hash_password("secret").expect("hash");
-        let mut u = make_user(1, "alice");
-        u.user_password = hashed;
-
-        // Use an error type that implements Display
-        let fetch = move |uname: &str| -> Result<Option<User>, &'static str> {
-            assert_eq!(uname, "alice");
-            Ok(Some(u.clone()))
-        };
-
-        let out = authenticate_user_with(fetch, "alice", "secret")
-            .expect("no db error");
-
-        assert!(out.is_some());
-        let got = out.unwrap();
-        assert_eq!(got.user_id, 1);
-        assert_eq!(got.user_username, "alice");
-    }
-
-    #[test]
-    fn auth_returns_none_when_password_wrong() {
-        let hashed = hash_password("secret").expect("hash");
-        let mut u = make_user(2, "bob");
-        u.user_password = hashed;
-
-        // fix: &'static str instead of ()
-        let fetch = move |_uname: &str| -> Result<Option<User>, &'static str> {
-            Ok(Some(u.clone()))
-        };
-
-        let out = authenticate_user_with(fetch, "bob", "not-the-password")
-            .expect("no db error");
-
-        assert!(out.is_none());
-    }
-
-    #[test]
-    fn auth_returns_none_when_user_not_found() {
-        // fix: &'static str instead of ()
-        let fetch = |_uname: &str| -> Result<Option<User>, &'static str> { Ok(None) };
-
-        let out = authenticate_user_with(fetch, "ghost", "whatever")
-            .expect("no db error");
-
-        assert!(out.is_none());
-    }
-
-    #[test]
-    fn auth_maps_fetch_error_to_string() {
-        let fetch = |_uname: &str| -> Result<Option<User>, &'static str> {
-            Err("boom")
-        };
-
-        let err = authenticate_user_with(fetch, "alice", "secret")
-            .err()
-            .expect("should error");
-
-        assert!(err.contains("Database error: boom"));
-    }
-
-    #[test]
-    fn auth_propagates_password_verification_error() {
-        // bcrypt will error on invalid hash format
-        let mut u = make_user(3, "carol");
-        u.user_password = "not-a-bcrypt-hash".into();
-
-        // fix: &'static str instead of ()
-        let fetch = move |_uname: &str| -> Result<Option<User>, &'static str> {
-            Ok(Some(u.clone()))
-        };
-
-        let err = authenticate_user_with(fetch, "carol", "anything")
-            .err()
-            .expect("should error");
-
-        assert!(err.starts_with("Password verification error:"));
+        assert!(is_authenticated_impl(&repo, None, Some("alice")) .is_none());
+        assert!(is_authenticated_impl(&repo, Some("42"), None)   .is_none());
+        assert!(is_authenticated_impl(&repo, None, None)         .is_none());
     }
 }
-*/

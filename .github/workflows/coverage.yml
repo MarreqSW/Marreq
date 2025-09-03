@@ -69,8 +69,8 @@ jobs:
           message-path: code-coverage-results.md
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Coverage gate (≥1% lines)
-        run: cargo llvm-cov --workspace --all-features --doctests --no-run --fail-under-lines 1
+      - name: Coverage gate
+        run: cargo llvm-cov --workspace --all-features --doctests --no-run --fail-under-lines 18
 
       - name: Upload coverage HTML
         if: always()

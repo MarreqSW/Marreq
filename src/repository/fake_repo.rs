@@ -45,7 +45,7 @@ impl FakeRepo {
 
 }
 
-impl Repository for FakeRepo {
+impl UserRepository for FakeRepo {
     fn get_user_by_id(&self, id: i32) -> Result<User, RepoError> {
         self.users.get(&id).cloned().ok_or(RepoError::NotFound)
     }
@@ -66,5 +66,32 @@ impl Repository for FakeRepo {
             }
             None => Err(RepoError::NotFound),
         }
+    }
+}
+
+impl LookupRepository for FakeRepo {
+    fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
+        Ok(Vec::new())
+    }
+    fn get_status_by_id(&self, _id: i32) -> Result<Status, RepoError> {
+        Err(RepoError::NotFound)
+    }
+    fn get_categories_all(&self) -> Result<Vec<Category>, RepoError> {
+        Ok(Vec::new())
+    }
+    fn get_category_by_id(&self, _id: i32) -> Result<Category, RepoError> {
+        Err(RepoError::NotFound)
+    }
+    fn get_applicability_all(&self) -> Result<Vec<Applicability>, RepoError> {
+        Ok(Vec::new())
+    }
+    fn get_applicability_by_id(&self, _id: i32) -> Result<Applicability, RepoError> {
+        Err(RepoError::NotFound)
+    }
+    fn get_verification_all(&self) -> Result<Vec<Verification>, RepoError> {
+        Ok(Vec::new())
+    }
+    fn get_verification_by_id(&self, _id: i32) -> Result<Verification, RepoError> {
+        Err(RepoError::NotFound)
     }
 }

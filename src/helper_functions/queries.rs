@@ -1,119 +1,55 @@
 use crate::models::*;
+use crate::repository::{DieselRepo, LookupRepository, UserRepository};
+use crate::repository::errors::RepoError;
 use diesel::prelude::*;
-use serde::{Deserialize, Serialize};
+
+pub type VerificationData = crate::models::Verification;
 
 pub fn get_status_all() -> Result<Vec<Status>, String> {
-    use crate::schema::status::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    status
-        .order(st_id)
-        .load::<Status>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying status: {:?}", _err);
-            "Error querying status from the database".into()
-        })
+    DieselRepo::new()
+        .get_status_all()
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_categories_all() -> Result<Vec<Category>, String> {
-    use crate::schema::categories::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    categories
-        .order(cat_id)
-        .load::<Category>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying categories: {:?}", _err);
-            "Error querying categories from the database".into()
-        })
+    DieselRepo::new()
+        .get_categories_all()
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_applicability_all() -> Result<Vec<Applicability>, String> {
-    use crate::schema::applicability::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    applicability
-        .order(app_id)
-        .load::<Applicability>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying applicability: {:?}", _err);
-            "Error querying applicability from the database".into()
-        })
+    DieselRepo::new()
+        .get_applicability_all()
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_applicability_by_id(id: i32) -> Applicability {
-    use crate::schema::applicability::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    applicability
-        .filter(app_id.eq(id))
-        .get_result(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying applicability: {:?}", _err);
-            "Error querying applicability from the database".into()
+    DieselRepo::new()
+        .get_applicability_by_id(id)
+        .unwrap_or_else(|_| Applicability {
+            app_id: id,
+            app_title: format!("Unknown Applicability ({})", id),
+            app_description: "Applicability not found".to_string(),
+            app_tag: "unknown".to_string(),
+            project_id: 1,
         })
-        .unwrap()
 }
 
 pub fn get_applicability_by_id_safe(id: i32, target_project_id: i32) -> Applicability {
-    use crate::schema::applicability::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-    
-    // First try to find the applicability in the specific project
-    match applicability
-        .filter(app_id.eq(id))
-        .filter(crate::schema::applicability::project_id.eq(target_project_id))
-        .get_result::<Applicability>(connection.as_mut()) {
-        Ok(result) => result,
-        Err(_) => {
-            // Fallback: try to find any applicability with this ID
-            match applicability
-                .filter(app_id.eq(id))
-                .get_result::<Applicability>(connection.as_mut()) {
-                Ok(result) => result,
-                Err(_) => {
-                    // Final fallback: return a default applicability
-                    Applicability {
-                        app_id: id,
-                        app_title: format!("Unknown Applicability ({})", id),
-                        app_description: "Applicability not found".to_string(),
-                        app_tag: "unknown".to_string(),
-                        project_id: target_project_id,
-                    }
-                }
-            }
-        }
-    }
+    DieselRepo::new()
+        .get_applicability_by_id(id)
+        .unwrap_or_else(|_| Applicability {
+            app_id: id,
+            app_title: format!("Unknown Applicability ({})", id),
+            app_description: "Applicability not found".to_string(),
+            app_tag: "unknown".to_string(),
+            project_id: target_project_id,
+        })
 }
 
 pub fn get_category_by_id(id: i32) -> Category {
-    use crate::schema::categories::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    categories
-        .filter(cat_id.eq(id))
-        .get_result(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying category: {:?}", _err);
-            format!("Error querying category with ID {} from the database", id)
-        })
+    DieselRepo::new()
+        .get_category_by_id(id)
         .unwrap_or_else(|_| Category {
             cat_id: id,
             cat_title: format!("Unknown Category ({})", id),
@@ -124,98 +60,37 @@ pub fn get_category_by_id(id: i32) -> Category {
 }
 
 pub fn get_category_by_id_safe(id: i32, target_project_id: i32) -> Category {
-    use crate::schema::categories::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-    
-    // First try to find the category in the specific project
-    match categories
-        .filter(cat_id.eq(id))
-        .filter(crate::schema::categories::project_id.eq(target_project_id))
-        .get_result::<Category>(connection.as_mut()) {
-        Ok(result) => result,
-        Err(_) => {
-            // Fallback: try to find any category with this ID
-            match categories
-                .filter(cat_id.eq(id))
-                .get_result::<Category>(connection.as_mut()) {
-                Ok(result) => result,
-                Err(_) => {
-                    // Final fallback: return a default category
-                    Category {
-                        cat_id: id,
-                        cat_title: format!("Unknown Category ({})", id),
-                        cat_description: "Category not found".to_string(),
-                        cat_tag: "unknown".to_string(),
-                        project_id: target_project_id,
-                    }
-                }
-            }
-        }
-    }
+    DieselRepo::new()
+        .get_category_by_id(id)
+        .unwrap_or_else(|_| Category {
+            cat_id: id,
+            cat_title: format!("Unknown Category ({})", id),
+            cat_description: "Category not found".to_string(),
+            cat_tag: "unknown".to_string(),
+            project_id: target_project_id,
+        })
 }
 
 pub fn get_user_by_id(id: i32) -> User {
-    use crate::schema::users::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    users
-        .filter(user_id.eq(id))
-        .get_result(connection.as_mut())
+    DieselRepo::new()
+        .get_user_by_id(id)
         .expect("Error reading table Users")
 }
 
-pub fn get_user_by_username(uname: &str) -> Result<Option<User>, diesel::result::Error> {
-    use crate::schema::users::dsl::*;
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    users
-        .filter(user_username.eq(uname))
-        .first::<User>(connection.as_mut())
-        .optional()
+pub fn get_user_by_username(uname: &str) -> Result<Option<User>, RepoError> {
+    DieselRepo::new().get_user_by_username(uname)
 }
 
-
-
 pub fn get_status_by_id(id: i32) -> Status {
-    use crate::schema::status::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    status
-        .filter(st_id.eq(id))
-        .get_result(connection.as_mut())
+    DieselRepo::new()
+        .get_status_by_id(id)
         .expect("Error reading table Status")
 }
 
-/// Struct for verification data that matches the database schema
-#[derive(Serialize, Deserialize, Queryable)]
-pub struct VerificationData {
-    pub verification_id: i32,
-    pub verification_name: String,
-    pub verification_description: String,
-    pub project_id: i32,
-}
-
 pub fn get_verification_all() -> Result<Vec<VerificationData>, String> {
-    use crate::schema::verification::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    verification
-        .order(verification_id)
-        .load::<VerificationData>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying verification: {:?}", _err);
-            "Error querying verification from the database".into()
-        })
+    DieselRepo::new()
+        .get_verification_all()
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_verification_by_project(_project_id: i32) -> Result<Vec<VerificationData>, String> {
@@ -236,14 +111,8 @@ pub fn get_verification_by_project(_project_id: i32) -> Result<Vec<VerificationD
 }
 
 pub fn get_verification_by_id(id: i32) -> VerificationData {
-    use crate::schema::verification::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    verification
-        .filter(verification_id.eq(id))
-        .get_result(connection.as_mut())
+    DieselRepo::new()
+        .get_verification_by_id(id)
         .unwrap_or_else(|_| VerificationData {
             verification_id: id,
             verification_name: format!("Unknown Verification ({})", id),
@@ -253,35 +122,14 @@ pub fn get_verification_by_id(id: i32) -> VerificationData {
 }
 
 pub fn get_verification_by_id_safe(id: i32, target_project_id: i32) -> VerificationData {
-    use crate::schema::verification::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-    
-    // First try to find the verification in the specific project
-    match verification
-        .filter(verification_id.eq(id))
-        .filter(crate::schema::verification::project_id.eq(target_project_id))
-        .get_result::<VerificationData>(connection.as_mut()) {
-        Ok(result) => result,
-        Err(_) => {
-            // Fallback: try to find any verification with this ID
-            match verification
-                .filter(verification_id.eq(id))
-                .get_result::<VerificationData>(connection.as_mut()) {
-                Ok(result) => result,
-                Err(_) => {
-                    // Final fallback: return a default verification
-                    VerificationData {
-                        verification_id: id,
-                        verification_name: format!("Unknown Verification ({})", id),
-                        verification_description: "Verification not found".to_string(),
-                        project_id: target_project_id,
-                    }
-                }
-            }
-        }
-    }
+    DieselRepo::new()
+        .get_verification_by_id(id)
+        .unwrap_or_else(|_| VerificationData {
+            verification_id: id,
+            verification_name: format!("Unknown Verification ({})", id),
+            verification_description: "Verification not found".to_string(),
+            project_id: target_project_id,
+        })
 }
 
 pub fn get_status_name_by_id(id: i32) -> String {

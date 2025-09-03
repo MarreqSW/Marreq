@@ -102,7 +102,7 @@ impl UserRepository for FakeRepo {
         }
     }
 
-    fn insert_new_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
+    fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
         Ok(new.user_id.unwrap_or(0))
     }
 
@@ -307,7 +307,7 @@ impl TestsRepository for FakeRepo {
         )
     }
 
-    fn insert_new_test(&mut self, _new: &NewTest) -> Result<i32, RepoError> {
+    fn insert_test(&mut self, _new: &NewTest) -> Result<i32, RepoError> {
         Ok(0)
     }
 

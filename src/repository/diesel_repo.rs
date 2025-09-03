@@ -76,7 +76,7 @@ impl UserRepository for DieselRepo {
     }
 
 
-    fn insert_new_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
+    fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
         let mut conn =
             crate::db::get_connection_pooled_safe().map_err(|e| RepoError::Pool(e.to_string()))?;
         let res: User =
@@ -496,7 +496,7 @@ impl TestsRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-       fn insert_new_test(&mut self, new: &NewTest) -> Result<i32, RepoError> {
+       fn insert_test(&mut self, new: &NewTest) -> Result<i32, RepoError> {
         let mut conn =
             crate::db::get_connection_pooled_safe().map_err(|e| RepoError::Pool(e.to_string()))?;
         let res: Test =

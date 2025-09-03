@@ -478,5 +478,3 @@ pub fn generate_pdf_report_data(
     add_footer(&first_layer, &footer_font);
     save_pdf(doc)
 }
-
-// Project management functions

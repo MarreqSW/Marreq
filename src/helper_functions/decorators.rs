@@ -174,3 +174,400 @@ fn get_linked_tests_for_requirement_impl<R: Repository>(
 
     Ok(decorate_tests_impl(repo, tests))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::fake_repo::FakeRepo;
+    use chrono::{NaiveDate, NaiveDateTime};
+
+    fn dt() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2020, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    #[test]
+    fn decorate_requirements_impl_covers_branches() {
+        let now = dt();
+        let mut repo = FakeRepo::default();
+
+        // Lookup data
+        repo.statuses.insert(
+            1,
+            Status {
+                st_id: 1,
+                st_title: "Open".into(),
+                st_description: String::new(),
+                st_short_name: String::new(),
+            },
+        );
+        repo.verifications.insert(
+            1,
+            Verification {
+                verification_id: 1,
+                verification_name: "Analysis".into(),
+                verification_description: String::new(),
+                project_id: 1,
+            },
+        );
+        repo.categories.insert(
+            1,
+            Category {
+                cat_id: 1,
+                cat_title: "Cat".into(),
+                cat_description: String::new(),
+                cat_tag: String::new(),
+                project_id: 1,
+            },
+        );
+        repo.applicability.insert(
+            1,
+            Applicability {
+                app_id: 1,
+                app_title: "App".into(),
+                app_description: String::new(),
+                app_tag: String::new(),
+                project_id: 1,
+            },
+        );
+
+        repo.users.insert(
+            1,
+            User {
+                user_id: 1,
+                user_username: "a".into(),
+                user_name: "Author".into(),
+                user_email: String::new(),
+                user_level: 0,
+                user_creation_date: now,
+                user_last_login: now,
+                user_password: String::new(),
+                project_id: None,
+                is_admin: false,
+            },
+        );
+        repo.users.insert(
+            2,
+            User {
+                user_id: 2,
+                user_username: "b".into(),
+                user_name: "Reviewer".into(),
+                user_email: String::new(),
+                user_level: 0,
+                user_creation_date: now,
+                user_last_login: now,
+                user_password: String::new(),
+                project_id: None,
+                is_admin: false,
+            },
+        );
+
+        // Parent requirement for branch coverage
+        repo.requirements.insert(
+            31,
+            Requirement {
+                req_id: 31,
+                req_title: "Parent".into(),
+                req_description: String::new(),
+                req_verification: 1,
+                req_current_status: 1,
+                req_author: 1,
+                req_reviewer: 2,
+                req_link: String::new(),
+                req_reference: String::new(),
+                req_category: 1,
+                req_parent: 0,
+                req_creation_date: now,
+                req_update_date: now,
+                req_deadline_date: now,
+                req_applicability: 1,
+                req_justification: None,
+                project_id: 1,
+            },
+        );
+
+        let r1 = Requirement {
+            req_id: 1,
+            req_title: "R1".into(),
+            req_description: String::new(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 1,
+            req_reviewer: 2,
+            req_link: String::new(),
+            req_reference: String::new(),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: now,
+            req_update_date: now,
+            req_deadline_date: now,
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 1,
+        };
+
+        let r2 = Requirement {
+            req_id: 2,
+            req_title: "R2".into(),
+            req_description: String::new(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 0,
+            req_reviewer: 0,
+            req_link: String::new(),
+            req_reference: String::new(),
+            req_category: 1,
+            req_parent: 31,
+            req_creation_date: now,
+            req_update_date: now,
+            req_deadline_date: now,
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 1,
+        };
+
+        let r3 = Requirement {
+            req_id: 3,
+            req_title: "R3".into(),
+            req_description: String::new(),
+            req_verification: 99,
+            req_current_status: 99,
+            req_author: 99,
+            req_reviewer: 98,
+            req_link: String::new(),
+            req_reference: String::new(),
+            req_category: 99,
+            req_parent: 32,
+            req_creation_date: now,
+            req_update_date: now,
+            req_deadline_date: now,
+            req_applicability: 99,
+            req_justification: None,
+            project_id: 1,
+        };
+
+        let decorated = decorate_requirements_impl(&repo, vec![r1, r2, r3]);
+
+        assert_eq!(decorated.len(), 3);
+        let d1 = &decorated[0];
+        assert_eq!(d1.req_verification, "Analysis");
+        assert_eq!(d1.req_current_status, "Open");
+        assert_eq!(d1.req_author, "Author");
+        assert_eq!(d1.req_reviewer, "Reviewer");
+        assert_eq!(d1.req_category, "Cat");
+        assert_eq!(d1.req_applicability, "App");
+        assert_eq!(d1.req_parent_title, "");
+
+        let d2 = &decorated[1];
+        assert_eq!(d2.req_author, "");
+        assert_eq!(d2.req_reviewer, "");
+        assert_eq!(d2.req_parent_title, "Parent");
+
+        let d3 = &decorated[2];
+        assert!(d3.req_verification.starts_with("Unknown Verification"));
+        assert!(d3.req_current_status.starts_with("Unknown Status"));
+        assert_eq!(d3.req_author, "");
+        assert_eq!(d3.req_reviewer, "");
+        assert!(d3.req_category.starts_with("Unknown Category"));
+        assert!(d3.req_applicability.starts_with("Unknown Applicability"));
+        assert_eq!(d3.req_parent_title, "[Deleted Parent]");
+    }
+
+    #[test]
+    fn decorate_tests_impl_covers_branches() {
+        let mut repo = FakeRepo::default();
+        repo.statuses.insert(
+            1,
+            Status {
+                st_id: 1,
+                st_title: "Open".into(),
+                st_description: String::new(),
+                st_short_name: String::new(),
+            },
+        );
+        // parent test for branch
+        repo.tests.insert(
+            10,
+            Test {
+                test_id: 10,
+                test_name: "Parent".into(),
+                test_description: String::new(),
+                test_source: String::new(),
+                test_status: 1,
+                test_parent: 0,
+                project_id: 1,
+            },
+        );
+
+        let t1 = Test {
+            test_id: 20,
+            test_name: "T1".into(),
+            test_description: String::new(),
+            test_source: String::new(),
+            test_status: 1,
+            test_parent: 0,
+            project_id: 1,
+        };
+        let t2 = Test {
+            test_id: 21,
+            test_name: "T2".into(),
+            test_description: String::new(),
+            test_source: String::new(),
+            test_status: 99,
+            test_parent: 10,
+            project_id: 1,
+        };
+        let t3 = Test {
+            test_id: 22,
+            test_name: "T3".into(),
+            test_description: String::new(),
+            test_source: String::new(),
+            test_status: 1,
+            test_parent: 999,
+            project_id: 1,
+        };
+
+        let decorated = decorate_tests_impl(&repo, vec![t1, t2, t3]);
+        assert_eq!(decorated.len(), 3);
+        assert_eq!(decorated[0].test_status, "Open");
+        assert_eq!(decorated[0].test_parent_title, "");
+        assert_eq!(decorated[1].test_status, "Unknown Status (99)");
+        assert_eq!(decorated[1].test_parent_title, "Parent");
+        assert_eq!(decorated[2].test_parent_title, "");
+    }
+
+    #[test]
+    fn get_linked_tests_for_requirement_impl_works() {
+        let now = dt();
+        let mut repo = FakeRepo::default();
+        repo.statuses.insert(
+            1,
+            Status {
+                st_id: 1,
+                st_title: "Open".into(),
+                st_description: String::new(),
+                st_short_name: String::new(),
+            },
+        );
+        let req = Requirement {
+            req_id: 1,
+            req_title: "R".into(),
+            req_description: String::new(),
+            req_verification: 0,
+            req_current_status: 0,
+            req_author: 0,
+            req_reviewer: 0,
+            req_link: String::new(),
+            req_reference: String::new(),
+            req_category: 0,
+            req_parent: 0,
+            req_creation_date: now,
+            req_update_date: now,
+            req_deadline_date: now,
+            req_applicability: 0,
+            req_justification: None,
+            project_id: 1,
+        };
+        let test = Test {
+            test_id: 10,
+            test_name: "T".into(),
+            test_description: String::new(),
+            test_source: String::new(),
+            test_status: 1,
+            test_parent: 0,
+            project_id: 1,
+        };
+        repo.requirements.insert(1, req);
+        repo.tests.insert(10, test);
+        repo.matrices.push(Matrix {
+            matrix_req_id: 1,
+            matrix_test_id: 10,
+            matrix_creation_date: now,
+            project_id: 1,
+        });
+
+        let result = get_linked_tests_for_requirement_impl(&repo, 1).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].test_name, "T");
+        assert_eq!(result[0].test_status, "Open");
+    }
+
+    #[test]
+    fn get_linked_tests_for_requirement_impl_empty_when_no_links() {
+        let now = dt();
+        let mut repo = FakeRepo::default();
+        let req = Requirement {
+            req_id: 2,
+            req_title: "R".into(),
+            req_description: String::new(),
+            req_verification: 0,
+            req_current_status: 0,
+            req_author: 0,
+            req_reviewer: 0,
+            req_link: String::new(),
+            req_reference: String::new(),
+            req_category: 0,
+            req_parent: 0,
+            req_creation_date: now,
+            req_update_date: now,
+            req_deadline_date: now,
+            req_applicability: 0,
+            req_justification: None,
+            project_id: 1,
+        };
+        repo.requirements.insert(2, req);
+        // matrix for different requirement
+        repo.matrices.push(Matrix {
+            matrix_req_id: 99,
+            matrix_test_id: 50,
+            matrix_creation_date: now,
+            project_id: 1,
+        });
+
+        let result = get_linked_tests_for_requirement_impl(&repo, 2).unwrap();
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn get_linked_tests_for_requirement_impl_errors_when_req_missing() {
+        let repo = FakeRepo::default();
+        let err = get_linked_tests_for_requirement_impl(&repo, 123).unwrap_err();
+        matches!(err, RepoError::NotFound);
+    }
+
+    #[test]
+    fn get_linked_tests_for_requirement_impl_errors_when_test_missing() {
+        let now = dt();
+        let mut repo = FakeRepo::default();
+        let req = Requirement {
+            req_id: 3,
+            req_title: "R".into(),
+            req_description: String::new(),
+            req_verification: 0,
+            req_current_status: 0,
+            req_author: 0,
+            req_reviewer: 0,
+            req_link: String::new(),
+            req_reference: String::new(),
+            req_category: 0,
+            req_parent: 0,
+            req_creation_date: now,
+            req_update_date: now,
+            req_deadline_date: now,
+            req_applicability: 0,
+            req_justification: None,
+            project_id: 1,
+        };
+        repo.requirements.insert(3, req);
+        repo.matrices.push(Matrix {
+            matrix_req_id: 3,
+            matrix_test_id: 999,
+            matrix_creation_date: now,
+            project_id: 1,
+        });
+
+        assert!(get_linked_tests_for_requirement_impl(&repo, 3).is_err());
+    }
+}

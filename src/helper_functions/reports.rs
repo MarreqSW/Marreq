@@ -478,3 +478,75 @@ pub fn generate_pdf_report_data(
     add_footer(&first_layer, &footer_font);
     save_pdf(doc)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_generate_pdf_content() {
+        let mut req_status = HashMap::new();
+        req_status.insert("Open".to_string(), 5);
+        req_status.insert("Closed".to_string(), 3);
+
+        let mut test_status = HashMap::new();
+        test_status.insert("Passed".to_string(), 10);
+        test_status.insert("Failed".to_string(), 2);
+
+        let mut req_category = HashMap::new();
+        req_category.insert("Functional".to_string(), 4);
+        req_category.insert("Performance".to_string(), 1);
+
+        let html = generate_pdf_content(
+            8,
+            12,
+            3,
+            2,
+            75.0,
+            1.5,
+            6,
+            20,
+            req_status.clone(),
+            test_status.clone(),
+            req_category.clone(),
+        );
+
+        assert!(html.contains("Total Requirements"));
+        assert!(html.contains("Functional"));
+        assert!(html.contains("Passed"));
+        assert!(html.contains("Average Tests per Requirement"));
+    }
+
+    #[test]
+    fn test_generate_pdf_from_html() {
+        let pdf_bytes = generate_pdf_from_html("<html></html>").unwrap();
+        assert!(pdf_bytes.starts_with(b"%PDF"));
+    }
+
+    #[test]
+    fn test_generate_pdf_report_data_with_page_break() {
+        let mut req_status = HashMap::new();
+        for i in 0..15 {
+            req_status.insert(format!("Status{}", i), i as i32);
+        }
+        let mut test_status = HashMap::new();
+        for i in 0..15 {
+            test_status.insert(format!("TestStatus{}", i), i as i32);
+        }
+        let pdf_bytes = generate_pdf_report_data(
+            100,
+            50,
+            5,
+            3,
+            60.0,
+            2.0,
+            60,
+            80,
+            req_status,
+            test_status,
+            HashMap::new(),
+        ).unwrap();
+        assert!(pdf_bytes.starts_with(b"%PDF"));
+    }
+}

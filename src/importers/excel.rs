@@ -5,6 +5,7 @@ use std::path::Path;
 use anyhow::{Result, anyhow};
 use crate::models::{NewRequirement, NewTest, NewCategory, NewApplicability};
 use crate::helper_functions::*;
+use crate::repository::{DieselRepo, RequirementsRepository, TestsRepository, LookupRepository};
 use diesel::{PgConnection, Connection};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -244,7 +245,7 @@ impl ExcelImporter {
             project_id,
         };
         
-        insert_new_requirement(conn, &new_req).map_err(|e| anyhow!("{}", e))?;
+        DieselRepo::new().insert_new_requirement(&new_req).map_err(|e| anyhow!("{}", e))?;
         Ok(())
     }
     
@@ -294,11 +295,11 @@ impl ExcelImporter {
             project_id,
         };
         
-        insert_new_test(conn, &new_test).map_err(|e| anyhow!("{}", e))?;
+        DieselRepo::new().insert_new_test(&new_test).map_err(|e| anyhow!("{}", e))?;
         Ok(())
     }
     
-    fn resolve_category_id(&self, category_name: &str, project_id: i32, conn: &mut PgConnection) -> Result<i32> {
+    fn resolve_category_id(&self, category_name: &str, project_id: i32, _conn: &mut PgConnection) -> Result<i32> {
         let categories = get_categories_by_project(project_id).map_err(|e| anyhow!("{}", e))?;
         for category in categories {
             if category.cat_title == category_name {
@@ -315,10 +316,10 @@ impl ExcelImporter {
             project_id,
         };
         
-        insert_new_category(conn, &new_category).map_err(|e| anyhow!("{}", e))
+        DieselRepo::new().insert_new_category(&new_category).map_err(|e| anyhow!("{}", e))
     }
     
-    fn resolve_applicability_id(&self, app_name: &str, project_id: i32, conn: &mut PgConnection) -> Result<i32> {
+    fn resolve_applicability_id(&self, app_name: &str, project_id: i32, _conn: &mut PgConnection) -> Result<i32> {
         let applicability_list = get_applicability_by_project(project_id).map_err(|e| anyhow!("{}", e))?;
         for app in applicability_list {
             if app.app_title == app_name {
@@ -335,7 +336,7 @@ impl ExcelImporter {
             project_id,
         };
         
-        insert_new_applicability(conn, &new_app).map_err(|e| anyhow!("{}", e))
+        DieselRepo::new().insert_new_applicability(&new_app).map_err(|e| anyhow!("{}", e))
     }
     
     fn resolve_status_id(&self, status_name: &str, _conn: &mut PgConnection) -> Result<i32> {

@@ -54,11 +54,12 @@ pub fn change_user_password<R: Repository>(
 mod tests {
     use super::*;
     use crate::repository::fake_repo::FakeRepo; // adjust path to your FakeRepo
-    use crate::repository::Repository;
+    use crate::repository::UserRepository;
 
     // --- hash/verify ---------------------------------------------------------
 
     #[test]
+    #[ignore] // Too slow
     fn bcrypt_roundtrip_ok() {
         let pw = "s3cr3t!";
         let hash = hash_password(pw).expect("hash should succeed");

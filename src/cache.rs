@@ -6,6 +6,10 @@ use serde::{Serialize, Deserialize};
 use serde_json::json;
 use std::thread;
 use chrono;
+use crate::repository::{
+    DieselRepo, LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
+    TestsRepository, UserRepository,
+};
 
 /// Cache entry with TTL (Time To Live)
 #[derive(Clone)]
@@ -437,36 +441,38 @@ pub fn invalidate_all_cache() {
 pub fn warm_cache() {
     let cache = get_cache();
     
+    let repo = DieselRepo::new();
+
     // Warm up projects cache
-    if let Ok(projects) = crate::helper_functions::get_projects_all() {
+    if let Ok(projects) = repo.get_projects_all() {
         if let Ok(json_data) = serde_json::to_string(&projects) {
             cache.set_with_ttl(keys::PROJECTS_ALL, json_data, Duration::from_secs(600));
         }
     }
-    
+
     // Warm up status cache
-    if let Ok(statuses) = crate::helper_functions::get_status_all() {
+    if let Ok(statuses) = repo.get_status_all() {
         if let Ok(json_data) = serde_json::to_string(&statuses) {
             cache.set_with_ttl(keys::STATUS_ALL, json_data, Duration::from_secs(900));
         }
     }
-    
+
     // Warm up categories cache
-    if let Ok(categories) = crate::helper_functions::get_categories_all() {
+    if let Ok(categories) = repo.get_categories_all() {
         if let Ok(json_data) = serde_json::to_string(&categories) {
             cache.set_with_ttl(keys::CATEGORIES_ALL, json_data, Duration::from_secs(900));
         }
     }
-    
+
     // Warm up users cache
-    if let Ok(users) = crate::helper_functions::get_users_all() {
+    if let Ok(users) = repo.get_users_all() {
         if let Ok(json_data) = serde_json::to_string(&users) {
             cache.set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(600));
         }
     }
-    
+
     // Warm up projects navigation cache
-    if let Ok(projects) = crate::helper_functions::get_projects_for_nav() {
+    if let Ok(projects) = repo.get_projects_all() {
         if let Ok(json_data) = serde_json::to_string(&projects) {
             cache.set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
         }
@@ -477,8 +483,10 @@ pub fn warm_cache() {
 pub fn warm_project_cache(project_id: i32) {
     let cache = get_cache();
     
+    let repo = DieselRepo::new();
+
     // Warm up project-specific requirements
-    if let Ok(requirements) = crate::helper_functions::get_requirements_by_project(project_id) {
+    if let Ok(requirements) = repo.get_requirements_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&requirements) {
             cache.set_with_ttl(
                 &keys::requirements_by_project(project_id),
@@ -487,9 +495,9 @@ pub fn warm_project_cache(project_id: i32) {
             );
         }
     }
-    
+
     // Warm up project-specific tests
-    if let Ok(tests) = crate::helper_functions::get_tests_by_project(project_id) {
+    if let Ok(tests) = repo.get_tests_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&tests) {
             cache.set_with_ttl(
                 &keys::tests_by_project(project_id),
@@ -498,9 +506,9 @@ pub fn warm_project_cache(project_id: i32) {
             );
         }
     }
-    
+
     // Warm up project-specific matrix data
-    if let Ok(matrix_data) = crate::helper_functions::get_matrix_by_project(project_id) {
+    if let Ok(matrix_data) = repo.get_matrix_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&matrix_data) {
             cache.set_with_ttl(
                 &keys::matrix_by_project(project_id),
@@ -509,9 +517,9 @@ pub fn warm_project_cache(project_id: i32) {
             );
         }
     }
-    
+
     // Warm up project-specific categories
-    if let Ok(categories) = crate::helper_functions::get_categories_by_project(project_id) {
+    if let Ok(categories) = repo.get_categories_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&categories) {
             cache.set_with_ttl(
                 &keys::categories_by_project(project_id),
@@ -520,9 +528,9 @@ pub fn warm_project_cache(project_id: i32) {
             );
         }
     }
-    
+
     // Warm up project-specific verification types
-    if let Ok(verifications) = crate::helper_functions::get_verification_by_project(project_id) {
+    if let Ok(verifications) = repo.get_verification_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&verifications) {
             cache.set_with_ttl(
                 &keys::verification_by_project(project_id),

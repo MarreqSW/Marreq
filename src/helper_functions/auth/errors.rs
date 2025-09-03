@@ -5,6 +5,12 @@ pub enum AuthError {
     #[error("invalid username or password")]
     InvalidCredentials,                // user not found OR bad password
 
+    #[error("not logged in")]
+    NotLoggedIn,                       // session cookie missing
+
+    #[error("invalid session")]
+    InvalidSession,                    // session cookie couldn't be parsed
+
     #[error("database error: {0}")]
     Db(String),                        // repo errors, connection pool, etc.
 

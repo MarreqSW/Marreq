@@ -258,7 +258,7 @@ pub fn api_get_test_by_id(ident: i32) -> Result<Json<Vec<Test>>, rocket::http::S
 #[post("/tests", data = "<new_test>")]
 pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::http::Status> {
     let connection = &mut establish_connection();
-    let ret_value = DieselRepo::new().create_test(&new_test);
+    let ret_value = DieselRepo::new().insert_test(&new_test);
 
     if let Ok(val) = ret_value {
         // Log the test creation via API
@@ -383,7 +383,7 @@ pub fn api_get_users_by_id(ident: i32) -> Result<Json<Vec<User>>, rocket::http::
 #[post("/users", data = "<new_user>")]
 pub async fn api_post_user(new_user: Json<NewUser>) -> Result<Value, rocket::http::Status> {
     let connection = &mut establish_connection();
-    let ret_value = DieselRepo::new().create_user(&new_user);
+    let ret_value = DieselRepo::new().insert_user(&new_user);
 
     if let Ok(val) = ret_value {
         // Log the user creation via API

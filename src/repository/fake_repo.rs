@@ -8,6 +8,13 @@ use chrono::{NaiveDate, NaiveDateTime};
 #[derive(Default)]
 pub struct FakeRepo {
     pub users: HashMap<i32, User>,
+    pub statuses: HashMap<i32, Status>,
+    pub verifications: HashMap<i32, Verification>,
+    pub categories: HashMap<i32, Category>,
+    pub applicability: HashMap<i32, Applicability>,
+    pub requirements: HashMap<i32, Requirement>,
+    pub tests: HashMap<i32, Test>,
+    pub matrices: Vec<Matrix>,
     pub force_err: bool,
 }
 
@@ -22,10 +29,30 @@ impl FakeRepo {
         for u in users {
             map.insert(u.user_id, u);
         }
-        Self { users: map, force_err: false }
+        Self {
+            users: map,
+            statuses: HashMap::new(),
+            verifications: HashMap::new(),
+            categories: HashMap::new(),
+            applicability: HashMap::new(),
+            requirements: HashMap::new(),
+            tests: HashMap::new(),
+            matrices: Vec::new(),
+            force_err: false,
+        }
     }
     pub fn with_error() -> Self {
-        Self { users: HashMap::new(), force_err: true }
+        Self {
+            users: HashMap::new(),
+            statuses: HashMap::new(),
+            verifications: HashMap::new(),
+            categories: HashMap::new(),
+            applicability: HashMap::new(),
+            requirements: HashMap::new(),
+            tests: HashMap::new(),
+            matrices: Vec::new(),
+            force_err: true,
+        }
     }
 
     pub fn make_user(id: i32, username: &str, stored_pw: &str) -> User {
@@ -99,50 +126,80 @@ impl UserRepository for FakeRepo {
 impl LookupRepository for FakeRepo {
 
     fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
-        Ok(Vec::new())
+        Ok(self.statuses.values().cloned().collect())
     }
 
-    fn get_status_by_id(&self, _id: i32) -> Result<Status, RepoError> {
-        Err(RepoError::NotFound)
+    fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError> {
+        self.statuses.get(&id).cloned().ok_or(RepoError::NotFound)
     }
 
 
     fn get_categories_all(&self) -> Result<Vec<Category>, RepoError> {
-        Ok(Vec::new())
+        Ok(self.categories.values().cloned().collect())
     }
 
-    fn get_category_by_id(&self, _id: i32) -> Result<Category, RepoError> {
-        Err(RepoError::NotFound)
+    fn get_category_by_id(&self, id: i32) -> Result<Category, RepoError> {
+        self.categories.get(&id).cloned().ok_or(RepoError::NotFound)
     }
 
-    fn get_categories_by_project(&self, _project_id: i32) -> Result<Vec<Category>, RepoError> {
-        Ok(Vec::new())
+    fn get_categories_by_project(&self, project_id: i32) -> Result<Vec<Category>, RepoError> {
+        Ok(
+            self
+                .categories
+                .values()
+                .filter(|c| c.project_id == project_id)
+                .cloned()
+                .collect(),
+        )
     }
 
 
     fn get_applicability_all(&self) -> Result<Vec<Applicability>, RepoError> {
-        Ok(Vec::new())
+        Ok(self.applicability.values().cloned().collect())
     }
 
-    fn get_applicability_by_id(&self, _id: i32) -> Result<Applicability, RepoError> {
-        Err(RepoError::NotFound)
+    fn get_applicability_by_id(&self, id: i32) -> Result<Applicability, RepoError> {
+        self.applicability
+            .get(&id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
     }
 
-    fn get_applicability_by_project(&self, _project_id: i32,) -> Result<Vec<Applicability>, RepoError> {
-        Ok(Vec::new())
+    fn get_applicability_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<Applicability>, RepoError> {
+        Ok(
+            self
+                .applicability
+                .values()
+                .filter(|a| a.project_id == project_id)
+                .cloned()
+                .collect(),
+        )
     }
 
 
     fn get_verification_all(&self) -> Result<Vec<Verification>, RepoError> {
-        Ok(Vec::new())
+        Ok(self.verifications.values().cloned().collect())
     }
 
-    fn get_verification_by_id(&self, _id: i32) -> Result<Verification, RepoError> {
-        Err(RepoError::NotFound)
+    fn get_verification_by_id(&self, id: i32) -> Result<Verification, RepoError> {
+        self.verifications
+            .get(&id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
     }
 
-    fn get_verification_by_project(&self, _project_id: i32) -> Result<Vec<Verification>, RepoError> {
-        Ok(Vec::new())
+    fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<Verification>, RepoError> {
+        Ok(
+            self
+                .verifications
+                .values()
+                .filter(|v| v.project_id == project_id)
+                .cloned()
+                .collect(),
+        )
     }
 
     fn insert_new_category(&mut self, _new: &NewCategory) -> Result<i32, RepoError> {
@@ -171,16 +228,29 @@ impl LookupRepository for FakeRepo {
 
 impl RequirementsRepository for FakeRepo {
 
-    fn get_requirement_by_id(&self, _id: i32) -> Result<Requirement, RepoError> {
-        Err(RepoError::NotFound)
+    fn get_requirement_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
+        self.requirements
+            .get(&id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
     }
 
     fn get_requirements_all(&self) -> Result<Vec<Requirement>, RepoError> {
-        Ok(Vec::new())
+        Ok(self.requirements.values().cloned().collect())
     }
 
-    fn get_requirements_by_project(&self, _project_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        Ok(Vec::new())
+    fn get_requirements_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        Ok(
+            self
+                .requirements
+                .values()
+                .filter(|r| r.project_id == project_id)
+                .cloned()
+                .collect(),
+        )
     }
 
     fn insert_new_requirement(&mut self, _new: &NewRequirement) -> Result<i32, RepoError> {
@@ -203,20 +273,38 @@ impl RequirementsRepository for FakeRepo {
 
 impl TestsRepository for FakeRepo {
 
-    fn get_test_by_id(&self, _id: i32) -> Result<Test, RepoError> {
-        Err(RepoError::NotFound)
+    fn get_test_by_id(&self, id: i32) -> Result<Test, RepoError> {
+        self.tests.get(&id).cloned().ok_or(RepoError::NotFound)
     }
 
     fn get_tests_all(&self) -> Result<Vec<Test>, RepoError> {
-        Ok(Vec::new())
+        Ok(self.tests.values().cloned().collect())
     }
 
-    fn get_tests_by_project(&self, _project_id: i32) -> Result<Vec<Test>, RepoError> {
-        Ok(Vec::new())
+    fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<Test>, RepoError> {
+        Ok(
+            self
+                .tests
+                .values()
+                .filter(|t| t.project_id == project_id)
+                .cloned()
+                .collect(),
+        )
     }
 
-    fn get_requirements_for_test(&self, _test_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        Ok(Vec::new())
+    fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        let ids: Vec<i32> = self
+            .matrices
+            .iter()
+            .filter(|m| m.matrix_test_id == test_id)
+            .map(|m| m.matrix_req_id)
+            .collect();
+        Ok(
+            ids
+                .into_iter()
+                .filter_map(|id| self.requirements.get(&id).cloned())
+                .collect(),
+        )
     }
 
     fn insert_new_test(&mut self, _new: &NewTest) -> Result<i32, RepoError> {
@@ -265,12 +353,24 @@ impl ProjectsRepository for FakeRepo {
 }
 
 impl MatrixRepository for FakeRepo {
-
-    fn get_matrix_by_project(&self, _project_id: i32) -> Result<Vec<Matrix>, RepoError> {
-        Ok(Vec::new())
+    fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
+        Ok(
+            self
+                .matrices
+                .iter()
+                .filter(|m| m.project_id == project_id)
+                .cloned()
+                .collect(),
+        )
     }
 
-    fn insert_new_matrix_item(&mut self, _new: &NewMatrix) -> Result<(), RepoError> {
+    fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError> {
+        self.matrices.push(Matrix {
+            matrix_req_id: new.matrix_req_id,
+            matrix_test_id: new.matrix_test_id,
+            matrix_creation_date: epoch(),
+            project_id: new.project_id,
+        });
         Ok(())
     }
 }

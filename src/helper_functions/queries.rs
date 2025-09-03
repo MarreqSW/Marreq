@@ -1,7 +1,9 @@
 use crate::models::*;
-use crate::repository::{DieselRepo, LookupRepository, UserRepository};
 use crate::repository::errors::RepoError;
-use diesel::prelude::*;
+use crate::repository::{
+    DieselRepo, LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
+    TestsRepository, UserRepository,
+};
 
 pub type VerificationData = crate::models::Verification;
 
@@ -93,21 +95,10 @@ pub fn get_verification_all() -> Result<Vec<VerificationData>, String> {
         .map_err(|e| e.to_string())
 }
 
-pub fn get_verification_by_project(_project_id: i32) -> Result<Vec<VerificationData>, String> {
-    use crate::schema::verification::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    verification
-        .filter(project_id.eq(_project_id))
-        .order(verification_id)
-        .load::<VerificationData>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying verification: {:?}", _err);
-            "Error querying verification from the database".into()
-        })
+pub fn get_verification_by_project(project_id: i32) -> Result<Vec<VerificationData>, String> {
+    DieselRepo::new()
+        .get_verification_by_project(project_id)
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_verification_by_id(id: i32) -> VerificationData {
@@ -137,14 +128,8 @@ pub fn get_status_name_by_id(id: i32) -> String {
 }
 
 pub fn get_requirement_by_id(id: i32) -> Requirement {
-    use crate::schema::requirements::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    requirements
-        .filter(req_id.eq(id))
-        .get_result(connection.as_mut())
+    DieselRepo::new()
+        .get_requirement_by_id(id)
         .unwrap_or_else(|_| Requirement {
             req_id: id,
             req_title: format!("Unknown Requirement ({})", id),
@@ -167,181 +152,74 @@ pub fn get_requirement_by_id(id: i32) -> Requirement {
 }
 
 pub fn get_requirement_by_id_safe(id: i32) -> Result<Requirement, String> {
-    use crate::schema::requirements::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    match requirements
-        .filter(req_id.eq(id))
-        .get_result::<Requirement>(connection.as_mut()) {
-        Ok(requirement) => Ok(requirement),
-        Err(diesel::result::Error::NotFound) => Err(format!("Requirement with ID {} not found", id)),
-        Err(e) => Err(format!("Database error: {}", e))
-    }
+    DieselRepo::new()
+        .get_requirement_by_id(id)
+        .map_err(|e| match e {
+            RepoError::NotFound => format!("Requirement with ID {} not found", id),
+            _ => e.to_string(),
+        })
 }
 
 pub fn get_requirement_title_by_id(id: i32) -> String {
     match get_requirement_by_id_safe(id) {
         Ok(req) => req.req_title,
-        Err(_) => "[Requirement Not Found]".to_string()
+        Err(_) => "[Requirement Not Found]".to_string(),
     }
 }
 
 pub fn get_requirements_all() -> Result<Vec<Requirement>, String> {
-    use crate::schema::requirements::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    requirements
-        .order(req_id)
-        .load::<Requirement>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying page views from the database".into()
-        })
+    DieselRepo::new()
+        .get_requirements_all()
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_tests_all() -> Result<Vec<Test>, String> {
-    use crate::schema::tests::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    tests
-        .order(test_id)
-        .load::<Test>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying page views from the database".into()
-        })
+    DieselRepo::new().get_tests_all().map_err(|e| e.to_string())
 }
 
 pub fn get_users_all() -> Result<Vec<User>, String> {
-    use crate::schema::users::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    users
-        .order(user_id)
-        .load::<User>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying users from the database".into()
-        })
+    DieselRepo::new().get_users_all().map_err(|e| e.to_string())
 }
 
 pub fn get_test_by_id(id: i32) -> Test {
-    use crate::schema::tests::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    tests
-        .filter(test_id.eq(id))
-        .get_result(connection.as_mut())
+    DieselRepo::new()
+        .get_test_by_id(id)
         .expect("Error reading table Tests")
 }
 
 pub fn get_test_by_id_safe(id: i32) -> Result<Test, String> {
-    use crate::schema::tests::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    match tests.filter(test_id.eq(id)).get_result::<Test>(connection.as_mut()) {
-        Ok(test) => Ok(test),
-        Err(diesel::result::Error::NotFound) => Err(format!("Test with ID {} not found", id)),
-        Err(e) => Err(format!("Database error: {}", e)),
-    }
+    DieselRepo::new().get_test_by_id(id).map_err(|e| match e {
+        RepoError::NotFound => format!("Test with ID {} not found", id),
+        _ => e.to_string(),
+    })
 }
 
 pub fn get_test_status_by_id(id: i32) -> String {
-    use crate::schema::tests::dsl::*;
-    use crate::models::Status;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    let ts: Test = match tests.filter(test_id.eq(id)).get_result(connection.as_mut()) {
+    let repo = DieselRepo::new();
+    let ts = match repo.get_test_by_id(id) {
         Ok(test) => test,
         Err(_) => return "[Test Not Found]".to_string(),
     };
-
-    let result: Status = match crate::schema::status::dsl::status
-        .filter(crate::schema::status::dsl::st_id.eq(ts.test_status))
-        .first(connection.as_mut()) {
-            Ok(status) => status,
-            Err(_) => return "[Status Not Found]".to_string(),
-        };
-
-    result.st_title
+    repo.get_status_by_id(ts.test_status)
+        .map(|status| status.st_title)
+        .unwrap_or_else(|_| "[Status Not Found]".to_string())
 }
 
 pub fn get_requirements_for_test(test_id: i32) -> Result<Vec<Requirement>, String> {
-    use crate::schema::matrix::dsl::*;
-    use crate::schema::requirements::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    let linked_requirements = matrix
-        .filter(matrix_test_id.eq(test_id))
-        .inner_join(requirements.on(matrix_req_id.eq(req_id)))
-        .select((
-            req_id,
-            req_title,
-            req_description,
-            req_verification,
-            req_current_status,
-            req_author,
-            req_reviewer,
-            req_link,
-            req_reference,
-            req_category,
-            req_parent,
-            req_creation_date,
-            req_update_date,
-            req_deadline_date,
-            req_applicability,
-            req_justification,
-            crate::schema::requirements::project_id,
-        ))
-        .load::<Requirement>(connection.as_mut())
-        .map_err(|_e| format!("Error getting requirements for test: {}", _e))?;
-
-    Ok(linked_requirements)
+    DieselRepo::new()
+        .get_requirements_for_test(test_id)
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_projects_all() -> Result<Vec<Project>, String> {
-    use crate::schema::projects::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    projects
-        .load::<Project>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying projects from the database".into()
-        })
+    DieselRepo::new()
+        .get_projects_all()
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_project_by_id(project_id_param: i32) -> Project {
-    use crate::schema::projects::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
-
-    projects
-        .filter(project_id.eq(project_id_param))
-        .first::<Project>(connection.as_mut())
+    DieselRepo::new()
+        .get_project_by_id(project_id_param)
         .expect("Error loading project")
 }
 
@@ -350,81 +228,31 @@ pub fn get_projects_for_nav() -> Result<Vec<Project>, String> {
 }
 
 pub fn get_requirements_by_project(_project_id: i32) -> Result<Vec<Requirement>, String> {
-    use crate::schema::requirements::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    requirements
-        .filter(crate::schema::requirements::project_id.eq(_project_id))
-        .load::<Requirement>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying requirements from the database".into()
-        })
+    DieselRepo::new()
+        .get_requirements_by_project(_project_id)
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_tests_by_project(_project_id: i32) -> Result<Vec<Test>, String> {
-    use crate::schema::tests::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    tests
-        .filter(crate::schema::tests::project_id.eq(_project_id))
-        .load::<Test>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying tests from the database".into()
-        })
+    DieselRepo::new()
+        .get_tests_by_project(_project_id)
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_categories_by_project(_project_id: i32) -> Result<Vec<Category>, String> {
-    use crate::schema::categories::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    categories
-        .filter(crate::schema::categories::project_id.eq(_project_id))
-        .load::<Category>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying categories from the database".into()
-        })
+    DieselRepo::new()
+        .get_categories_by_project(_project_id)
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_applicability_by_project(_project_id: i32) -> Result<Vec<Applicability>, String> {
-    use crate::schema::applicability::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    applicability
-        .filter(crate::schema::applicability::project_id.eq(_project_id))
-        .load::<Applicability>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying applicability from the database".into()
-        })
+    DieselRepo::new()
+        .get_applicability_by_project(_project_id)
+        .map_err(|e| e.to_string())
 }
 
 pub fn get_matrix_by_project(_project_id: i32) -> Result<Vec<Matrix>, String> {
-    use crate::schema::matrix::dsl::*;
-
-    let mut connection = crate::db::get_connection_pooled_safe()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    matrix
-        .filter(crate::schema::matrix::project_id.eq(_project_id))
-        .load::<Matrix>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying.*: {:?}", _err);
-            "Error querying matrix from the database".into()
-        })
+    DieselRepo::new()
+        .get_matrix_by_project(_project_id)
+        .map_err(|e| e.to_string())
 }

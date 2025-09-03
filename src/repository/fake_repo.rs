@@ -46,15 +46,22 @@ impl FakeRepo {
 }
 
 impl UserRepository for FakeRepo {
+
+    fn get_users_all(&self) -> Result<Vec<User>, RepoError> {
+        Ok(self.users.values().cloned().collect())
+    }
+
     fn get_user_by_id(&self, id: i32) -> Result<User, RepoError> {
         self.users.get(&id).cloned().ok_or(RepoError::NotFound)
     }
+
     fn get_user_by_username(&self, uname: &str) -> Result<Option<User>, RepoError> {
         if self.force_err {
             return Err(RepoError::Pool("forced test error".into()));
         }
         Ok(self.users.values().find(|u| u.user_username == uname).cloned())
     }
+
     fn update_user_password(&mut self, id: i32, new_hash: &str) -> Result<(), RepoError> {
         if self.force_err {
             return Err(RepoError::Db(diesel::result::Error::RollbackTransaction));
@@ -70,28 +77,93 @@ impl UserRepository for FakeRepo {
 }
 
 impl LookupRepository for FakeRepo {
+
     fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
         Ok(Vec::new())
     }
+
     fn get_status_by_id(&self, _id: i32) -> Result<Status, RepoError> {
         Err(RepoError::NotFound)
     }
+
+
     fn get_categories_all(&self) -> Result<Vec<Category>, RepoError> {
         Ok(Vec::new())
     }
+
     fn get_category_by_id(&self, _id: i32) -> Result<Category, RepoError> {
         Err(RepoError::NotFound)
     }
+
+    fn get_categories_by_project(&self, _project_id: i32) -> Result<Vec<Category>, RepoError> {
+        Ok(Vec::new())
+    }
+
+
     fn get_applicability_all(&self) -> Result<Vec<Applicability>, RepoError> {
         Ok(Vec::new())
     }
+
     fn get_applicability_by_id(&self, _id: i32) -> Result<Applicability, RepoError> {
         Err(RepoError::NotFound)
     }
+
+    fn get_applicability_by_project(&self, _project_id: i32,) -> Result<Vec<Applicability>, RepoError> {
+        Ok(Vec::new())
+    }
+
+
     fn get_verification_all(&self) -> Result<Vec<Verification>, RepoError> {
         Ok(Vec::new())
     }
+
     fn get_verification_by_id(&self, _id: i32) -> Result<Verification, RepoError> {
         Err(RepoError::NotFound)
+    }
+
+    fn get_verification_by_project(&self, _project_id: i32) -> Result<Vec<Verification>, RepoError> {
+        Ok(Vec::new())
+    }
+}
+
+impl RequirementsRepository for FakeRepo {
+    fn get_requirement_by_id(&self, _id: i32) -> Result<Requirement, RepoError> {
+        Err(RepoError::NotFound)
+    }
+    fn get_requirements_all(&self) -> Result<Vec<Requirement>, RepoError> {
+        Ok(Vec::new())
+    }
+    fn get_requirements_by_project(&self, _project_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        Ok(Vec::new())
+    }
+}
+
+impl TestsRepository for FakeRepo {
+    fn get_test_by_id(&self, _id: i32) -> Result<Test, RepoError> {
+        Err(RepoError::NotFound)
+    }
+    fn get_tests_all(&self) -> Result<Vec<Test>, RepoError> {
+        Ok(Vec::new())
+    }
+    fn get_tests_by_project(&self, _project_id: i32) -> Result<Vec<Test>, RepoError> {
+        Ok(Vec::new())
+    }
+    fn get_requirements_for_test(&self, _test_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        Ok(Vec::new())
+    }
+}
+
+impl ProjectsRepository for FakeRepo {
+    fn get_projects_all(&self) -> Result<Vec<Project>, RepoError> {
+        Ok(Vec::new())
+    }
+    fn get_project_by_id(&self, _id: i32) -> Result<Project, RepoError> {
+        Err(RepoError::NotFound)
+    }
+}
+
+impl MatrixRepository for FakeRepo {
+    fn get_matrix_by_project(&self, _project_id: i32) -> Result<Vec<Matrix>, RepoError> {
+        Ok(Vec::new())
     }
 }

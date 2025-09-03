@@ -294,7 +294,7 @@ impl ExcelImporter {
             project_id,
         };
         
-        DieselRepo::new().insert_new_test(&new_test).map_err(|e| anyhow!("{}", e))?;
+        DieselRepo::new().insert_test(&new_test).map_err(|e| anyhow!("{}", e))?;
         Ok(())
     }
     

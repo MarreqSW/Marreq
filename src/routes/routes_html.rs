@@ -1279,7 +1279,7 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
         test_parent: new_test.test_parent,
         project_id: new_test.project_id,
     };
-    let my_id = DieselRepo::new().insert_new_test(&my_new_test)
+    let my_id = DieselRepo::new().insert_test(&my_new_test)
         .map_err(|e| {
             eprintln!("Error inserting new test: {:?}", e);
             Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
@@ -1863,7 +1863,7 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
     match hash_password(&user_with_hashed_password.user_password) {
         Ok(hashed_password) => {
             user_with_hashed_password.user_password = hashed_password;
-            let my_id = DieselRepo::new().insert_new_user(&user_with_hashed_password)
+            let my_id = DieselRepo::new().insert_user(&user_with_hashed_password)
                 .map_err(|e| {
                     eprintln!("Error inserting new user: {:?}", e);
                     Redirect::to(uri!(new_user))

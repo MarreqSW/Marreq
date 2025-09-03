@@ -493,17 +493,16 @@ pub fn get_linked_tests_for_requirement_cached(req_id: i32) -> Result<Vec<Decora
             }
         }
     }
-    
-    let connection = &mut crate::helper_functions::establish_connection();
-    let tests = get_linked_tests_for_requirement(connection, req_id)
+
+    let tests = get_linked_tests_for_requirement(req_id)
         .map_err(|e| format!("Database error: {}", e))?;
-    
+
     let json_data = serde_json::to_string(&tests)
         .map_err(|e| format!("Serialization error: {}", e))?;
-    
+
     // Cache for 3 minutes (linked tests can change frequently)
     cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(180));
-    
+
     Ok(tests)
 }
 

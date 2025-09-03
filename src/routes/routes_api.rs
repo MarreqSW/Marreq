@@ -3,6 +3,7 @@ use rocket::serde::json::{json, Json, Value};
 
 use crate::helper_functions::*;
 use crate::models::*;
+use crate::repository::{DieselRepo, RequirementsRepository, TestsRepository, LookupRepository, UserRepository};
 
 // --------------------------------
 // API Routes
@@ -31,7 +32,7 @@ pub async fn api_post_requirement(
     new_req: Json<NewRequirement>,
 ) -> Result<Value, rocket::http::Status> {
     let connection = &mut establish_connection();
-    let ret_value = insert_new_requirement(connection, &new_req);
+    let ret_value = DieselRepo::new().insert_new_requirement(&new_req);
 
     if let Ok(val) = ret_value {
         // Log the requirement creation via API
@@ -65,7 +66,7 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
     // Get the requirement details before deleting
     let requirement = get_requirement_by_id(ident);
     
-    let ret_value = match delete_requirement(connection, &ident) {
+    let ret_value = match DieselRepo::new().delete_requirement(ident) {
         Ok(success) => success,
         Err(e) => {
             eprintln!("Error deleting requirement via API: {:?}", e);
@@ -173,8 +174,7 @@ pub fn api_get_status() -> Result<Json<Vec<Status>>, rocket::http::Status> {
 
 #[post("/status", data= "<new_status>")]
 pub async fn api_post_status(new_status: Json<NewStatus>) -> Value {
-    let connection = &mut establish_connection();
-    let new_id = match create_status(connection, &new_status) {
+    let new_id = match DieselRepo::new().create_status(&new_status) {
         Ok(id) => id,
         Err(e) => {
             eprintln!("Error creating status via API: {:?}", e);
@@ -235,7 +235,7 @@ pub fn api_get_test_by_id(ident: i32) -> Result<Json<Vec<Test>>, rocket::http::S
 #[post("/tests", data = "<new_test>")]
 pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::http::Status> {
     let connection = &mut establish_connection();
-    let ret_value = create_test(connection, &new_test);
+    let ret_value = DieselRepo::new().create_test(&new_test);
 
     if let Ok(val) = ret_value {
         // Log the test creation via API
@@ -269,7 +269,7 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
     // Get the test details before deleting
     let test = get_test_by_id(ident);
     
-    let ret_value = match delete_test(connection, &ident) {
+    let ret_value = match DieselRepo::new().delete_test(ident) {
         Ok(success) => success,
         Err(e) => {
             eprintln!("Error deleting test via API: {:?}", e);
@@ -349,7 +349,7 @@ pub fn api_get_users_by_id(ident: i32) -> Result<Json<Vec<User>>, rocket::http::
 #[post("/users", data = "<new_user>")]
 pub async fn api_post_user(new_user: Json<NewUser>) -> Result<Value, rocket::http::Status> {
     let connection = &mut establish_connection();
-    let ret_value = create_user(connection, &new_user);
+    let ret_value = DieselRepo::new().create_user(&new_user);
 
     if let Ok(val) = ret_value {
         // Log the user creation via API
@@ -380,8 +380,7 @@ pub async fn api_post_user(new_user: Json<NewUser>) -> Result<Value, rocket::htt
 
 #[delete("/users/<ident>")]
 pub async fn api_delete_user_by_id(ident: i32) -> rocket::http::Status {
-    let connection = &mut establish_connection();
-    let ret_value = delete_user(connection, &ident);
+    let ret_value = DieselRepo::new().delete_user(ident);
 
     if let Ok(val) = ret_value {
         if val {
@@ -435,7 +434,7 @@ pub fn api_get_category_by_id(ident: i32) -> Result<Json<Category>, rocket::http
 #[post("/categories", data = "<new_category>")]
 pub async fn api_post_category(new_category: Json<NewCategory>) -> Result<Value, rocket::http::Status> {
     let connection = &mut establish_connection();
-    let ret_value = insert_new_category(connection, &new_category);
+    let ret_value = DieselRepo::new().insert_new_category(&new_category);
 
     if let Ok(val) = ret_value {
         // Log the category creation via API
@@ -464,12 +463,10 @@ pub async fn api_post_category(new_category: Json<NewCategory>) -> Result<Value,
 
 #[put("/categories/<ident>", data = "<category>")]
 pub async fn api_put_category(ident: i32, category: Json<NewCategory>) -> Result<Value, rocket::http::Status> {
-    let connection = &mut establish_connection();
-    
     let mut category_with_id = category.into_inner();
     category_with_id.cat_id = Some(ident);
     
-    let ret_value = edit_category(connection, &category_with_id);
+    let ret_value = DieselRepo::new().edit_category(&category_with_id);
 
     if let Ok(val) = ret_value {
         if val {
@@ -493,7 +490,7 @@ pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
     // Get the category details before deleting
     let category = get_category_by_id(ident);
     
-    let ret_value = delete_category(connection, &ident);
+    let ret_value = DieselRepo::new().delete_category(ident);
 
     if let Ok(val) = ret_value {
         if val {
@@ -556,7 +553,7 @@ pub fn api_get_applicability_by_id(ident: i32) -> Result<Json<Applicability>, ro
 #[post("/applicability", data = "<new_applicability>")]
 pub async fn api_post_applicability(new_applicability: Json<NewApplicability>) -> Result<Value, rocket::http::Status> {
     let connection = &mut establish_connection();
-    let ret_value = insert_new_applicability(connection, &new_applicability);
+    let ret_value = DieselRepo::new().insert_new_applicability(&new_applicability);
 
     if let Ok(val) = ret_value {
         // Log the applicability creation via API
@@ -585,12 +582,10 @@ pub async fn api_post_applicability(new_applicability: Json<NewApplicability>) -
 
 #[put("/applicability/<ident>", data = "<applicability>")]
 pub async fn api_put_applicability(ident: i32, applicability: Json<NewApplicability>) -> Result<Value, rocket::http::Status> {
-    let connection = &mut establish_connection();
-    
     let mut applicability_with_id = applicability.into_inner();
     applicability_with_id.app_id = Some(ident);
     
-    let ret_value = edit_applicability(connection, &applicability_with_id);
+    let ret_value = DieselRepo::new().edit_applicability(&applicability_with_id);
 
     if let Ok(val) = ret_value {
         if val {
@@ -614,7 +609,7 @@ pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status 
     // Get the applicability details before deleting
     let applicability = get_applicability_by_id(ident);
     
-    let ret_value = delete_applicability(connection, &ident);
+    let ret_value = DieselRepo::new().delete_applicability(ident);
 
     if let Ok(val) = ret_value {
         if val {

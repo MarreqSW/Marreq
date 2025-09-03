@@ -21,6 +21,7 @@ use crate::logger::Logger;
 use crate::models::*;
 use crate::db_operations::*;
 use crate::db::{get_pooled_connection, get_connection_pooled_safe, PooledConnectionWrapper};
+use crate::repository::{DieselRepo, RequirementsRepository, TestsRepository, LookupRepository, UserRepository, ProjectsRepository, MatrixRepository};
 
 // --------------------------------
 // Helper Functions
@@ -36,7 +37,6 @@ fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Er
 // --------------------------------
 
 pub fn require_auth(cookies: &CookieJar<'_>) -> Result<User, Redirect> {
-    use crate::repository::diesel_repo::DieselRepo ;
     let repo = DieselRepo{};
 
     match is_authenticated(&repo, cookies) {
@@ -108,7 +108,6 @@ pub fn login(
     login_form: rocket::form::Form<LoginForm>,
     cookies: &rocket::http::CookieJar<'_>,
 ) -> Result<rocket::response::Redirect, Template> {
-    use crate::repository::diesel_repo::DieselRepo ;
     let repo = DieselRepo{};
 
     let form = login_form.into_inner();
@@ -161,7 +160,6 @@ pub fn change_password(
         return Err(Template::render("change_password", ctx));
     }
 
-    use crate::repository::diesel_repo::DieselRepo;
     let mut repo = DieselRepo{};
 
     match change_user_password(
@@ -428,7 +426,7 @@ pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &Cooki
     user_data.user_id = Some(user_id);
     
     // Update the user in the database
-    match update_user_without_password(connection, &user_data) {
+    match DieselRepo::new().update_user_without_password(&user_data) {
         Ok(_) => {
             // Log the user update
             if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_user), Logger::to_json_string(&user_data)) {
@@ -615,7 +613,7 @@ pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies
         }
     };
     
-    edit_requirement(connection, &requirement_data)
+    DieselRepo::new().edit_requirement(&requirement_data)
         .map_err(|e| {
             eprintln!("Error editing requirement: {:?}", e);
             Redirect::to(uri!(show_requirements(None::<i32>, None::<i32>, None::<i32>)))
@@ -671,7 +669,7 @@ pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<
         return Err(rocket::http::Status::Forbidden);
     }
     
-    let result = delete_requirement(connection.as_mut(), &req_id);
+    let result = DieselRepo::new().delete_requirement(req_id);
     match result {
         Ok(success) => {
             if success {
@@ -736,7 +734,7 @@ pub fn delete_test_route(test_id: i32, cookies: &CookieJar<'_>) -> Result<Redire
         return Err(rocket::http::Status::Forbidden);
     }
     
-    let result = delete_test(connection, &test_id);
+    let result = DieselRepo::new().delete_test(test_id);
     match result {
         Ok(success) => {
             if success {
@@ -912,7 +910,7 @@ pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) 
         }
     }
     
-    let my_id = insert_new_requirement(connection, &requirement_data)
+    let my_id = DieselRepo::new().insert_new_requirement(&requirement_data)
         .map_err(|e| {
             eprintln!("Error inserting new requirement: {:?}", e);
             Redirect::to(uri!(show_requirements(None::<i32>, None::<i32>, None::<i32>)))
@@ -1231,7 +1229,7 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
         project_id: edit_test_form.project_id,
     };
     
-    edit_test(connection, &new_test)
+    DieselRepo::new().edit_test(&new_test)
         .map_err(|e| {
             eprintln!("Error editing test: {:?}", e);
             Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
@@ -1253,7 +1251,7 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
     }
     
     // Then, update the requirement links
-    update_test_requirement_links(connection, edit_test_form.test_id, &edit_test_form.linked_requirements)
+    DieselRepo::new().update_test_requirement_links(edit_test_form.test_id, &edit_test_form.linked_requirements)
         .map_err(|e| {
             eprintln!("Error updating test requirement links: {:?}", e);
             Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
@@ -1281,7 +1279,7 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
         test_parent: new_test.test_parent,
         project_id: new_test.project_id,
     };
-    let my_id = insert_new_test(connection, &my_new_test)
+    let my_id = DieselRepo::new().insert_new_test(&my_new_test)
         .map_err(|e| {
             eprintln!("Error inserting new test: {:?}", e);
             Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
@@ -1309,7 +1307,7 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
             matrix_test_id: my_id,
             project_id: new_test.project_id,
         };
-        insert_new_matrix_item(connection, &matrix_item)
+        DieselRepo::new().insert_new_matrix_item(&matrix_item)
             .map_err(|e| {
                 eprintln!("Error inserting matrix item: {:?}", e);
                 Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
@@ -1722,7 +1720,7 @@ pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -
     })?;
     
     let category_data = new_category.into_inner();
-    let result = insert_new_category(connection, &category_data);
+    let result = DieselRepo::new().insert_new_category(&category_data);
     match result {
         Ok(category_id) => {
             // Log the category creation
@@ -1777,7 +1775,7 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
     let mut category_with_id = category.into_inner();
     category_with_id.cat_id = Some(cat_id);
     
-    let result = edit_category(connection, &category_with_id);
+    let result = DieselRepo::new().edit_category(&category_with_id);
     match result {
         Ok(_) => {
             // Log the category update
@@ -1822,7 +1820,7 @@ pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<roc
     // Get the category details before deleting
     let category = get_category_by_id(cat_id);
     
-    let result = delete_category(connection.as_mut(), &cat_id);
+    let result = DieselRepo::new().delete_category(cat_id);
     match result {
         Ok(_) => {
             // Log the category deletion
@@ -1865,7 +1863,7 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
     match hash_password(&user_with_hashed_password.user_password) {
         Ok(hashed_password) => {
             user_with_hashed_password.user_password = hashed_password;
-            let my_id = insert_new_user(connection, &user_with_hashed_password)
+            let my_id = DieselRepo::new().insert_new_user(&user_with_hashed_password)
                 .map_err(|e| {
                     eprintln!("Error inserting new user: {:?}", e);
                     Redirect::to(uri!(new_user))
@@ -1968,7 +1966,7 @@ pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &C
     })?;
     
     let applicability_data = new_applicability.into_inner();
-    let result = insert_new_applicability(connection, &applicability_data);
+    let result = DieselRepo::new().insert_new_applicability(&applicability_data);
     match result {
         Ok(applicability_id) => {
             // Log the applicability creation
@@ -2023,7 +2021,7 @@ pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability
     let mut applicability_with_id = applicability.into_inner();
     applicability_with_id.app_id = Some(app_id);
     
-    let result = edit_applicability(connection, &applicability_with_id);
+    let result = DieselRepo::new().edit_applicability(&applicability_with_id);
     match result {
         Ok(_) => {
             // Log the applicability update
@@ -2064,7 +2062,7 @@ pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Resul
     // Get the applicability details before deleting
     let applicability = get_applicability_by_id(app_id);
     
-    let result = delete_applicability(connection.as_mut(), &app_id);
+    let result = DieselRepo::new().delete_applicability(app_id);
     match result {
         Ok(_) => {
             // Log the applicability deletion
@@ -2495,7 +2493,7 @@ pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> R
     })?;
     
     let project_data = new_project.into_inner();
-    let result = insert_new_project(connection, &project_data);
+    let result = DieselRepo::new().insert_new_project(&project_data);
     match result {
         Ok(project_id) => {
             // Log the project creation
@@ -2566,7 +2564,7 @@ pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies:
     // Get the old values before updating
     let old_project = get_project_by_id(project_id);
     
-    let result = edit_project(connection, project_id, &project);
+    let result = DieselRepo::new().edit_project(project_id, &project);
     match result {
         Ok(_) => {
             // Log the project update
@@ -2618,7 +2616,7 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
     // Get the project details before deleting
     let project = get_project_by_id_pooled_safe(project_id);
     
-    let result = delete_project(connection.as_mut(), &project_id);
+    let result = DieselRepo::new().delete_project(project_id);
     match result {
         Ok(_) => {
             // Log the project deletion

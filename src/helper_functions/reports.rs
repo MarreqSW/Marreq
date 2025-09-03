@@ -1,4 +1,3 @@
-
 pub fn generate_pdf_content(
     total_requirements: usize,
     total_tests: usize,
@@ -13,7 +12,7 @@ pub fn generate_pdf_content(
     requirements_by_category: std::collections::HashMap<String, i32>,
 ) -> String {
     let mut content = String::new();
-    
+
     // Header
     content.push_str("
     <!DOCTYPE html>
@@ -43,81 +42,109 @@ pub fn generate_pdf_content(
         <div class='header'>
             <h1>ReqMan Project Report</h1>
             <p>Generated on: ");
-    
-    content.push_str(&chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string());
-    content.push_str("</p>
+
+    content.push_str(
+        &chrono::Utc::now()
+            .format("%Y-%m-%d %H:%M:%S UTC")
+            .to_string(),
+    );
+    content.push_str(
+        "</p>
         </div>
         
         <div class='section'>
             <h2>Executive Summary</h2>
             <div class='metric-grid'>
                 <div class='metric-card'>
-                    <div class='metric-value'>");
+                    <div class='metric-value'>",
+    );
     content.push_str(&total_requirements.to_string());
-    content.push_str("</div>
+    content.push_str(
+        "</div>
                     <div class='metric-label'>Total Requirements</div>
                 </div>
                 <div class='metric-card'>
-                    <div class='metric-value'>");
+                    <div class='metric-value'>",
+    );
     content.push_str(&total_tests.to_string());
-    content.push_str("</div>
+    content.push_str(
+        "</div>
                     <div class='metric-label'>Total Tests</div>
                 </div>
                 <div class='metric-card'>
-                    <div class='metric-value'>");
+                    <div class='metric-value'>",
+    );
     content.push_str(&format!("{:.1}%", coverage_percentage));
-    content.push_str("</div>
+    content.push_str(
+        "</div>
                     <div class='metric-label'>Coverage</div>
                 </div>
                 <div class='metric-card'>
-                    <div class='metric-value'>");
+                    <div class='metric-value'>",
+    );
     content.push_str(&format!("{:.1}", avg_tests_per_requirement));
-    content.push_str("</div>
+    content.push_str(
+        "</div>
                     <div class='metric-label'>Avg Tests/Req</div>
                 </div>
             </div>
         </div>
         
         <div class='section'>
-            <h2>Requirements by Status</h2>");
-    
+            <h2>Requirements by Status</h2>",
+    );
+
     for (status, count) in requirements_by_status {
-        content.push_str(&format!("
+        content.push_str(&format!(
+            "
             <div class='status-item'>
                 <span class='status-name'>{}</span>
                 <span class='status-count'>{}</span>
-            </div>", status, count));
+            </div>",
+            status, count
+        ));
     }
-    
-    content.push_str("
+
+    content.push_str(
+        "
         </div>
         
         <div class='section'>
-            <h2>Tests by Status</h2>");
-    
+            <h2>Tests by Status</h2>",
+    );
+
     for (status, count) in tests_by_status {
-        content.push_str(&format!("
+        content.push_str(&format!(
+            "
             <div class='status-item'>
                 <span class='status-name'>{}</span>
                 <span class='status-count'>{}</span>
-            </div>", status, count));
+            </div>",
+            status, count
+        ));
     }
-    
-    content.push_str("
+
+    content.push_str(
+        "
         </div>
         
         <div class='section'>
-            <h2>Requirements by Category</h2>");
-    
+            <h2>Requirements by Category</h2>",
+    );
+
     for (category, count) in requirements_by_category {
-        content.push_str(&format!("
+        content.push_str(&format!(
+            "
             <div class='status-item'>
                 <span class='status-name'>{}</span>
                 <span class='status-count'>{}</span>
-            </div>", category, count));
+            </div>",
+            category, count
+        ));
     }
-    
-    content.push_str(&format!("
+
+    content.push_str(&format!(
+        "
         </div>
         
         <div class='section'>
@@ -148,9 +175,9 @@ pub fn generate_pdf_content(
             <p>This report was generated automatically by ReqMan</p>
         </div>
     </body>
-    </html>", 
-        covered_requirements, 
-        total_requirements, 
+    </html>",
+        covered_requirements,
+        total_requirements,
         coverage_percentage,
         coverage_percentage,
         total_links,
@@ -158,123 +185,204 @@ pub fn generate_pdf_content(
         total_categories,
         total_users
     ));
-    
+
     content
+}
+use printpdf::{
+    BuiltinFont, IndirectFontRef, Mm, PdfDocument, PdfDocumentReference, PdfLayerReference,
+};
+use std::io::{BufWriter, Cursor};
+
+fn add_text(
+    layer: &PdfLayerReference,
+    font: &IndirectFontRef,
+    size: f32,
+    x: Mm,
+    y: Mm,
+    text: &str,
+) {
+    layer.use_text(text, size, x, y, font);
+}
+
+fn add_header(
+    layer: &PdfLayerReference,
+    title_font: &IndirectFontRef,
+    date_font: &IndirectFontRef,
+) {
+    add_text(
+        layer,
+        title_font,
+        18.0,
+        Mm(105.0),
+        Mm(280.0),
+        "ReqMan Project Report",
+    );
+    let current_date = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
+    add_text(
+        layer,
+        date_font,
+        10.0,
+        Mm(20.0),
+        Mm(270.0),
+        &format!("Generated on: {}", current_date),
+    );
+}
+
+fn add_footer(layer: &PdfLayerReference, font: &IndirectFontRef) {
+    add_text(
+        layer,
+        font,
+        8.0,
+        Mm(20.0),
+        Mm(20.0),
+        "Generated by ReqMan - Requirements Management System",
+    );
+}
+
+fn save_pdf(doc: PdfDocumentReference) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let cursor = Cursor::new(Vec::new());
+    let mut buf_writer = BufWriter::new(cursor);
+    doc.save(&mut buf_writer)?;
+    Ok(buf_writer.into_inner()?.into_inner())
+}
+
+fn add_page(
+    doc: &PdfDocumentReference,
+    font: &IndirectFontRef,
+    page_number: usize,
+) -> (PdfLayerReference, Mm) {
+    let (page_idx, layer_idx) =
+        doc.add_page(Mm(210.0), Mm(297.0), &format!("Page {}", page_number));
+    let page = doc.get_page(page_idx);
+    let layer = page.get_layer(layer_idx);
+    add_text(
+        &layer,
+        font,
+        12.0,
+        Mm(20.0),
+        Mm(20.0),
+        &format!("Page {}", page_number),
+    );
+    (layer, Mm(280.0))
+}
+
+fn add_list_section(
+    doc: &PdfDocumentReference,
+    layer: &mut PdfLayerReference,
+    title: &str,
+    items: Vec<String>,
+    title_font: &IndirectFontRef,
+    content_font: &IndirectFontRef,
+    y: &mut Mm,
+    page_num: &mut usize,
+) {
+    add_text(layer, title_font, 14.0, Mm(20.0), *y, title);
+    *y -= Mm(12.0);
+    for item in items {
+        add_text(layer, content_font, 12.0, Mm(25.0), *y, &item);
+        *y -= Mm(8.0);
+        if *y < Mm(50.0) {
+            *page_num += 1;
+            let (new_layer, new_y) = add_page(doc, content_font, *page_num);
+            *layer = new_layer;
+            *y = new_y;
+            add_text(
+                layer,
+                title_font,
+                14.0,
+                Mm(20.0),
+                *y,
+                &format!("{} (continued)", title),
+            );
+            *y -= Mm(12.0);
+        }
+    }
+    *y -= Mm(8.0);
+}
+
+fn add_status_section(
+    doc: &PdfDocumentReference,
+    layer: &mut PdfLayerReference,
+    title: &str,
+    data: &std::collections::HashMap<String, i32>,
+    title_font: &IndirectFontRef,
+    content_font: &IndirectFontRef,
+    y: &mut Mm,
+    page_num: &mut usize,
+) {
+    let items: Vec<String> = data.iter().map(|(s, c)| format!("{}: {}", s, c)).collect();
+    add_list_section(
+        doc,
+        layer,
+        title,
+        items,
+        title_font,
+        content_font,
+        y,
+        page_num,
+    );
 }
 
 pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    use printpdf::*;
-    use std::io::{Cursor, BufWriter};
-    
-    // Create a new PDF document
-    let (doc, page1, layer1) = PdfDocument::new("ReqMan Report", Mm(210.0), Mm(297.0), "Layer 1");
-    let page1 = doc.get_page(page1);
-    let layer1 = page1.get_layer(layer1);
-    
-    // Add title
-    let title_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)
-        .map_err(|e| format!("Failed to load title font: {}", e))?;
-    let title_font_size = 18.0;
-    let title_text = "ReqMan Project Report";
-    
-    layer1.use_text(
-        title_text,
-        title_font_size,
-        Mm(105.0),
-        Mm(280.0),
-        &title_font,
-    );
-    
-    // Add generation date
-    let date_font = doc.add_builtin_font(BuiltinFont::Helvetica)
-        .map_err(|e| format!("Failed to load date font: {}", e))?;
-    let date_font_size = 10.0;
-    let current_date = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
-    layer1.use_text(
-        &format!("Generated on: {}", current_date),
-        date_font_size,
-        Mm(20.0),
-        Mm(270.0),
-        &date_font,
-    );
-    
-    // Add content sections
-    let content_font = doc.add_builtin_font(BuiltinFont::Helvetica)
-        .map_err(|e| format!("Failed to load content font: {}", e))?;
-    let content_font_size = 12.0;
+    let (doc, page_idx, layer_idx) =
+        PdfDocument::new("ReqMan Report", Mm(210.0), Mm(297.0), "Layer 1");
+    let page = doc.get_page(page_idx);
+    let first_layer = page.get_layer(layer_idx);
+    let mut current_layer = first_layer.clone();
+
+    let title_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)?;
+    let regular_font = doc.add_builtin_font(BuiltinFont::Helvetica)?;
+    let bold_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)?;
+    let footer_font = doc.add_builtin_font(BuiltinFont::Helvetica)?;
+
+    add_header(&first_layer, &title_font, &regular_font);
+
     let mut y_position = Mm(250.0);
-    
-    // Parse HTML content to extract meaningful data
-    // For now, we'll create a simple structured report
+    let mut page_number = 1usize;
     let sections = vec![
-        ("Project Overview", "This report contains project metrics and statistics"),
-        ("Requirements", "Total requirements and their status distribution"),
+        (
+            "Project Overview",
+            "This report contains project metrics and statistics",
+        ),
+        (
+            "Requirements",
+            "Total requirements and their status distribution",
+        ),
         ("Tests", "Total tests and their status distribution"),
         ("Coverage", "Requirements coverage analysis"),
         ("Categories", "Requirements categorized by type"),
     ];
-    
-    for (section_title, section_desc) in sections {
-        // Section title
-        let section_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)
-            .map_err(|e| format!("Failed to load section font: {}", e))?;
-        layer1.use_text(
-            section_title,
-            content_font_size + 2.0,
+
+    for (title, desc) in sections {
+        add_text(
+            &current_layer,
+            &bold_font,
+            14.0,
             Mm(20.0),
             y_position,
-            &section_font,
+            title,
         );
         y_position -= Mm(8.0);
-        
-        // Section description
-        layer1.use_text(
-            section_desc,
-            content_font_size,
+        add_text(
+            &current_layer,
+            &regular_font,
+            12.0,
             Mm(20.0),
             y_position,
-            &content_font,
+            desc,
         );
         y_position -= Mm(15.0);
-        
-        // Add some spacing between sections
+
         if y_position < Mm(50.0) {
-            // If we're running out of space, add a new page
-            let (page2, layer2) = doc.add_page(Mm(210.0), Mm(297.0), "Page 2");
-            let page2 = doc.get_page(page2);
-            let layer2 = page2.get_layer(layer2);
-            
-            // Add page number
-            layer2.use_text(
-                "Page 2",
-                content_font_size,
-                Mm(20.0),
-                Mm(20.0),
-                &content_font,
-            );
-            
-            y_position = Mm(280.0);
+            page_number += 1;
+            let (new_layer, new_y) = add_page(&doc, &regular_font, page_number);
+            current_layer = new_layer;
+            y_position = new_y;
         }
     }
-    
-    // Add footer
-    let footer_font = doc.add_builtin_font(BuiltinFont::Helvetica)
-        .map_err(|e| format!("Failed to load footer font: {}", e))?;
-    layer1.use_text(
-        "Generated by ReqMan - Requirements Management System",
-        8.0,
-        Mm(20.0),
-        Mm(20.0),
-        &footer_font,
-    );
-    
-    // Write PDF to memory
-    let cursor = Cursor::new(Vec::new());
-    let mut buf_writer = BufWriter::new(cursor);
-    doc.save(&mut buf_writer)?;
-    
-    let cursor = buf_writer.into_inner()?;
-    Ok(cursor.into_inner())
+
+    add_footer(&first_layer, &footer_font);
+    save_pdf(doc)
 }
 
 pub fn generate_pdf_report_data(
@@ -290,220 +398,85 @@ pub fn generate_pdf_report_data(
     tests_by_status: std::collections::HashMap<String, i32>,
     _requirements_by_category: std::collections::HashMap<String, i32>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    use printpdf::*;
-    use std::io::{Cursor, BufWriter};
-    
-    // Create a new PDF document
-    let (doc, page1, layer1) = PdfDocument::new("ReqMan Report", Mm(210.0), Mm(297.0), "Layer 1");
-    let page1 = doc.get_page(page1);
-    let layer1 = page1.get_layer(layer1);
-    
-    // Add title
-    let title_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)
-        .map_err(|e| format!("Failed to load title font: {}", e))?;
-    let title_font_size = 18.0;
-    let title_text = "ReqMan Project Report";
-    
-    layer1.use_text(
-        title_text,
-        title_font_size,
-        Mm(105.0),
-        Mm(105.0),
-        &title_font,
-    );
-    
-    // Add generation date
-    let date_font = doc.add_builtin_font(BuiltinFont::Helvetica)
-        .map_err(|e| format!("Failed to load date font: {}", e))?;
-    let date_font_size = 10.0;
-    let current_date = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC").to_string();
-    layer1.use_text(
-        &format!("Generated on: {}", current_date),
-        date_font_size,
-        Mm(20.0),
-        Mm(270.0),
-        &date_font,
-    );
-    
-    // Add metrics overview
-    let metrics_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)
-        .map_err(|e| format!("Failed to load metrics font: {}", e))?;
-    let metrics_font_size = 14.0;
-    let content_font = doc.add_builtin_font(BuiltinFont::Helvetica)
-        .map_err(|e| format!("Failed to load content font: {}", e))?;
-    let content_font_size = 12.0;
+    let (doc, page_idx, layer_idx) =
+        PdfDocument::new("ReqMan Report", Mm(210.0), Mm(297.0), "Layer 1");
+    let page = doc.get_page(page_idx);
+    let first_layer = page.get_layer(layer_idx);
+    let mut layer = first_layer.clone();
+
+    let title_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)?;
+    let regular_font = doc.add_builtin_font(BuiltinFont::Helvetica)?;
+    let bold_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)?;
+    let footer_font = doc.add_builtin_font(BuiltinFont::Helvetica)?;
+
+    add_header(&first_layer, &title_font, &regular_font);
+
     let mut y_position = Mm(250.0);
-    
-    // Project Overview Section
-    layer1.use_text(
-        "Project Overview",
-        metrics_font_size,
-        Mm(20.0),
-        y_position,
-        &metrics_font,
-    );
-    y_position -= Mm(12.0);
-    
+    let mut page_number = 1usize;
+
     let overview_items = vec![
         format!("Total Requirements: {}", total_requirements),
         format!("Total Tests: {}", total_tests),
         format!("Total Categories: {}", total_categories),
         format!("Total Users: {}", total_users),
     ];
-    
-    for item in overview_items {
-        layer1.use_text(
-            &item,
-            content_font_size,
-            Mm(25.0),
-            y_position,
-            &content_font,
-        );
-        y_position -= Mm(8.0);
-    }
-    
-    y_position -= Mm(8.0);
-    
-    // Coverage Analysis Section
-    layer1.use_text(
-        "Coverage Analysis",
-        metrics_font_size,
-        Mm(20.0),
-        y_position,
-        &metrics_font,
+    add_list_section(
+        &doc,
+        &mut layer,
+        "Project Overview",
+        overview_items,
+        &bold_font,
+        &regular_font,
+        &mut y_position,
+        &mut page_number,
     );
-    y_position -= Mm(12.0);
-    
+
     let coverage_items = vec![
-        format!("Covered Requirements: {} out of {} ({:.1}%)", 
-                covered_requirements, total_requirements, coverage_percentage),
+        format!(
+            "Covered Requirements: {} out of {} ({:.1}%)",
+            covered_requirements, total_requirements, coverage_percentage
+        ),
         format!("Total Test Links: {}", total_links),
-        format!("Average Tests per Requirement: {:.1}", avg_tests_per_requirement),
+        format!(
+            "Average Tests per Requirement: {:.1}",
+            avg_tests_per_requirement
+        ),
     ];
-    
-    for item in coverage_items {
-        layer1.use_text(
-            &item,
-            content_font_size,
-            Mm(25.0),
-            y_position,
-            &content_font,
-        );
-        y_position -= Mm(8.0);
-    }
-    
-    y_position -= Mm(8.0);
-    
-    // Requirements by Status Section
-    layer1.use_text(
+    add_list_section(
+        &doc,
+        &mut layer,
+        "Coverage Analysis",
+        coverage_items,
+        &bold_font,
+        &regular_font,
+        &mut y_position,
+        &mut page_number,
+    );
+
+    add_status_section(
+        &doc,
+        &mut layer,
         "Requirements by Status",
-        metrics_font_size,
-        Mm(20.0),
-        y_position,
-        &metrics_font,
+        &requirements_by_status,
+        &bold_font,
+        &regular_font,
+        &mut y_position,
+        &mut page_number,
     );
-    y_position -= Mm(12.0);
-    
-    for (status, count) in &requirements_by_status {
-        let status_text = format!("{}: {}", status, count);
-        layer1.use_text(
-            &status_text,
-            content_font_size,
-            Mm(25.0),
-            y_position,
-            &content_font,
-        );
-        y_position -= Mm(8.0);
-        
-        if y_position < Mm(50.0) {
-            // Add new page if needed
-            let (page2, layer2) = doc.add_page(Mm(210.0), Mm(297.0), "Page 2");
-            let page2 = doc.get_page(page2);
-            let layer2 = page2.get_layer(layer2);
-            
-            // Continue on new page
-            y_position = Mm(280.0);
-            layer2.use_text(
-                "Requirements by Status (continued)",
-                metrics_font_size,
-                Mm(20.0),
-                y_position,
-                &metrics_font,
-            );
-            y_position -= Mm(12.0);
-        }
-    }
-    
-    y_position -= Mm(8.0);
-    
-    // Tests by Status Section
-    if y_position > Mm(60.0) {
-        layer1.use_text(
-            "Tests by Status",
-            metrics_font_size,
-            Mm(20.0),
-            y_position,
-            &metrics_font,
-        );
-        y_position -= Mm(12.0);
-        
-        for (status, count) in &tests_by_status {
-            let status_text = format!("{}: {}", status, count);
-            layer1.use_text(
-                &status_text,
-                content_font_size,
-                Mm(25.0),
-                y_position,
-                &content_font,
-            );
-            y_position -= Mm(8.0);
-        }
-    } else {
-        // Add new page for tests section
-        let (page3, layer3) = doc.add_page(Mm(210.0), Mm(297.0), "Page 3");
-        let page3 = doc.get_page(page3);
-        let layer3 = page3.get_layer(layer3);
-        
-        layer3.use_text(
-            "Tests by Status",
-            metrics_font_size,
-            Mm(20.0),
-            Mm(280.0),
-            &metrics_font,
-        );
-        
-        let mut test_y = Mm(268.0);
-        for (status, count) in &tests_by_status {
-            let status_text = format!("{}: {}", status, count);
-            layer3.use_text(
-                &status_text,
-                content_font_size,
-                Mm(25.0),
-                test_y,
-                &content_font,
-            );
-            test_y -= Mm(8.0);
-        }
-    }
-    
-    // Add footer to all pages
-    let footer_font = doc.add_builtin_font(BuiltinFont::Helvetica)
-        .map_err(|e| format!("Failed to load footer font: {}", e))?;
-    layer1.use_text(
-        "Generated by ReqMan - Requirements Management System",
-        8.0,
-        Mm(20.0),
-        Mm(20.0),
-        &footer_font,
+
+    add_status_section(
+        &doc,
+        &mut layer,
+        "Tests by Status",
+        &tests_by_status,
+        &bold_font,
+        &regular_font,
+        &mut y_position,
+        &mut page_number,
     );
-    
-    // Write PDF to memory
-    let cursor = Cursor::new(Vec::new());
-    let mut buf_writer = BufWriter::new(cursor);
-    doc.save(&mut buf_writer)?;
-    
-    let cursor = buf_writer.into_inner()?;
-    Ok(cursor.into_inner())
+
+    add_footer(&first_layer, &footer_font);
+    save_pdf(doc)
 }
 
 // Project management functions

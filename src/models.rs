@@ -88,7 +88,7 @@ pub struct DecoratedRequirement {
 }
 
 /// A grouping category for requirements.
-#[derive(Serialize, Deserialize, Queryable)]
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Category {
     pub cat_id: i32,
@@ -113,7 +113,7 @@ pub struct NewCategory {
 }
 
 /// Applicability tags limit where a requirement applies.
-#[derive(Serialize, Deserialize, Queryable)]
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Applicability {
     pub app_id: i32,
@@ -138,7 +138,7 @@ pub struct NewApplicability {
 }
 
 /// Possible status values for requirements or tests.
-#[derive(Serialize, Deserialize, Queryable)]
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Status {
     pub st_id: i32,
@@ -158,7 +158,7 @@ pub struct NewStatus {
 }
 
 /// Verification methods available for requirements.
-#[derive(Serialize, Deserialize, Queryable)]
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Verification {
     pub verification_id: i32,
@@ -168,7 +168,7 @@ pub struct Verification {
 }
 
 /// Link between a requirement and a test in the traceability matrix.
-#[derive(Serialize, Deserialize, Queryable)]
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Matrix {
     pub matrix_req_id: i32,
@@ -233,7 +233,7 @@ pub struct UpdateUser {
 }
 
 /// A test case that can verify one or more requirements.
-#[derive(Serialize, Deserialize, Queryable)]
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Test {
     pub test_id: i32,

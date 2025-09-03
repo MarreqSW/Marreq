@@ -1,10 +1,7 @@
 use bcrypt::{hash, verify, DEFAULT_COST};
-//use crate::models::*;
 use super::errors::AuthError;
-use crate::{repository::Repository};
+use crate::repository::Repository;
 use rocket::http::CookieJar;
-use rocket_dyn_templates::Template;
-use rocket::serde::json::json;
 
 pub fn hash_password(password: &str) -> Result<String, bcrypt::BcryptError> {
     hash(password, DEFAULT_COST)
@@ -14,7 +11,7 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, bcrypt::Bcryp
     verify(password, hash)
 }
 
-pub fn change_user_password<R: Repository>(
+fn change_user_password_impl<R: Repository>(
     repo: &mut R,
     uid: i32,
     current_password: &str,
@@ -36,59 +33,21 @@ pub fn change_user_password<R: Repository>(
     }
 }
 
-/// Handle a change password request, returning either a success or error template.
-pub fn change_password_user(
-    //password_form: &ChangePasswordForm,
-    current_password: &String,
-    new_password: &String,
+/// Handle a change password request, returning success or a domain error.
+pub fn change_user_password<R: Repository>(
+    repo: &mut R,
+    current_password: &str,
+    new_password: &str,
     cookies: &CookieJar<'_>,
-) -> Result<Template, Template> {
+) -> Result<(), AuthError> {
     // Get user ID from cookie
-    let user_id_cookie = cookies.get_private("user_id");
-    let user_id = match user_id_cookie {
-        Some(cookie) => match cookie.value().parse::<i32>() {
-            Ok(id) => id,
-            Err(_) => {
-                let ctx = json!({
-                    "title": "Change Password",
-                    "error": "Invalid session",
-                });
-                return Err(Template::render("change_password", ctx));
-            }
-        },
-        None => {
-            let ctx = json!({
-                "title": "Change Password",
-                "error": "Not logged in",
-            });
-            return Err(Template::render("change_password", ctx));
-        }
-    };
+    let user_id_cookie = cookies.get_private("user_id").ok_or(AuthError::NotLoggedIn)?;
+    let user_id = user_id_cookie
+        .value()
+        .parse::<i32>()
+        .map_err(|_| AuthError::InvalidSession)?;
 
-    use crate::repository::diesel_repo::DieselRepo ;
-    let mut repo = DieselRepo{};
-
-    match change_user_password(
-        &mut repo,
-        user_id,
-        &current_password,
-        &new_password,
-    ) {
-        Ok(_) => {
-            let ctx = json!({
-                "title": "Change Password",
-                "success": "Password changed successfully",
-            });
-            Ok(Template::render("change_password", ctx))
-        }
-        Err(e) => {
-            let ctx = json!({
-                "title": "Change Password",
-                "error": e.to_string(),
-            });
-            Err(Template::render("change_password", ctx))
-        }
-    }
+    change_user_password_impl(repo, user_id, current_password, new_password)
 }
 
 #[cfg(test)]
@@ -112,7 +71,7 @@ mod tests {
         assert!(!verify_password("battery-staple", &hash).expect("verify"));
     }
 
-    // --- change_user_password ------------------------------------------------
+    // --- change_user_password_impl ------------------------------------------------
 
     #[test]
     fn change_user_password_updates_hash_and_verifies() {
@@ -124,7 +83,7 @@ mod tests {
         let mut repo = FakeRepo::with_users([user]);
 
         // Act
-        change_user_password(&mut repo, 1, current, newpw).expect("should succeed");
+        change_user_password_impl(&mut repo, 1, current, newpw).expect("should succeed");
 
         // Assert: stored hash changed AND matches the new password
         let updated = repo.get_user_by_id(1).unwrap();
@@ -139,7 +98,7 @@ mod tests {
         let user = FakeRepo::make_user(7, "bob", &current_hash);
         let mut repo = FakeRepo::with_users([user]);
 
-        let err = change_user_password(&mut repo, 7, "nope", "new").unwrap_err();
+        let err = change_user_password_impl(&mut repo, 7, "nope", "new").unwrap_err();
         // Exact variant depends on your AuthError; the function returns InvalidCredentials here.
         assert!(matches!(err, AuthError::InvalidCredentials));
 
@@ -151,7 +110,7 @@ mod tests {
     #[test]
     fn change_user_password_fails_when_user_not_found() {
         let mut repo = FakeRepo::with_users([]); // empty
-        let result = change_user_password(&mut repo, 99, "x", "y");
+        let result = change_user_password_impl(&mut repo, 99, "x", "y");
         assert!(result.is_err());
         // usually mapped from RepoError::NotFound -> AuthError (Db or similar)
         assert!(!matches!(result.unwrap_err(), AuthError::InvalidCredentials | AuthError::Verify(_)));
@@ -164,7 +123,7 @@ mod tests {
         let mut repo = FakeRepo::with_users([user]);
         repo.force_err = true; // make update_user_password error
 
-        let result = change_user_password(&mut repo, 3, "pw", "newpw");
+        let result = change_user_password_impl(&mut repo, 3, "pw", "newpw");
         assert!(result.is_err());
         // Not checking exact variant because it depends on your From<RepoError> for AuthError
     }

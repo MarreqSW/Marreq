@@ -65,11 +65,28 @@ fn render_login_error(err: AuthError) -> Template {
     let (title, msg) = match err {
         AuthError::InvalidCredentials => ("Login", "Invalid username or password".to_string()),
         AuthError::Verify(_)          => ("Login", "Password verification failed".to_string()),
-        AuthError::Db(e)      => ("Error",  format!("Database error: {e}")),
+        AuthError::Db(e)              => ("Error",  format!("Database error: {e}")),
         AuthError::Audit(_)           => ("Login", "Logged in but failed to audit login".to_string()),
+        AuthError::NotLoggedIn        => ("Login", "Not logged in".to_string()),
+        AuthError::InvalidSession     => ("Login", "Invalid session".to_string()),
         AuthError::Repo(_)            => ("Login", "Internal server error".to_string())};
 
     Template::render("login", json!({ "title": title, "error": msg }))
+}
+
+fn render_change_password_error(err: AuthError) -> Template {
+    use crate::helper_functions::auth::AuthError;
+    let (title, msg) = match err {
+        AuthError::InvalidCredentials => ("Change Password", "Invalid current password".to_string()),
+        AuthError::Verify(_)          => ("Change Password", "Password verification failed".to_string()),
+        AuthError::Db(e)              => ("Error",  format!("Database error: {e}")),
+        AuthError::NotLoggedIn        => ("Change Password", "Not logged in".to_string()),
+        AuthError::InvalidSession     => ("Change Password", "Invalid session".to_string()),
+        AuthError::Audit(_)           => ("Change Password", "Failed to log password change".to_string()),
+        AuthError::Repo(_)            => ("Change Password", "Internal server error".to_string()),
+    };
+
+    Template::render("change_password", json!({ "title": title, "error": msg }))
 }
 
 #[get("/login")]
@@ -123,7 +140,10 @@ pub fn change_password_page() -> Template {
 }
 
 #[post("/change_password", data = "<password_form>")]
-pub fn change_password(password_form: Form<ChangePasswordForm>, cookies: &CookieJar<'_>) -> Result<Template, Template> {
+pub fn change_password(
+    password_form: Form<ChangePasswordForm>,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Template> {
     // Validate passwords
     if password_form.new_password != password_form.confirm_password {
         let ctx = json!({
@@ -141,7 +161,24 @@ pub fn change_password(password_form: Form<ChangePasswordForm>, cookies: &Cookie
         return Err(Template::render("change_password", ctx));
     }
 
-    change_password_user(&password_form.current_password, &password_form.new_password, cookies)
+    use crate::repository::diesel_repo::DieselRepo;
+    let mut repo = DieselRepo{};
+
+    match change_user_password(
+        &mut repo,
+        &password_form.current_password,
+        &password_form.new_password,
+        cookies,
+    ) {
+        Ok(()) => {
+            let ctx = json!({
+                "title": "Change Password",
+                "success": "Password changed successfully",
+            });
+            Ok(Template::render("change_password", ctx))
+        }
+        Err(err) => Err(render_change_password_error(err)),
+    }
 }
 
 // --------------------------------

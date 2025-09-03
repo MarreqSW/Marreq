@@ -1,9 +1,19 @@
+//! Data models for the requirement management application.
+//!
+//! These structures describe the core entities stored in the database and the
+//! auxiliary forms used to create or update them. Most of the types derive
+//! Diesel traits so they can be mapped directly to the PostgreSQL database.
+
 use crate::schema::*;
 use diesel::prelude::*;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
+/// A single requirement stored in the `requirements` table.
+///
+/// Mirrors the database representation and is used when fetching or updating
+/// existing requirements.
 #[derive(Serialize, Deserialize, Queryable, AsChangeset, Clone)]
 pub struct Requirement {
     pub req_id: i32,
@@ -25,6 +35,9 @@ pub struct Requirement {
     pub project_id: i32,
 }
 
+/// Data required to insert or update a requirement.
+///
+/// Typically populated from HTTP forms when creating or editing requirements.
 #[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = requirements)]
@@ -47,6 +60,10 @@ pub struct NewRequirement {
     pub project_id: i32,
 }
 
+/// Requirement enriched with human readable values for presentation.
+///
+/// Foreign key fields are replaced by their corresponding names, simplifying
+/// template rendering.
 #[derive(Serialize, Deserialize)]
 pub struct DecoratedRequirement {
     pub req_id: i32,
@@ -54,7 +71,7 @@ pub struct DecoratedRequirement {
     pub req_description: String,
     pub req_verification: String,
     pub req_current_status: String,
-    pub req_current_status_id: i32,  // Add numeric status ID for access control
+    pub req_current_status_id: i32, // Add numeric status ID for access control
     pub req_author: String,
     pub req_reviewer: String,
     pub req_link: String,
@@ -70,6 +87,7 @@ pub struct DecoratedRequirement {
     pub project_id: i32,
 }
 
+/// A grouping category for requirements.
 #[derive(Serialize, Deserialize, Queryable)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Category {
@@ -80,6 +98,7 @@ pub struct Category {
     pub project_id: i32,
 }
 
+/// Form used to insert or update a [`Category`].
 #[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = categories)]
@@ -93,6 +112,7 @@ pub struct NewCategory {
     pub project_id: i32,
 }
 
+/// Applicability tags limit where a requirement applies.
 #[derive(Serialize, Deserialize, Queryable)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Applicability {
@@ -103,6 +123,7 @@ pub struct Applicability {
     pub project_id: i32,
 }
 
+/// Form used to insert or update an [`Applicability`].
 #[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = applicability)]
@@ -116,6 +137,7 @@ pub struct NewApplicability {
     pub project_id: i32,
 }
 
+/// Possible status values for requirements or tests.
 #[derive(Serialize, Deserialize, Queryable)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Status {
@@ -125,15 +147,17 @@ pub struct Status {
     pub st_short_name: String,
 }
 
+/// Form used to create a new [`Status`].
 #[derive(Serialize, Deserialize, Insertable, FromForm)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = status)]
-pub struct NewStatus{
+pub struct NewStatus {
     pub st_title: String,
     pub st_description: String,
     pub st_short_name: String,
 }
 
+/// Verification methods available for requirements.
 #[derive(Serialize, Deserialize, Queryable)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Verification {
@@ -143,6 +167,7 @@ pub struct Verification {
     pub project_id: i32,
 }
 
+/// Link between a requirement and a test in the traceability matrix.
 #[derive(Serialize, Deserialize, Queryable)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Matrix {
@@ -152,6 +177,7 @@ pub struct Matrix {
     pub project_id: i32,
 }
 
+/// Form used to create a new [`Matrix`] entry tying a requirement to a test.
 #[derive(Serialize, Deserialize, Insertable)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = matrix)]
@@ -162,6 +188,7 @@ pub struct NewMatrix {
     pub project_id: i32,
 }
 
+/// A system user that can access projects and manage requirements.
 #[derive(Serialize, Deserialize, Queryable, AsChangeset, Debug, Clone)]
 pub struct User {
     pub user_id: i32,
@@ -176,6 +203,7 @@ pub struct User {
     pub is_admin: bool,
 }
 
+/// Form used to insert or update [`User`] records.
 #[derive(Serialize, Deserialize, Queryable, Insertable, AsChangeset, FromForm)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = users)]
@@ -192,6 +220,7 @@ pub struct NewUser {
     pub is_admin: bool,
 }
 
+/// Partial user information used when editing an existing user.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
 pub struct UpdateUser {
@@ -203,6 +232,7 @@ pub struct UpdateUser {
     pub is_admin: bool,
 }
 
+/// A test case that can verify one or more requirements.
 #[derive(Serialize, Deserialize, Queryable)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Test {
@@ -215,6 +245,7 @@ pub struct Test {
     pub project_id: i32,
 }
 
+/// Test information with resolved foreign keys for presentation.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DecoratedTest {
     pub test_id: i32,
@@ -222,12 +253,13 @@ pub struct DecoratedTest {
     pub test_description: String,
     pub test_source: String,
     pub test_status: String,
-    pub test_status_id: i32,  // Add numeric status ID for access control
+    pub test_status_id: i32, // Add numeric status ID for access control
     pub test_parent_id: i32,
     pub test_parent_title: String,
     pub project_id: i32,
 }
 
+/// Form used to create or update a [`Test`].
 #[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = tests)]
@@ -242,6 +274,8 @@ pub struct NewTest {
     pub project_id: i32,
 }
 
+/// Form data submitted when creating a new test along with linked
+/// requirements.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
 pub struct NewTestForm {
@@ -254,6 +288,7 @@ pub struct NewTestForm {
     pub project_id: i32,
 }
 
+/// Form used for editing an existing test and updating its requirement links.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
 pub struct EditTestForm {
@@ -267,6 +302,7 @@ pub struct EditTestForm {
     pub project_id: i32,
 }
 
+/// Credentials submitted during user login.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
 pub struct LoginForm {
@@ -274,6 +310,7 @@ pub struct LoginForm {
     pub password: String,
 }
 
+/// Form used when a user requests to change their password.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
 pub struct ChangePasswordForm {
@@ -383,6 +420,7 @@ impl fmt::Display for Test {
     }
 }
 
+/// A project groups a collection of requirements and tests.
 #[derive(Queryable, Serialize, Deserialize, Debug)]
 pub struct Project {
     pub project_id: i32,
@@ -394,6 +432,7 @@ pub struct Project {
     pub project_owner_id: Option<i32>,
 }
 
+/// Data required to create a new [`Project`].
 #[derive(Insertable, Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::schema::projects)]
@@ -404,6 +443,7 @@ pub struct NewProject {
     pub project_owner_id: Option<i32>,
 }
 
+/// Form used to update a project's metadata.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
 pub struct UpdateProject {
@@ -413,6 +453,7 @@ pub struct UpdateProject {
     pub project_owner_id: Option<i32>,
 }
 
+/// Form that stores temporary column mappings for data imports.
 #[derive(FromForm)]
 pub struct ImportMappingForm {
     pub column_mappings: String,
@@ -421,6 +462,7 @@ pub struct ImportMappingForm {
 }
 
 // Logging models
+/// A single audit log entry describing a user action.
 #[derive(Queryable, Serialize, Deserialize, Debug)]
 pub struct Log {
     pub log_id: i32,
@@ -437,6 +479,7 @@ pub struct Log {
     pub created_at: chrono::NaiveDateTime,
 }
 
+/// Form used to insert a new [`Log`] entry.
 #[derive(Insertable, Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::schema::logs)]
@@ -453,7 +496,7 @@ pub struct NewLog {
     pub user_agent: Option<String>,
 }
 
-// Logging action types
+/// Different categories of actions that can appear in the audit log.
 #[derive(Debug, Clone, Copy)]
 pub enum ActionType {
     Create,
@@ -481,7 +524,7 @@ impl std::fmt::Display for ActionType {
     }
 }
 
-// Entity types
+/// Entities that can be referenced by a [`Log`] entry.
 #[derive(Debug, Clone, Copy)]
 pub enum EntityType {
     Project,

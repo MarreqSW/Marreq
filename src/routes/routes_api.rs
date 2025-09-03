@@ -1,6 +1,5 @@
 use diesel::prelude::*;
 use rocket::serde::json::{json, Json, Value};
-
 use crate::helper_functions::*;
 use crate::models::*;
 use crate::repository::{DieselRepo, RequirementsRepository, TestsRepository, LookupRepository, UserRepository};
@@ -12,7 +11,8 @@ use crate::repository::{DieselRepo, RequirementsRepository, TestsRepository, Loo
 /// Requirements
 #[get("/requirements")]
 pub fn api_get_requirement() -> Result<Json<Vec<Requirement>>, rocket::http::Status> {
-    let ret_val = get_requirements_all()
+    let ret_val = DieselRepo::new()
+        .get_requirements_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", _err);
@@ -64,7 +64,27 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
     let connection = &mut establish_connection();
     
     // Get the requirement details before deleting
-    let requirement = get_requirement_by_id(ident);
+    let requirement = DieselRepo::new()
+        .get_requirement_by_id(ident)
+        .unwrap_or_else(|_| Requirement {
+            req_id: ident,
+            req_title: format!("Unknown Requirement ({})", ident),
+            req_description: "Requirement not found".to_string(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 1,
+            req_reviewer: 1,
+            req_link: "".to_string(),
+            req_reference: format!("REQ-UNK-{}", ident),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: chrono::Utc::now().naive_utc(),
+            req_update_date: chrono::Utc::now().naive_utc(),
+            req_deadline_date: chrono::Utc::now().naive_utc(),
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 1,
+        });
     
     let ret_value = match DieselRepo::new().delete_requirement(ident) {
         Ok(success) => success,
@@ -132,7 +152,8 @@ pub fn api_get_requirement_by_id(
 /// Categories
 #[get("/categories")]
 pub fn api_get_categories() -> Result<Json<Vec<Category>>, rocket::http::Status> {
-    let ret_val = get_categories_all()
+    let ret_val = DieselRepo::new()
+        .get_categories_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", _err);
@@ -154,7 +175,8 @@ pub fn api_get_categories() -> Result<Json<Vec<Category>>, rocket::http::Status>
 /// Status
 #[get("/status")]
 pub fn api_get_status() -> Result<Json<Vec<Status>>, rocket::http::Status> {
-    let ret_val = get_status_all()
+    let ret_val = DieselRepo::new()
+        .get_status_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", _err);
@@ -191,7 +213,8 @@ pub async fn api_post_status(new_status: Json<NewStatus>) -> Value {
 /// Tests
 #[get("/tests")]
 pub fn api_get_test() -> Result<Json<Vec<Test>>, rocket::http::Status> {
-    let ret_val = get_tests_all()
+    let ret_val = DieselRepo::new()
+        .get_tests_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", _err);
@@ -267,7 +290,17 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
     let connection = &mut establish_connection();
     
     // Get the test details before deleting
-    let test = get_test_by_id(ident);
+    let test = DieselRepo::new()
+        .get_test_by_id(ident)
+        .unwrap_or_else(|_| Test {
+            test_id: ident,
+            test_name: format!("Unknown Test ({})", ident),
+            test_description: "Test not found".to_string(),
+            test_source: String::new(),
+            test_status: 1,
+            test_parent: 0,
+            project_id: 1,
+        });
     
     let ret_value = match DieselRepo::new().delete_test(ident) {
         Ok(success) => success,
@@ -305,7 +338,8 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
 /// Users
 #[get("/users")]
 pub fn api_get_users() -> Result<Json<Vec<User>>, rocket::http::Status> {
-    let ret_val = get_users_all()
+    let ret_val = DieselRepo::new()
+        .get_users_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", _err);
@@ -427,8 +461,10 @@ pub fn api_get_matrix() -> Result<Json<Vec<Matrix>>, rocket::http::Status> {
 
 #[get("/categories/<ident>")]
 pub fn api_get_category_by_id(ident: i32) -> Result<Json<Category>, rocket::http::Status> {
-    let ret_val = get_category_by_id(ident);
-    Ok(Json(ret_val))
+    match DieselRepo::new().get_category_by_id(ident) {
+        Ok(cat) => Ok(Json(cat)),
+        Err(_) => Err(rocket::http::Status::NotFound),
+    }
 }
 
 #[post("/categories", data = "<new_category>")]
@@ -488,7 +524,15 @@ pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
     let connection = &mut establish_connection();
     
     // Get the category details before deleting
-    let category = get_category_by_id(ident);
+    let category = DieselRepo::new()
+        .get_category_by_id(ident)
+        .unwrap_or_else(|_| Category {
+            cat_id: ident,
+            cat_title: format!("Unknown Category ({})", ident),
+            cat_description: "Category not found".to_string(),
+            cat_tag: "unknown".to_string(),
+            project_id: 1,
+        });
     
     let ret_value = DieselRepo::new().delete_category(ident);
 
@@ -525,7 +569,8 @@ pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
 
 #[get("/applicability")]
 pub fn api_get_applicability() -> Result<Json<Vec<Applicability>>, rocket::http::Status> {
-    let ret_val = get_applicability_all()
+    let ret_val = DieselRepo::new()
+        .get_applicability_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying applicability: {:?}", _err);
@@ -546,8 +591,10 @@ pub fn api_get_applicability() -> Result<Json<Vec<Applicability>>, rocket::http:
 
 #[get("/applicability/<ident>")]
 pub fn api_get_applicability_by_id(ident: i32) -> Result<Json<Applicability>, rocket::http::Status> {
-    let ret_val = get_applicability_by_id(ident);
-    Ok(Json(ret_val))
+    match DieselRepo::new().get_applicability_by_id(ident) {
+        Ok(app) => Ok(Json(app)),
+        Err(_) => Err(rocket::http::Status::NotFound),
+    }
 }
 
 #[post("/applicability", data = "<new_applicability>")]
@@ -607,7 +654,15 @@ pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status 
     let connection = &mut establish_connection();
     
     // Get the applicability details before deleting
-    let applicability = get_applicability_by_id(ident);
+    let applicability = DieselRepo::new()
+        .get_applicability_by_id(ident)
+        .unwrap_or_else(|_| Applicability {
+            app_id: ident,
+            app_title: format!("Unknown Applicability ({})", ident),
+            app_description: "Applicability not found".to_string(),
+            app_tag: "unknown".to_string(),
+            project_id: 1,
+        });
     
     let ret_value = DieselRepo::new().delete_applicability(ident);
 

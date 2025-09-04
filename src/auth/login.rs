@@ -87,7 +87,7 @@ mod tests {
     use super::*;
     use crate::repository::fake_repo::FakeRepo;
     use std::collections::HashMap;
-    use crate::helper_functions::hash_password;
+    use crate::auth::hash_password;
 
     // ---------- is_authenticated_impl tests ----------
 

@@ -1,6 +1,6 @@
 use crate::models::*;
 use diesel::prelude::*;
-use crate::db::get_connection_pooled_safe;
+use crate::repository::get_connection_pooled_safe;
 use std::fs;
 
 pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {

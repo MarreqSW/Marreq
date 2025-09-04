@@ -7,7 +7,6 @@ pub mod auth;
 pub mod bbdd;
 pub mod cache;
 pub mod cached_functions;
-pub mod db;
 pub mod db_operations;
 pub mod generators;
 pub mod helper_functions;

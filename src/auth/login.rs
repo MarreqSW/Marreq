@@ -1,7 +1,7 @@
 use rocket::http::{Cookie, CookieJar};
 use super::errors::AuthError;
 use crate::models::*;
-use crate::repository::get_connection_pooled_safe;
+use crate::repository::get_connection;
 use crate::logger::Logger;
 use crate::repository::Repository;
 
@@ -24,7 +24,7 @@ pub fn login_user<R: Repository>(
     cookies.add_private(Cookie::new("username", user.user_username.clone()));
     cookies.add_private(Cookie::new("user_name", user.user_name.clone()));
 
-    let mut conn = get_connection_pooled_safe().map_err(|e| AuthError::Db(e.to_string()))?;
+    let mut conn = get_connection().map_err(|e| AuthError::Db(e.to_string()))?;
     Logger::log_login(&mut conn, user.user_id, None).map_err(|e| AuthError::Audit(e.to_string()))?;
 
     Ok(())

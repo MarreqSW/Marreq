@@ -1,18 +1,8 @@
 use crate::models::*;
-use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use dotenvy::dotenv;
 use rocket::http::CookieJar;
-use std::env;
 use std::error::Error;
-
-pub fn establish_connection() -> PgConnection {
-    dotenv().ok();
-
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    PgConnection::establish(&database_url)
-        .unwrap_or_else(|_| panic!("Error connecting to {}", database_url))
-}
+use crate::repository::DieselRepo;
 
 pub fn get_selected_project_id(cookies: &CookieJar<'_>) -> Option<i32> {
     cookies.get("selected_project_id")
@@ -23,7 +13,8 @@ pub fn generate_requirement_reference(category_id: i32, project_id: i32) -> Resu
     use crate::schema::categories;
     use crate::schema::requirements;
 
-    let mut connection = crate::repository::get_connection()
+    let mut connection = DieselRepo::new()
+        .get_conn()
         .unwrap_or_else(|_| panic!("Failed to get database connection"));
 
     let category = categories::table

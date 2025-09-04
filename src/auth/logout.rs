@@ -1,5 +1,5 @@
 use rocket::http::{CookieJar, Cookie};
-use crate::repository::get_connection;
+use crate::repository::DieselRepo;
 use crate::logger::Logger;
 
 /// Clear session cookies and log the logout event.
@@ -27,7 +27,7 @@ pub fn logout_user(cookies: &CookieJar<'_>) {
 
     // Log logout if possible
     if let Some(uid) = user_id {
-        if let Ok(mut conn) = get_connection() {
+        if let Ok(mut conn) = DieselRepo::new().get_conn() {
             let _description = username.map(|name| format!("User {} logged out", name));
             let _ = Logger::log_logout(&mut conn, uid, None);
         }

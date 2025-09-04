@@ -3,6 +3,7 @@ extern crate rocket;
 extern crate diesel;
 use rocket::fs::{relative, FileServer};
 use rocket_dyn_templates::Template;
+pub mod auth;
 pub mod bbdd;
 pub mod cache;
 pub mod cached_functions;

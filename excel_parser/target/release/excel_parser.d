@@ -1,1 +1,0 @@
-/home/marius/Work/ReqMan/excel_parser/target/release/excel_parser: /home/marius/Work/ReqMan/excel_parser/src/api_client.rs /home/marius/Work/ReqMan/excel_parser/src/main.rs /home/marius/Work/ReqMan/excel_parser/src/parser.rs

@@ -76,42 +76,6 @@ lazy_static! {
         Arc::new(pool)
     };
 }
-
-/// Get a connection from the global pool
-pub fn get_pooled_connection() -> Result<PooledConn, Box<dyn std::error::Error>> {
-    CONNECTION_POOL
-        .get()
-        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
-}
-
-/// Get a pooled connection wrapper that can be used in place of regular connections
-pub fn get_pooled_connection_wrapper() -> Result<PooledConnectionWrapper, Box<dyn std::error::Error>> {
-    let pooled_conn = get_pooled_connection()?;
-    Ok(PooledConnectionWrapper::new(pooled_conn))
-}
-
-/// Get a connection from the pool with proper error handling
-/// This function returns a pooled connection wrapper that can be used like a regular connection
-pub fn get_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Error>> {
-    get_pooled_connection_wrapper()
-}
-
-/// Get the global connection pool reference
-pub fn get_pool() -> &'static ConnectionPool {
-    &CONNECTION_POOL
-}
-
-/// Get pool statistics
-pub fn get_pool_stats() -> PoolStats {
-    let pool = get_pool();
-    PoolStats {
-        max_size: pool.max_size(),
-        min_idle: pool.min_idle().unwrap_or(0),
-        current_size: pool.state().connections,
-        available: pool.state().idle_connections,
-    }
-}
-
 /// Pool statistics
 #[derive(Debug, Clone)]
 pub struct PoolStats {
@@ -150,30 +114,6 @@ impl PoolStats {
         }
     }
 }
-
-/// Test the connection pool health
-pub fn test_pool_health() -> Result<bool, Box<dyn std::error::Error>> {
-    let mut conn = get_pooled_connection()?;
-
-    // Test the connection with a simple query
-    diesel::sql_query("SELECT 1").execute(&mut conn)?;
-
-    Ok(true)
-}
-
-/// Get detailed pool information for monitoring
-pub fn get_pool_info() -> PoolInfo {
-    let stats = get_pool_stats();
-    let pool = get_pool();
-
-    PoolInfo {
-        stats,
-        connection_timeout: pool.connection_timeout(),
-        idle_timeout: pool.idle_timeout(),
-        max_lifetime: pool.max_lifetime(),
-    }
-}
-
 /// Detailed pool information
 #[derive(Debug, Clone)]
 pub struct PoolInfo {
@@ -184,17 +124,17 @@ pub struct PoolInfo {
 }
 
 pub struct DieselRepo {
-    pool: &'static ConnectionPool,
+    pool: Arc<ConnectionPool>,
 }
 
 impl DieselRepo {
     pub fn new() -> Self {
         Self {
-            pool: get_pool(),
+            pool: CONNECTION_POOL.clone(),
         }
     }
 
-    fn get_conn(&self) -> Result<PooledConnectionWrapper, RepoError> {
+    pub fn get_conn(&self) -> Result<PooledConnectionWrapper, RepoError> {
         self.pool
             .get()
             .map(PooledConnectionWrapper::new)
@@ -202,15 +142,32 @@ impl DieselRepo {
     }
 
     pub fn pool_stats(&self) -> PoolStats {
-        get_pool_stats()
+        PoolStats {
+            max_size: self.pool.max_size(),
+            min_idle: self.pool.min_idle().unwrap_or(0),
+            current_size: self.pool.state().connections,
+            available: self.pool.state().idle_connections,
+        }
     }
 
     pub fn pool_info(&self) -> PoolInfo {
-        get_pool_info()
+        PoolInfo {
+            stats: self.pool_stats(),
+            connection_timeout: self.pool.connection_timeout(),
+            idle_timeout: self.pool.idle_timeout(),
+            max_lifetime: self.pool.max_lifetime(),
+        }
     }
 
     pub fn test_pool_health(&self) -> Result<bool, RepoError> {
-        test_pool_health().map_err(|e| RepoError::Pool(e.to_string()))
+        let mut conn = self
+            .pool
+            .get()
+            .map_err(|e| RepoError::Pool(e.to_string()))?;
+        diesel::sql_query("SELECT 1")
+            .execute(&mut conn)
+            .map_err(RepoError::from)?;
+        Ok(true)
     }
 }
 

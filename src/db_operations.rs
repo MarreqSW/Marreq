@@ -1,4 +1,4 @@
-use crate::repository::{get_pooled_connection_wrapper, PooledConnectionWrapper};
+use crate::repository::{DieselRepo, PooledConnectionWrapper};
 use crate::models::*;
 use crate::schema::*;
 use diesel::prelude::*;
@@ -6,7 +6,7 @@ use std::error::Error;
 
 /// Get all projects using connection pool
 pub fn get_projects_all_pooled() -> Result<Vec<Project>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     projects::table
         .load::<Project>(conn.as_mut())
@@ -15,7 +15,7 @@ pub fn get_projects_all_pooled() -> Result<Vec<Project>, Box<dyn Error>> {
 
 /// Get requirements by project using connection pool
 pub fn get_requirements_by_project_pooled(project_id: i32) -> Result<Vec<Requirement>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     requirements::table
         .filter(requirements::project_id.eq(project_id))
@@ -25,7 +25,7 @@ pub fn get_requirements_by_project_pooled(project_id: i32) -> Result<Vec<Require
 
 /// Get tests by project using connection pool
 pub fn get_tests_by_project_pooled(project_id: i32) -> Result<Vec<Test>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     tests::table
         .filter(tests::project_id.eq(project_id))
@@ -35,7 +35,7 @@ pub fn get_tests_by_project_pooled(project_id: i32) -> Result<Vec<Test>, Box<dyn
 
 /// Get categories by project using connection pool
 pub fn get_categories_by_project_pooled(project_id: i32) -> Result<Vec<Category>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     categories::table
         .filter(categories::project_id.eq(project_id))
@@ -45,7 +45,7 @@ pub fn get_categories_by_project_pooled(project_id: i32) -> Result<Vec<Category>
 
 /// Get applicability by project using connection pool
 pub fn get_applicability_by_project_pooled(project_id: i32) -> Result<Vec<Applicability>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     applicability::table
         .filter(applicability::project_id.eq(project_id))
@@ -55,7 +55,7 @@ pub fn get_applicability_by_project_pooled(project_id: i32) -> Result<Vec<Applic
 
 /// Get matrix by project using connection pool
 pub fn get_matrix_by_project_pooled(project_id: i32) -> Result<Vec<Matrix>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     matrix::table
         .filter(matrix::project_id.eq(project_id))
@@ -65,7 +65,7 @@ pub fn get_matrix_by_project_pooled(project_id: i32) -> Result<Vec<Matrix>, Box<
 
 /// Get all statuses using connection pool
 pub fn get_status_all_pooled() -> Result<Vec<Status>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     status::table
         .load::<Status>(conn.as_mut())
@@ -74,7 +74,7 @@ pub fn get_status_all_pooled() -> Result<Vec<Status>, Box<dyn Error>> {
 
 /// Get all categories using connection pool
 pub fn get_categories_all_pooled() -> Result<Vec<Category>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     categories::table
         .load::<Category>(conn.as_mut())
@@ -83,7 +83,7 @@ pub fn get_categories_all_pooled() -> Result<Vec<Category>, Box<dyn Error>> {
 
 /// Get all applicability using connection pool
 pub fn get_applicability_all_pooled() -> Result<Vec<Applicability>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     applicability::table
         .load::<Applicability>(conn.as_mut())
@@ -92,7 +92,7 @@ pub fn get_applicability_all_pooled() -> Result<Vec<Applicability>, Box<dyn Erro
 
 /// Get all tests using connection pool
 pub fn get_tests_all_pooled() -> Result<Vec<Test>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     tests::table
         .load::<Test>(conn.as_mut())
@@ -101,7 +101,7 @@ pub fn get_tests_all_pooled() -> Result<Vec<Test>, Box<dyn Error>> {
 
 /// Get all users using connection pool
 pub fn get_users_all_pooled() -> Result<Vec<User>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     users::table
         .load::<User>(conn.as_mut())
@@ -110,7 +110,7 @@ pub fn get_users_all_pooled() -> Result<Vec<User>, Box<dyn Error>> {
 
 /// Get all requirements using connection pool
 pub fn get_requirements_all_pooled() -> Result<Vec<Requirement>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     requirements::table
         .load::<Requirement>(conn.as_mut())
@@ -119,7 +119,7 @@ pub fn get_requirements_all_pooled() -> Result<Vec<Requirement>, Box<dyn Error>>
 
 /// Get user by ID using connection pool
 pub fn get_user_by_id_pooled(user_id: i32) -> Result<User, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     users::table
         .find(user_id)
@@ -129,7 +129,7 @@ pub fn get_user_by_id_pooled(user_id: i32) -> Result<User, Box<dyn Error>> {
 
 /// Get requirement by ID using connection pool
 pub fn get_requirement_by_id_pooled(req_id: i32) -> Result<Requirement, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     requirements::table
         .find(req_id)
@@ -139,7 +139,7 @@ pub fn get_requirement_by_id_pooled(req_id: i32) -> Result<Requirement, Box<dyn 
 
 /// Get test by ID using connection pool
 pub fn get_test_by_id_pooled(test_id: i32) -> Result<Test, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     tests::table
         .find(test_id)
@@ -149,7 +149,7 @@ pub fn get_test_by_id_pooled(test_id: i32) -> Result<Test, Box<dyn Error>> {
 
 /// Get category by ID using connection pool
 pub fn get_category_by_id_pooled(cat_id: i32) -> Result<Category, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     categories::table
         .find(cat_id)
@@ -159,7 +159,7 @@ pub fn get_category_by_id_pooled(cat_id: i32) -> Result<Category, Box<dyn Error>
 
 /// Get status by ID using connection pool
 pub fn get_status_by_id_pooled(status_id: i32) -> Result<Status, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     status::table
         .find(status_id)
@@ -169,7 +169,7 @@ pub fn get_status_by_id_pooled(status_id: i32) -> Result<Status, Box<dyn Error>>
 
 /// Get project by ID using connection pool
 pub fn get_project_by_id_pooled(project_id: i32) -> Result<Project, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     projects::table
         .find(project_id)
@@ -179,7 +179,7 @@ pub fn get_project_by_id_pooled(project_id: i32) -> Result<Project, Box<dyn Erro
 
 /// Get verification by project using connection pool
 pub fn get_verification_by_project_pooled(project_id: i32) -> Result<Vec<Verification>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     verification::table
         .filter(verification::project_id.eq(project_id))
@@ -189,7 +189,7 @@ pub fn get_verification_by_project_pooled(project_id: i32) -> Result<Vec<Verific
 
 /// Get all verification methods using connection pool
 pub fn get_verification_all_pooled() -> Result<Vec<Verification>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     verification::table
         .load::<Verification>(conn.as_mut())
@@ -198,7 +198,7 @@ pub fn get_verification_all_pooled() -> Result<Vec<Verification>, Box<dyn Error>
 
 /// Get linked tests for requirement using connection pool
 pub fn get_linked_tests_for_requirement_pooled(req_id: i32) -> Result<Vec<Test>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     // Get test IDs linked to this requirement
     let linked_test_ids: Vec<i32> = matrix::table
@@ -220,7 +220,7 @@ pub fn get_linked_tests_for_requirement_pooled(req_id: i32) -> Result<Vec<Test>,
 
 /// Get requirements for test using connection pool
 pub fn get_requirements_for_test_pooled(test_id: i32) -> Result<Vec<Requirement>, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     // Get requirement IDs linked to this test
     let linked_req_ids: Vec<i32> = matrix::table
@@ -242,7 +242,7 @@ pub fn get_requirements_for_test_pooled(test_id: i32) -> Result<Vec<Requirement>
 
 /// Get status name by ID using connection pool
 pub fn get_status_name_by_id_pooled(status_id: i32) -> Result<String, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     let status: Status = status::table
         .find(status_id)
@@ -344,7 +344,7 @@ pub fn get_project_by_id_pooled_safe(project_id: i32) -> Project {
 
 /// Get verification by ID using connection pool
 pub fn get_verification_by_id_pooled(verification_id: i32) -> Result<Verification, Box<dyn Error>> {
-    let mut conn = get_pooled_connection_wrapper()?;
+    let mut conn = get_pooled_connection_for_operations()?;
     
     verification::table
         .find(verification_id)
@@ -354,5 +354,7 @@ pub fn get_verification_by_id_pooled(verification_id: i32) -> Result<Verificatio
 
 /// Get pooled connection for operations that need it
 pub fn get_pooled_connection_for_operations() -> Result<PooledConnectionWrapper, Box<dyn Error>> {
-    get_pooled_connection_wrapper()
+    DieselRepo::new()
+        .get_conn()
+        .map_err(|e| Box::new(e) as Box<dyn Error>)
 }

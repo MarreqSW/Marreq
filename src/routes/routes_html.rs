@@ -15,7 +15,7 @@ use std::path;
 
 use crate::auth::*;
 use crate::cached_functions::*;
-use crate::repository::{get_connection, get_pooled_connection, PooledConnectionWrapper};
+use crate::repository::PooledConnectionWrapper;
 use crate::db_operations::*;
 use crate::generators::*;
 use crate::helper_functions::*;
@@ -33,7 +33,9 @@ use crate::repository::{
 
 /// Helper function to get a database connection with proper error handling
 fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Error>> {
-    get_connection()
+    DieselRepo::new()
+        .get_conn()
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
 }
 
 // --------------------------------
@@ -3321,7 +3323,7 @@ pub async fn generate_backup(
         Ok(output) => {
             if output.status.success() {
                 // Log the successful backup
-                if let Ok(mut conn) = get_pooled_connection() {
+                if let Ok(mut conn) = DieselRepo::new().get_conn() {
                     let _ = Logger::log_action(
                         &mut conn,
                         user.user_id,
@@ -3345,7 +3347,7 @@ pub async fn generate_backup(
                 Ok((content_type, file))
             } else {
                 // Log the failed backup
-                if let Ok(mut conn) = get_pooled_connection() {
+                if let Ok(mut conn) = DieselRepo::new().get_conn() {
                     let _ = Logger::log_action(
                         &mut conn,
                         user.user_id,
@@ -3369,7 +3371,7 @@ pub async fn generate_backup(
         }
         Err(e) => {
             // Log the command failure
-            if let Ok(mut conn) = get_pooled_connection() {
+            if let Ok(mut conn) = DieselRepo::new().get_conn() {
                 let _ = Logger::log_action(
                     &mut conn,
                     user.user_id,
@@ -3403,7 +3405,7 @@ pub fn show_logs(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         return Ok(Template::render("access_denied", context));
     }
 
-    let connection = &mut get_pooled_connection().map_err(|e| {
+    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
         eprintln!("Database connection error in show_logs: {}", e);
         Redirect::to(uri!(admin_dashboard))
     })?;
@@ -3446,7 +3448,7 @@ pub fn show_entity_logs(
         return Ok(Template::render("access_denied", context));
     }
 
-    let connection = &mut get_pooled_connection().map_err(|e| {
+    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
         eprintln!("Database connection error in show_entity_logs: {}", e);
         Redirect::to(uri!(show_logs))
     })?;
@@ -3486,7 +3488,7 @@ pub async fn export_logs(
         return Err(Redirect::to(uri!(show_logs)));
     }
 
-    let connection = &mut get_pooled_connection().map_err(|e| {
+    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
         eprintln!("Database connection error in export_logs: {}", e);
         Redirect::to(uri!(show_logs))
     })?;
@@ -3551,7 +3553,7 @@ pub fn export_entity_logs(
         return Err(Redirect::to(uri!(show_logs)));
     }
 
-    let mut connection = match get_connection() {
+    let mut connection = match DieselRepo::new().get_conn() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
@@ -3577,7 +3579,7 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
         return Err(Redirect::to(uri!(show_logs)));
     }
 
-    let mut connection = match get_connection() {
+    let mut connection = match DieselRepo::new().get_conn() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
@@ -3635,7 +3637,7 @@ pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         return Ok(Template::render("access_denied", context));
     }
 
-    let mut connection = match get_connection() {
+    let mut connection = match DieselRepo::new().get_conn() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);

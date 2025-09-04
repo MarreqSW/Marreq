@@ -15,7 +15,7 @@ use std::path;
 
 use crate::auth::*;
 use crate::cached_functions::*;
-use crate::repository::{get_connection_pooled_safe, get_pooled_connection, PooledConnectionWrapper};
+use crate::repository::{get_connection, get_pooled_connection, PooledConnectionWrapper};
 use crate::db_operations::*;
 use crate::generators::*;
 use crate::helper_functions::*;
@@ -33,7 +33,7 @@ use crate::repository::{
 
 /// Helper function to get a database connection with proper error handling
 fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Error>> {
-    get_connection_pooled_safe()
+    get_connection()
 }
 
 // --------------------------------
@@ -3551,7 +3551,7 @@ pub fn export_entity_logs(
         return Err(Redirect::to(uri!(show_logs)));
     }
 
-    let mut connection = match get_connection_pooled_safe() {
+    let mut connection = match get_connection() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
@@ -3577,7 +3577,7 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
         return Err(Redirect::to(uri!(show_logs)));
     }
 
-    let mut connection = match get_connection_pooled_safe() {
+    let mut connection = match get_connection() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
@@ -3635,7 +3635,7 @@ pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         return Ok(Template::render("access_denied", context));
     }
 
-    let mut connection = match get_connection_pooled_safe() {
+    let mut connection = match get_connection() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);

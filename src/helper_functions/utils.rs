@@ -23,7 +23,7 @@ pub fn generate_requirement_reference(category_id: i32, project_id: i32) -> Resu
     use crate::schema::categories;
     use crate::schema::requirements;
 
-    let mut connection = crate::repository::get_connection_pooled_safe()
+    let mut connection = crate::repository::get_connection()
         .unwrap_or_else(|_| panic!("Failed to get database connection"));
 
     let category = categories::table

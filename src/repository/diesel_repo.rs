@@ -92,12 +92,6 @@ pub fn get_pooled_connection_wrapper() -> Result<PooledConnectionWrapper, Box<dy
 
 /// Get a connection from the pool with proper error handling
 /// This function returns a pooled connection wrapper that can be used like a regular connection
-pub fn get_connection_pooled_safe() -> Result<PooledConnectionWrapper, Box<dyn std::error::Error>> {
-    get_pooled_connection_wrapper()
-}
-
-/// Get a connection from the pool (for use outside of Rocket handlers)
-/// This function now properly uses the pool instead of falling back to direct connections
 pub fn get_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Error>> {
     get_pooled_connection_wrapper()
 }

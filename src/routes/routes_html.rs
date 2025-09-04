@@ -15,6 +15,7 @@ use std::path;
 
 use crate::generators::*;
 use crate::helper_functions::*;
+use crate::auth::*;
 use crate::cached_functions::*;
 use crate::html::*;
 use crate::logger::Logger;
@@ -61,7 +62,7 @@ fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::s
 // --------------------------------
 
 fn render_login_error(err: AuthError) -> Template {
-    use crate::helper_functions::auth::AuthError;
+    use crate::auth::AuthError;
     let (title, msg) = match err {
         AuthError::InvalidCredentials => ("Login", "Invalid username or password".to_string()),
         AuthError::Verify(_)          => ("Login", "Password verification failed".to_string()),
@@ -75,7 +76,7 @@ fn render_login_error(err: AuthError) -> Template {
 }
 
 fn render_change_password_error(err: AuthError) -> Template {
-    use crate::helper_functions::auth::AuthError;
+    use crate::auth::AuthError;
     let (title, msg) = match err {
         AuthError::InvalidCredentials => ("Change Password", "Invalid current password".to_string()),
         AuthError::Verify(_)          => ("Change Password", "Password verification failed".to_string()),

@@ -1,5 +1,5 @@
 use rocket::http::{CookieJar, Cookie};
-use crate::db::get_connection_pooled_safe;
+use crate::repository::get_connection_pooled_safe;
 use crate::logger::Logger;
 
 /// Clear session cookies and log the logout event.

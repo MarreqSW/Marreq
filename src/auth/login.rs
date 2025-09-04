@@ -1,7 +1,7 @@
 use rocket::http::{Cookie, CookieJar};
 use super::errors::AuthError;
 use crate::models::*;
-use crate::db::get_connection_pooled_safe;
+use crate::repository::get_connection_pooled_safe;
 use crate::logger::Logger;
 use crate::repository::Repository;
 

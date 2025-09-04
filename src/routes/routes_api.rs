@@ -1,6 +1,5 @@
 use diesel::prelude::*;
 use rocket::serde::json::{json, Json, Value};
-use crate::helper_functions::*;
 use crate::models::*;
 use crate::repository::{DieselRepo, RequirementsRepository, TestsRepository, LookupRepository, UserRepository};
 
@@ -31,14 +30,14 @@ pub fn api_get_requirement() -> Result<Json<Vec<Requirement>>, rocket::http::Sta
 pub async fn api_post_requirement(
     new_req: Json<NewRequirement>,
 ) -> Result<Value, rocket::http::Status> {
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
     let ret_value = DieselRepo::new().insert_new_requirement(&new_req);
 
     if let Ok(val) = ret_value {
         // Log the requirement creation via API
         if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_req) {
             let _ = crate::logger::Logger::log_create(
-                connection,
+                connection.as_mut(),
                 0, // API user ID (system)
                 crate::models::EntityType::Requirement,
                 val,
@@ -61,7 +60,7 @@ pub async fn api_post_requirement(
 
 #[delete("/requirements/<ident>")]
 pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
     
     // Get the requirement details before deleting
     let requirement = DieselRepo::new()
@@ -100,7 +99,7 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
         // Log the requirement deletion via API
         if let Ok(old_values) = crate::logger::Logger::to_json_string(&requirement) {
             let _ = crate::logger::Logger::log_delete(
-                connection,
+                connection.as_mut(),
                 0, // API user ID (system)
                 crate::models::EntityType::Requirement,
                 ident,
@@ -126,11 +125,11 @@ pub fn api_get_requirement_by_id(
     ident: i32,
 ) -> Result<Json<Vec<Requirement>>, rocket::http::Status> {
     use crate::schema::requirements::dsl::*;
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
 
     let ret_val = requirements
         .filter(req_id.eq(ident))
-        .load::<Requirement>(connection)
+        .load::<Requirement>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", _err);
@@ -232,11 +231,11 @@ pub fn api_get_test() -> Result<Json<Vec<Test>>, rocket::http::Status> {
 #[get("/tests/<ident>")]
 pub fn api_get_test_by_id(ident: i32) -> Result<Json<Vec<Test>>, rocket::http::Status> {
     use crate::schema::tests::dsl::*;
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
 
     let ret_val = tests
         .filter(test_id.eq(ident))
-        .load::<Test>(connection)
+        .load::<Test>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", _err);
@@ -257,14 +256,14 @@ pub fn api_get_test_by_id(ident: i32) -> Result<Json<Vec<Test>>, rocket::http::S
 
 #[post("/tests", data = "<new_test>")]
 pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::http::Status> {
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
     let ret_value = DieselRepo::new().insert_test(&new_test);
 
     if let Ok(val) = ret_value {
         // Log the test creation via API
         if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_test) {
             let _ = crate::logger::Logger::log_create(
-                connection,
+                connection.as_mut(),
                 0, // API user ID (system)
                 crate::models::EntityType::Test,
                 val,
@@ -287,7 +286,7 @@ pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::htt
 
 #[delete("/tests/<ident>")]
 pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
     
     // Get the test details before deleting
     let test = DieselRepo::new()
@@ -314,7 +313,7 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
         // Log the test deletion via API
         if let Ok(old_values) = crate::logger::Logger::to_json_string(&test) {
             let _ = crate::logger::Logger::log_delete(
-                connection,
+                connection.as_mut(),
                 0, // API user ID (system)
                 crate::models::EntityType::Test,
                 ident,
@@ -357,11 +356,11 @@ pub fn api_get_users() -> Result<Json<Vec<User>>, rocket::http::Status> {
 #[get("/users/<ident>")]
 pub fn api_get_users_by_id(ident: i32) -> Result<Json<Vec<User>>, rocket::http::Status> {
     use crate::schema::users::dsl::*;
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
 
     let ret_val = users
         .filter(user_id.eq(ident))
-        .load::<User>(connection)
+        .load::<User>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", _err);
@@ -382,14 +381,14 @@ pub fn api_get_users_by_id(ident: i32) -> Result<Json<Vec<User>>, rocket::http::
 
 #[post("/users", data = "<new_user>")]
 pub async fn api_post_user(new_user: Json<NewUser>) -> Result<Value, rocket::http::Status> {
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
     let ret_value = DieselRepo::new().insert_user(&new_user);
 
     if let Ok(val) = ret_value {
         // Log the user creation via API
         if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_user) {
             let _ = crate::logger::Logger::log_create(
-                connection,
+                connection.as_mut(),
                 0, // API user ID (system)
                 crate::models::EntityType::User,
                 val,
@@ -435,10 +434,10 @@ pub async fn api_delete_user_by_id(ident: i32) -> rocket::http::Status {
 #[get("/matrix")]
 pub fn api_get_matrix() -> Result<Json<Vec<Matrix>>, rocket::http::Status> {
     use crate::schema::matrix::dsl::*;
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
 
     let ret_val = matrix
-        .load::<Matrix>(connection)
+        .load::<Matrix>(connection.as_mut())
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", _err);
@@ -469,14 +468,14 @@ pub fn api_get_category_by_id(ident: i32) -> Result<Json<Category>, rocket::http
 
 #[post("/categories", data = "<new_category>")]
 pub async fn api_post_category(new_category: Json<NewCategory>) -> Result<Value, rocket::http::Status> {
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
     let ret_value = DieselRepo::new().insert_new_category(&new_category);
 
     if let Ok(val) = ret_value {
         // Log the category creation via API
         if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_category) {
             let _ = crate::logger::Logger::log_create(
-                connection,
+                connection.as_mut(),
                 0, // API user ID (system)
                 crate::models::EntityType::Category,
                 val,
@@ -521,7 +520,7 @@ pub async fn api_put_category(ident: i32, category: Json<NewCategory>) -> Result
 
 #[delete("/categories/<ident>")]
 pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
     
     // Get the category details before deleting
     let category = DieselRepo::new()
@@ -541,7 +540,7 @@ pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
             // Log the category deletion via API
             if let Ok(old_values) = crate::logger::Logger::to_json_string(&category) {
                 let _ = crate::logger::Logger::log_delete(
-                    connection,
+                    connection.as_mut(),
                     0, // API user ID (system)
                     crate::models::EntityType::Category,
                     ident,
@@ -599,14 +598,14 @@ pub fn api_get_applicability_by_id(ident: i32) -> Result<Json<Applicability>, ro
 
 #[post("/applicability", data = "<new_applicability>")]
 pub async fn api_post_applicability(new_applicability: Json<NewApplicability>) -> Result<Value, rocket::http::Status> {
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
     let ret_value = DieselRepo::new().insert_new_applicability(&new_applicability);
 
     if let Ok(val) = ret_value {
         // Log the applicability creation via API
         if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_applicability) {
             let _ = crate::logger::Logger::log_create(
-                connection,
+                connection.as_mut(),
                 0, // API user ID (system)
                 crate::models::EntityType::Applicability,
                 val,
@@ -651,7 +650,7 @@ pub async fn api_put_applicability(ident: i32, applicability: Json<NewApplicabil
 
 #[delete("/applicability/<ident>")]
 pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status {
-    let connection = &mut establish_connection();
+    let mut connection = DieselRepo::new().get_conn().expect("Failed to get database connection");
     
     // Get the applicability details before deleting
     let applicability = DieselRepo::new()
@@ -671,7 +670,7 @@ pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status 
             // Log the applicability deletion via API
             if let Ok(old_values) = crate::logger::Logger::to_json_string(&applicability) {
                 let _ = crate::logger::Logger::log_delete(
-                    connection,
+                    connection.as_mut(),
                     0, // API user ID (system)
                     crate::models::EntityType::Applicability,
                     ident,

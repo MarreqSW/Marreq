@@ -4,6 +4,9 @@
 *.rs.bk
 *.pdb
 
+# Code Coverage artifacts
+coverage_html/
+
 # IDE and editor files
 .vscode/
 .idea/

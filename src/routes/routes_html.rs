@@ -1,26 +1,31 @@
+use chrono;
 use diesel::prelude::*;
+use regex::Regex;
 use rocket::form::Form;
 use rocket::fs::NamedFile;
 use rocket::http::ContentType;
+use rocket::http::{Cookie, CookieJar};
 use rocket::response::status::NotFound;
 use rocket::response::{content, Redirect};
 use rocket::serde::json::json;
-use rocket::http::{Cookie, CookieJar};
-use regex::Regex;
-use chrono;
 
 use rocket_dyn_templates::Template;
 
 use std::path;
+use chrono::Utc;
 
+use crate::auth::*;
+use crate::cached_functions::*;
+use crate::repository::PooledConnectionWrapper;
 use crate::generators::*;
 use crate::helper_functions::*;
-use crate::cached_functions::*;
 use crate::html::*;
 use crate::logger::Logger;
 use crate::models::*;
-use crate::db_operations::*;
-use crate::db::{get_pooled_connection, get_connection_pooled_safe, PooledConnectionWrapper};
+use crate::repository::{
+    DieselRepo, LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
+    TestsRepository, UserRepository,
+};
 
 // --------------------------------
 // Helper Functions
@@ -28,7 +33,9 @@ use crate::db::{get_pooled_connection, get_connection_pooled_safe, PooledConnect
 
 /// Helper function to get a database connection with proper error handling
 fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Error>> {
-    get_connection_pooled_safe()
+    DieselRepo::new()
+        .get_conn()
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
 }
 
 // --------------------------------
@@ -36,16 +43,18 @@ fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Er
 // --------------------------------
 
 pub fn require_auth(cookies: &CookieJar<'_>) -> Result<User, Redirect> {
-    match is_authenticated(cookies) {
+    let repo = DieselRepo::new();
+
+    match is_authenticated(&repo, cookies) {
         Some(user) => Ok(user),
-        None => Err(Redirect::to(uri!(login_page)))
+        None => Err(Redirect::to(uri!(login_page))),
     }
 }
 
 fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::serde::json::Value {
     let projects = get_projects_for_nav_cached().unwrap_or_default();
     let selected_project_id = get_selected_project_id(cookies);
-    
+
     json!({
         "user": user,
         "projects": projects,
@@ -57,12 +66,48 @@ fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::s
 // Authentication Routes
 // --------------------------------
 
+fn render_login_error(err: AuthError) -> Template {
+    let (title, msg) = match err {
+        AuthError::InvalidCredentials => ("Login", "Invalid username or password".to_string()),
+        AuthError::Verify(_) => ("Login", "Password verification failed".to_string()),
+        AuthError::Db(e) => ("Error", format!("Database error: {e}")),
+        AuthError::Audit(_) => ("Login", "Logged in but failed to audit login".to_string()),
+        AuthError::NotLoggedIn => ("Login", "Not logged in".to_string()),
+        AuthError::InvalidSession => ("Login", "Invalid session".to_string()),
+        AuthError::Repo(_) => ("Login", "Internal server error".to_string()),
+    };
+
+    Template::render("login", json!({ "title": title, "error": msg }))
+}
+
+fn render_change_password_error(err: AuthError) -> Template {
+    let (title, msg) = match err {
+        AuthError::InvalidCredentials => {
+            ("Change Password", "Invalid current password".to_string())
+        }
+        AuthError::Verify(_) => (
+            "Change Password",
+            "Password verification failed".to_string(),
+        ),
+        AuthError::Db(e) => ("Error", format!("Database error: {e}")),
+        AuthError::NotLoggedIn => ("Change Password", "Not logged in".to_string()),
+        AuthError::InvalidSession => ("Change Password", "Invalid session".to_string()),
+        AuthError::Audit(_) => (
+            "Change Password",
+            "Failed to log password change".to_string(),
+        ),
+        AuthError::Repo(_) => ("Change Password", "Internal server error".to_string()),
+    };
+
+    Template::render("change_password", json!({ "title": title, "error": msg }))
+}
+
 #[get("/login")]
 pub fn login_page() -> Template {
     // Get projects for navigation (even on login page)
     let projects = get_projects_for_nav_cached().unwrap_or_default();
     let selected_project_id: Option<i32> = None; // No project selected on login page
-    
+
     let ctx = json!({
         "title": "Login",
         "projects": projects,
@@ -72,91 +117,32 @@ pub fn login_page() -> Template {
 }
 
 #[post("/login", data = "<login_form>")]
-pub fn login(login_form: Form<LoginForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Template> {
-    match authenticate_user(&login_form.username, &login_form.password) {
-        Ok(Some(user)) => {
-            // Set session cookie
-            cookies.add_private(Cookie::new("user_id", user.user_id.to_string()));
-            cookies.add_private(Cookie::new("username", user.user_username.clone()));
-            cookies.add_private(Cookie::new("user_name", user.user_name.clone()));
-            
-            // Log successful login
-            let mut conn = get_db_connection().map_err(|e| {
-                eprintln!("Database connection error: {}", e);
-                Template::render("error", json!({"error": "Database connection failed"}))
-            })?;
-            let _ = Logger::log_login(
-                &mut conn,
-                user.user_id,
-                None,
-            );
-            
-            Ok(Redirect::to(uri!(index)))
-        }
-        Ok(None) => {
-            let ctx = json!({
-                "title": "Login",
-                "error": "Invalid username or password"
-            });
-            Err(Template::render("login", ctx))
-        }
-        Err(_e) => {
-            let ctx = json!({
-                "title": "Login",
-                "error": format!("Authentication error: {}", _e)
-            });
-            Err(Template::render("login", ctx))
-        }
+pub fn login(
+    login_form: rocket::form::Form<LoginForm>,
+    cookies: &rocket::http::CookieJar<'_>,
+) -> Result<rocket::response::Redirect, Template> {
+    let repo = DieselRepo::new();
+
+    let form = login_form.into_inner();
+
+    match login_user(&repo, &form, cookies) {
+        Ok(()) => Ok(rocket::response::Redirect::to(uri!(index))),
+        Err(err) => Err(render_login_error(err)),
     }
 }
 
 #[get("/logout")]
 pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
-    // Get user info from cookies before clearing them
-    let user_id = cookies.get_private("user_id")
-        .and_then(|cookie| cookie.value().parse::<i32>().ok());
-    let username = cookies.get_private("username")
-        .map(|cookie| cookie.value().to_string());
-    
-    // Clear all session cookies
-    let mut user_id_cookie = Cookie::new("user_id", "");
-    user_id_cookie.set_max_age(time::Duration::seconds(0));
-    user_id_cookie.set_path("/");
-    
-    let mut username_cookie = Cookie::new("username", "");
-    username_cookie.set_max_age(time::Duration::seconds(0));
-    username_cookie.set_path("/");
-    
-    let mut user_name_cookie = Cookie::new("user_name", "");
-    user_name_cookie.set_max_age(time::Duration::seconds(0));
-    user_name_cookie.set_path("/");
-    
-    // Add the expired cookies to force removal
-    cookies.add_private(user_id_cookie);
-    cookies.add_private(username_cookie);
-    cookies.add_private(user_name_cookie);
-    
-    // Log logout if we have user info
-    if let Some(uid) = user_id {
-        if let Ok(mut conn) = get_db_connection() {
-            let _description = username.map(|name| format!("User {} logged out", name));
-            let _ = Logger::log_logout(
-                &mut conn,
-                uid,
-                None,
-            );
-        }
-    }
-    
+    logout_user(cookies);
     Redirect::to(uri!(login_page))
 }
 
 #[get("/change_password")]
 pub fn change_password_page() -> Template {
     // Get projects for navigation
-    let projects = get_projects_for_nav().unwrap_or_default();
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
     let selected_project_id: Option<i32> = None; // No project selected on change password page
-    
+
     let ctx = json!({
         "title": "Change Password",
         "projects": projects,
@@ -166,62 +152,43 @@ pub fn change_password_page() -> Template {
 }
 
 #[post("/change_password", data = "<password_form>")]
-pub fn change_password(password_form: Form<ChangePasswordForm>, cookies: &CookieJar<'_>) -> Result<Template, Template> {
-    // Get user ID from cookie
-    let user_id_cookie = cookies.get_private("user_id");
-    let user_id = match user_id_cookie {
-        Some(cookie) => match cookie.value().parse::<i32>() {
-            Ok(id) => id,
-            Err(_) => {
-                let ctx = json!({
-                    "title": "Change Password",
-                    "error": "Invalid session"
-                });
-                return Err(Template::render("change_password", ctx));
-            }
-        },
-        None => {
-            let ctx = json!({
-                "title": "Change Password",
-                "error": "Not logged in"
-            });
-            return Err(Template::render("change_password", ctx));
-        }
-    };
-    
+pub fn change_password(
+    password_form: Form<ChangePasswordForm>,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Template> {
     // Validate passwords
     if password_form.new_password != password_form.confirm_password {
         let ctx = json!({
             "title": "Change Password",
-            "error": "New passwords do not match"
+            "error": "New passwords do not match",
         });
         return Err(Template::render("change_password", ctx));
     }
-    
+
     if password_form.new_password.len() < 8 {
         let ctx = json!({
             "title": "Change Password",
-            "error": "New password must be at least 8 characters long"
+            "error": "New password must be at least 8 characters long",
         });
         return Err(Template::render("change_password", ctx));
     }
-    
-    // Change password
-    match change_user_password(user_id, &password_form.current_password, &password_form.new_password) {
-        Ok(_) => {
+
+    let mut repo = DieselRepo::new();
+
+    match change_user_password(
+        &mut repo,
+        &password_form.current_password,
+        &password_form.new_password,
+        cookies,
+    ) {
+        Ok(()) => {
             let ctx = json!({
                 "title": "Change Password",
-                "success": "Password changed successfully"
+                "success": "Password changed successfully",
             });
             Ok(Template::render("change_password", ctx))
         }
-        Err(_e) => {
-            let ctx = json!({
-                "title": "Change Password",
-                "error": _e
-            });
-            Err(Template::render("change_password", ctx))
-        }
+        Err(err) => Err(render_change_password_error(err)),
     }
 }
 
@@ -229,13 +196,28 @@ pub fn change_password(password_form: Form<ChangePasswordForm>, cookies: &Cookie
 // Html Routes (TBD)
 // --------------------------------
 
+/// Get project by ID with safe fallback using the repository.
+pub fn get_project_by_id_pooled_safe(project_id: i32) -> Project {
+    DieselRepo::new()
+        .get_project_by_id(project_id)
+        .unwrap_or(Project {
+            project_id: 0,
+            project_name: "Unknown Project".to_string(),
+            project_description: Some("Unknown project".to_string()),
+            project_creation_date: Some(Utc::now().naive_utc()),
+            project_update_date: Some(Utc::now().naive_utc()),
+            project_status: Some("Unknown".to_string()),
+            project_owner_id: Some(0),
+        })
+}
+
 #[get("/")]
 pub fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
-    
+
     // Get selected project name
     let selected_project_name = if let Some(project_id) = selected_project_id {
         let project = get_project_by_id_pooled_safe(project_id);
@@ -249,34 +231,44 @@ pub fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
             "Requirements Manager".to_string()
         }
     };
-    
+
     // Get counts for requirements and tests
     let requirements_count = if let Some(project_id) = selected_project_id {
-        get_requirements_by_project(project_id).map(|reqs| reqs.len()).unwrap_or(0)
+        get_requirements_by_project_cached(project_id)
+            .map(|reqs| reqs.len())
+            .unwrap_or(0)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_requirements_by_project(first_project.project_id).map(|reqs| reqs.len()).unwrap_or(0)
+            get_requirements_by_project_cached(first_project.project_id)
+                .map(|reqs| reqs.len())
+                .unwrap_or(0)
         } else {
-            get_requirements_all_cached().map(|reqs| reqs.len()).unwrap_or(0)
+            get_requirements_all_cached()
+                .map(|reqs| reqs.len())
+                .unwrap_or(0)
         }
     };
-    
+
     let tests_count = if let Some(project_id) = selected_project_id {
-        get_tests_by_project(project_id).map(|tests| tests.len()).unwrap_or(0)
+        get_tests_by_project_cached(project_id)
+            .map(|tests| tests.len())
+            .unwrap_or(0)
     } else {
         // Default to the first project if no project is selected
         let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_tests_by_project(first_project.project_id).map(|tests| tests.len()).unwrap_or(0)
+            get_tests_by_project_cached(first_project.project_id)
+                .map(|tests| tests.len())
+                .unwrap_or(0)
         } else {
             get_tests_all_cached().map(|tests| tests.len()).unwrap_or(0)
         }
     };
-    
-    let projects = get_projects_for_nav().unwrap_or_default();
-    
+
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
+
     let ctx = json!({
         "user": user,
         "projects": projects,
@@ -286,7 +278,7 @@ pub fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         "requirements_count": requirements_count,
         "tests_count": tests_count
     });
-    
+
     Ok(Template::render("index", ctx))
 }
 
@@ -299,15 +291,15 @@ pub fn show_requirements(
 ) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     let mut ctx = build_context_with_projects(user, cookies);
-    
+
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
-    
+
     let requirements = if let Some(project_id) = selected_project_id {
         get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_requirements_by_project_cached(first_project.project_id)
         } else {
@@ -318,7 +310,8 @@ pub fn show_requirements(
     match requirements {
         Ok(req) => {
             // Apply filters
-            let filtered_requirements = filter_requirements(req, status_filter, verification_filter, category_filter);
+            let filtered_requirements =
+                filter_requirements(req, status_filter, verification_filter, category_filter);
             let requirements_decorate = decorate_requirements(filtered_requirements);
             ctx["requirements"] = json!(requirements_decorate);
         }
@@ -333,27 +326,27 @@ pub fn show_requirements(
         get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_verification_by_project_cached(first_project.project_id)
         } else {
             get_verification_all_cached()
         }
     };
-    
+
     // Get categories filtered by selected project
     let categories = if let Some(project_id) = selected_project_id {
         get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_categories_by_project_cached(first_project.project_id)
         } else {
             get_categories_all_cached()
         }
     };
-    
+
     ctx["statuses"] = json!(statuses);
     ctx["verifications"] = json!(verifications.unwrap_or_default());
     ctx["categories"] = json!(categories.unwrap_or_default());
@@ -367,7 +360,7 @@ pub fn show_requirements(
 #[get("/requirements/<req_id>")]
 pub fn show_requirement_id(req_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Use the safe function that returns a Result
     match get_requirement_by_id_cached_safe(req_id) {
         Ok(req) => {
@@ -384,7 +377,7 @@ pub fn show_requirement_id(req_id: i32, cookies: &CookieJar<'_>) -> Result<Templ
             });
 
             Ok(Template::render("requirement_by_id", ctx))
-        },
+        }
         Err(error_msg) => {
             // Render error template instead of panicking
             let ctx = json!({
@@ -393,7 +386,7 @@ pub fn show_requirement_id(req_id: i32, cookies: &CookieJar<'_>) -> Result<Templ
                 "details": error_msg,
                 "user": user
             });
-            
+
             Ok(Template::render("error", ctx))
         }
     }
@@ -443,7 +436,7 @@ pub fn show_user_id(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, R
 #[get("/edit_user/<user_id>")]
 pub fn edit_user(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let current_user = require_auth(cookies)?;
-    let user = get_user_by_id(user_id);
+    let user = get_user_by_id_cached(user_id);
     #[cfg(debug_assertions)]
     println!("USer: {:?}", user);
     let ctx = json!({
@@ -456,26 +449,33 @@ pub fn edit_user(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redi
 }
 
 #[post("/edit_user/<user_id>", data = "<user_form>")]
-pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+pub fn post_edit_user(
+    user_id: i32,
+    user_form: Form<UpdateUser>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
     let current_user = require_auth(cookies)?;
-    
+
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(edit_user(user_id)))
     })?;
-    
+
     // Get the old values before updating
-    let old_user = get_user_by_id(user_id);
-    
+    let old_user = get_user_by_id_cached(user_id);
+
     // Create an UpdateUser with the user_id
     let mut user_data = user_form.into_inner();
     user_data.user_id = Some(user_id);
-    
+
     // Update the user in the database
-    match update_user_without_password(connection, &user_data) {
+    match DieselRepo::new().update_user_without_password(&user_data) {
         Ok(_) => {
             // Log the user update
-            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_user), Logger::to_json_string(&user_data)) {
+            if let (Ok(old_values), Ok(new_values)) = (
+                Logger::to_json_string(&old_user),
+                Logger::to_json_string(&user_data),
+            ) {
                 let _ = Logger::log_update(
                     connection,
                     current_user.user_id,
@@ -488,12 +488,12 @@ pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &Cooki
                     None,
                 );
             }
-            
+
             // Invalidate cache for the updated user
             invalidate_user_cache_complete(user_id);
-            
+
             Ok(Redirect::to(uri!(show_user_id(user_id))))
-        },
+        }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -505,9 +505,9 @@ pub fn post_edit_user(user_id: i32, user_form: Form<UpdateUser>, cookies: &Cooki
 #[get("/edit_requirement/<req_id>")]
 pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Use the safe function that returns a Result
-    let req = match get_requirement_by_id_safe(req_id) {
+    let req = match get_requirement_by_id_cached_safe(req_id) {
         Ok(req) => req,
         Err(error_msg) => {
             // Render error template instead of panicking
@@ -517,11 +517,11 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
                 "details": error_msg,
                 "user": user
             });
-            
+
             return Ok(Template::render("error", ctx));
         }
     };
-    
+
     let req_decorate = decorate_requirements(vec![req.clone()]);
     let req_decorate_json = json!(req_decorate[0]);
 
@@ -534,307 +534,7 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
         get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            get_categories_by_project_cached(first_project.project_id)
-        } else {
-            get_categories_all_cached()
-        }
-    };
-    let categories_json = json!(categories.unwrap_or_default());
-
-    // Get parent requirements filtered by project
-    let parents = if let Some(project_id) = selected_project_id {
-        get_requirements_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            get_requirements_by_project(first_project.project_id)
-        } else {
-            get_requirements_all_cached()
-        }
-    };
-    let parents_json = json!(parents.unwrap_or_default());
-
-    let users = get_users_all().unwrap_or_default();
-    let users_json = json!(users);
-
-    // Get verification types filtered by project
-    let verification_types = if let Some(project_id) = selected_project_id {
-        get_verification_by_project_cached(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            get_verification_by_project_cached(first_project.project_id)
-        } else {
-            get_verification_all_cached()
-        }
-    };
-    let verification_json = json!(verification_types.unwrap_or_default());
-
-    // Get applicability filtered by project
-    let applicability = if let Some(project_id) = selected_project_id {
-        get_applicability_by_project_cached(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            get_applicability_by_project_cached(first_project.project_id)
-        } else {
-            get_applicability_all_cached()
-        }
-    };
-    let applicability_json = json!(applicability.unwrap_or_default());
-
-    let ctx = json!({
-        "requirements": req_decorate_json, 
-        "req_author_id": req.req_author,
-        "req_reviewer_id": req.req_reviewer,
-        "req_category_id": req.req_category,
-        "req_applicability_id": req.req_applicability,
-        "req_current_status_id": req.req_current_status,
-        "req_verification_id": req.req_verification,
-        "req_parent_id": req.req_parent,
-        "categories": categories_json, 
-        "status": status_json, 
-        "parent": parents_json, 
-        "users": users_json, 
-        "verification": verification_json, 
-        "applicability": applicability_json,
-        "user": user
-    });
-
-    #[cfg(debug_assertions)]
-    println!("Requirement: {:#}", ctx);
-    Ok(Template::render("edit_requirement_by_id", ctx))
-}
-
-#[post("/edit_requirement/<req_id>", data = "<new_req>")]
-pub fn post_edit_requirement(req_id: i32, new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
-    let my_id = new_req.req_id.unwrap_or(0);
-
-    let requirement_data = new_req.into_inner();
-    
-    // Server-side validation: Check if reference follows general format
-    if !requirement_data.req_reference.is_empty() {
-        // Check general format: REQ-TAG-NUMBER
-        let general_pattern = match Regex::new(r"^REQ-[A-Z]+-\d+$") {
-            Ok(pattern) => pattern,
-            Err(_) => {
-                eprintln!("Failed to compile regex pattern");
-                return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
-            }
-        };
-        if !general_pattern.is_match(&requirement_data.req_reference) {
-            // Invalid reference format - redirect back to form with error
-            return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
-        }
-        
-        // Get the category to check if reference matches
-        let category = get_category_by_id(requirement_data.req_category);
-        let expected_prefix = format!("REQ-{}-", category.cat_tag);
-        
-        // Only warn if reference doesn't match category, but don't block the update
-        if !requirement_data.req_reference.starts_with(&expected_prefix) {
-            // Log a warning but continue with the update
-            println!("Warning: Reference '{}' doesn't match category tag '{}' for requirement {}", 
-                     requirement_data.req_reference, category.cat_tag, req_id);
-        }
-    }
-
-    let connection = &mut get_db_connection().map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(post_edit_requirement(req_id)))
-    })?;
-    
-    // Get the old values before updating
-    let old_requirement = match get_requirement_by_id_safe(req_id) {
-        Ok(req) => req,
-        Err(_) => {
-            // Requirement not found - redirect back to requirements list
-            return Err(Redirect::to(uri!(show_requirements(None::<i32>, None::<i32>, None::<i32>))));
-        }
-    };
-    
-    edit_requirement(connection, &requirement_data)
-        .map_err(|e| {
-            eprintln!("Error editing requirement: {:?}", e);
-            Redirect::to(uri!(show_requirements(None::<i32>, None::<i32>, None::<i32>)))
-        })?;
-
-    // Log the requirement update
-    if let (Ok(old_values), Ok(new_values)) = (
-                    Logger::to_json_string(&old_requirement),
-            Logger::to_json_string(&requirement_data)
-    ) {
-        let _ = Logger::log_update(
-            connection,
-            user.user_id,
-            EntityType::Requirement,
-            req_id,
-            Some(requirement_data.project_id),
-            Some(old_values),
-            Some(new_values),
-            Some(format!("Updated requirement: {}", requirement_data.req_title)),
-            None,
-        );
-    }
-
-    // Invalidate cache for the updated requirement
-    invalidate_requirement_cache_complete(req_id);
-
-    Ok(Redirect::to(uri!(show_requirement_id(my_id))))
-}
-
-#[delete("/delete_requirement/<req_id>")]
-pub fn delete_requirement_route(req_id: i32, cookies: &CookieJar<'_>) -> Result<Redirect, rocket::http::Status> {
-    let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
-    let mut connection = match get_db_connection() {
-        Ok(conn) => conn,
-        Err(e) => {
-            eprintln!("Database connection error: {}", e);
-            return Err(rocket::http::Status::InternalServerError);
-        }
-    };
-    
-    // Get the requirement details before deleting
-    let requirement = match get_requirement_by_id_safe(req_id) {
-        Ok(req) => req,
-        Err(_) => {
-            // Requirement not found
-            return Err(rocket::http::Status::NotFound);
-        }
-    };
-    
-    // Check if user can delete this requirement
-    // Only allow deletion if status is Draft (1) or Proposal (2), or if user is admin
-    if requirement.req_current_status > 2 && !user.is_admin {
-        return Err(rocket::http::Status::Forbidden);
-    }
-    
-    let result = delete_requirement(connection.as_mut(), &req_id);
-    match result {
-        Ok(success) => {
-            if success {
-                // Log the requirement deletion
-                if let Ok(old_values) = Logger::to_json_string(&requirement) {
-                    let _ = Logger::log_delete(
-                        connection.as_mut(),
-                        user.user_id,
-                        EntityType::Requirement,
-                        req_id,
-                        Some(requirement.project_id),
-                        Some(old_values),
-                        Some(format!("Deleted requirement: {}", requirement.req_title)),
-                        None,
-                    );
-                }
-                
-                // Invalidate related caches - including project-level caches
-                crate::cached_functions::invalidate_requirement_cache_complete(req_id);
-                
-                // Also invalidate project-specific caches for the requirement's project
-                crate::cached_functions::invalidate_project_cache_complete(requirement.project_id);
-                
-                // Invalidate the requirements list cache
-                crate::cache::get_cache().remove(crate::cache::keys::REQUIREMENTS_ALL);
-                
-                // Redirect to requirements list page
-                Ok(Redirect::to(uri!(show_requirements(None::<i32>, None::<i32>, None::<i32>))))
-            } else {
-                // Requirement was not found or not deleted
-                Err(rocket::http::Status::NotFound)
-            }
-        },
-        Err(_e) => {
-            #[cfg(debug_assertions)]
-            println!("Error deleting requirement: {:?}", _e);
-            Err(rocket::http::Status::InternalServerError)
-        }
-    }
-}
-
-#[delete("/delete_test/<test_id>")]
-pub fn delete_test_route(test_id: i32, cookies: &CookieJar<'_>) -> Result<Redirect, rocket::http::Status> {
-    let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
-    let connection = &mut get_db_connection().map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        rocket::http::Status::InternalServerError
-    })?;
-    
-    // Get the test details before deleting
-    let test = match get_test_by_id_safe(test_id) {
-        Ok(t) => t,
-        Err(_) => {
-            // Test not found
-            return Err(rocket::http::Status::NotFound);
-        }
-    };
-    
-    // Check if user can delete this test
-    // Only allow deletion if status is Draft (1) or Proposal (2), or if user is admin
-    if test.test_status > 2 && !user.is_admin {
-        return Err(rocket::http::Status::Forbidden);
-    }
-    
-    let result = delete_test(connection, &test_id);
-    match result {
-        Ok(success) => {
-            if success {
-                // Log the test deletion
-                if let Ok(old_values) = Logger::to_json_string(&test) {
-                    let _ = Logger::log_delete(
-                        connection,
-                        user.user_id,
-                        EntityType::Test,
-                        test_id,
-                        Some(test.project_id),
-                        Some(old_values),
-                        Some(format!("Deleted test: {}", test.test_name)),
-                        None,
-                    );
-                }
-                
-                // Invalidate related caches - including project-level caches
-                crate::cached_functions::invalidate_test_cache_complete(test_id);
-                
-                // Also invalidate project-specific caches for the test's project
-                crate::cached_functions::invalidate_project_cache_complete(test.project_id);
-                
-                // Invalidate the tests list cache
-                crate::cache::get_cache().remove(crate::cache::keys::TESTS_ALL);
-                
-                // Redirect to tests list page
-                Ok(Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>))))
-            } else {
-                // Test was not found or not deleted
-                Err(rocket::http::Status::NotFound)
-            }
-        },
-        Err(_e) => {
-            #[cfg(debug_assertions)]
-            println!("Error deleting test: {:?}", _e);
-            Err(rocket::http::Status::InternalServerError)
-        }
-    }
-}
-
-#[get("/new_requirement")]
-pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
-    let status = get_status_all_cached().unwrap_or_default();
-    let status_json = json!(status);
-
-    // Get selected project ID and filter categories accordingly
-    let selected_project_id = get_selected_project_id(cookies);
-    let categories = if let Some(project_id) = selected_project_id {
-        get_categories_by_project_cached(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_categories_by_project_cached(first_project.project_id)
         } else {
@@ -865,7 +565,7 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_verification_by_project_cached(first_project.project_id)
         } else {
@@ -879,7 +579,7 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         get_applicability_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_applicability_by_project_cached(first_project.project_id)
         } else {
@@ -889,11 +589,343 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let applicability_json = json!(applicability.unwrap_or_default());
 
     let ctx = json!({
-        "categories": categories_json, 
-        "status": status_json, 
-        "parent": parents_json, 
-        "users": users_json, 
-        "verification": verification_json, 
+        "requirements": req_decorate_json,
+        "req_author_id": req.req_author,
+        "req_reviewer_id": req.req_reviewer,
+        "req_category_id": req.req_category,
+        "req_applicability_id": req.req_applicability,
+        "req_current_status_id": req.req_current_status,
+        "req_verification_id": req.req_verification,
+        "req_parent_id": req.req_parent,
+        "categories": categories_json,
+        "status": status_json,
+        "parent": parents_json,
+        "users": users_json,
+        "verification": verification_json,
+        "applicability": applicability_json,
+        "user": user
+    });
+
+    #[cfg(debug_assertions)]
+    println!("Requirement: {:#}", ctx);
+    Ok(Template::render("edit_requirement_by_id", ctx))
+}
+
+#[post("/edit_requirement/<req_id>", data = "<new_req>")]
+pub fn post_edit_requirement(
+    req_id: i32,
+    new_req: Form<NewRequirement>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
+    let user = require_auth(cookies)?;
+    let my_id = new_req.req_id.unwrap_or(0);
+
+    let requirement_data = new_req.into_inner();
+
+    // Server-side validation: Check if reference follows general format
+    if !requirement_data.req_reference.is_empty() {
+        // Check general format: REQ-TAG-NUMBER
+        let general_pattern = match Regex::new(r"^REQ-[A-Z]+-\d+$") {
+            Ok(pattern) => pattern,
+            Err(_) => {
+                eprintln!("Failed to compile regex pattern");
+                return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
+            }
+        };
+        if !general_pattern.is_match(&requirement_data.req_reference) {
+            // Invalid reference format - redirect back to form with error
+            return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
+        }
+
+        // Get the category to check if reference matches
+        let category = get_category_by_id_cached(requirement_data.req_category);
+        let expected_prefix = format!("REQ-{}-", category.cat_tag);
+
+        // Only warn if reference doesn't match category, but don't block the update
+        if !requirement_data.req_reference.starts_with(&expected_prefix) {
+            // Log a warning but continue with the update
+            println!(
+                "Warning: Reference '{}' doesn't match category tag '{}' for requirement {}",
+                requirement_data.req_reference, category.cat_tag, req_id
+            );
+        }
+    }
+
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(post_edit_requirement(req_id)))
+    })?;
+
+    // Get the old values before updating
+    let old_requirement = match get_requirement_by_id_cached_safe(req_id) {
+        Ok(req) => req,
+        Err(_) => {
+            // Requirement not found - redirect back to requirements list
+            return Err(Redirect::to(uri!(show_requirements(
+                None::<i32>,
+                None::<i32>,
+                None::<i32>
+            ))));
+        }
+    };
+
+    DieselRepo::new()
+        .edit_requirement(&requirement_data)
+        .map_err(|e| {
+            eprintln!("Error editing requirement: {:?}", e);
+            Redirect::to(uri!(show_requirements(
+                None::<i32>,
+                None::<i32>,
+                None::<i32>
+            )))
+        })?;
+
+    // Log the requirement update
+    if let (Ok(old_values), Ok(new_values)) = (
+        Logger::to_json_string(&old_requirement),
+        Logger::to_json_string(&requirement_data),
+    ) {
+        let _ = Logger::log_update(
+            connection,
+            user.user_id,
+            EntityType::Requirement,
+            req_id,
+            Some(requirement_data.project_id),
+            Some(old_values),
+            Some(new_values),
+            Some(format!(
+                "Updated requirement: {}",
+                requirement_data.req_title
+            )),
+            None,
+        );
+    }
+
+    // Invalidate cache for the updated requirement
+    invalidate_requirement_cache_complete(req_id);
+
+    Ok(Redirect::to(uri!(show_requirement_id(my_id))))
+}
+
+#[delete("/delete_requirement/<req_id>")]
+pub fn delete_requirement_route(
+    req_id: i32,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, rocket::http::Status> {
+    let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
+    let mut connection = match get_db_connection() {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            return Err(rocket::http::Status::InternalServerError);
+        }
+    };
+
+    // Get the requirement details before deleting
+    let requirement = match get_requirement_by_id_cached_safe(req_id) {
+        Ok(req) => req,
+        Err(_) => {
+            // Requirement not found
+            return Err(rocket::http::Status::NotFound);
+        }
+    };
+
+    // Check if user can delete this requirement
+    // Only allow deletion if status is Draft (1) or Proposal (2), or if user is admin
+    if requirement.req_current_status > 2 && !user.is_admin {
+        return Err(rocket::http::Status::Forbidden);
+    }
+
+    let result = DieselRepo::new().delete_requirement(req_id);
+    match result {
+        Ok(success) => {
+            if success {
+                // Log the requirement deletion
+                if let Ok(old_values) = Logger::to_json_string(&requirement) {
+                    let _ = Logger::log_delete(
+                        connection.as_mut(),
+                        user.user_id,
+                        EntityType::Requirement,
+                        req_id,
+                        Some(requirement.project_id),
+                        Some(old_values),
+                        Some(format!("Deleted requirement: {}", requirement.req_title)),
+                        None,
+                    );
+                }
+
+                // Invalidate related caches - including project-level caches
+                crate::cached_functions::invalidate_requirement_cache_complete(req_id);
+
+                // Also invalidate project-specific caches for the requirement's project
+                crate::cached_functions::invalidate_project_cache_complete(requirement.project_id);
+
+                // Invalidate the requirements list cache
+                crate::cache::get_cache().remove(crate::cache::keys::REQUIREMENTS_ALL);
+
+                // Redirect to requirements list page
+                Ok(Redirect::to(uri!(show_requirements(
+                    None::<i32>,
+                    None::<i32>,
+                    None::<i32>
+                ))))
+            } else {
+                // Requirement was not found or not deleted
+                Err(rocket::http::Status::NotFound)
+            }
+        }
+        Err(_e) => {
+            #[cfg(debug_assertions)]
+            println!("Error deleting requirement: {:?}", _e);
+            Err(rocket::http::Status::InternalServerError)
+        }
+    }
+}
+
+#[delete("/delete_test/<test_id>")]
+pub fn delete_test_route(
+    test_id: i32,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, rocket::http::Status> {
+    let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
+    let connection = &mut get_db_connection().map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        rocket::http::Status::InternalServerError
+    })?;
+
+    // Get the test details before deleting
+    let test = match get_test_by_id_cached_safe(test_id) {
+        Ok(t) => t,
+        Err(_) => {
+            // Test not found
+            return Err(rocket::http::Status::NotFound);
+        }
+    };
+
+    // Check if user can delete this test
+    // Only allow deletion if status is Draft (1) or Proposal (2), or if user is admin
+    if test.test_status > 2 && !user.is_admin {
+        return Err(rocket::http::Status::Forbidden);
+    }
+
+    let result = DieselRepo::new().delete_test(test_id);
+    match result {
+        Ok(success) => {
+            if success {
+                // Log the test deletion
+                if let Ok(old_values) = Logger::to_json_string(&test) {
+                    let _ = Logger::log_delete(
+                        connection,
+                        user.user_id,
+                        EntityType::Test,
+                        test_id,
+                        Some(test.project_id),
+                        Some(old_values),
+                        Some(format!("Deleted test: {}", test.test_name)),
+                        None,
+                    );
+                }
+
+                // Invalidate related caches - including project-level caches
+                crate::cached_functions::invalidate_test_cache_complete(test_id);
+
+                // Also invalidate project-specific caches for the test's project
+                crate::cached_functions::invalidate_project_cache_complete(test.project_id);
+
+                // Invalidate the tests list cache
+                crate::cache::get_cache().remove(crate::cache::keys::TESTS_ALL);
+
+                // Redirect to tests list page
+                Ok(Redirect::to(uri!(show_tests(
+                    None::<i32>,
+                    None::<i32>,
+                    None::<i32>
+                ))))
+            } else {
+                // Test was not found or not deleted
+                Err(rocket::http::Status::NotFound)
+            }
+        }
+        Err(_e) => {
+            #[cfg(debug_assertions)]
+            println!("Error deleting test: {:?}", _e);
+            Err(rocket::http::Status::InternalServerError)
+        }
+    }
+}
+
+#[get("/new_requirement")]
+pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let status = get_status_all_cached().unwrap_or_default();
+    let status_json = json!(status);
+
+    // Get selected project ID and filter categories accordingly
+    let selected_project_id = get_selected_project_id(cookies);
+    let categories = if let Some(project_id) = selected_project_id {
+        get_categories_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_categories_by_project_cached(first_project.project_id)
+        } else {
+            get_categories_all_cached()
+        }
+    };
+    let categories_json = json!(categories.unwrap_or_default());
+
+    // Get parent requirements filtered by project
+    let parents = if let Some(project_id) = selected_project_id {
+        get_requirements_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_requirements_by_project_cached(first_project.project_id)
+        } else {
+            get_requirements_all_cached()
+        }
+    };
+    let parents_json = json!(parents.unwrap_or_default());
+
+    let users = get_users_all_cached().unwrap_or_default();
+    let users_json = json!(users);
+
+    // Get verification types filtered by project
+    let verification_types = if let Some(project_id) = selected_project_id {
+        get_verification_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_verification_by_project_cached(first_project.project_id)
+        } else {
+            get_verification_all_cached()
+        }
+    };
+    let verification_json = json!(verification_types.unwrap_or_default());
+
+    // Get applicability filtered by project
+    let applicability = if let Some(project_id) = selected_project_id {
+        get_applicability_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_applicability_by_project_cached(first_project.project_id)
+        } else {
+            get_applicability_all_cached()
+        }
+    };
+    let applicability_json = json!(applicability.unwrap_or_default());
+
+    let ctx = json!({
+        "categories": categories_json,
+        "status": status_json,
+        "parent": parents_json,
+        "users": users_json,
+        "verification": verification_json,
         "applicability": applicability_json,
         "selected_project_id": selected_project_id.unwrap_or(1),
         "req_title": "",
@@ -908,26 +940,29 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 }
 
 #[post("/new_requirement", data = "<new_req>")]
-pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+pub fn post_requirement(
+    new_req: Form<NewRequirement>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_requirement))
     })?;
-    
+
     let mut requirement_data = new_req.into_inner();
-    
+
     // Server-side validation: Check if reference matches category
     if !requirement_data.req_reference.is_empty() {
         // Get the category to validate the reference
-        let category = get_category_by_id(requirement_data.req_category);
+        let category = get_category_by_id_cached(requirement_data.req_category);
         let expected_prefix = format!("REQ-{}-", category.cat_tag);
-        
+
         if !requirement_data.req_reference.starts_with(&expected_prefix) {
             // Invalid reference format - redirect back to form with error
             return Err(Redirect::to(uri!(new_requirement)));
         }
-        
+
         // Validate format: REQ-TAG-NUMBER
         let reference_pattern = format!("^REQ-{}-\\d+$", category.cat_tag);
         let regex = match Regex::new(&reference_pattern) {
@@ -942,28 +977,37 @@ pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) 
             return Err(Redirect::to(uri!(new_requirement)));
         }
     }
-    
+
     // Generate automatic reference code if not provided
     if requirement_data.req_reference.is_empty() {
-        match generate_requirement_reference(requirement_data.req_category, requirement_data.project_id) {
+        match generate_requirement_reference(
+            requirement_data.req_category,
+            requirement_data.project_id,
+        ) {
             Ok(reference) => {
                 requirement_data.req_reference = reference;
             }
             Err(_e) => {
                 // If generation fails, use a fallback reference
-                requirement_data.req_reference = format!("REQ-UNKNOWN-{}", chrono::Utc::now().timestamp());
+                requirement_data.req_reference =
+                    format!("REQ-UNKNOWN-{}", chrono::Utc::now().timestamp());
             }
         }
     }
-    
-    let my_id = insert_new_requirement(connection, &requirement_data)
+
+    let my_id = DieselRepo::new()
+        .insert_new_requirement(&requirement_data)
         .map_err(|e| {
             eprintln!("Error inserting new requirement: {:?}", e);
-            Redirect::to(uri!(show_requirements(None::<i32>, None::<i32>, None::<i32>)))
+            Redirect::to(uri!(show_requirements(
+                None::<i32>,
+                None::<i32>,
+                None::<i32>
+            )))
         })?;
 
     // Log the requirement creation
-            if let Ok(new_values) = Logger::to_json_string(&requirement_data) {
+    if let Ok(new_values) = Logger::to_json_string(&requirement_data) {
         let _ = Logger::log_create(
             connection,
             user.user_id,
@@ -971,7 +1015,10 @@ pub fn post_requirement(new_req: Form<NewRequirement>, cookies: &CookieJar<'_>) 
             my_id,
             Some(requirement_data.project_id),
             Some(new_values),
-            Some(format!("Created requirement: {}", requirement_data.req_title)),
+            Some(format!(
+                "Created requirement: {}",
+                requirement_data.req_title
+            )),
             None,
         );
     }
@@ -991,25 +1038,30 @@ pub fn show_tests(
 ) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     let mut ctx = build_context_with_projects(user, cookies);
-    
+
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
-    
+
     let tests = if let Some(project_id) = selected_project_id {
         get_tests_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_tests_by_project_cached(first_project.project_id)
         } else {
             get_tests_all_cached()
         }
     };
-    
+
     let tests_data = tests.unwrap_or_default();
     // Apply filters
-    let filtered_tests = filter_tests(tests_data, status_filter, verification_filter, category_filter);
+    let filtered_tests = filter_tests(
+        tests_data,
+        status_filter,
+        verification_filter,
+        category_filter,
+    );
     let tests_decorate = decorate_tests(filtered_tests);
     ctx["tests"] = json!(tests_decorate);
 
@@ -1019,27 +1071,27 @@ pub fn show_tests(
         get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_verification_by_project_cached(first_project.project_id)
         } else {
             get_verification_all_cached()
         }
     };
-    
+
     // Get categories filtered by selected project
     let categories = if let Some(project_id) = selected_project_id {
         get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_categories_by_project_cached(first_project.project_id)
         } else {
             get_categories_all_cached()
         }
     };
-    
+
     ctx["statuses"] = json!(statuses);
     ctx["verifications"] = json!(verifications.unwrap_or_default());
     ctx["categories"] = json!(categories.unwrap_or_default());
@@ -1053,16 +1105,17 @@ pub fn show_tests(
 #[get("/tests/<test_id_param>")]
 pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Use the safe function that returns a Result
     match get_test_by_id_cached_safe(test_id_param) {
         Ok(test) => {
             let test_decorate = decorate_tests(vec![test]);
-            
+
             // Get linked requirements for this test
-            let linked_requirements = get_requirements_for_test(test_id_param).unwrap_or_default();
+            let linked_requirements =
+                get_requirements_for_test_cached(test_id_param).unwrap_or_default();
             let linked_requirements_json = json!(linked_requirements);
-            
+
             let decorated_test = &test_decorate[0];
             let ctx = json!({
                 "test_id": decorated_test.test_id,
@@ -1077,7 +1130,7 @@ pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Templ
             });
 
             Ok(Template::render("test_by_id", ctx))
-        },
+        }
         Err(error_msg) => {
             // Render error template instead of panicking
             let ctx = json!({
@@ -1086,7 +1139,7 @@ pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Templ
                 "details": error_msg,
                 "user": user
             });
-            
+
             Ok(Template::render("error", ctx))
         }
     }
@@ -1104,7 +1157,7 @@ pub fn new_test(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_categories_by_project_cached(first_project.project_id)
         } else {
@@ -1118,7 +1171,7 @@ pub fn new_test(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         get_tests_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_tests_by_project_cached(first_project.project_id)
         } else {
@@ -1135,7 +1188,7 @@ pub fn new_test(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_requirements_by_project_cached(first_project.project_id)
         } else {
@@ -1145,10 +1198,10 @@ pub fn new_test(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let requirements_json = json!(requirements.unwrap_or_default());
 
     let ctx = json!({
-        "categories": categories_json, 
-        "status": status_json, 
-        "parents": parents_json, 
-        "users": users_json, 
+        "categories": categories_json,
+        "status": status_json,
+        "parents": parents_json,
+        "users": users_json,
         "requirements": requirements_json,
         "user": user
     });
@@ -1159,7 +1212,7 @@ pub fn new_test(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 #[get("/edit_test/<test_id>")]
 pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let test = get_test_by_id(test_id);
+    let test = get_test_by_id_cached(test_id);
     let test_decorate = decorate_tests(vec![test]);
     let test_decorate_json = json!(test_decorate[0]);
 
@@ -1172,7 +1225,7 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
         get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_categories_by_project_cached(first_project.project_id)
         } else {
@@ -1186,7 +1239,7 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
         get_tests_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_tests_by_project_cached(first_project.project_id)
         } else {
@@ -1203,7 +1256,7 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
         get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_verification_by_project_cached(first_project.project_id)
         } else {
@@ -1225,7 +1278,7 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
         get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             get_requirements_by_project_cached(first_project.project_id)
         } else {
@@ -1235,11 +1288,11 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
     let all_requirements_json = json!(all_requirements.unwrap_or_default());
 
     let ctx = json!({
-        "tests": test_decorate_json, 
-        "categories": categories_json, 
-        "status": status_json, 
-        "parent": parents_json, 
-        "users": users_json, 
+        "tests": test_decorate_json,
+        "categories": categories_json,
+        "status": status_json,
+        "parent": parents_json,
+        "users": users_json,
         "verification": verification_json,
         "linked_requirements": linked_requirements_json,
         "linked_req_ids": linked_req_ids_json,
@@ -1254,16 +1307,20 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
 
 #[allow(unused_variables)]
 #[post("/edit_test/<test_id>", data = "<edit_test_form>")]
-pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+pub fn post_edit_test(
+    test_id: i32,
+    edit_test_form: Form<EditTestForm>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(get_edit_test(test_id)))
     })?;
-    
+
     // Get the old values before updating
-    let old_test = get_test_by_id(test_id);
-    
+    let old_test = get_test_by_id_cached(test_id);
+
     // First, update the test details
     let new_test = NewTest {
         test_id: Some(edit_test_form.test_id),
@@ -1274,15 +1331,17 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
         test_parent: edit_test_form.test_parent,
         project_id: edit_test_form.project_id,
     };
-    
-    edit_test(connection, &new_test)
-        .map_err(|e| {
-            eprintln!("Error editing test: {:?}", e);
-            Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
-        })?;
-    
+
+    DieselRepo::new().edit_test(&new_test).map_err(|e| {
+        eprintln!("Error editing test: {:?}", e);
+        Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+    })?;
+
     // Log the test update
-            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_test), Logger::to_json_string(&new_test)) {
+    if let (Ok(old_values), Ok(new_values)) = (
+        Logger::to_json_string(&old_test),
+        Logger::to_json_string(&new_test),
+    ) {
         let _ = Logger::log_update(
             connection,
             user.user_id,
@@ -1295,9 +1354,10 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
             None,
         );
     }
-    
+
     // Then, update the requirement links
-    update_test_requirement_links(connection, edit_test_form.test_id, &edit_test_form.linked_requirements)
+    DieselRepo::new()
+        .update_test_requirement_links(edit_test_form.test_id, &edit_test_form.linked_requirements)
         .map_err(|e| {
             eprintln!("Error updating test requirement links: {:?}", e);
             Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
@@ -1310,7 +1370,10 @@ pub fn post_edit_test(test_id: i32, edit_test_form: Form<EditTestForm>, cookies:
 }
 
 #[post("/new_test", data = "<new_test>")]
-pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+pub fn post_test(
+    new_test: Form<NewTestForm>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
@@ -1325,14 +1388,13 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
         test_parent: new_test.test_parent,
         project_id: new_test.project_id,
     };
-    let my_id = insert_new_test(connection, &my_new_test)
-        .map_err(|e| {
-            eprintln!("Error inserting new test: {:?}", e);
-            Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
-        })?;
+    let my_id = DieselRepo::new().insert_test(&my_new_test).map_err(|e| {
+        eprintln!("Error inserting new test: {:?}", e);
+        Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+    })?;
 
     // Log the test creation
-            if let Ok(new_values) = Logger::to_json_string(&my_new_test) {
+    if let Ok(new_values) = Logger::to_json_string(&my_new_test) {
         let _ = Logger::log_create(
             connection,
             user.user_id,
@@ -1353,7 +1415,8 @@ pub fn post_test(new_test: Form<NewTestForm>, cookies: &CookieJar<'_>) -> Result
             matrix_test_id: my_id,
             project_id: new_test.project_id,
         };
-        insert_new_matrix_item(connection, &matrix_item)
+        DieselRepo::new()
+            .insert_new_matrix_item(&matrix_item)
             .map_err(|e| {
                 eprintln!("Error inserting matrix item: {:?}", e);
                 Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
@@ -1404,7 +1467,12 @@ pub fn show_status() -> content::RawHtml<String> {
 }
 
 #[get("/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
-pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: Option<String>, test_status_filter: Option<i32>) -> Result<Template, Redirect> {
+pub fn get_matrix(
+    cookies: &CookieJar<'_>,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
+    test_status_filter: Option<i32>,
+) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     use crate::schema::matrix::dsl::*;
     use crate::schema::requirements::dsl::*;
@@ -1420,7 +1488,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
-    
+
     let mut all_reqs = if let Some(selected_pid) = selected_project_id {
         requirements
             .filter(crate::schema::requirements::project_id.eq(selected_pid))
@@ -1470,7 +1538,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
     // Apply sorting
     let sort_by = sort_by.unwrap_or_else(|| "req_id".to_string());
     let sort_order = sort_order.unwrap_or_else(|| "asc".to_string());
-    
+
     // Check if sorting by test column
     if sort_by.starts_with("test_") {
         // Extract test ID from sort_by (e.g., "test_1" -> test_id = 1)
@@ -1550,7 +1618,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
 
     for req in &all_reqs {
         let mut req_matrix = Vec::new();
-        
+
         for test in &all_tests {
             let test_present: i64 = matrix
                 .filter(matrix_req_id.eq(req.req_id))
@@ -1572,7 +1640,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
                 }));
             }
         }
-        
+
         requirements_with_matrix.push(json!({
             "req_id": req.req_id,
             "req_title": req.req_title,
@@ -1584,7 +1652,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
     // Prepare tests with status names
     let mut tests_with_status = Vec::new();
     for test in all_tests {
-        let test_status_name = get_status_name_by_id(test.test_status);
+        let test_status_name = get_status_name_by_id_cached(test.test_status);
         tests_with_status.push(json!({
             "test_id": test.test_id,
             "test_name": test.test_name,
@@ -1613,7 +1681,7 @@ pub fn get_matrix(cookies: &CookieJar<'_>, sort_by: Option<String>, sort_order: 
 #[get("/matrix.xls")]
 pub async fn get_matrix_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, NamedFile), Redirect> {
     let _user = require_auth(cookies)?;
-    
+
     match excel::create_matrix_workbook(cookies) {
         Ok(_) => {
             let path_to_file = path::Path::new("target/matrix.xls");
@@ -1642,7 +1710,9 @@ pub async fn get_matrix_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, Nam
 }
 
 #[get("/requirements.xls")]
-pub async fn get_requirements_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, NamedFile), Redirect> {
+pub async fn get_requirements_xls(
+    cookies: &CookieJar<'_>,
+) -> Result<(ContentType, NamedFile), Redirect> {
     let _user = require_auth(cookies)?;
     let _file = excel::create_requirements_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/requirements.xls");
@@ -1700,17 +1770,17 @@ pub fn new_user(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 pub fn show_categories(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     let mut ctx = build_context_with_projects(user, cookies);
-    
+
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
-    
+
     let categories = if let Some(project_id) = selected_project_id {
-        get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
             get_categories_all_cached()
         }
@@ -1731,18 +1801,21 @@ pub fn show_categories(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 #[get("/new_category")]
 pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Get projects and selected project
     let projects = get_projects_for_nav_cached().unwrap_or_default();
     let mut selected_project_id = get_selected_project_id(cookies);
-    
+
     // If no project is selected and there are projects available, select the first one
     if selected_project_id.is_none() && !projects.is_empty() {
         selected_project_id = Some(projects[0].project_id);
         // Set the cookie for the selected project
-        cookies.add(Cookie::new("selected_project_id", projects[0].project_id.to_string()));
+        cookies.add(Cookie::new(
+            "selected_project_id",
+            projects[0].project_id.to_string(),
+        ));
     }
-    
+
     let ctx = json!({
         "user": user,
         "projects": projects,
@@ -1752,21 +1825,24 @@ pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 }
 
 #[post("/new_category", data = "<new_category>")]
-pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+pub fn post_category(
+    new_category: Form<NewCategory>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if project_id is provided
     if new_category.project_id == 0 {
         return Ok(Redirect::to(uri!(new_category)));
     }
-    
+
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_category))
     })?;
-    
+
     let category_data = new_category.into_inner();
-    let result = insert_new_category(connection, &category_data);
+    let result = DieselRepo::new().insert_new_category(&category_data);
     match result {
         Ok(category_id) => {
             // Log the category creation
@@ -1782,12 +1858,12 @@ pub fn post_category(new_category: Form<NewCategory>, cookies: &CookieJar<'_>) -
                     None,
                 );
             }
-            
+
             // Invalidate cache for the new category
             invalidate_category_cache_complete(category_id);
-            
+
             Ok(Redirect::to(uri!(show_categories)))
-        },
+        }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -1808,24 +1884,31 @@ pub fn get_edit_category(cat_id: i32, cookies: &CookieJar<'_>) -> Result<Templat
 }
 
 #[post("/edit_category/<cat_id>", data = "<category>")]
-pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+pub fn post_edit_category(
+    cat_id: i32,
+    category: Form<NewCategory>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(get_edit_category(cat_id)))
     })?;
-    
+
     // Get the old values before updating
-    let old_category = get_category_by_id(cat_id);
-    
+    let old_category = get_category_by_id_cached(cat_id);
+
     let mut category_with_id = category.into_inner();
     category_with_id.cat_id = Some(cat_id);
-    
-    let result = edit_category(connection, &category_with_id);
+
+    let result = DieselRepo::new().edit_category(&category_with_id);
     match result {
         Ok(_) => {
             // Log the category update
-            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_category), Logger::to_json_string(&category_with_id)) {
+            if let (Ok(old_values), Ok(new_values)) = (
+                Logger::to_json_string(&old_category),
+                Logger::to_json_string(&category_with_id),
+            ) {
                 let _ = Logger::log_update(
                     connection,
                     user.user_id,
@@ -1838,12 +1921,12 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
                     None,
                 );
             }
-            
+
             // Invalidate cache for the updated category
             invalidate_category_cache_complete(cat_id);
-            
+
             Ok(Redirect::to(uri!(show_categories)))
-        },
+        }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -1853,7 +1936,10 @@ pub fn post_edit_category(cat_id: i32, category: Form<NewCategory>, cookies: &Co
 }
 
 #[delete("/delete_category/<cat_id>")]
-pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
+pub fn delete_category_route(
+    cat_id: i32,
+    cookies: &CookieJar<'_>,
+) -> Result<rocket::http::Status, Redirect> {
     let user = require_auth(cookies)?;
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
@@ -1862,11 +1948,11 @@ pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<roc
             return Err(Redirect::to(uri!(show_categories)));
         }
     };
-    
+
     // Get the category details before deleting
-    let category = get_category_by_id(cat_id);
-    
-    let result = delete_category(connection.as_mut(), &cat_id);
+    let category = get_category_by_id_cached(cat_id);
+
+    let result = DieselRepo::new().delete_category(cat_id);
     match result {
         Ok(_) => {
             // Log the category deletion
@@ -1882,12 +1968,12 @@ pub fn delete_category_route(cat_id: i32, cookies: &CookieJar<'_>) -> Result<roc
                     None,
                 );
             }
-            
+
             // Invalidate cache for the deleted category
             invalidate_category_cache_complete(cat_id);
-            
+
             Ok(rocket::http::Status::Ok)
-        },
+        }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -1903,18 +1989,19 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_user))
     })?;
-    
+
     // Hash the password before inserting
     let mut user_with_hashed_password = new_user.into_inner();
     match hash_password(&user_with_hashed_password.user_password) {
         Ok(hashed_password) => {
             user_with_hashed_password.user_password = hashed_password;
-            let my_id = insert_new_user(connection, &user_with_hashed_password)
+            let my_id = DieselRepo::new()
+                .insert_user(&user_with_hashed_password)
                 .map_err(|e| {
                     eprintln!("Error inserting new user: {:?}", e);
                     Redirect::to(uri!(new_user))
                 })?;
-            
+
             // Log the user creation
             if let Ok(new_values) = Logger::to_json_string(&user_with_hashed_password) {
                 let _ = Logger::log_create(
@@ -1924,14 +2011,17 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
                     my_id,
                     None,
                     Some(new_values),
-                    Some(format!("Created user: {}", user_with_hashed_password.user_username)),
+                    Some(format!(
+                        "Created user: {}",
+                        user_with_hashed_password.user_username
+                    )),
                     None,
                 );
             }
-            
+
             // Invalidate cache for the new user
             invalidate_user_cache_complete(my_id);
-            
+
             Ok(Redirect::to(uri!(show_user_id(my_id))))
         }
         Err(_e) => {
@@ -1946,19 +2036,19 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
 pub fn show_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     let mut ctx = build_context_with_projects(user, cookies);
-    
+
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
-    
+
     let applicability = if let Some(project_id) = selected_project_id {
-        get_applicability_by_project(project_id)
+        get_applicability_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            get_applicability_by_project(first_project.project_id)
+            get_applicability_by_project_cached(first_project.project_id)
         } else {
-            get_applicability_all()
+            get_applicability_all_cached()
         }
     };
 
@@ -1977,18 +2067,21 @@ pub fn show_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect>
 #[get("/new_applicability")]
 pub fn new_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Get projects and selected project
-    let projects = get_projects_for_nav().unwrap_or_default();
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
     let mut selected_project_id = get_selected_project_id(cookies);
-    
+
     // If no project is selected and there are projects available, select the first one
     if selected_project_id.is_none() && !projects.is_empty() {
         selected_project_id = Some(projects[0].project_id);
         // Set the cookie for the selected project
-        cookies.add(Cookie::new("selected_project_id", projects[0].project_id.to_string()));
+        cookies.add(Cookie::new(
+            "selected_project_id",
+            projects[0].project_id.to_string(),
+        ));
     }
-    
+
     let ctx = json!({
         "user": user,
         "projects": projects,
@@ -1998,21 +2091,24 @@ pub fn new_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> 
 }
 
 #[post("/new_applicability", data = "<new_applicability>")]
-pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+pub fn post_applicability(
+    new_applicability: Form<NewApplicability>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if project_id is provided
     if new_applicability.project_id == 0 {
         return Ok(Redirect::to(uri!(new_applicability)));
     }
-    
+
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_applicability))
     })?;
-    
+
     let applicability_data = new_applicability.into_inner();
-    let result = insert_new_applicability(connection, &applicability_data);
+    let result = DieselRepo::new().insert_new_applicability(&applicability_data);
     match result {
         Ok(applicability_id) => {
             // Log the applicability creation
@@ -2024,16 +2120,19 @@ pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &C
                     applicability_id,
                     Some(applicability_data.project_id),
                     Some(new_values),
-                    Some(format!("Created applicability: {}", applicability_data.app_title)),
+                    Some(format!(
+                        "Created applicability: {}",
+                        applicability_data.app_title
+                    )),
                     None,
                 );
             }
-            
+
             // Invalidate cache for the new applicability
             invalidate_applicability_cache_complete(applicability_id);
-            
+
             Ok(Redirect::to(uri!(show_applicability)))
-        },
+        }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -2045,7 +2144,7 @@ pub fn post_applicability(new_applicability: Form<NewApplicability>, cookies: &C
 #[get("/edit_applicability/<app_id>")]
 pub fn get_edit_applicability(app_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let applicability = get_applicability_by_id(app_id);
+    let applicability = get_applicability_by_id_cached(app_id);
     let ctx = json!({
         "applicability": applicability,
         "user": user
@@ -2054,24 +2153,31 @@ pub fn get_edit_applicability(app_id: i32, cookies: &CookieJar<'_>) -> Result<Te
 }
 
 #[post("/edit_applicability/<app_id>", data = "<applicability>")]
-pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+pub fn post_edit_applicability(
+    app_id: i32,
+    applicability: Form<NewApplicability>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(get_edit_applicability(app_id)))
     })?;
-    
+
     // Get the old values before updating
-    let old_applicability = get_applicability_by_id(app_id);
-    
+    let old_applicability = get_applicability_by_id_cached(app_id);
+
     let mut applicability_with_id = applicability.into_inner();
     applicability_with_id.app_id = Some(app_id);
-    
-    let result = edit_applicability(connection, &applicability_with_id);
+
+    let result = DieselRepo::new().edit_applicability(&applicability_with_id);
     match result {
         Ok(_) => {
             // Log the applicability update
-            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_applicability), Logger::to_json_string(&applicability_with_id)) {
+            if let (Ok(old_values), Ok(new_values)) = (
+                Logger::to_json_string(&old_applicability),
+                Logger::to_json_string(&applicability_with_id),
+            ) {
                 let _ = Logger::log_update(
                     connection,
                     user.user_id,
@@ -2080,12 +2186,15 @@ pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability
                     Some(applicability_with_id.project_id),
                     Some(old_values),
                     Some(new_values),
-                    Some(format!("Updated applicability: {}", applicability_with_id.app_title)),
+                    Some(format!(
+                        "Updated applicability: {}",
+                        applicability_with_id.app_title
+                    )),
                     None,
                 );
             }
             Ok(Redirect::to(uri!(show_applicability)))
-        },
+        }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -2095,7 +2204,10 @@ pub fn post_edit_applicability(app_id: i32, applicability: Form<NewApplicability
 }
 
 #[delete("/delete_applicability/<app_id>")]
-pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
+pub fn delete_applicability_route(
+    app_id: i32,
+    cookies: &CookieJar<'_>,
+) -> Result<rocket::http::Status, Redirect> {
     let user = require_auth(cookies)?;
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
@@ -2104,11 +2216,11 @@ pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Resul
             return Err(Redirect::to(uri!(show_applicability)));
         }
     };
-    
+
     // Get the applicability details before deleting
-    let applicability = get_applicability_by_id(app_id);
-    
-    let result = delete_applicability(connection.as_mut(), &app_id);
+    let applicability = get_applicability_by_id_cached(app_id);
+
+    let result = DieselRepo::new().delete_applicability(app_id);
     match result {
         Ok(_) => {
             // Log the applicability deletion
@@ -2120,16 +2232,19 @@ pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Resul
                     app_id,
                     Some(applicability.project_id),
                     Some(old_values),
-                    Some(format!("Deleted applicability: {}", applicability.app_title)),
+                    Some(format!(
+                        "Deleted applicability: {}",
+                        applicability.app_title
+                    )),
                     None,
                 );
             }
-            
+
             // Invalidate cache for the deleted applicability
             crate::cached_functions::invalidate_applicability_cache_complete(app_id);
-            
+
             Ok(rocket::http::Status::Ok)
-        },
+        }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -2141,14 +2256,15 @@ pub fn delete_applicability_route(app_id: i32, cookies: &CookieJar<'_>) -> Resul
 #[get("/requirements/tree")]
 pub fn show_requirements_tree(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Get all requirements
     let all_requirements = get_requirements_all_cached().unwrap_or_default();
-    
+
     // Build tree structure
     let mut tree_data = Vec::new();
-    let mut children_map: std::collections::HashMap<i32, Vec<&Requirement>> = std::collections::HashMap::new();
-    
+    let mut children_map: std::collections::HashMap<i32, Vec<&Requirement>> =
+        std::collections::HashMap::new();
+
     // Group requirements by parent
     for req in &all_requirements {
         if req.req_parent == 0 {
@@ -2156,13 +2272,16 @@ pub fn show_requirements_tree(cookies: &CookieJar<'_>) -> Result<Template, Redir
             tree_data.push(req);
         } else {
             // Child requirements
-            children_map.entry(req.req_parent).or_insert_with(Vec::new).push(req);
+            children_map
+                .entry(req.req_parent)
+                .or_insert_with(Vec::new)
+                .push(req);
         }
     }
-    
+
     // Sort requirements by ID
     tree_data.sort_by(|a, b| a.req_id.cmp(&b.req_id));
-    
+
     // Create tree structure with children
     let mut tree_structure = Vec::new();
     for root_req in tree_data {
@@ -2170,136 +2289,144 @@ pub fn show_requirements_tree(cookies: &CookieJar<'_>) -> Result<Template, Redir
             "requirement": root_req,
             "children": Vec::<serde_json::Value>::new()
         });
-        
+
         // Add children if any
         if let Some(children) = children_map.get(&root_req.req_id) {
             let mut sorted_children = children.clone();
             sorted_children.sort_by(|a, b| a.req_id.cmp(&b.req_id));
-            
+
             let children_json: Vec<serde_json::Value> = sorted_children
                 .iter()
-                .map(|child| json!({
-                    "requirement": child,
-                    "children": Vec::<serde_json::Value>::new()
-                }))
+                .map(|child| {
+                    json!({
+                        "requirement": child,
+                        "children": Vec::<serde_json::Value>::new()
+                    })
+                })
                 .collect();
-            
+
             node["children"] = json!(children_json);
         }
-        
+
         tree_structure.push(node);
     }
-    
+
     let ctx = json!({
         "tree_data": tree_structure,
         "total_requirements": all_requirements.len(),
         "user": user
     });
-    
+
     Ok(Template::render("requirements_tree", ctx))
 }
 
 #[get("/reports")]
 pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
-    
+
     // Get project-specific data for metrics
-    let (all_requirements, all_tests, all_categories) = if let Some(project_id) = selected_project_id {
-        let requirements = get_requirements_by_project(project_id).unwrap_or_default();
-        let tests = get_tests_by_project(project_id).unwrap_or_default();
-        let categories = get_categories_by_project(project_id).unwrap_or_default();
+    let (all_requirements, all_tests, all_categories) = if let Some(project_id) =
+        selected_project_id
+    {
+        let requirements = get_requirements_by_project_cached(project_id).unwrap_or_default();
+        let tests = get_tests_by_project_cached(project_id).unwrap_or_default();
+        let categories = get_categories_by_project_cached(project_id).unwrap_or_default();
         (requirements, tests, categories)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            let requirements = get_requirements_by_project(first_project.project_id).unwrap_or_default();
-            let tests = get_tests_by_project(first_project.project_id).unwrap_or_default();
-            let categories = get_categories_by_project(first_project.project_id).unwrap_or_default();
+            let requirements =
+                get_requirements_by_project_cached(first_project.project_id).unwrap_or_default();
+            let tests = get_tests_by_project_cached(first_project.project_id).unwrap_or_default();
+            let categories =
+                get_categories_by_project_cached(first_project.project_id).unwrap_or_default();
             (requirements, tests, categories)
         } else {
             // Fallback to all data if no projects exist
-            (get_requirements_all_cached().unwrap_or_default(), 
-             get_tests_all_cached().unwrap_or_default(), 
-             get_categories_all_cached().unwrap_or_default())
+            (
+                get_requirements_all_cached().unwrap_or_default(),
+                get_tests_all_cached().unwrap_or_default(),
+                get_categories_all_cached().unwrap_or_default(),
+            )
         }
     };
-    
+
     let all_users = get_users_all_cached().unwrap_or_default();
     let all_statuses = get_status_all_cached().unwrap_or_default();
-    
+
     // Calculate metrics
     let total_requirements = all_requirements.len();
     let total_tests = all_tests.len();
     let total_categories = all_categories.len();
     let total_users = all_users.len();
-    
+
     // Requirements by status
     let mut requirements_by_status = std::collections::HashMap::new();
     for req in &all_requirements {
-        let status_name = get_status_name_by_id(req.req_current_status);
+        let status_name = get_status_name_by_id_cached(req.req_current_status);
         *requirements_by_status.entry(status_name).or_insert(0) += 1;
     }
-    
+
     // Tests by status
     let mut tests_by_status = std::collections::HashMap::new();
     for test in &all_tests {
-        let status_name = get_status_name_by_id(test.test_status);
+        let status_name = get_status_name_by_id_cached(test.test_status);
         *tests_by_status.entry(status_name).or_insert(0) += 1;
     }
-    
+
     // Requirements by category
     let mut requirements_by_category = std::collections::HashMap::new();
     for req in &all_requirements {
-        let category = get_category_by_id(req.req_category);
+        let category = get_category_by_id_cached(req.req_category);
         let category_name = category.cat_title;
         *requirements_by_category.entry(category_name).or_insert(0) += 1;
     }
-    
+
     // Coverage metrics
     let mut covered_requirements = 0;
     let mut total_links = 0;
     for req in &all_requirements {
-        let links = get_requirements_for_test(req.req_id).unwrap_or_default();
+        let links = get_requirements_for_test_cached(req.req_id).unwrap_or_default();
         if !links.is_empty() {
             covered_requirements += 1;
         }
         total_links += links.len();
     }
-    
+
     let coverage_percentage = if total_requirements > 0 {
         ((covered_requirements as f64 / total_requirements as f64) * 100.0 * 10.0).round() / 10.0
     } else {
         0.0
     };
-    
+
     let avg_tests_per_requirement = if total_requirements > 0 {
         ((total_links as f64 / total_requirements as f64) * 10.0).round() / 10.0
     } else {
         0.0
     };
-    
+
     // Recent activity (last 30 days)
     let now = chrono::Utc::now();
     let _thirty_days_ago = now - chrono::Duration::days(30);
-    
+
     let mut recent_requirements = 0;
     let mut recent_tests = 0;
-    
+
     for _req in &all_requirements {
         // For now, we'll use a placeholder since creation_date might not be available
         recent_requirements += 1; // Placeholder
     }
-    
+
     for _test in &all_tests {
         // Assuming test has creation date - you might need to add this field
         // For now, we'll use a placeholder
         recent_tests += 1; // Placeholder
     }
-    
+
     // Get selected project name for display
     let selected_project_name = if let Some(project_id) = selected_project_id {
         let project = get_project_by_id_pooled_safe(project_id);
@@ -2313,7 +2440,7 @@ pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
             "All Projects".to_string()
         }
     };
-    
+
     let ctx = json!({
         "user": user,
         "selected_project_name": selected_project_name,
@@ -2335,93 +2462,101 @@ pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         "all_statuses": all_statuses,
         "all_categories": all_categories
     });
-    
+
     Ok(Template::render("reports", ctx))
 }
 
 #[get("/reports/pdf")]
-pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
+pub fn generate_pdf_report(
+    cookies: &CookieJar<'_>,
+) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
     let _user = require_auth(cookies)?;
-    
+
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
-    
+
     // Get project-specific data for metrics
-    let (all_requirements, all_tests, all_categories) = if let Some(project_id) = selected_project_id {
-        let requirements = get_requirements_by_project(project_id).unwrap_or_default();
-        let tests = get_tests_by_project(project_id).unwrap_or_default();
-        let categories = get_categories_by_project(project_id).unwrap_or_default();
+    let (all_requirements, all_tests, all_categories) = if let Some(project_id) =
+        selected_project_id
+    {
+        let requirements = get_requirements_by_project_cached(project_id).unwrap_or_default();
+        let tests = get_tests_by_project_cached(project_id).unwrap_or_default();
+        let categories = get_categories_by_project_cached(project_id).unwrap_or_default();
         (requirements, tests, categories)
     } else {
         // Default to the first project if no project is selected
-        let projects = get_projects_all().unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            let requirements = get_requirements_by_project(first_project.project_id).unwrap_or_default();
-            let tests = get_tests_by_project(first_project.project_id).unwrap_or_default();
-            let categories = get_categories_by_project(first_project.project_id).unwrap_or_default();
+            let requirements =
+                get_requirements_by_project_cached(first_project.project_id).unwrap_or_default();
+            let tests = get_tests_by_project_cached(first_project.project_id).unwrap_or_default();
+            let categories =
+                get_categories_by_project_cached(first_project.project_id).unwrap_or_default();
             (requirements, tests, categories)
         } else {
             // Fallback to all data if no projects exist
-            (get_requirements_all_cached().unwrap_or_default(), 
-             get_tests_all_cached().unwrap_or_default(), 
-             get_categories_all_cached().unwrap_or_default())
+            (
+                get_requirements_all_cached().unwrap_or_default(),
+                get_tests_all_cached().unwrap_or_default(),
+                get_categories_all_cached().unwrap_or_default(),
+            )
         }
     };
-    
+
     let all_users = get_users_all_cached().unwrap_or_default();
     let _all_statuses = get_status_all_cached().unwrap_or_default();
-    
+
     // Calculate the same metrics
     let total_requirements = all_requirements.len();
     let total_tests = all_tests.len();
     let total_categories = all_categories.len();
     let total_users = all_users.len();
-    
+
     // Requirements by status
     let mut requirements_by_status = std::collections::HashMap::new();
     for req in &all_requirements {
-        let status_name = get_status_name_by_id(req.req_current_status);
+        let status_name = get_status_name_by_id_cached(req.req_current_status);
         *requirements_by_status.entry(status_name).or_insert(0) += 1;
     }
-    
+
     // Tests by status
     let mut tests_by_status = std::collections::HashMap::new();
     for test in &all_tests {
-        let status_name = get_status_name_by_id(test.test_status);
+        let status_name = get_status_name_by_id_cached(test.test_status);
         *tests_by_status.entry(status_name).or_insert(0) += 1;
     }
-    
+
     // Requirements by category
     let mut requirements_by_category = std::collections::HashMap::new();
     for req in &all_requirements {
-        let category = get_category_by_id(req.req_category);
+        let category = get_category_by_id_cached(req.req_category);
         let category_name = category.cat_title;
         *requirements_by_category.entry(category_name).or_insert(0) += 1;
     }
-    
+
     // Coverage metrics
     let mut covered_requirements = 0;
     let mut total_links = 0;
     for req in &all_requirements {
-        let links = get_requirements_for_test(req.req_id).unwrap_or_default();
+        let links = get_requirements_for_test_cached(req.req_id).unwrap_or_default();
         if !links.is_empty() {
             covered_requirements += 1;
         }
         total_links += links.len();
     }
-    
+
     let coverage_percentage = if total_requirements > 0 {
         ((covered_requirements as f64 / total_requirements as f64) * 100.0 * 10.0).round() / 10.0
     } else {
         0.0
     };
-    
+
     let avg_tests_per_requirement = if total_requirements > 0 {
         ((total_links as f64 / total_requirements as f64) * 10.0).round() / 10.0
     } else {
         0.0
     };
-    
+
     // Generate HTML content
     let html_content = generate_pdf_content(
         total_requirements,
@@ -2434,9 +2569,9 @@ pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<(rocket::http::Con
         total_links,
         requirements_by_status.clone(),
         tests_by_status.clone(),
-        requirements_by_category.clone()
+        requirements_by_category.clone(),
     );
-    
+
     // Generate PDF using the new PDF generation function
     match generate_pdf_report_data(
         total_requirements,
@@ -2449,7 +2584,7 @@ pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<(rocket::http::Con
         total_links,
         requirements_by_status,
         tests_by_status,
-        requirements_by_category
+        requirements_by_category,
     ) {
         Ok(pdf_bytes) => {
             let content_type = rocket::http::ContentType::new("application", "pdf");
@@ -2469,7 +2604,7 @@ pub fn generate_pdf_report(cookies: &CookieJar<'_>) -> Result<(rocket::http::Con
 #[get("/projects")]
 pub fn show_projects(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let projects = get_projects_all();
+    let projects = get_projects_all_cached();
 
     let ctx = match projects {
         Ok(projs) => {
@@ -2493,19 +2628,19 @@ pub fn show_projects(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 pub fn show_project_id(project_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     let project = get_project_by_id_pooled_safe(project_id);
-    
+
     let ctx = json!({
         "project": project,
         "user": user
     });
-    
+
     Ok(Template::render("project_detail", ctx))
 }
 
 #[get("/new_project")]
 pub fn new_project(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         let context = json!({
@@ -2514,9 +2649,9 @@ pub fn new_project(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         });
         return Ok(Template::render("access_denied", context));
     }
-    
-    let users = get_users_all().unwrap_or_default();
-    
+
+    let users = get_users_all_cached().unwrap_or_default();
+
     let ctx = json!({
         "users": users,
         "user": user
@@ -2525,21 +2660,24 @@ pub fn new_project(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 }
 
 #[post("/new_project", data = "<new_project>")]
-pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+pub fn post_project(
+    new_project: Form<NewProject>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         return Err(Redirect::to(uri!(show_projects)));
     }
-    
+
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_project))
     })?;
-    
+
     let project_data = new_project.into_inner();
-    let result = insert_new_project(connection, &project_data);
+    let result = DieselRepo::new().insert_new_project(&project_data);
     match result {
         Ok(project_id) => {
             // Log the project creation
@@ -2555,12 +2693,12 @@ pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> R
                     None,
                 );
             }
-            
+
             // Invalidate cache for the new project
             invalidate_project_cache_complete(project_id);
-            
+
             Ok(Redirect::to(uri!(show_projects)))
-        },
+        }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -2572,7 +2710,7 @@ pub fn post_project(new_project: Form<NewProject>, cookies: &CookieJar<'_>) -> R
 #[get("/edit_project/<project_id>")]
 pub fn get_edit_project(project_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         let context = json!({
@@ -2581,10 +2719,10 @@ pub fn get_edit_project(project_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
         });
         return Ok(Template::render("access_denied", context));
     }
-    
+
     let project = get_project_by_id_pooled_safe(project_id);
     let users = get_users_all_cached().unwrap_or_default();
-    
+
     let ctx = json!({
         "project": project,
         "users": users,
@@ -2594,28 +2732,35 @@ pub fn get_edit_project(project_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
 }
 
 #[post("/edit_project/<project_id>", data = "<project>")]
-pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+pub fn post_edit_project(
+    project_id: i32,
+    project: Form<UpdateProject>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         return Err(Redirect::to(uri!(show_projects)));
     }
-    
+
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(get_edit_project(project_id)))
     })?;
-    
+
     // Get the old values before updating
-    let old_project = get_project_by_id(project_id);
-    
-    let result = edit_project(connection, project_id, &project);
+    let old_project = get_project_by_id_cached(project_id);
+
+    let result = DieselRepo::new().edit_project(project_id, &project);
     match result {
         Ok(_) => {
             // Log the project update
             let project_data = project.into_inner();
-            if let (Ok(old_values), Ok(new_values)) = (Logger::to_json_string(&old_project), Logger::to_json_string(&project_data)) {
+            if let (Ok(old_values), Ok(new_values)) = (
+                Logger::to_json_string(&old_project),
+                Logger::to_json_string(&project_data),
+            ) {
                 let _ = Logger::log_update(
                     connection,
                     user.user_id,
@@ -2628,12 +2773,12 @@ pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies:
                     None,
                 );
             }
-            
+
             // Invalidate cache for the updated project
             invalidate_project_cache_complete(project_id);
-            
+
             Ok(Redirect::to(uri!(show_projects)))
-        },
+        }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -2643,14 +2788,17 @@ pub fn post_edit_project(project_id: i32, project: Form<UpdateProject>, cookies:
 }
 
 #[delete("/delete_project/<project_id>")]
-pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<rocket::http::Status, Redirect> {
+pub fn delete_project_route(
+    project_id: i32,
+    cookies: &CookieJar<'_>,
+) -> Result<rocket::http::Status, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         return Err(Redirect::to(uri!(show_projects)));
     }
-    
+
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
@@ -2658,11 +2806,11 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
             return Err(Redirect::to(uri!(show_projects)));
         }
     };
-    
+
     // Get the project details before deleting
     let project = get_project_by_id_pooled_safe(project_id);
-    
-    let result = delete_project(connection.as_mut(), &project_id);
+
+    let result = DieselRepo::new().delete_project(project_id);
     match result {
         Ok(_) => {
             // Log the project deletion
@@ -2678,12 +2826,12 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
                     None,
                 );
             }
-            
+
             // Invalidate cache for the deleted project
             invalidate_project_cache_complete(project_id);
-            
+
             Ok(rocket::http::Status::Ok)
-        },
+        }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
@@ -2696,7 +2844,7 @@ pub fn delete_project_route(project_id: i32, cookies: &CookieJar<'_>) -> Result<
 #[get("/import_excel")]
 pub fn import_excel_page(cookies: &CookieJar<'_>) -> Result<content::RawHtml<String>, Redirect> {
     let _user = require_auth(cookies)?;
-    
+
     // Get selected project ID and name
     let selected_project_id = get_selected_project_id(cookies);
     let (project_id, project_name) = if let Some(pid) = selected_project_id {
@@ -2711,8 +2859,9 @@ pub fn import_excel_page(cookies: &CookieJar<'_>) -> Result<content::RawHtml<Str
             (1, "Default Project".to_string())
         }
     };
-    
-    let html = format!(r#"
+
+    let html = format!(
+        r#"
     <!doctype html>
     <html lang='en'>
     <head>
@@ -2755,8 +2904,10 @@ pub fn import_excel_page(cookies: &CookieJar<'_>) -> Result<content::RawHtml<Str
         </div>
     </body>
     </html>
-    "#, project_name, project_id);
-    
+    "#,
+        project_name, project_id
+    );
+
     Ok(content::RawHtml(html))
 }
 
@@ -2766,26 +2917,35 @@ pub async fn upload_excel_file(
     cookies: &CookieJar<'_>,
 ) -> Result<content::RawHtml<String>, Redirect> {
     let _user = require_auth(cookies)?;
-    
+
     // Save uploaded file temporarily
     let temp_path = format!("/tmp/upload_{}.xlsx", chrono::Utc::now().timestamp());
-    upload.persist_to(&temp_path).await.map_err(|_| Redirect::to(uri!(import_excel_page)))?;
-    
+    upload
+        .persist_to(&temp_path)
+        .await
+        .map_err(|_| Redirect::to(uri!(import_excel_page)))?;
+
     // Parse Excel file
-    let importer = crate::importers::excel::ExcelImporter::new(&temp_path).map_err(|_| Redirect::to(uri!(import_excel_page)))?;
-    
+    let importer = crate::importers::excel::ExcelImporter::new(&temp_path)
+        .map_err(|_| Redirect::to(uri!(import_excel_page)))?;
+
     // Create HTML for column mapping
-    let _columns_html = importer.columns.iter()
+    let _columns_html = importer
+        .columns
+        .iter()
         .map(|col| format!("<option value=\"{}\">{}</option>", col.name, col.name))
         .collect::<Vec<_>>()
         .join("");
-    
-    let available_fields_html = importer.get_available_fields().iter()
+
+    let available_fields_html = importer
+        .get_available_fields()
+        .iter()
         .map(|field| format!("<option value=\"{}\">{}</option>", field, field))
         .collect::<Vec<_>>()
         .join("");
-    
-    let html = format!(r#"
+
+    let html = format!(
+        r#"
     <!doctype html>
     <html lang='en'>
     <head>
@@ -2863,15 +3023,17 @@ pub async fn upload_excel_file(
     </body>
     </html>
     "#,
-    importer.import_type,
-    importer.data.len(),
-    importer.import_type,
-    temp_path,
-    importer.columns.iter()
-        .map(|col| {
-            let sample_data = &col.sample_value;
-            format!(
-                r#"<tr>
+        importer.import_type,
+        importer.data.len(),
+        importer.import_type,
+        temp_path,
+        importer
+            .columns
+            .iter()
+            .map(|col| {
+                let sample_data = &col.sample_value;
+                format!(
+                    r#"<tr>
                     <td>{}</td>
                     <td>
                         <select name="field_{}" class="form-select">
@@ -2881,16 +3043,16 @@ pub async fn upload_excel_file(
                     </td>
                     <td><small class="text-muted">{}</small></td>
                 </tr>"#,
-                col.name,
-                col.name.replace(" ", "_"),
-                available_fields_html,
-                sample_data
-            )
-        })
-        .collect::<Vec<_>>()
-        .join("")
+                    col.name,
+                    col.name.replace(" ", "_"),
+                    available_fields_html,
+                    sample_data
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("")
     );
-    
+
     Ok(content::RawHtml(html))
 }
 
@@ -2900,23 +3062,23 @@ pub fn process_excel_import(
     cookies: &CookieJar<'_>,
 ) -> Result<content::RawHtml<String>, Redirect> {
     let _user = require_auth(cookies)?;
-    
+
     eprintln!("Column mappings string: {}", mapping_data.column_mappings);
-    
+
     // Parse column mappings
-    let column_mappings: Vec<crate::importers::excel::ColumnMapping> = serde_json::from_str(&mapping_data.column_mappings)
-        .map_err(|e| {
+    let column_mappings: Vec<crate::importers::excel::ColumnMapping> =
+        serde_json::from_str(&mapping_data.column_mappings).map_err(|e| {
             eprintln!("JSON parsing error: {}", e);
             Redirect::to(uri!(import_excel_page))
         })?;
-    
+
     // Create importer and import data
-    let importer = crate::importers::excel::ExcelImporter::new(&mapping_data.temp_file)
-        .map_err(|e| {
+    let importer =
+        crate::importers::excel::ExcelImporter::new(&mapping_data.temp_file).map_err(|e| {
             eprintln!("Excel importer creation error: {}", e);
             Redirect::to(uri!(import_excel_page))
         })?;
-    
+
     // Get selected project ID from cookies
     let selected_project_id = get_selected_project_id(cookies);
     let project_id = if let Some(pid) = selected_project_id {
@@ -2930,31 +3092,32 @@ pub fn process_excel_import(
             1 // Fallback to project 1 if no projects exist
         }
     };
-    
+
     // Create import configuration
     let config = crate::importers::excel::ImportConfig {
         import_type: mapping_data.import_type.clone(),
         column_mappings,
         project_id,
     };
-    
+
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(import_excel_page))
     })?;
     let result = importer.import_data(&config, connection);
-    
+
     eprintln!("Import result: {:?}", result);
-    
+
     let html = match result {
         Ok(import_result) => {
             // Invalidate all caches after successful import since we don't know exactly what was imported
             crate::cache::invalidate_all_cache();
-            
+
             // Get project name for display
             let project_name = get_project_by_id_pooled_safe(project_id).project_name;
-            
-            format!(r#"
+
+            format!(
+                r#"
             <!doctype html>
             <html lang='en'>
             <head>
@@ -2992,17 +3155,15 @@ pub fn process_excel_import(
             </body>
             </html>
             "#,
-            import_result.imported_count,
-            mapping_data.import_type,
-            project_name,
-            project_id
+                import_result.imported_count, mapping_data.import_type, project_name, project_id
             )
         }
         Err(e) => {
             // Get project name for display
             let project_name = get_project_by_id_pooled_safe(project_id).project_name;
-            
-            format!(r#"
+
+            format!(
+                r#"
             <!doctype html>
             <html lang='en'>
             <head>
@@ -3039,13 +3200,11 @@ pub fn process_excel_import(
             </body>
             </html>
             "#,
-            e,
-            project_name,
-            project_id
+                e, project_name, project_id
             )
         }
     };
-    
+
     Ok(content::RawHtml(html))
 }
 
@@ -3053,7 +3212,7 @@ pub fn process_excel_import(
 #[get("/admin")]
 pub fn admin_dashboard(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         let context = json!({
@@ -3062,19 +3221,19 @@ pub fn admin_dashboard(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         });
         return Ok(Template::render("access_denied", context));
     }
-    
+
     let context = json!({
         "user": user,
         "title": "Admin Dashboard"
     });
-    
+
     Ok(Template::render("admin/dashboard", context))
 }
 
 #[get("/admin/users")]
 pub fn admin_users_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         let context = json!({
@@ -3083,15 +3242,15 @@ pub fn admin_users_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         });
         return Ok(Template::render("access_denied", context));
     }
-    
-    let users = get_users_all().unwrap_or_default();
-    
+
+    let users = get_users_all_cached().unwrap_or_default();
+
     let context = json!({
         "user": user,
         "users": users,
         "title": "User Management"
     });
-    
+
     Ok(Template::render("admin/users", context))
 }
 
@@ -3099,7 +3258,7 @@ pub fn admin_users_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 #[get("/admin/backup")]
 pub fn admin_backup_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         let context = json!({
@@ -3108,39 +3267,42 @@ pub fn admin_backup_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> 
         });
         return Ok(Template::render("access_denied", context));
     }
-    
+
     let context = json!({
         "user": user,
         "title": "Database Backup"
     });
-    
+
     Ok(Template::render("admin/backup", context))
 }
 
 #[post("/admin/backup/generate/<filename>")]
-pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Result<(ContentType, NamedFile), Redirect> {
+pub async fn generate_backup(
+    filename: String,
+    cookies: &CookieJar<'_>,
+) -> Result<(ContentType, NamedFile), Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         return Err(Redirect::to(uri!(admin_backup_page)));
     }
-    
+
     // Use the filename from the URL parameter
     let filename = if filename.ends_with(".sql") {
         filename
     } else {
         format!("{}.sql", filename)
     };
-    
+
     // Create backup directory if it doesn't exist
     let backup_dir = "backups";
     if !std::path::Path::new(backup_dir).exists() {
         std::fs::create_dir(backup_dir).map_err(|_| Redirect::to(uri!(admin_backup_page)))?;
     }
-    
+
     let backup_path = format!("{}/{}", backup_dir, filename);
-    
+
     // Database configuration from Rocket.toml
     let _db_url = "postgres://rust:rust@127.0.0.1:5432/rust";
     let password = "rust";
@@ -3148,30 +3310,35 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
     let port = "5432";
     let username = "rust";
     let database = "rust";
-    
+
     // Set environment variable for password
     std::env::set_var("PGPASSWORD", password);
-    
+
     // Execute pg_dump command with explicit table inclusion to ensure logs are included
     let output = std::process::Command::new("pg_dump")
         .args(&[
-            "-h", host,
-            "-p", port,
-            "-U", username,
-            "-d", database,
-            "-f", &backup_path,
+            "-h",
+            host,
+            "-p",
+            port,
+            "-U",
+            username,
+            "-d",
+            database,
+            "-f",
+            &backup_path,
             "--no-password",
-            "--verbose",  // Add verbose output for debugging
-            "--no-owner",  // Don't include ownership information
-            "--no-privileges"  // Don't include privilege information
+            "--verbose",       // Add verbose output for debugging
+            "--no-owner",      // Don't include ownership information
+            "--no-privileges", // Don't include privilege information
         ])
         .output();
-    
+
     match output {
         Ok(output) => {
             if output.status.success() {
                 // Log the successful backup
-                if let Ok(mut conn) = get_pooled_connection() {
+                if let Ok(mut conn) = DieselRepo::new().get_conn() {
                     let _ = Logger::log_action(
                         &mut conn,
                         user.user_id,
@@ -3185,17 +3352,17 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
                         None,
                     );
                 }
-                
+
                 // Return the backup file for download
                 let file = NamedFile::open(&backup_path)
                     .await
                     .map_err(|_| Redirect::to(uri!(admin_backup_page)))?;
-                
+
                 let content_type = ContentType::new("application", "sql");
                 Ok((content_type, file))
             } else {
                 // Log the failed backup
-                if let Ok(mut conn) = get_pooled_connection() {
+                if let Ok(mut conn) = DieselRepo::new().get_conn() {
                     let _ = Logger::log_action(
                         &mut conn,
                         user.user_id,
@@ -3205,18 +3372,21 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
                         None,
                         None,
                         None,
-                        Some(format!("Database backup failed: {}", String::from_utf8_lossy(&output.stderr))),
+                        Some(format!(
+                            "Database backup failed: {}",
+                            String::from_utf8_lossy(&output.stderr)
+                        )),
                         None,
                     );
                 }
-                
+
                 // If backup failed, redirect to backup page with error
                 Err(Redirect::to(uri!(admin_backup_page)))
             }
         }
         Err(e) => {
             // Log the command failure
-            if let Ok(mut conn) = get_pooled_connection() {
+            if let Ok(mut conn) = DieselRepo::new().get_conn() {
                 let _ = Logger::log_action(
                     &mut conn,
                     user.user_id,
@@ -3230,7 +3400,7 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
                     None,
                 );
             }
-            
+
             // If command failed, redirect to backup page with error
             Err(Redirect::to(uri!(admin_backup_page)))
         }
@@ -3240,7 +3410,7 @@ pub async fn generate_backup(filename: String, cookies: &CookieJar<'_>) -> Resul
 #[get("/logs")]
 pub fn show_logs(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         let context = json!({
@@ -3249,37 +3419,41 @@ pub fn show_logs(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         });
         return Ok(Template::render("access_denied", context));
     }
-    
-    let connection = &mut get_pooled_connection().map_err(|e| {
+
+    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
         eprintln!("Database connection error in show_logs: {}", e);
         Redirect::to(uri!(admin_dashboard))
     })?;
     let logs = Logger::get_recent_logs(connection, 1000).unwrap_or_default();
-    
+
     // Enhance logs with user information
     let mut enhanced_logs = Vec::new();
     for log in logs {
-        let username = get_user_by_id(log.user_id).user_username;
+        let username = get_user_by_id_cached(log.user_id).user_username;
         let mut log_json = serde_json::to_value(log).unwrap_or_default();
         if let Some(log_obj) = log_json.as_object_mut() {
             log_obj.insert("username".to_string(), serde_json::Value::String(username));
         }
         enhanced_logs.push(log_json);
     }
-    
+
     let ctx = json!({
         "user": user,
         "logs": enhanced_logs,
         "title": "System Logs"
     });
-    
+
     Ok(Template::render("logs", ctx))
 }
 
 #[get("/logs/<entity_type>/<entity_id>")]
-pub fn show_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+pub fn show_entity_logs(
+    entity_type: String,
+    entity_id: i32,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         let context = json!({
@@ -3288,24 +3462,24 @@ pub fn show_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJar
         });
         return Ok(Template::render("access_denied", context));
     }
-    
-    let connection = &mut get_pooled_connection().map_err(|e| {
+
+    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
         eprintln!("Database connection error in show_entity_logs: {}", e);
         Redirect::to(uri!(show_logs))
     })?;
     let logs = Logger::get_logs_for_entity(connection, &entity_type, entity_id).unwrap_or_default();
-    
+
     // Enhance logs with user information
     let mut enhanced_logs = Vec::new();
     for log in logs {
-        let username = get_user_by_id(log.user_id).user_username;
+        let username = get_user_by_id_cached(log.user_id).user_username;
         let mut log_json = serde_json::to_value(log).unwrap_or_default();
         if let Some(log_obj) = log_json.as_object_mut() {
             log_obj.insert("username".to_string(), serde_json::Value::String(username));
         }
         enhanced_logs.push(log_json);
     }
-    
+
     let ctx = json!({
         "user": user,
         "logs": enhanced_logs,
@@ -3313,53 +3487,55 @@ pub fn show_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJar
         "entity_id": entity_id,
         "title": format!("Logs for {} {}", entity_type, entity_id)
     });
-    
+
     Ok(Template::render("entity_logs", ctx))
 }
 
 #[get("/export_logs?<filename>")]
-pub async fn export_logs(filename: Option<String>, cookies: &CookieJar<'_>) -> Result<(ContentType, NamedFile), Redirect> {
+pub async fn export_logs(
+    filename: Option<String>,
+    cookies: &CookieJar<'_>,
+) -> Result<(ContentType, NamedFile), Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         return Err(Redirect::to(uri!(show_logs)));
     }
-    
-    let connection = &mut get_pooled_connection().map_err(|e| {
+
+    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
         eprintln!("Database connection error in export_logs: {}", e);
         Redirect::to(uri!(show_logs))
     })?;
     let logs = Logger::get_recent_logs(connection, 1000).unwrap_or_default();
-    
+
     // Convert logs to JSON
     let logs_json = serde_json::to_string_pretty(&logs).unwrap_or_default();
-    
+
     // Generate filename if not provided
     let filename = filename.unwrap_or_else(|| {
         let now = chrono::Utc::now();
         format!("reqman-logs_{}.json", now.format("%Y%m%d_%H%M%S"))
     });
-    
+
     // Ensure filename has .json extension
     let filename = if filename.ends_with(".json") {
         filename
     } else {
         format!("{}.json", filename)
     };
-    
+
     // Create exports directory if it doesn't exist
     let export_dir = "exports";
     if !std::path::Path::new(export_dir).exists() {
         std::fs::create_dir(export_dir).map_err(|_| Redirect::to(uri!(show_logs)))?;
     }
-    
+
     let export_path = format!("{}/{}", export_dir, filename);
-    
+
     // Write JSON to file
-    std::fs::write(&export_path, logs_json)
-        .map_err(|_| Redirect::to(uri!(show_logs)))?;
-    
+    std::fs::write(&export_path, logs_json).map_err(|_| Redirect::to(uri!(show_logs)))?;
+
     // Log the successful export
     let _ = Logger::log_export(
         connection,
@@ -3370,31 +3546,41 @@ pub async fn export_logs(filename: Option<String>, cookies: &CookieJar<'_>) -> R
         Some(format!("Exported logs to {}", filename)),
         None,
     );
-    
-    Ok((ContentType::JSON, NamedFile::open(export_path).await.map_err(|_| Redirect::to(uri!(show_logs)))?))
+
+    Ok((
+        ContentType::JSON,
+        NamedFile::open(export_path)
+            .await
+            .map_err(|_| Redirect::to(uri!(show_logs)))?,
+    ))
 }
 
 #[get("/export_logs/<entity_type>/<entity_id>")]
-pub fn export_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJar<'_>) -> Result<(rocket::http::ContentType, String), Redirect> {
+pub fn export_entity_logs(
+    entity_type: String,
+    entity_id: i32,
+    cookies: &CookieJar<'_>,
+) -> Result<(rocket::http::ContentType, String), Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         return Err(Redirect::to(uri!(show_logs)));
     }
-    
-    let mut connection = match get_connection_pooled_safe() {
+
+    let mut connection = match DieselRepo::new().get_conn() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
             return Err(Redirect::to(uri!(show_logs)));
         }
     };
-    let logs = Logger::get_logs_for_entity(connection.as_mut(), &entity_type, entity_id).unwrap_or_default();
-    
+    let logs = Logger::get_logs_for_entity(connection.as_mut(), &entity_type, entity_id)
+        .unwrap_or_default();
+
     // Convert logs to JSON
     let logs_json = serde_json::to_string_pretty(&logs).unwrap_or_default();
-    
+
     let content_type = rocket::http::ContentType::new("application", "json");
     Ok((content_type, logs_json))
 }
@@ -3402,20 +3588,20 @@ pub fn export_entity_logs(entity_type: String, entity_id: i32, cookies: &CookieJ
 #[post("/cleanup_logs")]
 pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         return Err(Redirect::to(uri!(show_logs)));
     }
-    
-    let mut connection = match get_connection_pooled_safe() {
+
+    let mut connection = match DieselRepo::new().get_conn() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
             return Err(Redirect::to(uri!(show_logs)));
         }
     };
-    
+
     // Clean up logs older than 90 days
     match crate::logger::cleanup_old_logs(connection.as_mut(), 90) {
         Ok(deleted_count) => {
@@ -3432,7 +3618,7 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
                 Some(format!("Cleaned up {} old log entries", deleted_count)),
                 None,
             );
-        },
+        }
         Err(_) => {
             // Log the failed cleanup action
             let _ = Logger::log_action(
@@ -3449,14 +3635,14 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
             );
         }
     }
-    
+
     Ok(Redirect::to(uri!(show_logs)))
 }
 
 #[get("/log_analytics")]
 pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    
+
     // Check if user is admin
     if !user.is_admin {
         let context = json!({
@@ -3465,20 +3651,20 @@ pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         });
         return Ok(Template::render("access_denied", context));
     }
-    
-    let mut connection = match get_connection_pooled_safe() {
+
+    let mut connection = match DieselRepo::new().get_conn() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
             return Err(Redirect::to(uri!(show_logs)));
         }
     };
-    
+
     // Get basic statistics
     let last_7_days = Logger::get_log_count(connection.as_mut(), 7).unwrap_or(0);
     let last_30_days = Logger::get_log_count(connection.as_mut(), 30).unwrap_or(0);
     let last_90_days = Logger::get_log_count(connection.as_mut(), 90).unwrap_or(0);
-    
+
     let ctx = json!({
         "user": user,
         "last_7_days": last_7_days,
@@ -3486,11 +3672,9 @@ pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         "last_90_days": last_90_days,
         "title": "Log Analytics"
     });
-    
+
     Ok(Template::render("log_analytics", ctx))
 }
-
-
 
 // Test route for PDF generation (no authentication required)
 #[get("/test-pdf")]
@@ -3504,22 +3688,22 @@ pub fn test_pdf_generation() -> Result<(rocket::http::ContentType, Vec<u8>), roc
     let avg_tests_per_requirement = 1.2;
     let covered_requirements = 128;
     let total_links = 180;
-    
+
     let mut requirements_by_status = std::collections::HashMap::new();
     requirements_by_status.insert("Active".to_string(), 100);
     requirements_by_status.insert("Draft".to_string(), 30);
     requirements_by_status.insert("Deprecated".to_string(), 20);
-    
+
     let mut tests_by_status = std::collections::HashMap::new();
     tests_by_status.insert("Passed".to_string(), 80);
     tests_by_status.insert("Failed".to_string(), 15);
     tests_by_status.insert("Pending".to_string(), 25);
-    
+
     let mut requirements_by_category = std::collections::HashMap::new();
     requirements_by_category.insert("Functional".to_string(), 80);
     requirements_by_category.insert("Non-Functional".to_string(), 40);
     requirements_by_category.insert("Interface".to_string(), 30);
-    
+
     // Generate PDF using the PDF generation function
     match generate_pdf_report_data(
         total_requirements,
@@ -3532,7 +3716,7 @@ pub fn test_pdf_generation() -> Result<(rocket::http::ContentType, Vec<u8>), roc
         total_links,
         requirements_by_status,
         tests_by_status,
-        requirements_by_category
+        requirements_by_category,
     ) {
         Ok(pdf_bytes) => {
             let content_type = rocket::http::ContentType::new("application", "pdf");
@@ -3544,4 +3728,3 @@ pub fn test_pdf_generation() -> Result<(rocket::http::ContentType, Vec<u8>), roc
         }
     }
 }
-

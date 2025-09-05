@@ -2,8 +2,8 @@
 
 use super::*;
 use crate::repository::errors::RepoError;
-use std::collections::HashMap;
 use chrono::{NaiveDate, NaiveDateTime};
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct FakeRepo {
@@ -19,8 +19,10 @@ pub struct FakeRepo {
 }
 
 fn epoch() -> NaiveDateTime {
-    NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()
-        .and_hms_opt(0, 0, 0).unwrap()
+    NaiveDate::from_ymd_opt(1970, 1, 1)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
 }
 
 impl FakeRepo {
@@ -69,11 +71,9 @@ impl FakeRepo {
             is_admin: false,
         }
     }
-
 }
 
 impl UserRepository for FakeRepo {
-
     fn get_users_all(&self) -> Result<Vec<User>, RepoError> {
         Ok(self.users.values().cloned().collect())
     }
@@ -86,7 +86,11 @@ impl UserRepository for FakeRepo {
         if self.force_err {
             return Err(RepoError::Pool("forced test error".into()));
         }
-        Ok(self.users.values().find(|u| u.user_username == uname).cloned())
+        Ok(self
+            .users
+            .values()
+            .find(|u| u.user_username == uname)
+            .cloned())
     }
 
     fn update_user_password(&mut self, id: i32, new_hash: &str) -> Result<(), RepoError> {
@@ -110,21 +114,16 @@ impl UserRepository for FakeRepo {
         Ok(true)
     }
 
-    fn update_user_without_password(
-        &mut self,
-        _user_data: &UpdateUser,
-    ) -> Result<bool, RepoError> {
+    fn update_user_without_password(&mut self, _user_data: &UpdateUser) -> Result<bool, RepoError> {
         Ok(true)
     }
 
     fn delete_user(&mut self, _id: i32) -> Result<bool, RepoError> {
         Ok(true)
     }
-
 }
 
 impl LookupRepository for FakeRepo {
-
     fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
         Ok(self.statuses.values().cloned().collect())
     }
@@ -132,7 +131,6 @@ impl LookupRepository for FakeRepo {
     fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError> {
         self.statuses.get(&id).cloned().ok_or(RepoError::NotFound)
     }
-
 
     fn get_categories_all(&self) -> Result<Vec<Category>, RepoError> {
         Ok(self.categories.values().cloned().collect())
@@ -143,16 +141,13 @@ impl LookupRepository for FakeRepo {
     }
 
     fn get_categories_by_project(&self, project_id: i32) -> Result<Vec<Category>, RepoError> {
-        Ok(
-            self
-                .categories
-                .values()
-                .filter(|c| c.project_id == project_id)
-                .cloned()
-                .collect(),
-        )
+        Ok(self
+            .categories
+            .values()
+            .filter(|c| c.project_id == project_id)
+            .cloned()
+            .collect())
     }
-
 
     fn get_applicability_all(&self) -> Result<Vec<Applicability>, RepoError> {
         Ok(self.applicability.values().cloned().collect())
@@ -169,16 +164,13 @@ impl LookupRepository for FakeRepo {
         &self,
         project_id: i32,
     ) -> Result<Vec<Applicability>, RepoError> {
-        Ok(
-            self
-                .applicability
-                .values()
-                .filter(|a| a.project_id == project_id)
-                .cloned()
-                .collect(),
-        )
+        Ok(self
+            .applicability
+            .values()
+            .filter(|a| a.project_id == project_id)
+            .cloned()
+            .collect())
     }
-
 
     fn get_verification_all(&self) -> Result<Vec<Verification>, RepoError> {
         Ok(self.verifications.values().cloned().collect())
@@ -192,14 +184,12 @@ impl LookupRepository for FakeRepo {
     }
 
     fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<Verification>, RepoError> {
-        Ok(
-            self
-                .verifications
-                .values()
-                .filter(|v| v.project_id == project_id)
-                .cloned()
-                .collect(),
-        )
+        Ok(self
+            .verifications
+            .values()
+            .filter(|v| v.project_id == project_id)
+            .cloned()
+            .collect())
     }
 
     fn insert_new_category(&mut self, _new: &NewCategory) -> Result<i32, RepoError> {
@@ -223,11 +213,9 @@ impl LookupRepository for FakeRepo {
     fn create_status(&mut self, _new: &NewStatus) -> Result<i32, RepoError> {
         Ok(0)
     }
-
 }
 
 impl RequirementsRepository for FakeRepo {
-
     fn get_requirement_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
         self.requirements
             .get(&id)
@@ -239,18 +227,13 @@ impl RequirementsRepository for FakeRepo {
         Ok(self.requirements.values().cloned().collect())
     }
 
-    fn get_requirements_by_project(
-        &self,
-        project_id: i32,
-    ) -> Result<Vec<Requirement>, RepoError> {
-        Ok(
-            self
-                .requirements
-                .values()
-                .filter(|r| r.project_id == project_id)
-                .cloned()
-                .collect(),
-        )
+    fn get_requirements_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        Ok(self
+            .requirements
+            .values()
+            .filter(|r| r.project_id == project_id)
+            .cloned()
+            .collect())
     }
 
     fn insert_new_requirement(&mut self, _new: &NewRequirement) -> Result<i32, RepoError> {
@@ -268,11 +251,9 @@ impl RequirementsRepository for FakeRepo {
     fn update_requirement(&mut self, _req: i32) -> Result<(), RepoError> {
         Ok(())
     }
-
 }
 
 impl TestsRepository for FakeRepo {
-
     fn get_test_by_id(&self, id: i32) -> Result<Test, RepoError> {
         self.tests.get(&id).cloned().ok_or(RepoError::NotFound)
     }
@@ -282,14 +263,12 @@ impl TestsRepository for FakeRepo {
     }
 
     fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<Test>, RepoError> {
-        Ok(
-            self
-                .tests
-                .values()
-                .filter(|t| t.project_id == project_id)
-                .cloned()
-                .collect(),
-        )
+        Ok(self
+            .tests
+            .values()
+            .filter(|t| t.project_id == project_id)
+            .cloned()
+            .collect())
     }
 
     fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError> {
@@ -299,12 +278,23 @@ impl TestsRepository for FakeRepo {
             .filter(|m| m.matrix_test_id == test_id)
             .map(|m| m.matrix_req_id)
             .collect();
-        Ok(
-            ids
-                .into_iter()
-                .filter_map(|id| self.requirements.get(&id).cloned())
-                .collect(),
-        )
+        Ok(ids
+            .into_iter()
+            .filter_map(|id| self.requirements.get(&id).cloned())
+            .collect())
+    }
+
+    fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<Test>, RepoError> {
+        let ids: Vec<i32> = self
+            .matrices
+            .iter()
+            .filter(|m| m.matrix_req_id == req_id)
+            .map(|m| m.matrix_test_id)
+            .collect();
+        Ok(ids
+            .into_iter()
+            .filter_map(|id| self.tests.get(&id).cloned())
+            .collect())
     }
 
     fn insert_test(&mut self, _new: &NewTest) -> Result<i32, RepoError> {
@@ -326,11 +316,9 @@ impl TestsRepository for FakeRepo {
     ) -> Result<(), RepoError> {
         Ok(())
     }
-
 }
 
 impl ProjectsRepository for FakeRepo {
-
     fn get_projects_all(&self) -> Result<Vec<Project>, RepoError> {
         Ok(Vec::new())
     }
@@ -343,7 +331,11 @@ impl ProjectsRepository for FakeRepo {
         Ok(0)
     }
 
-    fn edit_project(&mut self, _project_id: i32, _update: &UpdateProject) -> Result<bool, RepoError> {
+    fn edit_project(
+        &mut self,
+        _project_id: i32,
+        _update: &UpdateProject,
+    ) -> Result<bool, RepoError> {
         Ok(false)
     }
 
@@ -354,14 +346,12 @@ impl ProjectsRepository for FakeRepo {
 
 impl MatrixRepository for FakeRepo {
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
-        Ok(
-            self
-                .matrices
-                .iter()
-                .filter(|m| m.project_id == project_id)
-                .cloned()
-                .collect(),
-        )
+        Ok(self
+            .matrices
+            .iter()
+            .filter(|m| m.project_id == project_id)
+            .cloned()
+            .collect())
     }
 
     fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError> {

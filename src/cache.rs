@@ -48,9 +48,7 @@ impl Cache {
     /// Get a value from cache
     pub fn get(&self, key: &str) -> Option<String> {
         let start_time = std::time::Instant::now();
-        
-        let access_time = start_time.elapsed().as_nanos() as u64;
-        
+
         // First, try to read the data to check if key exists and is valid
         {
             let data = self.data.read().unwrap();
@@ -60,8 +58,8 @@ impl Cache {
                 if cache_entry.expires_at > Instant::now() {
                     // Cache hit - use atomic operations
                     self.hits.fetch_add(1, Ordering::Relaxed);
+                    let access_time = start_time.elapsed().as_nanos() as u64;
                     self.total_access_time.fetch_add(access_time, Ordering::Relaxed);
-                    
                     let result = Some(cache_entry.data.clone());
                     drop(data);
                     return result;
@@ -74,6 +72,7 @@ impl Cache {
                 // Key doesn't exist
                 drop(data);
                 self.misses.fetch_add(1, Ordering::Relaxed);
+                let access_time = start_time.elapsed().as_nanos() as u64;
                 self.total_access_time.fetch_add(access_time, Ordering::Relaxed);
                 return None;
             }
@@ -90,6 +89,7 @@ impl Cache {
                     self.active_entries.fetch_sub(1, Ordering::Relaxed);
                     self.expired_entries.fetch_add(1, Ordering::Relaxed);
                     self.misses.fetch_add(1, Ordering::Relaxed);
+                    let access_time = start_time.elapsed().as_nanos() as u64;
                     self.total_access_time.fetch_add(access_time, Ordering::Relaxed);
                 }
             }

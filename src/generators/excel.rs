@@ -1,6 +1,6 @@
 use crate::models::*;
 use diesel::prelude::*;
-use crate::db::get_connection_pooled_safe;
+use crate::repository::DieselRepo;
 use std::fs;
 
 pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
@@ -11,7 +11,8 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
     use crate::schema::tests::dsl::*;
     use crate::helper_functions::*;
     
-    let mut connection = get_connection_pooled_safe()
+    let mut connection = DieselRepo::new()
+        .get_conn()
         .map_err(|e| format!("Database connection error: {}", e))?;
     
     // Get selected project ID
@@ -110,7 +111,7 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
 pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     use crate::schema::requirements::dsl::*;
 
-    let mut connection = get_connection_pooled_safe()?;
+    let mut connection = DieselRepo::new().get_conn()?;
 
     let all_requirements = requirements
         .load::<Requirement>(connection.as_mut())
@@ -161,7 +162,7 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
 pub fn create_tests_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     use crate::schema::tests::dsl::*;
 
-    let mut connection = get_connection_pooled_safe()?;
+    let mut connection = DieselRepo::new().get_conn()?;
 
     let all_tests = tests
         .load::<Test>(connection.as_mut())

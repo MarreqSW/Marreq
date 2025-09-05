@@ -12,11 +12,11 @@ use rocket::serde::json::json;
 use rocket_dyn_templates::Template;
 
 use std::path;
+use chrono::Utc;
 
 use crate::auth::*;
 use crate::cached_functions::*;
 use crate::repository::PooledConnectionWrapper;
-use crate::db_operations::*;
 use crate::generators::*;
 use crate::helper_functions::*;
 use crate::html::*;
@@ -195,6 +195,21 @@ pub fn change_password(
 // --------------------------------
 // Html Routes (TBD)
 // --------------------------------
+
+/// Get project by ID with safe fallback using the repository.
+pub fn get_project_by_id_pooled_safe(project_id: i32) -> Project {
+    DieselRepo::new()
+        .get_project_by_id(project_id)
+        .unwrap_or(Project {
+            project_id: 0,
+            project_name: "Unknown Project".to_string(),
+            project_description: Some("Unknown project".to_string()),
+            project_creation_date: Some(Utc::now().naive_utc()),
+            project_update_date: Some(Utc::now().naive_utc()),
+            project_status: Some("Unknown".to_string()),
+            project_owner_id: Some(0),
+        })
+}
 
 #[get("/")]
 pub fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {

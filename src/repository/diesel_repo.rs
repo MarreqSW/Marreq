@@ -585,6 +585,26 @@ impl TestsRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
+    fn get_tests_for_requirement(&self, rid: i32) -> Result<Vec<Test>, RepoError> {
+        use schema::matrix::dsl::{matrix, matrix_req_id, matrix_test_id};
+        use schema::tests::dsl as t;
+        let mut conn = self.get_conn()?;
+        matrix
+            .filter(matrix_req_id.eq(rid))
+            .inner_join(t::tests.on(matrix_test_id.eq(t::test_id)))
+            .select((
+                t::test_id,
+                t::test_name,
+                t::test_description,
+                t::test_source,
+                t::test_status,
+                t::test_parent,
+                t::project_id,
+            ))
+            .load::<Test>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
     fn get_requirements_for_test(&self, tid: i32) -> Result<Vec<Requirement>, RepoError> {
         use schema::matrix::dsl::*;
         use schema::requirements::dsl::*;

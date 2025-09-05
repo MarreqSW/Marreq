@@ -1,5 +1,5 @@
-pub mod errors;
 pub mod diesel_repo;
+pub mod errors;
 pub mod fake_repo;
 
 pub use diesel_repo::*;
@@ -35,11 +35,16 @@ pub trait TestsRepository {
     fn get_tests_all(&self) -> Result<Vec<Test>, RepoError>;
     fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<Test>, RepoError>;
     fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError>;
+    fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<Test>, RepoError>;
 
     fn insert_test(&mut self, new: &NewTest) -> Result<i32, RepoError>;
     fn edit_test(&mut self, new: &NewTest) -> Result<bool, RepoError>;
     fn delete_test(&mut self, id: i32) -> Result<bool, RepoError>;
-    fn update_test_requirement_links(&mut self, test_id: i32, requirement_ids: &[i32]) -> Result<(), RepoError>;
+    fn update_test_requirement_links(
+        &mut self,
+        test_id: i32,
+        requirement_ids: &[i32],
+    ) -> Result<(), RepoError>;
 }
 
 pub trait LookupRepository {
@@ -52,7 +57,10 @@ pub trait LookupRepository {
 
     fn get_applicability_all(&self) -> Result<Vec<Applicability>, RepoError>;
     fn get_applicability_by_id(&self, id: i32) -> Result<Applicability, RepoError>;
-    fn get_applicability_by_project(&self, project_id: i32,) -> Result<Vec<Applicability>, RepoError>;
+    fn get_applicability_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<Applicability>, RepoError>;
 
     fn get_verification_all(&self) -> Result<Vec<Verification>, RepoError>;
     fn get_verification_by_id(&self, id: i32) -> Result<Verification, RepoError>;
@@ -90,7 +98,8 @@ pub trait Repository:
     + TestsRepository
     + ProjectsRepository
     + MatrixRepository
-{ }
+{
+}
 
 impl<T> Repository for T where
     T: UserRepository
@@ -99,4 +108,5 @@ impl<T> Repository for T where
         + TestsRepository
         + ProjectsRepository
         + MatrixRepository
-{ }
+{
+}

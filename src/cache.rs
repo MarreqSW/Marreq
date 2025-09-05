@@ -30,6 +30,12 @@ pub struct Cache {
     last_cleanup: Arc<Mutex<chrono::DateTime<chrono::Utc>>>,
 }
 
+enum Status {
+    Hit(String),
+    Miss,
+    Expired,
+}
+
 impl Cache {
     /// Create a new cache instance with default TTL
     pub fn new(default_ttl_seconds: u64) -> Self {
@@ -45,57 +51,47 @@ impl Cache {
         }
     }
 
+    fn read(&self, key: &str) -> Status {
+        let data = self.data.read().unwrap();
+        match data.get(key) {
+            Some(cache) if cache.expires_at > Instant::now() => { Status::Hit(cache.data.clone()) }
+            Some(_) => { Status::Expired }
+            None => { Status::Miss }
+        }
+    }
+
+    fn remove_(&self, key: &str) -> Option<CacheEntry<String>> {
+        let mut data = self.data.write().unwrap();
+        data.remove(key)
+    }
+
+
     /// Get a value from cache
     pub fn get(&self, key: &str) -> Option<String> {
-        let start_time = std::time::Instant::now();
+        let start = Instant::now();
 
-        // First, try to read the data to check if key exists and is valid
-        {
-            let data = self.data.read().unwrap();
-            let entry = data.get(key);
-            
-            if let Some(cache_entry) = entry {
-                if cache_entry.expires_at > Instant::now() {
-                    // Cache hit - use atomic operations
-                    self.hits.fetch_add(1, Ordering::Relaxed);
-                    let access_time = start_time.elapsed().as_nanos() as u64;
-                    self.total_access_time.fetch_add(access_time, Ordering::Relaxed);
-                    let result = Some(cache_entry.data.clone());
-                    drop(data);
-                    return result;
-                } else {
-                    // Expired entry, need to remove it (requires write lock)
-                    drop(data);
-                    // Fall through to write lock for removal
-                }
-            } else {
-                // Key doesn't exist
-                drop(data);
+        let result: Option<String>;
+        match self.read(key) {
+            Status::Hit(value) => {
+                self.hits.fetch_add(1, Ordering::Relaxed);
+                result = Some(value);
+            }
+            Status::Miss => {
                 self.misses.fetch_add(1, Ordering::Relaxed);
-                let access_time = start_time.elapsed().as_nanos() as u64;
-                self.total_access_time.fetch_add(access_time, Ordering::Relaxed);
-                return None;
+                result = None;
+            }
+            Status::Expired => {
+                self.expired_entries.fetch_add(1, Ordering::Relaxed);
+                self.misses.fetch_add(1, Ordering::Relaxed);
+                self.remove_(key);
+                result = None;
             }
         }
-        
-        // If we get here, we need to remove an expired entry
-        // This requires a write lock, but it's rare (only for expired entries)
-        {
-            let mut data = self.data.write().unwrap();
-            // Double-check the entry is still expired (another thread might have removed it)
-            if let Some(cache_entry) = data.remove(key) {
-                if cache_entry.expires_at <= Instant::now() {
-                    // Update counters for expired entry removal
-                    self.active_entries.fetch_sub(1, Ordering::Relaxed);
-                    self.expired_entries.fetch_add(1, Ordering::Relaxed);
-                    self.misses.fetch_add(1, Ordering::Relaxed);
-                    let access_time = start_time.elapsed().as_nanos() as u64;
-                    self.total_access_time.fetch_add(access_time, Ordering::Relaxed);
-                }
-            }
-        }
-        
-        None
+
+        let dt = start.elapsed().as_nanos() as u64;
+        self.total_access_time.fetch_add(dt, Ordering::Relaxed);
+
+        result
     }
 
     /// Set a value in cache with default TTL
@@ -159,12 +155,19 @@ impl Cache {
         let hits = self.hits.load(Ordering::Relaxed);
         let misses = self.misses.load(Ordering::Relaxed);
         let total_requests = hits + misses;
-        let hit_rate = if total_requests > 0 { hits as f64 / total_requests as f64 } else { 0.0 };
-        let miss_rate = if total_requests > 0 { misses as f64 / total_requests as f64 } else { 0.0 };
-        
+
         let total_access_time = self.total_access_time.load(Ordering::Relaxed);
-        let average_access_time_ns = if total_requests > 0 { total_access_time / total_requests } else { 0 };
-        
+        let (hit_rate, miss_rate, average_access_time_ns) = if total_requests == 0 {
+            (0.0, 0.0, 0)
+        } else {
+            let tr_f = total_requests as f64;
+            (
+                hits as f64 / tr_f,
+                misses as f64 / tr_f,
+                total_access_time / total_requests,
+            )
+        };
+
         let active_entries = self.active_entries.load(Ordering::Relaxed) as usize;
         let expired_entries = self.expired_entries.load(Ordering::Relaxed) as usize;
         let total_entries = active_entries + expired_entries;
@@ -174,13 +177,13 @@ impl Cache {
         // Only calculate cache size when needed (this is still O(n) but less frequent)
         let cache_size_bytes = if total_entries > 0 {
             let data = self.data.read().unwrap();
-            data.iter().fold(0, |acc, (key, entry)| {
-                acc + key.len() + entry.data.len()
-            })
+            data.iter()
+                .map(|(k, e)| k.len() + e.data.len())
+                .sum()
         } else {
             0
         };
-        
+
         CacheStats {
             total_entries,
             active_entries,

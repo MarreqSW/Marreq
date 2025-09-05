@@ -1,0 +1,12 @@
+use thiserror::Error;
+use diesel::result::Error as DieselError;
+
+#[derive(Debug, Error)]
+pub enum RepoError {
+    #[error("not found")]
+    NotFound,
+    #[error("database error: {0}")]
+    Db(#[from] DieselError),
+    #[error("pool error: {0}")]
+    Pool(String),
+}

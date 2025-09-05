@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use anyhow::{Result, anyhow};
 use crate::models::{NewRequirement, NewTest, NewCategory, NewApplicability};
-use crate::helper_functions::*;
+use crate::repository::{DieselRepo, RequirementsRepository, TestsRepository, LookupRepository, UserRepository};
 use diesel::{PgConnection, Connection};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -187,13 +187,13 @@ impl ExcelImporter {
         
         // Resolve foreign key references
         let category_id = if let Some(category_name) = req_data.get("req_category") {
-            self.resolve_category_id(category_name, project_id, conn)?
+            self.resolve_category_id(category_name, project_id)?
         } else {
             1 // Default category
         };
         
         let applicability_id = if let Some(app_name) = req_data.get("req_applicability") {
-            self.resolve_applicability_id(app_name, project_id, conn)?
+            self.resolve_applicability_id(app_name, project_id)?
         } else {
             1 // Default applicability
         };
@@ -244,7 +244,7 @@ impl ExcelImporter {
             project_id,
         };
         
-        insert_new_requirement(conn, &new_req).map_err(|e| anyhow!("{}", e))?;
+        DieselRepo::new().insert_new_requirement(&new_req).map_err(|e| anyhow!("{}", e))?;
         Ok(())
     }
     
@@ -294,12 +294,15 @@ impl ExcelImporter {
             project_id,
         };
         
-        insert_new_test(conn, &new_test).map_err(|e| anyhow!("{}", e))?;
+        DieselRepo::new().insert_test(&new_test).map_err(|e| anyhow!("{}", e))?;
         Ok(())
     }
     
-    fn resolve_category_id(&self, category_name: &str, project_id: i32, conn: &mut PgConnection) -> Result<i32> {
-        let categories = get_categories_by_project(project_id).map_err(|e| anyhow!("{}", e))?;
+    fn resolve_category_id(&self, category_name: &str, project_id: i32) -> Result<i32> {
+        let repo = DieselRepo::new();
+        let categories = repo
+            .get_categories_by_project(project_id)
+            .map_err(|e| anyhow!("{}", e))?;
         for category in categories {
             if category.cat_title == category_name {
                 return Ok(category.cat_id);
@@ -315,11 +318,11 @@ impl ExcelImporter {
             project_id,
         };
         
-        insert_new_category(conn, &new_category).map_err(|e| anyhow!("{}", e))
+        DieselRepo::new().insert_new_category(&new_category).map_err(|e| anyhow!("{}", e))
     }
     
-    fn resolve_applicability_id(&self, app_name: &str, project_id: i32, conn: &mut PgConnection) -> Result<i32> {
-        let applicability_list = get_applicability_by_project(project_id).map_err(|e| anyhow!("{}", e))?;
+    fn resolve_applicability_id(&self, app_name: &str, project_id: i32) -> Result<i32> {
+        let applicability_list = DieselRepo::new().get_applicability_by_project(project_id).map_err(|e| anyhow!("{}", e))?;
         for app in applicability_list {
             if app.app_title == app_name {
                 return Ok(app.app_id);
@@ -335,11 +338,12 @@ impl ExcelImporter {
             project_id,
         };
         
-        insert_new_applicability(conn, &new_app).map_err(|e| anyhow!("{}", e))
+        DieselRepo::new().insert_new_applicability(&new_app).map_err(|e| anyhow!("{}", e))
     }
     
     fn resolve_status_id(&self, status_name: &str, _conn: &mut PgConnection) -> Result<i32> {
-        let statuses = get_status_all().map_err(|e| anyhow!("{}", e))?;
+        let repo = DieselRepo::new();
+        let statuses = repo.get_status_all().map_err(|e| anyhow!("{}", e))?;
         for status in statuses {
             if status.st_title == status_name {
                 return Ok(status.st_id);
@@ -351,7 +355,8 @@ impl ExcelImporter {
     }
     
     fn resolve_user_id(&self, user_name: &str, _project_id: i32, _conn: &mut PgConnection) -> Result<i32> {
-        let users = get_users_all().map_err(|e| anyhow!("{}", e))?;
+        let repo = DieselRepo::new();
+        let users = repo.get_users_all().map_err(|e| anyhow!("{}", e))?;
         for user in users {
             if user.user_name == user_name {
                 return Ok(user.user_id);
@@ -363,7 +368,10 @@ impl ExcelImporter {
     }
     
     fn resolve_requirement_id_by_title(&self, title: &str, project_id: i32, _conn: &mut PgConnection) -> Result<i32> {
-        let requirements = get_requirements_by_project(project_id).map_err(|e| anyhow!("{}", e))?;
+        let repo = DieselRepo::new();
+        let requirements = repo
+            .get_requirements_by_project(project_id)
+            .map_err(|e| anyhow!("{}", e))?;
         for req in requirements {
             if req.req_title == title {
                 return Ok(req.req_id);
@@ -374,7 +382,10 @@ impl ExcelImporter {
     }
     
     fn resolve_test_id_by_name(&self, name: &str, project_id: i32, _conn: &mut PgConnection) -> Result<i32> {
-        let tests = get_tests_by_project(project_id).map_err(|e| anyhow!("{}", e))?;
+        let repo = DieselRepo::new();
+        let tests = repo
+            .get_tests_by_project(project_id)
+            .map_err(|e| anyhow!("{}", e))?;
         for test in tests {
             if test.test_name == name {
                 return Ok(test.test_id);

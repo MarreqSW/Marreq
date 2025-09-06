@@ -6,10 +6,7 @@ use serde::{Serialize, Deserialize};
 use serde_json::json;
 use std::thread;
 use chrono;
-use crate::repository::{
-    DieselRepo, LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
-    TestsRepository, UserRepository,
-};
+use crate::repository::*;
 
 /// Cache entry with TTL (Time To Live)
 #[derive(Clone)]
@@ -257,11 +254,13 @@ pub struct CacheStats {
 
 // Global cache instance
 lazy_static::lazy_static! {
-    static ref CACHE: Cache = Cache::new(300); // 5 minutes default TTL
+    static ref CACHE: Cache = Cache::new(30); // 5 minutes default TTL
 }
 
 /// Cache key constants
 pub mod keys {
+    use std::fmt::Display;
+
     // Navigation and overview data
     pub const PROJECTS_NAV: &str = "projects:nav";
     pub const PROJECTS_ALL: &str = "projects:all";
@@ -270,11 +269,46 @@ pub mod keys {
     pub const APPLICABILITY_ALL: &str = "applicability:all";
     pub const VERIFICATION_ALL: &str = "verification:all";
     pub const USERS_ALL: &str = "users:all";
+
+    /// Generic builder for "prefix[:project]:id" style keys.
+    pub trait Keyspace {
+        const PREFIX: &'static str;
+
+        #[inline]
+        fn id<I: Display>(id: I) -> String {
+            format!("{}:{}", Self::PREFIX, id)
+        }
+
+        #[inline]
+        fn project<I: Display>(project_id: I) -> String {
+            format!("{}:project:{}", Self::PREFIX, project_id)
+        }
+    }
+
+    // Zero-sized marker types for each namespace
+    pub struct Projects;
+    pub struct Status;
+    pub struct Categories;
+    pub struct Applicability;
+    pub struct Verification;
+    pub struct Users;
+    pub struct Requirements;
+    pub struct Tests;
+    pub struct Matrix;
+
+    // Implement the prefix per namespace
+    impl Keyspace for Projects      { const PREFIX: &'static str = "project"; }
+    impl Keyspace for Status        { const PREFIX: &'static str = "status"; }
+    impl Keyspace for Categories    { const PREFIX: &'static str = "category"; }
+    impl Keyspace for Applicability { const PREFIX: &'static str = "applicability"; }
+    impl Keyspace for Verification  { const PREFIX: &'static str = "verification"; }
+    impl Keyspace for Users         { const PREFIX: &'static str = "user"; }
+    impl Keyspace for Requirements  { const PREFIX: &'static str = "requirement"; }
+    impl Keyspace for Tests         { const PREFIX: &'static str = "test"; }
+    impl Keyspace for Matrix        { const PREFIX: &'static str = "matrix"; }
     
     // Project-specific data
-    pub fn requirements_by_project(project_id: i32) -> String {
-        format!("requirements:project:{}", project_id)
-    }
+    pub fn requirements_by_project(project_id: i32) -> String { Requirements::project(project_id) }
     
     pub fn tests_by_project(project_id: i32) -> String {
         format!("tests:project:{}", project_id)
@@ -483,6 +517,7 @@ pub fn warm_cache() {
 }
 
 /// Warm up cache for a specific project
+/* TODO: never used ??
 pub fn warm_project_cache(project_id: i32) {
     let cache = get_cache();
     
@@ -543,6 +578,7 @@ pub fn warm_project_cache(project_id: i32) {
         }
     }
 }
+*/
 
 /// Get cache statistics
 pub fn get_cache_stats() -> serde_json::Value {

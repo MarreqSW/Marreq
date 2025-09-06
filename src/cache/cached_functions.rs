@@ -7,281 +7,127 @@ use crate::repository::{
 use crate::repository::errors::RepoError;
 use crate::helper_functions::decorators::get_linked_tests_for_requirement;
 use crate::models::*;
+use serde::{de::DeserializeOwned, Serialize};
 use serde_json::{self, json};
 use std::time::Duration;
 use chrono;
 
-/// Get projects for navigation with caching
-pub fn get_projects_for_nav_cached() -> Result<Vec<Project>, String> {
+/// Generic helper that attempts to load data from the cache and falls back to
+/// executing the provided closure when the cache is empty or contains invalid
+/// data. The fetched result is serialized and stored in the cache with the
+/// given TTL.
+fn get_or_fetch<T, F, E>(key: &str, ttl: Duration, fetch: F) -> Result<T, String>
+where
+    T: Serialize + DeserializeOwned,
+    F: FnOnce() -> Result<T, E>,
+    E: std::error::Error,
+{
     let cache = get_cache();
-    
-    // Try to get from cache first
-    if let Some(cached_data) = cache.get(keys::PROJECTS_NAV) {
-        match serde_json::from_str::<Vec<Project>>(&cached_data) {
-            Ok(projects) => return Ok(projects),
+
+    if let Some(cached) = cache.get(key) {
+        match serde_json::from_str::<T>(&cached) {
+            Ok(value) => return Ok(value),
             Err(_) => {
-                // Invalid cache data, remove it
-                cache.remove(keys::PROJECTS_NAV);
+                cache.remove(key);
             }
         }
     }
-    
-    // Get from database and cache the result
-    let repo = DieselRepo::new();
-    let projects = repo.get_projects_all().map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&projects)
+
+    let value = fetch().map_err(|e| e.to_string())?;
+    let json = serde_json::to_string(&value)
         .map_err(|e| format!("Serialization error: {}", e))?;
-    
+    cache.set_with_ttl(key, json, ttl);
+    Ok(value)
+}
+
+/// Get projects for navigation with caching
+pub fn get_projects_for_nav_cached() -> Result<Vec<Project>, String> {
     // Cache for 10 minutes (longer TTL for navigation data)
-    cache.set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(600));
-    
-    Ok(projects)
+    get_or_fetch(keys::PROJECTS_NAV, Duration::from_secs(600), || {
+        DieselRepo::new().get_projects_all()
+    })
 }
 
 /// Get all statuses with caching
 pub fn get_status_all_cached() -> Result<Vec<Status>, String> {
-    let cache = get_cache();
-    
-    if let Some(cached_data) = cache.get(keys::STATUS_ALL) {
-        match serde_json::from_str::<Vec<Status>>(&cached_data) {
-            Ok(statuses) => return Ok(statuses),
-            Err(_) => {
-                cache.remove(keys::STATUS_ALL);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let statuses = repo.get_status_all().map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&statuses)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 15 minutes (status data rarely changes)
-    cache.set_with_ttl(keys::STATUS_ALL, json_data, Duration::from_secs(900));
-    
-    Ok(statuses)
+    get_or_fetch(keys::STATUS_ALL, Duration::from_secs(900), || {
+        DieselRepo::new().get_status_all()
+    })
 }
 
 /// Get all categories with caching
 pub fn get_categories_all_cached() -> Result<Vec<Category>, String> {
-    let cache = get_cache();
-    
-    if let Some(cached_data) = cache.get(keys::CATEGORIES_ALL) {
-        match serde_json::from_str::<Vec<Category>>(&cached_data) {
-            Ok(categories) => return Ok(categories),
-            Err(_) => {
-                cache.remove(keys::CATEGORIES_ALL);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let categories = repo.get_categories_all().map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&categories)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 10 minutes
-    cache.set_with_ttl(keys::CATEGORIES_ALL, json_data, Duration::from_secs(600));
-    
-    Ok(categories)
+    get_or_fetch(keys::CATEGORIES_ALL, Duration::from_secs(600), || {
+        DieselRepo::new().get_categories_all()
+    })
 }
 
 /// Get all applicability with caching
 pub fn get_applicability_all_cached() -> Result<Vec<Applicability>, String> {
-    let cache = get_cache();
-    
-    if let Some(cached_data) = cache.get(keys::APPLICABILITY_ALL) {
-        match serde_json::from_str::<Vec<Applicability>>(&cached_data) {
-            Ok(applicability) => return Ok(applicability),
-            Err(_) => {
-                cache.remove(keys::APPLICABILITY_ALL);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let applicability = repo.get_applicability_all().map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&applicability)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 10 minutes
-    cache.set_with_ttl(keys::APPLICABILITY_ALL, json_data, Duration::from_secs(600));
-    
-    Ok(applicability)
+    get_or_fetch(keys::APPLICABILITY_ALL, Duration::from_secs(600), || {
+        DieselRepo::new().get_applicability_all()
+    })
 }
 
 /// Get all verification data with caching
 pub fn get_verification_all_cached() -> Result<Vec<Verification>, String> {
-    let cache = get_cache();
-    
-    if let Some(cached_data) = cache.get(keys::VERIFICATION_ALL) {
-        match serde_json::from_str::<Vec<Verification>>(&cached_data) {
-            Ok(verification) => return Ok(verification),
-            Err(_) => {
-                cache.remove(keys::VERIFICATION_ALL);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let verification = repo.get_verification_all().map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&verification)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 10 minutes
-    cache.set_with_ttl(keys::VERIFICATION_ALL, json_data, Duration::from_secs(600));
-    
-    Ok(verification)
+    get_or_fetch(keys::VERIFICATION_ALL, Duration::from_secs(600), || {
+        DieselRepo::new().get_verification_all()
+    })
 }
 
 /// Get all users with caching
 pub fn get_users_all_cached() -> Result<Vec<User>, String> {
-    let cache = get_cache();
-    
-    if let Some(cached_data) = cache.get(keys::USERS_ALL) {
-        match serde_json::from_str::<Vec<User>>(&cached_data) {
-            Ok(users) => return Ok(users),
-            Err(_) => {
-                cache.remove(keys::USERS_ALL);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let users = repo.get_users_all().map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&users)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 5 minutes (user data might change more frequently)
-    cache.set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(300));
-    
-    Ok(users)
+    get_or_fetch(keys::USERS_ALL, Duration::from_secs(300), || {
+        DieselRepo::new().get_users_all()
+    })
 }
 
 /// Get user by ID with caching
 pub fn get_user_by_id_cached(id: i32) -> User {
-    let cache = get_cache();
     let cache_key = keys::Users::by_id(id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<User>(&cached_data) {
-            Ok(user) => return user,
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let user = repo
-        .get_user_by_id(id)
-        .expect("Error reading table Users");
-    let json_data = serde_json::to_string(&user)
-        .unwrap_or_default();
-    
-    // Cache for 5 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
-    
-    user
+    get_or_fetch(&cache_key, Duration::from_secs(300), || {
+        DieselRepo::new().get_user_by_id(id)
+    })
+    .expect("Error reading table Users")
 }
 
 /// Get requirements by project with caching
 pub fn get_requirements_by_project_cached(project_id: i32) -> Result<Vec<Requirement>, String> {
-    let cache = get_cache();
-    let cache_key = keys::Requirements::by_project(project_id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Vec<Requirement>>(&cached_data) {
-            Ok(requirements) => return Ok(requirements),
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let requirements = repo
-        .get_requirements_by_project(project_id)
-        .map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&requirements)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 5 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
-    
-    Ok(requirements)
+    let cache_key = keys::Requirements::by_project(project_id);
+    get_or_fetch(&cache_key, Duration::from_secs(300), || {
+        DieselRepo::new().get_requirements_by_project(project_id)
+    })
 }
 
 /// Get tests by project with caching
 pub fn get_tests_by_project_cached(project_id: i32) -> Result<Vec<Test>, String> {
-    let cache = get_cache();
-    let cache_key = keys::Tests::by_project(project_id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Vec<Test>>(&cached_data) {
-            Ok(tests) => return Ok(tests),
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let tests = repo
-        .get_tests_by_project(project_id)
-        .map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&tests)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 5 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
-    
-    Ok(tests)
+    let cache_key = keys::Tests::by_project(project_id);
+    get_or_fetch(&cache_key, Duration::from_secs(300), || {
+        DieselRepo::new().get_tests_by_project(project_id)
+    })
 }
 
 /// Get matrix by project with caching
 pub fn get_matrix_by_project_cached(project_id: i32) -> Result<Vec<Matrix>, String> {
-    let cache = get_cache();
-    let cache_key = keys::Matrix::by_project(project_id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Vec<Matrix>>(&cached_data) {
-            Ok(matrix) => return Ok(matrix),
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let matrix = repo
-        .get_matrix_by_project(project_id)
-        .map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&matrix)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 3 minutes (matrix data is more dynamic)
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(180));
-    
-    Ok(matrix)
+    let cache_key = keys::Matrix::by_project(project_id);
+    get_or_fetch(&cache_key, Duration::from_secs(180), || {
+        DieselRepo::new().get_matrix_by_project(project_id)
+    })
 }
 
 /// Get requirement by ID with caching
 pub fn get_requirement_by_id_cached(id: i32) -> Requirement {
-    let cache = get_cache();
     let cache_key = keys::Requirements::by_id(id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Requirement>(&cached_data) {
-            Ok(requirement) => return requirement,
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let requirement = repo.get_requirement_by_id(id).unwrap_or_else(|_| Requirement {
+    let fallback = || Requirement {
         req_id: id,
         req_title: format!("Unknown Requirement ({})", id),
         req_description: "Requirement not found".to_string(),
@@ -299,14 +145,15 @@ pub fn get_requirement_by_id_cached(id: i32) -> Requirement {
         req_applicability: 1,
         req_justification: None,
         project_id: 1,
-    });
-    let json_data = serde_json::to_string(&requirement)
-        .unwrap_or_default();
-    
-    // Cache for 5 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
-    
-    requirement
+    };
+
+    get_or_fetch(&cache_key, Duration::from_secs(300), || {
+        match DieselRepo::new().get_requirement_by_id(id) {
+            Ok(r) => Ok::<Requirement, RepoError>(r),
+            Err(_) => Ok::<Requirement, RepoError>(fallback()),
+        }
+    })
+    .unwrap_or_else(|_| fallback())
 }
 
 /// Get requirement by ID with caching and proper error handling
@@ -341,29 +188,11 @@ pub fn get_requirement_by_id_cached_safe(id: i32) -> Result<Requirement, String>
 
 /// Get test by ID with caching
 pub fn get_test_by_id_cached(id: i32) -> Test {
-    let cache = get_cache();
     let cache_key = keys::Tests::by_id(id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Test>(&cached_data) {
-            Ok(test) => return test,
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let test = repo
-        .get_test_by_id(id)
-        .expect("Error reading table Tests");
-    let json_data = serde_json::to_string(&test)
-        .unwrap_or_default();
-    
-    // Cache for 5 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
-    
-    test
+    get_or_fetch(&cache_key, Duration::from_secs(300), || {
+        DieselRepo::new().get_test_by_id(id)
+    })
+    .expect("Error reading table Tests")
 }
 
 /// Get test by ID with caching and proper error handling
@@ -398,33 +227,22 @@ pub fn get_test_by_id_cached_safe(id: i32) -> Result<Test, String> {
 
 /// Get category by ID with caching
 pub fn get_category_by_id_cached(id: i32) -> Category {
-    let cache = get_cache();
     let cache_key = keys::Categories::by_id(id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Category>(&cached_data) {
-            Ok(category) => return category,
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let category = repo.get_category_by_id(id).unwrap_or_else(|_| Category {
+    let fallback = || Category {
         cat_id: id,
         cat_title: format!("Unknown Category ({})", id),
         cat_description: "Category not found".to_string(),
         cat_tag: "unknown".to_string(),
         project_id: 1,
-    });
-    let json_data = serde_json::to_string(&category)
-        .unwrap_or_default();
-    
-    // Cache for 10 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(600));
-    
-    category
+    };
+
+    get_or_fetch(&cache_key, Duration::from_secs(600), || {
+        match DieselRepo::new().get_category_by_id(id) {
+            Ok(c) => Ok::<Category, RepoError>(c),
+            Err(_) => Ok::<Category, RepoError>(fallback()),
+        }
+    })
+    .unwrap_or_else(|_| fallback())
 }
 
 /// Cached version of get_requirements_all with project filtering
@@ -477,322 +295,144 @@ pub fn invalidate_applicability_cache_complete(applicability_id: i32) {
 
 /// Get verification by project with caching
 pub fn get_verification_by_project_cached(project_id: i32) -> Result<Vec<Verification>, String> {
-    let cache = get_cache();
     let cache_key = format!("verification:project:{}", project_id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Vec<Verification>>(&cached_data) {
-            Ok(verification) => return Ok(verification),
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let verification = repo
-        .get_verification_by_project(project_id)
-        .map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&verification)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 5 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
-    
-    Ok(verification)
+    get_or_fetch(&cache_key, Duration::from_secs(300), || {
+        DieselRepo::new().get_verification_by_project(project_id)
+    })
 }
 
 /// Get categories by project with caching
 pub fn get_categories_by_project_cached(project_id: i32) -> Result<Vec<Category>, String> {
-    let cache = get_cache();
     let cache_key = format!("categories:project:{}", project_id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Vec<Category>>(&cached_data) {
-            Ok(categories) => return Ok(categories),
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let categories = repo
-        .get_categories_by_project(project_id)
-        .map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&categories)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 5 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
-    
-    Ok(categories)
+    get_or_fetch(&cache_key, Duration::from_secs(300), || {
+        DieselRepo::new().get_categories_by_project(project_id)
+    })
 }
 
 /// Get applicability by project with caching
 pub fn get_applicability_by_project_cached(project_id: i32) -> Result<Vec<Applicability>, String> {
-    let cache = get_cache();
     let cache_key = format!("applicability:project:{}", project_id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Vec<Applicability>>(&cached_data) {
-            Ok(applicability) => return Ok(applicability),
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let applicability = repo
-        .get_applicability_by_project(project_id)
-        .map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&applicability)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 5 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
-    
-    Ok(applicability)
+    get_or_fetch(&cache_key, Duration::from_secs(300), || {
+        DieselRepo::new().get_applicability_by_project(project_id)
+    })
 }
 
 /// Get linked tests for requirement with caching
 pub fn get_linked_tests_for_requirement_cached(req_id: i32) -> Result<Vec<DecoratedTest>, String> {
-    let cache = get_cache();
     let cache_key = format!("linked_tests:requirement:{}", req_id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Vec<DecoratedTest>>(&cached_data) {
-            Ok(tests) => return Ok(tests),
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-
-    let tests = get_linked_tests_for_requirement(req_id)
-        .map_err(|e| format!("Database error: {}", e))?;
-
-    let json_data = serde_json::to_string(&tests)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-
     // Cache for 3 minutes (linked tests can change frequently)
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(180));
-
-    Ok(tests)
+    get_or_fetch(&cache_key, Duration::from_secs(180), || {
+        get_linked_tests_for_requirement(req_id)
+    })
 }
 
 /// Get requirements for test with caching
 pub fn get_requirements_for_test_cached(test_id: i32) -> Result<Vec<Requirement>, String> {
-    let cache = get_cache();
     let cache_key = format!("requirements:test:{}", test_id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Vec<Requirement>>(&cached_data) {
-            Ok(requirements) => return Ok(requirements),
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let requirements = repo
-        .get_requirements_for_test(test_id)
-        .map_err(|e| e.to_string())?;
-    let json_data = serde_json::to_string(&requirements)
-        .map_err(|e| format!("Serialization error: {}", e))?;
-    
     // Cache for 5 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(300));
-    Ok(requirements)
+    get_or_fetch(&cache_key, Duration::from_secs(300), || {
+        DieselRepo::new().get_requirements_for_test(test_id)
+    })
 }
 
 /// Get status by ID with caching
 pub fn get_status_by_id_cached(id: i32) -> Status {
-    let cache = get_cache();
     let cache_key = format!("status:{}", id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Status>(&cached_data) {
-            Ok(status) => return status,
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let status = repo
-        .get_status_by_id(id)
-        .expect("Error reading table Status");
-    let json_data = serde_json::to_string(&status)
-        .unwrap_or_default();
-    
-    // Cache for 15 minutes (status data rarely changes)
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(900));
-    
-    status
+    get_or_fetch(&cache_key, Duration::from_secs(900), || {
+        DieselRepo::new().get_status_by_id(id)
+    })
+    .expect("Error reading table Status")
 }
 
 /// Get verification by ID with caching
 pub fn get_verification_by_id_cached(id: i32) -> Verification {
-    let cache = get_cache();
     let cache_key = format!("verification:{}", id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Verification>(&cached_data) {
-            Ok(verification) => return verification,
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
+    let fallback = || Verification {
+        verification_id: id,
+        verification_name: format!("Unknown Verification ({})", id),
+        verification_description: "Verification not found".to_string(),
+        project_id: 1,
+    };
+    get_or_fetch(&cache_key, Duration::from_secs(600), || {
+        match DieselRepo::new().get_verification_by_id(id) {
+            Ok(v) => Ok::<Verification, RepoError>(v),
+            Err(_) => Ok::<Verification, RepoError>(fallback()),
         }
-    }
-    
-    let repo = DieselRepo::new();
-    let verification = repo
-        .get_verification_by_id(id)
-        .unwrap_or_else(|_| Verification {
-            verification_id: id,
-            verification_name: format!("Unknown Verification ({})", id),
-            verification_description: "Verification not found".to_string(),
-            project_id: 1,
-        });
-    let json_data = serde_json::to_string(&verification)
-        .unwrap_or_default();
-    
-    // Cache for 10 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(600));
-    
-    verification
+    })
+    .unwrap_or_else(|_| fallback())
 }
 
 /// Get applicability by ID with caching
 pub fn get_applicability_by_id_cached(id: i32) -> Applicability {
-    let cache = get_cache();
     let cache_key = format!("applicability:{}", id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Applicability>(&cached_data) {
-            Ok(applicability) => return applicability,
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
+    let fallback = || Applicability {
+        app_id: id,
+        app_title: format!("Unknown Applicability ({})", id),
+        app_description: "Applicability not found".to_string(),
+        app_tag: "unknown".to_string(),
+        project_id: 1,
+    };
+    get_or_fetch(&cache_key, Duration::from_secs(600), || {
+        match DieselRepo::new().get_applicability_by_id(id) {
+            Ok(a) => Ok::<Applicability, RepoError>(a),
+            Err(_) => Ok::<Applicability, RepoError>(fallback()),
         }
-    }
-    
-    let repo = DieselRepo::new();
-    let applicability = repo
-        .get_applicability_by_id(id)
-        .unwrap_or_else(|_| Applicability {
-            app_id: id,
-            app_title: format!("Unknown Applicability ({})", id),
-            app_description: "Applicability not found".to_string(),
-            app_tag: "unknown".to_string(),
-            project_id: 1,
-        });
-    let json_data = serde_json::to_string(&applicability)
-        .unwrap_or_default();
-    
-    // Cache for 10 minutes
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(600));
-    
-    applicability
+    })
+    .unwrap_or_else(|_| fallback())
 }
 
 /// Get project by ID with caching
 pub fn get_project_by_id_cached(project_id: i32) -> Project {
-    let cache = get_cache();
     let cache_key = format!("project:{}", project_id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Project>(&cached_data) {
-            Ok(project) => return project,
-            Err(_) => {
-                cache.remove(&cache_key);
-            }
-        }
-    }
-    
-    let repo = DieselRepo::new();
-    let project = repo
-        .get_project_by_id(project_id)
-        .expect("Error loading project");
-    let json_data = serde_json::to_string(&project)
-        .unwrap_or_default();
-    
-    // Cache for 15 minutes (project data rarely changes)
-    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(900));
-    
-    project
+    get_or_fetch(&cache_key, Duration::from_secs(900), || {
+        DieselRepo::new().get_project_by_id(project_id)
+    })
+    .expect("Error loading project")
 }
 
 /// Get requirement title by ID with caching
 pub fn get_requirement_title_by_id_cached(id: i32) -> String {
-    let cache = get_cache();
     let cache_key = format!("requirement_title:{}", id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        return cached_data;
-    }
-    
-    let repo = DieselRepo::new();
-    let title = repo
-        .get_requirement_by_id(id)
-        .map(|r| r.req_title)
-        .unwrap_or_else(|_| "[Requirement Not Found]".to_string());
-    
-    // Cache for 10 minutes
-    cache.set_with_ttl(&cache_key, title.clone(), Duration::from_secs(600));
-    
-    title
+    get_or_fetch(&cache_key, Duration::from_secs(600), || {
+        match DieselRepo::new().get_requirement_by_id(id) {
+            Ok(r) => Ok::<String, RepoError>(r.req_title),
+            Err(_) => Ok::<String, RepoError>("[Requirement Not Found]".to_string()),
+        }
+    })
+    .unwrap_or_else(|_| "[Requirement Not Found]".to_string())
 }
 
 /// Get test status by ID with caching
 pub fn get_test_status_by_id_cached(id: i32) -> String {
-    let cache = get_cache();
     let cache_key = format!("test_status:{}", id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        return cached_data;
-    }
-    
-    let repo = DieselRepo::new();
-    let status = {
-        if let Ok(test) = repo.get_test_by_id(id) {
-            repo.get_status_by_id(test.test_status)
+    get_or_fetch(&cache_key, Duration::from_secs(300), || {
+        let repo = DieselRepo::new();
+        let status = if let Ok(test) = repo.get_test_by_id(id) {
+            repo
+                .get_status_by_id(test.test_status)
                 .map(|s| s.st_title)
                 .unwrap_or_else(|_| "[Status Not Found]".to_string())
         } else {
             "[Test Not Found]".to_string()
-        }
-    };
-    
-    // Cache for 5 minutes
-    cache.set_with_ttl(&cache_key, status.clone(), Duration::from_secs(300));
-    
-    status
+        };
+        Ok::<String, RepoError>(status)
+    })
+    .unwrap_or_else(|_| "[Status Not Found]".to_string())
 }
 
 /// Get status name by ID with caching
 pub fn get_status_name_by_id_cached(id: i32) -> String {
-    let cache = get_cache();
     let cache_key = format!("status_name:{}", id);
-    
-    if let Some(cached_data) = cache.get(&cache_key) {
-        return cached_data;
-    }
-    
-    let repo = DieselRepo::new();
-    let name = repo
-        .get_status_by_id(id)
-        .map(|s| s.st_title)
-        .unwrap_or_else(|_| "[Status Not Found]".to_string());
-    
-    // Cache for 15 minutes (status names rarely change)
-    cache.set_with_ttl(&cache_key, name.clone(), Duration::from_secs(900));
-    
-    name
+    get_or_fetch(&cache_key, Duration::from_secs(900), || {
+        match DieselRepo::new().get_status_by_id(id) {
+            Ok(s) => Ok::<String, RepoError>(s.st_title),
+            Err(_) => Ok::<String, RepoError>("[Status Not Found]".to_string()),
+        }
+    })
+    .unwrap_or_else(|_| "[Status Not Found]".to_string())
 }
 
 /// Warm up frequently accessed cache entries
@@ -1031,24 +671,10 @@ pub fn warm_frequently_accessed_cache() {
 }
 
 /// Get all projects with caching
-pub fn get_projects_all_cached() -> Result<Vec<Project>, Box<dyn std::error::Error>> {
-    let cache = get_cache();
+pub fn get_projects_all_cached() -> Result<Vec<Project>, String> {
     let cache_key = keys::PROJECTS_ALL;
-    
-    if let Some(cached_data) = cache.get(cache_key) {
-        match serde_json::from_str::<Vec<Project>>(&cached_data) {
-            Ok(projects) => return Ok(projects),
-            Err(_) => {
-                cache.remove(cache_key);
-            }
-        }
-    }
-    
-    let projects = DieselRepo::new().get_projects_all()?;
-    let json_data = serde_json::to_string(&projects)?;
-    
     // Cache for 10 minutes (project data changes occasionally)
-    cache.set_with_ttl(cache_key, json_data, Duration::from_secs(600));
-    
-    Ok(projects)
+    get_or_fetch(cache_key, Duration::from_secs(600), || {
+        DieselRepo::new().get_projects_all()
+    })
 }

@@ -296,6 +296,7 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
             test_name: format!("Unknown Test ({})", ident),
             test_description: "Test not found".to_string(),
             test_source: String::new(),
+            test_reference: format!("TEST-{}", ident),
             test_status: 1,
             test_parent: 0,
             project_id: 1,

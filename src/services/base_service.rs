@@ -169,22 +169,61 @@ impl Service for BaseService {
     }
 }
 
-/// Default implementation for cache operations
-impl<T> CacheableService<T> for BaseService 
-where 
-    T: serde::Serialize + serde::de::DeserializeOwned + Clone,
-{
-    fn get_cached(&self, key: &str) -> Option<T> {
+/// Helper methods for cache operations
+impl BaseService {
+    /// Get cached value by key
+    pub fn get_cached<T>(&self, key: &str) -> Option<T> 
+    where 
+        T: serde::de::DeserializeOwned,
+    {
         cache::get_cached_value(key)
     }
     
-    fn set_cache(&self, key: &str, value: T, ttl: Duration) {
+    /// Set cache value with TTL
+    pub fn set_cache<T>(&self, key: &str, value: T, ttl: Duration) 
+    where 
+        T: serde::Serialize,
+    {
         cache::set_cached_value(key, value, ttl);
     }
     
-    fn invalidate_cache(&self, key: &str) {
+    /// Invalidate cache entry
+    pub fn invalidate_cache(&self, key: &str) {
         cache::invalidate_cache_key(key);
     }
+    
+    /// Generate cache key for entity
+    pub fn cache_key(&self, entity_type: &str, id: i32) -> String {
+        format!("{}:{}", entity_type, id)
+    }
+    
+    /// Generate cache key for list
+    pub fn cache_key_list(&self, entity_type: &str, project_id: Option<i32>) -> String {
+        match project_id {
+            Some(pid) => format!("{}:list:{}", entity_type, pid),
+            None => format!("{}:list:all", entity_type),
+        }
+    }
+}
+
+/// Helper macro to implement CacheableService for service types
+#[macro_export]
+macro_rules! impl_cacheable_service {
+    ($service_type:ty, $data_type:ty) => {
+        impl CacheableService<$data_type> for $service_type {
+            fn get_cached(&self, key: &str) -> Option<$data_type> {
+                crate::cache::get_cached_value(key)
+            }
+            
+            fn set_cache(&self, key: &str, value: $data_type, ttl: Duration) {
+                crate::cache::set_cached_value(key, value, ttl);
+            }
+            
+            fn invalidate_cache(&self, key: &str) {
+                crate::cache::invalidate_cache_key(key);
+            }
+        }
+    };
 }
 
 /// Helper function to serialize data for logging
@@ -218,3 +257,4 @@ pub fn validate_entity_access(
 ) -> ApiResult<()> {
     check_project_permission(user, entity_project_id)
 }
+

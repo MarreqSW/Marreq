@@ -16,6 +16,7 @@ use chrono::Utc;
 
 use crate::auth::*;
 use crate::cached_functions::*;
+use crate::cache::invalidate_project_cache;
 use crate::repository::PooledConnectionWrapper;
 use crate::generators::*;
 use crate::helper_functions::*;
@@ -703,6 +704,9 @@ pub fn post_edit_requirement(
 
     // Invalidate cache for the updated requirement
     invalidate_requirement_cache_complete(req_id);
+    
+    // Also invalidate project cache since requirement list uses project-level cache
+    invalidate_project_cache(old_requirement.project_id);
 
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
@@ -1025,6 +1029,9 @@ pub fn post_requirement(
 
     // Invalidate cache for the new requirement
     invalidate_requirement_cache_complete(my_id);
+    
+    // Also invalidate project cache since requirement list uses project-level cache
+    invalidate_project_cache(requirement_data.project_id);
 
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
@@ -1062,7 +1069,24 @@ pub fn show_tests(
         verification_filter,
         category_filter,
     );
-    let tests_decorate = decorate_tests(filtered_tests);
+    let mut tests_decorate = decorate_tests(filtered_tests);
+    
+    // Sort tests by reference (TEST-1, TEST-2, etc.)
+    tests_decorate.sort_by(|a, b| {
+        // Extract numeric part from reference for proper sorting
+        let a_num = a.test_reference
+            .split('-')
+            .last()
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(0);
+        let b_num = b.test_reference
+            .split('-')
+            .last()
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(0);
+        a_num.cmp(&b_num)
+    });
+    
     ctx["tests"] = json!(tests_decorate);
 
     // Add filter data to context for the template
@@ -1122,7 +1146,9 @@ pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Templ
                 "test_name": decorated_test.test_name,
                 "test_description": decorated_test.test_description,
                 "test_source": decorated_test.test_source,
+                "test_reference": decorated_test.test_reference,
                 "test_status": decorated_test.test_status,
+                "test_status_id": decorated_test.test_status_id,
                 "test_parent_id": decorated_test.test_parent_id,
                 "test_parent_title": decorated_test.test_parent_title,
                 "linked_requirements": linked_requirements_json,
@@ -1327,6 +1353,7 @@ pub fn post_edit_test(
         test_name: edit_test_form.test_name.clone(),
         test_description: edit_test_form.test_description.clone(),
         test_source: edit_test_form.test_source.clone(),
+        test_reference: edit_test_form.test_reference.clone(),
         test_status: edit_test_form.test_status,
         test_parent: edit_test_form.test_parent,
         project_id: edit_test_form.project_id,
@@ -1365,6 +1392,9 @@ pub fn post_edit_test(
 
     // Invalidate cache for the updated test
     invalidate_test_cache_complete(test_id);
+    
+    // Also invalidate project cache since test list uses project-level cache
+    invalidate_project_cache(edit_test_form.project_id);
 
     Ok(Redirect::to(uri!(show_test_id(edit_test_form.test_id))))
 }
@@ -1384,6 +1414,7 @@ pub fn post_test(
         test_name: new_test.test_name.clone(),
         test_description: new_test.test_description.clone(),
         test_source: new_test.test_source.clone(),
+        test_reference: new_test.test_reference.clone(),
         test_status: new_test.test_status,
         test_parent: new_test.test_parent,
         project_id: new_test.project_id,
@@ -1425,6 +1456,9 @@ pub fn post_test(
 
     // Invalidate cache for the new test
     invalidate_test_cache_complete(my_id);
+    
+    // Also invalidate project cache since test list uses project-level cache
+    invalidate_project_cache(new_test.project_id);
 
     Ok(Redirect::to(uri!(show_test_id(my_id))))
 }
@@ -1861,6 +1895,9 @@ pub fn post_category(
 
             // Invalidate cache for the new category
             invalidate_category_cache_complete(category_id);
+            
+            // Also invalidate project cache since category list uses project-level cache
+            invalidate_project_cache(category_data.project_id);
 
             Ok(Redirect::to(uri!(show_categories)))
         }
@@ -1924,6 +1961,9 @@ pub fn post_edit_category(
 
             // Invalidate cache for the updated category
             invalidate_category_cache_complete(cat_id);
+            
+            // Also invalidate project cache since category list uses project-level cache
+            invalidate_project_cache(category_with_id.project_id);
 
             Ok(Redirect::to(uri!(show_categories)))
         }
@@ -2130,6 +2170,9 @@ pub fn post_applicability(
 
             // Invalidate cache for the new applicability
             invalidate_applicability_cache_complete(applicability_id);
+            
+            // Also invalidate project cache since applicability list uses project-level cache
+            invalidate_project_cache(applicability_data.project_id);
 
             Ok(Redirect::to(uri!(show_applicability)))
         }

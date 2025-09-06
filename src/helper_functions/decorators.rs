@@ -139,6 +139,7 @@ fn decorate_requirements_impl<R: Repository>(
                 test_name: t.test_name,
                 test_description: t.test_description,
                 test_source: t.test_source,
+                test_reference: t.test_reference,
                 test_status: status,
                 test_status_id: t.test_status,
                 test_parent_id: t.test_parent,

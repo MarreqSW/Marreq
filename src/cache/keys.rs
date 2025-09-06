@@ -73,3 +73,51 @@ impl Keyspace for Requirements  { const PREFIX: &'static str = "requirement"; }
 impl Keyspace for RequirementTitle   { const PREFIX: &'static str = "requirement_title"; }
 impl Keyspace for LinkedRequirements { const PREFIX: &'static str = "linked_tests"; }
 impl Keyspace for LinkedTests { const PREFIX: &'static str = "linked_requirements"; }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! check_keyspace {
+        ($ty:ty, $prefix:expr) => {
+            assert_eq!(<$ty as Keyspace>::by_id(1), format!("{}:1", $prefix));
+            assert_eq!(<$ty as Keyspace>::by_project("p"), format!("{}:project:p", $prefix));
+            assert_eq!(<$ty as Keyspace>::for_requirement(2), format!("{}:requirement:2", $prefix));
+            assert_eq!(<$ty as Keyspace>::for_test(3), format!("{}:test:3", $prefix));
+        };
+    }
+
+    #[test]
+    fn constants_are_correct() {
+        assert_eq!(PROJECTS_NAV, "projects:nav");
+        assert_eq!(PROJECTS_ALL, "projects:all");
+        assert_eq!(STATUS_ALL, "status:all");
+        assert_eq!(CATEGORIES_ALL, "categories:all");
+        assert_eq!(APPLICABILITY_ALL, "applicability:all");
+        assert_eq!(VERIFICATION_ALL, "verification:all");
+        assert_eq!(USERS_ALL, "users:all");
+        assert_eq!(CACHE_STATS, "cache:stats");
+        assert_eq!(CACHE_HEALTH, "cache:health");
+        assert_eq!(CACHE_PERFORMANCE, "cache:performance");
+        assert_eq!(REQUIREMENTS_ALL, "requirements:all");
+        assert_eq!(TESTS_ALL, "tests:all");
+    }
+
+    #[test]
+    fn prefixes_generate_expected_keys() {
+        check_keyspace!(Projects, "project");
+        check_keyspace!(Status, "status");
+        check_keyspace!(Categories, "category");
+        check_keyspace!(Applicability, "applicability");
+        check_keyspace!(Verification, "verification");
+        check_keyspace!(Users, "user");
+        check_keyspace!(Requirements, "requirement");
+        check_keyspace!(RequirementTitle, "requirement_title");
+        check_keyspace!(Tests, "test");
+        check_keyspace!(TestStatus, "test_status");
+        check_keyspace!(Matrix, "matrix");
+        check_keyspace!(LinkedRequirements, "linked_tests");
+        check_keyspace!(LinkedTests, "linked_requirements");
+    }
+}

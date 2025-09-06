@@ -8,6 +8,7 @@ use std::thread;
 use chrono;
 use crate::repository::*;
 use super::keys;
+use crate::cache::keys::Keyspace;
 
 /// Cache entry with TTL (Time To Live)
 #[derive(Clone)]
@@ -266,26 +267,26 @@ pub fn get_cache() -> &'static Cache {
 /// Invalidate all project-related cache entries
 pub fn invalidate_project_cache(project_id: i32) {
     let cache = get_cache();
-    cache.remove(&keys::requirements_by_project(project_id));
-    cache.remove(&keys::tests_by_project(project_id));
-    cache.remove(&keys::matrix_by_project(project_id));
-    cache.remove(&keys::verification_by_project(project_id));
-    cache.remove(&keys::categories_by_project(project_id));
-    cache.remove(&keys::applicability_by_project(project_id));
-    cache.remove(&keys::project_by_id(project_id));
+    cache.remove(&keys::Requirements::by_project(project_id));
+    cache.remove(&keys::Tests::by_project(project_id));
+    cache.remove(&keys::Matrix::by_project(project_id));
+    cache.remove(&keys::Verification::by_project(project_id));
+    cache.remove(&keys::Categories::by_project(project_id));
+    cache.remove(&keys::Applicability::by_project(project_id));
+    cache.remove(&keys::Projects::by_id(project_id));
 }
 
 /// Invalidate all user-related cache entries
 pub fn invalidate_user_cache(user_id: i32) {
     let cache = get_cache();
-    cache.remove(&keys::user_by_id(user_id));
+    cache.remove(&keys::Users::by_id(user_id));
     cache.remove(keys::USERS_ALL);
 }
 
 /// Invalidate all requirement-related cache entries
 pub fn invalidate_requirement_cache(req_id: i32) {
     let cache = get_cache();
-    cache.remove(&keys::requirement_by_id(req_id));
+    cache.remove(&keys::Requirements::by_id(req_id));
     cache.remove(&keys::linked_tests_for_requirement(req_id));
     cache.remove(&keys::requirement_title_by_id(req_id));
     // Also invalidate global lists and project-level caches
@@ -296,7 +297,7 @@ pub fn invalidate_requirement_cache(req_id: i32) {
 /// Invalidate all test-related cache entries
 pub fn invalidate_test_cache(test_id: i32) {
     let cache = get_cache();
-    cache.remove(&keys::test_by_id(test_id));
+    cache.remove(&keys::Tests::by_id(test_id));
     cache.remove(&keys::linked_requirements_for_test(test_id));
     cache.remove(&keys::test_status_by_id(test_id));
     // Also invalidate global lists and project-level caches
@@ -307,28 +308,28 @@ pub fn invalidate_test_cache(test_id: i32) {
 /// Invalidate all category-related cache entries
 pub fn invalidate_category_cache(cat_id: i32) {
     let cache = get_cache();
-    cache.remove(&keys::category_by_id(cat_id));
+    cache.remove(&keys::Categories::by_id(cat_id));
     cache.remove(keys::CATEGORIES_ALL);
 }
 
 /// Invalidate all status-related cache entries
 pub fn invalidate_status_cache(status_id: i32) {
     let cache = get_cache();
-    cache.remove(&keys::status_by_id(status_id));
+    cache.remove(&keys::Status::by_id(status_id));
     cache.remove(keys::STATUS_ALL);
 }
 
 /// Invalidate all verification-related cache entries
 pub fn invalidate_verification_cache(verification_id: i32) {
     let cache = get_cache();
-    cache.remove(&keys::verification_by_id(verification_id));
+    cache.remove(&keys::Verification::by_id(verification_id));
     cache.remove(keys::VERIFICATION_ALL);
 }
 
 /// Invalidate all applicability-related cache entries
 pub fn invalidate_applicability_cache(applicability_id: i32) {
     let cache = get_cache();
-    cache.remove(&keys::applicability_by_id(applicability_id));
+    cache.remove(&keys::Applicability::by_id(applicability_id));
     cache.remove(keys::APPLICABILITY_ALL);
 }
 
@@ -402,7 +403,7 @@ pub fn warm_project_cache(project_id: i32) {
     if let Ok(tests) = repo.get_tests_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&tests) {
             cache.set_with_ttl(
-                &keys::tests_by_project(project_id),
+                &keys::Tests::by_project(project_id),
                 json_data,
                 Duration::from_secs(300)
             );
@@ -413,7 +414,7 @@ pub fn warm_project_cache(project_id: i32) {
     if let Ok(matrix_data) = repo.get_matrix_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&matrix_data) {
             cache.set_with_ttl(
-                &keys::matrix_by_project(project_id),
+                &keys::Matrix::by_project(project_id),
                 json_data,
                 Duration::from_secs(180)
             );
@@ -424,7 +425,7 @@ pub fn warm_project_cache(project_id: i32) {
     if let Ok(categories) = repo.get_categories_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&categories) {
             cache.set_with_ttl(
-                &keys::categories_by_project(project_id),
+                &keys::Categories::by_project(project_id),
                 json_data,
                 Duration::from_secs(600)
             );
@@ -435,7 +436,7 @@ pub fn warm_project_cache(project_id: i32) {
     if let Ok(verifications) = repo.get_verification_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&verifications) {
             cache.set_with_ttl(
-                &keys::verification_by_project(project_id),
+                &keys::Verification::by_project(project_id),
                 json_data,
                 Duration::from_secs(600)
             );

@@ -1,7 +1,9 @@
+pub mod cache_middleware;
 pub mod diesel_repo;
 pub mod errors;
 pub mod fake_repo;
 
+pub use cache_middleware::CacheRepository;
 pub use diesel_repo::*;
 
 use crate::models::*;

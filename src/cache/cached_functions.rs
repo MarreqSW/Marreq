@@ -1,4 +1,5 @@
 use crate::cache::{get_cache, keys, invalidate_project_cache, invalidate_user_cache, invalidate_requirement_cache, invalidate_test_cache, invalidate_category_cache};
+use crate::cache::keys::Keyspace;
 use crate::repository::{
     DieselRepo, LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
     TestsRepository, UserRepository,
@@ -160,7 +161,7 @@ pub fn get_users_all_cached() -> Result<Vec<User>, String> {
 /// Get user by ID with caching
 pub fn get_user_by_id_cached(id: i32) -> User {
     let cache = get_cache();
-    let cache_key = keys::user_by_id(id);
+    let cache_key = keys::Users::by_id(id);
     
     if let Some(cached_data) = cache.get(&cache_key) {
         match serde_json::from_str::<User>(&cached_data) {
@@ -187,7 +188,7 @@ pub fn get_user_by_id_cached(id: i32) -> User {
 /// Get requirements by project with caching
 pub fn get_requirements_by_project_cached(project_id: i32) -> Result<Vec<Requirement>, String> {
     let cache = get_cache();
-    let cache_key = keys::requirements_by_project(project_id);
+    let cache_key = keys::Requirements::by_project(project_id);
     
     if let Some(cached_data) = cache.get(&cache_key) {
         match serde_json::from_str::<Vec<Requirement>>(&cached_data) {
@@ -214,7 +215,7 @@ pub fn get_requirements_by_project_cached(project_id: i32) -> Result<Vec<Require
 /// Get tests by project with caching
 pub fn get_tests_by_project_cached(project_id: i32) -> Result<Vec<Test>, String> {
     let cache = get_cache();
-    let cache_key = keys::tests_by_project(project_id);
+    let cache_key = keys::Tests::by_project(project_id);
     
     if let Some(cached_data) = cache.get(&cache_key) {
         match serde_json::from_str::<Vec<Test>>(&cached_data) {
@@ -241,7 +242,7 @@ pub fn get_tests_by_project_cached(project_id: i32) -> Result<Vec<Test>, String>
 /// Get matrix by project with caching
 pub fn get_matrix_by_project_cached(project_id: i32) -> Result<Vec<Matrix>, String> {
     let cache = get_cache();
-    let cache_key = keys::matrix_by_project(project_id);
+    let cache_key = keys::Matrix::by_project(project_id);
     
     if let Some(cached_data) = cache.get(&cache_key) {
         match serde_json::from_str::<Vec<Matrix>>(&cached_data) {
@@ -268,7 +269,7 @@ pub fn get_matrix_by_project_cached(project_id: i32) -> Result<Vec<Matrix>, Stri
 /// Get requirement by ID with caching
 pub fn get_requirement_by_id_cached(id: i32) -> Requirement {
     let cache = get_cache();
-    let cache_key = keys::requirement_by_id(id);
+    let cache_key = keys::Requirements::by_id(id);
     
     if let Some(cached_data) = cache.get(&cache_key) {
         match serde_json::from_str::<Requirement>(&cached_data) {
@@ -311,7 +312,7 @@ pub fn get_requirement_by_id_cached(id: i32) -> Requirement {
 /// Get requirement by ID with caching and proper error handling
 pub fn get_requirement_by_id_cached_safe(id: i32) -> Result<Requirement, String> {
     let cache = get_cache();
-    let cache_key = keys::requirement_by_id(id);
+    let cache_key = keys::Requirements::by_id(id);
     
     if let Some(cached_data) = cache.get(&cache_key) {
         match serde_json::from_str::<Requirement>(&cached_data) {
@@ -341,7 +342,7 @@ pub fn get_requirement_by_id_cached_safe(id: i32) -> Result<Requirement, String>
 /// Get test by ID with caching
 pub fn get_test_by_id_cached(id: i32) -> Test {
     let cache = get_cache();
-    let cache_key = keys::test_by_id(id);
+    let cache_key = keys::Tests::by_id(id);
     
     if let Some(cached_data) = cache.get(&cache_key) {
         match serde_json::from_str::<Test>(&cached_data) {
@@ -368,7 +369,7 @@ pub fn get_test_by_id_cached(id: i32) -> Test {
 /// Get test by ID with caching and proper error handling
 pub fn get_test_by_id_cached_safe(id: i32) -> Result<Test, String> {
     let cache = get_cache();
-    let cache_key = keys::test_by_id(id);
+    let cache_key = keys::Tests::by_id(id);
     
     if let Some(cached_data) = cache.get(&cache_key) {
         match serde_json::from_str::<Test>(&cached_data) {
@@ -398,7 +399,7 @@ pub fn get_test_by_id_cached_safe(id: i32) -> Result<Test, String> {
 /// Get category by ID with caching
 pub fn get_category_by_id_cached(id: i32) -> Category {
     let cache = get_cache();
-    let cache_key = keys::category_by_id(id);
+    let cache_key = keys::Categories::by_id(id);
     
     if let Some(cached_data) = cache.get(&cache_key) {
         match serde_json::from_str::<Category>(&cached_data) {
@@ -854,7 +855,7 @@ pub fn bulk_invalidate_cache(entity_type: &str, entity_ids: &[i32]) {
             // Also invalidate project-specific caches
             if let Ok(projects) = DieselRepo::new().get_projects_all() {
                 for project in projects {
-                    cache.remove(&keys::requirements_by_project(project.project_id));
+                    cache.remove(&keys::Requirements::by_project(project.project_id));
                 }
             }
         }
@@ -865,7 +866,7 @@ pub fn bulk_invalidate_cache(entity_type: &str, entity_ids: &[i32]) {
             // Also invalidate project-specific caches
             if let Ok(projects) = DieselRepo::new().get_projects_all() {
                 for project in projects {
-                    cache.remove(&keys::tests_by_project(project.project_id));
+                    cache.remove(&keys::Tests::by_project(project.project_id));
                 }
             }
         }
@@ -926,8 +927,8 @@ pub fn smart_invalidate_cache(entity_type: &str, entity_id: i32, related_entitie
             // Invalidate project-specific caches
             if let Ok(projects) = DieselRepo::new().get_projects_all() {
                 for project in projects {
-                    cache.remove(&keys::requirements_by_project(project.project_id));
-                    cache.remove(&keys::tests_by_project(project.project_id));
+                    cache.remove(&keys::Requirements::by_project(project.project_id));
+                    cache.remove(&keys::Tests::by_project(project.project_id));
                 }
             }
         }
@@ -955,7 +956,7 @@ pub fn warm_project_cache(project_id: i32) {
     if let Ok(requirements) = DieselRepo::new().get_requirements_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&requirements) {
             cache.set_with_ttl(
-                &keys::requirements_by_project(project_id),
+                &keys::Requirements::by_project(project_id),
                 json_data,
                 Duration::from_secs(300)
             );
@@ -966,7 +967,7 @@ pub fn warm_project_cache(project_id: i32) {
     if let Ok(tests) = DieselRepo::new().get_tests_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&tests) {
             cache.set_with_ttl(
-                &keys::tests_by_project(project_id),
+                &keys::Tests::by_project(project_id),
                 json_data,
                 Duration::from_secs(300)
             );
@@ -977,7 +978,7 @@ pub fn warm_project_cache(project_id: i32) {
     if let Ok(categories) = DieselRepo::new().get_categories_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&categories) {
             cache.set_with_ttl(
-                &keys::categories_by_project(project_id),
+                &keys::Categories::by_project(project_id),
                 json_data,
                 Duration::from_secs(600)
             );
@@ -988,7 +989,7 @@ pub fn warm_project_cache(project_id: i32) {
     if let Ok(verifications) = DieselRepo::new().get_verification_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&verifications) {
             cache.set_with_ttl(
-                &keys::verification_by_project(project_id),
+                &keys::Verification::by_project(project_id),
                 json_data,
                 Duration::from_secs(600)
             );
@@ -1006,7 +1007,7 @@ pub fn warm_frequently_accessed_cache() {
             if let Ok(matrix_data) = DieselRepo::new().get_matrix_by_project(project.project_id) {
                 if let Ok(json_data) = serde_json::to_string(&matrix_data) {
                     cache.set_with_ttl(
-                        &keys::matrix_by_project(project.project_id),
+                        &keys::Matrix::by_project(project.project_id),
                         json_data,
                         Duration::from_secs(1800) // 30 minutes
                     );
@@ -1020,7 +1021,7 @@ pub fn warm_frequently_accessed_cache() {
         for user in users {
             if let Ok(json_data) = serde_json::to_string(&user) {
                 cache.set_with_ttl(
-                    &keys::user_by_id(user.user_id),
+                    &keys::Users::by_id(user.user_id),
                     json_data,
                     Duration::from_secs(600)
                 );

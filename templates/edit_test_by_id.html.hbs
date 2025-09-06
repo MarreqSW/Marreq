@@ -37,7 +37,7 @@
             <label for="test_status" class="form-label">Status</label>
             <select name="test_status" id="test_status" class="form-control" required>
               {{#each status }}
-                <option value="{{st_id}}" {{#if (eq st_id ../tests.test_status_id)}}selected{{/if}}>{{st_title}}</option>
+                <option value="{{test_st_id}}" {{#if (eq test_st_id ../tests.test_status_id)}}selected{{/if}}>{{test_st_title}}</option>
               {{/each}}
             </select>
           </div>

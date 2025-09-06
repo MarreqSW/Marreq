@@ -199,7 +199,7 @@ impl ExcelImporter {
         };
         
         let status_id = if let Some(status_name) = req_data.get("req_current_status") {
-            self.resolve_status_id(status_name, conn)?
+            self.resolve_requirement_status_id(status_name, conn)?
         } else {
             1 // Default status
         };
@@ -268,7 +268,7 @@ impl ExcelImporter {
         
         // Resolve foreign key references
         let status_id = if let Some(status_name) = test_data.get("test_status") {
-            self.resolve_status_id(status_name, conn)?
+            self.resolve_test_status_id(status_name, conn)?
         } else {
             1 // Default status
         };
@@ -342,12 +342,25 @@ impl ExcelImporter {
         DieselRepo::new().insert_new_applicability(&new_app).map_err(|e| anyhow!("{}", e))
     }
     
-    fn resolve_status_id(&self, status_name: &str, _conn: &mut PgConnection) -> Result<i32> {
+    fn resolve_requirement_status_id(&self, status_name: &str, _conn: &mut PgConnection) -> Result<i32> {
         let repo = DieselRepo::new();
-        let statuses = repo.get_status_all().map_err(|e| anyhow!("{}", e))?;
+        let statuses = repo.get_requirement_status_all().map_err(|e| anyhow!("{}", e))?;
         for status in statuses {
-            if status.st_title == status_name {
-                return Ok(status.st_id);
+            if status.req_st_title == status_name {
+                return Ok(status.req_st_id);
+            }
+        }
+        
+        // Return default status ID if not found
+        Ok(1)
+    }
+
+    fn resolve_test_status_id(&self, status_name: &str, _conn: &mut PgConnection) -> Result<i32> {
+        let repo = DieselRepo::new();
+        let statuses = repo.get_test_status_all().map_err(|e| anyhow!("{}", e))?;
+        for status in statuses {
+            if status.test_st_title == status_name {
+                return Ok(status.test_st_id);
             }
         }
         

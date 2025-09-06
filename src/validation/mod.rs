@@ -310,24 +310,47 @@ pub fn validate_project(project: &NewProject) -> Result<(), ValidationError> {
     Ok(())
 }
 
-/// Validate a status before creation
-pub fn validate_status(status: &NewStatus) -> Result<(), ValidationError> {
+/// Validate a requirement status before creation
+pub fn validate_requirement_status(status: &NewRequirementStatus) -> Result<(), ValidationError> {
     // Validate status name
-    if status.st_title.trim().is_empty() {
-        return Err(ValidationError::Required { field: "st_title".to_string() });
+    if status.req_st_title.trim().is_empty() {
+        return Err(ValidationError::Required { field: "req_st_title".to_string() });
     }
     
-    if status.st_title.len() > 50 {
-        return Err(ValidationError::TooLong { field: "st_title".to_string(), max: 50 });
+    if status.req_st_title.len() > 50 {
+        return Err(ValidationError::TooLong { field: "req_st_title".to_string(), max: 50 });
     }
     
-    if status.st_title.len() < 2 {
-        return Err(ValidationError::TooShort { field: "st_title".to_string(), min: 2 });
+    if status.req_st_title.len() < 2 {
+        return Err(ValidationError::TooShort { field: "req_st_title".to_string(), min: 2 });
     }
     
     // Validate description
-    if !status.st_description.trim().is_empty() && status.st_description.len() > 200 {
-        return Err(ValidationError::TooLong { field: "st_description".to_string(), max: 200 });
+    if !status.req_st_description.trim().is_empty() && status.req_st_description.len() > 200 {
+        return Err(ValidationError::TooLong { field: "req_st_description".to_string(), max: 200 });
+    }
+    
+    Ok(())
+}
+
+/// Validate a test status before creation
+pub fn validate_test_status(status: &NewTestStatus) -> Result<(), ValidationError> {
+    // Validate status name
+    if status.test_st_title.trim().is_empty() {
+        return Err(ValidationError::Required { field: "test_st_title".to_string() });
+    }
+    
+    if status.test_st_title.len() > 50 {
+        return Err(ValidationError::TooLong { field: "test_st_title".to_string(), max: 50 });
+    }
+    
+    if status.test_st_title.len() < 2 {
+        return Err(ValidationError::TooShort { field: "test_st_title".to_string(), min: 2 });
+    }
+    
+    // Validate description
+    if !status.test_st_description.trim().is_empty() && status.test_st_description.len() > 200 {
+        return Err(ValidationError::TooLong { field: "test_st_description".to_string(), max: 200 });
     }
     
     Ok(())

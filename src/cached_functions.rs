@@ -37,26 +37,50 @@ pub fn get_projects_for_nav_cached() -> Result<Vec<Project>, String> {
     Ok(projects)
 }
 
-/// Get all statuses with caching
-pub fn get_status_all_cached() -> Result<Vec<Status>, String> {
+/// Get all requirement statuses with caching
+pub fn get_requirement_status_all_cached() -> Result<Vec<RequirementStatus>, String> {
     let cache = get_cache();
     
-    if let Some(cached_data) = cache.get(keys::STATUS_ALL) {
-        match serde_json::from_str::<Vec<Status>>(&cached_data) {
+    if let Some(cached_data) = cache.get(keys::REQUIREMENT_STATUS_ALL) {
+        match serde_json::from_str::<Vec<RequirementStatus>>(&cached_data) {
             Ok(statuses) => return Ok(statuses),
             Err(_) => {
-                cache.remove(keys::STATUS_ALL);
+                cache.remove(keys::REQUIREMENT_STATUS_ALL);
             }
         }
     }
     
     let repo = DieselRepo::new();
-    let statuses = repo.get_status_all().map_err(|e| e.to_string())?;
+    let statuses = repo.get_requirement_status_all().map_err(|e| e.to_string())?;
     let json_data = serde_json::to_string(&statuses)
         .map_err(|e| format!("Serialization error: {}", e))?;
     
     // Cache for 15 minutes (status data rarely changes)
-    cache.set_with_ttl(keys::STATUS_ALL, json_data, Duration::from_secs(900));
+    cache.set_with_ttl(keys::REQUIREMENT_STATUS_ALL, json_data, Duration::from_secs(900));
+    
+    Ok(statuses)
+}
+
+/// Get all test statuses with caching
+pub fn get_test_status_all_cached() -> Result<Vec<TestStatus>, String> {
+    let cache = get_cache();
+    
+    if let Some(cached_data) = cache.get(keys::TEST_STATUS_ALL) {
+        match serde_json::from_str::<Vec<TestStatus>>(&cached_data) {
+            Ok(statuses) => return Ok(statuses),
+            Err(_) => {
+                cache.remove(keys::TEST_STATUS_ALL);
+            }
+        }
+    }
+    
+    let repo = DieselRepo::new();
+    let statuses = repo.get_test_status_all().map_err(|e| e.to_string())?;
+    let json_data = serde_json::to_string(&statuses)
+        .map_err(|e| format!("Serialization error: {}", e))?;
+    
+    // Cache for 15 minutes (status data rarely changes)
+    cache.set_with_ttl(keys::TEST_STATUS_ALL, json_data, Duration::from_secs(900));
     
     Ok(statuses)
 }
@@ -607,13 +631,13 @@ pub fn get_requirements_for_test_cached(test_id: i32) -> Result<Vec<Requirement>
     Ok(requirements)
 }
 
-/// Get status by ID with caching
-pub fn get_status_by_id_cached(id: i32) -> Status {
+/// Get requirement status by ID with caching
+pub fn get_requirement_status_by_id_cached(id: i32) -> RequirementStatus {
     let cache = get_cache();
-    let cache_key = format!("status:{}", id);
+    let cache_key = format!("requirement_status:{}", id);
     
     if let Some(cached_data) = cache.get(&cache_key) {
-        match serde_json::from_str::<Status>(&cached_data) {
+        match serde_json::from_str::<RequirementStatus>(&cached_data) {
             Ok(status) => return status,
             Err(_) => {
                 cache.remove(&cache_key);
@@ -623,8 +647,35 @@ pub fn get_status_by_id_cached(id: i32) -> Status {
     
     let repo = DieselRepo::new();
     let status = repo
-        .get_status_by_id(id)
-        .expect("Error reading table Status");
+        .get_requirement_status_by_id(id)
+        .expect("Error reading table RequirementStatus");
+    let json_data = serde_json::to_string(&status)
+        .unwrap_or_default();
+    
+    // Cache for 15 minutes (status data rarely changes)
+    cache.set_with_ttl(&cache_key, json_data, Duration::from_secs(900));
+    
+    status
+}
+
+/// Get test status by ID with caching
+pub fn get_test_status_by_id_cached(id: i32) -> TestStatus {
+    let cache = get_cache();
+    let cache_key = format!("test_status:{}", id);
+    
+    if let Some(cached_data) = cache.get(&cache_key) {
+        match serde_json::from_str::<TestStatus>(&cached_data) {
+            Ok(status) => return status,
+            Err(_) => {
+                cache.remove(&cache_key);
+            }
+        }
+    }
+    
+    let repo = DieselRepo::new();
+    let status = repo
+        .get_test_status_by_id(id)
+        .expect("Error reading table TestStatus");
     let json_data = serde_json::to_string(&status)
         .unwrap_or_default();
     
@@ -747,8 +798,8 @@ pub fn get_requirement_title_by_id_cached(id: i32) -> String {
     title
 }
 
-/// Get test status by ID with caching
-pub fn get_test_status_by_id_cached(id: i32) -> String {
+/// Get test status name by test ID with caching
+pub fn get_test_status_name_by_test_id_cached(id: i32) -> String {
     let cache = get_cache();
     let cache_key = format!("test_status:{}", id);
     
@@ -759,8 +810,8 @@ pub fn get_test_status_by_id_cached(id: i32) -> String {
     let repo = DieselRepo::new();
     let status = {
         if let Ok(test) = repo.get_test_by_id(id) {
-            repo.get_status_by_id(test.test_status)
-                .map(|s| s.st_title)
+            repo.get_test_status_by_id(test.test_status)
+                .map(|s| s.test_st_title)
                 .unwrap_or_else(|_| "[Status Not Found]".to_string())
         } else {
             "[Test Not Found]".to_string()
@@ -773,10 +824,10 @@ pub fn get_test_status_by_id_cached(id: i32) -> String {
     status
 }
 
-/// Get status name by ID with caching
-pub fn get_status_name_by_id_cached(id: i32) -> String {
+/// Get requirement status name by ID with caching
+pub fn get_requirement_status_name_by_id_cached(id: i32) -> String {
     let cache = get_cache();
-    let cache_key = format!("status_name:{}", id);
+    let cache_key = format!("requirement_status_name:{}", id);
     
     if let Some(cached_data) = cache.get(&cache_key) {
         return cached_data;
@@ -784,8 +835,29 @@ pub fn get_status_name_by_id_cached(id: i32) -> String {
     
     let repo = DieselRepo::new();
     let name = repo
-        .get_status_by_id(id)
-        .map(|s| s.st_title)
+        .get_requirement_status_by_id(id)
+        .map(|s| s.req_st_title)
+        .unwrap_or_else(|_| "[Status Not Found]".to_string());
+    
+    // Cache for 15 minutes (status names rarely change)
+    cache.set_with_ttl(&cache_key, name.clone(), Duration::from_secs(900));
+    
+    name
+}
+
+/// Get test status name by ID with caching
+pub fn get_test_status_name_by_id_cached(id: i32) -> String {
+    let cache = get_cache();
+    let cache_key = format!("test_status_name:{}", id);
+    
+    if let Some(cached_data) = cache.get(&cache_key) {
+        return cached_data;
+    }
+    
+    let repo = DieselRepo::new();
+    let name = repo
+        .get_test_status_by_id(id)
+        .map(|s| s.test_st_title)
         .unwrap_or_else(|_| "[Status Not Found]".to_string());
     
     // Cache for 15 minutes (status names rarely change)
@@ -800,7 +872,8 @@ pub fn warm_cache() -> Result<(), String> {
     let _ = get_projects_for_nav_cached();
     
     // Warm up status and category data
-    let _ = get_status_all_cached();
+    let _ = get_requirement_status_all_cached();
+    let _ = get_test_status_all_cached();
     let _ = get_categories_all_cached();
     
     // Warm up applicability and verification data
@@ -821,7 +894,8 @@ pub fn get_cache_stats_extended() -> Result<serde_json::Value, String> {
     // Get some sample keys to show what's cached
     let sample_keys = vec![
         keys::PROJECTS_NAV,
-        keys::STATUS_ALL,
+        keys::REQUIREMENT_STATUS_ALL,
+        keys::TEST_STATUS_ALL,
         keys::CATEGORIES_ALL,
         keys::APPLICABILITY_ALL,
         keys::VERIFICATION_ALL,

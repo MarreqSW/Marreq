@@ -322,7 +322,7 @@ pub fn show_requirements(
     };
 
     // Add filter data to context for the template
-    let statuses = get_status_all_cached().unwrap_or_default();
+    let statuses = get_requirement_status_all_cached().unwrap_or_default();
     let verifications = if let Some(project_id) = selected_project_id {
         get_verification_by_project_cached(project_id)
     } else {
@@ -526,7 +526,7 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
     let req_decorate = decorate_requirements(vec![req.clone()]);
     let req_decorate_json = json!(req_decorate[0]);
 
-    let status = get_status_all_cached().unwrap_or_default();
+    let status = get_requirement_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
@@ -861,7 +861,7 @@ pub fn delete_test_route(
 #[get("/new_requirement")]
 pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let status = get_status_all_cached().unwrap_or_default();
+    let status = get_requirement_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
@@ -1090,7 +1090,7 @@ pub fn show_tests(
     ctx["tests"] = json!(tests_decorate);
 
     // Add filter data to context for the template
-    let statuses = get_status_all_cached().unwrap_or_default();
+    let statuses = get_test_status_all_cached().unwrap_or_default();
     let verifications = if let Some(project_id) = selected_project_id {
         get_verification_by_project_cached(project_id)
     } else {
@@ -1174,7 +1174,7 @@ pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Templ
 #[get("/new_test")]
 pub fn new_test(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let status = get_status_all_cached().unwrap_or_default();
+    let status = get_test_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
@@ -1242,7 +1242,7 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
     let test_decorate = decorate_tests(vec![test]);
     let test_decorate_json = json!(test_decorate[0]);
 
-    let status = get_status_all_cached().unwrap_or_default();
+    let status = get_test_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
@@ -1465,7 +1465,7 @@ pub fn post_test(
 
 #[get("/status")]
 pub fn show_status() -> content::RawHtml<String> {
-    use crate::schema::status::dsl::*;
+    use crate::schema::{requirement_status::dsl::*, test_status::dsl::*};
 
     let mut out_str = print_header();
     let mut connection = match get_db_connection() {
@@ -1476,15 +1476,24 @@ pub fn show_status() -> content::RawHtml<String> {
         }
     };
 
-    let all_status = match status.load::<Status>(connection.as_mut()) {
+    let all_requirement_status = match requirement_status.load::<RequirementStatus>(connection.as_mut()) {
         Ok(status_list) => status_list,
         Err(e) => {
             eprintln!("Database query error: {}", e);
-            return content::RawHtml("Error: Failed to load status data".to_string());
+            return content::RawHtml("Error: Failed to load requirement status data".to_string());
         }
     };
 
-    for st in all_status.iter() {
+    let all_test_status = match test_status.load::<TestStatus>(connection.as_mut()) {
+        Ok(status_list) => status_list,
+        Err(e) => {
+            eprintln!("Database query error: {}", e);
+            return content::RawHtml("Error: Failed to load test status data".to_string());
+        }
+    };
+
+    out_str = format!("{}<h2>Requirement Statuses</h2>", out_str);
+    for st in all_requirement_status.iter() {
         out_str = format!(
             "{}
         <div class='AllStatus'>
@@ -1492,7 +1501,20 @@ pub fn show_status() -> content::RawHtml<String> {
             <div>Title: {}</div>
             <div>Description: {}</div>
         </div>",
-            out_str, st.st_id, st.st_title, st.st_description
+            out_str, st.req_st_id, st.req_st_title, st.req_st_description
+        );
+    }
+
+    out_str = format!("{}<h2>Test Statuses</h2>", out_str);
+    for st in all_test_status.iter() {
+        out_str = format!(
+            "{}
+        <div class='AllStatus'>
+            <div>Id: {}</div>
+            <div>Title: {}</div>
+            <div>Description: {}</div>
+        </div>",
+            out_str, st.test_st_id, st.test_st_title, st.test_st_description
         );
     }
 
@@ -1686,7 +1708,7 @@ pub fn get_matrix(
     // Prepare tests with status names
     let mut tests_with_status = Vec::new();
     for test in all_tests {
-        let test_status_name = get_status_name_by_id_cached(test.test_status);
+        let test_status_name = get_test_status_name_by_id_cached(test.test_status);
         tests_with_status.push(json!({
             "test_id": test.test_id,
             "test_name": test.test_name,
@@ -1695,7 +1717,7 @@ pub fn get_matrix(
     }
 
     // Get all statuses for the filter dropdown
-    let all_statuses = get_status_all_cached().unwrap_or_default();
+    let all_statuses = get_test_status_all_cached().unwrap_or_default();
     let statuses_json = json!(all_statuses);
 
     let mut ctx = build_context_with_projects(user, cookies);
@@ -1790,7 +1812,7 @@ pub async fn get_tests_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, Name
 #[get("/new_user")]
 pub fn new_user(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
-    let status = get_status_all_cached().unwrap_or_default();
+    let status = get_requirement_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     let ctx = json!({
@@ -2399,7 +2421,7 @@ pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     };
 
     let all_users = get_users_all_cached().unwrap_or_default();
-    let all_statuses = get_status_all_cached().unwrap_or_default();
+    let all_statuses = get_requirement_status_all_cached().unwrap_or_default();
 
     // Calculate metrics
     let total_requirements = all_requirements.len();
@@ -2410,14 +2432,14 @@ pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     // Requirements by status
     let mut requirements_by_status = std::collections::HashMap::new();
     for req in &all_requirements {
-        let status_name = get_status_name_by_id_cached(req.req_current_status);
+        let status_name = get_requirement_status_name_by_id_cached(req.req_current_status);
         *requirements_by_status.entry(status_name).or_insert(0) += 1;
     }
 
     // Tests by status
     let mut tests_by_status = std::collections::HashMap::new();
     for test in &all_tests {
-        let status_name = get_status_name_by_id_cached(test.test_status);
+        let status_name = get_test_status_name_by_id_cached(test.test_status);
         *tests_by_status.entry(status_name).or_insert(0) += 1;
     }
 
@@ -2547,7 +2569,7 @@ pub fn generate_pdf_report(
     };
 
     let all_users = get_users_all_cached().unwrap_or_default();
-    let _all_statuses = get_status_all_cached().unwrap_or_default();
+    let _all_statuses = get_requirement_status_all_cached().unwrap_or_default();
 
     // Calculate the same metrics
     let total_requirements = all_requirements.len();
@@ -2558,14 +2580,14 @@ pub fn generate_pdf_report(
     // Requirements by status
     let mut requirements_by_status = std::collections::HashMap::new();
     for req in &all_requirements {
-        let status_name = get_status_name_by_id_cached(req.req_current_status);
+        let status_name = get_requirement_status_name_by_id_cached(req.req_current_status);
         *requirements_by_status.entry(status_name).or_insert(0) += 1;
     }
 
     // Tests by status
     let mut tests_by_status = std::collections::HashMap::new();
     for test in &all_tests {
-        let status_name = get_status_name_by_id_cached(test.test_status);
+        let status_name = get_test_status_name_by_id_cached(test.test_status);
         *tests_by_status.entry(status_name).or_insert(0) += 1;
     }
 

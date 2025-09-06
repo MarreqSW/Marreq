@@ -176,8 +176,10 @@ async fn main() -> Result<(), rocket::Error> {
                 projects::delete_project,
                 
                 // Status endpoints
-                status::get_status,
-                status::create_status,
+                status::get_requirement_status,
+                status::get_test_status,
+                status::create_requirement_status,
+                status::create_test_status,
                 
                 // Matrix endpoints
                 matrix::get_matrix,

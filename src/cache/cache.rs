@@ -287,8 +287,8 @@ pub fn invalidate_user_cache(user_id: i32) {
 pub fn invalidate_requirement_cache(req_id: i32) {
     let cache = get_cache();
     cache.remove(&keys::Requirements::by_id(req_id));
-    cache.remove(&keys::linked_tests_for_requirement(req_id));
-    cache.remove(&keys::requirement_title_by_id(req_id));
+    cache.remove(&keys::LinkedTests::for_requirement(req_id));
+    cache.remove(&keys::RequirementTitle::by_id(req_id));
     // Also invalidate global lists and project-level caches
     cache.remove(keys::REQUIREMENTS_ALL);
     // Note: In a real implementation, you'd need to track which project the requirement belongs to
@@ -298,8 +298,8 @@ pub fn invalidate_requirement_cache(req_id: i32) {
 pub fn invalidate_test_cache(test_id: i32) {
     let cache = get_cache();
     cache.remove(&keys::Tests::by_id(test_id));
-    cache.remove(&keys::linked_requirements_for_test(test_id));
-    cache.remove(&keys::test_status_by_id(test_id));
+    cache.remove(&keys::LinkedRequirements::for_test(test_id));
+    cache.remove(&keys::TestStatus::by_id(test_id));
     // Also invalidate global lists and project-level caches
     cache.remove(keys::TESTS_ALL);
     // Note: In a real implementation, you'd need to track which project the test belongs to

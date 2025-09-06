@@ -795,6 +795,7 @@ pub fn get_status_name_by_id_cached(id: i32) -> String {
 }
 
 /// Warm up frequently accessed cache entries
+/* TODO: never used ??
 pub fn warm_cache() -> Result<(), String> {
     // Warm up navigation data
     let _ = get_projects_for_nav_cached();
@@ -811,7 +812,7 @@ pub fn warm_cache() -> Result<(), String> {
     let _ = get_users_all_cached();
     
     Ok(())
-}
+}*/
 
 /// Get cache statistics with additional metrics
 pub fn get_cache_stats_extended() -> Result<serde_json::Value, String> {
@@ -946,6 +947,7 @@ pub fn smart_invalidate_cache(entity_type: &str, entity_id: i32, related_entitie
 }
 
 /// Cache warming for specific project data
+/* TODO: never used ??
 pub fn warm_project_cache(project_id: i32) {
     let cache = get_cache();
     
@@ -992,7 +994,7 @@ pub fn warm_project_cache(project_id: i32) {
             );
         }
     }
-}
+}*/
 
 /// Cache warming for frequently accessed data
 pub fn warm_frequently_accessed_cache() {

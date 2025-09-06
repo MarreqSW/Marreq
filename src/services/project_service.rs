@@ -3,7 +3,8 @@
 use crate::errors::{ApiError, ApiResult};
 use crate::models::*;
 use crate::validation::validate_project;
-use crate::services::{BaseService, Service, CacheableService};
+use crate::services::{BaseService, Service};
+use crate::repository::ProjectsRepository;
 use std::time::Duration;
 
 pub struct ProjectService {
@@ -16,30 +17,30 @@ impl ProjectService {
     }
     
     pub async fn get_all_projects(&self) -> ApiResult<Vec<Project>> {
-        let cache_key = self.cache_key_list("project", None);
-        if let Some(cached) = self.get_cached(&cache_key) {
+        let cache_key = self.base.cache_key_list("project", None);
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         let projects = self.base.repo()
             .get_projects_all()
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
-        self.set_cache(&cache_key, projects.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, projects.clone(), Duration::from_secs(300));
         Ok(projects)
     }
     
     pub async fn get_project_by_id(&self, id: i32) -> ApiResult<Project> {
-        let cache_key = self.cache_key("project", id);
-        if let Some(cached) = self.get_cached(&cache_key) {
+        let cache_key = self.base.cache_key("project", id);
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         let project = self.base.repo()
             .get_project_by_id(id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
-        self.set_cache(&cache_key, project.clone(), Duration::from_secs(600));
+        self.base.set_cache(&cache_key, project.clone(), Duration::from_secs(600));
         Ok(project)
     }
     
@@ -53,9 +54,9 @@ impl ProjectService {
         crate::validation::sanitize_string(&mut new_project.project_name);
         crate::validation::sanitize_optional_string(&mut new_project.project_description);
         
-        let id = self.base.repo()
-            .insert_new_project(&new_project)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let id = repo.insert_new_project(&new_project)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if let Ok(new_values) = crate::services::serialize_for_logging(&new_project) {
             let _ = self.base.log_create(
@@ -68,7 +69,7 @@ impl ProjectService {
             );
         }
         
-        self.invalidate_cache(&self.cache_key_list("project", None));
+        self.base.invalidate_cache(&self.base.cache_key_list("project", None));
         crate::cache::invalidate_project_cache(id);
         
         Ok(id)
@@ -86,9 +87,16 @@ impl ProjectService {
         crate::validation::sanitize_string(&mut updated_project.project_name);
         crate::validation::sanitize_optional_string(&mut updated_project.project_description);
         
-        let success = self.base.repo()
-            .edit_project(id, &updated_project)
-            .map_err(|e| ApiError::Database(e))?;
+        let update_data = crate::models::UpdateProject {
+            project_name: updated_project.project_name.clone(),
+            project_description: updated_project.project_description.clone(),
+            project_status: "active".to_string(), // Default status
+            project_owner_id: None, // Default owner
+        };
+        
+        let mut repo = crate::repository::DieselRepo::new();
+        let success = repo.edit_project(id, &update_data)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if success {
             if let (Ok(old_values), Ok(new_values)) = (
@@ -106,8 +114,8 @@ impl ProjectService {
                 );
             }
             
-            self.invalidate_cache(&self.cache_key("project", id));
-            self.invalidate_cache(&self.cache_key_list("project", None));
+            self.base.invalidate_cache(&self.base.cache_key("project", id));
+            self.base.invalidate_cache(&self.base.cache_key_list("project", None));
             crate::cache::invalidate_project_cache(id);
         }
         
@@ -117,9 +125,9 @@ impl ProjectService {
     pub async fn delete_project(&self, id: i32, user_id: i32) -> ApiResult<bool> {
         let old_project = self.get_project_by_id(id).await?;
         
-        let success = self.base.repo()
-            .delete_project(id)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let success = repo.delete_project(id)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if success {
             if let Ok(old_values) = crate::services::serialize_for_logging(&old_project) {
@@ -133,8 +141,8 @@ impl ProjectService {
                 );
             }
             
-            self.invalidate_cache(&self.cache_key("project", id));
-            self.invalidate_cache(&self.cache_key_list("project", None));
+            self.base.invalidate_cache(&self.base.cache_key("project", id));
+            self.base.invalidate_cache(&self.base.cache_key_list("project", None));
             crate::cache::invalidate_project_cache(id);
         }
         
@@ -147,5 +155,5 @@ impl Service for ProjectService {
     fn repo_mut(&mut self) -> &mut crate::repository::DieselRepo { self.base.repo_mut() }
 }
 
-impl CacheableService<Vec<Project>> for ProjectService {}
-impl CacheableService<Project> for ProjectService {}
+
+

@@ -511,6 +511,24 @@ impl RequirementsRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
+    fn get_requirements_by_category(&self, category_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        use schema::requirements::dsl::*;
+        let mut conn = self.get_conn()?;
+        requirements
+            .filter(schema::requirements::req_category.eq(category_id))
+            .load::<Requirement>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn get_requirements_by_status(&self, status_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        use schema::requirements::dsl::*;
+        let mut conn = self.get_conn()?;
+        requirements
+            .filter(schema::requirements::req_current_status.eq(status_id))
+            .load::<Requirement>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
         let res: Requirement = diesel::insert_into(schema::requirements::table)
@@ -585,6 +603,24 @@ impl TestsRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
+    fn get_tests_by_status(&self, status_id: i32) -> Result<Vec<Test>, RepoError> {
+        use schema::tests::dsl::*;
+        let mut conn = self.get_conn()?;
+        tests
+            .filter(schema::tests::test_status.eq(status_id))
+            .load::<Test>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn get_tests_by_parent(&self, parent_id: i32) -> Result<Vec<Test>, RepoError> {
+        use schema::tests::dsl::*;
+        let mut conn = self.get_conn()?;
+        tests
+            .filter(schema::tests::test_parent.eq(parent_id))
+            .load::<Test>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
     fn get_tests_for_requirement(&self, rid: i32) -> Result<Vec<Test>, RepoError> {
         use schema::matrix::dsl::{matrix, matrix_req_id, matrix_test_id};
         use schema::tests::dsl as t;
@@ -597,6 +633,7 @@ impl TestsRepository for DieselRepo {
                 t::test_name,
                 t::test_description,
                 t::test_source,
+                t::test_reference,
                 t::test_status,
                 t::test_parent,
                 t::project_id,
@@ -654,6 +691,7 @@ impl TestsRepository for DieselRepo {
                 test_name.eq(&new.test_name),
                 test_description.eq(&new.test_description),
                 test_source.eq(&new.test_source),
+                test_reference.eq(&new.test_reference),
                 test_status.eq(&new.test_status),
                 test_parent.eq(&new.test_parent),
             ))
@@ -752,6 +790,14 @@ impl ProjectsRepository for DieselRepo {
 }
 
 impl MatrixRepository for DieselRepo {
+    fn get_matrix_all(&self) -> Result<Vec<Matrix>, RepoError> {
+        use schema::matrix::dsl::*;
+        let mut conn = self.get_conn()?;
+        matrix
+            .load::<Matrix>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
     fn get_matrix_by_project(&self, pid: i32) -> Result<Vec<Matrix>, RepoError> {
         use schema::matrix::dsl::*;
         let mut conn = self.get_conn()?;
@@ -767,5 +813,28 @@ impl MatrixRepository for DieselRepo {
             .values(new)
             .execute(conn.as_mut())?;
         Ok(())
+    }
+
+    fn insert_matrix_link(&mut self, req_id: i32, test_id: i32, project_id: i32) -> Result<bool, RepoError> {
+        let mut conn = self.get_conn()?;
+        let new_matrix = NewMatrix {
+            matrix_req_id: req_id,
+            matrix_test_id: test_id,
+            project_id,
+        };
+        diesel::insert_into(schema::matrix::table)
+            .values(&new_matrix)
+            .execute(conn.as_mut())?;
+        Ok(true)
+    }
+
+    fn delete_matrix_link(&mut self, req_id: i32, test_id: i32) -> Result<bool, RepoError> {
+        use schema::matrix::dsl::*;
+        let mut conn = self.get_conn()?;
+        let deleted = diesel::delete(matrix
+            .filter(matrix_req_id.eq(req_id))
+            .filter(matrix_test_id.eq(test_id)))
+            .execute(conn.as_mut())?;
+        Ok(deleted > 0)
     }
 }

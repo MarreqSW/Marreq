@@ -3,7 +3,8 @@
 use crate::errors::{ApiError, ApiResult};
 use crate::models::*;
 use crate::validation::validate_applicability;
-use crate::services::{BaseService, Service, CacheableService};
+use crate::services::{BaseService, Service};
+use crate::repository::LookupRepository;
 use std::time::Duration;
 
 pub struct ApplicabilityService {
@@ -16,30 +17,30 @@ impl ApplicabilityService {
     }
     
     pub async fn get_all_applicability(&self) -> ApiResult<Vec<Applicability>> {
-        let cache_key = self.cache_key_list("applicability", None);
-        if let Some(cached) = self.get_cached(&cache_key) {
+        let cache_key = self.base.cache_key_list("applicability", None);
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         let applicability = self.base.repo()
             .get_applicability_all()
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
-        self.set_cache(&cache_key, applicability.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, applicability.clone(), Duration::from_secs(300));
         Ok(applicability)
     }
     
     pub async fn get_applicability_by_id(&self, id: i32) -> ApiResult<Applicability> {
-        let cache_key = self.cache_key("applicability", id);
-        if let Some(cached) = self.get_cached(&cache_key) {
+        let cache_key = self.base.cache_key("applicability", id);
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         let applicability = self.base.repo()
             .get_applicability_by_id(id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
-        self.set_cache(&cache_key, applicability.clone(), Duration::from_secs(600));
+        self.base.set_cache(&cache_key, applicability.clone(), Duration::from_secs(600));
         Ok(applicability)
     }
     
@@ -54,9 +55,9 @@ impl ApplicabilityService {
         crate::validation::sanitize_string(&mut new_applicability.app_description);
         crate::validation::sanitize_string(&mut new_applicability.app_tag);
         
-        let id = self.base.repo()
-            .insert_new_applicability(&new_applicability)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let id = repo.insert_new_applicability(&new_applicability)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if let Ok(new_values) = crate::services::serialize_for_logging(&new_applicability) {
             let _ = self.base.log_create(
@@ -69,8 +70,8 @@ impl ApplicabilityService {
             );
         }
         
-        self.invalidate_cache(&self.cache_key_list("applicability", None));
-        self.invalidate_cache(&self.cache_key_list("applicability", Some(new_applicability.project_id)));
+        self.base.invalidate_cache(&self.base.cache_key_list("applicability", None));
+        self.base.invalidate_cache(&self.base.cache_key_list("applicability", Some(new_applicability.project_id)));
         crate::cache::invalidate_applicability_cache(id);
         crate::cache::invalidate_project_cache(new_applicability.project_id);
         
@@ -92,9 +93,9 @@ impl ApplicabilityService {
         
         updated_applicability.app_id = Some(id);
         
-        let success = self.base.repo()
-            .edit_applicability(&updated_applicability)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let success = repo.edit_applicability(&updated_applicability)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if success {
             if let (Ok(old_values), Ok(new_values)) = (
@@ -112,9 +113,9 @@ impl ApplicabilityService {
                 );
             }
             
-            self.invalidate_cache(&self.cache_key("applicability", id));
-            self.invalidate_cache(&self.cache_key_list("applicability", None));
-            self.invalidate_cache(&self.cache_key_list("applicability", Some(updated_applicability.project_id)));
+            self.base.invalidate_cache(&self.base.cache_key("applicability", id));
+            self.base.invalidate_cache(&self.base.cache_key_list("applicability", None));
+            self.base.invalidate_cache(&self.base.cache_key_list("applicability", Some(updated_applicability.project_id)));
             crate::cache::invalidate_applicability_cache(id);
             crate::cache::invalidate_project_cache(updated_applicability.project_id);
         }
@@ -125,9 +126,9 @@ impl ApplicabilityService {
     pub async fn delete_applicability(&self, id: i32, user_id: i32) -> ApiResult<bool> {
         let old_applicability = self.get_applicability_by_id(id).await?;
         
-        let success = self.base.repo()
-            .delete_applicability(id)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let success = repo.delete_applicability(id)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if success {
             if let Ok(old_values) = crate::services::serialize_for_logging(&old_applicability) {
@@ -141,9 +142,9 @@ impl ApplicabilityService {
                 );
             }
             
-            self.invalidate_cache(&self.cache_key("applicability", id));
-            self.invalidate_cache(&self.cache_key_list("applicability", None));
-            self.invalidate_cache(&self.cache_key_list("applicability", Some(old_applicability.project_id)));
+            self.base.invalidate_cache(&self.base.cache_key("applicability", id));
+            self.base.invalidate_cache(&self.base.cache_key_list("applicability", None));
+            self.base.invalidate_cache(&self.base.cache_key_list("applicability", Some(old_applicability.project_id)));
             crate::cache::invalidate_applicability_cache(id);
             crate::cache::invalidate_project_cache(old_applicability.project_id);
         }
@@ -157,5 +158,5 @@ impl Service for ApplicabilityService {
     fn repo_mut(&mut self) -> &mut crate::repository::DieselRepo { self.base.repo_mut() }
 }
 
-impl CacheableService<Vec<Applicability>> for ApplicabilityService {}
-impl CacheableService<Applicability> for ApplicabilityService {}
+
+

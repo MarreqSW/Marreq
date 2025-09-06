@@ -6,7 +6,8 @@
 use crate::errors::{ApiError, ApiResult};
 use crate::models::*;
 use crate::validation::validate_requirement;
-use crate::services::{BaseService, Service, CacheableService};
+use crate::services::{BaseService, Service};
+use crate::repository::RequirementsRepository;
 use std::time::Duration;
 
 /// Service for managing requirements
@@ -24,60 +25,60 @@ impl RequirementService {
     
     /// Get all requirements
     pub async fn get_all_requirements(&self) -> ApiResult<Vec<Requirement>> {
-        let cache_key = self.cache_key_list("requirement", None);
+        let cache_key = self.base.cache_key_list("requirement", None);
         
         // Try to get from cache first
-        if let Some(cached) = self.get_cached(&cache_key) {
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         // Get from database
         let requirements = self.base.repo()
             .get_requirements_all()
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Internal(format!("Database error: {}", e)))?;
         
         // Cache the result
-        self.set_cache(&cache_key, requirements.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, requirements.clone(), Duration::from_secs(300));
         
         Ok(requirements)
     }
     
     /// Get requirements by project
     pub async fn get_requirements_by_project(&self, project_id: i32) -> ApiResult<Vec<Requirement>> {
-        let cache_key = self.cache_key_list("requirement", Some(project_id));
+        let cache_key = self.base.cache_key_list("requirement", Some(project_id));
         
         // Try to get from cache first
-        if let Some(cached) = self.get_cached(&cache_key) {
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         // Get from database
         let requirements = self.base.repo()
             .get_requirements_by_project(project_id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Internal(format!("Database error: {}", e)))?;
         
         // Cache the result
-        self.set_cache(&cache_key, requirements.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, requirements.clone(), Duration::from_secs(300));
         
         Ok(requirements)
     }
     
     /// Get a requirement by ID
     pub async fn get_requirement_by_id(&self, id: i32) -> ApiResult<Requirement> {
-        let cache_key = self.cache_key("requirement", id);
+        let cache_key = self.base.cache_key("requirement", id);
         
         // Try to get from cache first
-        if let Some(cached) = self.get_cached(&cache_key) {
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         // Get from database
         let requirement = self.base.repo()
             .get_requirement_by_id(id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
         // Cache the result
-        self.set_cache(&cache_key, requirement.clone(), Duration::from_secs(600));
+        self.base.set_cache(&cache_key, requirement.clone(), Duration::from_secs(600));
         
         Ok(requirement)
     }
@@ -98,15 +99,12 @@ impl RequirementService {
         crate::validation::sanitize_string(&mut new_req.req_link);
         crate::validation::sanitize_optional_string(&mut new_req.req_justification);
         
-        // Set timestamps
-        let now = chrono::Utc::now().naive_utc();
-        new_req.req_creation_date = Some(now);
-        new_req.req_update_date = Some(now);
+        // Note: req_creation_date and req_update_date are set by the database
         
         // Insert into database
-        let id = self.base.repo()
-            .insert_new_requirement(&new_req)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let id = repo.insert_new_requirement(&new_req)
+            .map_err(|e| ApiError::Repository(e))?;
         
         // Log the creation
         if let Ok(new_values) = crate::services::serialize_for_logging(&new_req) {
@@ -121,8 +119,8 @@ impl RequirementService {
         }
         
         // Invalidate relevant caches
-        self.invalidate_cache(&self.cache_key_list("requirement", None));
-        self.invalidate_cache(&self.cache_key_list("requirement", Some(new_req.project_id)));
+        self.base.invalidate_cache(&self.base.cache_key_list("requirement", None));
+        self.base.invalidate_cache(&self.base.cache_key_list("requirement", Some(new_req.project_id)));
         crate::cache::invalidate_requirement_cache(id);
         crate::cache::invalidate_project_cache(new_req.project_id);
         
@@ -149,14 +147,13 @@ impl RequirementService {
         crate::validation::sanitize_string(&mut updated_req.req_link);
         crate::validation::sanitize_optional_string(&mut updated_req.req_justification);
         
-        // Set update timestamp
-        updated_req.req_update_date = Some(chrono::Utc::now().naive_utc());
+        // Set ID for update
         updated_req.req_id = Some(id);
         
         // Update in database
-        let success = self.base.repo()
-            .edit_requirement(&updated_req)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let success = repo.edit_requirement(&updated_req)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if success {
             // Log the update
@@ -176,9 +173,9 @@ impl RequirementService {
             }
             
             // Invalidate relevant caches
-            self.invalidate_cache(&self.cache_key("requirement", id));
-            self.invalidate_cache(&self.cache_key_list("requirement", None));
-            self.invalidate_cache(&self.cache_key_list("requirement", Some(updated_req.project_id)));
+            self.base.invalidate_cache(&self.base.cache_key("requirement", id));
+            self.base.invalidate_cache(&self.base.cache_key_list("requirement", None));
+            self.base.invalidate_cache(&self.base.cache_key_list("requirement", Some(updated_req.project_id)));
             crate::cache::invalidate_requirement_cache(id);
             crate::cache::invalidate_project_cache(updated_req.project_id);
         }
@@ -196,9 +193,9 @@ impl RequirementService {
         let old_req = self.get_requirement_by_id(id).await?;
         
         // Delete from database
-        let success = self.base.repo()
-            .delete_requirement(id)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let success = repo.delete_requirement(id)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if success {
             // Log the deletion
@@ -214,9 +211,9 @@ impl RequirementService {
             }
             
             // Invalidate relevant caches
-            self.invalidate_cache(&self.cache_key("requirement", id));
-            self.invalidate_cache(&self.cache_key_list("requirement", None));
-            self.invalidate_cache(&self.cache_key_list("requirement", Some(old_req.project_id)));
+            self.base.invalidate_cache(&self.base.cache_key("requirement", id));
+            self.base.invalidate_cache(&self.base.cache_key_list("requirement", None));
+            self.base.invalidate_cache(&self.base.cache_key_list("requirement", Some(old_req.project_id)));
             crate::cache::invalidate_requirement_cache(id);
             crate::cache::invalidate_project_cache(old_req.project_id);
         }
@@ -229,17 +226,17 @@ impl RequirementService {
         let cache_key = format!("requirement:category:{}", category_id);
         
         // Try to get from cache first
-        if let Some(cached) = self.get_cached(&cache_key) {
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         // Get from database
         let requirements = self.base.repo()
             .get_requirements_by_category(category_id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
         // Cache the result
-        self.set_cache(&cache_key, requirements.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, requirements.clone(), Duration::from_secs(300));
         
         Ok(requirements)
     }
@@ -249,17 +246,17 @@ impl RequirementService {
         let cache_key = format!("requirement:status:{}", status_id);
         
         // Try to get from cache first
-        if let Some(cached) = self.get_cached(&cache_key) {
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         // Get from database
         let requirements = self.base.repo()
             .get_requirements_by_status(status_id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
         // Cache the result
-        self.set_cache(&cache_key, requirements.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, requirements.clone(), Duration::from_secs(300));
         
         Ok(requirements)
     }
@@ -275,5 +272,4 @@ impl Service for RequirementService {
     }
 }
 
-impl CacheableService<Vec<Requirement>> for RequirementService {}
-impl CacheableService<Requirement> for RequirementService {}
+

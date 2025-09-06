@@ -6,7 +6,8 @@
 use crate::errors::{ApiError, ApiResult};
 use crate::models::*;
 use crate::validation::validate_test;
-use crate::services::{BaseService, Service, CacheableService};
+use crate::services::{BaseService, Service};
+use crate::repository::TestsRepository;
 use std::time::Duration;
 
 /// Service for managing test cases
@@ -24,60 +25,60 @@ impl TestService {
     
     /// Get all tests
     pub async fn get_all_tests(&self) -> ApiResult<Vec<Test>> {
-        let cache_key = self.cache_key_list("test", None);
+        let cache_key = self.base.cache_key_list("test", None);
         
         // Try to get from cache first
-        if let Some(cached) = self.get_cached(&cache_key) {
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         // Get from database
         let tests = self.base.repo()
             .get_tests_all()
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
         // Cache the result
-        self.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
         
         Ok(tests)
     }
     
     /// Get tests by project
     pub async fn get_tests_by_project(&self, project_id: i32) -> ApiResult<Vec<Test>> {
-        let cache_key = self.cache_key_list("test", Some(project_id));
+        let cache_key = self.base.cache_key_list("test", Some(project_id));
         
         // Try to get from cache first
-        if let Some(cached) = self.get_cached(&cache_key) {
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         // Get from database
         let tests = self.base.repo()
             .get_tests_by_project(project_id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
         // Cache the result
-        self.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
         
         Ok(tests)
     }
     
     /// Get a test by ID
     pub async fn get_test_by_id(&self, id: i32) -> ApiResult<Test> {
-        let cache_key = self.cache_key("test", id);
+        let cache_key = self.base.cache_key("test", id);
         
         // Try to get from cache first
-        if let Some(cached) = self.get_cached(&cache_key) {
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         // Get from database
         let test = self.base.repo()
             .get_test_by_id(id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
         // Cache the result
-        self.set_cache(&cache_key, test.clone(), Duration::from_secs(600));
+        self.base.set_cache(&cache_key, test.clone(), Duration::from_secs(600));
         
         Ok(test)
     }
@@ -97,9 +98,9 @@ impl TestService {
         crate::validation::sanitize_string(&mut new_test.test_source);
         
         // Insert into database
-        let id = self.base.repo()
-            .insert_test(&new_test)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let id = repo.insert_test(&new_test)
+            .map_err(|e| ApiError::Repository(e))?;
         
         // Log the creation
         if let Ok(new_values) = crate::services::serialize_for_logging(&new_test) {
@@ -114,8 +115,8 @@ impl TestService {
         }
         
         // Invalidate relevant caches
-        self.invalidate_cache(&self.cache_key_list("test", None));
-        self.invalidate_cache(&self.cache_key_list("test", Some(new_test.project_id)));
+        self.base.invalidate_cache(&self.base.cache_key_list("test", None));
+        self.base.invalidate_cache(&self.base.cache_key_list("test", Some(new_test.project_id)));
         crate::cache::invalidate_test_cache(id);
         crate::cache::invalidate_project_cache(new_test.project_id);
         
@@ -144,9 +145,9 @@ impl TestService {
         updated_test.test_id = Some(id);
         
         // Update in database
-        let success = self.base.repo()
-            .edit_test(&updated_test)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let success = repo.edit_test(&updated_test)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if success {
             // Log the update
@@ -166,9 +167,9 @@ impl TestService {
             }
             
             // Invalidate relevant caches
-            self.invalidate_cache(&self.cache_key("test", id));
-            self.invalidate_cache(&self.cache_key_list("test", None));
-            self.invalidate_cache(&self.cache_key_list("test", Some(updated_test.project_id)));
+            self.base.invalidate_cache(&self.base.cache_key("test", id));
+            self.base.invalidate_cache(&self.base.cache_key_list("test", None));
+            self.base.invalidate_cache(&self.base.cache_key_list("test", Some(updated_test.project_id)));
             crate::cache::invalidate_test_cache(id);
             crate::cache::invalidate_project_cache(updated_test.project_id);
         }
@@ -186,9 +187,9 @@ impl TestService {
         let old_test = self.get_test_by_id(id).await?;
         
         // Delete from database
-        let success = self.base.repo()
-            .delete_test(id)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let success = repo.delete_test(id)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if success {
             // Log the deletion
@@ -204,9 +205,9 @@ impl TestService {
             }
             
             // Invalidate relevant caches
-            self.invalidate_cache(&self.cache_key("test", id));
-            self.invalidate_cache(&self.cache_key_list("test", None));
-            self.invalidate_cache(&self.cache_key_list("test", Some(old_test.project_id)));
+            self.base.invalidate_cache(&self.base.cache_key("test", id));
+            self.base.invalidate_cache(&self.base.cache_key_list("test", None));
+            self.base.invalidate_cache(&self.base.cache_key_list("test", Some(old_test.project_id)));
             crate::cache::invalidate_test_cache(id);
             crate::cache::invalidate_project_cache(old_test.project_id);
         }
@@ -219,17 +220,17 @@ impl TestService {
         let cache_key = format!("test:status:{}", status_id);
         
         // Try to get from cache first
-        if let Some(cached) = self.get_cached(&cache_key) {
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         // Get from database
         let tests = self.base.repo()
             .get_tests_by_status(status_id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
         // Cache the result
-        self.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
         
         Ok(tests)
     }
@@ -239,17 +240,17 @@ impl TestService {
         let cache_key = format!("test:parent:{}", parent_id);
         
         // Try to get from cache first
-        if let Some(cached) = self.get_cached(&cache_key) {
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         // Get from database
         let tests = self.base.repo()
             .get_tests_by_parent(parent_id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
         // Cache the result
-        self.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
         
         Ok(tests)
     }
@@ -265,5 +266,5 @@ impl Service for TestService {
     }
 }
 
-impl CacheableService<Vec<Test>> for TestService {}
-impl CacheableService<Test> for TestService {}
+
+

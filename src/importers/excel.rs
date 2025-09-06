@@ -289,6 +289,7 @@ impl ExcelImporter {
             test_name: test_data.get("test_name").unwrap_or(&"Imported Test".to_string()).clone(),
             test_description: test_data.get("test_description").unwrap_or(&"".to_string()).clone(),
             test_source: test_data.get("test_source").unwrap_or(&"".to_string()).clone(),
+            test_reference: test_data.get("test_reference").unwrap_or(&format!("TEST-{}", chrono::Utc::now().timestamp())).clone(),
             test_status: status_id,
             test_parent: parent_id.unwrap_or(0),
             project_id,

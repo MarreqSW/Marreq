@@ -3,7 +3,8 @@
 use crate::errors::{ApiError, ApiResult};
 use crate::models::*;
 use crate::validation::validate_category;
-use crate::services::{BaseService, Service, CacheableService};
+use crate::services::{BaseService, Service};
+use crate::repository::LookupRepository;
 use std::time::Duration;
 
 pub struct CategoryService {
@@ -16,30 +17,30 @@ impl CategoryService {
     }
     
     pub async fn get_all_categories(&self) -> ApiResult<Vec<Category>> {
-        let cache_key = self.cache_key_list("category", None);
-        if let Some(cached) = self.get_cached(&cache_key) {
+        let cache_key = self.base.cache_key_list("category", None);
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         let categories = self.base.repo()
             .get_categories_all()
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
-        self.set_cache(&cache_key, categories.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, categories.clone(), Duration::from_secs(300));
         Ok(categories)
     }
     
     pub async fn get_category_by_id(&self, id: i32) -> ApiResult<Category> {
-        let cache_key = self.cache_key("category", id);
-        if let Some(cached) = self.get_cached(&cache_key) {
+        let cache_key = self.base.cache_key("category", id);
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         let category = self.base.repo()
             .get_category_by_id(id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
-        self.set_cache(&cache_key, category.clone(), Duration::from_secs(600));
+        self.base.set_cache(&cache_key, category.clone(), Duration::from_secs(600));
         Ok(category)
     }
     
@@ -54,9 +55,9 @@ impl CategoryService {
         crate::validation::sanitize_string(&mut new_category.cat_description);
         crate::validation::sanitize_string(&mut new_category.cat_tag);
         
-        let id = self.base.repo()
-            .insert_new_category(&new_category)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let id = repo.insert_new_category(&new_category)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if let Ok(new_values) = crate::services::serialize_for_logging(&new_category) {
             let _ = self.base.log_create(
@@ -69,8 +70,8 @@ impl CategoryService {
             );
         }
         
-        self.invalidate_cache(&self.cache_key_list("category", None));
-        self.invalidate_cache(&self.cache_key_list("category", Some(new_category.project_id)));
+        self.base.invalidate_cache(&self.base.cache_key_list("category", None));
+        self.base.invalidate_cache(&self.base.cache_key_list("category", Some(new_category.project_id)));
         crate::cache::invalidate_category_cache(id);
         crate::cache::invalidate_project_cache(new_category.project_id);
         
@@ -92,9 +93,9 @@ impl CategoryService {
         
         updated_category.cat_id = Some(id);
         
-        let success = self.base.repo()
-            .edit_category(&updated_category)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let success = repo.edit_category(&updated_category)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if success {
             if let (Ok(old_values), Ok(new_values)) = (
@@ -112,9 +113,9 @@ impl CategoryService {
                 );
             }
             
-            self.invalidate_cache(&self.cache_key("category", id));
-            self.invalidate_cache(&self.cache_key_list("category", None));
-            self.invalidate_cache(&self.cache_key_list("category", Some(updated_category.project_id)));
+            self.base.invalidate_cache(&self.base.cache_key("category", id));
+            self.base.invalidate_cache(&self.base.cache_key_list("category", None));
+            self.base.invalidate_cache(&self.base.cache_key_list("category", Some(updated_category.project_id)));
             crate::cache::invalidate_category_cache(id);
             crate::cache::invalidate_project_cache(updated_category.project_id);
         }
@@ -125,9 +126,9 @@ impl CategoryService {
     pub async fn delete_category(&self, id: i32, user_id: i32) -> ApiResult<bool> {
         let old_category = self.get_category_by_id(id).await?;
         
-        let success = self.base.repo()
-            .delete_category(id)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let success = repo.delete_category(id)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if success {
             if let Ok(old_values) = crate::services::serialize_for_logging(&old_category) {
@@ -141,9 +142,9 @@ impl CategoryService {
                 );
             }
             
-            self.invalidate_cache(&self.cache_key("category", id));
-            self.invalidate_cache(&self.cache_key_list("category", None));
-            self.invalidate_cache(&self.cache_key_list("category", Some(old_category.project_id)));
+            self.base.invalidate_cache(&self.base.cache_key("category", id));
+            self.base.invalidate_cache(&self.base.cache_key_list("category", None));
+            self.base.invalidate_cache(&self.base.cache_key_list("category", Some(old_category.project_id)));
             crate::cache::invalidate_category_cache(id);
             crate::cache::invalidate_project_cache(old_category.project_id);
         }
@@ -157,5 +158,5 @@ impl Service for CategoryService {
     fn repo_mut(&mut self) -> &mut crate::repository::DieselRepo { self.base.repo_mut() }
 }
 
-impl CacheableService<Vec<Category>> for CategoryService {}
-impl CacheableService<Category> for CategoryService {}
+
+

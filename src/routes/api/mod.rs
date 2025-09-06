@@ -13,8 +13,7 @@ pub mod matrix;
 pub mod docs;
 
 use rocket::serde::json::Json;
-use crate::errors::{ApiResponse, ApiResponseResult};
-use crate::services::*;
+use crate::errors::ApiResponse;
 
 /// Health check endpoint
 #[get("/health")]

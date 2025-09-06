@@ -3,7 +3,8 @@
 use crate::errors::{ApiError, ApiResult};
 use crate::models::*;
 use crate::validation::validate_status;
-use crate::services::{BaseService, Service, CacheableService};
+use crate::services::{BaseService, Service};
+use crate::repository::LookupRepository;
 use std::time::Duration;
 
 pub struct StatusService {
@@ -16,16 +17,16 @@ impl StatusService {
     }
     
     pub async fn get_all_status(&self) -> ApiResult<Vec<Status>> {
-        let cache_key = self.cache_key_list("status", None);
-        if let Some(cached) = self.get_cached(&cache_key) {
+        let cache_key = self.base.cache_key_list("status", None);
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         let status = self.base.repo()
             .get_status_all()
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
-        self.set_cache(&cache_key, status.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, status.clone(), Duration::from_secs(300));
         Ok(status)
     }
     
@@ -37,11 +38,11 @@ impl StatusService {
         validate_status(&new_status)?;
         
         crate::validation::sanitize_string(&mut new_status.st_title);
-        crate::validation::sanitize_optional_string(&mut new_status.st_description);
+        crate::validation::sanitize_string(&mut new_status.st_description);
         
-        let id = self.base.repo()
-            .create_status(&new_status)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let id = repo.create_status(&new_status)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if let Ok(new_values) = crate::services::serialize_for_logging(&new_status) {
             let _ = self.base.log_create(
@@ -54,7 +55,7 @@ impl StatusService {
             );
         }
         
-        self.invalidate_cache(&self.cache_key_list("status", None));
+        self.base.invalidate_cache(&self.base.cache_key_list("status", None));
         crate::cache::invalidate_status_cache(id);
         
         Ok(id)
@@ -66,4 +67,4 @@ impl Service for StatusService {
     fn repo_mut(&mut self) -> &mut crate::repository::DieselRepo { self.base.repo_mut() }
 }
 
-impl CacheableService<Vec<Status>> for StatusService {}
+

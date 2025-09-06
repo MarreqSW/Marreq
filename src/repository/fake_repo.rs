@@ -236,6 +236,22 @@ impl RequirementsRepository for FakeRepo {
             .collect())
     }
 
+    fn get_requirements_by_category(&self, category_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        Ok(self.requirements
+            .values()
+            .filter(|r| r.req_category == category_id)
+            .cloned()
+            .collect())
+    }
+
+    fn get_requirements_by_status(&self, status_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        Ok(self.requirements
+            .values()
+            .filter(|r| r.req_current_status == status_id)
+            .cloned()
+            .collect())
+    }
+
     fn insert_new_requirement(&mut self, _new: &NewRequirement) -> Result<i32, RepoError> {
         Ok(0)
     }
@@ -267,6 +283,22 @@ impl TestsRepository for FakeRepo {
             .tests
             .values()
             .filter(|t| t.project_id == project_id)
+            .cloned()
+            .collect())
+    }
+
+    fn get_tests_by_status(&self, status_id: i32) -> Result<Vec<Test>, RepoError> {
+        Ok(self.tests
+            .values()
+            .filter(|t| t.test_status == status_id)
+            .cloned()
+            .collect())
+    }
+
+    fn get_tests_by_parent(&self, parent_id: i32) -> Result<Vec<Test>, RepoError> {
+        Ok(self.tests
+            .values()
+            .filter(|t| t.test_parent == parent_id)
             .cloned()
             .collect())
     }
@@ -345,6 +377,10 @@ impl ProjectsRepository for FakeRepo {
 }
 
 impl MatrixRepository for FakeRepo {
+    fn get_matrix_all(&self) -> Result<Vec<Matrix>, RepoError> {
+        Ok(self.matrices.iter().cloned().collect())
+    }
+
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
         Ok(self
             .matrices
@@ -362,5 +398,21 @@ impl MatrixRepository for FakeRepo {
             project_id: new.project_id,
         });
         Ok(())
+    }
+
+    fn insert_matrix_link(&mut self, req_id: i32, test_id: i32, project_id: i32) -> Result<bool, RepoError> {
+        self.matrices.push(Matrix {
+            matrix_req_id: req_id,
+            matrix_test_id: test_id,
+            matrix_creation_date: epoch(),
+            project_id,
+        });
+        Ok(true)
+    }
+
+    fn delete_matrix_link(&mut self, req_id: i32, test_id: i32) -> Result<bool, RepoError> {
+        let initial_len = self.matrices.len();
+        self.matrices.retain(|m| !(m.matrix_req_id == req_id && m.matrix_test_id == test_id));
+        Ok(self.matrices.len() < initial_len)
     }
 }

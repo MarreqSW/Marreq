@@ -613,6 +613,37 @@ pub fn get_cache_health() -> serde_json::Value {
     })
 }
 
+/// Get cached value by key (generic version for service layer)
+pub fn get_cached_value<T>(key: &str) -> Option<T> 
+where 
+    T: serde::de::DeserializeOwned,
+{
+    let cache = get_cache();
+    if let Some(value_str) = cache.get(key) {
+        if let Ok(value) = serde_json::from_str::<T>(&value_str) {
+            return Some(value);
+        }
+    }
+    None
+}
+
+/// Set cached value with TTL (generic version for service layer)
+pub fn set_cached_value<T>(key: &str, value: T, ttl: Duration) 
+where 
+    T: serde::Serialize,
+{
+    let cache = get_cache();
+    if let Ok(value_str) = serde_json::to_string(&value) {
+        cache.set(key, &value_str, ttl);
+    }
+}
+
+/// Invalidate cache key (generic version for service layer)
+pub fn invalidate_cache_key(key: &str) {
+    let cache = get_cache();
+    cache.invalidate(key);
+}
+
 /// Get detailed cache performance metrics
 pub fn get_cache_performance() -> serde_json::Value {
     let cache = get_cache();

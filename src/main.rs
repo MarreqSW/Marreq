@@ -7,6 +7,7 @@ pub mod auth;
 pub mod bbdd;
 pub mod cache;
 pub mod cached_functions;
+pub mod errors;
 pub mod generators;
 pub mod helper_functions;
 pub mod html;
@@ -16,10 +17,14 @@ pub mod models;
 pub mod routes;
 pub mod schema;
 pub mod repository;
+pub mod services;
+pub mod validation;
 
 use crate::html::cors::*;
 use crate::routes::routes_api::*;
 use crate::routes::routes_html::*;
+use crate::routes::api::*;
+use crate::services::*;
 
 #[rocket_sync_db_pools::database("my_db")]
 pub struct MyDbConn(rocket_sync_db_pools::diesel::PgConnection);
@@ -33,6 +38,15 @@ async fn main() -> Result<(), rocket::Error> {
     crate::cache::start_cache_maintenance();
     
     let _rocket = rocket::build()
+        // Manage service instances
+        .manage(RequirementService::new())
+        .manage(TestService::new())
+        .manage(CategoryService::new())
+        .manage(ApplicabilityService::new())
+        .manage(UserService::new())
+        .manage(ProjectService::new())
+        .manage(StatusService::new())
+        .manage(MatrixService::new())
         .mount(
             "/",
             routes![
@@ -108,30 +122,68 @@ async fn main() -> Result<(), rocket::Error> {
         .mount(
             "/api/v1",
             routes![
-                api_get_requirement,
-                api_get_requirement_by_id,
-                api_post_requirement,
-                api_delete_requirement_by_id,
-                api_get_status,
-                api_post_status,
-                api_get_categories,
-                api_get_test,
-                api_get_test_by_id,
-                api_post_test,
-                api_delete_test_by_id,
-                api_get_matrix,
-                api_get_users,
-                api_get_users_by_id,
-                api_get_category_by_id,
-                api_post_category,
-                api_put_category,
-                api_delete_category_by_id,
-                api_get_applicability,
-                api_get_applicability_by_id,
-                api_post_applicability,
-                api_put_applicability,
-                api_delete_applicability_by_id,
-
+                // Health and version endpoints
+                health_check,
+                api_version,
+                get_openapi_spec,
+                get_api_docs,
+                
+                // Requirements endpoints
+                requirements::get_requirements,
+                requirements::get_requirements_by_project,
+                requirements::get_requirement_by_id,
+                requirements::create_requirement,
+                requirements::update_requirement,
+                requirements::delete_requirement,
+                requirements::get_requirements_by_category,
+                requirements::get_requirements_by_status,
+                
+                // Tests endpoints
+                tests::get_tests,
+                tests::get_tests_by_project,
+                tests::get_test_by_id,
+                tests::create_test,
+                tests::update_test,
+                tests::delete_test,
+                tests::get_tests_by_status,
+                tests::get_tests_by_parent,
+                
+                // Categories endpoints
+                categories::get_categories,
+                categories::get_category_by_id,
+                categories::create_category,
+                categories::update_category,
+                categories::delete_category,
+                
+                // Applicability endpoints
+                applicability::get_applicability,
+                applicability::get_applicability_by_id,
+                applicability::create_applicability,
+                applicability::update_applicability,
+                applicability::delete_applicability,
+                
+                // Users endpoints
+                users::get_users,
+                users::get_user_by_id,
+                users::create_user,
+                users::delete_user,
+                
+                // Projects endpoints
+                projects::get_projects,
+                projects::get_project_by_id,
+                projects::create_project,
+                projects::update_project,
+                projects::delete_project,
+                
+                // Status endpoints
+                status::get_status,
+                status::create_status,
+                
+                // Matrix endpoints
+                matrix::get_matrix,
+                matrix::get_matrix_by_project,
+                matrix::create_matrix_link,
+                matrix::delete_matrix_link,
             ],
         )
         .mount("/static", FileServer::from(relative!("src/html/static")))

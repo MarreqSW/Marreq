@@ -8,7 +8,8 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct FakeRepo {
     pub users: HashMap<i32, User>,
-    pub statuses: HashMap<i32, Status>,
+    pub requirement_statuses: HashMap<i32, RequirementStatus>,
+    pub test_statuses: HashMap<i32, TestStatus>,
     pub verifications: HashMap<i32, Verification>,
     pub categories: HashMap<i32, Category>,
     pub applicability: HashMap<i32, Applicability>,
@@ -33,7 +34,8 @@ impl FakeRepo {
         }
         Self {
             users: map,
-            statuses: HashMap::new(),
+            requirement_statuses: HashMap::new(),
+            test_statuses: HashMap::new(),
             verifications: HashMap::new(),
             categories: HashMap::new(),
             applicability: HashMap::new(),
@@ -46,7 +48,8 @@ impl FakeRepo {
     pub fn with_error() -> Self {
         Self {
             users: HashMap::new(),
-            statuses: HashMap::new(),
+            requirement_statuses: HashMap::new(),
+            test_statuses: HashMap::new(),
             verifications: HashMap::new(),
             categories: HashMap::new(),
             applicability: HashMap::new(),
@@ -124,12 +127,20 @@ impl UserRepository for FakeRepo {
 }
 
 impl LookupRepository for FakeRepo {
-    fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
-        Ok(self.statuses.values().cloned().collect())
+    fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
+        Ok(self.requirement_statuses.values().cloned().collect())
     }
 
-    fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError> {
-        self.statuses.get(&id).cloned().ok_or(RepoError::NotFound)
+    fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError> {
+        self.requirement_statuses.get(&id).cloned().ok_or(RepoError::NotFound)
+    }
+
+    fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
+        Ok(self.test_statuses.values().cloned().collect())
+    }
+
+    fn get_test_status_by_id(&self, id: i32) -> Result<TestStatus, RepoError> {
+        self.test_statuses.get(&id).cloned().ok_or(RepoError::NotFound)
     }
 
     fn get_categories_all(&self) -> Result<Vec<Category>, RepoError> {
@@ -210,7 +221,11 @@ impl LookupRepository for FakeRepo {
     fn delete_applicability(&mut self, _id: i32) -> Result<bool, RepoError> {
         Ok(false)
     }
-    fn create_status(&mut self, _new: &NewStatus) -> Result<i32, RepoError> {
+    fn create_requirement_status(&mut self, _new: &NewRequirementStatus) -> Result<i32, RepoError> {
+        Ok(0)
+    }
+
+    fn create_test_status(&mut self, _new: &NewTestStatus) -> Result<i32, RepoError> {
         Ok(0)
     }
 }

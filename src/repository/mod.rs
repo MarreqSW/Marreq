@@ -52,8 +52,11 @@ pub trait TestsRepository {
 }
 
 pub trait LookupRepository {
-    fn get_status_all(&self) -> Result<Vec<Status>, RepoError>;
-    fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError>;
+    fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError>;
+    fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError>;
+    
+    fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError>;
+    fn get_test_status_by_id(&self, id: i32) -> Result<TestStatus, RepoError>;
 
     fn get_categories_all(&self) -> Result<Vec<Category>, RepoError>;
     fn get_categories_by_project(&self, project_id: i32) -> Result<Vec<Category>, RepoError>;
@@ -70,7 +73,8 @@ pub trait LookupRepository {
     fn get_verification_by_id(&self, id: i32) -> Result<Verification, RepoError>;
     fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<Verification>, RepoError>;
 
-    fn create_status(&mut self, new: &NewStatus) -> Result<i32, RepoError>;
+    fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError>;
+    fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError>;
 
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError>;
     fn edit_category(&mut self, new: &NewCategory) -> Result<bool, RepoError>;

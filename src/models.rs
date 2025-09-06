@@ -137,24 +137,44 @@ pub struct NewApplicability {
     pub project_id: i32,
 }
 
-/// Possible status values for requirements or tests.
+/// A status that can be assigned to requirements.
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Status {
-    pub st_id: i32,
-    pub st_title: String,
-    pub st_description: String,
-    pub st_short_name: String,
+pub struct RequirementStatus {
+    pub req_st_id: i32,
+    pub req_st_title: String,
+    pub req_st_description: String,
+    pub req_st_short_name: String,
 }
 
-/// Form used to create a new [`Status`].
+/// A status that can be assigned to tests.
+#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct TestStatus {
+    pub test_st_id: i32,
+    pub test_st_title: String,
+    pub test_st_description: String,
+    pub test_st_short_name: String,
+}
+
+/// Form used to create a new [`RequirementStatus`].
 #[derive(Serialize, Deserialize, Insertable, FromForm)]
 #[serde(crate = "rocket::serde")]
-#[diesel(table_name = status)]
-pub struct NewStatus {
-    pub st_title: String,
-    pub st_description: String,
-    pub st_short_name: String,
+#[diesel(table_name = requirement_status)]
+pub struct NewRequirementStatus {
+    pub req_st_title: String,
+    pub req_st_description: String,
+    pub req_st_short_name: String,
+}
+
+/// Form used to create a new [`TestStatus`].
+#[derive(Serialize, Deserialize, Insertable, FromForm)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = test_status)]
+pub struct NewTestStatus {
+    pub test_st_title: String,
+    pub test_st_description: String,
+    pub test_st_short_name: String,
 }
 
 /// Verification methods available for requirements.
@@ -240,10 +260,10 @@ pub struct Test {
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
-    pub test_reference: String,
     pub test_status: i32,
     pub test_parent: i32,
     pub project_id: i32,
+    pub test_reference: String,
 }
 
 /// Test information with resolved foreign keys for presentation.
@@ -384,9 +404,15 @@ impl fmt::Display for Applicability {
     }
 }
 
-impl fmt::Display for Status {
+impl fmt::Display for RequirementStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<div class='status'>Status: {}</div>", self.st_title)
+        write!(f, "<div class='status'>Status: {}</div>", self.req_st_title)
+    }
+}
+
+impl fmt::Display for TestStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<div class='status'>Status: {}</div>", self.test_st_title)
     }
 }
 

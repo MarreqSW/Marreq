@@ -172,14 +172,14 @@ pub fn api_get_categories() -> Result<Json<Vec<Category>>, rocket::http::Status>
 }
 
 /// Status
-#[get("/status")]
-pub fn api_get_status() -> Result<Json<Vec<Status>>, rocket::http::Status> {
+#[get("/requirement-status")]
+pub fn api_get_requirement_status() -> Result<Json<Vec<RequirementStatus>>, rocket::http::Status> {
     let ret_val = DieselRepo::new()
-        .get_status_all()
+        .get_requirement_status_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", _err);
-            "Error querying page views from the database".into()
+            println!("Error querying requirement status: {:?}", _err);
+            "Error querying requirement status from the database".into()
         })
         .map(Json);
     if let Ok(val) = ret_val {
@@ -193,13 +193,50 @@ pub fn api_get_status() -> Result<Json<Vec<Status>>, rocket::http::Status> {
     }
 }
 
-#[post("/status", data= "<new_status>")]
-pub async fn api_post_status(new_status: Json<NewStatus>) -> Value {
-    let new_id = match DieselRepo::new().create_status(&new_status) {
+#[get("/test-status")]
+pub fn api_get_test_status() -> Result<Json<Vec<TestStatus>>, rocket::http::Status> {
+    let ret_val = DieselRepo::new()
+        .get_test_status_all()
+        .map_err(|_err| -> String {
+            #[cfg(debug_assertions)]
+            println!("Error querying test status: {:?}", _err);
+            "Error querying test status from the database".into()
+        })
+        .map(Json);
+    if let Ok(val) = ret_val {
+        if val.is_empty() {
+            Err(rocket::http::Status::NotFound)
+        } else {
+            Ok(val)
+        }
+    } else {
+        Err(rocket::http::Status::InternalServerError)
+    }
+}
+
+#[post("/requirement-status", data= "<new_status>")]
+pub async fn api_post_requirement_status(new_status: Json<NewRequirementStatus>) -> Value {
+    let new_id = match DieselRepo::new().create_requirement_status(&new_status) {
         Ok(id) => id,
         Err(e) => {
             eprintln!("Error creating status via API: {:?}", e);
             return json!({ "status": "error", "message": "Failed to create status" });
+        }
+    };
+
+    // Invalidate relevant caches
+    crate::cache::invalidate_status_cache(new_id);
+
+    json!({ "status": "ok", "id": new_id })
+}
+
+#[post("/test-status", data= "<new_status>")]
+pub async fn api_post_test_status(new_status: Json<NewTestStatus>) -> Value {
+    let new_id = match DieselRepo::new().create_test_status(&new_status) {
+        Ok(id) => id,
+        Err(e) => {
+            eprintln!("Error creating test status via API: {:?}", e);
+            return json!({ "status": "error", "message": "Failed to create test status" });
         }
     };
 

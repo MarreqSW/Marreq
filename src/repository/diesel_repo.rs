@@ -280,20 +280,44 @@ impl UserRepository for DieselRepo {
 }
 
 impl LookupRepository for DieselRepo {
-    fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
-        use schema::status::dsl::*;
+    fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
+        use schema::requirement_status::dsl::*;
         let mut conn = self.get_conn()?;
-        status
-            .order(st_id)
-            .load::<Status>(conn.as_mut())
+        requirement_status
+            .order(req_st_id)
+            .load::<RequirementStatus>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError> {
-        use schema::status::dsl::*;
+    fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError> {
+        use schema::requirement_status::dsl::*;
         let mut conn = self.get_conn()?;
-        status
-            .filter(st_id.eq(id))
+        requirement_status
+            .filter(req_st_id.eq(id))
+            .get_result(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })
+    }
+
+    fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
+        use schema::test_status::dsl::*;
+        let mut conn = self.get_conn()?;
+        test_status
+            .order(test_st_id)
+            .load::<TestStatus>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn get_test_status_by_id(&self, id: i32) -> Result<TestStatus, RepoError> {
+        use schema::test_status::dsl::*;
+        let mut conn = self.get_conn()?;
+        test_status
+            .filter(test_st_id.eq(id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -468,12 +492,20 @@ impl LookupRepository for DieselRepo {
         Ok(deleted > 0)
     }
 
-    fn create_status(&mut self, new: &NewStatus) -> Result<i32, RepoError> {
+    fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
-        let res: Status = diesel::insert_into(schema::status::table)
+        let res: RequirementStatus = diesel::insert_into(schema::requirement_status::table)
             .values(new)
             .get_result(conn.as_mut())?;
-        Ok(res.st_id)
+        Ok(res.req_st_id)
+    }
+
+    fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError> {
+        let mut conn = self.get_conn()?;
+        let res: TestStatus = diesel::insert_into(schema::test_status::table)
+            .values(new)
+            .get_result(conn.as_mut())?;
+        Ok(res.test_st_id)
     }
 }
 
@@ -633,10 +665,10 @@ impl TestsRepository for DieselRepo {
                 t::test_name,
                 t::test_description,
                 t::test_source,
-                t::test_reference,
                 t::test_status,
                 t::test_parent,
                 t::project_id,
+                t::test_reference,
             ))
             .load::<Test>(conn.as_mut())
             .map_err(|e| e.into())

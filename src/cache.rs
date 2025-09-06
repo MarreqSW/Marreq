@@ -267,7 +267,8 @@ pub mod keys {
     // Navigation and overview data
     pub const PROJECTS_NAV: &str = "projects:nav";
     pub const PROJECTS_ALL: &str = "projects:all";
-    pub const STATUS_ALL: &str = "status:all";
+    pub const REQUIREMENT_STATUS_ALL: &str = "requirement_status:all";
+    pub const TEST_STATUS_ALL: &str = "test_status:all";
     pub const CATEGORIES_ALL: &str = "categories:all";
     pub const APPLICABILITY_ALL: &str = "applicability:all";
     pub const VERIFICATION_ALL: &str = "verification:all";
@@ -419,7 +420,8 @@ pub fn invalidate_category_cache(cat_id: i32) {
 pub fn invalidate_status_cache(status_id: i32) {
     let cache = get_cache();
     cache.remove(&keys::status_by_id(status_id));
-    cache.remove(keys::STATUS_ALL);
+    cache.remove(keys::REQUIREMENT_STATUS_ALL);
+    cache.remove(keys::TEST_STATUS_ALL);
 }
 
 /// Invalidate all verification-related cache entries
@@ -455,10 +457,17 @@ pub fn warm_cache() {
         }
     }
 
-    // Warm up status cache
-    if let Ok(statuses) = repo.get_status_all() {
+    // Warm up requirement status cache
+    if let Ok(statuses) = repo.get_requirement_status_all() {
         if let Ok(json_data) = serde_json::to_string(&statuses) {
-            cache.set_with_ttl(keys::STATUS_ALL, json_data, Duration::from_secs(900));
+            cache.set_with_ttl(keys::REQUIREMENT_STATUS_ALL, json_data, Duration::from_secs(900));
+        }
+    }
+
+    // Warm up test status cache
+    if let Ok(statuses) = repo.get_test_status_all() {
+        if let Ok(json_data) = serde_json::to_string(&statuses) {
+            cache.set_with_ttl(keys::TEST_STATUS_ALL, json_data, Duration::from_secs(900));
         }
     }
 

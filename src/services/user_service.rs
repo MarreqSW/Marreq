@@ -3,7 +3,8 @@
 use crate::errors::{ApiError, ApiResult};
 use crate::models::*;
 use crate::validation::validate_user;
-use crate::services::{BaseService, Service, CacheableService};
+use crate::services::{BaseService, Service};
+use crate::repository::UserRepository;
 use std::time::Duration;
 
 pub struct UserService {
@@ -16,30 +17,30 @@ impl UserService {
     }
     
     pub async fn get_all_users(&self) -> ApiResult<Vec<User>> {
-        let cache_key = self.cache_key_list("user", None);
-        if let Some(cached) = self.get_cached(&cache_key) {
+        let cache_key = self.base.cache_key_list("user", None);
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         let users = self.base.repo()
             .get_users_all()
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
-        self.set_cache(&cache_key, users.clone(), Duration::from_secs(300));
+        self.base.set_cache(&cache_key, users.clone(), Duration::from_secs(300));
         Ok(users)
     }
     
     pub async fn get_user_by_id(&self, id: i32) -> ApiResult<User> {
-        let cache_key = self.cache_key("user", id);
-        if let Some(cached) = self.get_cached(&cache_key) {
+        let cache_key = self.base.cache_key("user", id);
+        if let Some(cached) = self.base.get_cached(&cache_key) {
             return Ok(cached);
         }
         
         let user = self.base.repo()
             .get_user_by_id(id)
-            .map_err(|e| ApiError::Database(e))?;
+            .map_err(|e| ApiError::Repository(e))?;
         
-        self.set_cache(&cache_key, user.clone(), Duration::from_secs(600));
+        self.base.set_cache(&cache_key, user.clone(), Duration::from_secs(600));
         Ok(user)
     }
     
@@ -52,11 +53,11 @@ impl UserService {
         
         crate::validation::sanitize_string(&mut new_user.user_username);
         crate::validation::sanitize_string(&mut new_user.user_name);
-        crate::validation::sanitize_optional_string(&mut new_user.user_email);
+        crate::validation::sanitize_string(&mut new_user.user_email);
         
-        let id = self.base.repo()
-            .insert_user(&new_user)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let id = repo.insert_user(&new_user)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if let Ok(new_values) = crate::services::serialize_for_logging(&new_user) {
             let _ = self.base.log_create(
@@ -69,7 +70,7 @@ impl UserService {
             );
         }
         
-        self.invalidate_cache(&self.cache_key_list("user", None));
+        self.base.invalidate_cache(&self.base.cache_key_list("user", None));
         if let Some(project_id) = new_user.project_id {
             crate::cache::invalidate_project_cache(project_id);
         }
@@ -81,9 +82,9 @@ impl UserService {
     pub async fn delete_user(&self, id: i32, user_id: i32) -> ApiResult<bool> {
         let old_user = self.get_user_by_id(id).await?;
         
-        let success = self.base.repo()
-            .delete_user(id)
-            .map_err(|e| ApiError::Database(e))?;
+        let mut repo = crate::repository::DieselRepo::new();
+        let success = repo.delete_user(id)
+            .map_err(|e| ApiError::Repository(e))?;
         
         if success {
             if let Ok(old_values) = crate::services::serialize_for_logging(&old_user) {
@@ -97,8 +98,8 @@ impl UserService {
                 );
             }
             
-            self.invalidate_cache(&self.cache_key("user", id));
-            self.invalidate_cache(&self.cache_key_list("user", None));
+            self.base.invalidate_cache(&self.base.cache_key("user", id));
+            self.base.invalidate_cache(&self.base.cache_key_list("user", None));
             crate::cache::invalidate_user_cache(id);
         }
         
@@ -111,5 +112,5 @@ impl Service for UserService {
     fn repo_mut(&mut self) -> &mut crate::repository::DieselRepo { self.base.repo_mut() }
 }
 
-impl CacheableService<Vec<User>> for UserService {}
-impl CacheableService<User> for UserService {}
+
+

@@ -4,7 +4,7 @@
 
 use rocket::serde::json::Json;
 use rocket::State;
-use crate::errors::{ApiResponse, ApiResponseResult, ApiError};
+use crate::errors::{ApiResponse, ApiResponseResult};
 use crate::models::*;
 use crate::services::RequirementService;
 

@@ -96,6 +96,21 @@ pub fn validate_test(test: &NewTest) -> Result<(), ValidationError> {
         return Err(ValidationError::TooShort { field: "test_name".to_string(), min: 3 });
     }
     
+    // Validate test reference
+    if test.test_reference.trim().is_empty() {
+        return Err(ValidationError::Required { field: "test_reference".to_string() });
+    }
+    
+    if test.test_reference.len() > 50 {
+        return Err(ValidationError::TooLong { field: "test_reference".to_string(), max: 50 });
+    }
+    
+    // Validate test reference format (TEST-NUMBER)
+    let test_ref_regex = Regex::new(r"^TEST-\d+$").unwrap();
+    if !test_ref_regex.is_match(&test.test_reference) {
+        return Err(ValidationError::Custom("Test reference must follow format TEST-NUMBER (e.g., TEST-1, TEST-2)".to_string()));
+    }
+    
     // Validate description
     if test.test_description.trim().is_empty() {
         return Err(ValidationError::Required { field: "test_description".to_string() });
@@ -108,6 +123,10 @@ pub fn validate_test(test: &NewTest) -> Result<(), ValidationError> {
     // Validate IDs are positive
     if test.test_status <= 0 {
         return Err(ValidationError::Custom("Test status ID must be positive".to_string()));
+    }
+    
+    if test.test_parent <= 0 {
+        return Err(ValidationError::Custom("Test parent ID must be positive".to_string()));
     }
     
     if test.project_id <= 0 {
@@ -253,15 +272,13 @@ pub fn validate_user(user: &NewUser) -> Result<(), ValidationError> {
     }
     
     // Validate email format if provided
-    if let Some(email) = user.user_email.as_ref() {
-        if !email.trim().is_empty() {
-            let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
-            if !email_regex.is_match(email) {
-                return Err(ValidationError::InvalidFormat {
-                    field: "user_email".to_string(),
-                    message: "Email must be in valid format".to_string(),
-                });
-            }
+    if !user.user_email.trim().is_empty() {
+        let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+        if !email_regex.is_match(&user.user_email) {
+            return Err(ValidationError::InvalidFormat {
+                field: "user_email".to_string(),
+                message: "Email must be in valid format".to_string(),
+            });
         }
     }
     
@@ -309,10 +326,8 @@ pub fn validate_status(status: &NewStatus) -> Result<(), ValidationError> {
     }
     
     // Validate description
-    if let Some(description) = &status.st_description {
-        if !description.trim().is_empty() && description.len() > 200 {
-            return Err(ValidationError::TooLong { field: "st_description".to_string(), max: 200 });
-        }
+    if !status.st_description.trim().is_empty() && status.st_description.len() > 200 {
+        return Err(ValidationError::TooLong { field: "st_description".to_string(), max: 200 });
     }
     
     Ok(())

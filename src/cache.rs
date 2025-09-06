@@ -134,6 +134,11 @@ impl Cache {
         }
     }
 
+    /// Invalidate a cache entry (alias for remove)
+    pub fn invalidate(&self, key: &str) {
+        self.remove(key);
+    }
+
     /// Clear all cache entries
     pub fn clear(&self) {
         let mut data = self.data.write().unwrap();
@@ -634,7 +639,7 @@ where
 {
     let cache = get_cache();
     if let Ok(value_str) = serde_json::to_string(&value) {
-        cache.set(key, &value_str, ttl);
+        cache.set_with_ttl(key, value_str, ttl);
     }
 }
 

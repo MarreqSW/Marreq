@@ -21,9 +21,9 @@ pub mod services;
 pub mod validation;
 
 use crate::html::cors::*;
-use crate::routes::routes_api::*;
 use crate::routes::routes_html::*;
 use crate::routes::api::*;
+use crate::routes::api::docs::*;
 use crate::services::*;
 
 #[rocket_sync_db_pools::database("my_db")]

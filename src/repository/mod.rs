@@ -23,6 +23,8 @@ pub trait RequirementsRepository {
     fn get_requirement_by_id(&self, id: i32) -> Result<Requirement, RepoError>;
     fn get_requirements_all(&self) -> Result<Vec<Requirement>, RepoError>;
     fn get_requirements_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError>;
+    fn get_requirements_by_category(&self, category_id: i32) -> Result<Vec<Requirement>, RepoError>;
+    fn get_requirements_by_status(&self, status_id: i32) -> Result<Vec<Requirement>, RepoError>;
 
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError>;
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError>;
@@ -34,6 +36,8 @@ pub trait TestsRepository {
     fn get_test_by_id(&self, id: i32) -> Result<Test, RepoError>;
     fn get_tests_all(&self) -> Result<Vec<Test>, RepoError>;
     fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<Test>, RepoError>;
+    fn get_tests_by_status(&self, status_id: i32) -> Result<Vec<Test>, RepoError>;
+    fn get_tests_by_parent(&self, parent_id: i32) -> Result<Vec<Test>, RepoError>;
     fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError>;
     fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<Test>, RepoError>;
 
@@ -87,8 +91,11 @@ pub trait ProjectsRepository {
 }
 
 pub trait MatrixRepository {
+    fn get_matrix_all(&self) -> Result<Vec<Matrix>, RepoError>;
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError>;
     fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError>;
+    fn insert_matrix_link(&mut self, req_id: i32, test_id: i32, project_id: i32) -> Result<bool, RepoError>;
+    fn delete_matrix_link(&mut self, req_id: i32, test_id: i32) -> Result<bool, RepoError>;
 }
 
 pub trait Repository:

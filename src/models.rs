@@ -240,6 +240,7 @@ pub struct Test {
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
+    pub test_reference: String,
     pub test_status: i32,
     pub test_parent: i32,
     pub project_id: i32,
@@ -252,6 +253,7 @@ pub struct DecoratedTest {
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
+    pub test_reference: String,
     pub test_status: String,
     pub test_status_id: i32, // Add numeric status ID for access control
     pub test_parent_id: i32,
@@ -269,6 +271,7 @@ pub struct NewTest {
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
+    pub test_reference: String,
     pub test_status: i32,
     pub test_parent: i32,
     pub project_id: i32,
@@ -282,6 +285,7 @@ pub struct NewTestForm {
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
+    pub test_reference: String,
     pub test_status: i32,
     pub test_parent: i32,
     pub test_req: Vec<i32>,
@@ -296,6 +300,7 @@ pub struct EditTestForm {
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
+    pub test_reference: String,
     pub test_status: i32,
     pub test_parent: i32,
     pub linked_requirements: Vec<i32>,
@@ -421,7 +426,7 @@ impl fmt::Display for Test {
 }
 
 /// A project groups a collection of requirements and tests.
-#[derive(Queryable, Serialize, Deserialize, Debug)]
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 pub struct Project {
     pub project_id: i32,
     pub project_name: String,
@@ -535,6 +540,7 @@ pub enum EntityType {
     User,
     Matrix,
     Verification,
+    Status,
 }
 
 impl std::fmt::Display for EntityType {
@@ -548,6 +554,7 @@ impl std::fmt::Display for EntityType {
             EntityType::User => write!(f, "USER"),
             EntityType::Matrix => write!(f, "MATRIX"),
             EntityType::Verification => write!(f, "VERIFICATION"),
+            EntityType::Status => write!(f, "STATUS"),
         }
     }
 }

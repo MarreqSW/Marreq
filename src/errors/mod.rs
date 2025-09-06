@@ -8,6 +8,7 @@ use rocket::serde::json::Json;
 use rocket::response::{Responder, Response};
 use rocket::request::Request;
 use serde::Serialize;
+use std::fmt;
 use thiserror::Error;
 
 /// Main error type for the application
@@ -15,6 +16,9 @@ use thiserror::Error;
 pub enum ApiError {
     #[error("Database error: {0}")]
     Database(#[from] diesel::result::Error),
+    
+    #[error("Repository error: {0}")]
+    Repository(#[from] crate::repository::errors::RepoError),
     
     #[error("Not found: {entity} with id {id}")]
     NotFound { entity: String, id: i32 },
@@ -40,14 +44,20 @@ pub enum ApiError {
 
 /// Standard API response wrapper
 #[derive(Debug, Serialize)]
-pub struct ApiResponse<T> {
+pub struct ApiResponse<T: Serialize> {  
     pub success: bool,
     pub data: Option<T>,
     pub error: Option<String>,
     pub timestamp: String,
 }
 
-impl<T> ApiResponse<T> {
+impl<T: Serialize> fmt::Display for ApiResponse<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", serde_json::to_string(self).unwrap_or_else(|_| "{}".to_string()))
+    }
+}
+
+impl<T: Serialize> ApiResponse<T> {
     /// Create a successful response with data
     pub fn success(data: T) -> Self {
         Self {
@@ -102,7 +112,7 @@ impl From<ApiError> for Status {
             ApiError::Validation(_) => Status::BadRequest,
             ApiError::Authentication(_) => Status::Unauthorized,
             ApiError::Authorization(_) => Status::Forbidden,
-            ApiError::Database(_) | ApiError::Internal(_) => Status::InternalServerError,
+            ApiError::Database(_) | ApiError::Repository(_) | ApiError::Internal(_) => Status::InternalServerError,
             ApiError::Cache(_) => Status::ServiceUnavailable,
             ApiError::Serialization(_) => Status::BadRequest,
         }
@@ -112,18 +122,20 @@ impl From<ApiError> for Status {
 /// Convert ApiError to JSON response
 impl From<ApiError> for Json<ApiResponse<()>> {
     fn from(err: ApiError) -> Self {
-        Json(ApiResponse::error(err.to_string()))
+        Json(ApiResponse::<()>::error(err.to_string()))
     }
 }
 
 /// Implement Responder for ApiError
 impl<'r> Responder<'r, 'static> for ApiError {
     fn respond_to(self, _: &'r Request<'_>) -> rocket::response::Result<'static> {
+        let error_msg = self.to_string();
         let status: Status = self.into();
-        let response = ApiResponse::error(self.to_string());
+        let response = ApiResponse::<()>::error(error_msg);
+        let json_str = serde_json::to_string(&response).unwrap_or_else(|_| "{\"success\":false,\"error\":\"Serialization error\"}".to_string());
         Response::build()
             .status(status)
-            .sized_body(response.to_string().len(), std::io::Cursor::new(response.to_string()))
+            .sized_body(json_str.len(), std::io::Cursor::new(json_str))
             .header(rocket::http::ContentType::JSON)
             .ok()
     }

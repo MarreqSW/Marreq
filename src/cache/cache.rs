@@ -64,7 +64,6 @@ impl Cache {
         data.remove(key)
     }
 
-
     /// Get a value from cache
     pub fn get(&self, key: &str) -> Option<String> {
         let start = Instant::now();

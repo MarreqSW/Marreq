@@ -33,3 +33,55 @@ pub fn logout_user(cookies: &CookieJar<'_>) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rocket::local::blocking::Client;
+    use rocket::{get, routes};
+
+    #[get("/")]
+    fn set_basic(cookies: &CookieJar<'_>) {
+        cookies.add_private(Cookie::new("user_id", "not-an-int"));
+        cookies.add_private(Cookie::new("username", "alice"));
+        cookies.add_private(Cookie::new("user_name", "Alice"));
+    }
+
+    #[test]
+    fn removes_session_cookies() {
+        let rocket = rocket::build().mount("/", routes![set_basic]);
+        let client = Client::tracked(rocket).expect("valid rocket");
+        client.get("/").dispatch();
+        let jar = client.cookies();
+        assert!(jar.get_private("username").is_some());
+
+        logout_user(&jar);
+
+        assert!(jar.get_pending("user_id").is_none());
+        assert!(jar.get_pending("username").is_none());
+        assert!(jar.get_pending("user_name").is_none());
+    }
+
+    #[get("/")]
+    fn set_with_other(cookies: &CookieJar<'_>) {
+        cookies.add(Cookie::new("other", "ok"));
+        cookies.add_private(Cookie::new("user_id", "bad"));
+        cookies.add_private(Cookie::new("username", "bob"));
+        cookies.add_private(Cookie::new("user_name", "Bob"));
+    }
+
+    #[test]
+    fn leaves_other_cookies_intact() {
+        let rocket = rocket::build().mount("/", routes![set_with_other]);
+        let client = Client::tracked(rocket).expect("valid rocket");
+        client.get("/").dispatch();
+        let jar = client.cookies();
+
+        logout_user(&jar);
+
+        assert!(jar.get_pending("user_id").is_none());
+        assert!(jar.get_pending("username").is_none());
+        assert!(jar.get_pending("user_name").is_none());
+        assert!(jar.get_pending("other").is_some());
+    }
+}

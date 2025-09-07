@@ -1,4 +1,5 @@
-use super::cache::{get_cache, Cache};
+use super::cache::Cache;
+use super::cache_adapter::get_cache;
 use super::keys;
 use chrono;
 use serde::{Deserialize, Serialize};

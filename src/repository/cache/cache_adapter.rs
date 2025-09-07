@@ -3,13 +3,9 @@
 
 use crate::helper_functions::decorators::decorate_tests;
 use crate::models::*;
-use crate::repository::cache::{
-    invalidate_category, invalidate_project, invalidate_requirement,
-    invalidate_test, invalidate_user,
-};
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    DieselCachedRepo, LookupRepository, MatrixRepository, ProjectsRepository,
+    DieselCachedRepo, LookupRepository, Cache, MatrixRepository, ProjectsRepository,
     RequirementsRepository, TestsRepository, UserRepository,
 };
 use chrono;
@@ -314,6 +310,61 @@ pub fn get_projects_all_cached() -> Result<Vec<Project>, String> {
     DieselCachedRepo::shared()
         .get_projects_all()
         .map_err(|e| e.to_string())
+}
+
+
+/// Cache utility functions
+///
+/// The application maintains a shared [`CacheRepository`] instance that owns the
+/// cache. This helper provides a convenient way to access that cache without
+/// exposing a global mutable state.
+pub fn get_cache() -> &'static Cache {
+    crate::repository::diesel_repo::DieselCachedRepo::shared().cache()
+}
+
+/// Invalidate all project-related cache entries using the shared cache
+pub fn invalidate_project(project_id: i32) {
+    get_cache().invalidate_project(project_id);
+}
+
+/// Invalidate all user-related cache entries using the shared cache
+pub fn invalidate_user(user_id: i32) {
+    get_cache().invalidate_user(user_id);
+}
+
+/// Invalidate all requirement-related cache entries using the shared cache
+pub fn invalidate_requirement(req_id: i32) {
+    get_cache().invalidate_requirement(req_id);
+}
+
+/// Invalidate all test-related cache entries using the shared cache
+pub fn invalidate_test(test_id: i32) {
+    get_cache().invalidate_test(test_id);
+}
+
+/// Invalidate all category-related cache entries using the shared cache
+pub fn invalidate_category(cat_id: i32) {
+    get_cache().invalidate_category(cat_id);
+}
+
+/// Invalidate all status-related cache entries using the shared cache
+pub fn invalidate_status(status_id: i32) {
+    get_cache().invalidate_status(status_id);
+}
+
+/// Invalidate all verification-related cache entries using the shared cache
+pub fn invalidate_verification(verification_id: i32) {
+    get_cache().invalidate_verification(verification_id);
+}
+
+/// Invalidate all applicability-related cache entries using the shared cache
+pub fn invalidate_applicability(applicability_id: i32) {
+    get_cache().invalidate_applicability(applicability_id);
+}
+
+/// Invalidate all cache entries (use with caution)
+pub fn invalidate_all_cache() {
+    get_cache().clear();
 }
 
 /* TODO: never used ??

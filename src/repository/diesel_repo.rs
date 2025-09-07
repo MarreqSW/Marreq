@@ -152,14 +152,6 @@ impl DieselRepo {
         }
     }
 
-    /// Access a globally shared repository instance.
-    ///
-    /// This avoids the need to construct a new repository each time
-    /// code wants to access the database.
-    pub fn shared() -> &'static Self {
-        &SHARED_REPO
-    }
-
     pub fn get_conn(&self) -> Result<PooledConnectionWrapper, RepoError> {
         self.pool
             .get()
@@ -195,11 +187,6 @@ impl DieselRepo {
             .map_err(RepoError::from)?;
         Ok(true)
     }
-}
-
-lazy_static! {
-    /// Shared repository instance for application-wide use
-    static ref SHARED_REPO: DieselRepo = DieselRepo::new();
 }
 
 impl UserRepository for DieselRepo {

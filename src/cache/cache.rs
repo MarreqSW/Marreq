@@ -696,4 +696,90 @@ mod tests {
         assert_eq!(stats.active_entries, 10000);
         assert_eq!(stats.expired_entries, 0);
     }
+
+    #[test]
+    fn test_counters_and_reset() {
+        let cache = Cache::new(300);
+
+        // Initial stats should be zeroed
+        assert_eq!(cache.stats().total_entries, 0);
+
+        // One hit and one miss
+        cache.set("a", "1".to_string());
+        assert_eq!(cache.get("a"), Some("1".to_string()));
+        assert_eq!(cache.get("missing"), None);
+
+        let stats = cache.stats();
+        assert_eq!(stats.hits, 1);
+        assert_eq!(stats.misses, 1);
+        assert_eq!(stats.active_entries, 1);
+
+        // Reset all counters
+        cache.reset_counters();
+        let stats = cache.stats();
+        assert_eq!(stats.hits, 0);
+        assert_eq!(stats.misses, 0);
+        assert_eq!(stats.active_entries, 0);
+    }
+
+    #[test]
+    fn test_sync_counters_updates_expired() {
+        let cache = Cache::new(300);
+
+        cache.set_with_ttl("active", "v".to_string(), Duration::from_secs(1));
+        cache.set_with_ttl("expired", "v".to_string(), Duration::from_millis(1));
+        thread::sleep(Duration::from_millis(10));
+
+        cache.sync_counters();
+        let stats = cache.stats();
+        assert_eq!(stats.active_entries, 1);
+        assert_eq!(stats.expired_entries, 1);
+    }
+
+    #[test]
+    fn test_global_cache_helpers() {
+        invalidate_all_cache();
+        let cache = get_cache();
+        cache.reset_counters();
+
+        cache.set("keep", "v".to_string());
+        cache.set_with_ttl("gone", "v".to_string(), Duration::from_millis(1));
+        thread::sleep(Duration::from_millis(10));
+        cache.sync_counters();
+
+        let stats = get_cache_stats();
+        assert_eq!(stats["total_entries"].as_u64(), Some(2));
+        assert_eq!(stats["active_entries"].as_u64(), Some(1));
+        assert_eq!(stats["expired_entries"].as_u64(), Some(1));
+        assert_eq!(stats["cleanup_available"].as_bool(), Some(true));
+
+        cleanup_expired();
+        cache.sync_counters();
+        let stats = get_cache_stats();
+        assert_eq!(stats["total_entries"].as_u64(), Some(1));
+        assert_eq!(stats["active_entries"].as_u64(), Some(1));
+        assert_eq!(stats["expired_entries"].as_u64(), Some(0));
+        assert_eq!(get_memory_usage(), 1);
+
+        let health = get_cache_health();
+        assert_eq!(health["status"].as_str(), Some("healthy"));
+        assert_eq!(health["cleanup_needed"].as_bool(), Some(false));
+
+        // Trigger performance recommendations
+        invalidate_all_cache();
+        cache.reset_counters();
+        for i in 0..5 {
+            let _ = cache.get(&format!("missing{}", i));
+        }
+        for i in 0..1001 {
+            cache.set(&format!("key{}", i), "v".to_string());
+        }
+
+        let perf = get_cache_performance();
+        assert_eq!(perf["total_requests"].as_u64(), Some(5));
+
+        let recs = get_cache_recommendations();
+        let arr = recs["recommendations"].as_array().unwrap();
+        assert!(arr.iter().any(|r| r.as_str().unwrap().contains("hit rate")));
+    }
 }

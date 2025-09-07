@@ -1113,7 +1113,9 @@ pub fn post_requirement(
 
     // Generate automatic reference code if not provided
     if requirement_data.req_reference.is_empty() {
+
         match generate_requirement_reference(
+            &DieselRepo::new(),
             requirement_data.req_category,
             requirement_data.project_id,
         ) {

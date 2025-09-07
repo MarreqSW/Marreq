@@ -1,43 +1,37 @@
 use crate::models::*;
-use diesel::prelude::*;
+use crate::repository::errors::RepoError;
+use crate::repository::{LookupRepository, RequirementsRepository};
 use rocket::http::CookieJar;
-use std::error::Error;
-use crate::repository::DieselRepo;
 
 pub fn get_selected_project_id(cookies: &CookieJar<'_>) -> Option<i32> {
-    cookies.get("selected_project_id")
+    cookies
+        .get("selected_project_id")
         .and_then(|cookie| cookie.value().parse::<i32>().ok())
 }
 
-pub fn generate_requirement_reference(category_id: i32, project_id: i32) -> Result<String, Box<dyn Error>> {
-    use crate::schema::categories;
-    use crate::schema::requirements;
+pub fn generate_requirement_reference<R>(
+    repo: &R,
+    category_id: i32,
+    project_id: i32,
+) -> Result<String, RepoError>
+where
+    R: LookupRepository + RequirementsRepository,
+{
+    let category = repo.get_category_by_id(category_id)?;
 
-    let mut connection = DieselRepo::new()
-        .get_conn()
-        .unwrap_or_else(|_| panic!("Failed to get database connection"));
+    let existing_count = repo
+        .get_requirements_by_project(project_id)?
+        .into_iter()
+        .filter(|req| req.req_category == category_id)
+        .count();
 
-    let category = categories::table
-        .filter(categories::cat_id.eq(category_id))
-        .first::<Category>(connection.as_mut())
-        .map_err(|_e| Box::new(std::io::Error::new(std::io::ErrorKind::NotFound, "Category not found")))?;
-
-    let existing_count = requirements::table
-        .filter(requirements::req_category.eq(category_id))
-        .filter(requirements::project_id.eq(project_id))
-        .count()
-        .get_result::<i64>(connection.as_mut())
-        .map_err(|_e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, "Database error")))?;
-
-    let next_number = existing_count + 1;
-    let reference = format!("REQ-{}-{}", category.cat_tag, next_number);
-
-    Ok(reference)
+    Ok(format!("REQ-{}-{}", category.cat_tag, existing_count + 1))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::repository::fake_repo::FakeRepo;
     use rocket::http::Cookie;
     use rocket::local::blocking::Client;
     use rocket::{get, routes};
@@ -81,65 +75,26 @@ mod tests {
 
     #[test]
     fn generate_requirement_reference_creates_incremental_reference() {
-        std::env::set_var(
-            "DATABASE_URL",
-            "postgres://rust:rust@127.0.0.1:5432/reqman",
-        );
-
-        use crate::schema::{categories, projects};
-        use diesel::RunQueryDsl;
-        use std::time::{SystemTime, UNIX_EPOCH};
-
-        let mut conn = DieselRepo::new()
-            .get_conn()
-            .expect("Failed to get database connection");
-
-        // Create a unique suffix to avoid conflicts across test runs
-        let unique = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
-            .to_string();
-
-        // Insert a temporary project
-        let new_project = NewProject {
-            project_name: format!("test_project_{}", unique),
-            project_description: None,
-            project_status: "active".into(),
-            project_owner_id: None,
-        };
-        let project: Project = diesel::insert_into(projects::table)
-            .values(&new_project)
-            .get_result(conn.as_mut())
-            .expect("insert project");
-
-        // Insert a category for that project
-        let new_category = NewCategory {
-            cat_id: None,
+        let mut repo = FakeRepo::default();
+        let project_id = 1;
+        let category = Category {
+            cat_id: 1,
             cat_title: "Test Cat".into(),
             cat_description: "desc".into(),
-            cat_tag: format!("TC{}", unique),
-            project_id: project.project_id,
+            cat_tag: "TC".into(),
+            project_id,
         };
-        let category: Category = diesel::insert_into(categories::table)
-            .values(&new_category)
-            .get_result(conn.as_mut())
-            .expect("insert category");
+        repo.categories.insert(category.cat_id, category.clone());
 
-        // Since no requirements exist yet, the reference should end with -1
-        let reference = generate_requirement_reference(category.cat_id, project.project_id)
+        let reference = generate_requirement_reference(&repo, category.cat_id, project_id)
             .expect("reference generation");
         assert_eq!(reference, format!("REQ-{}-1", category.cat_tag));
     }
 
     #[test]
     fn generate_requirement_reference_missing_category_returns_error() {
-        std::env::set_var(
-            "DATABASE_URL",
-            "postgres://rust:rust@127.0.0.1:5432/reqman",
-        );
-
-        let result = generate_requirement_reference(-1, -1);
+        let repo = FakeRepo::default();
+        let result = generate_requirement_reference(&repo, -1, -1);
         assert!(result.is_err());
     }
 }

@@ -1,5 +1,4 @@
-use super::keys;
-use crate::cache::keys::Keyspace;
+use super::keys::{self, Keyspace};
 use crate::repository::*;
 use chrono;
 use std::collections::HashMap;
@@ -407,7 +406,7 @@ pub fn start_cache_maintenance() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cache::{
+    use crate::repository::cache::{
         get_cache_health, get_cache_performance, get_cache_recommendations, get_cache_stats,
         get_memory_usage,
     };

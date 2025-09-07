@@ -1,4 +1,4 @@
-use crate::cache::{
+use crate::repository::cache::{
     invalidate_category_cache, invalidate_project_cache, invalidate_requirement_cache,
     invalidate_test_cache, invalidate_user_cache,
 };
@@ -197,7 +197,7 @@ pub fn invalidate_project_cache_complete(project_id: i32) {
 
 /// Invalidate cache when applicability is modified
 pub fn invalidate_applicability_cache_complete(applicability_id: i32) {
-    crate::cache::invalidate_applicability_cache(applicability_id);
+    crate::repository::cache::invalidate_applicability_cache(applicability_id);
 }
 
 /// Get verification by project with caching
@@ -413,7 +413,7 @@ pub fn bulk_invalidate_cache(entity_type: &str, entity_ids: &[i32]) {
         }
         _ => {
             // Unknown entity type, invalidate all caches as fallback
-            crate::cache::invalidate_all_cache();
+            crate::repository::cache::invalidate_all_cache();
         }
     }
 }

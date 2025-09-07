@@ -1,5 +1,5 @@
-use crate::cache::keys::Keyspace;
-use crate::cache::{
+use super::cache::keys::Keyspace;
+use super::cache::{
     get_cache, invalidate_applicability_cache, invalidate_category_cache, invalidate_project_cache,
     invalidate_requirement_cache, invalidate_status_cache, invalidate_test_cache,
     invalidate_user_cache, keys,

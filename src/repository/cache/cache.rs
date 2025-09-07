@@ -47,6 +47,27 @@ impl Cache {
         }
     }
 
+    /// Start background cache maintenance tasks
+    pub fn start_cache_maintenance(self: &Arc<Self>) {
+        let weak: Weak<Self> = Arc::downgrade(self);
+        thread::spawn(move || {
+            loop {
+                // stop if `Cache` is dropped everywhere
+                match weak.upgrade() {
+                    Some(this) => {
+                        this.cleanup();
+                        let stats = this.stats();
+                        if stats.active_entries < 10 {
+                            warm_cache();
+                        }
+                    }
+                    None => break, // Cache gone; exit thread
+                }
+                thread::sleep(Duration::from_secs(300));
+            }
+        });
+    }
+
     fn read(&self, key: &str) -> Status {
         let data = self.data.read().unwrap();
         match data.get(key) {
@@ -183,29 +204,6 @@ impl Cache {
 
         self.active_entries.store(actual_active, Ordering::Relaxed);
         self.expired_entries.store(actual_expired, Ordering::Relaxed);
-    }
-}
-
-impl Cache {
-    /// Start background cache maintenance tasks
-    pub fn start_cache_maintenance(self: &Arc<Self>) {
-        let weak: Weak<Self> = Arc::downgrade(self);
-        thread::spawn(move || {
-            loop {
-                // stop if `Cache` is dropped everywhere
-                match weak.upgrade() {
-                    Some(this) => {
-                        this.cleanup();
-                        let stats = this.stats();
-                        if stats.active_entries < 10 {
-                            warm_cache();
-                        }
-                    }
-                    None => break, // Cache gone; exit thread
-                }
-                thread::sleep(Duration::from_secs(300));
-            }
-        });
     }
 
     /// Invalidate all project-related cache entries

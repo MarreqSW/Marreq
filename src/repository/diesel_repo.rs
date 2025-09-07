@@ -10,7 +10,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::RunQueryDsl;
 use lazy_static::lazy_static;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 
 /// Database connection wrapper for use in Rocket handlers
@@ -23,17 +23,28 @@ pub type DieselCachedRepo = super::CacheRepository<DieselRepo>;
 
 
 lazy_static! {
-    /// Shared repository instance for application-wide.
-    /// This is Required to avoid cache copies.
-    static ref SHARED_CACHED_REPO: DieselCachedRepo = DieselCachedRepo::new(
+    /// Shared, mutable, thread-safe repository singleton.
+    static ref SHARED_CACHED_REPO: RwLock<DieselCachedRepo> = RwLock::new(
+    DieselCachedRepo::new(
         DieselRepo::new(),
-        5*60, // 5 min
+            5 * 60, // 5 min
+        )
     );
 }
 
 impl DieselCachedRepo {
-    pub fn shared() -> &'static Self {
-        &SHARED_CACHED_REPO
+    /// Access the global repo lock (call `.read()` or `.write()` as needed).
+    pub fn shared() -> &'static RwLock<DieselCachedRepo> {
+        &*SHARED_CACHED_REPO
+    }
+
+    /// Convenience helpers if you prefer to grab the guards directly.
+    pub fn read() -> RwLockReadGuard<'static, DieselCachedRepo> {
+        SHARED_CACHED_REPO.read().expect("repo lock poisoned")
+    }
+
+    pub fn write() -> RwLockWriteGuard<'static, DieselCachedRepo> {
+        SHARED_CACHED_REPO.write().expect("repo lock poisoned")
     }
 }
 

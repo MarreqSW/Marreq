@@ -16,49 +16,49 @@ use chrono;
 
 /// Get projects for navigation with caching
 pub fn get_projects_for_nav_cached() -> Result<Vec<Project>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_projects_all()
         .map_err(|e| e.to_string())
 }
 
 /// Get all statuses with caching
 pub fn get_status_all_cached() -> Result<Vec<Status>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_status_all()
         .map_err(|e| e.to_string())
 }
 
 /// Get all categories with caching
 pub fn get_categories_all_cached() -> Result<Vec<Category>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_categories_all()
         .map_err(|e| e.to_string())
 }
 
 /// Get all applicability with caching
 pub fn get_applicability_all_cached() -> Result<Vec<Applicability>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_applicability_all()
         .map_err(|e| e.to_string())
 }
 
 /// Get all verification data with caching
 pub fn get_verification_all_cached() -> Result<Vec<Verification>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_verification_all()
         .map_err(|e| e.to_string())
 }
 
 /// Get all users with caching
 pub fn get_users_all_cached() -> Result<Vec<User>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_users_all()
         .map_err(|e| e.to_string())
 }
 
 /// Get user by ID with caching
 pub fn get_user_by_id_cached(id: i32) -> User {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_user_by_id(id)
         .expect("Error reading table Users")
 }
@@ -66,7 +66,7 @@ pub fn get_user_by_id_cached(id: i32) -> User {
 /// Get requirements by project with caching
 pub fn get_requirements_by_project_cached(project_id: i32) -> Result<Vec<Requirement>, String> {
     // Cache for 5 minutes
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_requirements_by_project(project_id)
         .map_err(|e| e.to_string())
 }
@@ -74,7 +74,7 @@ pub fn get_requirements_by_project_cached(project_id: i32) -> Result<Vec<Require
 /// Get tests by project with caching
 pub fn get_tests_by_project_cached(project_id: i32) -> Result<Vec<Test>, String> {
     // Cache for 5 minutes
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_tests_by_project(project_id)
         .map_err(|e| e.to_string())
 }
@@ -82,7 +82,7 @@ pub fn get_tests_by_project_cached(project_id: i32) -> Result<Vec<Test>, String>
 /// Get matrix by project with caching
 pub fn get_matrix_by_project_cached(project_id: i32) -> Result<Vec<Matrix>, String> {
     // Cache for 3 minutes (matrix data is more dynamic)
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_matrix_by_project(project_id)
         .map_err(|e| e.to_string())
 }
@@ -109,14 +109,14 @@ pub fn get_requirement_by_id_cached(id: i32) -> Requirement {
         project_id: 1,
     };
 
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_requirement_by_id(id)
         .unwrap_or_else(|_| fallback())
 }
 
 /// Get requirement by ID with caching and proper error handling
 pub fn get_requirement_by_id_cached_safe(id: i32) -> Result<Requirement, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_requirement_by_id(id)
         .map_err(|e| match e {
             RepoError::NotFound => format!("Requirement with ID {} not found", id),
@@ -126,14 +126,14 @@ pub fn get_requirement_by_id_cached_safe(id: i32) -> Result<Requirement, String>
 
 /// Get test by ID with caching
 pub fn get_test_by_id_cached(id: i32) -> Test {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_test_by_id(id)
         .expect("Error reading table Tests")
 }
 
 /// Get test by ID with caching and proper error handling
 pub fn get_test_by_id_cached_safe(id: i32) -> Result<Test, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_test_by_id(id)
         .map_err(|e| match e {
             RepoError::NotFound => format!("Test with ID {} not found", id),
@@ -150,21 +150,21 @@ pub fn get_category_by_id_cached(id: i32) -> Category {
         cat_tag: "unknown".to_string(),
         project_id: 1,
     };
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_category_by_id(id)
         .unwrap_or_else(|_| fallback())
 }
 
 /// Cached version of get_requirements_all with project filtering
 pub fn get_requirements_all_cached() -> Result<Vec<Requirement>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_requirements_all()
         .map_err(|e| e.to_string())
 }
 
 /// Cached version of get_tests_all with project filtering
 pub fn get_tests_all_cached() -> Result<Vec<Test>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_tests_all()
         .map_err(|e| e.to_string())
 }
@@ -205,28 +205,28 @@ pub fn invalidate_applicability_cache_complete(applicability_id: i32) {
 
 /// Get verification by project with caching
 pub fn get_verification_by_project_cached(project_id: i32) -> Result<Vec<Verification>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_verification_by_project(project_id)
         .map_err(|e| e.to_string())
 }
 
 /// Get categories by project with caching
 pub fn get_categories_by_project_cached(project_id: i32) -> Result<Vec<Category>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_categories_by_project(project_id)
         .map_err(|e| e.to_string())
 }
 
 /// Get applicability by project with caching
 pub fn get_applicability_by_project_cached(project_id: i32) -> Result<Vec<Applicability>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_applicability_by_project(project_id)
         .map_err(|e| e.to_string())
 }
 
 /// Get linked tests for requirement with caching
 pub fn get_linked_tests_for_requirement_cached(req_id: i32) -> Result<Vec<DecoratedTest>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_tests_for_requirement(req_id)
         .map(|tests| decorate_tests(tests))
         .map_err(|e| e.to_string())
@@ -234,14 +234,14 @@ pub fn get_linked_tests_for_requirement_cached(req_id: i32) -> Result<Vec<Decora
 
 /// Get requirements for test with caching
 pub fn get_requirements_for_test_cached(test_id: i32) -> Result<Vec<Requirement>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_requirements_for_test(test_id)
         .map_err(|e| e.to_string())
 }
 
 /// Get status by ID with caching
 pub fn get_status_by_id_cached(id: i32) -> Status {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_status_by_id(id)
         .expect("Error reading table Status")
 }
@@ -254,7 +254,7 @@ pub fn get_verification_by_id_cached(id: i32) -> Verification {
         verification_description: "Verification not found".to_string(),
         project_id: 1,
     };
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_verification_by_id(id)
         .unwrap_or_else(|_| fallback())
 }
@@ -268,21 +268,21 @@ pub fn get_applicability_by_id_cached(id: i32) -> Applicability {
         app_tag: "unknown".to_string(),
         project_id: 1,
     };
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_applicability_by_id(id)
         .unwrap_or_else(|_| fallback())
 }
 
 /// Get project by ID with caching
 pub fn get_project_by_id_cached(project_id: i32) -> Project {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_project_by_id(project_id)
         .expect("Error loading project")
 }
 
 /// Get requirement title by ID with caching
 pub fn get_requirement_title_by_id_cached(id: i32) -> String {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_requirement_by_id(id)
         .map(|r| r.req_title)
         .unwrap_or_else(|_| "[Requirement Not Found]".to_string())
@@ -290,7 +290,7 @@ pub fn get_requirement_title_by_id_cached(id: i32) -> String {
 
 /// Get test status by ID with caching
 pub fn get_test_status_by_id_cached(id: i32) -> String {
-    let repo = DieselCachedRepo::default();
+    let repo = DieselCachedRepo::shared();
     let status = if let Ok(test) = repo.get_test_by_id(id) {
         repo.get_status_by_id(test.test_status)
             .map(|s| s.st_title)
@@ -303,7 +303,7 @@ pub fn get_test_status_by_id_cached(id: i32) -> String {
 
 /// Get status name by ID with caching
 pub fn get_status_name_by_id_cached(id: i32) -> String {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_status_by_id(id)
         .map(|s| s.st_title)
         .unwrap_or_else(|_| "[Status Not Found]".to_string())
@@ -311,7 +311,7 @@ pub fn get_status_name_by_id_cached(id: i32) -> String {
 
 /// Get all projects with caching
 pub fn get_projects_all_cached() -> Result<Vec<Project>, String> {
-    DieselCachedRepo::default()
+    DieselCachedRepo::shared()
         .get_projects_all()
         .map_err(|e| e.to_string())
 }
@@ -376,7 +376,7 @@ pub fn bulk_invalidate_cache(entity_type: &str, entity_ids: &[i32]) {
                 invalidate_requirement_cache(id);
             }
             // Also invalidate project-specific caches
-            if let Ok(projects) = DieselCachedRepo::default().get_projects_all() {
+            if let Ok(projects) = DieselCachedRepo::shared().get_projects_all() {
                 for project in projects {
                     cache.remove(&keys::Requirements::by_project(project.project_id));
                 }
@@ -387,7 +387,7 @@ pub fn bulk_invalidate_cache(entity_type: &str, entity_ids: &[i32]) {
                 invalidate_test_cache(id);
             }
             // Also invalidate project-specific caches
-            if let Ok(projects) = DieselCachedRepo::default().get_projects_all() {
+            if let Ok(projects) = DieselCachedRepo::shared().get_projects_all() {
                 for project in projects {
                     cache.remove(&keys::Tests::by_project(project.project_id));
                 }
@@ -448,7 +448,7 @@ pub fn smart_invalidate_cache(entity_type: &str, entity_id: i32, related_entitie
     match entity_type {
         "requirement" | "test" => {
             // Invalidate project-specific caches
-            if let Ok(projects) = DieselCachedRepo::default().get_projects_all() {
+            if let Ok(projects) = DieselCachedRepo::shared().get_projects_all() {
                 for project in projects {
                     cache.remove(&keys::Requirements::by_project(project.project_id));
                     cache.remove(&keys::Tests::by_project(project.project_id));
@@ -475,7 +475,7 @@ pub fn warm_project_cache(project_id: i32) {
     let cache = get_cache();
 
     // Warm up project-specific requirements
-    if let Ok(requirements) = DieselCachedRepo::default().get_requirements_by_project(project_id) {
+    if let Ok(requirements) = DieselCachedRepo::shared().get_requirements_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&requirements) {
             cache.set_with_ttl(
                 &keys::Requirements::by_project(project_id),
@@ -486,7 +486,7 @@ pub fn warm_project_cache(project_id: i32) {
     }
 
     // Warm up project-specific tests
-    if let Ok(tests) = DieselCachedRepo::default().get_tests_by_project(project_id) {
+    if let Ok(tests) = DieselCachedRepo::shared().get_tests_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&tests) {
             cache.set_with_ttl(
                 &keys::Tests::by_project(project_id),
@@ -497,7 +497,7 @@ pub fn warm_project_cache(project_id: i32) {
     }
 
     // Warm up project-specific categories
-    if let Ok(categories) = DieselCachedRepo::default().get_categories_by_project(project_id) {
+    if let Ok(categories) = DieselCachedRepo::shared().get_categories_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&categories) {
             cache.set_with_ttl(
                 &keys::Categories::by_project(project_id),
@@ -508,7 +508,7 @@ pub fn warm_project_cache(project_id: i32) {
     }
 
     // Warm up project-specific verification types
-    if let Ok(verifications) = DieselCachedRepo::default().get_verification_by_project(project_id) {
+    if let Ok(verifications) = DieselCachedRepo::shared().get_verification_by_project(project_id) {
         if let Ok(json_data) = serde_json::to_string(&verifications) {
             cache.set_with_ttl(
                 &keys::Verification::by_project(project_id),
@@ -524,10 +524,10 @@ pub fn warm_frequently_accessed_cache() {
     let cache = get_cache();
 
     // Warm up matrix data for all projects
-    if let Ok(projects) = DieselCachedRepo::default().get_projects_all() {
+    if let Ok(projects) = DieselCachedRepo::shared().get_projects_all() {
         for project in projects {
             if let Ok(matrix_data) =
-                DieselCachedRepo::default().get_matrix_by_project(project.project_id)
+                DieselCachedRepo::shared().get_matrix_by_project(project.project_id)
             {
                 if let Ok(json_data) = serde_json::to_string(&matrix_data) {
                     cache.set_with_ttl(
@@ -541,7 +541,7 @@ pub fn warm_frequently_accessed_cache() {
     }
 
     // Warm up user data with recent activity
-    if let Ok(users) = DieselCachedRepo::default().get_users_all() {
+    if let Ok(users) = DieselCachedRepo::shared().get_users_all() {
         for user in users {
             if let Ok(json_data) = serde_json::to_string(&user) {
                 cache.set_with_ttl(

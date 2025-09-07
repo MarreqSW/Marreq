@@ -27,7 +27,8 @@ async fn main() -> Result<(), rocket::Error> {
     crate::repository::cache::warm_cache();
     
     // Start background cache maintenance
-    crate::repository::cache::start_cache_maintenance();
+    //crate::repository::cache::start_cache_maintenance();
+    crate::repository::DieselCachedRepo::shared().cache().start_cache_maintenance();
     
     let _rocket = rocket::build()
         .mount(

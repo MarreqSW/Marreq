@@ -3,7 +3,7 @@ use crate::repository::*;
 use chrono;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -187,6 +187,27 @@ impl Cache {
 }
 
 impl Cache {
+    /// Start background cache maintenance tasks
+    pub fn start_cache_maintenance(self: &Arc<Self>) {
+        let weak: Weak<Self> = Arc::downgrade(self);
+        thread::spawn(move || {
+            loop {
+                // stop if `Cache` is dropped everywhere
+                match weak.upgrade() {
+                    Some(this) => {
+                        this.cleanup();
+                        let stats = this.stats();
+                        if stats.active_entries < 10 {
+                            warm_cache();
+                        }
+                    }
+                    None => break, // Cache gone; exit thread
+                }
+                thread::sleep(Duration::from_secs(300));
+            }
+        });
+    }
+
     /// Invalidate all project-related cache entries
     pub fn invalidate_project(&self, project_id: i32) {
         self.remove(&keys::Requirements::by_project(project_id));
@@ -249,137 +270,6 @@ impl Cache {
     }
 }
 
-/// Warm up the cache with frequently accessed data
-pub fn warm_cache() {
-    let cache = get_cache();
-
-    let repo = DieselRepo::new();
-
-    // Warm up projects cache
-    if let Ok(projects) = repo.get_projects_all() {
-        if let Ok(json_data) = serde_json::to_string(&projects) {
-            cache.set_with_ttl(keys::PROJECTS_ALL, json_data, Duration::from_secs(600));
-        }
-    }
-
-    // Warm up status cache
-    if let Ok(statuses) = repo.get_status_all() {
-        if let Ok(json_data) = serde_json::to_string(&statuses) {
-            cache.set_with_ttl(keys::STATUS_ALL, json_data, Duration::from_secs(900));
-        }
-    }
-
-    // Warm up categories cache
-    if let Ok(categories) = repo.get_categories_all() {
-        if let Ok(json_data) = serde_json::to_string(&categories) {
-            cache.set_with_ttl(keys::CATEGORIES_ALL, json_data, Duration::from_secs(900));
-        }
-    }
-
-    // Warm up users cache
-    if let Ok(users) = repo.get_users_all() {
-        if let Ok(json_data) = serde_json::to_string(&users) {
-            cache.set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(600));
-        }
-    }
-
-    // Warm up projects navigation cache
-    if let Ok(projects) = repo.get_projects_all() {
-        if let Ok(json_data) = serde_json::to_string(&projects) {
-            cache.set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
-        }
-    }
-}
-
-/// Warm up cache for a specific project
-/* TODO: never used ??
-pub fn warm_project_cache(project_id: i32) {
-    let cache = get_cache();
-
-    let repo = DieselRepo::new();
-
-    // Warm up project-specific requirements
-    if let Ok(requirements) = repo.get_requirements_by_project(project_id) {
-        if let Ok(json_data) = serde_json::to_string(&requirements) {
-            cache.set_with_ttl(
-                &keys::requirements_by_project(project_id),
-                json_data,
-                Duration::from_secs(300)
-            );
-        }
-    }
-
-    // Warm up project-specific tests
-    if let Ok(tests) = repo.get_tests_by_project(project_id) {
-        if let Ok(json_data) = serde_json::to_string(&tests) {
-            cache.set_with_ttl(
-                &keys::Tests::by_project(project_id),
-                json_data,
-                Duration::from_secs(300)
-            );
-        }
-    }
-
-    // Warm up project-specific matrix data
-    if let Ok(matrix_data) = repo.get_matrix_by_project(project_id) {
-        if let Ok(json_data) = serde_json::to_string(&matrix_data) {
-            cache.set_with_ttl(
-                &keys::Matrix::by_project(project_id),
-                json_data,
-                Duration::from_secs(180)
-            );
-        }
-    }
-
-    // Warm up project-specific categories
-    if let Ok(categories) = repo.get_categories_by_project(project_id) {
-        if let Ok(json_data) = serde_json::to_string(&categories) {
-            cache.set_with_ttl(
-                &keys::Categories::by_project(project_id),
-                json_data,
-                Duration::from_secs(600)
-            );
-        }
-    }
-
-    // Warm up project-specific verification types
-    if let Ok(verifications) = repo.get_verification_by_project(project_id) {
-        if let Ok(json_data) = serde_json::to_string(&verifications) {
-            cache.set_with_ttl(
-                &keys::Verification::by_project(project_id),
-                json_data,
-                Duration::from_secs(600)
-            );
-        }
-    }
-}
-*/
-
-/// Clear expired cache entries
-pub fn cleanup_expired() {
-    let cache = get_cache();
-    cache.cleanup();
-}
-
-/// Start background cache maintenance tasks
-pub fn start_cache_maintenance() {
-    thread::spawn(|| {
-        loop {
-            // Sleep for 5 minutes
-            thread::sleep(Duration::from_secs(300));
-
-            // Clean up expired entries
-            cleanup_expired();
-
-            // Warm up frequently accessed data if cache is getting empty
-            let cache = get_cache();
-            let stats = cache.stats();
-            if stats.active_entries < 10 {
-                warm_cache();
-            }
-        }
-    });
-}
 
 #[cfg(test)]
 mod tests {
@@ -551,7 +441,7 @@ mod tests {
         assert_eq!(stats["expired_entries"].as_u64(), Some(1));
         assert_eq!(stats["cleanup_available"].as_bool(), Some(true));
 
-        cleanup_expired();
+        cache.cleanup();
         cache.sync_counters();
         let stats = get_cache_stats();
         assert_eq!(stats["total_entries"].as_u64(), Some(1));

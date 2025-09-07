@@ -13,7 +13,7 @@ use rocket::serde::json::{json, Json, Value};
 /// Requirements
 #[get("/requirements")]
 pub fn api_get_requirement() -> Result<Json<Vec<Requirement>>, rocket::http::Status> {
-    let ret_val = DieselCachedRepo::default()
+    let ret_val = DieselCachedRepo::shared()
         .get_requirements_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
@@ -137,7 +137,7 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
 pub fn api_get_requirement_by_id(
     ident: i32,
 ) -> Result<Json<Vec<Requirement>>, rocket::http::Status> {
-    match DieselCachedRepo::default().get_requirement_by_id(ident) {
+    match DieselCachedRepo::shared().get_requirement_by_id(ident) {
         Ok(req) => Ok(Json(vec![req])),
         Err(crate::repository::errors::RepoError::NotFound) => Err(rocket::http::Status::NotFound),
         Err(_) => Err(rocket::http::Status::InternalServerError),

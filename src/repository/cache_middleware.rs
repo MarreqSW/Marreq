@@ -8,22 +8,23 @@ use crate::repository::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
+use std::sync::Arc;
 
 /// Repository wrapper that checks the cache before hitting the database
 pub struct CacheRepository<R> {
     inner: R,
-    cache: Cache,
+    cache: Arc<Cache>,
 }
 
 impl<R> CacheRepository<R> {
     /// Create a new repository wrapper with the provided cache instance
     pub fn new(inner: R, ttl_seconds: u64) -> Self {
-        Self { inner, cache: Cache::new(ttl_seconds) }
+        Self { inner, cache: Cache::new(ttl_seconds).into() }
     }
 
     /// Get a reference to the underlying cache
-    pub fn cache(&self) -> &Cache {
-        &self.cache
+    pub fn cache(&self) -> Arc<Cache> {
+        Arc::clone(&self.cache)
     }
 
     fn get_or_fetch<T, F>(&self, key: &str, ttl: Duration, fetch: F) -> Result<T, RepoError>

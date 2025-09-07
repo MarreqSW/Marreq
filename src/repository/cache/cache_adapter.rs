@@ -9,6 +9,7 @@ use crate::repository::{
     RequirementsRepository, TestsRepository, UserRepository,
 };
 use chrono;
+use std::sync::Arc;
 
 /// Get projects for navigation with caching
 pub fn get_projects_for_nav_cached() -> Result<Vec<Project>, String> {
@@ -318,9 +319,10 @@ pub fn get_projects_all_cached() -> Result<Vec<Project>, String> {
 /// The application maintains a shared [`CacheRepository`] instance that owns the
 /// cache. This helper provides a convenient way to access that cache without
 /// exposing a global mutable state.
-pub fn get_cache() -> &'static Cache {
+pub fn get_cache() -> Arc<Cache> {
     crate::repository::diesel_repo::DieselCachedRepo::shared().cache()
 }
+
 
 /// Invalidate all project-related cache entries using the shared cache
 pub fn invalidate_project(project_id: i32) {
@@ -365,6 +367,53 @@ pub fn invalidate_applicability(applicability_id: i32) {
 /// Invalidate all cache entries (use with caution)
 pub fn invalidate_all_cache() {
     get_cache().clear();
+}
+
+/// Warm up the cache with frequently accessed data
+// VPR: I discourage this function as it copies the whole DB!
+pub fn warm_cache() {
+    use crate::repository::DieselRepo;
+    use crate::repository::keys;
+    use std::time::Duration;
+
+    let cache = get_cache();
+
+    let repo = DieselRepo::new();
+
+    // Warm up projects cache
+    if let Ok(projects) = repo.get_projects_all() {
+        if let Ok(json_data) = serde_json::to_string(&projects) {
+            cache.set_with_ttl(keys::PROJECTS_ALL, json_data, Duration::from_secs(600));
+        }
+    }
+
+    // Warm up status cache
+    if let Ok(statuses) = repo.get_status_all() {
+        if let Ok(json_data) = serde_json::to_string(&statuses) {
+            cache.set_with_ttl(keys::STATUS_ALL, json_data, Duration::from_secs(900));
+        }
+    }
+
+    // Warm up categories cache
+    if let Ok(categories) = repo.get_categories_all() {
+        if let Ok(json_data) = serde_json::to_string(&categories) {
+            cache.set_with_ttl(keys::CATEGORIES_ALL, json_data, Duration::from_secs(900));
+        }
+    }
+
+    // Warm up users cache
+    if let Ok(users) = repo.get_users_all() {
+        if let Ok(json_data) = serde_json::to_string(&users) {
+            cache.set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(600));
+        }
+    }
+
+    // Warm up projects navigation cache
+    if let Ok(projects) = repo.get_projects_all() {
+        if let Ok(json_data) = serde_json::to_string(&projects) {
+            cache.set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
+        }
+    }
 }
 
 /* TODO: never used ??

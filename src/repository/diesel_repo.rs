@@ -21,9 +21,16 @@ pub type ConnectionPool = Pool<ConnectionManager<PgConnection>>;
 pub type PooledConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub type DieselCachedRepo = super::CacheRepository<DieselRepo>;
 
-impl Default for DieselCachedRepo {
-    fn default() -> Self {
-        super::CacheRepository::new(DieselRepo::new())
+
+lazy_static! {
+    /// Shared repository instance for application-wide.
+    /// This is Required to avoid cache copies.
+    static ref SHARED_CACHED_REPO: DieselCachedRepo = DieselCachedRepo::new(DieselRepo::new());
+}
+
+impl DieselCachedRepo {
+    pub fn shared() -> &'static Self {
+        &SHARED_CACHED_REPO
     }
 }
 

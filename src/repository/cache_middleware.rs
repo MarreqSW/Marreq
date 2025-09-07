@@ -22,6 +22,8 @@ impl<R> CacheRepository<R> {
         Self { inner, cache: Cache::new(ttl_seconds).into() }
     }
 
+    pub fn inner_repo(&self) -> &R { &self.inner }
+
     /// Get a reference to the underlying cache
     pub fn cache(&self) -> Arc<Cache> {
         Arc::clone(&self.cache)

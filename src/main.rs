@@ -25,7 +25,7 @@ async fn main() -> Result<(), rocket::Error> {
     use crate::repository::DieselCachedRepo;
 
     // Warm up the cache on startup
-    DieselCachedRepo::write().cache().warm_cache();
+    DieselCachedRepo::write().warm_cache();
 
     // Start background cache maintenance
     DieselCachedRepo::read().cache().start_cache_maintenance();

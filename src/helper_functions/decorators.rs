@@ -195,13 +195,13 @@ mod tests {
         let mut repo = FakeRepo::default();
 
         // Lookup data
-        repo.statuses.insert(
+        repo.requirement_statuses.insert(
             1,
-            Status {
-                st_id: 1,
-                st_title: "Open".into(),
-                st_description: String::new(),
-                st_short_name: String::new(),
+            RequirementStatus {
+                req_st_id: 1,
+                req_st_title: "Open".into(),
+                req_st_description: String::new(),
+                req_st_short_name: String::new(),
             },
         );
         repo.verifications.insert(
@@ -379,13 +379,13 @@ mod tests {
     #[test]
     fn decorate_tests_impl_covers_branches() {
         let mut repo = FakeRepo::default();
-        repo.statuses.insert(
+        repo.test_statuses.insert(
             1,
-            Status {
-                st_id: 1,
-                st_title: "Open".into(),
-                st_description: String::new(),
-                st_short_name: String::new(),
+            TestStatus {
+                test_st_id: 1,
+                test_st_title: "Open".into(),
+                test_st_description: String::new(),
+                test_st_short_name: String::new(),
             },
         );
         // parent test for branch
@@ -447,13 +447,22 @@ mod tests {
     fn get_linked_tests_for_requirement_impl_works() {
         let now = dt();
         let mut repo = FakeRepo::default();
-        repo.statuses.insert(
+        repo.requirement_statuses.insert(
             1,
-            Status {
-                st_id: 1,
-                st_title: "Open".into(),
-                st_description: String::new(),
-                st_short_name: String::new(),
+            RequirementStatus {
+                req_st_id: 1,
+                req_st_title: "Open".into(),
+                req_st_description: String::new(),
+                req_st_short_name: String::new(),
+            },
+        );
+        repo.test_statuses.insert(
+            1,
+            TestStatus {
+                test_st_id: 1,
+                test_st_title: "Open".into(),
+                test_st_description: String::new(),
+                test_st_short_name: String::new(),
             },
         );
         let req = Requirement {

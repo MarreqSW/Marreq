@@ -15,6 +15,7 @@ pub struct FakeRepo {
     pub applicability: HashMap<i32, Applicability>,
     pub requirements: HashMap<i32, Requirement>,
     pub tests: HashMap<i32, Test>,
+    pub projects: HashMap<i32, Project>,
     pub matrices: Vec<Matrix>,
     pub force_err: bool,
 }
@@ -41,6 +42,7 @@ impl FakeRepo {
             applicability: HashMap::new(),
             requirements: HashMap::new(),
             tests: HashMap::new(),
+            projects: HashMap::new(),
             matrices: Vec::new(),
             force_err: false,
         }
@@ -55,6 +57,7 @@ impl FakeRepo {
             applicability: HashMap::new(),
             requirements: HashMap::new(),
             tests: HashMap::new(),
+            projects: HashMap::new(),
             matrices: Vec::new(),
             force_err: true,
         }

@@ -14,9 +14,12 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: postgres://rust:rust@127.0.0.1:5432/reqman
+
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --verbose
+      - name: Run tests
+        run: cargo test --verbose

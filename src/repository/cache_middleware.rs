@@ -1,9 +1,5 @@
 use super::cache::keys::Keyspace;
-use super::cache::{
-    get_cache, invalidate_applicability_cache, invalidate_category_cache, invalidate_project_cache,
-    invalidate_requirement_cache, invalidate_status_cache, invalidate_test_cache,
-    invalidate_user_cache, keys,
-};
+use super::cache::{keys, Cache};
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
@@ -16,11 +12,18 @@ use std::time::Duration;
 /// Repository wrapper that checks the cache before hitting the database
 pub struct CacheRepository<R> {
     inner: R,
+    cache: Cache,
 }
 
 impl<R> CacheRepository<R> {
-    pub fn new(inner: R) -> Self {
-        Self { inner }
+    /// Create a new repository wrapper with the provided cache instance
+    pub fn new(inner: R, ttl_seconds: u64) -> Self {
+        Self { inner, cache: Cache::new(ttl_seconds) }
+    }
+
+    /// Get a reference to the underlying cache
+    pub fn cache(&self) -> &Cache {
+        &self.cache
     }
 
     fn get_or_fetch<T, F>(&self, key: &str, ttl: Duration, fetch: F) -> Result<T, RepoError>
@@ -28,16 +31,15 @@ impl<R> CacheRepository<R> {
         T: Serialize + DeserializeOwned,
         F: FnOnce() -> Result<T, RepoError>,
     {
-        let cache = get_cache();
-        if let Some(cached) = cache.get(key) {
+        if let Some(cached) = self.cache.get(key) {
             if let Ok(value) = serde_json::from_str(&cached) {
                 return Ok(value);
             }
-            cache.remove(key);
+            self.cache.remove(key);
         }
         let value = fetch()?;
         if let Ok(json) = serde_json::to_string(&value) {
-            cache.set_with_ttl(key, json, ttl);
+            self.cache.set_with_ttl(key, json, ttl);
         }
         Ok(value)
     }
@@ -66,29 +68,29 @@ impl<R: RequirementsRepository> RequirementsRepository for CacheRepository<R> {
 
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_requirement(new)?;
-        invalidate_requirement_cache(id);
-        invalidate_project_cache(new.project_id);
+        self.cache.invalidate_requirement_cache(id);
+        self.cache.invalidate_project_cache(new.project_id);
         Ok(id)
     }
 
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError> {
         let res = self.inner.edit_requirement(new)?;
         if let Some(id) = new.req_id {
-            invalidate_requirement_cache(id);
+            self.cache.invalidate_requirement_cache(id);
         }
-        invalidate_project_cache(new.project_id);
+        self.cache.invalidate_project_cache(new.project_id);
         Ok(res)
     }
 
     fn delete_requirement(&mut self, id: i32) -> Result<bool, RepoError> {
         let res = self.inner.delete_requirement(id)?;
-        invalidate_requirement_cache(id);
+        self.cache.invalidate_requirement_cache(id);
         Ok(res)
     }
 
     fn update_requirement(&mut self, req: i32) -> Result<(), RepoError> {
         self.inner.update_requirement(req)?;
-        invalidate_requirement_cache(req);
+        self.cache.invalidate_requirement_cache(req);
         Ok(())
     }
 }
@@ -116,20 +118,20 @@ impl<R: UserRepository> UserRepository for CacheRepository<R> {
 
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
         let id = self.inner.insert_user(new)?;
-        invalidate_user_cache(id);
+        self.cache.invalidate_user_cache(id);
         Ok(id)
     }
 
     fn update_user_password(&mut self, id: i32, new_hash: &str) -> Result<(), RepoError> {
         self.inner.update_user_password(id, new_hash)?;
-        invalidate_user_cache(id);
+        self.cache.invalidate_user_cache(id);
         Ok(())
     }
 
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError> {
         let res = self.inner.update_user(user_data)?;
         if let Some(id) = user_data.user_id {
-            invalidate_user_cache(id);
+            self.cache.invalidate_user_cache(id);
         }
         Ok(res)
     }
@@ -137,14 +139,14 @@ impl<R: UserRepository> UserRepository for CacheRepository<R> {
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError> {
         let res = self.inner.update_user_without_password(user_data)?;
         if let Some(id) = user_data.user_id {
-            invalidate_user_cache(id);
+            self.cache.invalidate_user_cache(id);
         }
         Ok(res)
     }
 
     fn delete_user(&mut self, id: i32) -> Result<bool, RepoError> {
         let res = self.inner.delete_user(id)?;
-        invalidate_user_cache(id);
+        self.cache.invalidate_user_cache(id);
         Ok(res)
     }
 }
@@ -186,23 +188,23 @@ impl<R: TestsRepository> TestsRepository for CacheRepository<R> {
 
     fn insert_test(&mut self, new: &NewTest) -> Result<i32, RepoError> {
         let id = self.inner.insert_test(new)?;
-        invalidate_test_cache(id);
-        invalidate_project_cache(new.project_id);
+        self.cache.invalidate_test_cache(id);
+        self.cache.invalidate_project_cache(new.project_id);
         Ok(id)
     }
 
     fn edit_test(&mut self, new: &NewTest) -> Result<bool, RepoError> {
         let res = self.inner.edit_test(new)?;
         if let Some(id) = new.test_id {
-            invalidate_test_cache(id);
+            self.cache.invalidate_test_cache(id);
         }
-        invalidate_project_cache(new.project_id);
+        self.cache.invalidate_project_cache(new.project_id);
         Ok(res)
     }
 
     fn delete_test(&mut self, id: i32) -> Result<bool, RepoError> {
         let res = self.inner.delete_test(id)?;
-        invalidate_test_cache(id);
+        self.cache.invalidate_test_cache(id);
         Ok(res)
     }
 
@@ -213,9 +215,9 @@ impl<R: TestsRepository> TestsRepository for CacheRepository<R> {
     ) -> Result<(), RepoError> {
         self.inner
             .update_test_requirement_links(test_id, requirement_ids)?;
-        invalidate_test_cache(test_id);
+        self.cache.invalidate_test_cache(test_id);
         for &rid in requirement_ids {
-            invalidate_requirement_cache(rid);
+            self.cache.invalidate_requirement_cache(rid);
         }
         Ok(())
     }
@@ -300,51 +302,51 @@ impl<R: LookupRepository> LookupRepository for CacheRepository<R> {
 
     fn create_status(&mut self, new: &NewStatus) -> Result<i32, RepoError> {
         let id = self.inner.create_status(new)?;
-        invalidate_status_cache(id);
+        self.cache.invalidate_status_cache(id);
         Ok(id)
     }
 
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_category(new)?;
-        invalidate_category_cache(id);
-        invalidate_project_cache(new.project_id);
+        self.cache.invalidate_category_cache(id);
+        self.cache.invalidate_project_cache(new.project_id);
         Ok(id)
     }
 
     fn edit_category(&mut self, new: &NewCategory) -> Result<bool, RepoError> {
         let res = self.inner.edit_category(new)?;
         if let Some(id) = new.cat_id {
-            invalidate_category_cache(id);
+            self.cache.invalidate_category_cache(id);
         }
-        invalidate_project_cache(new.project_id);
+        self.cache.invalidate_project_cache(new.project_id);
         Ok(res)
     }
 
     fn delete_category(&mut self, id: i32) -> Result<bool, RepoError> {
         let res = self.inner.delete_category(id)?;
-        invalidate_category_cache(id);
+        self.cache.invalidate_category_cache(id);
         Ok(res)
     }
 
     fn insert_new_applicability(&mut self, new: &NewApplicability) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_applicability(new)?;
-        invalidate_applicability_cache(id);
-        invalidate_project_cache(new.project_id);
+        self.cache.invalidate_applicability_cache(id);
+        self.cache.invalidate_project_cache(new.project_id);
         Ok(id)
     }
 
     fn edit_applicability(&mut self, new: &NewApplicability) -> Result<bool, RepoError> {
         let res = self.inner.edit_applicability(new)?;
         if let Some(id) = new.app_id {
-            invalidate_applicability_cache(id);
+            self.cache.invalidate_applicability_cache(id);
         }
-        invalidate_project_cache(new.project_id);
+        self.cache.invalidate_project_cache(new.project_id);
         Ok(res)
     }
 
     fn delete_applicability(&mut self, id: i32) -> Result<bool, RepoError> {
         let res = self.inner.delete_applicability(id)?;
-        invalidate_applicability_cache(id);
+        self.cache.invalidate_applicability_cache(id);
         Ok(res)
     }
 }
@@ -365,19 +367,19 @@ impl<R: ProjectsRepository> ProjectsRepository for CacheRepository<R> {
 
     fn insert_new_project(&mut self, new: &NewProject) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_project(new)?;
-        invalidate_project_cache(id);
+        self.cache.invalidate_project_cache(id);
         Ok(id)
     }
 
     fn edit_project(&mut self, project_id: i32, update: &UpdateProject) -> Result<bool, RepoError> {
         let res = self.inner.edit_project(project_id, update)?;
-        invalidate_project_cache(project_id);
+        self.cache.invalidate_project_cache(project_id);
         Ok(res)
     }
 
     fn delete_project(&mut self, project_id: i32) -> Result<bool, RepoError> {
         let res = self.inner.delete_project(project_id)?;
-        invalidate_project_cache(project_id);
+        self.cache.invalidate_project_cache(project_id);
         Ok(res)
     }
 }
@@ -393,7 +395,7 @@ impl<R: MatrixRepository> MatrixRepository for CacheRepository<R> {
     fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError> {
         self.inner.insert_new_matrix_item(new)?;
         let key = keys::Matrix::by_project(new.project_id);
-        get_cache().remove(&key);
+        self.cache.remove(&key);
         Ok(())
     }
 }

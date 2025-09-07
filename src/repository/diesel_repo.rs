@@ -25,7 +25,10 @@ pub type DieselCachedRepo = super::CacheRepository<DieselRepo>;
 lazy_static! {
     /// Shared repository instance for application-wide.
     /// This is Required to avoid cache copies.
-    static ref SHARED_CACHED_REPO: DieselCachedRepo = DieselCachedRepo::new(DieselRepo::new());
+    static ref SHARED_CACHED_REPO: DieselCachedRepo = DieselCachedRepo::new(
+        DieselRepo::new(),
+        5*60, // 5 min
+    );
 }
 
 impl DieselCachedRepo {

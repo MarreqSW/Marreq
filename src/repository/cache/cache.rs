@@ -186,89 +186,121 @@ impl Cache {
     }
 }
 
-// Global cache instance
-lazy_static::lazy_static! {
-    static ref CACHE: Cache = Cache::new(30); // 5 minutes default TTL
-}
-
 /// Cache utility functions
+///
+/// The application maintains a shared [`CacheRepository`] instance that owns the
+/// cache. This helper provides a convenient way to access that cache without
+/// exposing a global mutable state.
 pub fn get_cache() -> &'static Cache {
-    &CACHE
+    crate::repository::diesel_repo::DieselCachedRepo::shared().cache()
 }
 
-/// Invalidate all project-related cache entries
+impl Cache {
+    /// Invalidate all project-related cache entries
+    pub fn invalidate_project_cache(&self, project_id: i32) {
+        self.remove(&keys::Requirements::by_project(project_id));
+        self.remove(&keys::Tests::by_project(project_id));
+        self.remove(&keys::Matrix::by_project(project_id));
+        self.remove(&keys::Verification::by_project(project_id));
+        self.remove(&keys::Categories::by_project(project_id));
+        self.remove(&keys::Applicability::by_project(project_id));
+        self.remove(&keys::Projects::by_id(project_id));
+    }
+
+    /// Invalidate all user-related cache entries
+    pub fn invalidate_user_cache(&self, user_id: i32) {
+        self.remove(&keys::Users::by_id(user_id));
+        self.remove(keys::USERS_ALL);
+    }
+
+    /// Invalidate all requirement-related cache entries
+    pub fn invalidate_requirement_cache(&self, req_id: i32) {
+        self.remove(&keys::Requirements::by_id(req_id));
+        self.remove(&keys::LinkedTests::for_requirement(req_id));
+        self.remove(&keys::RequirementTitle::by_id(req_id));
+        // Also invalidate global lists and project-level caches
+        self.remove(keys::REQUIREMENTS_ALL);
+        // Note: In a real implementation, you'd need to track which project the requirement belongs to
+    }
+
+    /// Invalidate all test-related cache entries
+    pub fn invalidate_test_cache(&self, test_id: i32) {
+        self.remove(&keys::Tests::by_id(test_id));
+        self.remove(&keys::LinkedRequirements::for_test(test_id));
+        self.remove(&keys::TestStatus::by_id(test_id));
+        // Also invalidate global lists and project-level caches
+        self.remove(keys::TESTS_ALL);
+        // Note: In a real implementation, you'd need to track which project the test belongs to
+    }
+
+    /// Invalidate all category-related cache entries
+    pub fn invalidate_category_cache(&self, cat_id: i32) {
+        self.remove(&keys::Categories::by_id(cat_id));
+        self.remove(keys::CATEGORIES_ALL);
+    }
+
+    /// Invalidate all status-related cache entries
+    pub fn invalidate_status_cache(&self, status_id: i32) {
+        self.remove(&keys::Status::by_id(status_id));
+        self.remove(keys::STATUS_ALL);
+    }
+
+    /// Invalidate all verification-related cache entries
+    pub fn invalidate_verification_cache(&self, verification_id: i32) {
+        self.remove(&keys::Verification::by_id(verification_id));
+        self.remove(keys::VERIFICATION_ALL);
+    }
+
+    /// Invalidate all applicability-related cache entries
+    pub fn invalidate_applicability_cache(&self, applicability_id: i32) {
+        self.remove(&keys::Applicability::by_id(applicability_id));
+        self.remove(keys::APPLICABILITY_ALL);
+    }
+}
+
+/// Invalidate all project-related cache entries using the shared cache
 pub fn invalidate_project_cache(project_id: i32) {
-    let cache = get_cache();
-    cache.remove(&keys::Requirements::by_project(project_id));
-    cache.remove(&keys::Tests::by_project(project_id));
-    cache.remove(&keys::Matrix::by_project(project_id));
-    cache.remove(&keys::Verification::by_project(project_id));
-    cache.remove(&keys::Categories::by_project(project_id));
-    cache.remove(&keys::Applicability::by_project(project_id));
-    cache.remove(&keys::Projects::by_id(project_id));
+    get_cache().invalidate_project_cache(project_id);
 }
 
-/// Invalidate all user-related cache entries
+/// Invalidate all user-related cache entries using the shared cache
 pub fn invalidate_user_cache(user_id: i32) {
-    let cache = get_cache();
-    cache.remove(&keys::Users::by_id(user_id));
-    cache.remove(keys::USERS_ALL);
+    get_cache().invalidate_user_cache(user_id);
 }
 
-/// Invalidate all requirement-related cache entries
+/// Invalidate all requirement-related cache entries using the shared cache
 pub fn invalidate_requirement_cache(req_id: i32) {
-    let cache = get_cache();
-    cache.remove(&keys::Requirements::by_id(req_id));
-    cache.remove(&keys::LinkedTests::for_requirement(req_id));
-    cache.remove(&keys::RequirementTitle::by_id(req_id));
-    // Also invalidate global lists and project-level caches
-    cache.remove(keys::REQUIREMENTS_ALL);
-    // Note: In a real implementation, you'd need to track which project the requirement belongs to
+    get_cache().invalidate_requirement_cache(req_id);
 }
 
-/// Invalidate all test-related cache entries
+/// Invalidate all test-related cache entries using the shared cache
 pub fn invalidate_test_cache(test_id: i32) {
-    let cache = get_cache();
-    cache.remove(&keys::Tests::by_id(test_id));
-    cache.remove(&keys::LinkedRequirements::for_test(test_id));
-    cache.remove(&keys::TestStatus::by_id(test_id));
-    // Also invalidate global lists and project-level caches
-    cache.remove(keys::TESTS_ALL);
-    // Note: In a real implementation, you'd need to track which project the test belongs to
+    get_cache().invalidate_test_cache(test_id);
 }
 
-/// Invalidate all category-related cache entries
+/// Invalidate all category-related cache entries using the shared cache
 pub fn invalidate_category_cache(cat_id: i32) {
-    let cache = get_cache();
-    cache.remove(&keys::Categories::by_id(cat_id));
-    cache.remove(keys::CATEGORIES_ALL);
+    get_cache().invalidate_category_cache(cat_id);
 }
 
-/// Invalidate all status-related cache entries
+/// Invalidate all status-related cache entries using the shared cache
 pub fn invalidate_status_cache(status_id: i32) {
-    let cache = get_cache();
-    cache.remove(&keys::Status::by_id(status_id));
-    cache.remove(keys::STATUS_ALL);
+    get_cache().invalidate_status_cache(status_id);
 }
 
-/// Invalidate all verification-related cache entries
+/// Invalidate all verification-related cache entries using the shared cache
 pub fn invalidate_verification_cache(verification_id: i32) {
-    let cache = get_cache();
-    cache.remove(&keys::Verification::by_id(verification_id));
-    cache.remove(keys::VERIFICATION_ALL);
+    get_cache().invalidate_verification_cache(verification_id);
 }
 
-/// Invalidate all applicability-related cache entries
+/// Invalidate all applicability-related cache entries using the shared cache
 pub fn invalidate_applicability_cache(applicability_id: i32) {
-    let cache = get_cache();
-    cache.remove(&keys::Applicability::by_id(applicability_id));
-    cache.remove(keys::APPLICABILITY_ALL);
+    get_cache().invalidate_applicability_cache(applicability_id);
 }
 
 /// Invalidate all cache entries (use with caution)
 pub fn invalidate_all_cache() {
-    let cache = get_cache();
-    cache.clear();
+    get_cache().clear();
 }
 
 /// Warm up the cache with frequently accessed data

@@ -2,6 +2,9 @@ pub mod diesel_repo;
 pub mod errors;
 pub mod fake_repo;
 
+#[cfg(test)]
+mod tests;
+
 pub use diesel_repo::*;
 
 use crate::models::*;

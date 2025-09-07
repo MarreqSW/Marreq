@@ -151,7 +151,7 @@ pub fn warm_cache_route(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
     }
 
     // Warm up the cache
-    DieselCachedRepo::write().cache().warm_cache();
+    DieselCachedRepo::write().warm_cache();
 
     Ok(Redirect::to("/admin/cache"))
 }

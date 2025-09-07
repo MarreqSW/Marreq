@@ -3,8 +3,7 @@ use super::cache::{keys, Cache};
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
-    TestsRepository, UserRepository,
+    LookupRepository, MatrixRepository, ProjectsRepository, Repository, RequirementsRepository, TestsRepository, UserRepository
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -16,7 +15,7 @@ pub struct CacheRepository<R> {
     cache: Arc<Cache>,
 }
 
-impl<R> CacheRepository<R> {
+impl<R: Repository> CacheRepository<R> {
     /// Create a new repository wrapper with the provided cache instance
     pub fn new(inner: R, ttl_seconds: u64) -> Self {
         Self {
@@ -51,9 +50,50 @@ impl<R> CacheRepository<R> {
         }
         Ok(value)
     }
+
+        /// Warm up the cache with frequently accessed data
+    ///
+    /// Populates the cache with common queries to improve initial performance.
+    /// Note: This function may copy significant amounts of data; use with caution.
+    pub fn warm_cache(&self) {
+        // Warm up projects cache
+        if let Ok(projects) = self.inner.get_projects_all() {
+            if let Ok(json_data) = serde_json::to_string(&projects) {
+                self.cache.set_with_ttl(keys::PROJECTS_ALL, json_data, Duration::from_secs(600));
+            }
+        }
+
+        // Warm up status cache
+        if let Ok(statuses) = self.inner.get_status_all() {
+            if let Ok(json_data) = serde_json::to_string(&statuses) {
+                self.cache.set_with_ttl(keys::STATUS_ALL, json_data, Duration::from_secs(900));
+            }
+        }
+
+        // Warm up categories cache
+        if let Ok(categories) = self.inner.get_categories_all() {
+            if let Ok(json_data) = serde_json::to_string(&categories) {
+                self.cache.set_with_ttl(keys::CATEGORIES_ALL, json_data, Duration::from_secs(900));
+            }
+        }
+
+        // Warm up users cache
+        if let Ok(users) = self.inner.get_users_all() {
+            if let Ok(json_data) = serde_json::to_string(&users) {
+                self.cache.set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(600));
+            }
+        }
+
+        // Warm up projects navigation cache
+        if let Ok(projects) = self.inner.get_projects_all() {
+            if let Ok(json_data) = serde_json::to_string(&projects) {
+                self.cache.set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
+            }
+        }
+    }
 }
 
-impl<R: RequirementsRepository> RequirementsRepository for CacheRepository<R> {
+impl<R: Repository> RequirementsRepository for CacheRepository<R> {
     fn get_requirement_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
         let key = keys::Requirements::by_id(id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
@@ -104,7 +144,7 @@ impl<R: RequirementsRepository> RequirementsRepository for CacheRepository<R> {
     }
 }
 
-impl<R: UserRepository> UserRepository for CacheRepository<R> {
+impl<R: Repository> UserRepository for CacheRepository<R> {
     fn get_users_all(&self) -> Result<Vec<User>, RepoError> {
         self.get_or_fetch(keys::USERS_ALL, Duration::from_secs(300), || {
             self.inner.get_users_all()
@@ -166,7 +206,7 @@ impl<R: UserRepository> UserRepository for CacheRepository<R> {
     }
 }
 
-impl<R: TestsRepository> TestsRepository for CacheRepository<R> {
+impl<R: Repository> TestsRepository for CacheRepository<R> {
     fn get_test_by_id(&self, id: i32) -> Result<Test, RepoError> {
         let key = keys::Tests::by_id(id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
@@ -239,7 +279,7 @@ impl<R: TestsRepository> TestsRepository for CacheRepository<R> {
     }
 }
 
-impl<R: LookupRepository> LookupRepository for CacheRepository<R> {
+impl<R: Repository> LookupRepository for CacheRepository<R> {
     fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
         self.get_or_fetch(keys::STATUS_ALL, Duration::from_secs(900), || {
             self.inner.get_status_all()
@@ -369,7 +409,7 @@ impl<R: LookupRepository> LookupRepository for CacheRepository<R> {
     }
 }
 
-impl<R: ProjectsRepository> ProjectsRepository for CacheRepository<R> {
+impl<R: Repository> ProjectsRepository for CacheRepository<R> {
     fn get_projects_all(&self) -> Result<Vec<Project>, RepoError> {
         self.get_or_fetch(keys::PROJECTS_ALL, Duration::from_secs(600), || {
             self.inner.get_projects_all()
@@ -402,7 +442,7 @@ impl<R: ProjectsRepository> ProjectsRepository for CacheRepository<R> {
     }
 }
 
-impl<R: MatrixRepository> MatrixRepository for CacheRepository<R> {
+impl<R: Repository> MatrixRepository for CacheRepository<R> {
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
         let key = keys::Matrix::by_project(project_id);
         self.get_or_fetch(&key, Duration::from_secs(180), || {

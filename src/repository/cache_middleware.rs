@@ -457,3 +457,28 @@ impl<R: Repository> MatrixRepository for CacheRepository<R> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::fake_repo::FakeRepo;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_warm_cache_populates_common_keys() {
+        let repo = CacheRepository::new(
+             FakeRepo{users: HashMap::new(), ..Default::default()},
+            60
+        );
+
+        let cache = repo.cache();
+
+        repo.warm_cache();
+
+        assert_eq!(cache.get(keys::PROJECTS_ALL), Some("[]".to_string()));
+        assert_eq!(cache.get(keys::STATUS_ALL), Some("[]".to_string()));
+        assert_eq!(cache.get(keys::CATEGORIES_ALL), Some("[]".to_string()));
+        assert_eq!(cache.get(keys::USERS_ALL), Some("[]".to_string()));
+        assert_eq!(cache.get(keys::PROJECTS_NAV), Some("[]".to_string()));
+    }
+}

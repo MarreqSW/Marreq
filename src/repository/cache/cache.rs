@@ -273,7 +273,7 @@ impl Cache {
 mod tests {
     use super::*;
     use crate::repository::cache::{
-        get_cache_health, get_cache_performance, get_cache_recommendations, get_cache_stats,
+        get_cache_health, get_cache_performance, get_cache_recommendations,
         get_memory_usage,
     };
     use std::sync::{atomic::Ordering, Mutex};
@@ -433,7 +433,7 @@ mod tests {
         thread::sleep(Duration::from_millis(10));
         cache.sync_counters();
 
-        let stats = get_cache_stats();
+        let stats = cache.get_stats();
         assert_eq!(stats["total_entries"].as_u64(), Some(2));
         assert_eq!(stats["active_entries"].as_u64(), Some(1));
         assert_eq!(stats["expired_entries"].as_u64(), Some(1));
@@ -441,7 +441,7 @@ mod tests {
 
         cache.cleanup();
         cache.sync_counters();
-        let stats = get_cache_stats();
+        let stats = cache.get_stats();
         assert_eq!(stats["total_entries"].as_u64(), Some(1));
         assert_eq!(stats["active_entries"].as_u64(), Some(1));
         assert_eq!(stats["expired_entries"].as_u64(), Some(0));

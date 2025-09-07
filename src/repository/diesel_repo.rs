@@ -131,6 +131,7 @@ impl PoolStats {
         }
     }
 }
+
 /// Detailed pool information
 #[derive(Debug, Clone)]
 pub struct PoolInfo {

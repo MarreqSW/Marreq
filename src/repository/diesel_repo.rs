@@ -21,7 +21,6 @@ pub type ConnectionPool = Pool<ConnectionManager<PgConnection>>;
 pub type PooledConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub type DieselCachedRepo = super::CacheRepository<DieselRepo>;
 
-
 lazy_static! {
     /// Shared, mutable, thread-safe repository singleton.
     static ref SHARED_CACHED_REPO: RwLock<DieselCachedRepo> = RwLock::new(
@@ -300,11 +299,21 @@ impl UserRepository for DieselRepo {
         Ok(result > 0)
     }
 
-    fn delete_user(&mut self, id: i32) -> Result<bool, RepoError> {
+    fn delete_user(&mut self, id: i32) -> Result<User, RepoError> {
         use crate::schema::users::dsl::*;
         let mut conn = self.get_conn()?;
-        let deleted = diesel::delete(users.filter(user_id.eq(id))).execute(conn.as_mut())?;
-        Ok(deleted > 0)
+        let user = users
+            .filter(user_id.eq(id))
+            .get_result::<User>(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })?;
+        diesel::delete(users.filter(user_id.eq(id))).execute(conn.as_mut())?;
+        Ok(user)
     }
 }
 
@@ -458,11 +467,21 @@ impl LookupRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_category(&mut self, id: i32) -> Result<bool, RepoError> {
+    fn delete_category(&mut self, id: i32) -> Result<Category, RepoError> {
         use schema::categories::dsl::*;
         let mut conn = self.get_conn()?;
-        let deleted = diesel::delete(categories.filter(cat_id.eq(id))).execute(conn.as_mut())?;
-        Ok(deleted > 0)
+        let cat = categories
+            .filter(cat_id.eq(id))
+            .get_result::<Category>(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })?;
+        diesel::delete(categories.filter(cat_id.eq(id))).execute(conn.as_mut())?;
+        Ok(cat)
     }
 
     fn insert_new_applicability(&mut self, new: &NewApplicability) -> Result<i32, RepoError> {
@@ -490,11 +509,21 @@ impl LookupRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_applicability(&mut self, id: i32) -> Result<bool, RepoError> {
+    fn delete_applicability(&mut self, id: i32) -> Result<Applicability, RepoError> {
         use schema::applicability::dsl::*;
         let mut conn = self.get_conn()?;
-        let deleted = diesel::delete(applicability.filter(app_id.eq(id))).execute(conn.as_mut())?;
-        Ok(deleted > 0)
+        let app = applicability
+            .filter(app_id.eq(id))
+            .get_result::<Applicability>(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })?;
+        diesel::delete(applicability.filter(app_id.eq(id))).execute(conn.as_mut())?;
+        Ok(app)
     }
 
     fn create_status(&mut self, new: &NewStatus) -> Result<i32, RepoError> {
@@ -561,11 +590,21 @@ impl RequirementsRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn delete_requirement(&mut self, id: i32) -> Result<bool, RepoError> {
+    fn delete_requirement(&mut self, id: i32) -> Result<Requirement, RepoError> {
         use crate::schema::requirements::dsl::*;
         let mut conn = self.get_conn()?;
-        let deleted = diesel::delete(requirements.filter(req_id.eq(id))).execute(conn.as_mut())?;
-        Ok(deleted > 0)
+        let req = requirements
+            .filter(req_id.eq(id))
+            .get_result::<Requirement>(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })?;
+        diesel::delete(requirements.filter(req_id.eq(id))).execute(conn.as_mut())?;
+        Ok(req)
     }
 
     fn update_requirement(&mut self, req: i32) -> Result<(), RepoError> {
@@ -690,11 +729,21 @@ impl TestsRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_test(&mut self, id: i32) -> Result<bool, RepoError> {
+    fn delete_test(&mut self, id: i32) -> Result<Test, RepoError> {
         use crate::schema::tests::dsl::*;
         let mut conn = self.get_conn()?;
-        let deleted = diesel::delete(tests.filter(test_id.eq(id))).execute(conn.as_mut())?;
-        Ok(deleted > 0)
+        let test = tests
+            .filter(test_id.eq(id))
+            .get_result::<Test>(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })?;
+        diesel::delete(tests.filter(test_id.eq(id))).execute(conn.as_mut())?;
+        Ok(test)
     }
 
     fn update_test_requirement_links(
@@ -771,12 +820,21 @@ impl ProjectsRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_project(&mut self, project_id_param: i32) -> Result<bool, RepoError> {
+    fn delete_project(&mut self, project_id_param: i32) -> Result<Project, RepoError> {
         use schema::projects::dsl::*;
         let mut conn = self.get_conn()?;
-        let deleted = diesel::delete(projects.filter(project_id.eq(project_id_param)))
-            .execute(conn.as_mut())?;
-        Ok(deleted > 0)
+        let proj = projects
+            .filter(project_id.eq(project_id_param))
+            .get_result::<Project>(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })?;
+        diesel::delete(projects.filter(project_id.eq(project_id_param))).execute(conn.as_mut())?;
+        Ok(proj)
     }
 }
 

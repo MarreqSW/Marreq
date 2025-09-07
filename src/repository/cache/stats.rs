@@ -78,21 +78,22 @@ impl Cache {
             cache_size_bytes,
         }
     }
+
+    /// Get cache statistics summary
+    pub fn get_stats(&self) -> serde_json::Value {
+        let stats = self.stats();
+
+        json!({
+            "total_entries": stats.total_entries,
+            "active_entries": stats.active_entries,
+            "expired_entries": stats.expired_entries,
+            "memory_usage": get_memory_usage(),
+            "cleanup_available": stats.expired_entries > 0
+        })
+    }
 }
 
-/// Get cache statistics summary
-pub fn get_cache_stats() -> serde_json::Value {
-    let cache = get_cache();
-    let stats = cache.stats();
 
-    json!({
-        "total_entries": stats.total_entries,
-        "active_entries": stats.active_entries,
-        "expired_entries": stats.expired_entries,
-        "memory_usage": get_memory_usage(),
-        "cleanup_available": stats.expired_entries > 0
-    })
-}
 
 /// Get cache memory usage
 pub fn get_memory_usage() -> usize {

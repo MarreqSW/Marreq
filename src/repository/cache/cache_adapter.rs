@@ -4,8 +4,8 @@
 use crate::helper_functions::decorators::decorate_tests;
 use crate::models::*;
 use crate::repository::cache::{
-    invalidate_category_cache, invalidate_project_cache, invalidate_requirement_cache,
-    invalidate_test_cache, invalidate_user_cache,
+    invalidate_category, invalidate_project, invalidate_requirement,
+    invalidate_test, invalidate_user,
 };
 use crate::repository::errors::RepoError;
 use crate::repository::{
@@ -171,36 +171,36 @@ pub fn get_tests_all_cached() -> Result<Vec<Test>, String> {
 
 /// Invalidate cache when requirements are modified
 pub fn invalidate_requirement_cache_complete(req_id: i32) {
-    invalidate_requirement_cache(req_id);
+    invalidate_requirement(req_id);
     // Also invalidate project-level caches
     // Note: In a real implementation, you'd need to track which project the requirement belongs to
 }
 
 /// Invalidate cache when tests are modified
 pub fn invalidate_test_cache_complete(test_id: i32) {
-    invalidate_test_cache(test_id);
+    invalidate_test(test_id);
     // Also invalidate project-level caches
     // Note: In a real implementation, you'd need to track which project the test belongs to
 }
 
 /// Invalidate cache when users are modified
 pub fn invalidate_user_cache_complete(user_id: i32) {
-    invalidate_user_cache(user_id);
+    invalidate_user(user_id);
 }
 
 /// Invalidate cache when categories are modified
 pub fn invalidate_category_cache_complete(cat_id: i32) {
-    invalidate_category_cache(cat_id);
+    invalidate_category(cat_id);
 }
 
 /// Invalidate cache when projects are modified
 pub fn invalidate_project_cache_complete(project_id: i32) {
-    invalidate_project_cache(project_id);
+    invalidate_project(project_id);
 }
 
 /// Invalidate cache when applicability is modified
 pub fn invalidate_applicability_cache_complete(applicability_id: i32) {
-    crate::repository::cache::invalidate_applicability_cache(applicability_id);
+    crate::repository::cache::invalidate_applicability(applicability_id);
 }
 
 /// Get verification by project with caching
@@ -373,7 +373,7 @@ pub fn bulk_invalidate_cache(entity_type: &str, entity_ids: &[i32]) {
     match entity_type {
         "requirement" => {
             for &id in entity_ids {
-                invalidate_requirement_cache(id);
+                invalidate_requirement(id);
             }
             // Also invalidate project-specific caches
             if let Ok(projects) = DieselCachedRepo::shared().get_projects_all() {
@@ -384,7 +384,7 @@ pub fn bulk_invalidate_cache(entity_type: &str, entity_ids: &[i32]) {
         }
         "test" => {
             for &id in entity_ids {
-                invalidate_test_cache(id);
+                invalidate_test(id);
             }
             // Also invalidate project-specific caches
             if let Ok(projects) = DieselCachedRepo::shared().get_projects_all() {
@@ -395,19 +395,19 @@ pub fn bulk_invalidate_cache(entity_type: &str, entity_ids: &[i32]) {
         }
         "category" => {
             for &id in entity_ids {
-                invalidate_category_cache(id);
+                invalidate_category(id);
             }
             cache.remove(keys::CATEGORIES_ALL);
         }
         "user" => {
             for &id in entity_ids {
-                invalidate_user_cache(id);
+                invalidate_user(id);
             }
             cache.remove(keys::USERS_ALL);
         }
         "project" => {
             for &id in entity_ids {
-                invalidate_project_cache(id);
+                invalidate_project(id);
             }
             cache.remove(keys::PROJECTS_ALL);
             cache.remove(keys::PROJECTS_NAV);
@@ -423,22 +423,22 @@ pub fn bulk_invalidate_cache(entity_type: &str, entity_ids: &[i32]) {
 pub fn smart_invalidate_cache(entity_type: &str, entity_id: i32, related_entities: &[(String, i32)]) {
     // First, invalidate the main entity
     match entity_type {
-        "requirement" => invalidate_requirement_cache(entity_id),
-        "test" => invalidate_test_cache(entity_id),
-        "category" => invalidate_category_cache(entity_id),
-        "user" => invalidate_user_cache(entity_id),
-        "project" => invalidate_project_cache(entity_id),
+        "requirement" => invalidate_requirement(entity_id),
+        "test" => invalidate_test(entity_id),
+        "category" => invalidate_category(entity_id),
+        "user" => invalidate_user(entity_id),
+        "project" => invalidate_project(entity_id),
         _ => {}
     }
 
     // Then invalidate related entities
     for (related_type, related_id) in related_entities {
         match related_type.as_str() {
-            "requirement" => invalidate_requirement_cache(*related_id),
-            "test" => invalidate_test_cache(*related_id),
-            "category" => invalidate_category_cache(*related_id),
-            "user" => invalidate_user_cache(*related_id),
-            "project" => invalidate_project_cache(*related_id),
+            "requirement" => invalidate_requirement(*related_id),
+            "test" => invalidate_test(*related_id),
+            "category" => invalidate_category(*related_id),
+            "user" => invalidate_user(*related_id),
+            "project" => invalidate_project(*related_id),
             _ => {}
         }
     }

@@ -1,6 +1,7 @@
 use rocket::serde::json::json;
 use rocket_dyn_templates::Template;
 use crate::repository::cache::{get_cache, invalidate_all_cache};
+use crate::repository::DieselCachedRepo;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::http::CookieJar;
@@ -15,8 +16,8 @@ pub fn cache_stats_page() -> Template {
     let cleaned = cache.cleanup();
     
     // Get performance metrics
-    let performance = crate::repository::DieselCachedRepo::shared().cache().get_performance();
-    let recommendations = crate::repository::DieselCachedRepo::shared().cache().get_recommendations();
+    let performance = DieselCachedRepo::shared().cache().get_performance();
+    let recommendations = DieselCachedRepo::shared().cache().get_recommendations();
     
     let ctx = json!({
         "title": "Cache Statistics",
@@ -104,14 +105,14 @@ pub fn api_cleanup_cache() -> rocket::serde::json::Json<serde_json::Value> {
 /// API endpoint to get cache performance metrics
 #[get("/api/v1/cache/performance")]
 pub fn api_cache_performance() -> rocket::serde::json::Json<serde_json::Value> {
-    let performance = crate::repository::DieselCachedRepo::shared().cache().get_performance();
+    let performance = DieselCachedRepo::shared().cache().get_performance();
     rocket::serde::json::Json(performance)
 }
 
 /// API endpoint to get cache optimization recommendations
 #[get("/api/v1/cache/recommendations")]
 pub fn api_cache_recommendations() -> rocket::serde::json::Json<serde_json::Value> {
-    let recommendations = crate::repository::DieselCachedRepo::shared().cache().get_recommendations();
+    let recommendations = DieselCachedRepo::shared().cache().get_recommendations();
     rocket::serde::json::Json(recommendations)
 }
 
@@ -136,7 +137,7 @@ pub fn cache_health_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> 
         return Err(Redirect::to("/"));
     }
     
-    let health_data = crate::repository::DieselCachedRepo::shared().cache().get_health();
+    let health_data = DieselCachedRepo::shared().cache().get_health();
     let ctx = json!({
         "user": user,
         "health": health_data
@@ -161,6 +162,6 @@ pub fn warm_cache_route(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
 
 #[get("/cache/health/api")]
 pub fn api_cache_health() -> Json<serde_json::Value> {
-    let health_data = crate::repository::DieselCachedRepo::shared().cache().get_health();
+    let health_data = DieselCachedRepo::shared().cache().get_health();
     Json(health_data)
 }

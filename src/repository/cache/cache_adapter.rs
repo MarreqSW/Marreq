@@ -168,36 +168,36 @@ pub fn get_tests_all_cached() -> Result<Vec<Test>, String> {
 
 /// Invalidate cache when requirements are modified
 pub fn invalidate_requirement_cache_complete(req_id: i32) {
-    invalidate_requirement(req_id);
+    DieselCachedRepo::write().cache().invalidate_requirement(req_id);
     // Also invalidate project-level caches
     // Note: In a real implementation, you'd need to track which project the requirement belongs to
 }
 
 /// Invalidate cache when tests are modified
 pub fn invalidate_test_cache_complete(test_id: i32) {
-    invalidate_test(test_id);
+    DieselCachedRepo::write().cache().invalidate_test(test_id);
     // Also invalidate project-level caches
     // Note: In a real implementation, you'd need to track which project the test belongs to
 }
 
 /// Invalidate cache when users are modified
 pub fn invalidate_user_cache_complete(user_id: i32) {
-    invalidate_user(user_id);
+    DieselCachedRepo::write().cache().invalidate_user(user_id);
 }
 
 /// Invalidate cache when categories are modified
 pub fn invalidate_category_cache_complete(cat_id: i32) {
-    invalidate_category(cat_id);
+    DieselCachedRepo::write().cache().invalidate_category(cat_id);
 }
 
 /// Invalidate cache when projects are modified
 pub fn invalidate_project_cache_complete(project_id: i32) {
-    invalidate_project(project_id);
+    DieselCachedRepo::write().cache().invalidate_project(project_id);
 }
 
 /// Invalidate cache when applicability is modified
 pub fn invalidate_applicability_cache_complete(applicability_id: i32) {
-    crate::repository::cache::invalidate_applicability(applicability_id);
+    DieselCachedRepo::write().cache().invalidate_applicability(applicability_id);
 }
 
 /// Get verification by project with caching
@@ -236,26 +236,6 @@ pub fn get_requirements_for_test_cached(test_id: i32) -> Result<Vec<Requirement>
         .map_err(|e| e.to_string())
 }
 
-/// Get status by ID with caching
-pub fn get_status_by_id_cached(id: i32) -> Status {
-    DieselCachedRepo::read()
-        .get_status_by_id(id)
-        .expect("Error reading table Status")
-}
-
-/// Get verification by ID with caching
-pub fn get_verification_by_id_cached(id: i32) -> Verification {
-    let fallback = || Verification {
-        verification_id: id,
-        verification_name: format!("Unknown Verification ({})", id),
-        verification_description: "Verification not found".to_string(),
-        project_id: 1,
-    };
-    DieselCachedRepo::read()
-        .get_verification_by_id(id)
-        .unwrap_or_else(|_| fallback())
-}
-
 /// Get applicability by ID with caching
 pub fn get_applicability_by_id_cached(id: i32) -> Applicability {
     let fallback = || Applicability {
@@ -275,27 +255,6 @@ pub fn get_project_by_id_cached(project_id: i32) -> Project {
     DieselCachedRepo::read()
         .get_project_by_id(project_id)
         .expect("Error loading project")
-}
-
-/// Get requirement title by ID with caching
-pub fn get_requirement_title_by_id_cached(id: i32) -> String {
-    DieselCachedRepo::read()
-        .get_requirement_by_id(id)
-        .map(|r| r.req_title)
-        .unwrap_or_else(|_| "[Requirement Not Found]".to_string())
-}
-
-/// Get test status by ID with caching
-pub fn get_test_status_by_id_cached(id: i32) -> String {
-    let repo = DieselCachedRepo::read();
-    let status = if let Ok(test) = repo.get_test_by_id(id) {
-        repo.get_status_by_id(test.test_status)
-            .map(|s| s.st_title)
-            .unwrap_or_else(|_| "[Status Not Found]".to_string())
-    } else {
-        "[Test Not Found]".to_string()
-    };
-    status
 }
 
 /// Get status name by ID with caching
@@ -323,46 +282,6 @@ pub fn get_cache() -> Arc<Cache> {
     crate::repository::diesel_repo::DieselCachedRepo::read().cache()
 }
 
-
-/// Invalidate all project-related cache entries using the shared cache
-pub fn invalidate_project(project_id: i32) {
-    get_cache().invalidate_project(project_id);
-}
-
-/// Invalidate all user-related cache entries using the shared cache
-pub fn invalidate_user(user_id: i32) {
-    get_cache().invalidate_user(user_id);
-}
-
-/// Invalidate all requirement-related cache entries using the shared cache
-pub fn invalidate_requirement(req_id: i32) {
-    get_cache().invalidate_requirement(req_id);
-}
-
-/// Invalidate all test-related cache entries using the shared cache
-pub fn invalidate_test(test_id: i32) {
-    get_cache().invalidate_test(test_id);
-}
-
-/// Invalidate all category-related cache entries using the shared cache
-pub fn invalidate_category(cat_id: i32) {
-    get_cache().invalidate_category(cat_id);
-}
-
-/// Invalidate all status-related cache entries using the shared cache
-pub fn invalidate_status(status_id: i32) {
-    get_cache().invalidate_status(status_id);
-}
-
-/// Invalidate all verification-related cache entries using the shared cache
-pub fn invalidate_verification(verification_id: i32) {
-    get_cache().invalidate_verification(verification_id);
-}
-
-/// Invalidate all applicability-related cache entries using the shared cache
-pub fn invalidate_applicability(applicability_id: i32) {
-    get_cache().invalidate_applicability(applicability_id);
-}
 
 /// Invalidate all cache entries (use with caution)
 pub fn invalidate_all_cache() {
@@ -415,241 +334,3 @@ pub fn warm_cache() {
         }
     }
 }
-
-/* TODO: never used ??
-use std::time::Duration;
-
-/// Warm up frequently accessed cache entries
-pub fn warm_cache() -> Result<(), String> {
-    // Warm up navigation data
-    let _ = get_projects_for_nav_cached();
-
-    // Warm up status and category data
-    let _ = get_status_all_cached();
-    let _ = get_categories_all_cached();
-
-    // Warm up applicability and verification data
-    let _ = get_applicability_all_cached();
-    let _ = get_verification_all_cached();
-
-    // Warm up users data
-    let _ = get_users_all_cached();
-
-    Ok(())
-}
-
-/// Get cache statistics with additional metrics
-pub fn get_cache_stats_extended() -> Result<serde_json::Value, String> {
-    let cache = get_cache();
-    let stats = cache.stats();
-
-    // Get some sample keys to show what's cached
-    let sample_keys = vec![
-        keys::PROJECTS_NAV,
-        keys::STATUS_ALL,
-        keys::CATEGORIES_ALL,
-        keys::APPLICABILITY_ALL,
-        keys::VERIFICATION_ALL,
-        keys::USERS_ALL,
-    ];
-
-    let mut key_status = serde_json::Map::new();
-    for key in sample_keys {
-        let exists = cache.get(key).is_some();
-        key_status.insert(key.to_string(), serde_json::Value::Bool(exists));
-    }
-
-    Ok(json!({
-        "stats": stats,
-        "key_status": key_status,
-        "timestamp": chrono::Utc::now().to_rfc3339()
-    }))
-}
-
-/// Bulk invalidate cache for multiple entities
-pub fn bulk_invalidate_cache(entity_type: &str, entity_ids: &[i32]) {
-    let cache = get_cache();
-
-    match entity_type {
-        "requirement" => {
-            for &id in entity_ids {
-                invalidate_requirement(id);
-            }
-            // Also invalidate project-specific caches
-            if let Ok(projects) = DieselCachedRepo::shared().get_projects_all() {
-                for project in projects {
-                    cache.remove(&keys::Requirements::by_project(project.project_id));
-                }
-            }
-        }
-        "test" => {
-            for &id in entity_ids {
-                invalidate_test(id);
-            }
-            // Also invalidate project-specific caches
-            if let Ok(projects) = DieselCachedRepo::shared().get_projects_all() {
-                for project in projects {
-                    cache.remove(&keys::Tests::by_project(project.project_id));
-                }
-            }
-        }
-        "category" => {
-            for &id in entity_ids {
-                invalidate_category(id);
-            }
-            cache.remove(keys::CATEGORIES_ALL);
-        }
-        "user" => {
-            for &id in entity_ids {
-                invalidate_user(id);
-            }
-            cache.remove(keys::USERS_ALL);
-        }
-        "project" => {
-            for &id in entity_ids {
-                invalidate_project(id);
-            }
-            cache.remove(keys::PROJECTS_ALL);
-            cache.remove(keys::PROJECTS_NAV);
-        }
-        _ => {
-            // Unknown entity type, invalidate all caches as fallback
-            crate::repository::cache::invalidate_all_cache();
-        }
-    }
-}
-
-/// Smart cache invalidation based on entity relationships
-pub fn smart_invalidate_cache(entity_type: &str, entity_id: i32, related_entities: &[(String, i32)]) {
-    // First, invalidate the main entity
-    match entity_type {
-        "requirement" => invalidate_requirement(entity_id),
-        "test" => invalidate_test(entity_id),
-        "category" => invalidate_category(entity_id),
-        "user" => invalidate_user(entity_id),
-        "project" => invalidate_project(entity_id),
-        _ => {}
-    }
-
-    // Then invalidate related entities
-    for (related_type, related_id) in related_entities {
-        match related_type.as_str() {
-            "requirement" => invalidate_requirement(*related_id),
-            "test" => invalidate_test(*related_id),
-            "category" => invalidate_category(*related_id),
-            "user" => invalidate_user(*related_id),
-            "project" => invalidate_project(*related_id),
-            _ => {}
-        }
-    }
-
-    // Finally, invalidate aggregate caches that might be affected
-    let cache = get_cache();
-    match entity_type {
-        "requirement" | "test" => {
-            // Invalidate project-specific caches
-            if let Ok(projects) = DieselCachedRepo::shared().get_projects_all() {
-                for project in projects {
-                    cache.remove(&keys::Requirements::by_project(project.project_id));
-                    cache.remove(&keys::Tests::by_project(project.project_id));
-                }
-            }
-        }
-        "category" => {
-            cache.remove(keys::CATEGORIES_ALL);
-            cache.remove(keys::APPLICABILITY_ALL);
-        }
-        "user" => {
-            cache.remove(keys::USERS_ALL);
-        }
-        "project" => {
-            cache.remove(keys::PROJECTS_ALL);
-            cache.remove(keys::PROJECTS_NAV);
-        }
-        _ => {}
-    }
-}
-
-/// Cache warming for specific project data
-pub fn warm_project_cache(project_id: i32) {
-    let cache = get_cache();
-
-    // Warm up project-specific requirements
-    if let Ok(requirements) = DieselCachedRepo::shared().get_requirements_by_project(project_id) {
-        if let Ok(json_data) = serde_json::to_string(&requirements) {
-            cache.set_with_ttl(
-                &keys::Requirements::by_project(project_id),
-                json_data,
-                Duration::from_secs(300)
-            );
-        }
-    }
-
-    // Warm up project-specific tests
-    if let Ok(tests) = DieselCachedRepo::shared().get_tests_by_project(project_id) {
-        if let Ok(json_data) = serde_json::to_string(&tests) {
-            cache.set_with_ttl(
-                &keys::Tests::by_project(project_id),
-                json_data,
-                Duration::from_secs(300)
-            );
-        }
-    }
-
-    // Warm up project-specific categories
-    if let Ok(categories) = DieselCachedRepo::shared().get_categories_by_project(project_id) {
-        if let Ok(json_data) = serde_json::to_string(&categories) {
-            cache.set_with_ttl(
-                &keys::Categories::by_project(project_id),
-                json_data,
-                Duration::from_secs(600)
-            );
-        }
-    }
-
-    // Warm up project-specific verification types
-    if let Ok(verifications) = DieselCachedRepo::shared().get_verification_by_project(project_id) {
-        if let Ok(json_data) = serde_json::to_string(&verifications) {
-            cache.set_with_ttl(
-                &keys::Verification::by_project(project_id),
-                json_data,
-                Duration::from_secs(600)
-            );
-        }
-    }
-}
-
-/// Cache warming for frequently accessed data
-pub fn warm_frequently_accessed_cache() {
-    let cache = get_cache();
-
-    // Warm up matrix data for all projects
-    if let Ok(projects) = DieselCachedRepo::shared().get_projects_all() {
-        for project in projects {
-            if let Ok(matrix_data) =
-                DieselCachedRepo::shared().get_matrix_by_project(project.project_id)
-            {
-                if let Ok(json_data) = serde_json::to_string(&matrix_data) {
-                    cache.set_with_ttl(
-                        &keys::Matrix::by_project(project.project_id),
-                        json_data,
-                        Duration::from_secs(1800), // 30 minutes
-                    );
-                }
-            }
-        }
-    }
-
-    // Warm up user data with recent activity
-    if let Ok(users) = DieselCachedRepo::shared().get_users_all() {
-        for user in users {
-            if let Ok(json_data) = serde_json::to_string(&user) {
-                cache.set_with_ttl(
-                    &keys::Users::by_id(user.user_id),
-                    json_data,
-                    Duration::from_secs(600),
-                );
-            }
-        }
-    }
-}*/

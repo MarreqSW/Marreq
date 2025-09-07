@@ -59,7 +59,6 @@ mod tests {
     // --- hash/verify ---------------------------------------------------------
 
     #[test]
-    #[ignore] // Too slow
     fn bcrypt_roundtrip_ok() {
         let pw = "s3cr3t!";
         let hash = hash_password(pw).expect("hash should succeed");

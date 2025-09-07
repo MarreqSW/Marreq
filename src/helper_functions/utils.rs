@@ -79,4 +79,67 @@ mod tests {
         assert_eq!(response.into_string().unwrap(), "none");
     }
 
+    #[test]
+    fn generate_requirement_reference_creates_incremental_reference() {
+        std::env::set_var(
+            "DATABASE_URL",
+            "postgres://rust:rust@127.0.0.1:5432/reqman",
+        );
+
+        use crate::schema::{categories, projects};
+        use diesel::RunQueryDsl;
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let mut conn = DieselRepo::new()
+            .get_conn()
+            .expect("Failed to get database connection");
+
+        // Create a unique suffix to avoid conflicts across test runs
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .to_string();
+
+        // Insert a temporary project
+        let new_project = NewProject {
+            project_name: format!("test_project_{}", unique),
+            project_description: None,
+            project_status: "active".into(),
+            project_owner_id: None,
+        };
+        let project: Project = diesel::insert_into(projects::table)
+            .values(&new_project)
+            .get_result(conn.as_mut())
+            .expect("insert project");
+
+        // Insert a category for that project
+        let new_category = NewCategory {
+            cat_id: None,
+            cat_title: "Test Cat".into(),
+            cat_description: "desc".into(),
+            cat_tag: format!("TC{}", unique),
+            project_id: project.project_id,
+        };
+        let category: Category = diesel::insert_into(categories::table)
+            .values(&new_category)
+            .get_result(conn.as_mut())
+            .expect("insert category");
+
+        // Since no requirements exist yet, the reference should end with -1
+        let reference = generate_requirement_reference(category.cat_id, project.project_id)
+            .expect("reference generation");
+        assert_eq!(reference, format!("REQ-{}-1", category.cat_tag));
+    }
+
+    #[test]
+    fn generate_requirement_reference_missing_category_returns_error() {
+        std::env::set_var(
+            "DATABASE_URL",
+            "postgres://rust:rust@127.0.0.1:5432/reqman",
+        );
+
+        let result = generate_requirement_reference(-1, -1);
+        assert!(result.is_err());
+    }
 }

@@ -1,3 +1,6 @@
+// NOTE: This is a temporal Adapter (for DieselRepo)until the
+// Middleware refactor with Repository Errors is completed.
+
 use crate::helper_functions::decorators::decorate_tests;
 use crate::models::*;
 use crate::repository::cache::{

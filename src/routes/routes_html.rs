@@ -755,10 +755,10 @@ pub fn delete_requirement_route(
                 }
 
                 // Invalidate related caches - including project-level caches
-                cache::cached_functions::invalidate_requirement_cache_complete(req_id);
+                cache::cache_adapter::invalidate_requirement_cache_complete(req_id);
 
                 // Also invalidate project-specific caches for the requirement's project
-                cache::cached_functions::invalidate_project_cache_complete(requirement.project_id);
+                cache::cache_adapter::invalidate_project_cache_complete(requirement.project_id);
 
                 // Invalidate the requirements list cache
                 cache::get_cache().remove(crate::repository::cache::keys::REQUIREMENTS_ALL);
@@ -827,10 +827,10 @@ pub fn delete_test_route(
                 }
 
                 // Invalidate related caches - including project-level caches
-                cache::cached_functions::invalidate_test_cache_complete(test_id);
+                cache::cache_adapter::invalidate_test_cache_complete(test_id);
 
                 // Also invalidate project-specific caches for the test's project
-                cache::cached_functions::invalidate_project_cache_complete(test.project_id);
+                cache::cache_adapter::invalidate_project_cache_complete(test.project_id);
 
                 // Invalidate the tests list cache
                 cache::get_cache().remove(crate::repository::cache::keys::TESTS_ALL);
@@ -2241,7 +2241,7 @@ pub fn delete_applicability_route(
             }
 
             // Invalidate cache for the deleted applicability
-            cache::cached_functions::invalidate_applicability_cache_complete(app_id);
+            cache::cache_adapter::invalidate_applicability_cache_complete(app_id);
 
             Ok(rocket::http::Status::Ok)
         }

@@ -1,8 +1,8 @@
 pub mod cache;
-pub mod cached_functions;
+pub mod cache_adapter;
 pub mod keys;
 pub mod stats;
 
 pub use cache::*;
-pub use cached_functions::*;
+pub use cache_adapter::*;
 pub use stats::*;

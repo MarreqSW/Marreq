@@ -122,6 +122,9 @@ impl<R: UserRepository> UserRepository for CacheRepository<R> {
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
         let id = self.inner.insert_user(new)?;
         self.cache.invalidate_user(id);
+        if let Some(project_id) = new.project_id {
+            self.cache.invalidate_project(project_id);
+        }
         Ok(id)
     }
 
@@ -206,8 +209,12 @@ impl<R: TestsRepository> TestsRepository for CacheRepository<R> {
     }
 
     fn delete_test(&mut self, id: i32) -> Result<bool, RepoError> {
+        let test = self.get_test_by_id(id)?; // early return on Err
+
         let res = self.inner.delete_test(id)?;
         self.cache.invalidate_test(id);
+        self.cache.invalidate_project(test.project_id);
+
         Ok(res)
     }
 
@@ -326,8 +333,10 @@ impl<R: LookupRepository> LookupRepository for CacheRepository<R> {
     }
 
     fn delete_category(&mut self, id: i32) -> Result<bool, RepoError> {
+        let cat = self.get_category_by_id(id)?; // early return on Err
         let res = self.inner.delete_category(id)?;
         self.cache.invalidate_category(id);
+        self.cache.invalidate_project(cat.project_id);
         Ok(res)
     }
 
@@ -348,8 +357,10 @@ impl<R: LookupRepository> LookupRepository for CacheRepository<R> {
     }
 
     fn delete_applicability(&mut self, id: i32) -> Result<bool, RepoError> {
+        let app = self.get_applicability_by_id(id)?;
         let res = self.inner.delete_applicability(id)?;
         self.cache.invalidate_applicability(id);
+        self.cache.invalidate_project(app.project_id);
         Ok(res)
     }
 }

@@ -13,6 +13,9 @@ pub mod project_service;
 pub mod status_service;
 pub mod matrix_service;
 
+#[cfg(test)]
+mod tests;
+
 pub use base_service::*;
 pub use requirement_service::*;
 pub use test_service::*;

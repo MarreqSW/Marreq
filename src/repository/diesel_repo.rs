@@ -24,8 +24,8 @@ pub type DieselCachedRepo = super::CacheRepository<DieselRepo>;
 lazy_static! {
     /// Shared, mutable, thread-safe repository singleton.
     static ref SHARED_CACHED_REPO: RwLock<DieselCachedRepo> = RwLock::new(
-    DieselCachedRepo::new(
-        DieselRepo::new(),
+        DieselCachedRepo::new(
+            DieselRepo::new(),
             5 * 60, // 5 min
         )
     );

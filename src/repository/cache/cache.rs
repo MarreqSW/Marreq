@@ -197,7 +197,7 @@ pub fn get_cache() -> &'static Cache {
 
 impl Cache {
     /// Invalidate all project-related cache entries
-    pub fn invalidate_project_cache(&self, project_id: i32) {
+    pub fn invalidate_project(&self, project_id: i32) {
         self.remove(&keys::Requirements::by_project(project_id));
         self.remove(&keys::Tests::by_project(project_id));
         self.remove(&keys::Matrix::by_project(project_id));
@@ -208,13 +208,13 @@ impl Cache {
     }
 
     /// Invalidate all user-related cache entries
-    pub fn invalidate_user_cache(&self, user_id: i32) {
+    pub fn invalidate_user(&self, user_id: i32) {
         self.remove(&keys::Users::by_id(user_id));
         self.remove(keys::USERS_ALL);
     }
 
     /// Invalidate all requirement-related cache entries
-    pub fn invalidate_requirement_cache(&self, req_id: i32) {
+    pub fn invalidate_requirement(&self, req_id: i32) {
         self.remove(&keys::Requirements::by_id(req_id));
         self.remove(&keys::LinkedTests::for_requirement(req_id));
         self.remove(&keys::RequirementTitle::by_id(req_id));
@@ -224,7 +224,7 @@ impl Cache {
     }
 
     /// Invalidate all test-related cache entries
-    pub fn invalidate_test_cache(&self, test_id: i32) {
+    pub fn invalidate_test(&self, test_id: i32) {
         self.remove(&keys::Tests::by_id(test_id));
         self.remove(&keys::LinkedRequirements::for_test(test_id));
         self.remove(&keys::TestStatus::by_id(test_id));
@@ -234,68 +234,68 @@ impl Cache {
     }
 
     /// Invalidate all category-related cache entries
-    pub fn invalidate_category_cache(&self, cat_id: i32) {
+    pub fn invalidate_category(&self, cat_id: i32) {
         self.remove(&keys::Categories::by_id(cat_id));
         self.remove(keys::CATEGORIES_ALL);
     }
 
     /// Invalidate all status-related cache entries
-    pub fn invalidate_status_cache(&self, status_id: i32) {
+    pub fn invalidate_status(&self, status_id: i32) {
         self.remove(&keys::Status::by_id(status_id));
         self.remove(keys::STATUS_ALL);
     }
 
     /// Invalidate all verification-related cache entries
-    pub fn invalidate_verification_cache(&self, verification_id: i32) {
+    pub fn invalidate_verification(&self, verification_id: i32) {
         self.remove(&keys::Verification::by_id(verification_id));
         self.remove(keys::VERIFICATION_ALL);
     }
 
     /// Invalidate all applicability-related cache entries
-    pub fn invalidate_applicability_cache(&self, applicability_id: i32) {
+    pub fn invalidate_applicability(&self, applicability_id: i32) {
         self.remove(&keys::Applicability::by_id(applicability_id));
         self.remove(keys::APPLICABILITY_ALL);
     }
 }
 
 /// Invalidate all project-related cache entries using the shared cache
-pub fn invalidate_project_cache(project_id: i32) {
-    get_cache().invalidate_project_cache(project_id);
+pub fn invalidate_project(project_id: i32) {
+    get_cache().invalidate_project(project_id);
 }
 
 /// Invalidate all user-related cache entries using the shared cache
-pub fn invalidate_user_cache(user_id: i32) {
-    get_cache().invalidate_user_cache(user_id);
+pub fn invalidate_user(user_id: i32) {
+    get_cache().invalidate_user(user_id);
 }
 
 /// Invalidate all requirement-related cache entries using the shared cache
-pub fn invalidate_requirement_cache(req_id: i32) {
-    get_cache().invalidate_requirement_cache(req_id);
+pub fn invalidate_requirement(req_id: i32) {
+    get_cache().invalidate_requirement(req_id);
 }
 
 /// Invalidate all test-related cache entries using the shared cache
-pub fn invalidate_test_cache(test_id: i32) {
-    get_cache().invalidate_test_cache(test_id);
+pub fn invalidate_test(test_id: i32) {
+    get_cache().invalidate_test(test_id);
 }
 
 /// Invalidate all category-related cache entries using the shared cache
-pub fn invalidate_category_cache(cat_id: i32) {
-    get_cache().invalidate_category_cache(cat_id);
+pub fn invalidate_category(cat_id: i32) {
+    get_cache().invalidate_category(cat_id);
 }
 
 /// Invalidate all status-related cache entries using the shared cache
-pub fn invalidate_status_cache(status_id: i32) {
-    get_cache().invalidate_status_cache(status_id);
+pub fn invalidate_status(status_id: i32) {
+    get_cache().invalidate_status(status_id);
 }
 
 /// Invalidate all verification-related cache entries using the shared cache
-pub fn invalidate_verification_cache(verification_id: i32) {
-    get_cache().invalidate_verification_cache(verification_id);
+pub fn invalidate_verification(verification_id: i32) {
+    get_cache().invalidate_verification(verification_id);
 }
 
 /// Invalidate all applicability-related cache entries using the shared cache
-pub fn invalidate_applicability_cache(applicability_id: i32) {
-    get_cache().invalidate_applicability_cache(applicability_id);
+pub fn invalidate_applicability(applicability_id: i32) {
+    get_cache().invalidate_applicability(applicability_id);
 }
 
 /// Invalidate all cache entries (use with caution)

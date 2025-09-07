@@ -1,5 +1,4 @@
 use super::keys::{self, Keyspace};
-use crate::repository::*;
 use chrono;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -56,10 +55,6 @@ impl Cache {
                 match weak.upgrade() {
                     Some(this) => {
                         this.cleanup();
-                        let stats = this.stats();
-                        if stats.active_entries < 10 {
-                            this.warm_cache();
-                        }
                         thread::sleep(this.default_ttl);
                     }
                     None => break, // Cache gone; exit thread
@@ -265,52 +260,6 @@ impl Cache {
     pub fn invalidate_applicability(&self, applicability_id: i32) {
         self.remove(&keys::Applicability::by_id(applicability_id));
         self.remove(keys::APPLICABILITY_ALL);
-    }
-
-    /// Warm up the cache with frequently accessed data
-    ///
-    /// Populates the cache with common queries to improve initial performance.
-    /// Note: This function may copy significant amounts of data; use with caution.
-    pub fn warm_cache(&self) {
-        use crate::repository::DieselRepo;
-        use std::time::Duration;
-
-        let repo = DieselRepo::new();
-
-        // Warm up projects cache
-        if let Ok(projects) = repo.get_projects_all() {
-            if let Ok(json_data) = serde_json::to_string(&projects) {
-                self.set_with_ttl(keys::PROJECTS_ALL, json_data, Duration::from_secs(600));
-            }
-        }
-
-        // Warm up status cache
-        if let Ok(statuses) = repo.get_status_all() {
-            if let Ok(json_data) = serde_json::to_string(&statuses) {
-                self.set_with_ttl(keys::STATUS_ALL, json_data, Duration::from_secs(900));
-            }
-        }
-
-        // Warm up categories cache
-        if let Ok(categories) = repo.get_categories_all() {
-            if let Ok(json_data) = serde_json::to_string(&categories) {
-                self.set_with_ttl(keys::CATEGORIES_ALL, json_data, Duration::from_secs(900));
-            }
-        }
-
-        // Warm up users cache
-        if let Ok(users) = repo.get_users_all() {
-            if let Ok(json_data) = serde_json::to_string(&users) {
-                self.set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(600));
-            }
-        }
-
-        // Warm up projects navigation cache
-        if let Ok(projects) = repo.get_projects_all() {
-            if let Ok(json_data) = serde_json::to_string(&projects) {
-                self.set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
-            }
-        }
     }
 
 }

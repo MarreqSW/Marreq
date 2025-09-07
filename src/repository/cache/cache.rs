@@ -60,10 +60,10 @@ impl Cache {
                         if stats.active_entries < 10 {
                             warm_cache();
                         }
+                        thread::sleep(this.default_ttl);
                     }
                     None => break, // Cache gone; exit thread
                 }
-                thread::sleep(Duration::from_secs(300));
             }
         });
     }

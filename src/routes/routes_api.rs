@@ -52,8 +52,8 @@ pub async fn api_post_requirement(
         }
 
         // Invalidate relevant caches
-        crate::cache::invalidate_requirement_cache(val);
-        crate::cache::invalidate_project_cache(new_req.project_id);
+        crate::repository::cache::invalidate_requirement_cache(val);
+        crate::repository::cache::invalidate_project_cache(new_req.project_id);
 
         Ok(json!({ "status": "ok", "id": val }))
     } else {
@@ -114,8 +114,8 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
         }
 
         // Invalidate relevant caches
-        crate::cache::invalidate_requirement_cache(ident);
-        crate::cache::invalidate_project_cache(requirement.project_id);
+        crate::repository::cache::invalidate_requirement_cache(ident);
+        crate::repository::cache::invalidate_project_cache(requirement.project_id);
 
         rocket::http::Status::NoContent
     } else {
@@ -190,7 +190,7 @@ pub async fn api_post_status(new_status: Json<NewStatus>) -> Value {
     };
 
     // Invalidate relevant caches
-    crate::cache::invalidate_status_cache(new_id);
+    crate::repository::cache::invalidate_status_cache(new_id);
 
     json!({ "status": "ok", "id": new_id })
 }
@@ -261,8 +261,8 @@ pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::htt
         }
 
         // Invalidate relevant caches
-        crate::cache::invalidate_test_cache(val);
-        crate::cache::invalidate_project_cache(new_test.project_id);
+        crate::repository::cache::invalidate_test_cache(val);
+        crate::repository::cache::invalidate_project_cache(new_test.project_id);
 
         Ok(json!({ "status": "ok", "id": val }))
     } else {
@@ -311,8 +311,8 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
         }
 
         // Invalidate relevant caches
-        crate::cache::invalidate_test_cache(ident);
-        crate::cache::invalidate_project_cache(test.project_id);
+        crate::repository::cache::invalidate_test_cache(ident);
+        crate::repository::cache::invalidate_project_cache(test.project_id);
 
         rocket::http::Status::NoContent
     } else {
@@ -386,9 +386,9 @@ pub async fn api_post_user(new_user: Json<NewUser>) -> Result<Value, rocket::htt
         }
 
         // Invalidate relevant caches
-        crate::cache::invalidate_user_cache(val);
+        crate::repository::cache::invalidate_user_cache(val);
         if let Some(project_id) = new_user.project_id {
-            crate::cache::invalidate_project_cache(project_id);
+            crate::repository::cache::invalidate_project_cache(project_id);
         }
 
         Ok(json!({ "status": "ok", "id": val }))
@@ -404,7 +404,7 @@ pub async fn api_delete_user_by_id(ident: i32) -> rocket::http::Status {
     if let Ok(val) = ret_value {
         if val {
             // Invalidate relevant caches
-            crate::cache::invalidate_user_cache(ident);
+            crate::repository::cache::invalidate_user_cache(ident);
             // Note: We can't invalidate project cache here since we don't have the project_id
             rocket::http::Status::NoContent
         } else {
@@ -473,8 +473,8 @@ pub async fn api_post_category(new_category: Json<NewCategory>) -> Result<Value,
         }
 
         // Invalidate relevant caches
-        crate::cache::invalidate_category_cache(val);
-        crate::cache::invalidate_project_cache(new_category.project_id);
+        crate::repository::cache::invalidate_category_cache(val);
+        crate::repository::cache::invalidate_project_cache(new_category.project_id);
 
         Ok(json!({ "status": "ok", "id": val }))
     } else {
@@ -492,8 +492,8 @@ pub async fn api_put_category(ident: i32, category: Json<NewCategory>) -> Result
     if let Ok(val) = ret_value {
         if val {
             // Invalidate relevant caches
-            crate::cache::invalidate_category_cache(ident);
-            crate::cache::invalidate_project_cache(category_with_id.project_id);
+            crate::repository::cache::invalidate_category_cache(ident);
+            crate::repository::cache::invalidate_project_cache(category_with_id.project_id);
 
             Ok(json!({ "status": "ok", "message": "Category updated successfully" }))
         } else {
@@ -538,8 +538,8 @@ pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
             }
 
             // Invalidate relevant caches
-            crate::cache::invalidate_category_cache(ident);
-            crate::cache::invalidate_project_cache(category.project_id);
+            crate::repository::cache::invalidate_category_cache(ident);
+            crate::repository::cache::invalidate_project_cache(category.project_id);
 
             rocket::http::Status::NoContent
         } else {
@@ -603,8 +603,8 @@ pub async fn api_post_applicability(new_applicability: Json<NewApplicability>) -
         }
 
         // Invalidate relevant caches
-        crate::cache::invalidate_applicability_cache(val);
-        crate::cache::invalidate_project_cache(new_applicability.project_id);
+        crate::repository::cache::invalidate_applicability_cache(val);
+        crate::repository::cache::invalidate_project_cache(new_applicability.project_id);
 
         Ok(json!({ "status": "ok", "id": val }))
     } else {
@@ -622,8 +622,8 @@ pub async fn api_put_applicability(ident: i32, applicability: Json<NewApplicabil
     if let Ok(val) = ret_value {
         if val {
             // Invalidate relevant caches
-            crate::cache::invalidate_applicability_cache(ident);
-            crate::cache::invalidate_project_cache(applicability_with_id.project_id);
+            crate::repository::cache::invalidate_applicability_cache(ident);
+            crate::repository::cache::invalidate_project_cache(applicability_with_id.project_id);
 
             Ok(json!({ "status": "ok", "message": "Applicability updated successfully" }))
         } else {
@@ -668,8 +668,8 @@ pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status 
             }
 
             // Invalidate relevant caches
-            crate::cache::invalidate_applicability_cache(ident);
-            crate::cache::invalidate_project_cache(applicability.project_id);
+            crate::repository::cache::invalidate_applicability_cache(ident);
+            crate::repository::cache::invalidate_project_cache(applicability.project_id);
 
             rocket::http::Status::NoContent
         } else {

@@ -14,7 +14,7 @@ use rocket_dyn_templates::Template;
 use std::path;
 use chrono::Utc;
 
-use crate::cache;
+use crate::repository::cache;
 use crate::auth::*;
 use crate::repository::PooledConnectionWrapper;
 use crate::generators::*;
@@ -761,7 +761,7 @@ pub fn delete_requirement_route(
                 cache::cached_functions::invalidate_project_cache_complete(requirement.project_id);
 
                 // Invalidate the requirements list cache
-                cache::get_cache().remove(crate::cache::keys::REQUIREMENTS_ALL);
+                cache::get_cache().remove(crate::repository::cache::keys::REQUIREMENTS_ALL);
 
                 // Redirect to requirements list page
                 Ok(Redirect::to(uri!(show_requirements(
@@ -833,7 +833,7 @@ pub fn delete_test_route(
                 cache::cached_functions::invalidate_project_cache_complete(test.project_id);
 
                 // Invalidate the tests list cache
-                cache::get_cache().remove(crate::cache::keys::TESTS_ALL);
+                cache::get_cache().remove(crate::repository::cache::keys::TESTS_ALL);
 
                 // Redirect to tests list page
                 Ok(Redirect::to(uri!(show_tests(
@@ -3111,7 +3111,7 @@ pub fn process_excel_import(
     let html = match result {
         Ok(import_result) => {
             // Invalidate all caches after successful import since we don't know exactly what was imported
-            crate::cache::invalidate_all_cache();
+            crate::repository::cache::invalidate_all_cache();
 
             // Get project name for display
             let project_name = get_project_by_id_pooled_safe(project_id).project_name;

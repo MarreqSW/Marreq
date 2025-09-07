@@ -4,7 +4,6 @@ extern crate diesel;
 use rocket::fs::{relative, FileServer};
 use rocket_dyn_templates::Template;
 pub mod auth;
-pub mod cache;
 pub mod generators;
 pub mod helper_functions;
 pub mod html;
@@ -25,10 +24,10 @@ pub struct MyDbConn(rocket_sync_db_pools::diesel::PgConnection);
 async fn main() -> Result<(), rocket::Error> {
     
     // Warm up the cache on startup
-    crate::cache::warm_cache();
+    crate::repository::cache::warm_cache();
     
     // Start background cache maintenance
-    crate::cache::start_cache_maintenance();
+    crate::repository::cache::start_cache_maintenance();
     
     let _rocket = rocket::build()
         .mount(

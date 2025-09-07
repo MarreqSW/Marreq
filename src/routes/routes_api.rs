@@ -13,7 +13,7 @@ use rocket::serde::json::{json, Json, Value};
 /// Requirements
 #[get("/requirements")]
 pub fn api_get_requirement() -> Result<Json<Vec<Requirement>>, rocket::http::Status> {
-    let ret_val = DieselCachedRepo::shared()
+    let ret_val = DieselCachedRepo::read()
         .get_requirements_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
@@ -33,16 +33,13 @@ pub fn api_get_requirement() -> Result<Json<Vec<Requirement>>, rocket::http::Sta
 pub async fn api_post_requirement(
     new_req: Json<NewRequirement>,
 ) -> Result<Value, rocket::http::Status> {
-    let mut connection = DieselRepo::new()
-        .get_conn()
-        .expect("Failed to get database connection");
-    let ret_value = DieselRepo::new().insert_new_requirement(&new_req);
+    let ret_value = DieselCachedRepo::write().insert_new_requirement(&new_req);
 
     if let Ok(val) = ret_value {
         // Log the requirement creation via API
         if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_req) {
             let _ = crate::logger::Logger::log_create(
-                connection.as_mut(),
+                DieselRepo::new().get_conn().expect("Failed to get database connection").as_mut(),
                 0, // API user ID (system)
                 crate::models::EntityType::Requirement,
                 val,
@@ -55,11 +52,6 @@ pub async fn api_post_requirement(
                 None,
             );
         }
-
-        // Invalidate relevant caches
-        crate::repository::cache::invalidate_requirement(val);
-        crate::repository::cache::invalidate_project(new_req.project_id);
-
         Ok(json!({ "status": "ok", "id": val }))
     } else {
         Err(rocket::http::Status::BadRequest)
@@ -68,10 +60,6 @@ pub async fn api_post_requirement(
 
 #[delete("/requirements/<ident>")]
 pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
-    let mut connection = DieselRepo::new()
-        .get_conn()
-        .expect("Failed to get database connection");
-
     // Get the requirement details before deleting
     let requirement = DieselRepo::new()
         .get_requirement_by_id(ident)
@@ -95,7 +83,7 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
             project_id: 1,
         });
 
-    let ret_value = match DieselRepo::new().delete_requirement(ident) {
+    let ret_value = match DieselCachedRepo::write().delete_requirement(ident) {
         Ok(success) => success,
         Err(e) => {
             eprintln!("Error deleting requirement via API: {:?}", e);
@@ -109,7 +97,7 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
         // Log the requirement deletion via API
         if let Ok(old_values) = crate::logger::Logger::to_json_string(&requirement) {
             let _ = crate::logger::Logger::log_delete(
-                connection.as_mut(),
+                DieselRepo::new().get_conn().expect("Failed to get database connection").as_mut(),
                 0, // API user ID (system)
                 crate::models::EntityType::Requirement,
                 ident,
@@ -122,11 +110,6 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
                 None,
             );
         }
-
-        // Invalidate relevant caches
-        crate::repository::cache::invalidate_requirement(ident);
-        crate::repository::cache::invalidate_project(requirement.project_id);
-
         rocket::http::Status::NoContent
     } else {
         rocket::http::Status::Accepted
@@ -137,7 +120,7 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
 pub fn api_get_requirement_by_id(
     ident: i32,
 ) -> Result<Json<Vec<Requirement>>, rocket::http::Status> {
-    match DieselCachedRepo::shared().get_requirement_by_id(ident) {
+    match DieselCachedRepo::read().get_requirement_by_id(ident) {
         Ok(req) => Ok(Json(vec![req])),
         Err(crate::repository::errors::RepoError::NotFound) => Err(rocket::http::Status::NotFound),
         Err(_) => Err(rocket::http::Status::InternalServerError),

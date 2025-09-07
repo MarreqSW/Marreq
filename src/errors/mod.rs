@@ -141,6 +141,19 @@ impl<'r> Responder<'r, 'static> for ApiError {
     }
 }
 
+impl Serialize for ApiError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("ApiError", 2)?;
+        state.serialize_field("error", &self.to_string())?;
+        state.serialize_field("type", &format!("{:?}", self))?;
+        state.end()
+    }
+}
+
 /// Result type alias for API operations
 pub type ApiResult<T> = Result<T, ApiError>;
 

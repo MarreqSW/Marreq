@@ -549,4 +549,30 @@ mod tests {
         ).unwrap();
         assert!(pdf_bytes.starts_with(b"%PDF"));
     }
+
+    #[test]
+    fn test_generate_pdf_report_data_adds_new_page() {
+        let mut req_status = HashMap::new();
+        for i in 0..20 {
+            req_status.insert(format!("Status{}", i), i as i32);
+        }
+
+        let pdf_bytes = generate_pdf_report_data(
+            100,
+            50,
+            5,
+            3,
+            60.0,
+            2.0,
+            60,
+            80,
+            req_status,
+            HashMap::new(),
+            HashMap::new(),
+        )
+        .unwrap();
+
+        let pdf_text = String::from_utf8_lossy(&pdf_bytes);
+        assert!(pdf_text.contains("Page 2"));
+    }
 }

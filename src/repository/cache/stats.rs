@@ -200,3 +200,143 @@ impl Cache {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Arc, atomic::Ordering};
+    use std::thread;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn test_stats_performance_improvement() {
+        let cache = Arc::new(Cache::new(300));
+        for i in 0..10000 {
+            cache.set(&format!("key{}", i), format!("value{}", i));
+        }
+        let start = Instant::now();
+        let stats = cache.stats();
+        let duration = start.elapsed();
+        assert!(duration.as_micros() < 1000, "Stats should be calculated in under 1ms, took {:?}", duration);
+        assert_eq!(stats.total_entries, 10000);
+        assert_eq!(stats.active_entries, 10000);
+        assert_eq!(stats.expired_entries, 0);
+    }
+
+    #[test]
+    fn test_counters_and_reset() {
+        let cache = Cache::new(300);
+        assert_eq!(cache.stats().total_entries, 0);
+        cache.set("a", "1".to_string());
+        assert_eq!(cache.get("a"), Some("1".to_string()));
+        assert_eq!(cache.get("missing"), None);
+        let stats = cache.stats();
+        assert_eq!(stats.hits, 1);
+        assert_eq!(stats.misses, 1);
+        assert_eq!(stats.active_entries, 1);
+        cache.reset_counters();
+        let stats = cache.stats();
+        assert_eq!(stats.hits, 0);
+        assert_eq!(stats.misses, 0);
+        assert_eq!(stats.active_entries, 0);
+    }
+
+    #[test]
+    fn test_sync_counters_updates_expired() {
+        let cache = Cache::new(300);
+        cache.set_with_ttl("active", "v".to_string(), Duration::from_secs(1));
+        cache.set_with_ttl("expired", "v".to_string(), Duration::from_millis(1));
+        thread::sleep(Duration::from_millis(10));
+        cache.sync_counters();
+        let stats = cache.stats();
+        assert_eq!(stats.active_entries, 1);
+        assert_eq!(stats.expired_entries, 1);
+    }
+
+    #[test]
+    fn test_stats_helpers() {
+        let cache = Cache::new(300);
+        cache.reset_counters();
+        cache.set("keep", "v".to_string());
+        cache.set_with_ttl("gone", "v".to_string(), Duration::from_millis(1));
+        thread::sleep(Duration::from_millis(10));
+        cache.sync_counters();
+        let stats = cache.get_stats();
+        assert_eq!(stats["total_entries"].as_u64(), Some(2));
+        assert_eq!(stats["active_entries"].as_u64(), Some(1));
+        assert_eq!(stats["expired_entries"].as_u64(), Some(1));
+        assert_eq!(stats["cleanup_available"].as_bool(), Some(true));
+        cache.cleanup();
+        cache.sync_counters();
+        let stats = cache.get_stats();
+        assert_eq!(stats["total_entries"].as_u64(), Some(1));
+        assert_eq!(stats["active_entries"].as_u64(), Some(1));
+        assert_eq!(stats["expired_entries"].as_u64(), Some(0));
+        assert_eq!(cache.get_memory_usage(), 1);
+        let health = cache.get_health();
+        assert_eq!(health["status"].as_str(), Some("healthy"));
+        assert_eq!(health["cleanup_needed"].as_bool(), Some(false));
+        cache.clear();
+        cache.reset_counters();
+        for i in 0..5 {
+            let _ = cache.get(&format!("missing{}", i));
+        }
+        for i in 0..1001 {
+            cache.set(&format!("key{}", i), "v".to_string());
+        }
+        let perf = cache.get_performance();
+        assert_eq!(perf["total_requests"].as_u64(), Some(5));
+        let recs = cache.get_recommendations();
+        let arr = recs["recommendations"].as_array().unwrap();
+        assert!(arr.iter().any(|r| r.as_str().unwrap().contains("hit rate")));
+    }
+
+    #[test]
+    fn test_cache_stats_branches() {
+        let cache = Cache::new(300);
+        cache.reset_counters();
+        let stats_empty = cache.stats();
+        assert_eq!(stats_empty.total_entries, 0);
+        assert_eq!(stats_empty.cache_size_bytes, 0);
+        let perf_empty = cache.get_performance();
+        assert_eq!(perf_empty["total_requests"].as_u64(), Some(0));
+        assert_eq!(perf_empty["cache_efficiency"].as_f64(), Some(0.0));
+        assert_eq!(perf_empty["expired_entries_percentage"].as_f64(), Some(0.0));
+        let big_value = String::from_utf8(vec![b'x'; 105 * 1024 * 1024]).unwrap();
+        cache.set("huge", big_value);
+        cache.hits.store(1, Ordering::Relaxed);
+        cache.misses.store(2, Ordering::Relaxed);
+        cache.total_access_time.store(6_000_000, Ordering::Relaxed);
+        cache.active_entries.store(10, Ordering::Relaxed);
+        cache.expired_entries.store(11, Ordering::Relaxed);
+        let health_degraded = cache.get_health();
+        assert_eq!(health_degraded["status"].as_str(), Some("degraded"));
+        assert!(health_degraded["cleanup_needed"].as_bool().unwrap());
+        cache.expired_entries.store(25, Ordering::Relaxed);
+        let health_warning = cache.get_health();
+        assert_eq!(health_warning["status"].as_str(), Some("warning"));
+        let recs_bad = cache.get_recommendations();
+        let recs_bad_arr = recs_bad["recommendations"].as_array().unwrap();
+        assert!(recs_bad_arr.iter().any(|r| r.as_str().unwrap().contains("increasing cache TTL")));
+        assert!(recs_bad_arr.iter().any(|r| r.as_str().unwrap().contains("hit rate is low")));
+        assert!(recs_bad_arr.iter().any(|r| r.as_str().unwrap().contains("expired entries")));
+        assert!(recs_bad_arr.iter().any(|r| r.as_str().unwrap().contains("memory usage is high")));
+        assert!(recs_bad_arr.iter().any(|r| r.as_str().unwrap().contains("access time is slow")));
+        assert_eq!(recs_bad["priority"].as_str(), Some("high"));
+        cache.clear();
+        cache.reset_counters();
+        cache.hits.store(10, Ordering::Relaxed);
+        cache.total_access_time.store(10, Ordering::Relaxed);
+        cache.active_entries.store(1, Ordering::Relaxed);
+        cache.expired_entries.store(0, Ordering::Relaxed);
+        let recs_good = cache.get_recommendations();
+        let recs_good_arr = recs_good["recommendations"].as_array().unwrap();
+        assert_eq!(recs_good_arr.len(), 1);
+        assert!(recs_good_arr[0].as_str().unwrap().contains("performing well"));
+        assert_eq!(recs_good["priority"].as_str(), Some("low"));
+        let health_healthy = cache.get_health();
+        assert_eq!(health_healthy["status"].as_str(), Some("healthy"));
+        cache.clear();
+        cache.reset_counters();
+    }
+}

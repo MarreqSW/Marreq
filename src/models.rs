@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Mirrors the database representation and is used when fetching or updating
 /// existing requirements.
-#[derive(Serialize, Deserialize, Queryable, AsChangeset, Clone)]
+#[derive(Serialize, Deserialize, Queryable, AsChangeset, Clone, Debug)]
 pub struct Requirement {
     pub req_id: i32,
     pub req_title: String,
@@ -88,7 +88,7 @@ pub struct DecoratedRequirement {
 }
 
 /// A grouping category for requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Category {
     pub cat_id: i32,
@@ -113,7 +113,7 @@ pub struct NewCategory {
 }
 
 /// Applicability tags limit where a requirement applies.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Applicability {
     pub app_id: i32,
@@ -138,7 +138,7 @@ pub struct NewApplicability {
 }
 
 /// A status that can be assigned to requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct RequirementStatus {
     pub req_st_id: i32,
@@ -148,7 +148,7 @@ pub struct RequirementStatus {
 }
 
 /// A status that can be assigned to tests.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct TestStatus {
     pub test_st_id: i32,
@@ -178,7 +178,7 @@ pub struct NewTestStatus {
 }
 
 /// Verification methods available for requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Verification {
     pub verification_id: i32,
@@ -253,7 +253,7 @@ pub struct UpdateUser {
 }
 
 /// A test case that can verify one or more requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Test {
     pub test_id: i32,

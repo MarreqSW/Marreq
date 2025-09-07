@@ -1,7 +1,6 @@
 use crate::models::*;
 use crate::repository::{
-    DieselRepo, DieselCachedRepo, LookupRepository, RequirementsRepository, TestsRepository,
-    UserRepository,
+    DieselCachedRepo, LookupRepository, RequirementsRepository, TestsRepository, UserRepository,
 };
 use diesel::prelude::*;
 use rocket::serde::json::{json, Json, Value};
@@ -39,7 +38,11 @@ pub async fn api_post_requirement(
         // Log the requirement creation via API
         if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_req) {
             let _ = crate::logger::Logger::log_create(
-                DieselRepo::new().get_conn().expect("Failed to get database connection").as_mut(),
+                DieselCachedRepo::read()
+                    .inner_repo()
+                    .get_conn()
+                    .expect("Failed to get database connection")
+                    .as_mut(),
                 0, // API user ID (system)
                 crate::models::EntityType::Requirement,
                 val,
@@ -61,7 +64,7 @@ pub async fn api_post_requirement(
 #[delete("/requirements/<ident>")]
 pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
     // Get the requirement details before deleting
-    let requirement = DieselRepo::new()
+    let requirement = DieselCachedRepo::read()
         .get_requirement_by_id(ident)
         .unwrap_or_else(|_| Requirement {
             req_id: ident,
@@ -97,7 +100,11 @@ pub async fn api_delete_requirement_by_id(ident: i32) -> rocket::http::Status {
         // Log the requirement deletion via API
         if let Ok(old_values) = crate::logger::Logger::to_json_string(&requirement) {
             let _ = crate::logger::Logger::log_delete(
-                DieselRepo::new().get_conn().expect("Failed to get database connection").as_mut(),
+                DieselCachedRepo::read()
+                    .inner_repo()
+                    .get_conn()
+                    .expect("Failed to get database connection")
+                    .as_mut(),
                 0, // API user ID (system)
                 crate::models::EntityType::Requirement,
                 ident,
@@ -130,7 +137,7 @@ pub fn api_get_requirement_by_id(
 /// Categories
 #[get("/categories")]
 pub fn api_get_categories() -> Result<Json<Vec<Category>>, rocket::http::Status> {
-    let ret_val = DieselRepo::new()
+    let ret_val = DieselCachedRepo::read()
         .get_categories_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
@@ -139,21 +146,17 @@ pub fn api_get_categories() -> Result<Json<Vec<Category>>, rocket::http::Status>
         })
         .map(Json);
 
-    if let Ok(val) = ret_val {
-        if val.is_empty() {
-            Err(rocket::http::Status::NotFound)
-        } else {
-            Ok(val)
-        }
-    } else {
-        Err(rocket::http::Status::InternalServerError)
+    match ret_val {
+        Ok(val) if val.is_empty() => Err(rocket::http::Status::NotFound),
+        Ok(val) => Ok(val),
+        Err(_) => Err(rocket::http::Status::InternalServerError),
     }
 }
 
 /// Status
 #[get("/status")]
 pub fn api_get_status() -> Result<Json<Vec<Status>>, rocket::http::Status> {
-    let ret_val = DieselRepo::new()
+    let ret_val = DieselCachedRepo::read()
         .get_status_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
@@ -161,37 +164,30 @@ pub fn api_get_status() -> Result<Json<Vec<Status>>, rocket::http::Status> {
             "Error querying page views from the database".into()
         })
         .map(Json);
-    if let Ok(val) = ret_val {
-        if val.is_empty() {
-            Err(rocket::http::Status::NotFound)
-        } else {
-            Ok(val)
-        }
-    } else {
-        Err(rocket::http::Status::InternalServerError)
+
+    match ret_val {
+        Ok(val) if val.is_empty() => Err(rocket::http::Status::NotFound),
+        Ok(val) => Ok(val),
+        Err(_) => Err(rocket::http::Status::InternalServerError),
     }
 }
 
 #[post("/status", data = "<new_status>")]
 pub async fn api_post_status(new_status: Json<NewStatus>) -> Value {
-    let new_id = match DieselRepo::new().create_status(&new_status) {
+    let new_id = match DieselCachedRepo::write().create_status(&new_status) {
         Ok(id) => id,
         Err(e) => {
             eprintln!("Error creating status via API: {:?}", e);
             return json!({ "status": "error", "message": "Failed to create status" });
         }
     };
-
-    // Invalidate relevant caches
-    crate::repository::cache::invalidate_status(new_id);
-
     json!({ "status": "ok", "id": new_id })
 }
 
 /// Tests
 #[get("/tests")]
 pub fn api_get_test() -> Result<Json<Vec<Test>>, rocket::http::Status> {
-    let ret_val = DieselRepo::new()
+    let ret_val = DieselCachedRepo::read()
         .get_tests_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
@@ -200,47 +196,25 @@ pub fn api_get_test() -> Result<Json<Vec<Test>>, rocket::http::Status> {
         })
         .map(Json);
 
-    if let Ok(val) = ret_val {
-        Ok(val)
-    } else {
-        Err(rocket::http::Status::InternalServerError)
-    }
+    ret_val.map_err(|_| rocket::http::Status::InternalServerError)
 }
 
 #[get("/tests/<ident>")]
 pub fn api_get_test_by_id(ident: i32) -> Result<Json<Vec<Test>>, rocket::http::Status> {
-    use crate::schema::tests::dsl::*;
-    let mut connection = DieselRepo::new()
-        .get_conn()
-        .expect("Failed to get database connection");
-
-    let ret_val = tests
-        .filter(test_id.eq(ident))
-        .load::<Test>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", _err);
-            "Error querying page views from the database".into()
-        })
-        .map(Json);
-
-    if let Ok(val) = ret_val {
-        if val.is_empty() {
-            Err(rocket::http::Status::NotFound)
-        } else {
-            Ok(val)
-        }
-    } else {
-        Err(rocket::http::Status::InternalServerError)
+    match DieselCachedRepo::read().get_test_by_id(ident) {
+        Ok(test) => Ok(Json(vec![test])),
+        Err(crate::repository::errors::RepoError::NotFound) => Err(rocket::http::Status::NotFound),
+        Err(_) => Err(rocket::http::Status::InternalServerError),
     }
 }
 
 #[post("/tests", data = "<new_test>")]
 pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::http::Status> {
-    let mut connection = DieselRepo::new()
+    let mut connection = DieselCachedRepo::read()
+        .inner_repo()
         .get_conn()
         .expect("Failed to get database connection");
-    let ret_value = DieselRepo::new().insert_test(&new_test);
+    let ret_value = DieselCachedRepo::write().insert_test(&new_test);
 
     if let Ok(val) = ret_value {
         // Log the test creation via API
@@ -256,11 +230,6 @@ pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::htt
                 None,
             );
         }
-
-        // Invalidate relevant caches
-        crate::repository::cache::invalidate_test(val);
-        crate::repository::cache::invalidate_project(new_test.project_id);
-
         Ok(json!({ "status": "ok", "id": val }))
     } else {
         Err(rocket::http::Status::BadRequest)
@@ -269,12 +238,13 @@ pub async fn api_post_test(new_test: Json<NewTest>) -> Result<Value, rocket::htt
 
 #[delete("/tests/<ident>")]
 pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
-    let mut connection = DieselRepo::new()
+    let mut connection = DieselCachedRepo::read()
+        .inner_repo()
         .get_conn()
         .expect("Failed to get database connection");
 
     // Get the test details before deleting
-    let test = DieselRepo::new()
+    let test = DieselCachedRepo::read()
         .get_test_by_id(ident)
         .unwrap_or_else(|_| Test {
             test_id: ident,
@@ -286,7 +256,7 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
             project_id: 1,
         });
 
-    let ret_value = match DieselRepo::new().delete_test(ident) {
+    let ret_value = match DieselCachedRepo::write().delete_test(ident) {
         Ok(success) => success,
         Err(e) => {
             eprintln!("Error deleting test via API: {:?}", e);
@@ -308,11 +278,6 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
                 None,
             );
         }
-
-        // Invalidate relevant caches
-        crate::repository::cache::invalidate_test(ident);
-        crate::repository::cache::invalidate_project(test.project_id);
-
         rocket::http::Status::NoContent
     } else {
         rocket::http::Status::Accepted
@@ -322,56 +287,33 @@ pub async fn api_delete_test_by_id(ident: i32) -> rocket::http::Status {
 /// Users
 #[get("/users")]
 pub fn api_get_users() -> Result<Json<Vec<User>>, rocket::http::Status> {
-    let ret_val = DieselRepo::new()
+    DieselCachedRepo::read()
         .get_users_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", _err);
             "Error querying page views from the database".into()
         })
-        .map(Json);
-
-    if let Ok(val) = ret_val {
-        Ok(val)
-    } else {
-        Err(rocket::http::Status::InternalServerError)
-    }
+        .map(Json)
+        .map_err(|_| rocket::http::Status::InternalServerError)
 }
 
 #[get("/users/<ident>")]
 pub fn api_get_users_by_id(ident: i32) -> Result<Json<Vec<User>>, rocket::http::Status> {
-    use crate::schema::users::dsl::*;
-    let mut connection = DieselRepo::new()
-        .get_conn()
-        .expect("Failed to get database connection");
-
-    let ret_val = users
-        .filter(user_id.eq(ident))
-        .load::<User>(connection.as_mut())
-        .map_err(|_err| -> String {
-            #[cfg(debug_assertions)]
-            println!("Error querying page views: {:?}", _err);
-            "Error querying page views from the database".into()
-        })
-        .map(Json);
-
-    if let Ok(val) = ret_val {
-        if val.is_empty() {
-            Err(rocket::http::Status::NotFound)
-        } else {
-            Ok(val)
-        }
-    } else {
-        Err(rocket::http::Status::InternalServerError)
+    match DieselCachedRepo::read().get_user_by_id(ident) {
+        Ok(user) => Ok(Json(vec![user])),
+        Err(crate::repository::errors::RepoError::NotFound) => Err(rocket::http::Status::NotFound),
+        Err(_) => Err(rocket::http::Status::InternalServerError),
     }
 }
 
 #[post("/users", data = "<new_user>")]
 pub async fn api_post_user(new_user: Json<NewUser>) -> Result<Value, rocket::http::Status> {
-    let mut connection = DieselRepo::new()
+    let mut connection = DieselCachedRepo::read()
+        .inner_repo()
         .get_conn()
         .expect("Failed to get database connection");
-    let ret_value = DieselRepo::new().insert_user(&new_user);
+    let ret_value = DieselCachedRepo::write().insert_user(&new_user);
 
     if let Ok(val) = ret_value {
         // Log the user creation via API
@@ -387,13 +329,6 @@ pub async fn api_post_user(new_user: Json<NewUser>) -> Result<Value, rocket::htt
                 None,
             );
         }
-
-        // Invalidate relevant caches
-        crate::repository::cache::invalidate_user(val);
-        if let Some(project_id) = new_user.project_id {
-            crate::repository::cache::invalidate_project(project_id);
-        }
-
         Ok(json!({ "status": "ok", "id": val }))
     } else {
         Err(rocket::http::Status::BadRequest)
@@ -402,19 +337,10 @@ pub async fn api_post_user(new_user: Json<NewUser>) -> Result<Value, rocket::htt
 
 #[delete("/users/<ident>")]
 pub async fn api_delete_user_by_id(ident: i32) -> rocket::http::Status {
-    let ret_value = DieselRepo::new().delete_user(ident);
-
-    if let Ok(val) = ret_value {
-        if val {
-            // Invalidate relevant caches
-            crate::repository::cache::invalidate_user(ident);
-            // Note: We can't invalidate project cache here since we don't have the project_id
-            rocket::http::Status::NoContent
-        } else {
-            rocket::http::Status::Accepted
-        }
-    } else {
-        rocket::http::Status::BadRequest
+    match DieselCachedRepo::write().delete_user(ident) {
+        Ok(true) => rocket::http::Status::NoContent,
+        Ok(false) => rocket::http::Status::Accepted,
+        Err(_) => rocket::http::Status::BadRequest,
     }
 }
 
@@ -423,7 +349,8 @@ pub async fn api_delete_user_by_id(ident: i32) -> rocket::http::Status {
 #[get("/matrix")]
 pub fn api_get_matrix() -> Result<Json<Vec<Matrix>>, rocket::http::Status> {
     use crate::schema::matrix::dsl::*;
-    let mut connection = DieselRepo::new()
+    let mut connection = DieselCachedRepo::read()
+        .inner_repo()
         .get_conn()
         .expect("Failed to get database connection");
 
@@ -436,14 +363,10 @@ pub fn api_get_matrix() -> Result<Json<Vec<Matrix>>, rocket::http::Status> {
         })
         .map(Json);
 
-    if let Ok(val) = ret_val {
-        if val.is_empty() {
-            Err(rocket::http::Status::NotFound)
-        } else {
-            Ok(val)
-        }
-    } else {
-        Err(rocket::http::Status::InternalServerError)
+    match ret_val {
+        Ok(val) if val.is_empty() => Err(rocket::http::Status::NotFound),
+        Ok(val) => Ok(val),
+        Err(_) => Err(rocket::http::Status::InternalServerError),
     }
 }
 
@@ -451,7 +374,7 @@ pub fn api_get_matrix() -> Result<Json<Vec<Matrix>>, rocket::http::Status> {
 
 #[get("/categories/<ident>")]
 pub fn api_get_category_by_id(ident: i32) -> Result<Json<Category>, rocket::http::Status> {
-    match DieselRepo::new().get_category_by_id(ident) {
+    match DieselCachedRepo::read().get_category_by_id(ident) {
         Ok(cat) => Ok(Json(cat)),
         Err(_) => Err(rocket::http::Status::NotFound),
     }
@@ -461,10 +384,13 @@ pub fn api_get_category_by_id(ident: i32) -> Result<Json<Category>, rocket::http
 pub async fn api_post_category(
     new_category: Json<NewCategory>,
 ) -> Result<Value, rocket::http::Status> {
-    let mut connection = DieselRepo::new()
+
+    let ret_value = DieselCachedRepo::write().insert_new_category(&new_category);
+
+    let mut connection = DieselCachedRepo::read()
+        .inner_repo()
         .get_conn()
         .expect("Failed to get database connection");
-    let ret_value = DieselRepo::new().insert_new_category(&new_category);
 
     if let Ok(val) = ret_value {
         // Log the category creation via API
@@ -483,11 +409,6 @@ pub async fn api_post_category(
                 None,
             );
         }
-
-        // Invalidate relevant caches
-        crate::repository::cache::invalidate_category(val);
-        crate::repository::cache::invalidate_project(new_category.project_id);
-
         Ok(json!({ "status": "ok", "id": val }))
     } else {
         Err(rocket::http::Status::BadRequest)
@@ -502,31 +423,20 @@ pub async fn api_put_category(
     let mut category_with_id = category.into_inner();
     category_with_id.cat_id = Some(ident);
 
-    let ret_value = DieselRepo::new().edit_category(&category_with_id);
+    let ret_value = DieselCachedRepo::write().edit_category(&category_with_id);
 
-    if let Ok(val) = ret_value {
-        if val {
-            // Invalidate relevant caches
-            crate::repository::cache::invalidate_category(ident);
-            crate::repository::cache::invalidate_project(category_with_id.project_id);
-
-            Ok(json!({ "status": "ok", "message": "Category updated successfully" }))
-        } else {
-            Err(rocket::http::Status::NotFound)
-        }
-    } else {
-        Err(rocket::http::Status::BadRequest)
+    match ret_value {
+        Ok(true) => Ok(json!({ "status": "ok", "message": "Category updated successfully" })),
+        Ok(false) => Err(rocket::http::Status::NotFound),
+        Err(_) => Err(rocket::http::Status::BadRequest),
     }
 }
 
 #[delete("/categories/<ident>")]
 pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
-    let mut connection = DieselRepo::new()
-        .get_conn()
-        .expect("Failed to get database connection");
 
     // Get the category details before deleting
-    let category = DieselRepo::new()
+    let category = DieselCachedRepo::read()
         .get_category_by_id(ident)
         .unwrap_or_else(|_| Category {
             cat_id: ident,
@@ -536,10 +446,15 @@ pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
             project_id: 1,
         });
 
-    let ret_value = DieselRepo::new().delete_category(ident);
+    let ret_value = DieselCachedRepo::write().delete_category(ident);
 
-    if let Ok(val) = ret_value {
-        if val {
+    let mut connection = DieselCachedRepo::read()
+        .inner_repo()
+        .get_conn()
+        .expect("Failed to get database connection");
+
+    match ret_value {
+        Ok(true) => {
             // Log the category deletion via API
             if let Ok(old_values) = crate::logger::Logger::to_json_string(&category) {
                 let _ = crate::logger::Logger::log_delete(
@@ -553,17 +468,10 @@ pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
                     None,
                 );
             }
-
-            // Invalidate relevant caches
-            crate::repository::cache::invalidate_category(ident);
-            crate::repository::cache::invalidate_project(category.project_id);
-
             rocket::http::Status::NoContent
-        } else {
-            rocket::http::Status::NotFound
         }
-    } else {
-        rocket::http::Status::BadRequest
+        Ok(false) => rocket::http::Status::NotFound,
+        Err(_) => rocket::http::Status::BadRequest,
     }
 }
 
@@ -571,7 +479,7 @@ pub async fn api_delete_category_by_id(ident: i32) -> rocket::http::Status {
 
 #[get("/applicability")]
 pub fn api_get_applicability() -> Result<Json<Vec<Applicability>>, rocket::http::Status> {
-    let ret_val = DieselRepo::new()
+    let ret_val = DieselCachedRepo::read()
         .get_applicability_all()
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
@@ -580,14 +488,10 @@ pub fn api_get_applicability() -> Result<Json<Vec<Applicability>>, rocket::http:
         })
         .map(Json);
 
-    if let Ok(val) = ret_val {
-        if val.is_empty() {
-            Err(rocket::http::Status::NotFound)
-        } else {
-            Ok(val)
-        }
-    } else {
-        Err(rocket::http::Status::InternalServerError)
+    match ret_val {
+        Ok(val) if val.is_empty() => Err(rocket::http::Status::NotFound),
+        Ok(val) => Ok(val),
+        Err(_) => Err(rocket::http::Status::InternalServerError),
     }
 }
 
@@ -595,7 +499,7 @@ pub fn api_get_applicability() -> Result<Json<Vec<Applicability>>, rocket::http:
 pub fn api_get_applicability_by_id(
     ident: i32,
 ) -> Result<Json<Applicability>, rocket::http::Status> {
-    match DieselRepo::new().get_applicability_by_id(ident) {
+    match DieselCachedRepo::read().get_applicability_by_id(ident) {
         Ok(app) => Ok(Json(app)),
         Err(_) => Err(rocket::http::Status::NotFound),
     }
@@ -605,36 +509,33 @@ pub fn api_get_applicability_by_id(
 pub async fn api_post_applicability(
     new_applicability: Json<NewApplicability>,
 ) -> Result<Value, rocket::http::Status> {
-    let mut connection = DieselRepo::new()
+    let mut connection = DieselCachedRepo::read()
+        .inner_repo()
         .get_conn()
         .expect("Failed to get database connection");
-    let ret_value = DieselRepo::new().insert_new_applicability(&new_applicability);
+    let ret_value = DieselCachedRepo::write().insert_new_applicability(&new_applicability);
 
-    if let Ok(val) = ret_value {
-        // Log the applicability creation via API
-        if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_applicability) {
-            let _ = crate::logger::Logger::log_create(
-                connection.as_mut(),
-                0, // API user ID (system)
-                crate::models::EntityType::Applicability,
-                val,
-                Some(new_applicability.project_id),
-                Some(new_values),
-                Some(format!(
-                    "Created applicability via API: {}",
-                    new_applicability.app_title
-                )),
-                None,
-            );
+    match ret_value {
+        Ok(val) => {
+            // Log the applicability creation via API
+            if let Ok(new_values) = crate::logger::Logger::to_json_string(&*new_applicability) {
+                let _ = crate::logger::Logger::log_create(
+                    connection.as_mut(),
+                    0, // API user ID (system)
+                    crate::models::EntityType::Applicability,
+                    val,
+                    Some(new_applicability.project_id),
+                    Some(new_values),
+                    Some(format!(
+                        "Created applicability via API: {}",
+                        new_applicability.app_title
+                    )),
+                    None,
+                );
+            }
+            Ok(json!({ "status": "ok", "id": val }))
         }
-
-        // Invalidate relevant caches
-        crate::repository::cache::invalidate_applicability(val);
-        crate::repository::cache::invalidate_project(new_applicability.project_id);
-
-        Ok(json!({ "status": "ok", "id": val }))
-    } else {
-        Err(rocket::http::Status::BadRequest)
+        Err(_) => Err(rocket::http::Status::BadRequest),
     }
 }
 
@@ -646,31 +547,24 @@ pub async fn api_put_applicability(
     let mut applicability_with_id = applicability.into_inner();
     applicability_with_id.app_id = Some(ident);
 
-    let ret_value = DieselRepo::new().edit_applicability(&applicability_with_id);
+    let ret_value = DieselCachedRepo::write().edit_applicability(&applicability_with_id);
 
-    if let Ok(val) = ret_value {
-        if val {
-            // Invalidate relevant caches
-            crate::repository::cache::invalidate_applicability(ident);
-            crate::repository::cache::invalidate_project(applicability_with_id.project_id);
-
-            Ok(json!({ "status": "ok", "message": "Applicability updated successfully" }))
-        } else {
-            Err(rocket::http::Status::NotFound)
-        }
-    } else {
-        Err(rocket::http::Status::BadRequest)
+    match ret_value {
+        Ok(true) => Ok(json!({ "status": "ok", "message": "Applicability updated successfully" })),
+        Ok(false) => Err(rocket::http::Status::NotFound),
+        Err(_) => Err(rocket::http::Status::BadRequest),
     }
 }
 
 #[delete("/applicability/<ident>")]
 pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status {
-    let mut connection = DieselRepo::new()
+    let mut connection = DieselCachedRepo::read()
+        .inner_repo()
         .get_conn()
         .expect("Failed to get database connection");
 
     // Get the applicability details before deleting
-    let applicability = DieselRepo::new()
+    let applicability = DieselCachedRepo::read()
         .get_applicability_by_id(ident)
         .unwrap_or_else(|_| Applicability {
             app_id: ident,
@@ -680,10 +574,10 @@ pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status 
             project_id: 1,
         });
 
-    let ret_value = DieselRepo::new().delete_applicability(ident);
+    let ret_value = DieselCachedRepo::write().delete_applicability(ident);
 
-    if let Ok(val) = ret_value {
-        if val {
+    match ret_value {
+        Ok(true) => {
             // Log the applicability deletion via API
             if let Ok(old_values) = crate::logger::Logger::to_json_string(&applicability) {
                 let _ = crate::logger::Logger::log_delete(
@@ -700,16 +594,10 @@ pub async fn api_delete_applicability_by_id(ident: i32) -> rocket::http::Status 
                     None,
                 );
             }
-
-            // Invalidate relevant caches
-            crate::repository::cache::invalidate_applicability(ident);
-            crate::repository::cache::invalidate_project(applicability.project_id);
-
             rocket::http::Status::NoContent
-        } else {
-            rocket::http::Status::NotFound
         }
-    } else {
-        rocket::http::Status::BadRequest
+        Ok(false) => rocket::http::Status::NotFound,
+        Err(_) => rocket::http::Status::BadRequest,
     }
+
 }

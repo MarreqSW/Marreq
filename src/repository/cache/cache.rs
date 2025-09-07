@@ -272,12 +272,10 @@ impl Cache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{atomic::Ordering, Mutex};
+    use super::super::keys;
+    use std::sync::Arc;
     use std::thread;
-    use std::time::Duration;
-    use std::time::Instant;
-
-    static CACHE_LOCK: Mutex<()> = Mutex::new(());
+    use std::time::{Duration, Instant};
 
     #[test]
     fn test_cache_basic_operations() {
@@ -352,193 +350,138 @@ mod tests {
         assert_eq!(cache.get("key999"), Some("value999".to_string()));
     }
 
-    #[test]
-    fn test_stats_performance_improvement() {
-        let cache = Arc::new(Cache::new(300));
-
-        // Pre-populate cache with many entries
-        for i in 0..10000 {
-            cache.set(&format!("key{}", i), format!("value{}", i));
-        }
-
-        // Test stats performance with large cache
-        let start = Instant::now();
-        let stats = cache.stats();
-        let duration = start.elapsed();
-
-        println!("Stats calculation with 10,000 entries took: {:?}", duration);
-        println!("Active entries: {}, Total entries: {}", stats.active_entries, stats.total_entries);
-
-        // Verify the performance improvement - should be very fast now
-        assert!(duration.as_micros() < 1000, "Stats should be calculated in under 1ms, took {:?}", duration);
-
-        // Verify counters are working correctly
-        assert_eq!(stats.total_entries, 10000);
-        assert_eq!(stats.active_entries, 10000);
-        assert_eq!(stats.expired_entries, 0);
-    }
+    // tests moved to stats.rs
 
     #[test]
-    fn test_counters_and_reset() {
+    fn test_invalidate_project_removes_related_keys() {
         let cache = Cache::new(300);
-
-        // Initial stats should be zeroed
-        assert_eq!(cache.stats().total_entries, 0);
-
-        // One hit and one miss
-        cache.set("a", "1".to_string());
-        assert_eq!(cache.get("a"), Some("1".to_string()));
-        assert_eq!(cache.get("missing"), None);
-
-        let stats = cache.stats();
-        assert_eq!(stats.hits, 1);
-        assert_eq!(stats.misses, 1);
-        assert_eq!(stats.active_entries, 1);
-
-        // Reset all counters
-        cache.reset_counters();
-        let stats = cache.stats();
-        assert_eq!(stats.hits, 0);
-        assert_eq!(stats.misses, 0);
-        assert_eq!(stats.active_entries, 0);
+        let pid = 1;
+        cache.set(&keys::Requirements::by_project(pid), "r".to_string());
+        cache.set(&keys::Tests::by_project(pid), "t".to_string());
+        cache.set(&keys::Matrix::by_project(pid), "m".to_string());
+        cache.set(&keys::Verification::by_project(pid), "v".to_string());
+        cache.set(&keys::Categories::by_project(pid), "c".to_string());
+        cache.set(&keys::Applicability::by_project(pid), "a".to_string());
+        cache.set(&keys::Projects::by_id(pid), "p".to_string());
+        cache.invalidate_project(pid);
+        assert!(cache.get(&keys::Requirements::by_project(pid)).is_none());
+        assert!(cache.get(&keys::Tests::by_project(pid)).is_none());
+        assert!(cache.get(&keys::Matrix::by_project(pid)).is_none());
+        assert!(cache.get(&keys::Verification::by_project(pid)).is_none());
+        assert!(cache.get(&keys::Categories::by_project(pid)).is_none());
+        assert!(cache.get(&keys::Applicability::by_project(pid)).is_none());
+        assert!(cache.get(&keys::Projects::by_id(pid)).is_none());
     }
 
     #[test]
-    fn test_sync_counters_updates_expired() {
+    fn test_invalidate_user_removes_related_keys() {
         let cache = Cache::new(300);
-
-        cache.set_with_ttl("active", "v".to_string(), Duration::from_secs(1));
-        cache.set_with_ttl("expired", "v".to_string(), Duration::from_millis(1));
-        thread::sleep(Duration::from_millis(10));
-
-        cache.sync_counters();
-        let stats = cache.stats();
-        assert_eq!(stats.active_entries, 1);
-        assert_eq!(stats.expired_entries, 1);
+        let uid = 7;
+        cache.set(&keys::Users::by_id(uid), "u".to_string());
+        cache.set(keys::USERS_ALL, "ua".to_string());
+        cache.invalidate_user(uid);
+        assert!(cache.get(&keys::Users::by_id(uid)).is_none());
+        assert!(cache.get(keys::USERS_ALL).is_none());
     }
 
     #[test]
-    fn test_global_cache_helpers() {
-        let _guard = CACHE_LOCK.lock().unwrap();
-        invalidate_all_cache();
-        let cache = get_cache();
-        cache.reset_counters();
+    fn test_invalidate_requirement_removes_related_keys() {
+        let cache = Cache::new(300);
+        let rid = 42;
+        cache.set(&keys::Requirements::by_id(rid), "r".to_string());
+        cache.set(&keys::LinkedTests::for_requirement(rid), "lt".to_string());
+        cache.set(&keys::RequirementTitle::by_id(rid), "rt".to_string());
+        cache.set(keys::REQUIREMENTS_ALL, "ra".to_string());
+        cache.invalidate_requirement(rid);
+        assert!(cache.get(&keys::Requirements::by_id(rid)).is_none());
+        assert!(cache.get(&keys::LinkedTests::for_requirement(rid)).is_none());
+        assert!(cache.get(&keys::RequirementTitle::by_id(rid)).is_none());
+        assert!(cache.get(keys::REQUIREMENTS_ALL).is_none());
+    }
 
-        cache.set("keep", "v".to_string());
-        cache.set_with_ttl("gone", "v".to_string(), Duration::from_millis(1));
-        thread::sleep(Duration::from_millis(10));
-        cache.sync_counters();
+    #[test]
+    fn test_invalidate_test_removes_related_keys() {
+        let cache = Cache::new(300);
+        let tid = 5;
+        cache.set(&keys::Tests::by_id(tid), "t".to_string());
+        cache.set(&keys::LinkedRequirements::for_test(tid), "lr".to_string());
+        cache.set(&keys::TestStatus::by_id(tid), "ts".to_string());
+        cache.set(keys::TESTS_ALL, "ta".to_string());
+        cache.invalidate_test(tid);
+        assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
+        assert!(cache.get(&keys::LinkedRequirements::for_test(tid)).is_none());
+        assert!(cache.get(&keys::TestStatus::by_id(tid)).is_none());
+        assert!(cache.get(keys::TESTS_ALL).is_none());
+    }
 
-        let stats = cache.get_stats();
-        assert_eq!(stats["total_entries"].as_u64(), Some(2));
-        assert_eq!(stats["active_entries"].as_u64(), Some(1));
-        assert_eq!(stats["expired_entries"].as_u64(), Some(1));
-        assert_eq!(stats["cleanup_available"].as_bool(), Some(true));
+    #[test]
+    fn test_invalidate_category_removes_related_keys() {
+        let cache = Cache::new(300);
+        let cid = 3;
+        cache.set(&keys::Categories::by_id(cid), "c".to_string());
+        cache.set(keys::CATEGORIES_ALL, "ca".to_string());
+        cache.invalidate_category(cid);
+        assert!(cache.get(&keys::Categories::by_id(cid)).is_none());
+        assert!(cache.get(keys::CATEGORIES_ALL).is_none());
+    }
 
-        cache.cleanup();
-        cache.sync_counters();
-        let stats = cache.get_stats();
-        assert_eq!(stats["total_entries"].as_u64(), Some(1));
-        assert_eq!(stats["active_entries"].as_u64(), Some(1));
-        assert_eq!(stats["expired_entries"].as_u64(), Some(0));
-        assert_eq!(cache.get_memory_usage(), 1);
+    #[test]
+    fn test_invalidate_status_removes_related_keys() {
+        let cache = Cache::new(300);
+        let sid = 9;
+        cache.set(&keys::Status::by_id(sid), "s".to_string());
+        cache.set(keys::STATUS_ALL, "sa".to_string());
+        cache.invalidate_status(sid);
+        assert!(cache.get(&keys::Status::by_id(sid)).is_none());
+        assert!(cache.get(keys::STATUS_ALL).is_none());
+    }
 
-        let health = cache.get_health();
-        assert_eq!(health["status"].as_str(), Some("healthy"));
-        assert_eq!(health["cleanup_needed"].as_bool(), Some(false));
+    #[test]
+    fn test_invalidate_verification_removes_related_keys() {
+        let cache = Cache::new(300);
+        let vid = 4;
+        cache.set(&keys::Verification::by_id(vid), "v".to_string());
+        cache.set(keys::VERIFICATION_ALL, "va".to_string());
+        cache.invalidate_verification(vid);
+        assert!(cache.get(&keys::Verification::by_id(vid)).is_none());
+        assert!(cache.get(keys::VERIFICATION_ALL).is_none());
+    }
 
-        // Trigger performance recommendations
-        invalidate_all_cache();
-        cache.reset_counters();
-        for i in 0..5 {
-            let _ = cache.get(&format!("missing{}", i));
-        }
-        for i in 0..1001 {
+    #[test]
+    fn test_invalidate_applicability_removes_related_keys() {
+        let cache = Cache::new(300);
+        let aid = 6;
+        cache.set(&keys::Applicability::by_id(aid), "a".to_string());
+        cache.set(keys::APPLICABILITY_ALL, "aa".to_string());
+        cache.invalidate_applicability(aid);
+        assert!(cache.get(&keys::Applicability::by_id(aid)).is_none());
+        assert!(cache.get(keys::APPLICABILITY_ALL).is_none());
+    }
+
+
+    #[test]
+    fn test_start_cache_maintenance_cleans_expired_entries() {
+        let cache = Arc::new(Cache::new(60));
+
+        // Insert enough active entries so warm_cache is not triggered
+        for i in 0..10 {
             cache.set(&format!("key{}", i), "v".to_string());
         }
 
-        let perf = cache.get_performance();
-        assert_eq!(perf["total_requests"].as_u64(), Some(5));
+        // Insert an entry that will expire quickly
+        cache.set_with_ttl("expired", "x".to_string(), Duration::from_millis(1));
+        thread::sleep(Duration::from_millis(10));
 
-        let recs = cache.get_recommendations();
-        let arr = recs["recommendations"].as_array().unwrap();
-        assert!(arr.iter().any(|r| r.as_str().unwrap().contains("hit rate")));
-    }
+        // Ensure the expired entry is still present before maintenance starts
+        assert!(cache.data.read().unwrap().contains_key("expired"));
 
-    #[test]
-    fn test_cache_stats_branches() {
-        let _guard = CACHE_LOCK.lock().unwrap();
-        invalidate_all_cache();
-        let cache = get_cache();
-        cache.reset_counters();
+        cache.start_cache_maintenance();
 
-        // Empty cache stats and performance
-        let stats_empty = cache.stats();
-        assert_eq!(stats_empty.total_entries, 0);
-        assert_eq!(stats_empty.cache_size_bytes, 0);
-        let perf_empty = cache.get_performance();
-        assert_eq!(perf_empty["total_requests"].as_u64(), Some(0));
-        assert_eq!(perf_empty["cache_efficiency"].as_f64(), Some(0.0));
-        assert_eq!(perf_empty["expired_entries_percentage"].as_f64(), Some(0.0));
-        invalidate_all_cache();
+        // Give maintenance thread time to run cleanup once
+        thread::sleep(Duration::from_millis(50));
 
-        // Configure counters to trigger all recommendation branches
-        let big_value = String::from_utf8(vec![b'x'; 105 * 1024 * 1024]).unwrap();
-        cache.set("huge", big_value);
-        cache.hits.store(1, Ordering::Relaxed);
-        cache.misses.store(2, Ordering::Relaxed);
-        cache.total_access_time.store(6_000_000, Ordering::Relaxed);
-        cache.active_entries.store(10, Ordering::Relaxed);
-        cache.expired_entries.store(11, Ordering::Relaxed);
-
-        let health_degraded = cache.get_health();
-        assert_eq!(health_degraded["status"].as_str(), Some("degraded"));
-        assert!(health_degraded["cleanup_needed"].as_bool().unwrap());
-
-        cache.expired_entries.store(25, Ordering::Relaxed);
-        let health_warning = cache.get_health();
-        assert_eq!(health_warning["status"].as_str(), Some("warning"));
-
-        let recs_bad = cache.get_recommendations();
-        let recs_bad_arr = recs_bad["recommendations"].as_array().unwrap();
-        assert!(recs_bad_arr
-            .iter()
-            .any(|r| r.as_str().unwrap().contains("increasing cache TTL")));
-        assert!(recs_bad_arr
-            .iter()
-            .any(|r| r.as_str().unwrap().contains("hit rate is low")));
-        assert!(recs_bad_arr
-            .iter()
-            .any(|r| r.as_str().unwrap().contains("expired entries")));
-        assert!(recs_bad_arr
-            .iter()
-            .any(|r| r.as_str().unwrap().contains("memory usage is high")));
-        assert!(recs_bad_arr
-            .iter()
-            .any(|r| r.as_str().unwrap().contains("access time is slow")));
-        assert_eq!(recs_bad["priority"].as_str(), Some("high"));
-
-        // Reset to good state to trigger positive recommendation
-        invalidate_all_cache();
-        cache.reset_counters();
-        cache.hits.store(10, Ordering::Relaxed);
-        cache.total_access_time.store(10, Ordering::Relaxed);
-        cache.active_entries.store(1, Ordering::Relaxed);
-        cache.expired_entries.store(0, Ordering::Relaxed);
-
-        let recs_good = cache.get_recommendations();
-        let recs_good_arr = recs_good["recommendations"].as_array().unwrap();
-        assert_eq!(recs_good_arr.len(), 1);
-        assert!(recs_good_arr[0]
-            .as_str()
-            .unwrap()
-            .contains("performing well"));
-        assert_eq!(recs_good["priority"].as_str(), Some("low"));
-
-        let health_healthy = cache.get_health();
-        assert_eq!(health_healthy["status"].as_str(), Some("healthy"));
-
-        invalidate_all_cache();
-        cache.reset_counters();
+        let data = cache.data.read().unwrap();
+        assert!(!data.contains_key("expired"));
+        assert_eq!(data.len(), 10);
     }
 }

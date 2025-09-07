@@ -1,9 +1,9 @@
-use rocket::http::{Cookie, CookieJar};
 use super::errors::AuthError;
+use crate::logger::Logger;
 use crate::models::*;
 use crate::repository::DieselRepo;
-use crate::logger::Logger;
 use crate::repository::Repository;
+use rocket::http::{Cookie, CookieJar};
 
 // --------------------------------
 // API
@@ -24,7 +24,7 @@ pub fn login_user<R: Repository>(
     cookies.add_private(Cookie::new("username", user.user_username.clone()));
     cookies.add_private(Cookie::new("user_name", user.user_name.clone()));
 
-    let mut conn = DieselRepo::new()
+    let mut conn = DieselRepo::shared()
         .get_conn()
         .map_err(|e| AuthError::Db(e.to_string()))?;
     Logger::log_login(&mut conn, user.user_id, None).map_err(|e| AuthError::Audit(e.to_string()))?;
@@ -32,11 +32,8 @@ pub fn login_user<R: Repository>(
     Ok(())
 }
 
-pub fn is_authenticated<R: Repository>(
-    repo: &R,
-    cookies: &CookieJar<'_>,
-) -> Option<User> {
-    let uid_cookie   = cookies.get_private("user_id");
+pub fn is_authenticated<R: Repository>(repo: &R, cookies: &CookieJar<'_>) -> Option<User> {
+    let uid_cookie = cookies.get_private("user_id");
     let uname_cookie = cookies.get_private("username");
 
     is_authenticated_impl(
@@ -45,7 +42,6 @@ pub fn is_authenticated<R: Repository>(
         uname_cookie.as_ref().map(|c| c.value()),
     )
 }
-
 
 // --------------------------------
 // Implementation
@@ -79,7 +75,7 @@ fn authenticate_user<R: Repository>(
     match super::verify_password(password, &user.user_password) {
         Ok(true)  => Ok(user),
         Ok(false) => Err(AuthError::InvalidCredentials),
-        Err(e)    => Err(AuthError::Verify(e.to_string())),
+        Err(e) => Err(AuthError::Verify(e.to_string())),
     }
 }
 
@@ -87,9 +83,9 @@ fn authenticate_user<R: Repository>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::hash_password;
     use crate::repository::fake_repo::FakeRepo;
     use std::collections::HashMap;
-    use crate::auth::hash_password;
 
     // ---------- is_authenticated_impl tests ----------
 

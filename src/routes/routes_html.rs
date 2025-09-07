@@ -11,17 +11,17 @@ use rocket::serde::json::json;
 
 use rocket_dyn_templates::Template;
 
-use std::path;
 use chrono::Utc;
+use std::path;
 
-use crate::repository::cache;
 use crate::auth::*;
-use crate::repository::PooledConnectionWrapper;
 use crate::generators::*;
 use crate::helper_functions::*;
 use crate::html::*;
 use crate::logger::Logger;
 use crate::models::*;
+use crate::repository::cache;
+use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
     DieselRepo, LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
     TestsRepository, UserRepository,
@@ -736,44 +736,39 @@ pub fn delete_requirement_route(
         return Err(rocket::http::Status::Forbidden);
     }
 
-    let result = DieselRepo::new().delete_requirement(req_id);
-    match result {
-        Ok(success) => {
-            if success {
-                // Log the requirement deletion
-                if let Ok(old_values) = Logger::to_json_string(&requirement) {
-                    let _ = Logger::log_delete(
-                        connection.as_mut(),
-                        user.user_id,
-                        EntityType::Requirement,
-                        req_id,
-                        Some(requirement.project_id),
-                        Some(old_values),
-                        Some(format!("Deleted requirement: {}", requirement.req_title)),
-                        None,
-                    );
-                }
-
-                // Invalidate related caches - including project-level caches
-                cache::cache_adapter::invalidate_requirement_cache_complete(req_id);
-
-                // Also invalidate project-specific caches for the requirement's project
-                cache::cache_adapter::invalidate_project_cache_complete(requirement.project_id);
-
-                // Invalidate the requirements list cache
-                cache::get_cache().remove(crate::repository::cache::keys::REQUIREMENTS_ALL);
-
-                // Redirect to requirements list page
-                Ok(Redirect::to(uri!(show_requirements(
-                    None::<i32>,
-                    None::<i32>,
-                    None::<i32>
-                ))))
-            } else {
-                // Requirement was not found or not deleted
-                Err(rocket::http::Status::NotFound)
+    match DieselRepo::new().delete_requirement(req_id) {
+        Ok(_deleted) => {
+            // Log the requirement deletion
+            if let Ok(old_values) = Logger::to_json_string(&requirement) {
+                let _ = Logger::log_delete(
+                    connection.as_mut(),
+                    user.user_id,
+                    EntityType::Requirement,
+                    req_id,
+                    Some(requirement.project_id),
+                    Some(old_values),
+                    Some(format!("Deleted requirement: {}", requirement.req_title)),
+                    None,
+                );
             }
+
+            // Invalidate related caches - including project-level caches
+            cache::cache_adapter::invalidate_requirement_cache_complete(req_id);
+
+            // Also invalidate project-specific caches for the requirement's project
+            cache::cache_adapter::invalidate_project_cache_complete(requirement.project_id);
+
+            // Invalidate the requirements list cache
+            cache::get_cache().remove(crate::repository::cache::keys::REQUIREMENTS_ALL);
+
+            // Redirect to requirements list page
+            Ok(Redirect::to(uri!(show_requirements(
+                None::<i32>,
+                None::<i32>,
+                None::<i32>
+            ))))
         }
+        Err(crate::repository::errors::RepoError::NotFound) => Err(rocket::http::Status::NotFound),
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error deleting requirement: {:?}", _e);
@@ -808,44 +803,39 @@ pub fn delete_test_route(
         return Err(rocket::http::Status::Forbidden);
     }
 
-    let result = DieselRepo::new().delete_test(test_id);
-    match result {
-        Ok(success) => {
-            if success {
-                // Log the test deletion
-                if let Ok(old_values) = Logger::to_json_string(&test) {
-                    let _ = Logger::log_delete(
-                        connection,
-                        user.user_id,
-                        EntityType::Test,
-                        test_id,
-                        Some(test.project_id),
-                        Some(old_values),
-                        Some(format!("Deleted test: {}", test.test_name)),
-                        None,
-                    );
-                }
-
-                // Invalidate related caches - including project-level caches
-                cache::cache_adapter::invalidate_test_cache_complete(test_id);
-
-                // Also invalidate project-specific caches for the test's project
-                cache::cache_adapter::invalidate_project_cache_complete(test.project_id);
-
-                // Invalidate the tests list cache
-                cache::get_cache().remove(crate::repository::cache::keys::TESTS_ALL);
-
-                // Redirect to tests list page
-                Ok(Redirect::to(uri!(show_tests(
-                    None::<i32>,
-                    None::<i32>,
-                    None::<i32>
-                ))))
-            } else {
-                // Test was not found or not deleted
-                Err(rocket::http::Status::NotFound)
+    match DieselRepo::new().delete_test(test_id) {
+        Ok(_deleted) => {
+            // Log the test deletion
+            if let Ok(old_values) = Logger::to_json_string(&test) {
+                let _ = Logger::log_delete(
+                    connection,
+                    user.user_id,
+                    EntityType::Test,
+                    test_id,
+                    Some(test.project_id),
+                    Some(old_values),
+                    Some(format!("Deleted test: {}", test.test_name)),
+                    None,
+                );
             }
+
+            // Invalidate related caches - including project-level caches
+            cache::cache_adapter::invalidate_test_cache_complete(test_id);
+
+            // Also invalidate project-specific caches for the test's project
+            cache::cache_adapter::invalidate_project_cache_complete(test.project_id);
+
+            // Invalidate the tests list cache
+            cache::get_cache().remove(crate::repository::cache::keys::TESTS_ALL);
+
+            // Redirect to tests list page
+            Ok(Redirect::to(uri!(show_tests(
+                None::<i32>,
+                None::<i32>,
+                None::<i32>
+            ))))
         }
+        Err(crate::repository::errors::RepoError::NotFound) => Err(rocket::http::Status::NotFound),
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error deleting test: {:?}", _e);

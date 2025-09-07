@@ -20,7 +20,7 @@ pub trait UserRepository {
     fn update_user_password(&mut self, id: i32, new_hash: &str) -> Result<(), RepoError>;
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError>;
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError>;
-    fn delete_user(&mut self, id: i32) -> Result<bool, RepoError>;
+    fn delete_user(&mut self, id: i32) -> Result<User, RepoError>;
 }
 
 pub trait RequirementsRepository {
@@ -30,7 +30,7 @@ pub trait RequirementsRepository {
 
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError>;
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError>;
-    fn delete_requirement(&mut self, id: i32) -> Result<bool, RepoError>;
+    fn delete_requirement(&mut self, id: i32) -> Result<Requirement, RepoError>;
     fn update_requirement(&mut self, req: i32) -> Result<(), RepoError>;
 }
 
@@ -43,7 +43,7 @@ pub trait TestsRepository {
 
     fn insert_test(&mut self, new: &NewTest) -> Result<i32, RepoError>;
     fn edit_test(&mut self, new: &NewTest) -> Result<bool, RepoError>;
-    fn delete_test(&mut self, id: i32) -> Result<bool, RepoError>;
+    fn delete_test(&mut self, id: i32) -> Result<Test, RepoError>;
     fn update_test_requirement_links(
         &mut self,
         test_id: i32,
@@ -74,11 +74,11 @@ pub trait LookupRepository {
 
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError>;
     fn edit_category(&mut self, new: &NewCategory) -> Result<bool, RepoError>;
-    fn delete_category(&mut self, id: i32) -> Result<bool, RepoError>;
+    fn delete_category(&mut self, id: i32) -> Result<Category, RepoError>;
 
     fn insert_new_applicability(&mut self, new: &NewApplicability) -> Result<i32, RepoError>;
     fn edit_applicability(&mut self, new: &NewApplicability) -> Result<bool, RepoError>;
-    fn delete_applicability(&mut self, id: i32) -> Result<bool, RepoError>;
+    fn delete_applicability(&mut self, id: i32) -> Result<Applicability, RepoError>;
 }
 
 pub trait ProjectsRepository {
@@ -87,7 +87,7 @@ pub trait ProjectsRepository {
 
     fn insert_new_project(&mut self, new: &NewProject) -> Result<i32, RepoError>;
     fn edit_project(&mut self, project_id: i32, update: &UpdateProject) -> Result<bool, RepoError>;
-    fn delete_project(&mut self, project_id: i32) -> Result<bool, RepoError>;
+    fn delete_project(&mut self, project_id: i32) -> Result<Project, RepoError>;
 }
 
 pub trait MatrixRepository {

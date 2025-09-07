@@ -118,8 +118,8 @@ impl UserRepository for FakeRepo {
         Ok(true)
     }
 
-    fn delete_user(&mut self, _id: i32) -> Result<bool, RepoError> {
-        Ok(true)
+    fn delete_user(&mut self, id: i32) -> Result<User, RepoError> {
+        self.users.remove(&id).ok_or(RepoError::NotFound)
     }
 }
 
@@ -198,8 +198,8 @@ impl LookupRepository for FakeRepo {
     fn edit_category(&mut self, _new: &NewCategory) -> Result<bool, RepoError> {
         Ok(false)
     }
-    fn delete_category(&mut self, _id: i32) -> Result<bool, RepoError> {
-        Ok(false)
+    fn delete_category(&mut self, id: i32) -> Result<Category, RepoError> {
+        self.categories.remove(&id).ok_or(RepoError::NotFound)
     }
     fn insert_new_applicability(&mut self, _new: &NewApplicability) -> Result<i32, RepoError> {
         Ok(0)
@@ -207,8 +207,8 @@ impl LookupRepository for FakeRepo {
     fn edit_applicability(&mut self, _new: &NewApplicability) -> Result<bool, RepoError> {
         Ok(false)
     }
-    fn delete_applicability(&mut self, _id: i32) -> Result<bool, RepoError> {
-        Ok(false)
+    fn delete_applicability(&mut self, id: i32) -> Result<Applicability, RepoError> {
+        self.applicability.remove(&id).ok_or(RepoError::NotFound)
     }
     fn create_status(&mut self, _new: &NewStatus) -> Result<i32, RepoError> {
         Ok(0)
@@ -244,8 +244,8 @@ impl RequirementsRepository for FakeRepo {
         Ok(false)
     }
 
-    fn delete_requirement(&mut self, _id: i32) -> Result<bool, RepoError> {
-        Ok(false)
+    fn delete_requirement(&mut self, id: i32) -> Result<Requirement, RepoError> {
+        self.requirements.remove(&id).ok_or(RepoError::NotFound)
     }
 
     fn update_requirement(&mut self, _req: i32) -> Result<(), RepoError> {
@@ -305,8 +305,8 @@ impl TestsRepository for FakeRepo {
         Ok(false)
     }
 
-    fn delete_test(&mut self, _id: i32) -> Result<bool, RepoError> {
-        Ok(false)
+    fn delete_test(&mut self, id: i32) -> Result<Test, RepoError> {
+        self.tests.remove(&id).ok_or(RepoError::NotFound)
     }
 
     fn update_test_requirement_links(
@@ -339,8 +339,9 @@ impl ProjectsRepository for FakeRepo {
         Ok(false)
     }
 
-    fn delete_project(&mut self, _project_id: i32) -> Result<bool, RepoError> {
-        Ok(false)
+    fn delete_project(&mut self, _project_id: i32) -> Result<Project, RepoError> {
+        // FakeRepo currently does not store projects; return NotFound
+        Err(RepoError::NotFound)
     }
 }
 

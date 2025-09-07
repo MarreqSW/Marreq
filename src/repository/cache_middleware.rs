@@ -7,8 +7,8 @@ use crate::repository::{
     TestsRepository, UserRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
-use std::time::Duration;
 use std::sync::Arc;
+use std::time::Duration;
 
 /// Repository wrapper that checks the cache before hitting the database
 pub struct CacheRepository<R> {
@@ -19,10 +19,15 @@ pub struct CacheRepository<R> {
 impl<R> CacheRepository<R> {
     /// Create a new repository wrapper with the provided cache instance
     pub fn new(inner: R, ttl_seconds: u64) -> Self {
-        Self { inner, cache: Cache::new(ttl_seconds).into() }
+        Self {
+            inner,
+            cache: Cache::new(ttl_seconds).into(),
+        }
     }
 
-    pub fn inner_repo(&self) -> &R { &self.inner }
+    pub fn inner_repo(&self) -> &R {
+        &self.inner
+    }
 
     /// Get a reference to the underlying cache
     pub fn cache(&self) -> Arc<Cache> {
@@ -85,10 +90,11 @@ impl<R: RequirementsRepository> RequirementsRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_requirement(&mut self, id: i32) -> Result<bool, RepoError> {
-        let res = self.inner.delete_requirement(id)?;
+    fn delete_requirement(&mut self, id: i32) -> Result<Requirement, RepoError> {
+        let req = self.inner.delete_requirement(id)?;
         self.cache.invalidate_requirement(id);
-        Ok(res)
+        self.cache.invalidate_project(req.project_id);
+        Ok(req)
     }
 
     fn update_requirement(&mut self, req: i32) -> Result<(), RepoError> {
@@ -150,10 +156,13 @@ impl<R: UserRepository> UserRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_user(&mut self, id: i32) -> Result<bool, RepoError> {
-        let res = self.inner.delete_user(id)?;
+    fn delete_user(&mut self, id: i32) -> Result<User, RepoError> {
+        let user = self.inner.delete_user(id)?;
         self.cache.invalidate_user(id);
-        Ok(res)
+        if let Some(pid) = user.project_id {
+            self.cache.invalidate_project(pid);
+        }
+        Ok(user)
     }
 }
 
@@ -208,14 +217,11 @@ impl<R: TestsRepository> TestsRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_test(&mut self, id: i32) -> Result<bool, RepoError> {
-        let test = self.get_test_by_id(id)?; // early return on Err
-
-        let res = self.inner.delete_test(id)?;
+    fn delete_test(&mut self, id: i32) -> Result<Test, RepoError> {
+        let test = self.inner.delete_test(id)?;
         self.cache.invalidate_test(id);
         self.cache.invalidate_project(test.project_id);
-
-        Ok(res)
+        Ok(test)
     }
 
     fn update_test_requirement_links(
@@ -332,12 +338,11 @@ impl<R: LookupRepository> LookupRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_category(&mut self, id: i32) -> Result<bool, RepoError> {
-        let cat = self.get_category_by_id(id)?; // early return on Err
-        let res = self.inner.delete_category(id)?;
+    fn delete_category(&mut self, id: i32) -> Result<Category, RepoError> {
+        let cat = self.inner.delete_category(id)?;
         self.cache.invalidate_category(id);
         self.cache.invalidate_project(cat.project_id);
-        Ok(res)
+        Ok(cat)
     }
 
     fn insert_new_applicability(&mut self, new: &NewApplicability) -> Result<i32, RepoError> {
@@ -356,12 +361,11 @@ impl<R: LookupRepository> LookupRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_applicability(&mut self, id: i32) -> Result<bool, RepoError> {
-        let app = self.get_applicability_by_id(id)?;
-        let res = self.inner.delete_applicability(id)?;
+    fn delete_applicability(&mut self, id: i32) -> Result<Applicability, RepoError> {
+        let app = self.inner.delete_applicability(id)?;
         self.cache.invalidate_applicability(id);
         self.cache.invalidate_project(app.project_id);
-        Ok(res)
+        Ok(app)
     }
 }
 
@@ -391,10 +395,10 @@ impl<R: ProjectsRepository> ProjectsRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_project(&mut self, project_id: i32) -> Result<bool, RepoError> {
-        let res = self.inner.delete_project(project_id)?;
+    fn delete_project(&mut self, project_id: i32) -> Result<Project, RepoError> {
+        let proj = self.inner.delete_project(project_id)?;
         self.cache.invalidate_project(project_id);
-        Ok(res)
+        Ok(proj)
     }
 }
 

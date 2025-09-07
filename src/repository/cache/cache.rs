@@ -272,10 +272,6 @@ impl Cache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::repository::cache::{
-        get_cache_health, get_cache_performance, get_cache_recommendations,
-        get_memory_usage,
-    };
     use std::sync::{atomic::Ordering, Mutex};
     use std::thread;
     use std::time::Duration;
@@ -445,9 +441,9 @@ mod tests {
         assert_eq!(stats["total_entries"].as_u64(), Some(1));
         assert_eq!(stats["active_entries"].as_u64(), Some(1));
         assert_eq!(stats["expired_entries"].as_u64(), Some(0));
-        assert_eq!(get_memory_usage(), 1);
+        assert_eq!(cache.get_memory_usage(), 1);
 
-        let health = get_cache_health();
+        let health = cache.get_health();
         assert_eq!(health["status"].as_str(), Some("healthy"));
         assert_eq!(health["cleanup_needed"].as_bool(), Some(false));
 
@@ -461,10 +457,10 @@ mod tests {
             cache.set(&format!("key{}", i), "v".to_string());
         }
 
-        let perf = get_cache_performance();
+        let perf = cache.get_performance();
         assert_eq!(perf["total_requests"].as_u64(), Some(5));
 
-        let recs = get_cache_recommendations();
+        let recs = cache.get_recommendations();
         let arr = recs["recommendations"].as_array().unwrap();
         assert!(arr.iter().any(|r| r.as_str().unwrap().contains("hit rate")));
     }
@@ -480,7 +476,7 @@ mod tests {
         let stats_empty = cache.stats();
         assert_eq!(stats_empty.total_entries, 0);
         assert_eq!(stats_empty.cache_size_bytes, 0);
-        let perf_empty = get_cache_performance();
+        let perf_empty = cache.get_performance();
         assert_eq!(perf_empty["total_requests"].as_u64(), Some(0));
         assert_eq!(perf_empty["cache_efficiency"].as_f64(), Some(0.0));
         assert_eq!(perf_empty["expired_entries_percentage"].as_f64(), Some(0.0));
@@ -495,15 +491,15 @@ mod tests {
         cache.active_entries.store(10, Ordering::Relaxed);
         cache.expired_entries.store(11, Ordering::Relaxed);
 
-        let health_degraded = get_cache_health();
+        let health_degraded = cache.get_health();
         assert_eq!(health_degraded["status"].as_str(), Some("degraded"));
         assert!(health_degraded["cleanup_needed"].as_bool().unwrap());
 
         cache.expired_entries.store(25, Ordering::Relaxed);
-        let health_warning = get_cache_health();
+        let health_warning = cache.get_health();
         assert_eq!(health_warning["status"].as_str(), Some("warning"));
 
-        let recs_bad = get_cache_recommendations();
+        let recs_bad = cache.get_recommendations();
         let recs_bad_arr = recs_bad["recommendations"].as_array().unwrap();
         assert!(recs_bad_arr
             .iter()
@@ -530,7 +526,7 @@ mod tests {
         cache.active_entries.store(1, Ordering::Relaxed);
         cache.expired_entries.store(0, Ordering::Relaxed);
 
-        let recs_good = get_cache_recommendations();
+        let recs_good = cache.get_recommendations();
         let recs_good_arr = recs_good["recommendations"].as_array().unwrap();
         assert_eq!(recs_good_arr.len(), 1);
         assert!(recs_good_arr[0]
@@ -539,7 +535,7 @@ mod tests {
             .contains("performing well"));
         assert_eq!(recs_good["priority"].as_str(), Some("low"));
 
-        let health_healthy = get_cache_health();
+        let health_healthy = cache.get_health();
         assert_eq!(health_healthy["status"].as_str(), Some("healthy"));
 
         invalidate_all_cache();

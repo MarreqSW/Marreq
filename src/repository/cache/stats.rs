@@ -1,5 +1,4 @@
 use super::cache::Cache;
-use super::cache_adapter::get_cache;
 use super::keys;
 use chrono;
 use serde::{Deserialize, Serialize};
@@ -87,123 +86,117 @@ impl Cache {
             "total_entries": stats.total_entries,
             "active_entries": stats.active_entries,
             "expired_entries": stats.expired_entries,
-            "memory_usage": get_memory_usage(),
+            "memory_usage": self.get_memory_usage(),
             "cleanup_available": stats.expired_entries > 0
         })
     }
-}
 
+    /// Get cache memory usage
+    pub fn get_memory_usage(&self) -> usize {
+        let stats = self.stats();
+        stats.total_entries
+    }
 
+    /// Get cache health status
+    pub fn get_health(&self) -> serde_json::Value {
+        let stats = self.stats();
+        let memory_usage = self.get_memory_usage();
 
-/// Get cache memory usage
-pub fn get_memory_usage() -> usize {
-    let cache = get_cache();
-    let stats = cache.stats();
-    stats.total_entries
-}
-
-/// Get cache health status
-pub fn get_cache_health() -> serde_json::Value {
-    let cache = get_cache();
-    let stats = cache.stats();
-    let memory_usage = get_memory_usage();
-
-    let health_status = if stats.expired_entries > stats.active_entries * 2 {
-        "warning"
-    } else if stats.expired_entries > stats.active_entries {
-        "degraded"
-    } else {
-        "healthy"
-    };
-
-    json!({
-        "status": health_status,
-        "total_entries": stats.total_entries,
-        "active_entries": stats.active_entries,
-        "expired_entries": stats.expired_entries,
-        "memory_usage": memory_usage,
-        "cleanup_needed": stats.expired_entries > 0,
-        "last_cleanup": chrono::Utc::now().to_rfc3339()
-    })
-}
-
-/// Get detailed cache performance metrics
-pub fn get_cache_performance() -> serde_json::Value {
-    let cache = get_cache();
-    let stats = cache.stats();
-
-    let performance_metrics = json!({
-        "hit_rate_percentage": (stats.hit_rate * 100.0).round() / 100.0,
-        "miss_rate_percentage": (stats.miss_rate * 100.0).round() / 100.0,
-        "total_requests": stats.total_requests,
-        "hits": stats.hits,
-        "misses": stats.misses,
-        "average_access_time_ms": (stats.average_access_time_ns as f64 / 1_000_000.0).round() / 1000.0,
-        "total_access_time_ms": (stats.total_access_time_ns as f64 / 1_000_000.0).round() / 1000.0,
-        "cache_efficiency": if stats.total_entries > 0 {
-            (stats.active_entries as f64 / stats.total_entries as f64 * 100.0).round() / 100.0
+        let health_status = if stats.expired_entries > stats.active_entries * 2 {
+            "warning"
+        } else if stats.expired_entries > stats.active_entries {
+            "degraded"
         } else {
-            0.0
-        },
-        "memory_usage_mb": (stats.cache_size_bytes as f64 / 1_048_576.0).round() / 1000.0,
-        "last_cleanup": stats.last_cleanup.to_rfc3339(),
-        "cleanup_needed": stats.expired_entries > 0,
-        "expired_entries_percentage": if stats.total_entries > 0 {
-            (stats.expired_entries as f64 / stats.total_entries as f64 * 100.0).round() / 100.0
-        } else {
-            0.0
+            "healthy"
+        };
+
+        json!({
+            "status": health_status,
+            "total_entries": stats.total_entries,
+            "active_entries": stats.active_entries,
+            "expired_entries": stats.expired_entries,
+            "memory_usage": memory_usage,
+            "cleanup_needed": stats.expired_entries > 0,
+            "last_cleanup": chrono::Utc::now().to_rfc3339()
+        })
+    }
+
+    /// Get detailed cache performance metrics
+    pub fn get_performance(&self) -> serde_json::Value {
+        let stats = self.stats();
+
+        let performance_metrics = json!({
+            "hit_rate_percentage": (stats.hit_rate * 100.0).round() / 100.0,
+            "miss_rate_percentage": (stats.miss_rate * 100.0).round() / 100.0,
+            "total_requests": stats.total_requests,
+            "hits": stats.hits,
+            "misses": stats.misses,
+            "average_access_time_ms": (stats.average_access_time_ns as f64 / 1_000_000.0).round() / 1000.0,
+            "total_access_time_ms": (stats.total_access_time_ns as f64 / 1_000_000.0).round() / 1000.0,
+            "cache_efficiency": if stats.total_entries > 0 {
+                (stats.active_entries as f64 / stats.total_entries as f64 * 100.0).round() / 100.0
+            } else {
+                0.0
+            },
+            "memory_usage_mb": (stats.cache_size_bytes as f64 / 1_048_576.0).round() / 1000.0,
+            "last_cleanup": stats.last_cleanup.to_rfc3339(),
+            "cleanup_needed": stats.expired_entries > 0,
+            "expired_entries_percentage": if stats.total_entries > 0 {
+                (stats.expired_entries as f64 / stats.total_entries as f64 * 100.0).round() / 100.0
+            } else {
+                0.0
+            }
+        });
+
+        // Cache the performance metrics
+        self.set_with_ttl(
+            keys::CACHE_PERFORMANCE,
+            performance_metrics.to_string(),
+            Duration::from_secs(60),
+        );
+
+        performance_metrics
+    }
+
+    /// Get cache optimization recommendations
+    pub fn get_recommendations(&self) -> serde_json::Value {
+        let stats = self.stats();
+        let mut recommendations = Vec::new();
+
+        // Analyze hit rate
+        if stats.hit_rate < 0.7 {
+            recommendations.push("Consider increasing cache TTL for frequently accessed data");
         }
-    });
+        if stats.hit_rate < 0.5 {
+            recommendations.push("Cache hit rate is low - review cache invalidation strategy");
+        }
 
-    // Cache the performance metrics
-    cache.set_with_ttl(
-        keys::CACHE_PERFORMANCE,
-        performance_metrics.to_string(),
-        Duration::from_secs(60),
-    );
+        // Analyze expired entries
+        if stats.expired_entries > stats.active_entries {
+            recommendations.push("High number of expired entries - consider adjusting TTL values");
+        }
 
-    performance_metrics
-}
+        // Analyze memory usage
+        if stats.cache_size_bytes > 100 * 1024 * 1024 {
+            // 100MB
+            recommendations.push("Cache memory usage is high - consider implementing compression");
+        }
 
-/// Get cache optimization recommendations
-pub fn get_cache_recommendations() -> serde_json::Value {
-    let cache = get_cache();
-    let stats = cache.stats();
-    let mut recommendations = Vec::new();
+        // Analyze access patterns
+        if stats.average_access_time_ns > 1_000_000 {
+            // 1ms
+            recommendations.push("Cache access time is slow - consider optimizing data structures");
+        }
 
-    // Analyze hit rate
-    if stats.hit_rate < 0.7 {
-        recommendations.push("Consider increasing cache TTL for frequently accessed data");
+        // If no issues, provide positive feedback
+        if recommendations.is_empty() {
+            recommendations.push("Cache is performing well - no immediate optimizations needed");
+        }
+
+        json!({
+            "recommendations": recommendations,
+            "priority": if recommendations.len() > 2 { "high" } else if recommendations.len() > 1 { "medium" } else { "low" },
+            "analysis_timestamp": chrono::Utc::now().to_rfc3339()
+        })
     }
-    if stats.hit_rate < 0.5 {
-        recommendations.push("Cache hit rate is low - review cache invalidation strategy");
-    }
-
-    // Analyze expired entries
-    if stats.expired_entries > stats.active_entries {
-        recommendations.push("High number of expired entries - consider adjusting TTL values");
-    }
-
-    // Analyze memory usage
-    if stats.cache_size_bytes > 100 * 1024 * 1024 {
-        // 100MB
-        recommendations.push("Cache memory usage is high - consider implementing compression");
-    }
-
-    // Analyze access patterns
-    if stats.average_access_time_ns > 1_000_000 {
-        // 1ms
-        recommendations.push("Cache access time is slow - consider optimizing data structures");
-    }
-
-    // If no issues, provide positive feedback
-    if recommendations.is_empty() {
-        recommendations.push("Cache is performing well - no immediate optimizations needed");
-    }
-
-    json!({
-        "recommendations": recommendations,
-        "priority": if recommendations.len() > 2 { "high" } else if recommendations.len() > 1 { "medium" } else { "low" },
-        "analysis_timestamp": chrono::Utc::now().to_rfc3339()
-    })
 }

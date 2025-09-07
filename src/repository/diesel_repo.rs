@@ -141,7 +141,6 @@ pub struct PoolInfo {
     pub max_lifetime: Option<Duration>,
 }
 
-#[derive(Clone)]
 pub struct DieselRepo {
     pool: Arc<ConnectionPool>,
 }

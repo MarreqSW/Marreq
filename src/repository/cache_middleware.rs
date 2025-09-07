@@ -7,22 +7,20 @@ use super::cache::{
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    DieselRepo, LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
+    LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
     TestsRepository, UserRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::time::Duration;
 
 /// Repository wrapper that checks the cache before hitting the database
-pub struct CacheRepository {
-    inner: DieselRepo,
+pub struct CacheRepository<R> {
+    inner: R,
 }
 
-impl CacheRepository {
-    pub fn new() -> Self {
-        Self {
-            inner: DieselRepo::new(),
-        }
+impl<R> CacheRepository<R> {
+    pub fn new(inner: R) -> Self {
+        Self { inner }
     }
 
     fn get_or_fetch<T, F>(&self, key: &str, ttl: Duration, fetch: F) -> Result<T, RepoError>
@@ -45,7 +43,7 @@ impl CacheRepository {
     }
 }
 
-impl RequirementsRepository for CacheRepository {
+impl<R: RequirementsRepository> RequirementsRepository for CacheRepository<R> {
     fn get_requirement_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
         let key = keys::Requirements::by_id(id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
@@ -95,7 +93,7 @@ impl RequirementsRepository for CacheRepository {
     }
 }
 
-impl UserRepository for CacheRepository {
+impl<R: UserRepository> UserRepository for CacheRepository<R> {
     fn get_users_all(&self) -> Result<Vec<User>, RepoError> {
         self.get_or_fetch(keys::USERS_ALL, Duration::from_secs(300), || {
             self.inner.get_users_all()
@@ -151,7 +149,7 @@ impl UserRepository for CacheRepository {
     }
 }
 
-impl TestsRepository for CacheRepository {
+impl<R: TestsRepository> TestsRepository for CacheRepository<R> {
     fn get_test_by_id(&self, id: i32) -> Result<Test, RepoError> {
         let key = keys::Tests::by_id(id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
@@ -223,7 +221,7 @@ impl TestsRepository for CacheRepository {
     }
 }
 
-impl LookupRepository for CacheRepository {
+impl<R: LookupRepository> LookupRepository for CacheRepository<R> {
     fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
         self.get_or_fetch(keys::STATUS_ALL, Duration::from_secs(900), || {
             self.inner.get_status_all()
@@ -351,7 +349,7 @@ impl LookupRepository for CacheRepository {
     }
 }
 
-impl ProjectsRepository for CacheRepository {
+impl<R: ProjectsRepository> ProjectsRepository for CacheRepository<R> {
     fn get_projects_all(&self) -> Result<Vec<Project>, RepoError> {
         self.get_or_fetch(keys::PROJECTS_ALL, Duration::from_secs(600), || {
             self.inner.get_projects_all()
@@ -384,7 +382,7 @@ impl ProjectsRepository for CacheRepository {
     }
 }
 
-impl MatrixRepository for CacheRepository {
+impl<R: MatrixRepository> MatrixRepository for CacheRepository<R> {
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
         let key = keys::Matrix::by_project(project_id);
         self.get_or_fetch(&key, Duration::from_secs(180), || {

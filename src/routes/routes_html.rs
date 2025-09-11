@@ -22,7 +22,7 @@ use crate::logger::Logger;
 use crate::models::*;
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
-    DieselCachedRepo, DieselRepo, LookupRepository, MatrixRepository, ProjectsRepository,
+    DieselCachedRepo, LookupRepository, MatrixRepository, ProjectsRepository,
     RequirementsRepository, TestsRepository, UserRepository,
 };
 
@@ -32,7 +32,8 @@ use crate::repository::{
 
 /// Helper function to get a database connection with proper error handling
 fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Error>> {
-    DieselRepo::new()
+    DieselCachedRepo::read()
+        .inner_repo()
         .get_conn()
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
 }
@@ -42,9 +43,9 @@ fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Er
 // --------------------------------
 
 pub fn require_auth(cookies: &CookieJar<'_>) -> Result<User, Redirect> {
-    let repo = DieselRepo::new();
+    let repo = DieselCachedRepo::read();
 
-    match is_authenticated(&repo, cookies) {
+    match is_authenticated(&*repo, cookies) {
         Some(user) => Ok(user),
         None => Err(Redirect::to(uri!(login_page))),
     }
@@ -200,11 +201,11 @@ pub fn login(
     login_form: rocket::form::Form<LoginForm>,
     cookies: &rocket::http::CookieJar<'_>,
 ) -> Result<rocket::response::Redirect, Template> {
-    let repo = DieselRepo::new();
+    let repo = DieselCachedRepo::read();
 
     let form = login_form.into_inner();
 
-    match login_user(&repo, &form, cookies) {
+    match login_user(&*repo, &form, cookies) {
         Ok(()) => Ok(rocket::response::Redirect::to(uri!(index))),
         Err(err) => Err(render_login_error(err)),
     }
@@ -254,10 +255,10 @@ pub fn change_password(
         return Err(Template::render("change_password", ctx));
     }
 
-    let mut repo = DieselRepo::new();
+    let mut repo = DieselCachedRepo::write();
 
     match change_user_password(
-        &mut repo,
+        &mut *repo,
         &password_form.current_password,
         &password_form.new_password,
         cookies,
@@ -279,7 +280,7 @@ pub fn change_password(
 
 /// Get project by ID with safe fallback using the repository.
 pub fn get_project_by_id_pooled_safe(project_id: i32) -> Project {
-    DieselRepo::new()
+    DieselCachedRepo::read()
         .get_project_by_id(project_id)
         .unwrap_or(Project {
             project_id: 0,
@@ -580,7 +581,7 @@ pub fn post_edit_user(
     user_data.user_id = Some(user_id);
 
     // Update the user in the database
-    match DieselRepo::new().update_user_without_password(&user_data) {
+    match DieselCachedRepo::write().update_user_without_password(&user_data) {
         Ok(_) => {
             // Log the user update
             if let (Ok(old_values), Ok(new_values)) = (
@@ -790,7 +791,7 @@ pub fn post_edit_requirement(
         }
     };
 
-    DieselRepo::new()
+    DieselCachedRepo::write()
         .edit_requirement(&requirement_data)
         .map_err(|e| {
             eprintln!("Error editing requirement: {:?}", e);
@@ -859,7 +860,7 @@ pub fn delete_requirement_route(
         return Err(rocket::http::Status::Forbidden);
     }
 
-    match DieselRepo::new().delete_requirement(req_id) {
+    match DieselCachedRepo::write().delete_requirement(req_id) {
         Ok(_deleted) => {
             // Log the requirement deletion
             if let Ok(old_values) = Logger::to_json_string(&requirement) {
@@ -932,7 +933,7 @@ pub fn delete_test_route(
         return Err(rocket::http::Status::Forbidden);
     }
 
-    match DieselRepo::new().delete_test(test_id) {
+    match DieselCachedRepo::write().delete_test(test_id) {
         Ok(_deleted) => {
             // Log the test deletion
             if let Ok(old_values) = Logger::to_json_string(&test) {
@@ -1114,8 +1115,9 @@ pub fn post_requirement(
     // Generate automatic reference code if not provided
     if requirement_data.req_reference.is_empty() {
 
+        let repo = DieselCachedRepo::write();
         match generate_requirement_reference(
-            &DieselRepo::new(),
+            &*repo,
             requirement_data.req_category,
             requirement_data.project_id,
         ) {
@@ -1130,7 +1132,7 @@ pub fn post_requirement(
         }
     }
 
-    let my_id = DieselRepo::new()
+    let my_id = DieselCachedRepo::write()
         .insert_new_requirement(&requirement_data)
         .map_err(|e| {
             eprintln!("Error inserting new requirement: {:?}", e);
@@ -1499,7 +1501,7 @@ pub fn post_edit_test(
         project_id: edit_test_form.project_id,
     };
 
-    DieselRepo::new().edit_test(&new_test).map_err(|e| {
+    DieselCachedRepo::write().edit_test(&new_test).map_err(|e| {
         eprintln!("Error editing test: {:?}", e);
         Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
     })?;
@@ -1523,7 +1525,7 @@ pub fn post_edit_test(
     }
 
     // Then, update the requirement links
-    DieselRepo::new()
+    DieselCachedRepo::write()
         .update_test_requirement_links(edit_test_form.test_id, &edit_test_form.linked_requirements)
         .map_err(|e| {
             eprintln!("Error updating test requirement links: {:?}", e);
@@ -1555,7 +1557,7 @@ pub fn post_test(
         test_parent: new_test.test_parent,
         project_id: new_test.project_id,
     };
-    let my_id = DieselRepo::new().insert_test(&my_new_test).map_err(|e| {
+    let my_id = DieselCachedRepo::write().insert_test(&my_new_test).map_err(|e| {
         eprintln!("Error inserting new test: {:?}", e);
         Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
     })?;
@@ -1582,7 +1584,7 @@ pub fn post_test(
             matrix_test_id: my_id,
             project_id: new_test.project_id,
         };
-        DieselRepo::new()
+        DieselCachedRepo::write()
             .insert_new_matrix_item(&matrix_item)
             .map_err(|e| {
                 eprintln!("Error inserting matrix item: {:?}", e);
@@ -2017,7 +2019,7 @@ pub fn post_category(
     })?;
 
     let category_data = new_category.into_inner();
-    let result = DieselRepo::new().insert_new_category(&category_data);
+    let result = DieselCachedRepo::write().insert_new_category(&category_data);
     match result {
         Ok(category_id) => {
             // Log the category creation
@@ -2078,7 +2080,7 @@ pub fn post_edit_category(
     let mut category_with_id = category.into_inner();
     category_with_id.cat_id = Some(cat_id);
 
-    let result = DieselRepo::new().edit_category(&category_with_id);
+    let result = DieselCachedRepo::write().edit_category(&category_with_id);
     match result {
         Ok(_) => {
             // Log the category update
@@ -2131,7 +2133,7 @@ pub fn delete_category_route(
     // Get the category details before deleting
     let category = get_category_by_id_cached(cat_id);
 
-    let result = DieselRepo::new().delete_category(cat_id);
+    let result = DieselCachedRepo::write().delete_category(cat_id);
     match result {
         Ok(_) => {
             // Log the category deletion
@@ -2176,7 +2178,7 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
     match hash_password(&user_with_hashed_password.user_password) {
         Ok(hashed_password) => {
             user_with_hashed_password.user_password = hashed_password;
-            let my_id = DieselRepo::new()
+            let my_id = DieselCachedRepo::write()
                 .insert_user(&user_with_hashed_password)
                 .map_err(|e| {
                     eprintln!("Error inserting new user: {:?}", e);
@@ -2293,7 +2295,7 @@ pub fn post_applicability(
     })?;
 
     let applicability_data = new_applicability.into_inner();
-    let result = DieselRepo::new().insert_new_applicability(&applicability_data);
+    let result = DieselCachedRepo::write().insert_new_applicability(&applicability_data);
     match result {
         Ok(applicability_id) => {
             // Log the applicability creation
@@ -2357,7 +2359,7 @@ pub fn post_edit_applicability(
     let mut applicability_with_id = applicability.into_inner();
     applicability_with_id.app_id = Some(app_id);
 
-    let result = DieselRepo::new().edit_applicability(&applicability_with_id);
+    let result = DieselCachedRepo::write().edit_applicability(&applicability_with_id);
     match result {
         Ok(_) => {
             // Log the applicability update
@@ -2407,7 +2409,7 @@ pub fn delete_applicability_route(
     // Get the applicability details before deleting
     let applicability = get_applicability_by_id_cached(app_id);
 
-    let result = DieselRepo::new().delete_applicability(app_id);
+    let result = DieselCachedRepo::write().delete_applicability(app_id);
     match result {
         Ok(_) => {
             // Log the applicability deletion
@@ -2904,7 +2906,7 @@ pub fn post_project(
     })?;
 
     let project_data = new_project.into_inner();
-    let result = DieselRepo::new().insert_new_project(&project_data);
+    let result = DieselCachedRepo::write().insert_new_project(&project_data);
     match result {
         Ok(project_id) => {
             // Log the project creation
@@ -2981,7 +2983,7 @@ pub fn post_edit_project(
     // Get the old values before updating
     let old_project = get_project_by_id_cached(project_id);
 
-    let result = DieselRepo::new().edit_project(project_id, &project);
+    let result = DieselCachedRepo::write().edit_project(project_id, &project);
     match result {
         Ok(_) => {
             // Log the project update
@@ -3041,7 +3043,7 @@ pub fn delete_project_route(
     // Get the project details before deleting
     let project = get_project_by_id_pooled_safe(project_id);
 
-    let result = DieselRepo::new().delete_project(project_id);
+    let result = DieselCachedRepo::write().delete_project(project_id);
     match result {
         Ok(_) => {
             // Log the project deletion
@@ -3575,7 +3577,7 @@ pub async fn generate_backup(
         Ok(output) => {
             if output.status.success() {
                 // Log the successful backup
-                if let Ok(mut conn) = DieselRepo::new().get_conn() {
+                if let Ok(mut conn) = get_db_connection() {
                     let _ = Logger::log_action(
                         &mut conn,
                         user.user_id,
@@ -3599,7 +3601,7 @@ pub async fn generate_backup(
                 Ok((content_type, file))
             } else {
                 // Log the failed backup
-                if let Ok(mut conn) = DieselRepo::new().get_conn() {
+                if let Ok(mut conn) = get_db_connection() {
                     let _ = Logger::log_action(
                         &mut conn,
                         user.user_id,
@@ -3623,7 +3625,7 @@ pub async fn generate_backup(
         }
         Err(e) => {
             // Log the command failure
-            if let Ok(mut conn) = DieselRepo::new().get_conn() {
+            if let Ok(mut conn) = get_db_connection() {
                 let _ = Logger::log_action(
                     &mut conn,
                     user.user_id,
@@ -3657,7 +3659,7 @@ pub fn show_logs(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         return Ok(Template::render("access_denied", context));
     }
 
-    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
+    let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error in show_logs: {}", e);
         Redirect::to(uri!(admin_dashboard))
     })?;
@@ -3703,7 +3705,7 @@ pub fn show_entity_logs(
         return Ok(Template::render("access_denied", context));
     }
 
-    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
+    let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error in show_entity_logs: {}", e);
         Redirect::to(uri!(show_logs))
     })?;
@@ -3746,7 +3748,7 @@ pub async fn export_logs(
         return Err(Redirect::to(uri!(show_logs)));
     }
 
-    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
+    let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error in export_logs: {}", e);
         Redirect::to(uri!(show_logs))
     })?;
@@ -3811,7 +3813,7 @@ pub fn export_entity_logs(
         return Err(Redirect::to(uri!(show_logs)));
     }
 
-    let mut connection = match DieselRepo::new().get_conn() {
+    let mut connection = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
@@ -3837,7 +3839,7 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
         return Err(Redirect::to(uri!(show_logs)));
     }
 
-    let mut connection = match DieselRepo::new().get_conn() {
+    let mut connection = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
@@ -3895,7 +3897,7 @@ pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         return Ok(Template::render("access_denied", context));
     }
 
-    let mut connection = match DieselRepo::new().get_conn() {
+    let mut connection = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);

@@ -30,6 +30,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::Category;
     use crate::repository::fake_repo::FakeRepo;
     use rocket::http::Cookie;
     use rocket::local::blocking::Client;

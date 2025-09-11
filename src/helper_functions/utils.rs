@@ -1,4 +1,3 @@
-use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{LookupRepository, RequirementsRepository};
 use rocket::http::CookieJar;

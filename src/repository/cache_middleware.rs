@@ -134,6 +134,7 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         let req = self.inner.delete_requirement(id)?;
         self.cache.invalidate_requirement(id);
         self.cache.invalidate_project(req.project_id);
+        self.cache.remove(super::cache::keys::REQUIREMENTS_ALL);
         Ok(req)
     }
 
@@ -261,6 +262,7 @@ impl<R: Repository> TestsRepository for CacheRepository<R> {
         let test = self.inner.delete_test(id)?;
         self.cache.invalidate_test(id);
         self.cache.invalidate_project(test.project_id);
+        self.cache.remove(super::cache::keys::TESTS_ALL);
         Ok(test)
     }
 

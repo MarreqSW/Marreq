@@ -600,10 +600,6 @@ pub fn post_edit_user(
                     None,
                 );
             }
-
-            // Invalidate cache for the updated user
-            DieselCachedRepo::write().cache().invalidate_user(user_id);
-
             Ok(Redirect::to(uri!(show_user_id(user_id))))
         }
         Err(_e) => {
@@ -823,11 +819,6 @@ pub fn post_edit_requirement(
         );
     }
 
-    // Invalidate cache for the updated requirement
-    DieselCachedRepo::write()
-        .cache()
-        .invalidate_requirement(req_id);
-
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
 
@@ -875,21 +866,6 @@ pub fn delete_requirement_route(
                     None,
                 );
             }
-
-            // Invalidate related caches - including project-level caches
-            DieselCachedRepo::write()
-                .cache()
-                .invalidate_requirement(req_id);
-
-            // Also invalidate project-specific caches for the requirement's project
-            DieselCachedRepo::write()
-                .cache()
-                .invalidate_project(requirement.project_id);
-
-            // Invalidate the requirements list cache
-            DieselCachedRepo::read()
-                .cache()
-                .remove(crate::repository::cache::keys::REQUIREMENTS_ALL);
 
             // Redirect to requirements list page
             Ok(Redirect::to(uri!(show_requirements(
@@ -948,19 +924,6 @@ pub fn delete_test_route(
                     None,
                 );
             }
-
-            // Invalidate related caches - including project-level caches
-            DieselCachedRepo::write().cache().invalidate_test(test_id);
-
-            // Also invalidate project-specific caches for the test's project
-            DieselCachedRepo::write()
-                .cache()
-                .invalidate_project(test.project_id);
-
-            // Invalidate the tests list cache
-            DieselCachedRepo::read()
-                .cache()
-                .remove(crate::repository::cache::keys::TESTS_ALL);
 
             // Redirect to tests list page
             Ok(Redirect::to(uri!(show_tests(
@@ -1159,11 +1122,6 @@ pub fn post_requirement(
             None,
         );
     }
-
-    // Invalidate cache for the new requirement
-    DieselCachedRepo::write()
-        .cache()
-        .invalidate_requirement(my_id);
 
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
@@ -1532,9 +1490,6 @@ pub fn post_edit_test(
             Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
         })?;
 
-    // Invalidate cache for the updated test
-    DieselCachedRepo::write().cache().invalidate_test(test_id);
-
     Ok(Redirect::to(uri!(show_test_id(edit_test_form.test_id))))
 }
 
@@ -1591,9 +1546,6 @@ pub fn post_test(
                 Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
             })?;
     }
-
-    // Invalidate cache for the new test
-    DieselCachedRepo::write().cache().invalidate_test(my_id);
 
     Ok(Redirect::to(uri!(show_test_id(my_id))))
 }
@@ -2036,11 +1988,6 @@ pub fn post_category(
                 );
             }
 
-            // Invalidate cache for the new category
-            DieselCachedRepo::write()
-                .cache()
-                .invalidate_category(category_id);
-
             Ok(Redirect::to(uri!(show_categories)))
         }
         Err(_e) => {
@@ -2101,11 +2048,6 @@ pub fn post_edit_category(
                 );
             }
 
-            // Invalidate cache for the updated category
-            DieselCachedRepo::write()
-                .cache()
-                .invalidate_category(cat_id);
-
             Ok(Redirect::to(uri!(show_categories)))
         }
         Err(_e) => {
@@ -2149,11 +2091,6 @@ pub fn delete_category_route(
                     None,
                 );
             }
-
-            // Invalidate cache for the deleted category
-            DieselCachedRepo::write()
-                .cache()
-                .invalidate_category(cat_id);
 
             Ok(rocket::http::Status::Ok)
         }
@@ -2201,9 +2138,6 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
                     None,
                 );
             }
-
-            // Invalidate cache for the new user
-            DieselCachedRepo::write().cache().invalidate_user(my_id);
 
             Ok(Redirect::to(uri!(show_user_id(my_id))))
         }
@@ -2315,11 +2249,6 @@ pub fn post_applicability(
                 );
             }
 
-            // Invalidate cache for the new applicability
-            DieselCachedRepo::write()
-                .cache()
-                .invalidate_applicability(applicability_id);
-
             Ok(Redirect::to(uri!(show_applicability)))
         }
         Err(_e) => {
@@ -2428,11 +2357,6 @@ pub fn delete_applicability_route(
                     None,
                 );
             }
-
-            // Invalidate cache for the deleted applicability
-            DieselCachedRepo::write()
-                .cache()
-                .invalidate_applicability(app_id);
 
             Ok(rocket::http::Status::Ok)
         }
@@ -2923,11 +2847,6 @@ pub fn post_project(
                 );
             }
 
-            // Invalidate cache for the new project
-            DieselCachedRepo::write()
-                .cache()
-                .invalidate_project(project_id);
-
             Ok(Redirect::to(uri!(show_projects)))
         }
         Err(_e) => {
@@ -3005,11 +2924,6 @@ pub fn post_edit_project(
                 );
             }
 
-            // Invalidate cache for the updated project
-            DieselCachedRepo::write()
-                .cache()
-                .invalidate_project(project_id);
-
             Ok(Redirect::to(uri!(show_projects)))
         }
         Err(_e) => {
@@ -3059,11 +2973,6 @@ pub fn delete_project_route(
                     None,
                 );
             }
-
-            // Invalidate cache for the deleted project
-            DieselCachedRepo::write()
-                .cache()
-                .invalidate_project(project_id);
 
             Ok(rocket::http::Status::Ok)
         }

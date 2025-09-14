@@ -464,7 +464,120 @@ impl<R: Repository> MatrixRepository for CacheRepository<R> {
 mod tests {
     use super::*;
     use crate::repository::fake_repo::FakeRepo;
+    use chrono::{NaiveDate, NaiveDateTime};
     use std::collections::HashMap;
+
+    fn epoch() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(1970, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn populated_repo() -> FakeRepo {
+        let user = FakeRepo::make_user(1, "alice", "hash");
+        let status = Status { st_id: 1, st_title: "Open".into(), st_description: "".into(), st_short_name: "O".into() };
+        let category = Category { cat_id: 1, cat_title: "Cat".into(), cat_description: "".into(), cat_tag: "C".into(), project_id: 1 };
+        let app = Applicability { app_id: 1, app_title: "App".into(), app_description: "".into(), app_tag: "A".into(), project_id: 1 };
+        let ver = Verification { verification_id: 1, verification_name: "Ver".into(), verification_description: "".into(), project_id: 1 };
+        let project = Project {
+            project_id: 1,
+            project_name: "Proj".into(),
+            project_description: Some("Desc".into()),
+            project_creation_date: Some(epoch()),
+            project_update_date: Some(epoch()),
+            project_status: Some("Active".into()),
+            project_owner_id: Some(1),
+        };
+        let requirement = Requirement {
+            req_id: 1,
+            req_title: "Req".into(),
+            req_description: "".into(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 1,
+            req_reviewer: 1,
+            req_link: "link".into(),
+            req_reference: "ref".into(),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: epoch(),
+            req_update_date: epoch(),
+            req_deadline_date: epoch(),
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 1,
+        };
+        let test = Test {
+            test_id: 1,
+            test_name: "Test".into(),
+            test_description: "".into(),
+            test_source: "src".into(),
+            test_status: 1,
+            test_parent: 0,
+            project_id: 1,
+        };
+        let matrix = Matrix { matrix_req_id: 1, matrix_test_id: 1, matrix_creation_date: epoch(), project_id: 1 };
+
+        let mut users = HashMap::new();
+        users.insert(1, user);
+        let mut statuses = HashMap::new();
+        statuses.insert(1, status);
+        let mut categories = HashMap::new();
+        categories.insert(1, category);
+        let mut applicability = HashMap::new();
+        applicability.insert(1, app);
+        let mut verifications = HashMap::new();
+        verifications.insert(1, ver);
+        let mut requirements = HashMap::new();
+        requirements.insert(1, requirement);
+        let mut tests = HashMap::new();
+        tests.insert(1, test);
+        let mut projects = HashMap::new();
+        projects.insert(1, project);
+
+        FakeRepo {
+            users,
+            statuses,
+            verifications,
+            categories,
+            applicability,
+            requirements,
+            tests,
+            projects,
+            matrices: vec![matrix],
+            force_err: false,
+        }
+    }
+
+    #[test]
+    fn test_inner_repo_exposes_live_inner_repository() {
+        // Start with a fully populated fake repo
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+
+        // Read directly via inner_repo(); this should bypass the cache wrapper
+        let initial_users = repo.inner_repo().get_users_all().unwrap();
+        let initial_len = initial_users.len();
+        assert!(initial_len >= 1);
+
+        // Mutate the underlying repo through the wrapper (which changes the inner)
+        let new_user = NewUser {
+            user_id: None,
+            user_username: "eve".into(),
+            user_name: "Eve".into(),
+            user_email: "eve@example.com".into(),
+            user_level: 0,
+            user_password: "pw".into(),
+            project_id: None,
+            is_admin: false,
+        };
+        let _new_id = repo.insert_user(&new_user).unwrap();
+
+        // Read again via inner_repo(); the change should be visible,
+        // demonstrating that inner_repo() returns a live reference to the inner R
+        let after_users = repo.inner_repo().get_users_all().unwrap();
+        assert_eq!(after_users.len(), initial_len + 1);
+    }
 
     #[test]
     fn test_warm_cache_populates_common_keys() {
@@ -482,5 +595,319 @@ mod tests {
         assert_eq!(cache.get(keys::CATEGORIES_ALL), Some("[]".to_string()));
         assert_eq!(cache.get(keys::USERS_ALL), Some("[]".to_string()));
         assert_eq!(cache.get(keys::PROJECTS_NAV), Some("[]".to_string()));
+    }
+
+    #[test]
+    fn test_get_user_by_id_is_cached() {
+        let user = FakeRepo::make_user(1, "alice", "hash");
+        let mut users = HashMap::new();
+        users.insert(user.user_id, user.clone());
+
+        let repo = CacheRepository::new(FakeRepo { users, ..Default::default() }, 60);
+        let cache = repo.cache();
+        cache.reset_counters();
+
+        // first call should miss cache and populate it
+        let fetched = repo.get_user_by_id(1).unwrap();
+        assert_eq!(fetched.user_username, "alice");
+        let stats = cache.stats();
+        assert_eq!(stats.hits, 0);
+        assert_eq!(stats.misses, 1);
+
+        // second call should be served from cache
+        let again = repo.get_user_by_id(1).unwrap();
+        assert_eq!(again.user_username, "alice");
+        let stats = cache.stats();
+        assert_eq!(stats.hits, 1);
+        assert_eq!(stats.misses, 1);
+    }
+
+    #[test]
+    fn test_insert_user_invalidates_users_all_cache() {
+        let user = FakeRepo::make_user(1, "bob", "hash");
+        let mut users = HashMap::new();
+        users.insert(user.user_id, user);
+        let mut repo = CacheRepository::new(FakeRepo { users, ..Default::default() }, 60);
+        let cache = repo.cache();
+
+        // populate cache with all users
+        let all = repo.get_users_all().unwrap();
+        assert_eq!(cache.get(keys::USERS_ALL), Some(serde_json::to_string(&all).unwrap()));
+
+        // inserting a new user should invalidate USERS_ALL cache
+        let new_user = NewUser {
+            user_id: None,
+            user_username: "charlie".into(),
+            user_name: "Charlie".into(),
+            user_email: "charlie@example.com".into(),
+            user_level: 0,
+            user_password: "pw".into(),
+            project_id: None,
+            is_admin: false,
+        };
+        repo.insert_user(&new_user).unwrap();
+
+        assert_eq!(cache.get(keys::USERS_ALL), None);
+    }
+
+    #[test]
+    fn test_update_user_password_invalidates_cache() {
+        let user = FakeRepo::make_user(1, "dave", "old");
+        let mut users = HashMap::new();
+        users.insert(user.user_id, user);
+        let mut repo = CacheRepository::new(FakeRepo { users, ..Default::default() }, 60);
+        let cache = repo.cache();
+
+        // cache user entry
+        repo.get_user_by_id(1).unwrap();
+        assert!(cache.get(&keys::Users::by_id(1)).is_some());
+
+        // updating password should invalidate cached entry
+        repo.update_user_password(1, "newhash").unwrap();
+        assert!(cache.get(&keys::Users::by_id(1)).is_none());
+    }
+
+    #[test]
+    fn test_user_repository_flows_and_invalid_cache() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+        let cache = repo.cache();
+
+        // Prepopulate invalid JSON to exercise removal path
+        cache.set(&keys::Users::by_id(1), "not-json".into());
+        let user = repo.get_user_by_id(1).unwrap();
+        assert_eq!(user.user_username, "alice");
+        assert!(cache
+            .get(&keys::Users::by_id(1))
+            .unwrap()
+            .contains("alice"));
+
+        // Username lookup is cached
+        repo.get_user_by_username("alice").unwrap();
+        assert!(cache.get("user:username:alice").is_some());
+
+        // Populate list cache then insert new user to invalidate it
+        repo.get_users_all().unwrap();
+        assert!(cache.get(keys::USERS_ALL).is_some());
+        let new_user = NewUser {
+            user_id: None,
+            user_username: "bob".into(),
+            user_name: "Bob".into(),
+            user_email: "b@example.com".into(),
+            user_level: 0,
+            user_password: "pw".into(),
+            project_id: Some(1),
+            is_admin: false,
+        };
+        let new_id = repo.insert_user(&new_user).unwrap();
+        assert!(cache.get(keys::USERS_ALL).is_none());
+
+        // Updating and deleting invalidate caches
+        repo.update_user_password(new_id, "hash").unwrap();
+        assert!(cache.get(&keys::Users::by_id(new_id)).is_none());
+
+        let upd = NewUser {
+            user_id: Some(new_id),
+            user_username: "bob".into(),
+            user_name: "Bob".into(),
+            user_email: "b@example.com".into(),
+            user_level: 0,
+            user_password: "pw".into(),
+            project_id: Some(1),
+            is_admin: false,
+        };
+        repo.update_user(&upd).unwrap();
+        assert!(cache.get(&keys::Users::by_id(new_id)).is_none());
+
+        let upd2 = UpdateUser {
+            user_id: Some(new_id),
+            user_username: "b2".into(),
+            user_name: "B2".into(),
+            user_email: "b2@example.com".into(),
+            user_level: 1,
+            is_admin: false,
+        };
+        repo.update_user_without_password(&upd2).unwrap();
+        assert!(cache.get(&keys::Users::by_id(new_id)).is_none());
+
+        repo.delete_user(new_id).unwrap();
+        assert!(cache.get(&keys::Users::by_id(new_id)).is_none());
+    }
+
+    #[test]
+    fn test_requirements_repository_flows() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+        let cache = repo.cache();
+
+        repo.get_requirement_by_id(1).unwrap();
+        assert!(cache.get(&keys::Requirements::by_id(1)).is_some());
+
+        repo.get_requirements_all().unwrap();
+        assert!(cache.get(keys::REQUIREMENTS_ALL).is_some());
+
+        repo.get_requirements_by_project(1).unwrap();
+        assert!(cache.get(&keys::Requirements::by_project(1)).is_some());
+
+        let new_req = NewRequirement {
+            req_id: None,
+            req_title: "R2".into(),
+            req_description: "".into(),
+            req_verification: 1,
+            req_author: 1,
+            req_link: "l2".into(),
+            req_category: 1,
+            req_current_status: 1,
+            req_parent: 0,
+            req_reference: "r2".into(),
+            req_reviewer: 1,
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 1,
+        };
+        let rid = repo.insert_new_requirement(&new_req).unwrap();
+        assert!(cache.get(&keys::Requirements::by_id(rid)).is_none());
+
+        let edit_req = NewRequirement {
+            req_id: Some(rid),
+            req_title: "R2".into(),
+            req_description: "".into(),
+            req_verification: 1,
+            req_author: 1,
+            req_link: "l2".into(),
+            req_category: 1,
+            req_current_status: 1,
+            req_parent: 0,
+            req_reference: "r2".into(),
+            req_reviewer: 1,
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 1,
+        };
+        repo.edit_requirement(&edit_req).unwrap();
+        assert!(cache.get(&keys::Requirements::by_id(rid)).is_none());
+
+        repo.update_requirement(1).unwrap();
+        assert!(cache.get(&keys::Requirements::by_id(1)).is_none());
+
+        repo.get_requirements_all().unwrap();
+        repo.delete_requirement(rid).unwrap();
+        assert!(cache.get(keys::REQUIREMENTS_ALL).is_none());
+    }
+
+    #[test]
+    fn test_tests_repository_flows() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+        let cache = repo.cache();
+
+        repo.get_test_by_id(1).unwrap();
+        assert!(cache.get(&keys::Tests::by_id(1)).is_some());
+        repo.get_tests_all().unwrap();
+        assert!(cache.get(keys::TESTS_ALL).is_some());
+        repo.get_tests_by_project(1).unwrap();
+        assert!(cache.get(&keys::Tests::by_project(1)).is_some());
+
+        let reqs = repo.get_requirements_for_test(1).unwrap();
+        assert_eq!(reqs.len(), 1);
+        let tests = repo.get_tests_for_requirement(1).unwrap();
+        assert_eq!(tests.len(), 1);
+
+        let new_test = NewTest {
+            test_id: None,
+            test_name: "T2".into(),
+            test_description: "".into(),
+            test_source: "s".into(),
+            test_status: 1,
+            test_parent: 0,
+            project_id: 1,
+        };
+        let tid = repo.insert_test(&new_test).unwrap();
+        assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
+
+        let edit_test = NewTest {
+            test_id: Some(tid),
+            test_name: "T2".into(),
+            test_description: "".into(),
+            test_source: "s".into(),
+            test_status: 1,
+            test_parent: 0,
+            project_id: 1,
+        };
+        repo.edit_test(&edit_test).unwrap();
+        assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
+
+        repo.update_test_requirement_links(tid, &[1]).unwrap();
+        assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
+        assert!(cache.get(&keys::Requirements::by_id(1)).is_none());
+
+        repo.get_tests_all().unwrap();
+        repo.delete_test(tid).unwrap();
+        assert!(cache.get(keys::TESTS_ALL).is_none());
+    }
+
+    #[test]
+    fn test_lookup_project_and_matrix_flows() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+        let cache = repo.cache();
+
+        // Status operations
+        repo.get_status_all().unwrap();
+        assert!(cache.get(keys::STATUS_ALL).is_some());
+        repo.get_status_by_id(1).unwrap();
+        assert!(cache.get(&keys::Status::by_id(1)).is_some());
+        let ns = NewStatus { st_title: "Closed".into(), st_description: "".into(), st_short_name: "C".into() };
+        let stid = repo.create_status(&ns).unwrap();
+        assert!(cache.get(&keys::Status::by_id(stid)).is_none());
+
+        // Category operations
+        repo.get_categories_all().unwrap();
+        repo.get_category_by_id(1).unwrap();
+        repo.get_categories_by_project(1).unwrap();
+        let nc = NewCategory { cat_id: None, cat_title: "Cat2".into(), cat_description: "".into(), cat_tag: "C2".into(), project_id: 1 };
+        let cid = repo.insert_new_category(&nc).unwrap();
+        let ec = NewCategory {
+            cat_id: Some(cid),
+            cat_title: "Cat2".into(),
+            cat_description: "".into(),
+            cat_tag: "C2".into(),
+            project_id: 1,
+        };
+        repo.edit_category(&ec).unwrap();
+        repo.delete_category(cid).unwrap();
+
+        // Applicability operations
+        repo.get_applicability_all().unwrap();
+        repo.get_applicability_by_id(1).unwrap();
+        repo.get_applicability_by_project(1).unwrap();
+        let na = NewApplicability { app_id: None, app_title: "App2".into(), app_description: "".into(), app_tag: "A2".into(), project_id: 1 };
+        let aid = repo.insert_new_applicability(&na).unwrap();
+        let ea = NewApplicability {
+            app_id: Some(aid),
+            app_title: "App2".into(),
+            app_description: "".into(),
+            app_tag: "A2".into(),
+            project_id: 1,
+        };
+        repo.edit_applicability(&ea).unwrap();
+        repo.delete_applicability(aid).unwrap();
+
+        // Verification operations
+        repo.get_verification_all().unwrap();
+        repo.get_verification_by_id(1).unwrap();
+        repo.get_verification_by_project(1).unwrap();
+
+        // Project operations
+        repo.get_projects_all().unwrap();
+        repo.get_project_by_id(1).unwrap();
+        let np = NewProject { project_name: "P2".into(), project_description: Some("".into()), project_status: "Active".into(), project_owner_id: Some(1) };
+        let pid = repo.insert_new_project(&np).unwrap();
+        let up = UpdateProject { project_name: "P2a".into(), project_description: Some("".into()), project_status: "Active".into(), project_owner_id: Some(1) };
+        repo.edit_project(pid, &up).unwrap();
+        repo.delete_project(pid).unwrap();
+
+        // Matrix operations
+        repo.get_matrix_by_project(1).unwrap();
+        assert!(cache.get(&keys::Matrix::by_project(1)).is_some());
+        repo.insert_new_matrix_item(&NewMatrix { matrix_req_id: 1, matrix_test_id: 1, project_id: 1 })
+            .unwrap();
+        assert!(cache.get(&keys::Matrix::by_project(1)).is_none());
     }
 }

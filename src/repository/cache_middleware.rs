@@ -464,7 +464,6 @@ impl<R: Repository> MatrixRepository for CacheRepository<R> {
 mod tests {
     use super::*;
     use crate::repository::fake_repo::FakeRepo;
-    use crate::models::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::collections::HashMap;
 
@@ -549,6 +548,35 @@ mod tests {
             matrices: vec![matrix],
             force_err: false,
         }
+    }
+
+    #[test]
+    fn test_inner_repo_exposes_live_inner_repository() {
+        // Start with a fully populated fake repo
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+
+        // Read directly via inner_repo(); this should bypass the cache wrapper
+        let initial_users = repo.inner_repo().get_users_all().unwrap();
+        let initial_len = initial_users.len();
+        assert!(initial_len >= 1);
+
+        // Mutate the underlying repo through the wrapper (which changes the inner)
+        let new_user = NewUser {
+            user_id: None,
+            user_username: "eve".into(),
+            user_name: "Eve".into(),
+            user_email: "eve@example.com".into(),
+            user_level: 0,
+            user_password: "pw".into(),
+            project_id: None,
+            is_admin: false,
+        };
+        let _new_id = repo.insert_user(&new_user).unwrap();
+
+        // Read again via inner_repo(); the change should be visible,
+        // demonstrating that inner_repo() returns a live reference to the inner R
+        let after_users = repo.inner_repo().get_users_all().unwrap();
+        assert_eq!(after_users.len(), initial_len + 1);
     }
 
     #[test]

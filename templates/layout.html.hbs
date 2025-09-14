@@ -12,7 +12,9 @@
     <link rel='icon' type='image/x-icon' href='/static/favicon.ico'>
   </head>
   <body>
+    {{#if user}}
     {{> nav}}
+    {{/if}}
     <main class="container">
       {{~> page}}
     </main>

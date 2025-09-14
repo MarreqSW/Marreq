@@ -421,7 +421,7 @@ impl fmt::Display for Test {
 }
 
 /// A project groups a collection of requirements and tests.
-#[derive(Queryable, Serialize, Deserialize, Debug)]
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 pub struct Project {
     pub project_id: i32,
     pub project_name: String,

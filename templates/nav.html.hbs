@@ -5,7 +5,6 @@
     {{#if projects}}
     <div class="nav-project-selector">
       <select id="project-selector" class="form-select" onchange="changeProject(this.value)">
-        <option value="">Select Project</option>
         {{#each projects}}
           <option value="{{project_id}}" {{#if (eq project_id ../selected_project_id)}}selected{{/if}}>
             {{project_name}}
@@ -92,8 +91,8 @@ document.addEventListener('DOMContentLoaded', function() {
         );
         
         // If no project is selected and no cookie exists, select the first project
-        if ((!projectSelector.value || projectSelector.value === "") && !hasProjectCookie) {
-            const firstOption = projectSelector.querySelector('option[value]:not([value=""])');
+        if (!hasProjectCookie) {
+            const firstOption = projectSelector.querySelector('option[value]');
             if (firstOption) {
                 projectSelector.value = firstOption.value;
                 changeProject(firstOption.value);

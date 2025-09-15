@@ -12,7 +12,7 @@
 }
 
 .list-item:hover {
-  background-color: #f8fafc;
+  background-color: var(--surface-muted);
 }
 
 .list-item:last-child {
@@ -48,6 +48,10 @@
 
 .text-secondary {
   color: var(--text-secondary);
+}
+
+.text-muted {
+  color: var(--text-secondary) !important;
 }
 
 .text-primary {

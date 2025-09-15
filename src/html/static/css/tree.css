@@ -1,0 +1,196 @@
+/* Requirements Tree View Styles */
+.tree-container {
+  padding: var(--space-5) 0;
+}
+
+.tree-root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.tree-node {
+  position: relative;
+}
+
+.node-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.node-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+  margin-top: var(--space-2);
+}
+
+.node-toggle:hover {
+  background-color: var(--background-color);
+}
+
+.toggle-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+}
+
+.toggle-placeholder {
+  width: 16px;
+  height: 16px;
+}
+
+.node-children {
+  margin-left: 36px;
+  margin-top: var(--space-4);
+  padding-left: var(--space-5);
+  border-left: 2px solid var(--border-color);
+  display: none;
+}
+
+.child-node {
+  margin-bottom: var(--space-4);
+}
+
+.child-card {
+  border-left: 3px solid var(--primary-color);
+  background-color: #fafbfc;
+}
+
+.tree-controls {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tree-controls .btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.875rem;
+}
+
+.requirement-card {
+  flex: 1;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  min-width: 0;
+  margin-bottom: var(--space-6);
+}
+
+.requirement-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.requirement-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.requirement-link {
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.2s ease;
+}
+
+.requirement-link:hover {
+  color: var(--primary-dark);
+}
+
+.requirement-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+  line-height: 1.4;
+}
+
+.requirement-description {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-3);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.requirement-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+}
+
+.meta-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  color: var(--border-color);
+}
+
+.empty-state h3 {
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.empty-state p {
+  margin-bottom: var(--space-6);
+  font-size: 1.1rem;
+}
+
+/* Responsive adjustments for tree view */
+@media (max-width: 768px) {
+  .node-content {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .node-toggle {
+    align-self: flex-start;
+    margin-top: 0;
+  }
+
+  .node-children {
+    margin-left: var(--space-5);
+    padding-left: var(--space-3);
+  }
+
+  .requirement-meta {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}

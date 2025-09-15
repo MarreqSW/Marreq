@@ -1,4 +1,96 @@
 (function () {
+    const THEME_STORAGE_KEY = 'reqman-theme';
+    const root = document.documentElement;
+
+    function getStoredTheme() {
+        try {
+            return localStorage.getItem(THEME_STORAGE_KEY);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function persistTheme(theme) {
+        try {
+            localStorage.setItem(THEME_STORAGE_KEY, theme);
+        } catch (error) {
+            /* Ignore storage errors */
+        }
+    }
+
+    function applyTheme(theme) {
+        if (theme === 'dark') {
+            root.setAttribute('data-theme', 'dark');
+        } else {
+            root.removeAttribute('data-theme');
+        }
+    }
+
+    function updateToggleButton(theme) {
+        const toggle = document.getElementById('theme-toggle');
+        if (!toggle) {
+            return;
+        }
+
+        const isDark = theme === 'dark';
+        const label = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+        toggle.dataset.theme = theme;
+        toggle.setAttribute('aria-pressed', String(isDark));
+        toggle.setAttribute('aria-label', label);
+        toggle.setAttribute('title', label);
+    }
+
+    function determineTheme() {
+        const stored = getStoredTheme();
+        if (stored === 'dark' || stored === 'light') {
+            return stored;
+        }
+
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            return 'dark';
+        }
+
+        return 'light';
+    }
+
+    function handleMediaChange(event) {
+        if (getStoredTheme()) {
+            return;
+        }
+
+        const theme = event.matches ? 'dark' : 'light';
+        applyTheme(theme);
+        updateToggleButton(theme);
+    }
+
+    const initialTheme = determineTheme();
+    applyTheme(initialTheme);
+    updateToggleButton(initialTheme);
+
+    document.addEventListener('DOMContentLoaded', function () {
+        updateToggleButton(root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+
+        const toggle = document.getElementById('theme-toggle');
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                const currentTheme = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                applyTheme(nextTheme);
+                persistTheme(nextTheme);
+                updateToggleButton(nextTheme);
+            });
+        }
+
+        if (window.matchMedia) {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            if (mediaQuery.addEventListener) {
+                mediaQuery.addEventListener('change', handleMediaChange);
+            } else if (mediaQuery.addListener) {
+                mediaQuery.addListener(handleMediaChange);
+            }
+        }
+    });
+
     function deleteRequirement(reqId, reqTitle) {
         if (
             confirm(

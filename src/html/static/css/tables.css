@@ -1,0 +1,199 @@
+/* Tables */
+.table-container {
+  background-color: var(--surface-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  position: relative;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary-color) #f1f5f9;
+  scroll-behavior: smooth;
+  overflow-y: hidden;
+  min-height: 0;
+}
+
+.table-container::-webkit-scrollbar {
+  height: 12px;
+}
+
+.table-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 6px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  min-width: 100%;
+}
+
+.table-container .table {
+  min-width: max-content;
+  table-layout: auto;
+  width: max-content;
+}
+
+.table th {
+  background-color: #f8fafc;
+  padding: var(--space-4);
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table td {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.table tr:hover {
+  background-color: #f8fafc;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Matrix specific styles */
+.table th.text-center,
+.table td.text-center {
+  text-align: center;
+  min-width: 80px;
+  max-width: 80px;
+  width: 80px;
+}
+
+.table td.text-center {
+  vertical-align: middle;
+}
+
+.table th:first-child,
+.table td:first-child {
+  position: sticky;
+  left: 0;
+  background-color: var(--surface-color);
+  z-index: 10;
+  border-right: 2px solid var(--border-color);
+  min-width: 80px;
+  max-width: 80px;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+  position: sticky;
+  left: 80px;
+  background-color: var(--surface-color);
+  z-index: 10;
+  border-right: 2px solid var(--border-color);
+  min-width: 200px;
+  max-width: 200px;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+  position: sticky;
+  left: 280px;
+  background-color: var(--surface-color);
+  z-index: 10;
+  border-right: 2px solid var(--border-color);
+  min-width: 150px;
+  max-width: 150px;
+}
+
+/* Top scroll indicator - improved positioning and styling */
+.scroll-track {
+  width: calc(100% - 8px);
+  height: 6px;
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  background-color: #e2e8f0;
+  border-radius: 3px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.scroll-thumb {
+  height: 100%;
+  background-color: var(--primary-color);
+  border-radius: 3px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-width: 30px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.scroll-thumb:hover {
+  background-color: var(--primary-dark);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.scroll-thumb:active {
+  background-color: var(--primary-dark);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Sortable table columns */
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable a {
+  color: var(--text-primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+.sortable a:hover {
+  color: var(--primary-color);
+}
+
+.sort-indicator {
+  font-size: 0.75rem;
+  margin-left: 0.5rem;
+  opacity: 0.7;
+  color: var(--text-secondary);
+}
+
+.sortable a:hover .sort-indicator {
+  opacity: 1;
+  color: var(--primary-color);
+}
+
+/* Test column sorting styles */
+.sortable a.d-flex.flex-column {
+  min-height: 60px;
+  justify-content: space-between;
+}
+
+.sortable a.d-flex.flex-column .d-flex.align-items-center.justify-content-between {
+  margin-bottom: 0.25rem;
+}
+
+.sortable a.d-flex.flex-column .text-xs {
+  margin-top: 0.25rem;
+}

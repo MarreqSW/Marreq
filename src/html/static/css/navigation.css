@@ -56,9 +56,9 @@
 }
 
 .nav-user-name {
-  color: var(--text-secondary);
+  color: var(--text-primary);
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .nav-project-selector {
@@ -91,6 +91,58 @@
 .nav-item-theme {
   display: flex;
   align-items: center;
+}
+
+.nav-item-user {
+  position: relative;
+}
+
+.nav-user-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.nav-user-toggle:hover,
+.nav-user-toggle:focus {
+  color: var(--primary-color);
+  background-color: var(--surface-accent);
+}
+
+.nav-user-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nav-user-menu {
+  min-width: 220px;
+  padding: var(--space-2) 0;
+}
+
+.nav-user-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.nav-user-username {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.nav-user-menu .nav-user-logout {
+  color: var(--error-color);
+  font-weight: 600;
+}
+
+.nav-user-menu .nav-user-logout:hover,
+.nav-user-menu .nav-user-logout:focus {
+  color: var(--error-color);
+  background-color: rgba(239, 68, 68, 0.12);
 }
 
 .dropdown-menu {

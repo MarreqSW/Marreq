@@ -6,6 +6,7 @@
   border: 1px solid var(--border-color);
   overflow: hidden;
   transition: all 0.2s ease;
+  color: var(--text-primary);
 }
 
 .card:hover {
@@ -16,17 +17,22 @@
 .card-header {
   padding: var(--space-6);
   border-bottom: 1px solid var(--border-color);
-  background-color: #f8fafc;
+  background-color: var(--surface-muted);
 }
 
 .card-body {
   padding: var(--space-6);
 }
 
+.card-subtitle,
+.card-text {
+  color: var(--text-secondary);
+}
+
 .card-footer {
   padding: var(--space-4) var(--space-6);
   border-top: 1px solid var(--border-color);
-  background-color: #f8fafc;
+  background-color: var(--surface-muted);
 }
 
 /* Requirement Cards */

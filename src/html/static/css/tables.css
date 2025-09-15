@@ -10,7 +10,7 @@
   overflow-x: auto;
   max-width: 100%;
   scrollbar-width: thin;
-  scrollbar-color: var(--primary-color) #f1f5f9;
+  scrollbar-color: var(--primary-color) var(--surface-muted);
   scroll-behavior: smooth;
   overflow-y: hidden;
   min-height: 0;
@@ -21,7 +21,7 @@
 }
 
 .table-container::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: var(--surface-muted);
   border-radius: 6px;
 }
 
@@ -48,7 +48,7 @@
 }
 
 .table th {
-  background-color: #f8fafc;
+  background-color: var(--surface-muted);
   padding: var(--space-4);
   text-align: left;
   font-weight: 600;
@@ -63,7 +63,7 @@
 }
 
 .table tr:hover {
-  background-color: #f8fafc;
+  background-color: var(--surface-muted);
 }
 
 .table tr:last-child td {
@@ -123,7 +123,7 @@
   position: absolute;
   top: 3px;
   left: 4px;
-  background-color: #e2e8f0;
+  background-color: var(--surface-hover);
   border-radius: 3px;
   cursor: pointer;
   user-select: none;

@@ -78,7 +78,7 @@
 }
 
 .btn-outline:hover {
-  background-color: var(--background-color);
+  background-color: var(--surface-muted);
   border-color: var(--primary-color);
   color: var(--primary-color);
 }
@@ -123,13 +123,13 @@
 }
 
 .btn-clear {
-  background-color: #f1f5f9;
+  background-color: var(--surface-muted);
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
 }
 
 .btn-clear:hover {
-  background-color: #e2e8f0;
+  background-color: var(--surface-hover);
   color: var(--text-primary);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);

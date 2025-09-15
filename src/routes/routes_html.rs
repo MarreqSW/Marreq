@@ -182,16 +182,8 @@ fn render_change_password_error(err: AuthError) -> Template {
 
 #[get("/login")]
 pub fn login_page() -> Template {
-    // Get projects for navigation (even on login page)
-    let projects = DieselCachedRepo::read()
-        .get_projects_all()
-        .unwrap_or_default();
-    let selected_project_id: Option<i32> = None; // No project selected on login page
-
     let ctx = json!({
-        "title": "Login",
-        "projects": projects,
-        "selected_project_id": selected_project_id
+        "title": "Login"
     });
     Template::render("login", ctx)
 }

@@ -5,8 +5,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  background: linear-gradient(135deg, var(--login-gradient-start) 0%, var(--login-gradient-end) 100%);
   padding: 1rem;
+  position: relative;
 }
 
 .login-container > p {
@@ -27,6 +28,12 @@
   padding: 2.5rem;
   width: 100%;
   max-width: 400px;
+}
+
+.login-theme-toggle {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
 }
 
 .login-header {

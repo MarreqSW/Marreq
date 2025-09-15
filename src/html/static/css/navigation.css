@@ -41,12 +41,12 @@
 
 .nav-link:hover {
   color: var(--primary-color);
-  background-color: var(--background-color);
+  background-color: var(--surface-accent);
 }
 
 .nav-link.active {
   color: var(--primary-color);
-  background-color: #eff6ff;
+  background-color: var(--surface-accent);
 }
 
 .nav-user {
@@ -86,6 +86,35 @@
 
 .nav-project-selector .form-select:hover {
   border-color: var(--primary-light);
+}
+
+.nav-item-theme {
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-menu {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 0.5rem 0;
+}
+
+.dropdown-item {
+  color: var(--text-secondary);
+  font-weight: 500;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: var(--surface-accent);
+  color: var(--primary-color);
+}
+
+.dropdown-divider {
+  border-top: 1px solid var(--border-color);
 }
 
 @media (max-width: 768px) {

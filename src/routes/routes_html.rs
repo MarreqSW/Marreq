@@ -358,6 +358,85 @@ pub fn show_requirements(
     Ok(Template::render("requirements", ctx))
 }
 
+#[get("/requirements_table?<status_filter>&<verification_filter>&<category_filter>")]
+pub fn show_requirements_table(
+    cookies: &CookieJar<'_>,
+    status_filter: Option<i32>,
+    verification_filter: Option<i32>,
+    category_filter: Option<i32>,
+) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let mut ctx = build_context_with_projects(user, cookies);
+
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+
+    let requirements = if let Some(project_id) = selected_project_id {
+        get_requirements_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_requirements_by_project_cached(first_project.project_id)
+        } else {
+            get_requirements_all_cached()
+        }
+    };
+
+    match requirements {
+        Ok(req) => {
+            // Apply filters
+            let filtered_requirements =
+                filter_requirements(req, status_filter, verification_filter, category_filter);
+            let requirements_decorate = decorate_requirements(filtered_requirements);
+            ctx["requirements"] = json!(requirements_decorate);
+        }
+        Err(_) => {
+            ctx["requirements"] = json!([]);
+        }
+    };
+
+    // Add filter data to context for the template
+    let statuses = get_requirement_status_all_cached().unwrap_or_default();
+    let verifications = if let Some(project_id) = selected_project_id {
+        get_verification_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_verification_by_project_cached(first_project.project_id)
+        } else {
+            get_verification_all_cached()
+        }
+    };
+
+    // Get categories filtered by selected project
+    let categories = if let Some(project_id) = selected_project_id {
+        get_categories_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_categories_by_project_cached(first_project.project_id)
+        } else {
+            get_categories_all_cached()
+        }
+    };
+
+    // Get users for the dropdowns
+    let users = get_users_all_cached().unwrap_or_default();
+
+    ctx["statuses"] = json!(statuses);
+    ctx["verifications"] = json!(verifications.unwrap_or_default());
+    ctx["categories"] = json!(categories.unwrap_or_default());
+    ctx["users"] = json!(users);
+    ctx["current_status_filter"] = json!(status_filter);
+    ctx["current_verification_filter"] = json!(verification_filter);
+    ctx["current_category_filter"] = json!(category_filter);
+
+    Ok(Template::render("requirements_table", ctx))
+}
+
 #[get("/requirements/<req_id>")]
 pub fn show_requirement_id(req_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
@@ -1124,6 +1203,96 @@ pub fn show_tests(
     ctx["current_category_filter"] = json!(category_filter);
 
     Ok(Template::render("tests", ctx))
+}
+
+#[get("/tests_table?<status_filter>&<verification_filter>&<category_filter>")]
+pub fn show_tests_table(
+    cookies: &CookieJar<'_>,
+    status_filter: Option<i32>,
+    verification_filter: Option<i32>,
+    category_filter: Option<i32>,
+) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let mut ctx = build_context_with_projects(user, cookies);
+
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+
+    let tests = if let Some(project_id) = selected_project_id {
+        get_tests_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_tests_by_project_cached(first_project.project_id)
+        } else {
+            get_tests_all_cached()
+        }
+    };
+
+    let tests_data = tests.unwrap_or_default();
+    // Apply filters
+    let filtered_tests = filter_tests(
+        tests_data,
+        status_filter,
+        verification_filter,
+        category_filter,
+    );
+    let mut tests_decorate = decorate_tests(filtered_tests);
+    
+    // Sort tests by reference (TEST-1, TEST-2, etc.)
+    tests_decorate.sort_by(|a, b| {
+        // Extract numeric part from reference for proper sorting
+        let a_num = a.test_reference
+            .split('-')
+            .last()
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(0);
+        let b_num = b.test_reference
+            .split('-')
+            .last()
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(0);
+        a_num.cmp(&b_num)
+    });
+    
+    ctx["tests"] = json!(tests_decorate);
+
+    // Add filter data to context for the template
+    let statuses = get_test_status_all_cached().unwrap_or_default();
+    let verifications = if let Some(project_id) = selected_project_id {
+        get_verification_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_verification_by_project_cached(first_project.project_id)
+        } else {
+            get_verification_all_cached()
+        }
+    };
+
+    // Get categories filtered by selected project
+    let categories = if let Some(project_id) = selected_project_id {
+        get_categories_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_categories_by_project_cached(first_project.project_id)
+        } else {
+            get_categories_all_cached()
+        }
+    };
+
+    ctx["statuses"] = json!(statuses);
+    ctx["verifications"] = json!(verifications.unwrap_or_default());
+    ctx["categories"] = json!(categories.unwrap_or_default());
+    ctx["current_status_filter"] = json!(status_filter);
+    ctx["current_verification_filter"] = json!(verification_filter);
+    ctx["current_category_filter"] = json!(category_filter);
+
+    Ok(Template::render("tests_table", ctx))
 }
 
 #[get("/tests/<test_id_param>")]

@@ -70,14 +70,19 @@ pub struct DecoratedRequirement {
     pub req_title: String,
     pub req_description: String,
     pub req_verification: String,
+    pub req_verification_id: i32, // Add numeric verification ID for access control
     pub req_current_status: String,
     pub req_current_status_id: i32, // Add numeric status ID for access control
     pub req_author: String,
+    pub req_author_id: i32, // Add numeric author ID for access control
     pub req_reviewer: String,
+    pub req_reviewer_id: i32, // Add numeric reviewer ID for access control
     pub req_link: String,
     pub req_reference: String,
     pub req_category: String,
+    pub req_category_id: i32, // Add numeric category ID for access control
     pub req_applicability: String,
+    pub req_applicability_id: i32, // Add numeric applicability ID for access control
     pub req_parent_id: i32,
     pub req_parent_title: String,
     pub req_creation_date: String,

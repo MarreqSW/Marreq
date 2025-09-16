@@ -152,7 +152,7 @@
             <td>
               <select class="form-select form-select-sm editable-select" data-field="req_category" data-id="{{req_id}}">
                 {{#each ../categories}}
-                  <option value="{{cat_id}}" {{#if (eq cat_id ../req_category)}}selected{{/if}}>{{cat_title}}</option>
+                  <option value="{{cat_id}}" {{#if (eq cat_id ../req_category_id)}}selected{{/if}}>{{cat_title}}</option>
                 {{/each}}
               </select>
             </td>
@@ -166,21 +166,21 @@
             <td>
               <select class="form-select form-select-sm editable-select" data-field="req_verification" data-id="{{req_id}}">
                 {{#each ../verifications}}
-                  <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification)}}selected{{/if}}>{{verification_name}}</option>
+                  <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification_id)}}selected{{/if}}>{{verification_name}}</option>
                 {{/each}}
               </select>
             </td>
             <td>
               <select class="form-select form-select-sm editable-select" data-field="req_author" data-id="{{req_id}}">
                 {{#each ../users}}
-                  <option value="{{user_id}}" {{#if (eq user_id ../req_author)}}selected{{/if}}>{{user_name}}</option>
+                  <option value="{{user_id}}" {{#if (eq user_id ../req_author_id)}}selected{{/if}}>{{user_name}}</option>
                 {{/each}}
               </select>
             </td>
             <td>
               <select class="form-select form-select-sm editable-select" data-field="req_reviewer" data-id="{{req_id}}">
                 {{#each ../users}}
-                  <option value="{{user_id}}" {{#if (eq user_id ../req_reviewer)}}selected{{/if}}>{{user_name}}</option>
+                  <option value="{{user_id}}" {{#if (eq user_id ../req_reviewer_id)}}selected{{/if}}>{{user_name}}</option>
                 {{/each}}
               </select>
             </td>

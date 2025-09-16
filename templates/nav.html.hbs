@@ -18,8 +18,25 @@
     <ul class="nav-menu">
       <li><a href="/" class="nav-link">Home</a></li>
       <li><a href="/projects" class="nav-link">Projects</a></li>
-      <li><a href="/requirements" class="nav-link">Requirements</a></li>
-      <li><a href="/tests" class="nav-link">Tests</a></li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          Requirements
+        </a>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="/requirements">Card View</a></li>
+          <li><a class="dropdown-item" href="/requirements_table">Table View</a></li>
+          <li><a class="dropdown-item" href="/requirements/tree">Tree View</a></li>
+        </ul>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          Tests
+        </a>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="/tests">Card View</a></li>
+          <li><a class="dropdown-item" href="/tests_table">Table View</a></li>
+        </ul>
+      </li>
       <li><a href="/reports" class="nav-link">Reports</a></li>
       {{#if user.is_admin}}
       <li class="nav-item dropdown">

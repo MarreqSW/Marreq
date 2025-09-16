@@ -1819,3 +1819,181 @@ select[multiple] option:hover {
   color: #991b1b;
   border: 1px solid #ef4444;
 }
+
+/* Editable Table Styles */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.editable-field {
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  display: inline-block;
+  min-width: 100px;
+}
+
+.editable-field:hover {
+  background-color: #eff6ff;
+  border: 1px solid #dbeafe;
+}
+
+.editable-title {
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+  display: inline-block;
+  min-width: 150px;
+  font-weight: 500;
+}
+
+.editable-title:hover {
+  background-color: #eff6ff;
+  border: 1px solid #dbeafe;
+}
+
+.editable-select {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  background-color: white;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.editable-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.editable-select:hover {
+  border-color: var(--primary-light);
+}
+
+.editable-date {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  background-color: white;
+  transition: all 0.2s ease;
+  min-width: 120px;
+}
+
+.editable-date:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.editable-date:hover {
+  border-color: var(--primary-light);
+}
+
+/* Table action buttons */
+.btn-group-sm .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 0.25rem;
+}
+
+.btn-group-sm .btn + .btn {
+  margin-left: 0.125rem;
+}
+
+/* Modal styles for add new items */
+.modal-content {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border-color);
+  padding: 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+}
+
+/* Notification styles */
+.alert {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  min-width: 300px;
+  box-shadow: var(--shadow-lg);
+}
+
+.alert-dismissible .btn-close {
+  padding: 0.75rem 1rem;
+}
+
+/* Dropdown menu styles */
+.dropdown-menu {
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-md);
+  padding: 0.5rem 0;
+  min-width: 200px;
+}
+
+.dropdown-item {
+  padding: 0.5rem 1rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dropdown-item:hover {
+  background-color: var(--background-color);
+  color: var(--primary-color);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 0.5rem 0;
+}
+
+/* Responsive table adjustments */
+@media (max-width: 768px) {
+  .table-responsive {
+    font-size: 0.875rem;
+  }
+  
+  .editable-field,
+  .editable-title {
+    min-width: 80px;
+  }
+  
+  .editable-select,
+  .editable-date {
+    min-width: 80px;
+    font-size: 0.75rem;
+  }
+  
+  .btn-group-sm .btn {
+    padding: 0.125rem 0.25rem;
+    font-size: 0.625rem;
+  }
+}

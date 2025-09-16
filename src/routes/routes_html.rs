@@ -447,7 +447,6 @@ pub fn show_requirements(
 pub fn show_requirement_id(
     session_user: SessionUser,
     req_id: i32,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
 
@@ -485,7 +484,6 @@ pub fn show_requirement_id(
 #[get("/users")]
 pub fn show_users(
     session_user: SessionUser,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
     let users = DieselCachedRepo::read().get_users_all();
@@ -512,7 +510,6 @@ pub fn show_users(
 pub fn show_user_id(
     session_user: SessionUser,
     user_id: i32,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let current_user = session_user.into_inner();
     let user = DieselCachedRepo::read()
@@ -536,7 +533,6 @@ pub fn show_user_id(
 pub fn edit_user(
     session_user: SessionUser,
     user_id: i32,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let current_user = session_user.into_inner();
     let user = DieselCachedRepo::read()
@@ -558,7 +554,6 @@ pub fn post_edit_user(
     session_user: SessionUser,
     user_id: i32,
     user_form: Form<UpdateUser>,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
     let current_user = session_user.into_inner();
 
@@ -734,7 +729,6 @@ pub fn post_edit_requirement(
     session_user: SessionUser,
     req_id: i32,
     new_req: Form<NewRequirement>,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
     let my_id = new_req.req_id.unwrap_or(0);
@@ -827,7 +821,6 @@ pub fn post_edit_requirement(
 pub fn delete_requirement_route(
     session_user: SessionUser,
     req_id: i32,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, rocket::http::Status> {
     let user = session_user.into_inner();
     let mut connection = match get_db_connection() {
@@ -889,7 +882,6 @@ pub fn delete_requirement_route(
 pub fn delete_test_route(
     session_user: SessionUser,
     test_id: i32,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, rocket::http::Status> {
     let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
@@ -1046,7 +1038,6 @@ pub fn new_requirement(
 pub fn post_requirement(
     session_user: SessionUser,
     new_req: Form<NewRequirement>,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
@@ -1218,7 +1209,6 @@ pub fn show_tests(
 pub fn show_test_id(
     session_user: SessionUser,
     test_id_param: i32,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
 
@@ -1445,13 +1435,11 @@ pub fn get_edit_test(
     Ok(Template::render("edit_test_by_id", ctx))
 }
 
-#[allow(unused_variables)]
 #[post("/edit_test/<test_id>", data = "<edit_test_form>")]
 pub fn post_edit_test(
     session_user: SessionUser,
     test_id: i32,
     edit_test_form: Form<EditTestForm>,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
@@ -1515,7 +1503,6 @@ pub fn post_edit_test(
 pub fn post_test(
     session_user: SessionUser,
     new_test: Form<NewTestForm>,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
@@ -1860,7 +1847,6 @@ pub async fn get_matrix_xls(
 #[get("/requirements.xls")]
 pub async fn get_requirements_xls(
     session_user: SessionUser,
-    _cookies: &CookieJar<'_>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
     let _user = session_user.into_inner();
     let _file = excel::create_requirements_workbook().expect("file can be created");
@@ -1884,7 +1870,6 @@ pub async fn get_requirements_xls(
 #[get("/tests.xls")]
 pub async fn get_tests_xls(
     session_user: SessionUser,
-    _cookies: &CookieJar<'_>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
     let _user = session_user.into_inner();
     let _file = excel::create_tests_workbook().expect("file can be created");
@@ -1906,7 +1891,7 @@ pub async fn get_tests_xls(
 }
 
 #[get("/new_user")]
-pub fn new_user(session_user: SessionUser, _cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+pub fn new_user(session_user: SessionUser) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
     let status = DieselCachedRepo::read()
         .get_status_all()
@@ -1992,7 +1977,6 @@ pub fn new_category(
 pub fn post_category(
     session_user: SessionUser,
     new_category: Form<NewCategory>,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
 
@@ -2038,7 +2022,6 @@ pub fn post_category(
 pub fn get_edit_category(
     session_user: SessionUser,
     cat_id: i32,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
     let category = get_category_by_id_cached(cat_id);
@@ -2054,7 +2037,6 @@ pub fn post_edit_category(
     session_user: SessionUser,
     cat_id: i32,
     category: Form<NewCategory>,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
@@ -2103,7 +2085,6 @@ pub fn post_edit_category(
 pub fn delete_category_route(
     session_user: SessionUser,
     cat_id: i32,
-    _cookies: &CookieJar<'_>,
 ) -> Result<rocket::http::Status, Redirect> {
     let user = session_user.into_inner();
     let mut connection = match get_db_connection() {
@@ -2148,7 +2129,6 @@ pub fn delete_category_route(
 pub fn post_user(
     session_user: SessionUser,
     new_user: Form<NewUser>,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
@@ -2267,7 +2247,6 @@ pub fn new_applicability(
 pub fn post_applicability(
     session_user: SessionUser,
     new_applicability: Form<NewApplicability>,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
 
@@ -2316,7 +2295,6 @@ pub fn post_applicability(
 pub fn get_edit_applicability(
     session_user: SessionUser,
     app_id: i32,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
     let applicability = get_applicability_by_id_cached(app_id);
@@ -2332,7 +2310,6 @@ pub fn post_edit_applicability(
     session_user: SessionUser,
     app_id: i32,
     applicability: Form<NewApplicability>,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
@@ -2383,7 +2360,6 @@ pub fn post_edit_applicability(
 pub fn delete_applicability_route(
     session_user: SessionUser,
     app_id: i32,
-    _cookies: &CookieJar<'_>,
 ) -> Result<rocket::http::Status, Redirect> {
     let user = session_user.into_inner();
     let mut connection = match get_db_connection() {
@@ -2430,7 +2406,6 @@ pub fn delete_applicability_route(
 #[get("/requirements/tree")]
 pub fn show_requirements_tree(
     session_user: SessionUser,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
 
@@ -2823,7 +2798,6 @@ pub fn generate_pdf_report(
 #[get("/projects")]
 pub fn show_projects(
     session_user: SessionUser,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
     let projects = DieselCachedRepo::read().get_projects_all();
@@ -2850,7 +2824,6 @@ pub fn show_projects(
 pub fn show_project_id(
     session_user: SessionUser,
     project_id: i32,
-    _cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
     let project = get_project_by_id_pooled_safe(project_id);
@@ -3101,7 +3074,6 @@ pub fn import_excel_page(
 pub async fn upload_excel_file(
     session_user: SessionUser,
     mut upload: rocket::form::Form<rocket::fs::TempFile<'_>>,
-    _cookies: &CookieJar<'_>,
 ) -> Result<content::RawHtml<String>, Redirect> {
     let _user = session_user.into_inner();
 

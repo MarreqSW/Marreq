@@ -170,9 +170,13 @@ impl Cache {
         let total_access_time = self.total_access_time.load(Ordering::Relaxed);
         let average_access_time_ns = if total_requests > 0 { total_access_time / total_requests } else { 0 };
         
-        let active_entries = self.active_entries.load(Ordering::Relaxed) as usize;
-        let expired_entries = self.expired_entries.load(Ordering::Relaxed) as usize;
-        let total_entries = active_entries + expired_entries;
+        let active_entries = self.active_entries.load(Ordering::Relaxed);
+        let expired_entries = self.expired_entries.load(Ordering::Relaxed);
+        
+        // Prevent overflow by capping the values
+        let active_entries = active_entries.min(u64::MAX / 2) as usize;
+        let expired_entries = expired_entries.min(u64::MAX / 2) as usize;
+        let total_entries = active_entries.saturating_add(expired_entries);
         
         let last_cleanup = *self.last_cleanup.lock().unwrap();
         

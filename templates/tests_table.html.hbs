@@ -74,13 +74,48 @@
       <table class="table table-hover mb-0" id="testsTable">
         <thead class="table-light">
           <tr>
-            <th style="width: 80px;">ID</th>
-            <th style="width: 200px;">Name</th>
-            <th style="width: 150px;">Reference</th>
-            <th style="width: 200px;">Description</th>
-            <th style="width: 120px;">Status</th>
-            <th style="width: 120px;">Source</th>
-            <th style="width: 150px;">Parent</th>
+            <th class="sortable" data-sort="test_id" style="width: 80px;">
+              <a href="#" onclick="sortTable('test_id', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                ID
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_name" style="width: 200px;">
+              <a href="#" onclick="sortTable('test_name', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Name
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_reference" style="width: 150px;">
+              <a href="#" onclick="sortTable('test_reference', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Reference
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_description" style="width: 200px;">
+              <a href="#" onclick="sortTable('test_description', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Description
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_status" style="width: 120px;">
+              <a href="#" onclick="sortTable('test_status', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Status
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_source" style="width: 120px;">
+              <a href="#" onclick="sortTable('test_source', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Source
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_parent" style="width: 150px;">
+              <a href="#" onclick="sortTable('test_parent', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Parent
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
             <th style="width: 100px;">Actions</th>
           </tr>
         </thead>
@@ -203,6 +238,84 @@
 </div>
 
 <script>
+// Table sorting functionality
+let currentSortColumn = null;
+let currentSortOrder = 'asc';
+
+function sortTable(column, order) {
+  const table = document.getElementById('testsTable');
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  
+  // Toggle order if clicking the same column
+  if (currentSortColumn === column) {
+    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+  } else {
+    currentSortColumn = column;
+    currentSortOrder = order;
+  }
+  
+  rows.sort((a, b) => {
+    const aVal = getCellValue(a, column);
+    const bVal = getCellValue(b, column);
+    
+    if (aVal < bVal) return currentSortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return currentSortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+  
+  // Clear tbody and re-append sorted rows
+  tbody.innerHTML = '';
+  rows.forEach(row => tbody.appendChild(row));
+  
+  // Update sort indicators
+  updateSortIndicators(column, currentSortOrder);
+}
+
+function getCellValue(row, column) {
+  const cellIndex = getColumnIndex(column);
+  const cell = row.cells[cellIndex];
+  
+  if (!cell) return '';
+  
+  // Handle different cell types
+  const input = cell.querySelector('input');
+  const select = cell.querySelector('select');
+  const span = cell.querySelector('span');
+  
+  if (input) return input.value;
+  if (select) return select.options[select.selectedIndex].text;
+  if (span) return span.textContent;
+  
+  return cell.textContent || cell.innerText;
+}
+
+function getColumnIndex(column) {
+  const columnMap = {
+    'test_id': 0,
+    'test_name': 1,
+    'test_reference': 2,
+    'test_description': 3,
+    'test_status': 4,
+    'test_source': 5,
+    'test_parent': 6
+  };
+  return columnMap[column] || 0;
+}
+
+function updateSortIndicators(activeColumn, order) {
+  // Reset all indicators
+  document.querySelectorAll('.sort-indicator').forEach(indicator => {
+    indicator.textContent = '↕';
+  });
+  
+  // Set active indicator
+  const activeIndicator = document.querySelector(`[data-sort="${activeColumn}"] .sort-indicator`);
+  if (activeIndicator) {
+    activeIndicator.textContent = order === 'asc' ? '↑' : '↓';
+  }
+}
+
 // Inline editing functionality
 document.addEventListener('DOMContentLoaded', function() {
   // Handle editable fields

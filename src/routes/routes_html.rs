@@ -358,12 +358,14 @@ pub fn show_requirements(
     Ok(Template::render("requirements", ctx))
 }
 
-#[get("/requirements_table?<status_filter>&<verification_filter>&<category_filter>")]
+#[get("/requirements_table?<status_filter>&<verification_filter>&<category_filter>&<sort_by>&<sort_order>")]
 pub fn show_requirements_table(
     cookies: &CookieJar<'_>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
 ) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     let mut ctx = build_context_with_projects(user, cookies);
@@ -433,6 +435,8 @@ pub fn show_requirements_table(
     ctx["current_status_filter"] = json!(status_filter);
     ctx["current_verification_filter"] = json!(verification_filter);
     ctx["current_category_filter"] = json!(category_filter);
+    ctx["current_sort_by"] = json!(sort_by);
+    ctx["current_sort_order"] = json!(sort_order);
 
     Ok(Template::render("requirements_table", ctx))
 }
@@ -1205,12 +1209,14 @@ pub fn show_tests(
     Ok(Template::render("tests", ctx))
 }
 
-#[get("/tests_table?<status_filter>&<verification_filter>&<category_filter>")]
+#[get("/tests_table?<status_filter>&<verification_filter>&<category_filter>&<sort_by>&<sort_order>")]
 pub fn show_tests_table(
     cookies: &CookieJar<'_>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
 ) -> Result<Template, Redirect> {
     let user = require_auth(cookies)?;
     let mut ctx = build_context_with_projects(user, cookies);
@@ -1291,6 +1297,8 @@ pub fn show_tests_table(
     ctx["current_status_filter"] = json!(status_filter);
     ctx["current_verification_filter"] = json!(verification_filter);
     ctx["current_category_filter"] = json!(category_filter);
+    ctx["current_sort_by"] = json!(sort_by);
+    ctx["current_sort_order"] = json!(sort_order);
 
     Ok(Template::render("tests_table", ctx))
 }

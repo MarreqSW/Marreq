@@ -1,6 +1,6 @@
-use bcrypt::{hash, verify, DEFAULT_COST};
 use super::errors::AuthError;
 use crate::repository::Repository;
+use bcrypt::{hash, verify, DEFAULT_COST};
 use rocket::http::CookieJar;
 
 pub fn hash_password(password: &str) -> Result<String, bcrypt::BcryptError> {
@@ -15,15 +15,14 @@ fn change_user_password_impl<R: Repository>(
     repo: &mut R,
     uid: i32,
     current_password: &str,
-    new_password: &str
+    new_password: &str,
 ) -> Result<(), AuthError> {
-
     let user = repo.get_user_by_id(uid)?;
 
     match verify_password(current_password, &user.user_password) {
         Ok(true) => {
-            let new_hash = hash_password(new_password)
-                .map_err(|e| AuthError::Verify(e.to_string()))?;
+            let new_hash =
+                hash_password(new_password).map_err(|e| AuthError::Verify(e.to_string()))?;
 
             repo.update_user_password(uid, &new_hash)?;
             Ok(())
@@ -41,7 +40,9 @@ pub fn change_user_password<R: Repository>(
     cookies: &CookieJar<'_>,
 ) -> Result<(), AuthError> {
     // Get user ID from cookie
-    let user_id_cookie = cookies.get_private("user_id").ok_or(AuthError::NotLoggedIn)?;
+    let user_id_cookie = cookies
+        .get_private(super::session::SESSION_COOKIE)
+        .ok_or(AuthError::NotLoggedIn)?;
     let user_id = user_id_cookie
         .value()
         .parse::<i32>()
@@ -113,7 +114,10 @@ mod tests {
         let result = change_user_password_impl(&mut repo, 99, "x", "y");
         assert!(result.is_err());
         // usually mapped from RepoError::NotFound -> AuthError (Db or similar)
-        assert!(!matches!(result.unwrap_err(), AuthError::InvalidCredentials | AuthError::Verify(_)));
+        assert!(!matches!(
+            result.unwrap_err(),
+            AuthError::InvalidCredentials | AuthError::Verify(_)
+        ));
     }
 
     #[test]

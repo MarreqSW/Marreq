@@ -15,19 +15,17 @@
         <li><a class="dropdown-item" href="/new_test">New Test</a></li>
         <li><a class="dropdown-item" href="/new_category">New Category</a></li>
         <li><a class="dropdown-item" href="/new_applicability">New Applicability</a></li>
-        {{#if user.is_admin}}
         <li><a class="dropdown-item" href="/new_user">New User</a></li>
         <li><hr class="dropdown-divider"></li>
+        {{#if user.is_admin}}
         <li><a class="dropdown-item" href="/import_excel">Import Excel</a></li>
         <li><hr class="dropdown-divider"></li>
         {{/if}}
         <li><a class="dropdown-item" href="/requirements.xls">Export Requirements</a></li>
         <li><a class="dropdown-item" href="/tests.xls">Export Tests</a></li>
         <li><a class="dropdown-item" href="/matrix.xls">Export Matrix</a></li>
-        {{#if user.is_admin}}
         <li><hr class="dropdown-divider"></li>
         <li><a class="dropdown-item" href="/users">View Users</a></li>
-        {{/if}}
         <li><a class="dropdown-item" href="/reports">View Reports</a></li>
       </ul>
     </div>
@@ -112,7 +110,6 @@
     </div>
   </div>
 
-  {{#if user.is_admin}}
   <div class="card">
     <div class="card-header">
       <h3>Users</h3>
@@ -125,7 +122,6 @@
       </div>
     </div>
   </div>
-  {{/if}}
 
   {{#if user.is_admin}}
   <div class="card">

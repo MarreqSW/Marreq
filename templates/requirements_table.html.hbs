@@ -451,7 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function updateRequirement(id, field, value) {
-  fetch(`/api/v1/requirements/${id}`, {
+  fetch(`/api/v1/requirements/${id}/field`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

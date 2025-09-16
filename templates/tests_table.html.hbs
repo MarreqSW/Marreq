@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function updateTest(id, field, value) {
-  fetch(`/api/v1/tests/${id}`, {
+  fetch(`/api/v1/tests/${id}/field`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

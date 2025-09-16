@@ -38,19 +38,6 @@ fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Er
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
 }
 
-// --------------------------------
-// Authentication Helper Functions
-// --------------------------------
-
-pub fn require_auth(cookies: &CookieJar<'_>) -> Result<User, Redirect> {
-    let repo = DieselCachedRepo::read();
-
-    match is_authenticated(&*repo, cookies) {
-        Some(user) => Ok(user),
-        None => Err(Redirect::to(uri!(login_page))),
-    }
-}
-
 fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::serde::json::Value {
     let projects = DieselCachedRepo::read()
         .get_projects_all()
@@ -286,8 +273,8 @@ pub fn get_project_by_id_pooled_safe(project_id: i32) -> Project {
 }
 
 #[get("/")]
-pub fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn index(session_user: SessionUser, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
@@ -374,12 +361,13 @@ pub fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 
 #[get("/requirements?<status_filter>&<verification_filter>&<category_filter>")]
 pub fn show_requirements(
+    session_user: SessionUser,
     cookies: &CookieJar<'_>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
 ) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
     let mut ctx = build_context_with_projects(user, cookies);
 
     // Get selected project ID
@@ -456,8 +444,11 @@ pub fn show_requirements(
 }
 
 #[get("/requirements/<req_id>")]
-pub fn show_requirement_id(req_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn show_requirement_id(
+    session_user: SessionUser,
+    req_id: i32,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
 
     // Use the safe function that returns a Result
     match get_requirement_by_id_cached_safe(req_id) {
@@ -491,8 +482,10 @@ pub fn show_requirement_id(req_id: i32, cookies: &CookieJar<'_>) -> Result<Templ
 }
 
 #[get("/users")]
-pub fn show_users(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn show_users(
+    session_user: SessionUser,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
     let users = DieselCachedRepo::read().get_users_all();
 
     let ctx = match users {
@@ -514,8 +507,11 @@ pub fn show_users(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 }
 
 #[get("/users/<user_id>")]
-pub fn show_user_id(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let current_user = require_auth(cookies)?;
+pub fn show_user_id(
+    session_user: SessionUser,
+    user_id: i32,
+) -> Result<Template, Redirect> {
+    let current_user = session_user.into_inner();
     let user = DieselCachedRepo::read()
         .get_user_by_id(user_id)
         .expect("Error reading table Users");
@@ -534,8 +530,11 @@ pub fn show_user_id(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, R
 }
 
 #[get("/edit_user/<user_id>")]
-pub fn edit_user(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let current_user = require_auth(cookies)?;
+pub fn edit_user(
+    session_user: SessionUser,
+    user_id: i32,
+) -> Result<Template, Redirect> {
+    let current_user = session_user.into_inner();
     let user = DieselCachedRepo::read()
         .get_user_by_id(user_id)
         .expect("Error reading table Users");
@@ -552,11 +551,11 @@ pub fn edit_user(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redi
 
 #[post("/edit_user/<user_id>", data = "<user_form>")]
 pub fn post_edit_user(
+    session_user: SessionUser,
     user_id: i32,
     user_form: Form<UpdateUser>,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let current_user = require_auth(cookies)?;
+    let current_user = session_user.into_inner();
 
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
@@ -603,8 +602,12 @@ pub fn post_edit_user(
 }
 
 #[get("/edit_requirement/<req_id>")]
-pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn get_edit_requirement(
+    session_user: SessionUser,
+    req_id: i32,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
 
     // Use the safe function that returns a Result
     let req = match get_requirement_by_id_cached_safe(req_id) {
@@ -723,11 +726,11 @@ pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
 
 #[post("/edit_requirement/<req_id>", data = "<new_req>")]
 pub fn post_edit_requirement(
+    session_user: SessionUser,
     req_id: i32,
     new_req: Form<NewRequirement>,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
     let my_id = new_req.req_id.unwrap_or(0);
 
     let requirement_data = new_req.into_inner();
@@ -816,10 +819,10 @@ pub fn post_edit_requirement(
 
 #[delete("/delete_requirement/<req_id>")]
 pub fn delete_requirement_route(
+    session_user: SessionUser,
     req_id: i32,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, rocket::http::Status> {
-    let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
+    let user = session_user.into_inner();
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
@@ -877,10 +880,10 @@ pub fn delete_requirement_route(
 
 #[delete("/delete_test/<test_id>")]
 pub fn delete_test_route(
+    session_user: SessionUser,
     test_id: i32,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, rocket::http::Status> {
-    let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
+    let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         rocket::http::Status::InternalServerError
@@ -934,8 +937,11 @@ pub fn delete_test_route(
 }
 
 #[get("/new_requirement")]
-pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn new_requirement(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
     let status = DieselCachedRepo::read()
         .get_status_all()
         .unwrap_or_default();
@@ -1030,10 +1036,10 @@ pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 
 #[post("/new_requirement", data = "<new_req>")]
 pub fn post_requirement(
+    session_user: SessionUser,
     new_req: Form<NewRequirement>,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_requirement))
@@ -1069,7 +1075,6 @@ pub fn post_requirement(
 
     // Generate automatic reference code if not provided
     if requirement_data.req_reference.is_empty() {
-
         let repo = DieselCachedRepo::write();
         match generate_requirement_reference(
             &*repo,
@@ -1120,12 +1125,13 @@ pub fn post_requirement(
 
 #[get("/tests?<status_filter>&<verification_filter>&<category_filter>")]
 pub fn show_tests(
+    session_user: SessionUser,
     cookies: &CookieJar<'_>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
 ) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
     let mut ctx = build_context_with_projects(user, cookies);
 
     // Get selected project ID
@@ -1200,8 +1206,11 @@ pub fn show_tests(
 }
 
 #[get("/tests/<test_id_param>")]
-pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn show_test_id(
+    session_user: SessionUser,
+    test_id_param: i32,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
 
     // Use the safe function that returns a Result
     match get_test_by_id_cached_safe(test_id_param) {
@@ -1243,8 +1252,8 @@ pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Templ
 }
 
 #[get("/new_test")]
-pub fn new_test(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn new_test(session_user: SessionUser, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
     let status = DieselCachedRepo::read()
         .get_status_all()
         .unwrap_or_default();
@@ -1315,8 +1324,12 @@ pub fn new_test(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 }
 
 #[get("/edit_test/<test_id>")]
-pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn get_edit_test(
+    session_user: SessionUser,
+    test_id: i32,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
     let test = DieselCachedRepo::read()
         .get_test_by_id(test_id)
         .expect("Error reading table Tests");
@@ -1422,14 +1435,13 @@ pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, 
     Ok(Template::render("edit_test_by_id", ctx))
 }
 
-#[allow(unused_variables)]
 #[post("/edit_test/<test_id>", data = "<edit_test_form>")]
 pub fn post_edit_test(
+    session_user: SessionUser,
     test_id: i32,
     edit_test_form: Form<EditTestForm>,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(get_edit_test(test_id)))
@@ -1451,10 +1463,12 @@ pub fn post_edit_test(
         project_id: edit_test_form.project_id,
     };
 
-    DieselCachedRepo::write().edit_test(&new_test).map_err(|e| {
-        eprintln!("Error editing test: {:?}", e);
-        Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
-    })?;
+    DieselCachedRepo::write()
+        .edit_test(&new_test)
+        .map_err(|e| {
+            eprintln!("Error editing test: {:?}", e);
+            Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+        })?;
 
     // Log the test update
     if let (Ok(old_values), Ok(new_values)) = (
@@ -1487,10 +1501,10 @@ pub fn post_edit_test(
 
 #[post("/new_test", data = "<new_test>")]
 pub fn post_test(
+    session_user: SessionUser,
     new_test: Form<NewTestForm>,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_test))
@@ -1504,10 +1518,12 @@ pub fn post_test(
         test_parent: new_test.test_parent,
         project_id: new_test.project_id,
     };
-    let my_id = DieselCachedRepo::write().insert_test(&my_new_test).map_err(|e| {
-        eprintln!("Error inserting new test: {:?}", e);
-        Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
-    })?;
+    let my_id = DieselCachedRepo::write()
+        .insert_test(&my_new_test)
+        .map_err(|e| {
+            eprintln!("Error inserting new test: {:?}", e);
+            Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+        })?;
 
     // Log the test creation
     if let Ok(new_values) = Logger::to_json_string(&my_new_test) {
@@ -1581,12 +1597,13 @@ pub fn show_status() -> content::RawHtml<String> {
 
 #[get("/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
 pub fn get_matrix(
+    session_user: SessionUser,
     cookies: &CookieJar<'_>,
     sort_by: Option<String>,
     sort_order: Option<String>,
     test_status_filter: Option<i32>,
 ) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
     use crate::schema::matrix::dsl::*;
     use crate::schema::requirements::dsl::*;
     use crate::schema::tests::dsl::*;
@@ -1794,8 +1811,11 @@ pub fn get_matrix(
 }
 
 #[get("/matrix.xls")]
-pub async fn get_matrix_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = require_auth(cookies)?;
+pub async fn get_matrix_xls(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+) -> Result<(ContentType, NamedFile), Redirect> {
+    let _user = session_user.into_inner();
 
     match excel::create_matrix_workbook(cookies) {
         Ok(_) => {
@@ -1826,9 +1846,9 @@ pub async fn get_matrix_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, Nam
 
 #[get("/requirements.xls")]
 pub async fn get_requirements_xls(
-    cookies: &CookieJar<'_>,
+    session_user: SessionUser,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = require_auth(cookies)?;
+    let _user = session_user.into_inner();
     let _file = excel::create_requirements_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/requirements.xls");
     let res = NamedFile::open(&path_to_file)
@@ -1848,8 +1868,10 @@ pub async fn get_requirements_xls(
 }
 
 #[get("/tests.xls")]
-pub async fn get_tests_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = require_auth(cookies)?;
+pub async fn get_tests_xls(
+    session_user: SessionUser,
+) -> Result<(ContentType, NamedFile), Redirect> {
+    let _user = session_user.into_inner();
     let _file = excel::create_tests_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/tests.xls");
     let res = NamedFile::open(&path_to_file)
@@ -1869,8 +1891,8 @@ pub async fn get_tests_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, Name
 }
 
 #[get("/new_user")]
-pub fn new_user(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn new_user(session_user: SessionUser) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
     let status = DieselCachedRepo::read()
         .get_status_all()
         .unwrap_or_default();
@@ -1884,8 +1906,11 @@ pub fn new_user(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 }
 
 #[get("/categories")]
-pub fn show_categories(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn show_categories(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
     let mut ctx = build_context_with_projects(user, cookies);
 
     // Get selected project ID
@@ -1918,8 +1943,11 @@ pub fn show_categories(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 }
 
 #[get("/new_category")]
-pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn new_category(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
 
     // Get projects and selected project
     let projects = DieselCachedRepo::read()
@@ -1947,10 +1975,10 @@ pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 
 #[post("/new_category", data = "<new_category>")]
 pub fn post_category(
+    session_user: SessionUser,
     new_category: Form<NewCategory>,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
 
     // Check if project_id is provided
     if new_category.project_id == 0 {
@@ -1991,8 +2019,11 @@ pub fn post_category(
 }
 
 #[get("/edit_category/<cat_id>")]
-pub fn get_edit_category(cat_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn get_edit_category(
+    session_user: SessionUser,
+    cat_id: i32,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
     let category = get_category_by_id_cached(cat_id);
     let ctx = json!({
         "categories": category,
@@ -2003,11 +2034,11 @@ pub fn get_edit_category(cat_id: i32, cookies: &CookieJar<'_>) -> Result<Templat
 
 #[post("/edit_category/<cat_id>", data = "<category>")]
 pub fn post_edit_category(
+    session_user: SessionUser,
     cat_id: i32,
     category: Form<NewCategory>,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(get_edit_category(cat_id)))
@@ -2052,10 +2083,10 @@ pub fn post_edit_category(
 
 #[delete("/delete_category/<cat_id>")]
 pub fn delete_category_route(
+    session_user: SessionUser,
     cat_id: i32,
-    cookies: &CookieJar<'_>,
 ) -> Result<rocket::http::Status, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
@@ -2095,8 +2126,11 @@ pub fn delete_category_route(
 }
 
 #[post("/new_user", data = "<new_user>")]
-pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn post_user(
+    session_user: SessionUser,
+    new_user: Form<NewUser>,
+) -> Result<Redirect, Redirect> {
+    let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_user))
@@ -2142,8 +2176,11 @@ pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Red
 }
 
 #[get("/applicability")]
-pub fn show_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn show_applicability(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
     let mut ctx = build_context_with_projects(user, cookies);
 
     // Get selected project ID
@@ -2176,8 +2213,11 @@ pub fn show_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect>
 }
 
 #[get("/new_applicability")]
-pub fn new_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn new_applicability(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
 
     // Get projects and selected project
     let projects = DieselCachedRepo::read()
@@ -2205,10 +2245,10 @@ pub fn new_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> 
 
 #[post("/new_applicability", data = "<new_applicability>")]
 pub fn post_applicability(
+    session_user: SessionUser,
     new_applicability: Form<NewApplicability>,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
 
     // Check if project_id is provided
     if new_applicability.project_id == 0 {
@@ -2252,8 +2292,11 @@ pub fn post_applicability(
 }
 
 #[get("/edit_applicability/<app_id>")]
-pub fn get_edit_applicability(app_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn get_edit_applicability(
+    session_user: SessionUser,
+    app_id: i32,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
     let applicability = get_applicability_by_id_cached(app_id);
     let ctx = json!({
         "applicability": applicability,
@@ -2264,11 +2307,11 @@ pub fn get_edit_applicability(app_id: i32, cookies: &CookieJar<'_>) -> Result<Te
 
 #[post("/edit_applicability/<app_id>", data = "<applicability>")]
 pub fn post_edit_applicability(
+    session_user: SessionUser,
     app_id: i32,
     applicability: Form<NewApplicability>,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(get_edit_applicability(app_id)))
@@ -2315,10 +2358,10 @@ pub fn post_edit_applicability(
 
 #[delete("/delete_applicability/<app_id>")]
 pub fn delete_applicability_route(
+    session_user: SessionUser,
     app_id: i32,
-    cookies: &CookieJar<'_>,
 ) -> Result<rocket::http::Status, Redirect> {
-    let user = require_auth(cookies)?;
+    let user = session_user.into_inner();
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
@@ -2361,8 +2404,10 @@ pub fn delete_applicability_route(
 }
 
 #[get("/requirements/tree")]
-pub fn show_requirements_tree(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn show_requirements_tree(
+    session_user: SessionUser,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
 
     // Get all requirements
     let all_requirements = DieselCachedRepo::read()
@@ -2430,8 +2475,11 @@ pub fn show_requirements_tree(cookies: &CookieJar<'_>) -> Result<Template, Redir
 }
 
 #[get("/reports")]
-pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn show_reports(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
@@ -2596,9 +2644,10 @@ pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 
 #[get("/reports/pdf")]
 pub fn generate_pdf_report(
+    session_user: SessionUser,
     cookies: &CookieJar<'_>,
 ) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
-    let _user = require_auth(cookies)?;
+    let _user = session_user.into_inner();
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
@@ -2747,8 +2796,10 @@ pub fn generate_pdf_report(
 
 // Project management routes
 #[get("/projects")]
-pub fn show_projects(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn show_projects(
+    session_user: SessionUser,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
     let projects = DieselCachedRepo::read().get_projects_all();
 
     let ctx = match projects {
@@ -2770,8 +2821,11 @@ pub fn show_projects(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 }
 
 #[get("/projects/<project_id>")]
-pub fn show_project_id(project_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
+pub fn show_project_id(
+    session_user: SessionUser,
+    project_id: i32,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
     let project = get_project_by_id_pooled_safe(project_id);
 
     let ctx = json!({
@@ -2783,17 +2837,8 @@ pub fn show_project_id(project_id: i32, cookies: &CookieJar<'_>) -> Result<Templ
 }
 
 #[get("/new_project")]
-pub fn new_project(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        let context = json!({
-            "user": user,
-            "title": "Access Denied"
-        });
-        return Ok(Template::render("access_denied", context));
-    }
+pub fn new_project(admin: AdminOnly) -> Template {
+    let user = admin.into_inner();
 
     let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
 
@@ -2801,20 +2846,12 @@ pub fn new_project(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         "users": users,
         "user": user
     });
-    Ok(Template::render("new_project", ctx))
+    Template::render("new_project", ctx)
 }
 
 #[post("/new_project", data = "<new_project>")]
-pub fn post_project(
-    new_project: Form<NewProject>,
-    cookies: &CookieJar<'_>,
-) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        return Err(Redirect::to(uri!(show_projects)));
-    }
+pub fn post_project(admin: AdminOnly, new_project: Form<NewProject>) -> Result<Redirect, Redirect> {
+    let user = admin.into_inner();
 
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
@@ -2850,17 +2887,8 @@ pub fn post_project(
 }
 
 #[get("/edit_project/<project_id>")]
-pub fn get_edit_project(project_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        let context = json!({
-            "user": user,
-            "title": "Access Denied"
-        });
-        return Ok(Template::render("access_denied", context));
-    }
+pub fn get_edit_project(admin: AdminOnly, project_id: i32) -> Template {
+    let user = admin.into_inner();
 
     let project = get_project_by_id_pooled_safe(project_id);
     let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
@@ -2870,21 +2898,16 @@ pub fn get_edit_project(project_id: i32, cookies: &CookieJar<'_>) -> Result<Temp
         "users": users,
         "user": user
     });
-    Ok(Template::render("edit_project", ctx))
+    Template::render("edit_project", ctx)
 }
 
 #[post("/edit_project/<project_id>", data = "<project>")]
 pub fn post_edit_project(
+    admin: AdminOnly,
     project_id: i32,
     project: Form<UpdateProject>,
-    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        return Err(Redirect::to(uri!(show_projects)));
-    }
+    let user = admin.into_inner();
 
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
@@ -2928,15 +2951,10 @@ pub fn post_edit_project(
 
 #[delete("/delete_project/<project_id>")]
 pub fn delete_project_route(
+    admin: AdminOnly,
     project_id: i32,
-    cookies: &CookieJar<'_>,
 ) -> Result<rocket::http::Status, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        return Err(Redirect::to(uri!(show_projects)));
-    }
+    let user = admin.into_inner();
 
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
@@ -2978,8 +2996,11 @@ pub fn delete_project_route(
 
 // Excel Import Routes
 #[get("/import_excel")]
-pub fn import_excel_page(cookies: &CookieJar<'_>) -> Result<content::RawHtml<String>, Redirect> {
-    let _user = require_auth(cookies)?;
+pub fn import_excel_page(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+) -> Result<content::RawHtml<String>, Redirect> {
+    let _user = session_user.into_inner();
 
     // Get selected project ID and name
     let selected_project_id = get_selected_project_id(cookies);
@@ -3051,10 +3072,10 @@ pub fn import_excel_page(cookies: &CookieJar<'_>) -> Result<content::RawHtml<Str
 
 #[post("/import_excel/upload", data = "<upload>")]
 pub async fn upload_excel_file(
+    session_user: SessionUser,
     mut upload: rocket::form::Form<rocket::fs::TempFile<'_>>,
-    cookies: &CookieJar<'_>,
 ) -> Result<content::RawHtml<String>, Redirect> {
-    let _user = require_auth(cookies)?;
+    let _user = session_user.into_inner();
 
     // Save uploaded file temporarily
     let temp_path = format!("/tmp/upload_{}.xlsx", chrono::Utc::now().timestamp());
@@ -3196,10 +3217,11 @@ pub async fn upload_excel_file(
 
 #[post("/import_excel/process", data = "<mapping_data>")]
 pub fn process_excel_import(
+    session_user: SessionUser,
     mapping_data: Form<crate::models::ImportMappingForm>,
     cookies: &CookieJar<'_>,
 ) -> Result<content::RawHtml<String>, Redirect> {
-    let _user = require_auth(cookies)?;
+    let _user = session_user.into_inner();
 
     eprintln!("Column mappings string: {}", mapping_data.column_mappings);
 
@@ -3350,38 +3372,20 @@ pub fn process_excel_import(
 
 // Admin Dashboard Routes
 #[get("/admin")]
-pub fn admin_dashboard(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        let context = json!({
-            "user": user,
-            "title": "Access Denied"
-        });
-        return Ok(Template::render("access_denied", context));
-    }
+pub fn admin_dashboard(admin: AdminOnly) -> Template {
+    let user = admin.into_inner();
 
     let context = json!({
         "user": user,
         "title": "Admin Dashboard"
     });
 
-    Ok(Template::render("admin/dashboard", context))
+    Template::render("admin/dashboard", context)
 }
 
 #[get("/admin/users")]
-pub fn admin_users_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        let context = json!({
-            "user": user,
-            "title": "Access Denied"
-        });
-        return Ok(Template::render("access_denied", context));
-    }
+pub fn admin_users_page(admin: AdminOnly) -> Template {
+    let user = admin.into_inner();
 
     let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
 
@@ -3391,42 +3395,28 @@ pub fn admin_users_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
         "title": "User Management"
     });
 
-    Ok(Template::render("admin/users", context))
+    Template::render("admin/users", context)
 }
 
 // Backup Routes
 #[get("/admin/backup")]
-pub fn admin_backup_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        let context = json!({
-            "user": user,
-            "title": "Access Denied"
-        });
-        return Ok(Template::render("access_denied", context));
-    }
+pub fn admin_backup_page(admin: AdminOnly) -> Template {
+    let user = admin.into_inner();
 
     let context = json!({
         "user": user,
         "title": "Database Backup"
     });
 
-    Ok(Template::render("admin/backup", context))
+    Template::render("admin/backup", context)
 }
 
 #[post("/admin/backup/generate/<filename>")]
 pub async fn generate_backup(
+    admin: AdminOnly,
     filename: String,
-    cookies: &CookieJar<'_>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        return Err(Redirect::to(uri!(admin_backup_page)));
-    }
+    let user = admin.into_inner();
 
     // Use the filename from the URL parameter
     let filename = if filename.ends_with(".sql") {
@@ -3548,17 +3538,8 @@ pub async fn generate_backup(
 }
 
 #[get("/logs")]
-pub fn show_logs(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        let context = json!({
-            "user": user,
-            "title": "Access Denied"
-        });
-        return Ok(Template::render("access_denied", context));
-    }
+pub fn show_logs(admin: AdminOnly) -> Result<Template, Redirect> {
+    let user = admin.into_inner();
 
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error in show_logs: {}", e);
@@ -3591,20 +3572,11 @@ pub fn show_logs(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
 
 #[get("/logs/<entity_type>/<entity_id>")]
 pub fn show_entity_logs(
+    admin: AdminOnly,
     entity_type: String,
     entity_id: i32,
-    cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        let context = json!({
-            "user": user,
-            "title": "Access Denied"
-        });
-        return Ok(Template::render("access_denied", context));
-    }
+    let user = admin.into_inner();
 
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error in show_entity_logs: {}", e);
@@ -3639,15 +3611,10 @@ pub fn show_entity_logs(
 
 #[get("/export_logs?<filename>")]
 pub async fn export_logs(
+    admin: AdminOnly,
     filename: Option<String>,
-    cookies: &CookieJar<'_>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        return Err(Redirect::to(uri!(show_logs)));
-    }
+    let user = admin.into_inner();
 
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error in export_logs: {}", e);
@@ -3703,17 +3670,10 @@ pub async fn export_logs(
 
 #[get("/export_logs/<entity_type>/<entity_id>")]
 pub fn export_entity_logs(
+    _admin: AdminOnly,
     entity_type: String,
     entity_id: i32,
-    cookies: &CookieJar<'_>,
 ) -> Result<(rocket::http::ContentType, String), Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        return Err(Redirect::to(uri!(show_logs)));
-    }
-
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
@@ -3732,13 +3692,8 @@ pub fn export_entity_logs(
 }
 
 #[post("/cleanup_logs")]
-pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        return Err(Redirect::to(uri!(show_logs)));
-    }
+pub fn cleanup_logs(admin: AdminOnly) -> Result<Redirect, Redirect> {
+    let user = admin.into_inner();
 
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
@@ -3786,17 +3741,8 @@ pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
 }
 
 #[get("/log_analytics")]
-pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
-
-    // Check if user is admin
-    if !user.is_admin {
-        let context = json!({
-            "user": user,
-            "title": "Access Denied"
-        });
-        return Ok(Template::render("access_denied", context));
-    }
+pub fn log_analytics(admin: AdminOnly) -> Result<Template, Redirect> {
+    let user = admin.into_inner();
 
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,

@@ -10,11 +10,12 @@ pub mod html;
 pub mod importers;
 pub mod logger;
 pub mod models;
+pub mod repository;
 pub mod routes;
 pub mod schema;
-pub mod repository;
 
 use crate::html::cors::*;
+use crate::routes::catchers::*;
 use crate::routes::routes_api::*;
 use crate::routes::routes_html::*;
 
@@ -29,7 +30,7 @@ async fn main() -> Result<(), rocket::Error> {
 
     // Start background cache maintenance
     DieselCachedRepo::read().cache().start_cache_maintenance();
-    
+
     let _rocket = rocket::build()
         .mount(
             "/",
@@ -100,7 +101,6 @@ async fn main() -> Result<(), rocket::Error> {
                 export_entity_logs,
                 cleanup_logs,
                 log_analytics,
-
             ],
         )
         .mount(
@@ -129,9 +129,9 @@ async fn main() -> Result<(), rocket::Error> {
                 api_post_applicability,
                 api_put_applicability,
                 api_delete_applicability_by_id,
-
             ],
         )
+        .register("/", catchers![unauthorized, forbidden])
         .mount("/static", FileServer::from(relative!("src/html/static")))
         .attach(CorsFairing)
         .attach(Template::fairing())
@@ -141,4 +141,3 @@ async fn main() -> Result<(), rocket::Error> {
 
     Ok(())
 }
-

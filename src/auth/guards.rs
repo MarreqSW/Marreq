@@ -1,0 +1,95 @@
+use std::ops::Deref;
+
+use rocket::http::Status;
+use rocket::request::{FromRequest, Outcome};
+use rocket::{async_trait, Request};
+
+use crate::auth::{clear_session_cookie, read_session_user_id};
+use crate::models::User;
+use crate::repository::errors::RepoError;
+use crate::repository::{DieselCachedRepo, UserRepository};
+
+/// Request guard that ensures the user is authenticated and loaded from the database.
+pub struct SessionUser(pub User);
+
+impl SessionUser {
+    pub fn into_inner(self) -> User {
+        self.0
+    }
+}
+
+impl Deref for SessionUser {
+    type Target = User;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for SessionUser {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let cookies = request.cookies();
+
+        let user_id = match read_session_user_id(cookies) {
+            Some(id) => id,
+            None => {
+                clear_session_cookie(cookies);
+                return Outcome::Error((Status::Unauthorized, ()));
+            }
+        };
+
+        let result = rocket::tokio::task::spawn_blocking(move || {
+            DieselCachedRepo::read().get_user_by_id(user_id)
+        })
+        .await;
+
+        match result {
+            Ok(Ok(user)) => Outcome::Success(SessionUser(user)),
+            Ok(Err(RepoError::NotFound)) => {
+                clear_session_cookie(cookies);
+                Outcome::Error((Status::Unauthorized, ()))
+            }
+            Ok(Err(_)) => Outcome::Error((Status::InternalServerError, ())),
+            Err(_) => Outcome::Error((Status::InternalServerError, ())),
+        }
+    }
+}
+
+/// Request guard ensuring the current user has administrator privileges.
+pub struct AdminOnly(pub User);
+
+impl AdminOnly {
+    pub fn into_inner(self) -> User {
+        self.0
+    }
+}
+
+impl Deref for AdminOnly {
+    type Target = User;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for AdminOnly {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        match request.guard::<SessionUser>().await {
+            Outcome::Success(user) => {
+                if user.is_admin {
+                    Outcome::Success(AdminOnly(user.into_inner()))
+                } else {
+                    Outcome::Error((Status::Forbidden, ()))
+                }
+            }
+            Outcome::Error((status, ())) => Outcome::Error((status, ())),
+            Outcome::Forward(status) => Outcome::Forward(status),
+        }
+    }
+}

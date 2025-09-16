@@ -1,11 +1,9 @@
+use crate::auth::AdminOnly;
 use crate::repository::DieselCachedRepo;
-use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::serde::json::json;
 use rocket::serde::json::Json;
 use rocket_dyn_templates::Template;
-
-use crate::routes::routes_html::require_auth;
 
 /// Show cache statistics page
 #[get("/admin/cache")]
@@ -126,12 +124,8 @@ pub fn api_reset_cache_counters() -> rocket::serde::json::Json<serde_json::Value
 
 /// API endpoint to get cache health
 #[get("/cache/health")]
-pub fn cache_health_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = require_auth(cookies)?;
-
-    if !user.is_admin {
-        return Err(Redirect::to("/"));
-    }
+pub fn cache_health_page(admin: AdminOnly) -> Template {
+    let user = admin.into_inner();
 
     let health_data = DieselCachedRepo::read().cache().get_health();
     let ctx = json!({
@@ -139,21 +133,15 @@ pub fn cache_health_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> 
         "health": health_data
     });
 
-    Ok(Template::render("admin/cache_health", ctx))
+    Template::render("admin/cache_health", ctx)
 }
 
 #[get("/cache/warm")]
-pub fn warm_cache_route(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
-    let user = require_auth(cookies)?;
-
-    if !user.is_admin {
-        return Err(Redirect::to("/"));
-    }
-
+pub fn warm_cache_route(_admin: AdminOnly) -> Redirect {
     // Warm up the cache
     DieselCachedRepo::write().warm_cache();
 
-    Ok(Redirect::to("/admin/cache"))
+    Redirect::to("/admin/cache")
 }
 
 #[get("/cache/health/api")]

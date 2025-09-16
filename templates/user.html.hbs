@@ -28,7 +28,12 @@
     </div>
   </div>
   <div class="card-footer">
-    <a href="/users/{{user_id}}" class="btn btn-outline btn-sm">View Details</a>
+    {{#if show_back_button}}
+      <a href="/users" class="btn btn-outline btn-sm">Back to Users</a>
+    {{/if}}
+    {{#if show_details_button}}
+      <a href="/users/{{user_id}}" class="btn btn-outline btn-sm">View Details</a>
+    {{/if}}
     <a href="/edit_user/{{user_id}}" class="btn btn-primary btn-sm">Edit User</a>
   </div>
 </div>

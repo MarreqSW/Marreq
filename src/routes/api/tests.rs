@@ -58,6 +58,73 @@ pub async fn update_test(
     Ok(Json(ApiResponse::success(success)))
 }
 
+/// Partial update for test fields (for inline editing)
+#[put("/tests/<id>/field", data = "<field_update>")]
+pub async fn update_test_field(
+    id: i32,
+    field_update: Json<serde_json::Value>,
+    service: &State<TestService>,
+) -> ApiResponseResult<bool> {
+    // Get the current test
+    let current_test = service.get_test_by_id(id).await?;
+    
+    // Create a new test with the updated field
+    let mut updated_test = NewTest {
+        test_id: Some(current_test.test_id),
+        test_name: current_test.test_name,
+        test_description: current_test.test_description,
+        test_source: current_test.test_source,
+        test_reference: current_test.test_reference,
+        test_status: current_test.test_status,
+        test_parent: current_test.test_parent,
+        project_id: current_test.project_id,
+    };
+    
+    // Update the specific field
+    if let Some(field_data) = field_update.as_object() {
+        for (key, value) in field_data {
+            match key.as_str() {
+                "test_name" => {
+                    if let Some(name) = value.as_str() {
+                        updated_test.test_name = name.to_string();
+                    }
+                }
+                "test_reference" => {
+                    if let Some(reference) = value.as_str() {
+                        updated_test.test_reference = reference.to_string();
+                    }
+                }
+                "test_description" => {
+                    if let Some(description) = value.as_str() {
+                        updated_test.test_description = description.to_string();
+                    }
+                }
+                "test_status" => {
+                    if let Some(status) = value.as_i64() {
+                        updated_test.test_status = status as i32;
+                    }
+                }
+                "test_source" => {
+                    if let Some(source) = value.as_str() {
+                        updated_test.test_source = source.to_string();
+                    }
+                }
+                "test_parent" => {
+                    if let Some(parent) = value.as_i64() {
+                        updated_test.test_parent = parent as i32;
+                    }
+                }
+                _ => {
+                    // Unknown field, skip
+                }
+            }
+        }
+    }
+    
+    let success = service.update_test(id, updated_test, 0).await?; // TODO: Get user_id from auth
+    Ok(Json(ApiResponse::success(success)))
+}
+
 /// Delete a test
 #[delete("/tests/<id>")]
 pub async fn delete_test(

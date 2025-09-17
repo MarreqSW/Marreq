@@ -137,9 +137,30 @@ pub struct NewApplicability {
     pub project_id: i32,
 }
 
-/// Possible status values for requirements or tests.
+/// Possible status values for requirements.
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(table_name = requirement_status)]
+pub struct RequirementStatus {
+    pub req_st_id: i32,
+    pub req_st_title: String,
+    pub req_st_description: String,
+    pub req_st_short_name: String,
+}
+
+/// Possible status values for tests.
+#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(table_name = test_status)]
+pub struct TestStatus {
+    pub test_st_id: i32,
+    pub test_st_title: String,
+    pub test_st_description: String,
+    pub test_st_short_name: String,
+}
+
+// Keep the old Status struct for backward compatibility
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Status {
     pub st_id: i32,
     pub st_title: String,
@@ -150,11 +171,11 @@ pub struct Status {
 /// Form used to create a new [`Status`].
 #[derive(Serialize, Deserialize, Insertable, FromForm)]
 #[serde(crate = "rocket::serde")]
-#[diesel(table_name = status)]
+#[diesel(table_name = requirement_status)]
 pub struct NewStatus {
-    pub st_title: String,
-    pub st_description: String,
-    pub st_short_name: String,
+    pub req_st_title: String,
+    pub req_st_description: String,
+    pub req_st_short_name: String,
 }
 
 /// Verification methods available for requirements.

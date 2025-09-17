@@ -11,19 +11,21 @@ use rocket::serde::json::json;
 
 use rocket_dyn_templates::Template;
 
-use chrono::Utc;
 use std::path;
+use chrono::Utc;
 
 use crate::auth::*;
+use crate::cached_functions::*;
+use crate::cache::invalidate_project_cache;
+use crate::repository::PooledConnectionWrapper;
 use crate::generators::*;
 use crate::helper_functions::*;
 use crate::html::*;
 use crate::logger::Logger;
 use crate::models::*;
-use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
-    DieselCachedRepo, LookupRepository, MatrixRepository, ProjectsRepository,
-    RequirementsRepository, TestsRepository, UserRepository,
+    DieselRepo, LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
+    TestsRepository, UserRepository,
 };
 
 // --------------------------------
@@ -32,16 +34,26 @@ use crate::repository::{
 
 /// Helper function to get a database connection with proper error handling
 fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Error>> {
-    DieselCachedRepo::read()
-        .inner_repo()
+    DieselRepo::new()
         .get_conn()
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
 }
 
+// --------------------------------
+// Authentication Helper Functions
+// --------------------------------
+
+pub fn require_auth(cookies: &CookieJar<'_>) -> Result<User, Redirect> {
+    let repo = DieselRepo::new();
+
+    match is_authenticated(&repo, cookies) {
+        Some(user) => Ok(user),
+        None => Err(Redirect::to(uri!(login_page))),
+    }
+}
+
 fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::serde::json::Value {
-    let projects = DieselCachedRepo::read()
-        .get_projects_all()
-        .unwrap_or_default();
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
     let selected_project_id = get_selected_project_id(cookies);
 
     json!({
@@ -49,82 +61,6 @@ fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::s
         "projects": projects,
         "selected_project_id": selected_project_id
     })
-}
-
-// --------------------------------
-// Cached Data Helpers
-// --------------------------------
-
-fn get_requirement_by_id_cached_safe(id: i32) -> Result<Requirement, String> {
-    DieselCachedRepo::read()
-        .get_requirement_by_id(id)
-        .map_err(|e| match e {
-            crate::repository::errors::RepoError::NotFound => {
-                format!("Requirement with ID {} not found", id)
-            }
-            _ => e.to_string(),
-        })
-}
-
-fn get_test_by_id_cached_safe(id: i32) -> Result<Test, String> {
-    DieselCachedRepo::read()
-        .get_test_by_id(id)
-        .map_err(|e| match e {
-            crate::repository::errors::RepoError::NotFound => {
-                format!("Test with ID {} not found", id)
-            }
-            _ => e.to_string(),
-        })
-}
-
-fn get_category_by_id_cached(id: i32) -> Category {
-    DieselCachedRepo::read()
-        .get_category_by_id(id)
-        .unwrap_or_else(|_| Category {
-            cat_id: id,
-            cat_title: format!("Unknown Category ({})", id),
-            cat_description: "Category not found".to_string(),
-            cat_tag: "unknown".to_string(),
-            project_id: 1,
-        })
-}
-
-fn get_applicability_by_id_cached(id: i32) -> Applicability {
-    DieselCachedRepo::read()
-        .get_applicability_by_id(id)
-        .unwrap_or_else(|_| Applicability {
-            app_id: id,
-            app_title: format!("Unknown Applicability ({})", id),
-            app_description: "Applicability not found".to_string(),
-            app_tag: "unknown".to_string(),
-            project_id: 1,
-        })
-}
-
-fn get_status_name_by_id_cached(id: i32) -> String {
-    DieselCachedRepo::read()
-        .get_status_by_id(id)
-        .map(|s| s.st_title)
-        .unwrap_or_else(|_| "[Status Not Found]".to_string())
-}
-
-fn get_linked_tests_for_requirement_cached(req_id: i32) -> Result<Vec<DecoratedTest>, String> {
-    DieselCachedRepo::read()
-        .get_tests_for_requirement(req_id)
-        .map(|tests| decorate_tests(tests))
-        .map_err(|e| e.to_string())
-}
-
-fn get_requirements_for_test_cached(test_id: i32) -> Result<Vec<Requirement>, String> {
-    DieselCachedRepo::read()
-        .get_requirements_for_test(test_id)
-        .map_err(|e| e.to_string())
-}
-
-fn get_project_by_id_cached(project_id: i32) -> Project {
-    DieselCachedRepo::read()
-        .get_project_by_id(project_id)
-        .expect("Error loading project")
 }
 
 // --------------------------------
@@ -169,8 +105,14 @@ fn render_change_password_error(err: AuthError) -> Template {
 
 #[get("/login")]
 pub fn login_page() -> Template {
+    // Get projects for navigation (even on login page)
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
+    let selected_project_id: Option<i32> = None; // No project selected on login page
+
     let ctx = json!({
-        "title": "Login"
+        "title": "Login",
+        "projects": projects,
+        "selected_project_id": selected_project_id
     });
     Template::render("login", ctx)
 }
@@ -180,11 +122,11 @@ pub fn login(
     login_form: rocket::form::Form<LoginForm>,
     cookies: &rocket::http::CookieJar<'_>,
 ) -> Result<rocket::response::Redirect, Template> {
-    let repo = DieselCachedRepo::read();
+    let repo = DieselRepo::new();
 
     let form = login_form.into_inner();
 
-    match login_user(&*repo, &form, cookies) {
+    match login_user(&repo, &form, cookies) {
         Ok(()) => Ok(rocket::response::Redirect::to(uri!(index))),
         Err(err) => Err(render_login_error(err)),
     }
@@ -199,9 +141,7 @@ pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
 #[get("/change_password")]
 pub fn change_password_page() -> Template {
     // Get projects for navigation
-    let projects = DieselCachedRepo::read()
-        .get_projects_all()
-        .unwrap_or_default();
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
     let selected_project_id: Option<i32> = None; // No project selected on change password page
 
     let ctx = json!({
@@ -234,10 +174,10 @@ pub fn change_password(
         return Err(Template::render("change_password", ctx));
     }
 
-    let mut repo = DieselCachedRepo::write();
+    let mut repo = DieselRepo::new();
 
     match change_user_password(
-        &mut *repo,
+        &mut repo,
         &password_form.current_password,
         &password_form.new_password,
         cookies,
@@ -259,7 +199,7 @@ pub fn change_password(
 
 /// Get project by ID with safe fallback using the repository.
 pub fn get_project_by_id_pooled_safe(project_id: i32) -> Project {
-    DieselCachedRepo::read()
+    DieselRepo::new()
         .get_project_by_id(project_id)
         .unwrap_or(Project {
             project_id: 0,
@@ -273,8 +213,8 @@ pub fn get_project_by_id_pooled_safe(project_id: i32) -> Project {
 }
 
 #[get("/")]
-pub fn index(session_user: SessionUser, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+pub fn index(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
@@ -285,9 +225,7 @@ pub fn index(session_user: SessionUser, cookies: &CookieJar<'_>) -> Result<Templ
         project.project_name
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             first_project.project_name.clone()
         } else {
@@ -297,54 +235,40 @@ pub fn index(session_user: SessionUser, cookies: &CookieJar<'_>) -> Result<Templ
 
     // Get counts for requirements and tests
     let requirements_count = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read()
-            .get_requirements_by_project(project_id)
+        get_requirements_by_project_cached(project_id)
             .map(|reqs| reqs.len())
             .unwrap_or(0)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read()
-                .get_requirements_by_project(first_project.project_id)
+            get_requirements_by_project_cached(first_project.project_id)
                 .map(|reqs| reqs.len())
                 .unwrap_or(0)
         } else {
-            DieselCachedRepo::read()
-                .get_requirements_all()
+            get_requirements_all_cached()
                 .map(|reqs| reqs.len())
                 .unwrap_or(0)
         }
     };
 
     let tests_count = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read()
-            .get_tests_by_project(project_id)
+        get_tests_by_project_cached(project_id)
             .map(|tests| tests.len())
             .unwrap_or(0)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read()
-                .get_tests_by_project(first_project.project_id)
+            get_tests_by_project_cached(first_project.project_id)
                 .map(|tests| tests.len())
                 .unwrap_or(0)
         } else {
-            DieselCachedRepo::read()
-                .get_tests_all()
-                .map(|tests| tests.len())
-                .unwrap_or(0)
+            get_tests_all_cached().map(|tests| tests.len()).unwrap_or(0)
         }
     };
 
-    let projects = DieselCachedRepo::read()
-        .get_projects_all()
-        .unwrap_or_default();
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
 
     let ctx = json!({
         "user": user,
@@ -361,29 +285,26 @@ pub fn index(session_user: SessionUser, cookies: &CookieJar<'_>) -> Result<Templ
 
 #[get("/requirements?<status_filter>&<verification_filter>&<category_filter>")]
 pub fn show_requirements(
-    session_user: SessionUser,
     cookies: &CookieJar<'_>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
     let mut ctx = build_context_with_projects(user, cookies);
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
 
     let requirements = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_requirements_by_project(project_id)
+        get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_requirements_by_project(first_project.project_id)
+            get_requirements_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_requirements_all()
+            get_requirements_all_cached()
         }
     };
 
@@ -401,35 +322,29 @@ pub fn show_requirements(
     };
 
     // Add filter data to context for the template
-    let statuses = DieselCachedRepo::read()
-        .get_status_all()
-        .unwrap_or_default();
+    let statuses = get_requirement_status_all_cached().unwrap_or_default();
     let verifications = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_verification_by_project(project_id)
+        get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_verification_by_project(first_project.project_id)
+            get_verification_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_verification_all()
+            get_verification_all_cached()
         }
     };
 
     // Get categories filtered by selected project
     let categories = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_categories_all()
+            get_categories_all_cached()
         }
     };
 
@@ -443,12 +358,92 @@ pub fn show_requirements(
     Ok(Template::render("requirements", ctx))
 }
 
-#[get("/requirements/<req_id>")]
-pub fn show_requirement_id(
-    session_user: SessionUser,
-    req_id: i32,
+#[get("/requirements_table?<status_filter>&<verification_filter>&<category_filter>&<sort_by>&<sort_order>")]
+pub fn show_requirements_table(
+    cookies: &CookieJar<'_>,
+    status_filter: Option<i32>,
+    verification_filter: Option<i32>,
+    category_filter: Option<i32>,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
+    let mut ctx = build_context_with_projects(user, cookies);
+
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+
+    let requirements = if let Some(project_id) = selected_project_id {
+        get_requirements_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_requirements_by_project_cached(first_project.project_id)
+        } else {
+            get_requirements_all_cached()
+        }
+    };
+
+    match requirements {
+        Ok(req) => {
+            // Apply filters
+            let filtered_requirements =
+                filter_requirements(req, status_filter, verification_filter, category_filter);
+            let requirements_decorate = decorate_requirements(filtered_requirements);
+            ctx["requirements"] = json!(requirements_decorate);
+        }
+        Err(_) => {
+            ctx["requirements"] = json!([]);
+        }
+    };
+
+    // Add filter data to context for the template
+    let statuses = get_requirement_status_all_cached().unwrap_or_default();
+    let verifications = if let Some(project_id) = selected_project_id {
+        get_verification_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_verification_by_project_cached(first_project.project_id)
+        } else {
+            get_verification_all_cached()
+        }
+    };
+
+    // Get categories filtered by selected project
+    let categories = if let Some(project_id) = selected_project_id {
+        get_categories_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_categories_by_project_cached(first_project.project_id)
+        } else {
+            get_categories_all_cached()
+        }
+    };
+
+    // Get users for the dropdowns
+    let users = get_users_all_cached().unwrap_or_default();
+
+    ctx["statuses"] = json!(statuses);
+    ctx["verifications"] = json!(verifications.unwrap_or_default());
+    ctx["categories"] = json!(categories.unwrap_or_default());
+    ctx["users"] = json!(users);
+    ctx["current_status_filter"] = json!(status_filter);
+    ctx["current_verification_filter"] = json!(verification_filter);
+    ctx["current_category_filter"] = json!(category_filter);
+    ctx["current_sort_by"] = json!(sort_by);
+    ctx["current_sort_order"] = json!(sort_order);
+
+    Ok(Template::render("requirements_table", ctx))
+}
+
+#[get("/requirements/<req_id>")]
+pub fn show_requirement_id(req_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
     // Use the safe function that returns a Result
     match get_requirement_by_id_cached_safe(req_id) {
@@ -482,11 +477,9 @@ pub fn show_requirement_id(
 }
 
 #[get("/users")]
-pub fn show_users(
-    session_user: SessionUser,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-    let users = DieselCachedRepo::read().get_users_all();
+pub fn show_users(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let users = get_users_all_cached();
 
     let ctx = match users {
         Ok(users_list) => {
@@ -507,14 +500,9 @@ pub fn show_users(
 }
 
 #[get("/users/<user_id>")]
-pub fn show_user_id(
-    session_user: SessionUser,
-    user_id: i32,
-) -> Result<Template, Redirect> {
-    let current_user = session_user.into_inner();
-    let user = DieselCachedRepo::read()
-        .get_user_by_id(user_id)
-        .expect("Error reading table Users");
+pub fn show_user_id(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let current_user = require_auth(cookies)?;
+    let user = get_user_by_id_cached(user_id);
     let ctx = json!({
         "user": current_user,
         "user_name": user.user_name,
@@ -530,14 +518,9 @@ pub fn show_user_id(
 }
 
 #[get("/edit_user/<user_id>")]
-pub fn edit_user(
-    session_user: SessionUser,
-    user_id: i32,
-) -> Result<Template, Redirect> {
-    let current_user = session_user.into_inner();
-    let user = DieselCachedRepo::read()
-        .get_user_by_id(user_id)
-        .expect("Error reading table Users");
+pub fn edit_user(user_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let current_user = require_auth(cookies)?;
+    let user = get_user_by_id_cached(user_id);
     #[cfg(debug_assertions)]
     println!("USer: {:?}", user);
     let ctx = json!({
@@ -551,11 +534,11 @@ pub fn edit_user(
 
 #[post("/edit_user/<user_id>", data = "<user_form>")]
 pub fn post_edit_user(
-    session_user: SessionUser,
     user_id: i32,
     user_form: Form<UpdateUser>,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let current_user = session_user.into_inner();
+    let current_user = require_auth(cookies)?;
 
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
@@ -563,16 +546,14 @@ pub fn post_edit_user(
     })?;
 
     // Get the old values before updating
-    let old_user = DieselCachedRepo::read()
-        .get_user_by_id(user_id)
-        .expect("Error reading table Users");
+    let old_user = get_user_by_id_cached(user_id);
 
     // Create an UpdateUser with the user_id
     let mut user_data = user_form.into_inner();
     user_data.user_id = Some(user_id);
 
     // Update the user in the database
-    match DieselCachedRepo::write().update_user_without_password(&user_data) {
+    match DieselRepo::new().update_user_without_password(&user_data) {
         Ok(_) => {
             // Log the user update
             if let (Ok(old_values), Ok(new_values)) = (
@@ -591,6 +572,10 @@ pub fn post_edit_user(
                     None,
                 );
             }
+
+            // Invalidate cache for the updated user
+            invalidate_user_cache_complete(user_id);
+
             Ok(Redirect::to(uri!(show_user_id(user_id))))
         }
         Err(_e) => {
@@ -602,12 +587,8 @@ pub fn post_edit_user(
 }
 
 #[get("/edit_requirement/<req_id>")]
-pub fn get_edit_requirement(
-    session_user: SessionUser,
-    req_id: i32,
-    cookies: &CookieJar<'_>,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+pub fn get_edit_requirement(req_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
     // Use the safe function that returns a Result
     let req = match get_requirement_by_id_cached_safe(req_id) {
@@ -628,75 +609,65 @@ pub fn get_edit_requirement(
     let req_decorate = decorate_requirements(vec![req.clone()]);
     let req_decorate_json = json!(req_decorate[0]);
 
-    let status = DieselCachedRepo::read()
-        .get_status_all()
-        .unwrap_or_default();
+    let status = get_requirement_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
     let selected_project_id = get_selected_project_id(cookies);
     let categories = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_categories_all()
+            get_categories_all_cached()
         }
     };
     let categories_json = json!(categories.unwrap_or_default());
 
     // Get parent requirements filtered by project
     let parents = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_requirements_by_project(project_id)
+        get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_requirements_by_project(first_project.project_id)
+            get_requirements_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_requirements_all()
+            get_requirements_all_cached()
         }
     };
     let parents_json = json!(parents.unwrap_or_default());
 
-    let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
+    let users = get_users_all_cached().unwrap_or_default();
     let users_json = json!(users);
 
     // Get verification types filtered by project
     let verification_types = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_verification_by_project(project_id)
+        get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_verification_by_project(first_project.project_id)
+            get_verification_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_verification_all()
+            get_verification_all_cached()
         }
     };
     let verification_json = json!(verification_types.unwrap_or_default());
 
     // Get applicability filtered by project
     let applicability = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_applicability_by_project(project_id)
+        get_applicability_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_applicability_by_project(first_project.project_id)
+            get_applicability_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_applicability_all()
+            get_applicability_all_cached()
         }
     };
     let applicability_json = json!(applicability.unwrap_or_default());
@@ -726,11 +697,11 @@ pub fn get_edit_requirement(
 
 #[post("/edit_requirement/<req_id>", data = "<new_req>")]
 pub fn post_edit_requirement(
-    session_user: SessionUser,
     req_id: i32,
     new_req: Form<NewRequirement>,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
     let my_id = new_req.req_id.unwrap_or(0);
 
     let requirement_data = new_req.into_inner();
@@ -782,7 +753,7 @@ pub fn post_edit_requirement(
         }
     };
 
-    DieselCachedRepo::write()
+    DieselRepo::new()
         .edit_requirement(&requirement_data)
         .map_err(|e| {
             eprintln!("Error editing requirement: {:?}", e);
@@ -814,15 +785,21 @@ pub fn post_edit_requirement(
         );
     }
 
+    // Invalidate cache for the updated requirement
+    invalidate_requirement_cache_complete(req_id);
+    
+    // Also invalidate project cache since requirement list uses project-level cache
+    invalidate_project_cache(old_requirement.project_id);
+
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
 
 #[delete("/delete_requirement/<req_id>")]
 pub fn delete_requirement_route(
-    session_user: SessionUser,
     req_id: i32,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, rocket::http::Status> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
@@ -846,30 +823,44 @@ pub fn delete_requirement_route(
         return Err(rocket::http::Status::Forbidden);
     }
 
-    match DieselCachedRepo::write().delete_requirement(req_id) {
-        Ok(_deleted) => {
-            // Log the requirement deletion
-            if let Ok(old_values) = Logger::to_json_string(&requirement) {
-                let _ = Logger::log_delete(
-                    connection.as_mut(),
-                    user.user_id,
-                    EntityType::Requirement,
-                    req_id,
-                    Some(requirement.project_id),
-                    Some(old_values),
-                    Some(format!("Deleted requirement: {}", requirement.req_title)),
-                    None,
-                );
-            }
+    let result = DieselRepo::new().delete_requirement(req_id);
+    match result {
+        Ok(success) => {
+            if success {
+                // Log the requirement deletion
+                if let Ok(old_values) = Logger::to_json_string(&requirement) {
+                    let _ = Logger::log_delete(
+                        connection.as_mut(),
+                        user.user_id,
+                        EntityType::Requirement,
+                        req_id,
+                        Some(requirement.project_id),
+                        Some(old_values),
+                        Some(format!("Deleted requirement: {}", requirement.req_title)),
+                        None,
+                    );
+                }
 
-            // Redirect to requirements list page
-            Ok(Redirect::to(uri!(show_requirements(
-                None::<i32>,
-                None::<i32>,
-                None::<i32>
-            ))))
+                // Invalidate related caches - including project-level caches
+                crate::cached_functions::invalidate_requirement_cache_complete(req_id);
+
+                // Also invalidate project-specific caches for the requirement's project
+                crate::cached_functions::invalidate_project_cache_complete(requirement.project_id);
+
+                // Invalidate the requirements list cache
+                crate::cache::get_cache().remove(crate::cache::keys::REQUIREMENTS_ALL);
+
+                // Redirect to requirements list page
+                Ok(Redirect::to(uri!(show_requirements(
+                    None::<i32>,
+                    None::<i32>,
+                    None::<i32>
+                ))))
+            } else {
+                // Requirement was not found or not deleted
+                Err(rocket::http::Status::NotFound)
+            }
         }
-        Err(crate::repository::errors::RepoError::NotFound) => Err(rocket::http::Status::NotFound),
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error deleting requirement: {:?}", _e);
@@ -880,10 +871,10 @@ pub fn delete_requirement_route(
 
 #[delete("/delete_test/<test_id>")]
 pub fn delete_test_route(
-    session_user: SessionUser,
     test_id: i32,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, rocket::http::Status> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies).map_err(|_| rocket::http::Status::Unauthorized)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         rocket::http::Status::InternalServerError
@@ -904,30 +895,44 @@ pub fn delete_test_route(
         return Err(rocket::http::Status::Forbidden);
     }
 
-    match DieselCachedRepo::write().delete_test(test_id) {
-        Ok(_deleted) => {
-            // Log the test deletion
-            if let Ok(old_values) = Logger::to_json_string(&test) {
-                let _ = Logger::log_delete(
-                    connection,
-                    user.user_id,
-                    EntityType::Test,
-                    test_id,
-                    Some(test.project_id),
-                    Some(old_values),
-                    Some(format!("Deleted test: {}", test.test_name)),
-                    None,
-                );
-            }
+    let result = DieselRepo::new().delete_test(test_id);
+    match result {
+        Ok(success) => {
+            if success {
+                // Log the test deletion
+                if let Ok(old_values) = Logger::to_json_string(&test) {
+                    let _ = Logger::log_delete(
+                        connection,
+                        user.user_id,
+                        EntityType::Test,
+                        test_id,
+                        Some(test.project_id),
+                        Some(old_values),
+                        Some(format!("Deleted test: {}", test.test_name)),
+                        None,
+                    );
+                }
 
-            // Redirect to tests list page
-            Ok(Redirect::to(uri!(show_tests(
-                None::<i32>,
-                None::<i32>,
-                None::<i32>
-            ))))
+                // Invalidate related caches - including project-level caches
+                crate::cached_functions::invalidate_test_cache_complete(test_id);
+
+                // Also invalidate project-specific caches for the test's project
+                crate::cached_functions::invalidate_project_cache_complete(test.project_id);
+
+                // Invalidate the tests list cache
+                crate::cache::get_cache().remove(crate::cache::keys::TESTS_ALL);
+
+                // Redirect to tests list page
+                Ok(Redirect::to(uri!(show_tests(
+                    None::<i32>,
+                    None::<i32>,
+                    None::<i32>
+                ))))
+            } else {
+                // Test was not found or not deleted
+                Err(rocket::http::Status::NotFound)
+            }
         }
-        Err(crate::repository::errors::RepoError::NotFound) => Err(rocket::http::Status::NotFound),
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error deleting test: {:?}", _e);
@@ -937,80 +942,67 @@ pub fn delete_test_route(
 }
 
 #[get("/new_requirement")]
-pub fn new_requirement(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-    let status = DieselCachedRepo::read()
-        .get_status_all()
-        .unwrap_or_default();
+pub fn new_requirement(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let status = get_requirement_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
     let selected_project_id = get_selected_project_id(cookies);
     let categories = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_categories_all()
+            get_categories_all_cached()
         }
     };
     let categories_json = json!(categories.unwrap_or_default());
 
     // Get parent requirements filtered by project
     let parents = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_requirements_by_project(project_id)
+        get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_requirements_by_project(first_project.project_id)
+            get_requirements_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_requirements_all()
+            get_requirements_all_cached()
         }
     };
     let parents_json = json!(parents.unwrap_or_default());
 
-    let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
+    let users = get_users_all_cached().unwrap_or_default();
     let users_json = json!(users);
 
     // Get verification types filtered by project
     let verification_types = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_verification_by_project(project_id)
+        get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_verification_by_project(first_project.project_id)
+            get_verification_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_verification_all()
+            get_verification_all_cached()
         }
     };
     let verification_json = json!(verification_types.unwrap_or_default());
 
     // Get applicability filtered by project
     let applicability = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_applicability_by_project(project_id)
+        get_applicability_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_applicability_by_project(first_project.project_id)
+            get_applicability_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_applicability_all()
+            get_applicability_all_cached()
         }
     };
     let applicability_json = json!(applicability.unwrap_or_default());
@@ -1036,10 +1028,10 @@ pub fn new_requirement(
 
 #[post("/new_requirement", data = "<new_req>")]
 pub fn post_requirement(
-    session_user: SessionUser,
     new_req: Form<NewRequirement>,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_requirement))
@@ -1075,9 +1067,7 @@ pub fn post_requirement(
 
     // Generate automatic reference code if not provided
     if requirement_data.req_reference.is_empty() {
-        let repo = DieselCachedRepo::write();
         match generate_requirement_reference(
-            &*repo,
             requirement_data.req_category,
             requirement_data.project_id,
         ) {
@@ -1092,7 +1082,7 @@ pub fn post_requirement(
         }
     }
 
-    let my_id = DieselCachedRepo::write()
+    let my_id = DieselRepo::new()
         .insert_new_requirement(&requirement_data)
         .map_err(|e| {
             eprintln!("Error inserting new requirement: {:?}", e);
@@ -1120,34 +1110,37 @@ pub fn post_requirement(
         );
     }
 
+    // Invalidate cache for the new requirement
+    invalidate_requirement_cache_complete(my_id);
+    
+    // Also invalidate project cache since requirement list uses project-level cache
+    invalidate_project_cache(requirement_data.project_id);
+
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
 
 #[get("/tests?<status_filter>&<verification_filter>&<category_filter>")]
 pub fn show_tests(
-    session_user: SessionUser,
     cookies: &CookieJar<'_>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
     let mut ctx = build_context_with_projects(user, cookies);
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
 
     let tests = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_tests_by_project(project_id)
+        get_tests_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_tests_by_project(first_project.project_id)
+            get_tests_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_tests_all()
+            get_tests_all_cached()
         }
     };
 
@@ -1159,39 +1152,50 @@ pub fn show_tests(
         verification_filter,
         category_filter,
     );
-    let tests_decorate = decorate_tests(filtered_tests);
+    let mut tests_decorate = decorate_tests(filtered_tests);
+    
+    // Sort tests by reference (TEST-1, TEST-2, etc.)
+    tests_decorate.sort_by(|a, b| {
+        // Extract numeric part from reference for proper sorting
+        let a_num = a.test_reference
+            .split('-')
+            .last()
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(0);
+        let b_num = b.test_reference
+            .split('-')
+            .last()
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(0);
+        a_num.cmp(&b_num)
+    });
+    
     ctx["tests"] = json!(tests_decorate);
 
     // Add filter data to context for the template
-    let statuses = DieselCachedRepo::read()
-        .get_status_all()
-        .unwrap_or_default();
+    let statuses = get_test_status_all_cached().unwrap_or_default();
     let verifications = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_verification_by_project(project_id)
+        get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_verification_by_project(first_project.project_id)
+            get_verification_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_verification_all()
+            get_verification_all_cached()
         }
     };
 
     // Get categories filtered by selected project
     let categories = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_categories_all()
+            get_categories_all_cached()
         }
     };
 
@@ -1205,12 +1209,103 @@ pub fn show_tests(
     Ok(Template::render("tests", ctx))
 }
 
-#[get("/tests/<test_id_param>")]
-pub fn show_test_id(
-    session_user: SessionUser,
-    test_id_param: i32,
+#[get("/tests_table?<status_filter>&<verification_filter>&<category_filter>&<sort_by>&<sort_order>")]
+pub fn show_tests_table(
+    cookies: &CookieJar<'_>,
+    status_filter: Option<i32>,
+    verification_filter: Option<i32>,
+    category_filter: Option<i32>,
+    sort_by: Option<String>,
+    sort_order: Option<String>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
+    let mut ctx = build_context_with_projects(user, cookies);
+
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+
+    let tests = if let Some(project_id) = selected_project_id {
+        get_tests_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_tests_by_project_cached(first_project.project_id)
+        } else {
+            get_tests_all_cached()
+        }
+    };
+
+    let tests_data = tests.unwrap_or_default();
+    // Apply filters
+    let filtered_tests = filter_tests(
+        tests_data,
+        status_filter,
+        verification_filter,
+        category_filter,
+    );
+    let mut tests_decorate = decorate_tests(filtered_tests);
+    
+    // Sort tests by reference (TEST-1, TEST-2, etc.)
+    tests_decorate.sort_by(|a, b| {
+        // Extract numeric part from reference for proper sorting
+        let a_num = a.test_reference
+            .split('-')
+            .last()
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(0);
+        let b_num = b.test_reference
+            .split('-')
+            .last()
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(0);
+        a_num.cmp(&b_num)
+    });
+    
+    ctx["tests"] = json!(tests_decorate);
+
+    // Add filter data to context for the template
+    let statuses = get_test_status_all_cached().unwrap_or_default();
+    let verifications = if let Some(project_id) = selected_project_id {
+        get_verification_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_verification_by_project_cached(first_project.project_id)
+        } else {
+            get_verification_all_cached()
+        }
+    };
+
+    // Get categories filtered by selected project
+    let categories = if let Some(project_id) = selected_project_id {
+        get_categories_by_project_cached(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            get_categories_by_project_cached(first_project.project_id)
+        } else {
+            get_categories_all_cached()
+        }
+    };
+
+    ctx["statuses"] = json!(statuses);
+    ctx["verifications"] = json!(verifications.unwrap_or_default());
+    ctx["categories"] = json!(categories.unwrap_or_default());
+    ctx["current_status_filter"] = json!(status_filter);
+    ctx["current_verification_filter"] = json!(verification_filter);
+    ctx["current_category_filter"] = json!(category_filter);
+    ctx["current_sort_by"] = json!(sort_by);
+    ctx["current_sort_order"] = json!(sort_order);
+
+    Ok(Template::render("tests_table", ctx))
+}
+
+#[get("/tests/<test_id_param>")]
+pub fn show_test_id(test_id_param: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
     // Use the safe function that returns a Result
     match get_test_by_id_cached_safe(test_id_param) {
@@ -1228,7 +1323,9 @@ pub fn show_test_id(
                 "test_name": decorated_test.test_name,
                 "test_description": decorated_test.test_description,
                 "test_source": decorated_test.test_source,
+                "test_reference": decorated_test.test_reference,
                 "test_status": decorated_test.test_status,
+                "test_status_id": decorated_test.test_status_id,
                 "test_parent_id": decorated_test.test_parent_id,
                 "test_parent_title": decorated_test.test_parent_title,
                 "linked_requirements": linked_requirements_json,
@@ -1252,61 +1349,53 @@ pub fn show_test_id(
 }
 
 #[get("/new_test")]
-pub fn new_test(session_user: SessionUser, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-    let status = DieselCachedRepo::read()
-        .get_status_all()
-        .unwrap_or_default();
+pub fn new_test(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let status = get_test_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
     let selected_project_id = get_selected_project_id(cookies);
     let categories = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_categories_all()
+            get_categories_all_cached()
         }
     };
     let categories_json = json!(categories.unwrap_or_default());
 
     // Get parent tests filtered by project
     let parents = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_tests_by_project(project_id)
+        get_tests_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_tests_by_project(first_project.project_id)
+            get_tests_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_tests_all()
+            get_tests_all_cached()
         }
     };
     let parents_json = json!(parents.unwrap_or_default());
 
-    let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
+    let users = get_users_all_cached().unwrap_or_default();
     let users_json = json!(users);
 
     // Get requirements filtered by project
     let requirements = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_requirements_by_project(project_id)
+        get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_requirements_by_project(first_project.project_id)
+            get_requirements_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_requirements_all()
+            get_requirements_all_cached()
         }
     };
     let requirements_json = json!(requirements.unwrap_or_default());
@@ -1324,71 +1413,57 @@ pub fn new_test(session_user: SessionUser, cookies: &CookieJar<'_>) -> Result<Te
 }
 
 #[get("/edit_test/<test_id>")]
-pub fn get_edit_test(
-    session_user: SessionUser,
-    test_id: i32,
-    cookies: &CookieJar<'_>,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-    let test = DieselCachedRepo::read()
-        .get_test_by_id(test_id)
-        .expect("Error reading table Tests");
+pub fn get_edit_test(test_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let test = get_test_by_id_cached(test_id);
     let test_decorate = decorate_tests(vec![test]);
     let test_decorate_json = json!(test_decorate[0]);
 
-    let status = DieselCachedRepo::read()
-        .get_status_all()
-        .unwrap_or_default();
+    let status = get_test_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     // Get selected project ID and filter categories accordingly
     let selected_project_id = get_selected_project_id(cookies);
     let categories = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_categories_all()
+            get_categories_all_cached()
         }
     };
     let categories_json = json!(categories.unwrap_or_default());
 
     // Get parent tests filtered by project
     let parents = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_tests_by_project(project_id)
+        get_tests_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_tests_by_project(first_project.project_id)
+            get_tests_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_tests_all()
+            get_tests_all_cached()
         }
     };
     let parents_json = json!(parents.unwrap_or_default());
 
-    let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
+    let users = get_users_all_cached().unwrap_or_default();
     let users_json = json!(users);
 
     // Get verification types filtered by project
     let verification_types = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_verification_by_project(project_id)
+        get_verification_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_verification_by_project(first_project.project_id)
+            get_verification_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_verification_all()
+            get_verification_all_cached()
         }
     };
     let verification_json = json!(verification_types.unwrap_or_default());
@@ -1403,16 +1478,14 @@ pub fn get_edit_test(
 
     // Get all requirements for the multi-select (filtered by project)
     let all_requirements = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_requirements_by_project(project_id)
+        get_requirements_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_requirements_by_project(first_project.project_id)
+            get_requirements_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_requirements_all()
+            get_requirements_all_cached()
         }
     };
     let all_requirements_json = json!(all_requirements.unwrap_or_default());
@@ -1435,22 +1508,21 @@ pub fn get_edit_test(
     Ok(Template::render("edit_test_by_id", ctx))
 }
 
+#[allow(unused_variables)]
 #[post("/edit_test/<test_id>", data = "<edit_test_form>")]
 pub fn post_edit_test(
-    session_user: SessionUser,
     test_id: i32,
     edit_test_form: Form<EditTestForm>,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(get_edit_test(test_id)))
     })?;
 
     // Get the old values before updating
-    let old_test = DieselCachedRepo::read()
-        .get_test_by_id(test_id)
-        .expect("Error reading table Tests");
+    let old_test = get_test_by_id_cached(test_id);
 
     // First, update the test details
     let new_test = NewTest {
@@ -1458,17 +1530,16 @@ pub fn post_edit_test(
         test_name: edit_test_form.test_name.clone(),
         test_description: edit_test_form.test_description.clone(),
         test_source: edit_test_form.test_source.clone(),
+        test_reference: edit_test_form.test_reference.clone(),
         test_status: edit_test_form.test_status,
         test_parent: edit_test_form.test_parent,
         project_id: edit_test_form.project_id,
     };
 
-    DieselCachedRepo::write()
-        .edit_test(&new_test)
-        .map_err(|e| {
-            eprintln!("Error editing test: {:?}", e);
-            Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
-        })?;
+    DieselRepo::new().edit_test(&new_test).map_err(|e| {
+        eprintln!("Error editing test: {:?}", e);
+        Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+    })?;
 
     // Log the test update
     if let (Ok(old_values), Ok(new_values)) = (
@@ -1489,22 +1560,28 @@ pub fn post_edit_test(
     }
 
     // Then, update the requirement links
-    DieselCachedRepo::write()
+    DieselRepo::new()
         .update_test_requirement_links(edit_test_form.test_id, &edit_test_form.linked_requirements)
         .map_err(|e| {
             eprintln!("Error updating test requirement links: {:?}", e);
             Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
         })?;
 
+    // Invalidate cache for the updated test
+    invalidate_test_cache_complete(test_id);
+    
+    // Also invalidate project cache since test list uses project-level cache
+    invalidate_project_cache(edit_test_form.project_id);
+
     Ok(Redirect::to(uri!(show_test_id(edit_test_form.test_id))))
 }
 
 #[post("/new_test", data = "<new_test>")]
 pub fn post_test(
-    session_user: SessionUser,
     new_test: Form<NewTestForm>,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_test))
@@ -1514,16 +1591,15 @@ pub fn post_test(
         test_name: new_test.test_name.clone(),
         test_description: new_test.test_description.clone(),
         test_source: new_test.test_source.clone(),
+        test_reference: new_test.test_reference.clone(),
         test_status: new_test.test_status,
         test_parent: new_test.test_parent,
         project_id: new_test.project_id,
     };
-    let my_id = DieselCachedRepo::write()
-        .insert_test(&my_new_test)
-        .map_err(|e| {
-            eprintln!("Error inserting new test: {:?}", e);
-            Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
-        })?;
+    let my_id = DieselRepo::new().insert_test(&my_new_test).map_err(|e| {
+        eprintln!("Error inserting new test: {:?}", e);
+        Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+    })?;
 
     // Log the test creation
     if let Ok(new_values) = Logger::to_json_string(&my_new_test) {
@@ -1547,7 +1623,7 @@ pub fn post_test(
             matrix_test_id: my_id,
             project_id: new_test.project_id,
         };
-        DieselCachedRepo::write()
+        DieselRepo::new()
             .insert_new_matrix_item(&matrix_item)
             .map_err(|e| {
                 eprintln!("Error inserting matrix item: {:?}", e);
@@ -1555,12 +1631,18 @@ pub fn post_test(
             })?;
     }
 
+    // Invalidate cache for the new test
+    invalidate_test_cache_complete(my_id);
+    
+    // Also invalidate project cache since test list uses project-level cache
+    invalidate_project_cache(new_test.project_id);
+
     Ok(Redirect::to(uri!(show_test_id(my_id))))
 }
 
 #[get("/status")]
 pub fn show_status() -> content::RawHtml<String> {
-    use crate::schema::requirement_status::dsl::*;
+    use crate::schema::{requirement_status::dsl::*, test_status::dsl::*};
 
     let mut out_str = print_header();
     let mut connection = match get_db_connection() {
@@ -1571,15 +1653,24 @@ pub fn show_status() -> content::RawHtml<String> {
         }
     };
 
-    let all_status = match requirement_status.load::<RequirementStatus>(connection.as_mut()) {
+    let all_requirement_status = match requirement_status.load::<RequirementStatus>(connection.as_mut()) {
         Ok(status_list) => status_list,
         Err(e) => {
             eprintln!("Database query error: {}", e);
-            return content::RawHtml("Error: Failed to load status data".to_string());
+            return content::RawHtml("Error: Failed to load requirement status data".to_string());
         }
     };
 
-    for st in all_status.iter() {
+    let all_test_status = match test_status.load::<TestStatus>(connection.as_mut()) {
+        Ok(status_list) => status_list,
+        Err(e) => {
+            eprintln!("Database query error: {}", e);
+            return content::RawHtml("Error: Failed to load test status data".to_string());
+        }
+    };
+
+    out_str = format!("{}<h2>Requirement Statuses</h2>", out_str);
+    for st in all_requirement_status.iter() {
         out_str = format!(
             "{}
         <div class='AllStatus'>
@@ -1591,19 +1682,31 @@ pub fn show_status() -> content::RawHtml<String> {
         );
     }
 
+    out_str = format!("{}<h2>Test Statuses</h2>", out_str);
+    for st in all_test_status.iter() {
+        out_str = format!(
+            "{}
+        <div class='AllStatus'>
+            <div>Id: {}</div>
+            <div>Title: {}</div>
+            <div>Description: {}</div>
+        </div>",
+            out_str, st.test_st_id, st.test_st_title, st.test_st_description
+        );
+    }
+
     out_str = format!("{} {}", out_str, print_footer());
     content::RawHtml(out_str)
 }
 
 #[get("/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
 pub fn get_matrix(
-    session_user: SessionUser,
     cookies: &CookieJar<'_>,
     sort_by: Option<String>,
     sort_order: Option<String>,
     test_status_filter: Option<i32>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
     use crate::schema::matrix::dsl::*;
     use crate::schema::requirements::dsl::*;
     use crate::schema::tests::dsl::*;
@@ -1782,7 +1885,7 @@ pub fn get_matrix(
     // Prepare tests with status names
     let mut tests_with_status = Vec::new();
     for test in all_tests {
-        let test_status_name = get_status_name_by_id_cached(test.test_status);
+        let test_status_name = get_test_status_name_by_id_cached(test.test_status);
         tests_with_status.push(json!({
             "test_id": test.test_id,
             "test_name": test.test_name,
@@ -1791,9 +1894,7 @@ pub fn get_matrix(
     }
 
     // Get all statuses for the filter dropdown
-    let all_statuses = DieselCachedRepo::read()
-        .get_status_all()
-        .unwrap_or_default();
+    let all_statuses = get_test_status_all_cached().unwrap_or_default();
     let statuses_json = json!(all_statuses);
 
     let mut ctx = build_context_with_projects(user, cookies);
@@ -1811,11 +1912,8 @@ pub fn get_matrix(
 }
 
 #[get("/matrix.xls")]
-pub async fn get_matrix_xls(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
-) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = session_user.into_inner();
+pub async fn get_matrix_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, NamedFile), Redirect> {
+    let _user = require_auth(cookies)?;
 
     match excel::create_matrix_workbook(cookies) {
         Ok(_) => {
@@ -1846,9 +1944,9 @@ pub async fn get_matrix_xls(
 
 #[get("/requirements.xls")]
 pub async fn get_requirements_xls(
-    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = session_user.into_inner();
+    let _user = require_auth(cookies)?;
     let _file = excel::create_requirements_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/requirements.xls");
     let res = NamedFile::open(&path_to_file)
@@ -1868,10 +1966,8 @@ pub async fn get_requirements_xls(
 }
 
 #[get("/tests.xls")]
-pub async fn get_tests_xls(
-    session_user: SessionUser,
-) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = session_user.into_inner();
+pub async fn get_tests_xls(cookies: &CookieJar<'_>) -> Result<(ContentType, NamedFile), Redirect> {
+    let _user = require_auth(cookies)?;
     let _file = excel::create_tests_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/tests.xls");
     let res = NamedFile::open(&path_to_file)
@@ -1891,11 +1987,9 @@ pub async fn get_tests_xls(
 }
 
 #[get("/new_user")]
-pub fn new_user(session_user: SessionUser) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-    let status = DieselCachedRepo::read()
-        .get_status_all()
-        .unwrap_or_default();
+pub fn new_user(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let status = get_requirement_status_all_cached().unwrap_or_default();
     let status_json = json!(status);
 
     let ctx = json!({
@@ -1906,27 +2000,22 @@ pub fn new_user(session_user: SessionUser) -> Result<Template, Redirect> {
 }
 
 #[get("/categories")]
-pub fn show_categories(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+pub fn show_categories(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
     let mut ctx = build_context_with_projects(user, cookies);
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
 
     let categories = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_categories_by_project(project_id)
+        get_categories_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_categories_by_project(first_project.project_id)
+            get_categories_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_categories_all()
+            get_categories_all_cached()
         }
     };
 
@@ -1943,16 +2032,11 @@ pub fn show_categories(
 }
 
 #[get("/new_category")]
-pub fn new_category(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+pub fn new_category(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
     // Get projects and selected project
-    let projects = DieselCachedRepo::read()
-        .get_projects_all()
-        .unwrap_or_default();
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
     let mut selected_project_id = get_selected_project_id(cookies);
 
     // If no project is selected and there are projects available, select the first one
@@ -1975,10 +2059,10 @@ pub fn new_category(
 
 #[post("/new_category", data = "<new_category>")]
 pub fn post_category(
-    session_user: SessionUser,
     new_category: Form<NewCategory>,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
 
     // Check if project_id is provided
     if new_category.project_id == 0 {
@@ -1991,7 +2075,7 @@ pub fn post_category(
     })?;
 
     let category_data = new_category.into_inner();
-    let result = DieselCachedRepo::write().insert_new_category(&category_data);
+    let result = DieselRepo::new().insert_new_category(&category_data);
     match result {
         Ok(category_id) => {
             // Log the category creation
@@ -2008,6 +2092,12 @@ pub fn post_category(
                 );
             }
 
+            // Invalidate cache for the new category
+            invalidate_category_cache_complete(category_id);
+            
+            // Also invalidate project cache since category list uses project-level cache
+            invalidate_project_cache(category_data.project_id);
+
             Ok(Redirect::to(uri!(show_categories)))
         }
         Err(_e) => {
@@ -2019,11 +2109,8 @@ pub fn post_category(
 }
 
 #[get("/edit_category/<cat_id>")]
-pub fn get_edit_category(
-    session_user: SessionUser,
-    cat_id: i32,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+pub fn get_edit_category(cat_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
     let category = get_category_by_id_cached(cat_id);
     let ctx = json!({
         "categories": category,
@@ -2034,11 +2121,11 @@ pub fn get_edit_category(
 
 #[post("/edit_category/<cat_id>", data = "<category>")]
 pub fn post_edit_category(
-    session_user: SessionUser,
     cat_id: i32,
     category: Form<NewCategory>,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(get_edit_category(cat_id)))
@@ -2050,7 +2137,7 @@ pub fn post_edit_category(
     let mut category_with_id = category.into_inner();
     category_with_id.cat_id = Some(cat_id);
 
-    let result = DieselCachedRepo::write().edit_category(&category_with_id);
+    let result = DieselRepo::new().edit_category(&category_with_id);
     match result {
         Ok(_) => {
             // Log the category update
@@ -2071,6 +2158,12 @@ pub fn post_edit_category(
                 );
             }
 
+            // Invalidate cache for the updated category
+            invalidate_category_cache_complete(cat_id);
+            
+            // Also invalidate project cache since category list uses project-level cache
+            invalidate_project_cache(category_with_id.project_id);
+
             Ok(Redirect::to(uri!(show_categories)))
         }
         Err(_e) => {
@@ -2083,10 +2176,10 @@ pub fn post_edit_category(
 
 #[delete("/delete_category/<cat_id>")]
 pub fn delete_category_route(
-    session_user: SessionUser,
     cat_id: i32,
+    cookies: &CookieJar<'_>,
 ) -> Result<rocket::http::Status, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
@@ -2098,7 +2191,7 @@ pub fn delete_category_route(
     // Get the category details before deleting
     let category = get_category_by_id_cached(cat_id);
 
-    let result = DieselCachedRepo::write().delete_category(cat_id);
+    let result = DieselRepo::new().delete_category(cat_id);
     match result {
         Ok(_) => {
             // Log the category deletion
@@ -2115,6 +2208,9 @@ pub fn delete_category_route(
                 );
             }
 
+            // Invalidate cache for the deleted category
+            invalidate_category_cache_complete(cat_id);
+
             Ok(rocket::http::Status::Ok)
         }
         Err(_e) => {
@@ -2126,11 +2222,8 @@ pub fn delete_category_route(
 }
 
 #[post("/new_user", data = "<new_user>")]
-pub fn post_user(
-    session_user: SessionUser,
-    new_user: Form<NewUser>,
-) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+pub fn post_user(new_user: Form<NewUser>, cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+    let user = require_auth(cookies)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_user))
@@ -2141,7 +2234,7 @@ pub fn post_user(
     match hash_password(&user_with_hashed_password.user_password) {
         Ok(hashed_password) => {
             user_with_hashed_password.user_password = hashed_password;
-            let my_id = DieselCachedRepo::write()
+            let my_id = DieselRepo::new()
                 .insert_user(&user_with_hashed_password)
                 .map_err(|e| {
                     eprintln!("Error inserting new user: {:?}", e);
@@ -2165,6 +2258,9 @@ pub fn post_user(
                 );
             }
 
+            // Invalidate cache for the new user
+            invalidate_user_cache_complete(my_id);
+
             Ok(Redirect::to(uri!(show_user_id(my_id))))
         }
         Err(_e) => {
@@ -2176,27 +2272,22 @@ pub fn post_user(
 }
 
 #[get("/applicability")]
-pub fn show_applicability(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+pub fn show_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
     let mut ctx = build_context_with_projects(user, cookies);
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
 
     let applicability = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read().get_applicability_by_project(project_id)
+        get_applicability_by_project_cached(project_id)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            DieselCachedRepo::read().get_applicability_by_project(first_project.project_id)
+            get_applicability_by_project_cached(first_project.project_id)
         } else {
-            DieselCachedRepo::read().get_applicability_all()
+            get_applicability_all_cached()
         }
     };
 
@@ -2213,16 +2304,11 @@ pub fn show_applicability(
 }
 
 #[get("/new_applicability")]
-pub fn new_applicability(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+pub fn new_applicability(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
     // Get projects and selected project
-    let projects = DieselCachedRepo::read()
-        .get_projects_all()
-        .unwrap_or_default();
+    let projects = get_projects_for_nav_cached().unwrap_or_default();
     let mut selected_project_id = get_selected_project_id(cookies);
 
     // If no project is selected and there are projects available, select the first one
@@ -2245,10 +2331,10 @@ pub fn new_applicability(
 
 #[post("/new_applicability", data = "<new_applicability>")]
 pub fn post_applicability(
-    session_user: SessionUser,
     new_applicability: Form<NewApplicability>,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
 
     // Check if project_id is provided
     if new_applicability.project_id == 0 {
@@ -2261,7 +2347,7 @@ pub fn post_applicability(
     })?;
 
     let applicability_data = new_applicability.into_inner();
-    let result = DieselCachedRepo::write().insert_new_applicability(&applicability_data);
+    let result = DieselRepo::new().insert_new_applicability(&applicability_data);
     match result {
         Ok(applicability_id) => {
             // Log the applicability creation
@@ -2281,6 +2367,12 @@ pub fn post_applicability(
                 );
             }
 
+            // Invalidate cache for the new applicability
+            invalidate_applicability_cache_complete(applicability_id);
+            
+            // Also invalidate project cache since applicability list uses project-level cache
+            invalidate_project_cache(applicability_data.project_id);
+
             Ok(Redirect::to(uri!(show_applicability)))
         }
         Err(_e) => {
@@ -2292,11 +2384,8 @@ pub fn post_applicability(
 }
 
 #[get("/edit_applicability/<app_id>")]
-pub fn get_edit_applicability(
-    session_user: SessionUser,
-    app_id: i32,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+pub fn get_edit_applicability(app_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
     let applicability = get_applicability_by_id_cached(app_id);
     let ctx = json!({
         "applicability": applicability,
@@ -2307,11 +2396,11 @@ pub fn get_edit_applicability(
 
 #[post("/edit_applicability/<app_id>", data = "<applicability>")]
 pub fn post_edit_applicability(
-    session_user: SessionUser,
     app_id: i32,
     applicability: Form<NewApplicability>,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(get_edit_applicability(app_id)))
@@ -2323,7 +2412,7 @@ pub fn post_edit_applicability(
     let mut applicability_with_id = applicability.into_inner();
     applicability_with_id.app_id = Some(app_id);
 
-    let result = DieselCachedRepo::write().edit_applicability(&applicability_with_id);
+    let result = DieselRepo::new().edit_applicability(&applicability_with_id);
     match result {
         Ok(_) => {
             // Log the applicability update
@@ -2358,10 +2447,10 @@ pub fn post_edit_applicability(
 
 #[delete("/delete_applicability/<app_id>")]
 pub fn delete_applicability_route(
-    session_user: SessionUser,
     app_id: i32,
+    cookies: &CookieJar<'_>,
 ) -> Result<rocket::http::Status, Redirect> {
-    let user = session_user.into_inner();
+    let user = require_auth(cookies)?;
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
         Err(e) => {
@@ -2373,7 +2462,7 @@ pub fn delete_applicability_route(
     // Get the applicability details before deleting
     let applicability = get_applicability_by_id_cached(app_id);
 
-    let result = DieselCachedRepo::write().delete_applicability(app_id);
+    let result = DieselRepo::new().delete_applicability(app_id);
     match result {
         Ok(_) => {
             // Log the applicability deletion
@@ -2393,6 +2482,9 @@ pub fn delete_applicability_route(
                 );
             }
 
+            // Invalidate cache for the deleted applicability
+            crate::cached_functions::invalidate_applicability_cache_complete(app_id);
+
             Ok(rocket::http::Status::Ok)
         }
         Err(_e) => {
@@ -2404,15 +2496,11 @@ pub fn delete_applicability_route(
 }
 
 #[get("/requirements/tree")]
-pub fn show_requirements_tree(
-    session_user: SessionUser,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+pub fn show_requirements_tree(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
     // Get all requirements
-    let all_requirements = DieselCachedRepo::read()
-        .get_requirements_all()
-        .unwrap_or_default();
+    let all_requirements = get_requirements_all_cached().unwrap_or_default();
 
     // Build tree structure
     let mut tree_data = Vec::new();
@@ -2475,62 +2563,42 @@ pub fn show_requirements_tree(
 }
 
 #[get("/reports")]
-pub fn show_reports(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+pub fn show_reports(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
 
     // Get project-specific data for metrics
-    let (all_requirements, all_tests, all_categories) =
-        if let Some(project_id) = selected_project_id {
-            let requirements = DieselCachedRepo::read()
-                .get_requirements_by_project(project_id)
-                .unwrap_or_default();
-            let tests = DieselCachedRepo::read()
-                .get_tests_by_project(project_id)
-                .unwrap_or_default();
-            let categories = DieselCachedRepo::read()
-                .get_categories_by_project(project_id)
-                .unwrap_or_default();
+    let (all_requirements, all_tests, all_categories) = if let Some(project_id) =
+        selected_project_id
+    {
+        let requirements = get_requirements_by_project_cached(project_id).unwrap_or_default();
+        let tests = get_tests_by_project_cached(project_id).unwrap_or_default();
+        let categories = get_categories_by_project_cached(project_id).unwrap_or_default();
+        (requirements, tests, categories)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            let requirements =
+                get_requirements_by_project_cached(first_project.project_id).unwrap_or_default();
+            let tests = get_tests_by_project_cached(first_project.project_id).unwrap_or_default();
+            let categories =
+                get_categories_by_project_cached(first_project.project_id).unwrap_or_default();
             (requirements, tests, categories)
         } else {
-            // Default to the first project if no project is selected
-            let projects = DieselCachedRepo::read()
-                .get_projects_all()
-                .unwrap_or_default();
-            if let Some(first_project) = projects.first() {
-                let requirements = DieselCachedRepo::read()
-                    .get_requirements_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let tests = DieselCachedRepo::read()
-                    .get_tests_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let categories = DieselCachedRepo::read()
-                    .get_categories_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                (requirements, tests, categories)
-            } else {
-                // Fallback to all data if no projects exist
-                (
-                    DieselCachedRepo::read()
-                        .get_requirements_all()
-                        .unwrap_or_default(),
-                    DieselCachedRepo::read().get_tests_all().unwrap_or_default(),
-                    DieselCachedRepo::read()
-                        .get_categories_all()
-                        .unwrap_or_default(),
-                )
-            }
-        };
+            // Fallback to all data if no projects exist
+            (
+                get_requirements_all_cached().unwrap_or_default(),
+                get_tests_all_cached().unwrap_or_default(),
+                get_categories_all_cached().unwrap_or_default(),
+            )
+        }
+    };
 
-    let all_users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
-    let all_statuses = DieselCachedRepo::read()
-        .get_status_all()
-        .unwrap_or_default();
+    let all_users = get_users_all_cached().unwrap_or_default();
+    let all_statuses = get_requirement_status_all_cached().unwrap_or_default();
 
     // Calculate metrics
     let total_requirements = all_requirements.len();
@@ -2541,14 +2609,14 @@ pub fn show_reports(
     // Requirements by status
     let mut requirements_by_status = std::collections::HashMap::new();
     for req in &all_requirements {
-        let status_name = get_status_name_by_id_cached(req.req_current_status);
+        let status_name = get_requirement_status_name_by_id_cached(req.req_current_status);
         *requirements_by_status.entry(status_name).or_insert(0) += 1;
     }
 
     // Tests by status
     let mut tests_by_status = std::collections::HashMap::new();
     for test in &all_tests {
-        let status_name = get_status_name_by_id_cached(test.test_status);
+        let status_name = get_test_status_name_by_id_cached(test.test_status);
         *tests_by_status.entry(status_name).or_insert(0) += 1;
     }
 
@@ -2607,9 +2675,7 @@ pub fn show_reports(
         project.project_name
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             first_project.project_name.clone()
         } else {
@@ -2644,61 +2710,43 @@ pub fn show_reports(
 
 #[get("/reports/pdf")]
 pub fn generate_pdf_report(
-    session_user: SessionUser,
     cookies: &CookieJar<'_>,
 ) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
-    let _user = session_user.into_inner();
+    let _user = require_auth(cookies)?;
 
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
 
     // Get project-specific data for metrics
-    let (all_requirements, all_tests, all_categories) =
-        if let Some(project_id) = selected_project_id {
-            let requirements = DieselCachedRepo::read()
-                .get_requirements_by_project(project_id)
-                .unwrap_or_default();
-            let tests = DieselCachedRepo::read()
-                .get_tests_by_project(project_id)
-                .unwrap_or_default();
-            let categories = DieselCachedRepo::read()
-                .get_categories_by_project(project_id)
-                .unwrap_or_default();
+    let (all_requirements, all_tests, all_categories) = if let Some(project_id) =
+        selected_project_id
+    {
+        let requirements = get_requirements_by_project_cached(project_id).unwrap_or_default();
+        let tests = get_tests_by_project_cached(project_id).unwrap_or_default();
+        let categories = get_categories_by_project_cached(project_id).unwrap_or_default();
+        (requirements, tests, categories)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = get_projects_all_cached().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            let requirements =
+                get_requirements_by_project_cached(first_project.project_id).unwrap_or_default();
+            let tests = get_tests_by_project_cached(first_project.project_id).unwrap_or_default();
+            let categories =
+                get_categories_by_project_cached(first_project.project_id).unwrap_or_default();
             (requirements, tests, categories)
         } else {
-            // Default to the first project if no project is selected
-            let projects = DieselCachedRepo::read()
-                .get_projects_all()
-                .unwrap_or_default();
-            if let Some(first_project) = projects.first() {
-                let requirements = DieselCachedRepo::read()
-                    .get_requirements_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let tests = DieselCachedRepo::read()
-                    .get_tests_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let categories = DieselCachedRepo::read()
-                    .get_categories_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                (requirements, tests, categories)
-            } else {
-                // Fallback to all data if no projects exist
-                (
-                    DieselCachedRepo::read()
-                        .get_requirements_all()
-                        .unwrap_or_default(),
-                    DieselCachedRepo::read().get_tests_all().unwrap_or_default(),
-                    DieselCachedRepo::read()
-                        .get_categories_all()
-                        .unwrap_or_default(),
-                )
-            }
-        };
+            // Fallback to all data if no projects exist
+            (
+                get_requirements_all_cached().unwrap_or_default(),
+                get_tests_all_cached().unwrap_or_default(),
+                get_categories_all_cached().unwrap_or_default(),
+            )
+        }
+    };
 
-    let all_users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
-    let _all_statuses = DieselCachedRepo::read()
-        .get_status_all()
-        .unwrap_or_default();
+    let all_users = get_users_all_cached().unwrap_or_default();
+    let _all_statuses = get_requirement_status_all_cached().unwrap_or_default();
 
     // Calculate the same metrics
     let total_requirements = all_requirements.len();
@@ -2709,14 +2757,14 @@ pub fn generate_pdf_report(
     // Requirements by status
     let mut requirements_by_status = std::collections::HashMap::new();
     for req in &all_requirements {
-        let status_name = get_status_name_by_id_cached(req.req_current_status);
+        let status_name = get_requirement_status_name_by_id_cached(req.req_current_status);
         *requirements_by_status.entry(status_name).or_insert(0) += 1;
     }
 
     // Tests by status
     let mut tests_by_status = std::collections::HashMap::new();
     for test in &all_tests {
-        let status_name = get_status_name_by_id_cached(test.test_status);
+        let status_name = get_test_status_name_by_id_cached(test.test_status);
         *tests_by_status.entry(status_name).or_insert(0) += 1;
     }
 
@@ -2796,11 +2844,9 @@ pub fn generate_pdf_report(
 
 // Project management routes
 #[get("/projects")]
-pub fn show_projects(
-    session_user: SessionUser,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-    let projects = DieselCachedRepo::read().get_projects_all();
+pub fn show_projects(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+    let projects = get_projects_all_cached();
 
     let ctx = match projects {
         Ok(projs) => {
@@ -2821,11 +2867,8 @@ pub fn show_projects(
 }
 
 #[get("/projects/<project_id>")]
-pub fn show_project_id(
-    session_user: SessionUser,
-    project_id: i32,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+pub fn show_project_id(project_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
     let project = get_project_by_id_pooled_safe(project_id);
 
     let ctx = json!({
@@ -2837,21 +2880,38 @@ pub fn show_project_id(
 }
 
 #[get("/new_project")]
-pub fn new_project(admin: AdminOnly) -> Template {
-    let user = admin.into_inner();
+pub fn new_project(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
-    let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+
+    let users = get_users_all_cached().unwrap_or_default();
 
     let ctx = json!({
         "users": users,
         "user": user
     });
-    Template::render("new_project", ctx)
+    Ok(Template::render("new_project", ctx))
 }
 
 #[post("/new_project", data = "<new_project>")]
-pub fn post_project(admin: AdminOnly, new_project: Form<NewProject>) -> Result<Redirect, Redirect> {
-    let user = admin.into_inner();
+pub fn post_project(
+    new_project: Form<NewProject>,
+    cookies: &CookieJar<'_>,
+) -> Result<Redirect, Redirect> {
+    let user = require_auth(cookies)?;
+
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_projects)));
+    }
 
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
@@ -2859,7 +2919,7 @@ pub fn post_project(admin: AdminOnly, new_project: Form<NewProject>) -> Result<R
     })?;
 
     let project_data = new_project.into_inner();
-    let result = DieselCachedRepo::write().insert_new_project(&project_data);
+    let result = DieselRepo::new().insert_new_project(&project_data);
     match result {
         Ok(project_id) => {
             // Log the project creation
@@ -2876,6 +2936,9 @@ pub fn post_project(admin: AdminOnly, new_project: Form<NewProject>) -> Result<R
                 );
             }
 
+            // Invalidate cache for the new project
+            invalidate_project_cache_complete(project_id);
+
             Ok(Redirect::to(uri!(show_projects)))
         }
         Err(_e) => {
@@ -2887,27 +2950,41 @@ pub fn post_project(admin: AdminOnly, new_project: Form<NewProject>) -> Result<R
 }
 
 #[get("/edit_project/<project_id>")]
-pub fn get_edit_project(admin: AdminOnly, project_id: i32) -> Template {
-    let user = admin.into_inner();
+pub fn get_edit_project(project_id: i32, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
 
     let project = get_project_by_id_pooled_safe(project_id);
-    let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
+    let users = get_users_all_cached().unwrap_or_default();
 
     let ctx = json!({
         "project": project,
         "users": users,
         "user": user
     });
-    Template::render("edit_project", ctx)
+    Ok(Template::render("edit_project", ctx))
 }
 
 #[post("/edit_project/<project_id>", data = "<project>")]
 pub fn post_edit_project(
-    admin: AdminOnly,
     project_id: i32,
     project: Form<UpdateProject>,
+    cookies: &CookieJar<'_>,
 ) -> Result<Redirect, Redirect> {
-    let user = admin.into_inner();
+    let user = require_auth(cookies)?;
+
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_projects)));
+    }
 
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
@@ -2917,7 +2994,7 @@ pub fn post_edit_project(
     // Get the old values before updating
     let old_project = get_project_by_id_cached(project_id);
 
-    let result = DieselCachedRepo::write().edit_project(project_id, &project);
+    let result = DieselRepo::new().edit_project(project_id, &project);
     match result {
         Ok(_) => {
             // Log the project update
@@ -2939,6 +3016,9 @@ pub fn post_edit_project(
                 );
             }
 
+            // Invalidate cache for the updated project
+            invalidate_project_cache_complete(project_id);
+
             Ok(Redirect::to(uri!(show_projects)))
         }
         Err(_e) => {
@@ -2951,10 +3031,15 @@ pub fn post_edit_project(
 
 #[delete("/delete_project/<project_id>")]
 pub fn delete_project_route(
-    admin: AdminOnly,
     project_id: i32,
+    cookies: &CookieJar<'_>,
 ) -> Result<rocket::http::Status, Redirect> {
-    let user = admin.into_inner();
+    let user = require_auth(cookies)?;
+
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_projects)));
+    }
 
     let mut connection = match get_db_connection() {
         Ok(conn) => conn,
@@ -2967,7 +3052,7 @@ pub fn delete_project_route(
     // Get the project details before deleting
     let project = get_project_by_id_pooled_safe(project_id);
 
-    let result = DieselCachedRepo::write().delete_project(project_id);
+    let result = DieselRepo::new().delete_project(project_id);
     match result {
         Ok(_) => {
             // Log the project deletion
@@ -2984,6 +3069,9 @@ pub fn delete_project_route(
                 );
             }
 
+            // Invalidate cache for the deleted project
+            invalidate_project_cache_complete(project_id);
+
             Ok(rocket::http::Status::Ok)
         }
         Err(_e) => {
@@ -2996,11 +3084,8 @@ pub fn delete_project_route(
 
 // Excel Import Routes
 #[get("/import_excel")]
-pub fn import_excel_page(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
-) -> Result<content::RawHtml<String>, Redirect> {
-    let _user = session_user.into_inner();
+pub fn import_excel_page(cookies: &CookieJar<'_>) -> Result<content::RawHtml<String>, Redirect> {
+    let _user = require_auth(cookies)?;
 
     // Get selected project ID and name
     let selected_project_id = get_selected_project_id(cookies);
@@ -3009,9 +3094,7 @@ pub fn import_excel_page(
         (pid, project.project_name)
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             (first_project.project_id, first_project.project_name.clone())
         } else {
@@ -3072,10 +3155,10 @@ pub fn import_excel_page(
 
 #[post("/import_excel/upload", data = "<upload>")]
 pub async fn upload_excel_file(
-    session_user: SessionUser,
     mut upload: rocket::form::Form<rocket::fs::TempFile<'_>>,
+    cookies: &CookieJar<'_>,
 ) -> Result<content::RawHtml<String>, Redirect> {
-    let _user = session_user.into_inner();
+    let _user = require_auth(cookies)?;
 
     // Save uploaded file temporarily
     let temp_path = format!("/tmp/upload_{}.xlsx", chrono::Utc::now().timestamp());
@@ -3217,11 +3300,10 @@ pub async fn upload_excel_file(
 
 #[post("/import_excel/process", data = "<mapping_data>")]
 pub fn process_excel_import(
-    session_user: SessionUser,
     mapping_data: Form<crate::models::ImportMappingForm>,
     cookies: &CookieJar<'_>,
 ) -> Result<content::RawHtml<String>, Redirect> {
-    let _user = session_user.into_inner();
+    let _user = require_auth(cookies)?;
 
     eprintln!("Column mappings string: {}", mapping_data.column_mappings);
 
@@ -3245,9 +3327,7 @@ pub fn process_excel_import(
         pid
     } else {
         // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
+        let projects = get_projects_all_cached().unwrap_or_default();
         if let Some(first_project) = projects.first() {
             first_project.project_id
         } else {
@@ -3273,7 +3353,7 @@ pub fn process_excel_import(
     let html = match result {
         Ok(import_result) => {
             // Invalidate all caches after successful import since we don't know exactly what was imported
-            DieselCachedRepo::read().cache().clear();
+            crate::cache::invalidate_all_cache();
 
             // Get project name for display
             let project_name = get_project_by_id_pooled_safe(project_id).project_name;
@@ -3372,22 +3452,40 @@ pub fn process_excel_import(
 
 // Admin Dashboard Routes
 #[get("/admin")]
-pub fn admin_dashboard(admin: AdminOnly) -> Template {
-    let user = admin.into_inner();
+pub fn admin_dashboard(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
 
     let context = json!({
         "user": user,
         "title": "Admin Dashboard"
     });
 
-    Template::render("admin/dashboard", context)
+    Ok(Template::render("admin/dashboard", context))
 }
 
 #[get("/admin/users")]
-pub fn admin_users_page(admin: AdminOnly) -> Template {
-    let user = admin.into_inner();
+pub fn admin_users_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
-    let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+
+    let users = get_users_all_cached().unwrap_or_default();
 
     let context = json!({
         "user": user,
@@ -3395,28 +3493,42 @@ pub fn admin_users_page(admin: AdminOnly) -> Template {
         "title": "User Management"
     });
 
-    Template::render("admin/users", context)
+    Ok(Template::render("admin/users", context))
 }
 
 // Backup Routes
 #[get("/admin/backup")]
-pub fn admin_backup_page(admin: AdminOnly) -> Template {
-    let user = admin.into_inner();
+pub fn admin_backup_page(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
+
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
 
     let context = json!({
         "user": user,
         "title": "Database Backup"
     });
 
-    Template::render("admin/backup", context)
+    Ok(Template::render("admin/backup", context))
 }
 
 #[post("/admin/backup/generate/<filename>")]
 pub async fn generate_backup(
-    admin: AdminOnly,
     filename: String,
+    cookies: &CookieJar<'_>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let user = admin.into_inner();
+    let user = require_auth(cookies)?;
+
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(admin_backup_page)));
+    }
 
     // Use the filename from the URL parameter
     let filename = if filename.ends_with(".sql") {
@@ -3468,7 +3580,7 @@ pub async fn generate_backup(
         Ok(output) => {
             if output.status.success() {
                 // Log the successful backup
-                if let Ok(mut conn) = get_db_connection() {
+                if let Ok(mut conn) = DieselRepo::new().get_conn() {
                     let _ = Logger::log_action(
                         &mut conn,
                         user.user_id,
@@ -3492,7 +3604,7 @@ pub async fn generate_backup(
                 Ok((content_type, file))
             } else {
                 // Log the failed backup
-                if let Ok(mut conn) = get_db_connection() {
+                if let Ok(mut conn) = DieselRepo::new().get_conn() {
                     let _ = Logger::log_action(
                         &mut conn,
                         user.user_id,
@@ -3516,7 +3628,7 @@ pub async fn generate_backup(
         }
         Err(e) => {
             // Log the command failure
-            if let Ok(mut conn) = get_db_connection() {
+            if let Ok(mut conn) = DieselRepo::new().get_conn() {
                 let _ = Logger::log_action(
                     &mut conn,
                     user.user_id,
@@ -3538,10 +3650,19 @@ pub async fn generate_backup(
 }
 
 #[get("/logs")]
-pub fn show_logs(admin: AdminOnly) -> Result<Template, Redirect> {
-    let user = admin.into_inner();
+pub fn show_logs(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
-    let connection = &mut get_db_connection().map_err(|e| {
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+
+    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
         eprintln!("Database connection error in show_logs: {}", e);
         Redirect::to(uri!(admin_dashboard))
     })?;
@@ -3550,10 +3671,7 @@ pub fn show_logs(admin: AdminOnly) -> Result<Template, Redirect> {
     // Enhance logs with user information
     let mut enhanced_logs = Vec::new();
     for log in logs {
-        let username = DieselCachedRepo::read()
-            .get_user_by_id(log.user_id)
-            .expect("Error reading table Users")
-            .user_username;
+        let username = get_user_by_id_cached(log.user_id).user_username;
         let mut log_json = serde_json::to_value(log).unwrap_or_default();
         if let Some(log_obj) = log_json.as_object_mut() {
             log_obj.insert("username".to_string(), serde_json::Value::String(username));
@@ -3572,13 +3690,22 @@ pub fn show_logs(admin: AdminOnly) -> Result<Template, Redirect> {
 
 #[get("/logs/<entity_type>/<entity_id>")]
 pub fn show_entity_logs(
-    admin: AdminOnly,
     entity_type: String,
     entity_id: i32,
+    cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
-    let user = admin.into_inner();
+    let user = require_auth(cookies)?;
 
-    let connection = &mut get_db_connection().map_err(|e| {
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+
+    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
         eprintln!("Database connection error in show_entity_logs: {}", e);
         Redirect::to(uri!(show_logs))
     })?;
@@ -3587,10 +3714,7 @@ pub fn show_entity_logs(
     // Enhance logs with user information
     let mut enhanced_logs = Vec::new();
     for log in logs {
-        let username = DieselCachedRepo::read()
-            .get_user_by_id(log.user_id)
-            .expect("Error reading table Users")
-            .user_username;
+        let username = get_user_by_id_cached(log.user_id).user_username;
         let mut log_json = serde_json::to_value(log).unwrap_or_default();
         if let Some(log_obj) = log_json.as_object_mut() {
             log_obj.insert("username".to_string(), serde_json::Value::String(username));
@@ -3611,12 +3735,17 @@ pub fn show_entity_logs(
 
 #[get("/export_logs?<filename>")]
 pub async fn export_logs(
-    admin: AdminOnly,
     filename: Option<String>,
+    cookies: &CookieJar<'_>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let user = admin.into_inner();
+    let user = require_auth(cookies)?;
 
-    let connection = &mut get_db_connection().map_err(|e| {
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_logs)));
+    }
+
+    let connection = &mut DieselRepo::new().get_conn().map_err(|e| {
         eprintln!("Database connection error in export_logs: {}", e);
         Redirect::to(uri!(show_logs))
     })?;
@@ -3670,11 +3799,18 @@ pub async fn export_logs(
 
 #[get("/export_logs/<entity_type>/<entity_id>")]
 pub fn export_entity_logs(
-    _admin: AdminOnly,
     entity_type: String,
     entity_id: i32,
+    cookies: &CookieJar<'_>,
 ) -> Result<(rocket::http::ContentType, String), Redirect> {
-    let mut connection = match get_db_connection() {
+    let user = require_auth(cookies)?;
+
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_logs)));
+    }
+
+    let mut connection = match DieselRepo::new().get_conn() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
@@ -3692,10 +3828,15 @@ pub fn export_entity_logs(
 }
 
 #[post("/cleanup_logs")]
-pub fn cleanup_logs(admin: AdminOnly) -> Result<Redirect, Redirect> {
-    let user = admin.into_inner();
+pub fn cleanup_logs(cookies: &CookieJar<'_>) -> Result<Redirect, Redirect> {
+    let user = require_auth(cookies)?;
 
-    let mut connection = match get_db_connection() {
+    // Check if user is admin
+    if !user.is_admin {
+        return Err(Redirect::to(uri!(show_logs)));
+    }
+
+    let mut connection = match DieselRepo::new().get_conn() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
@@ -3741,10 +3882,19 @@ pub fn cleanup_logs(admin: AdminOnly) -> Result<Redirect, Redirect> {
 }
 
 #[get("/log_analytics")]
-pub fn log_analytics(admin: AdminOnly) -> Result<Template, Redirect> {
-    let user = admin.into_inner();
+pub fn log_analytics(cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
+    let user = require_auth(cookies)?;
 
-    let mut connection = match get_db_connection() {
+    // Check if user is admin
+    if !user.is_admin {
+        let context = json!({
+            "user": user,
+            "title": "Access Denied"
+        });
+        return Ok(Template::render("access_denied", context));
+    }
+
+    let mut connection = match DieselRepo::new().get_conn() {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);

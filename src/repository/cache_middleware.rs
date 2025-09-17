@@ -295,6 +295,32 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         })
     }
 
+    fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
+        self.get_or_fetch(keys::REQUIREMENT_STATUS_ALL, Duration::from_secs(900), || {
+            self.inner.get_requirement_status_all()
+        })
+    }
+
+    fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError> {
+        let key = keys::RequirementStatus::by_id(id);
+        self.get_or_fetch(&key, Duration::from_secs(900), || {
+            self.inner.get_requirement_status_by_id(id)
+        })
+    }
+
+    fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
+        self.get_or_fetch(keys::TEST_STATUS_ALL, Duration::from_secs(900), || {
+            self.inner.get_test_status_all()
+        })
+    }
+
+    fn get_test_status_by_id(&self, id: i32) -> Result<TestStatus, RepoError> {
+        let key = keys::TestStatus::by_id(id);
+        self.get_or_fetch(&key, Duration::from_secs(900), || {
+            self.inner.get_test_status_by_id(id)
+        })
+    }
+
     fn get_categories_all(&self) -> Result<Vec<Category>, RepoError> {
         self.get_or_fetch(keys::CATEGORIES_ALL, Duration::from_secs(600), || {
             self.inner.get_categories_all()

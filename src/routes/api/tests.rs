@@ -103,6 +103,10 @@ pub async fn update_test_field(
                 "test_status" => {
                     if let Some(status) = value.as_i64() {
                         updated_test.test_status = status as i32;
+                    } else if let Some(status_str) = value.as_str() {
+                        if let Ok(status) = status_str.parse::<i32>() {
+                            updated_test.test_status = status;
+                        }
                     }
                 }
                 "test_source" => {
@@ -113,6 +117,10 @@ pub async fn update_test_field(
                 "test_parent" => {
                     if let Some(parent) = value.as_i64() {
                         updated_test.test_parent = parent as i32;
+                    } else if let Some(parent_str) = value.as_str() {
+                        if let Ok(parent) = parent_str.parse::<i32>() {
+                            updated_test.test_parent = parent;
+                        }
                     }
                 }
                 _ => {

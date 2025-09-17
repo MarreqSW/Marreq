@@ -110,30 +110,55 @@ pub async fn update_requirement_field(
                     if let Some(category) = value.as_i64() {
                         updated_req.req_category = category as i32;
                         updated_fields.insert("req_category");
+                    } else if let Some(category_str) = value.as_str() {
+                        if let Ok(category) = category_str.parse::<i32>() {
+                            updated_req.req_category = category;
+                            updated_fields.insert("req_category");
+                        }
                     }
                 }
                 "req_current_status" => {
                     if let Some(status) = value.as_i64() {
                         updated_req.req_current_status = status as i32;
                         updated_fields.insert("req_current_status");
+                    } else if let Some(status_str) = value.as_str() {
+                        if let Ok(status) = status_str.parse::<i32>() {
+                            updated_req.req_current_status = status;
+                            updated_fields.insert("req_current_status");
+                        }
                     }
                 }
                 "req_verification" => {
                     if let Some(verification) = value.as_i64() {
                         updated_req.req_verification = verification as i32;
                         updated_fields.insert("req_verification");
+                    } else if let Some(verification_str) = value.as_str() {
+                        if let Ok(verification) = verification_str.parse::<i32>() {
+                            updated_req.req_verification = verification;
+                            updated_fields.insert("req_verification");
+                        }
                     }
                 }
                 "req_author" => {
                     if let Some(author) = value.as_i64() {
                         updated_req.req_author = author as i32;
                         updated_fields.insert("req_author");
+                    } else if let Some(author_str) = value.as_str() {
+                        if let Ok(author) = author_str.parse::<i32>() {
+                            updated_req.req_author = author;
+                            updated_fields.insert("req_author");
+                        }
                     }
                 }
                 "req_reviewer" => {
                     if let Some(reviewer) = value.as_i64() {
                         updated_req.req_reviewer = reviewer as i32;
                         updated_fields.insert("req_reviewer");
+                    } else if let Some(reviewer_str) = value.as_str() {
+                        if let Ok(reviewer) = reviewer_str.parse::<i32>() {
+                            updated_req.req_reviewer = reviewer;
+                            updated_fields.insert("req_reviewer");
+                        }
                     }
                 }
                 "req_deadline_date" => {

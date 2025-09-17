@@ -127,10 +127,32 @@ pub fn api_get_categories() -> Result<Json<Vec<Category>>, rocket::http::Status>
 }
 
 /// Status
+#[get("/debug_status/<id>")]
+pub fn debug_status(id: i32) -> Result<String, rocket::http::Status> {
+    use crate::repository::{DieselCachedRepo, LookupRepository};
+    
+    match DieselCachedRepo::read().get_requirement_status_by_id(id) {
+        Ok(status) => Ok(format!("Status ID {}: {} ({})", status.req_st_id, status.req_st_title, status.req_st_description)),
+        Err(e) => {
+            eprintln!("Error getting status {}: {:?}", id, e);
+            Err(rocket::http::Status::InternalServerError)
+        }
+    }
+}
+
 #[get("/status")]
 pub fn api_get_status() -> Result<Json<Vec<Status>>, rocket::http::Status> {
     let ret_val = DieselCachedRepo::read()
-        .get_status_all()
+        .get_requirement_status_all()
+        .map(|req_statuses| {
+            // Convert RequirementStatus to Status for backward compatibility
+            req_statuses.into_iter().map(|rs| Status {
+                st_id: rs.req_st_id,
+                st_title: rs.req_st_title,
+                st_description: rs.req_st_description,
+                st_short_name: rs.req_st_short_name,
+            }).collect::<Vec<Status>>()
+        })
         .map_err(|_err| -> String {
             #[cfg(debug_assertions)]
             println!("Error querying page views: {:?}", _err);

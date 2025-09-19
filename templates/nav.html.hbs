@@ -16,7 +16,17 @@
     
     <ul class="nav-menu">
       <li><a href="/" class="nav-link">Home</a></li>
-      <li><a href="/projects" class="nav-link">Projects</a></li>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          Projects
+        </a>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="/projects">All Projects</a></li>
+          {{#if user.is_admin}}
+          <li><a class="dropdown-item" href="/new_project">New Project</a></li>
+          {{/if}}
+        </ul>
+      </li>
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
           Requirements

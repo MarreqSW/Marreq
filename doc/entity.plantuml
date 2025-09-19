@@ -41,11 +41,10 @@ entity "Users" as user {
 * user_username
 * user_name
 * user_email
-* user_level
 * user_creation_date
 * user_last_login
 * user_password
-project_id
+is_admin
 }
 
 entity "Status" as st {

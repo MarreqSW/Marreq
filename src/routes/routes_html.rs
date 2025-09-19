@@ -23,7 +23,7 @@ use crate::models::*;
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
     DieselCachedRepo, LookupRepository, MatrixRepository, ProjectsRepository,
-    RequirementsRepository, TestsRepository, UserRepository,
+    RequirementsRepository, TestsRepository, UserRepository, ProjectMembersRepository
 };
 
 // --------------------------------
@@ -49,6 +49,26 @@ fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::s
         "projects": projects,
         "selected_project_id": selected_project_id
     })
+}
+
+fn describe_project_role(role: i32) -> &'static str {
+    match role {
+        1 => "Owner",
+        2 => "Manager",
+        3 => "Contributor",
+        4 => "Viewer",
+        _ => "Member",
+    }
+}
+
+fn project_status_badge(status: &str) -> &'static str {
+    let normalized = status.trim().to_ascii_lowercase();
+    match normalized.as_str() {
+        "active" => "bg-success",
+        "archived" | "inactive" => "bg-secondary",
+        "on hold" | "paused" | "maintenance" => "bg-warning",
+        _ => "bg-secondary",
+    }
 }
 
 // --------------------------------
@@ -346,6 +366,46 @@ pub fn index(session_user: SessionUser, cookies: &CookieJar<'_>) -> Result<Templ
         .get_projects_all()
         .unwrap_or_default();
 
+    let user_memberships = DieselCachedRepo::read()
+        .get_projects_for_user(user.user_id)
+        .unwrap_or_default();
+
+    let user_projects: Vec<_> = user_memberships
+        .into_iter()
+        .filter_map(|membership| {
+            DieselCachedRepo::read()
+                .get_project_by_id(membership.project_id)
+                .ok()
+                .map(|project| {
+                    let Project {
+                        project_id,
+                        project_name,
+                        project_description,
+                        project_status,
+                        ..
+                    } = project;
+
+                    let project_status_label =
+                        project_status.unwrap_or_else(|| "Unknown".to_string());
+                    let status_class = project_status_badge(&project_status_label).to_string();
+                    let role_label = describe_project_role(membership.role).to_string();
+                    let role_id = membership.role;
+
+                    json!({
+                        "project_id": project_id,
+                        "project_name": project_name,
+                        "project_description": project_description,
+                        "project_status": project_status_label,
+                        "status_class": status_class,
+                        "role_label": role_label,
+                        "role_id": role_id,
+                    })
+                })
+        })
+        .collect();
+
+    let user_project_count = user_projects.len();
+
     let ctx = json!({
         "user": user,
         "projects": projects,
@@ -353,7 +413,9 @@ pub fn index(session_user: SessionUser, cookies: &CookieJar<'_>) -> Result<Templ
         "title": "Main",
         "selected_project_name": selected_project_name,
         "requirements_count": requirements_count,
-        "tests_count": tests_count
+        "tests_count": tests_count,
+        "user_projects": user_projects,
+        "user_project_count": user_project_count
     });
 
     Ok(Template::render("index", ctx))
@@ -520,10 +582,10 @@ pub fn show_user_id(
         "user_name": user.user_name,
         "user_username": user.user_username,
         "user_email": user.user_email,
-        "user_level": user.user_level,
         "user_id": user.user_id,
         "user_creation_date": user.user_creation_date,
-        "user_last_login": user.user_last_login
+        "user_last_login": user.user_last_login,
+        "is_admin": user.is_admin
     });
 
     Ok(Template::render("user_by_id", ctx))
@@ -2829,6 +2891,19 @@ pub fn show_project_id(
     project_id: i32,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
+    if !user.is_admin {
+        let memberships = DieselCachedRepo::read()
+            .get_projects_for_user(user.user_id)
+            .unwrap_or_default();
+
+        let has_access = memberships
+            .iter()
+            .any(|membership| membership.project_id == project_id);
+
+        if !has_access {
+            return Err(Redirect::to(uri!(show_projects)));
+        }
+    }
     let project = get_project_by_id_pooled_safe(project_id);
 
     let ctx = json!({

@@ -54,12 +54,19 @@ CREATE TABLE users (
     user_username VARCHAR NOT NULL,
     user_name VARCHAR NOT NULL,
     user_email VARCHAR NOT NULL DEFAULT ' ',
-    user_level INTEGER NOT NULL DEFAULT 0,
     user_creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_last_login TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_password VARCHAR(255) NOT NULL DEFAULT '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m',
-    project_id INTEGER,
     is_admin BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE project_members (
+    project_id INTEGER NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    role INTEGER NOT NULL DEFAULT 2,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (project_id, user_id)
 );
 
 -- Requirement Status table
@@ -165,10 +172,7 @@ CREATE TABLE logs (
 -- FOREIGN KEY CONSTRAINTS
 -- =============================================================================
 
-ALTER TABLE users ADD CONSTRAINT fk_users_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
-
-ALTER TABLE categories ADD CONSTRAINT fk_categories_project 
+ALTER TABLE categories ADD CONSTRAINT fk_categories_project
     FOREIGN KEY (project_id) REFERENCES projects(project_id);
 
 ALTER TABLE applicability ADD CONSTRAINT fk_applicability_project 
@@ -207,6 +211,8 @@ ALTER TABLE logs ADD CONSTRAINT fk_logs_user_id
 ALTER TABLE logs ADD CONSTRAINT fk_logs_project_id 
     FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE;
 
+CREATE INDEX project_members_user_idx ON project_members(user_id);
+
 -- =============================================================================
 -- INDEXES FOR PERFORMANCE
 -- =============================================================================
@@ -239,7 +245,6 @@ CREATE INDEX idx_matrix_test_id ON matrix(matrix_test_id);
 
 -- Users indexes
 CREATE INDEX idx_users_username ON users(user_username);
-CREATE INDEX idx_users_project_id ON users(project_id);
 CREATE INDEX idx_users_admin ON users(is_admin);
 
 -- Categories indexes
@@ -278,13 +283,13 @@ INSERT INTO test_status (test_st_title, test_st_description, test_st_short_name)
 
 -- Users with working passwords (all users have password: 'password')
 -- Password hash: $2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m
-INSERT INTO users (user_username, user_name, user_email, user_level, project_id, is_admin, user_password) VALUES
-    ('alice', 'Alice Johnson', 'alice@reqman.com', 1, 2, true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
-    ('dr_smith', 'Dr. Sarah Smith', 'sarah.smith@spacecorp.com', 1, 1, true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
-    ('eng_jones', 'Engineer Mike Jones', 'mike.jones@spacecorp.com', 1, 1, false, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
-    ('tech_lee', 'Technician Lisa Lee', 'lisa.lee@spacecorp.com', 1, 1, false, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
-    ('qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', 1, 1, false, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
-    ('admin', 'System Administrator', 'admin@reqman.com', 1, 2, true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m');
+INSERT INTO users (user_username, user_name, user_email, is_admin, user_password) VALUES
+    ('alice', 'Alice Johnson', 'alice@reqman.com', true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
+    ('dr_smith', 'Dr. Sarah Smith', 'sarah.smith@spacecorp.com', true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
+    ('eng_jones', 'Engineer Mike Jones', 'mike.jones@spacecorp.com', false, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
+    ('tech_lee', 'Technician Lisa Lee', 'lisa.lee@spacecorp.com', false, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
+    ('qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', false, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
+    ('admin', 'System Administrator', 'admin@reqman.com', true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m');
 
 -- Categories for Space Project
 INSERT INTO categories (cat_title, cat_description, cat_tag, project_id) VALUES

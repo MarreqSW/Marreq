@@ -50,6 +50,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    project_members (project_id, user_id) {
+        project_id -> Int4,
+        user_id -> Int4,
+        role -> Int4,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     projects (project_id) {
         project_id -> Int4,
         #[max_length = 255]
@@ -122,12 +132,10 @@ diesel::table! {
         user_username -> Varchar,
         user_name -> Varchar,
         user_email -> Varchar,
-        user_level -> Int4,
         user_creation_date -> Timestamp,
         user_last_login -> Timestamp,
         #[max_length = 255]
         user_password -> Varchar,
-        project_id -> Nullable<Int4>,
         is_admin -> Bool,
     }
 }
@@ -146,6 +154,8 @@ diesel::joinable!(categories -> projects (project_id));
 diesel::joinable!(logs -> projects (project_id));
 diesel::joinable!(logs -> users (user_id));
 diesel::joinable!(matrix -> projects (project_id));
+diesel::joinable!(project_members -> projects (project_id));
+diesel::joinable!(project_members -> users (user_id));
 diesel::joinable!(requirements -> applicability (req_applicability));
 diesel::joinable!(requirements -> projects (project_id));
 diesel::joinable!(requirements -> requirement_status (req_current_status));
@@ -158,6 +168,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     categories,
     logs,
     matrix,
+    project_members,
     projects,
     requirement_status,
     requirements,

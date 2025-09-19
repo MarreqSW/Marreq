@@ -2,10 +2,10 @@ use super::errors::RepoError;
 use crate::models::*;
 use crate::repository::{
     LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
-    TestsRepository, UserRepository,
+    TestsRepository, UserRepository, ProjectMembersRepository
 };
 use crate::schema;
-use diesel::pg::PgConnection;
+use diesel::pg::{upsert::excluded, PgConnection};
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::RunQueryDsl;
@@ -258,10 +258,16 @@ impl UserRepository for DieselRepo {
 
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
-        let res: User = diesel::insert_into(schema::users::table)
-            .values(new)
-            .get_result(conn.as_mut())?;
-        Ok(res.user_id)
+        let user_id = conn
+            .as_mut()
+            .transaction::<i32, diesel::result::Error, _>(|conn| {
+                let res: User = diesel::insert_into(schema::users::table)
+                    .values(new)
+                    .get_result(conn)?;
+                Ok(res.user_id)
+            })?;
+
+        Ok(user_id)
     }
 
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError> {
@@ -275,8 +281,8 @@ impl UserRepository for DieselRepo {
                 user_name.eq(&user_data.user_name),
                 user_username.eq(&user_data.user_username),
                 user_email.eq(&user_data.user_email),
-                user_level.eq(user_data.user_level),
                 user_password.eq(&user_data.user_password),
+                is_admin.eq(user_data.is_admin),
             ))
             .execute(conn.as_mut())?;
         Ok(result > 0)
@@ -293,7 +299,7 @@ impl UserRepository for DieselRepo {
                 user_name.eq(&user_data.user_name),
                 user_username.eq(&user_data.user_username),
                 user_email.eq(&user_data.user_email),
-                user_level.eq(user_data.user_level),
+                is_admin.eq(user_data.is_admin),
             ))
             .execute(conn.as_mut())?;
         Ok(result > 0)
@@ -314,6 +320,92 @@ impl UserRepository for DieselRepo {
             })?;
         diesel::delete(users.filter(user_id.eq(id))).execute(conn.as_mut())?;
         Ok(user)
+    }
+}
+
+
+impl ProjectMembersRepository for DieselRepo {
+    fn get_members_by_project(&self, pid: i32) -> Result<Vec<ProjectMember>, RepoError> {
+        use crate::schema::project_members::dsl::*;
+
+        let mut conn = self.get_conn()?;
+        project_members
+            .filter(project_id.eq(pid))
+            .order(user_id)
+            .load::<ProjectMember>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn get_projects_for_user(&self, uid: i32) -> Result<Vec<ProjectMember>, RepoError> {
+        use crate::schema::project_members::dsl::*;
+
+        let mut conn = self.get_conn()?;
+        project_members
+            .filter(user_id.eq(uid))
+            .order(project_id)
+            .load::<ProjectMember>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn add_project_member(&mut self, new: &NewProjectMember) -> Result<(), RepoError> {
+        use crate::schema::project_members::dsl::*;
+
+        let mut conn = self.get_conn()?;
+        diesel::insert_into(project_members)
+            .values(new)
+            .on_conflict((project_id, user_id))
+            .do_update()
+            .set((
+                role.eq(excluded(role)),
+                updated_at.eq(chrono::Utc::now().naive_utc()),
+            ))
+            .execute(conn.as_mut())?;
+        Ok(())
+    }
+
+    fn update_project_member_role(
+        &mut self,
+        pid: i32,
+        uid: i32,
+        new_role: i32,
+    ) -> Result<(), RepoError> {
+        use crate::schema::project_members::dsl::*;
+
+        let mut conn = self.get_conn()?;
+        let affected = diesel::update(
+            project_members
+                .filter(project_id.eq(pid))
+                .filter(user_id.eq(uid)),
+        )
+        .set((
+            role.eq(new_role),
+            updated_at.eq(chrono::Utc::now().naive_utc()),
+        ))
+        .execute(conn.as_mut())?;
+
+        if affected == 0 {
+            Err(RepoError::NotFound)
+        } else {
+            Ok(())
+        }
+    }
+
+    fn remove_project_member(&mut self, pid: i32, uid: i32) -> Result<(), RepoError> {
+        use crate::schema::project_members::dsl::*;
+
+        let mut conn = self.get_conn()?;
+        let affected = diesel::delete(
+            project_members
+                .filter(project_id.eq(pid))
+                .filter(user_id.eq(uid)),
+        )
+        .execute(conn.as_mut())?;
+
+        if affected == 0 {
+            Err(RepoError::NotFound)
+        } else {
+            Ok(())
+        }
     }
 }
 

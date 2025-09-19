@@ -301,7 +301,7 @@ pub async fn api_post_user(new_user: Json<NewUser>) -> Result<Value, rocket::htt
                 0, // API user ID (system)
                 crate::models::EntityType::User,
                 val,
-                new_user.project_id,
+                None,
                 Some(new_values),
                 Some(format!("Created user via API: {}", new_user.user_username)),
                 None,

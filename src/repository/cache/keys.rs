@@ -44,6 +44,11 @@ pub trait Keyspace {
     fn for_test<I: Display>(project_id: I) -> String {
         format!("{}:test:{}", Self::PREFIX, project_id)
     }
+
+    #[inline]
+    fn for_user<I: Display>(user_id: I) -> String {
+        format!("{}:user:{}", Self::PREFIX, user_id)
+    }
 }
 
 // Zero-sized marker types for each namespace
@@ -61,6 +66,7 @@ pub struct TestStatus;
 pub struct Matrix;
 pub struct LinkedTests;
 pub struct LinkedRequirements;
+pub struct ProjectMembers;
 
 // Implement the prefix per namespace
 impl Keyspace for Projects      { const PREFIX: &'static str = "project"; }
@@ -77,7 +83,7 @@ impl Keyspace for RequirementStatus { const PREFIX: &'static str = "requirement_
 impl Keyspace for RequirementTitle   { const PREFIX: &'static str = "requirement_title"; }
 impl Keyspace for LinkedRequirements { const PREFIX: &'static str = "linked_tests"; }
 impl Keyspace for LinkedTests { const PREFIX: &'static str = "linked_requirements"; }
-
+impl Keyspace for ProjectMembers { const PREFIX: &'static str = "project_member"; }
 
 #[cfg(test)]
 mod tests {
@@ -123,5 +129,8 @@ mod tests {
         check_keyspace!(Matrix, "matrix");
         check_keyspace!(LinkedRequirements, "linked_tests");
         check_keyspace!(LinkedTests, "linked_requirements");
+        check_keyspace!(ProjectMembers, "project_member");
+
+        assert_eq!(ProjectMembers::for_user(5), "project_member:user:5");
     }
 }

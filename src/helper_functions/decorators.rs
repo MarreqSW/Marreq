@@ -246,11 +246,9 @@ mod tests {
                 user_username: "a".into(),
                 user_name: "Author".into(),
                 user_email: String::new(),
-                user_level: 0,
                 user_creation_date: now,
                 user_last_login: now,
                 user_password: String::new(),
-                project_id: None,
                 is_admin: false,
             },
         );
@@ -261,11 +259,9 @@ mod tests {
                 user_username: "b".into(),
                 user_name: "Reviewer".into(),
                 user_email: String::new(),
-                user_level: 0,
                 user_creation_date: now,
                 user_last_login: now,
                 user_password: String::new(),
-                project_id: None,
                 is_admin: false,
             },
         );

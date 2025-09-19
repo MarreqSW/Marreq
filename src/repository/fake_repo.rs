@@ -8,8 +8,7 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct FakeRepo {
     pub users: HashMap<i32, User>,
-    pub requirement_statuses: HashMap<i32, RequirementStatus>,
-    pub test_statuses: HashMap<i32, TestStatus>,
+    pub statuses: HashMap<i32, Status>,
     pub verifications: HashMap<i32, Verification>,
     pub categories: HashMap<i32, Category>,
     pub applicability: HashMap<i32, Applicability>,
@@ -35,8 +34,7 @@ impl FakeRepo {
         }
         Self {
             users: map,
-            requirement_statuses: HashMap::new(),
-            test_statuses: HashMap::new(),
+            statuses: HashMap::new(),
             verifications: HashMap::new(),
             categories: HashMap::new(),
             applicability: HashMap::new(),
@@ -50,8 +48,7 @@ impl FakeRepo {
     pub fn with_error() -> Self {
         Self {
             users: HashMap::new(),
-            requirement_statuses: HashMap::new(),
-            test_statuses: HashMap::new(),
+            statuses: HashMap::new(),
             verifications: HashMap::new(),
             categories: HashMap::new(),
             applicability: HashMap::new(),
@@ -113,37 +110,111 @@ impl UserRepository for FakeRepo {
     }
 
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
-        Ok(new.user_id.unwrap_or(0))
+        let id = new
+            .user_id
+            .unwrap_or_else(|| self.users.keys().max().map(|i| i + 1).unwrap_or(1));
+        let user = User {
+            user_id: id,
+            user_username: new.user_username.clone(),
+            user_name: new.user_name.clone(),
+            user_email: new.user_email.clone(),
+            user_level: new.user_level,
+            user_creation_date: epoch(),
+            user_last_login: epoch(),
+            user_password: new.user_password.clone(),
+            project_id: new.project_id,
+            is_admin: new.is_admin,
+        };
+        self.users.insert(id, user);
+        Ok(id)
     }
 
-    fn update_user(&mut self, _user_data: &NewUser) -> Result<bool, RepoError> {
-        Ok(true)
+    fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError> {
+        let id = user_data
+            .user_id
+            .ok_or(RepoError::NotFound)?;
+        match self.users.get_mut(&id) {
+            Some(user) => {
+                user.user_username = user_data.user_username.clone();
+                user.user_name = user_data.user_name.clone();
+                user.user_email = user_data.user_email.clone();
+                user.user_level = user_data.user_level;
+                user.user_password = user_data.user_password.clone();
+                user.project_id = user_data.project_id;
+                user.is_admin = user_data.is_admin;
+                Ok(true)
+            }
+            None => Err(RepoError::NotFound),
+        }
     }
 
-    fn update_user_without_password(&mut self, _user_data: &UpdateUser) -> Result<bool, RepoError> {
-        Ok(true)
+    fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError> {
+        let id = user_data
+            .user_id
+            .ok_or(RepoError::NotFound)?;
+        match self.users.get_mut(&id) {
+            Some(user) => {
+                user.user_username = user_data.user_username.clone();
+                user.user_name = user_data.user_name.clone();
+                user.user_email = user_data.user_email.clone();
+                user.user_level = user_data.user_level;
+                user.is_admin = user_data.is_admin;
+                Ok(true)
+            }
+            None => Err(RepoError::NotFound),
+        }
     }
 
-    fn delete_user(&mut self, _id: i32) -> Result<bool, RepoError> {
-        Ok(true)
+    fn delete_user(&mut self, id: i32) -> Result<User, RepoError> {
+        self.users.remove(&id).ok_or(RepoError::NotFound)
     }
 }
 
 impl LookupRepository for FakeRepo {
+    fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
+        Ok(self.statuses.values().cloned().collect())
+    }
+
+    fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError> {
+        self.statuses.get(&id).cloned().ok_or(RepoError::NotFound)
+    }
+
     fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
-        Ok(self.requirement_statuses.values().cloned().collect())
+        // Convert Status to RequirementStatus for testing
+        Ok(self.statuses.values().map(|s| RequirementStatus {
+            req_st_id: s.st_id,
+            req_st_title: s.st_title.clone(),
+            req_st_description: s.st_description.clone(),
+            req_st_short_name: s.st_short_name.clone(),
+        }).collect())
     }
 
     fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError> {
-        self.requirement_statuses.get(&id).cloned().ok_or(RepoError::NotFound)
+        self.statuses.get(&id).map(|s| RequirementStatus {
+            req_st_id: s.st_id,
+            req_st_title: s.st_title.clone(),
+            req_st_description: s.st_description.clone(),
+            req_st_short_name: s.st_short_name.clone(),
+        }).ok_or(RepoError::NotFound)
     }
 
     fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
-        Ok(self.test_statuses.values().cloned().collect())
+        // Convert Status to TestStatus for testing
+        Ok(self.statuses.values().map(|s| TestStatus {
+            test_st_id: s.st_id,
+            test_st_title: s.st_title.clone(),
+            test_st_description: s.st_description.clone(),
+            test_st_short_name: s.st_short_name.clone(),
+        }).collect())
     }
 
     fn get_test_status_by_id(&self, id: i32) -> Result<TestStatus, RepoError> {
-        self.test_statuses.get(&id).cloned().ok_or(RepoError::NotFound)
+        self.statuses.get(&id).map(|s| TestStatus {
+            test_st_id: s.st_id,
+            test_st_title: s.st_title.clone(),
+            test_st_description: s.st_description.clone(),
+            test_st_short_name: s.st_short_name.clone(),
+        }).ok_or(RepoError::NotFound)
     }
 
     fn get_categories_all(&self) -> Result<Vec<Category>, RepoError> {
@@ -207,29 +278,80 @@ impl LookupRepository for FakeRepo {
     }
 
     fn insert_new_category(&mut self, _new: &NewCategory) -> Result<i32, RepoError> {
-        Ok(0)
+        let id = _new
+            .cat_id
+            .unwrap_or_else(|| self.categories.keys().max().map(|i| i + 1).unwrap_or(1));
+        let cat = Category {
+            cat_id: id,
+            cat_title: _new.cat_title.clone(),
+            cat_description: _new.cat_description.clone(),
+            cat_tag: _new.cat_tag.clone(),
+            project_id: _new.project_id,
+        };
+        self.categories.insert(id, cat);
+        Ok(id)
     }
     fn edit_category(&mut self, _new: &NewCategory) -> Result<bool, RepoError> {
-        Ok(false)
+        let id = _new.cat_id.ok_or(RepoError::NotFound)?;
+        match self.categories.get_mut(&id) {
+            Some(cat) => {
+                cat.cat_title = _new.cat_title.clone();
+                cat.cat_description = _new.cat_description.clone();
+                cat.cat_tag = _new.cat_tag.clone();
+                cat.project_id = _new.project_id;
+                Ok(true)
+            }
+            None => Err(RepoError::NotFound),
+        }
     }
-    fn delete_category(&mut self, _id: i32) -> Result<bool, RepoError> {
-        Ok(false)
+    fn delete_category(&mut self, id: i32) -> Result<Category, RepoError> {
+        self.categories.remove(&id).ok_or(RepoError::NotFound)
     }
     fn insert_new_applicability(&mut self, _new: &NewApplicability) -> Result<i32, RepoError> {
-        Ok(0)
+        let id = _new
+            .app_id
+            .unwrap_or_else(|| self.applicability.keys().max().map(|i| i + 1).unwrap_or(1));
+        let app = Applicability {
+            app_id: id,
+            app_title: _new.app_title.clone(),
+            app_description: _new.app_description.clone(),
+            app_tag: _new.app_tag.clone(),
+            project_id: _new.project_id,
+        };
+        self.applicability.insert(id, app);
+        Ok(id)
     }
     fn edit_applicability(&mut self, _new: &NewApplicability) -> Result<bool, RepoError> {
-        Ok(false)
+        let id = _new.app_id.ok_or(RepoError::NotFound)?;
+        match self.applicability.get_mut(&id) {
+            Some(app) => {
+                app.app_title = _new.app_title.clone();
+                app.app_description = _new.app_description.clone();
+                app.app_tag = _new.app_tag.clone();
+                app.project_id = _new.project_id;
+                Ok(true)
+            }
+            None => Err(RepoError::NotFound),
+        }
     }
-    fn delete_applicability(&mut self, _id: i32) -> Result<bool, RepoError> {
-        Ok(false)
+    fn delete_applicability(&mut self, id: i32) -> Result<Applicability, RepoError> {
+        self.applicability.remove(&id).ok_or(RepoError::NotFound)
     }
-    fn create_requirement_status(&mut self, _new: &NewRequirementStatus) -> Result<i32, RepoError> {
-        Ok(0)
-    }
-
-    fn create_test_status(&mut self, _new: &NewTestStatus) -> Result<i32, RepoError> {
-        Ok(0)
+    fn create_status(&mut self, _new: &NewStatus) -> Result<i32, RepoError> {
+        let id = self
+            .statuses
+            .keys()
+            .max()
+            .map(|i| i + 1)
+            .unwrap_or(1);
+        let status = Status {
+            st_id: id,
+            st_title: _new.req_st_title.clone(),
+            st_description: _new.req_st_description.clone(),
+            st_short_name: _new.req_st_short_name.clone(),
+        };
+        self.statuses.insert(id, status);
+        Ok(id)
     }
 }
 
@@ -254,36 +376,70 @@ impl RequirementsRepository for FakeRepo {
             .collect())
     }
 
-    fn get_requirements_by_category(&self, category_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        Ok(self.requirements
-            .values()
-            .filter(|r| r.req_category == category_id)
-            .cloned()
-            .collect())
-    }
-
-    fn get_requirements_by_status(&self, status_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        Ok(self.requirements
-            .values()
-            .filter(|r| r.req_current_status == status_id)
-            .cloned()
-            .collect())
-    }
-
     fn insert_new_requirement(&mut self, _new: &NewRequirement) -> Result<i32, RepoError> {
-        Ok(0)
+        let id = _new
+            .req_id
+            .unwrap_or_else(|| self.requirements.keys().max().map(|i| i + 1).unwrap_or(1));
+        let now = epoch();
+        let req = Requirement {
+            req_id: id,
+            req_title: _new.req_title.clone(),
+            req_description: _new.req_description.clone(),
+            req_verification: _new.req_verification,
+            req_current_status: _new.req_current_status,
+            req_author: _new.req_author,
+            req_reviewer: _new.req_reviewer,
+            req_link: _new.req_link.clone(),
+            req_reference: _new.req_reference.clone(),
+            req_category: _new.req_category,
+            req_parent: _new.req_parent,
+            req_creation_date: now,
+            req_update_date: now,
+            req_deadline_date: now,
+            req_applicability: _new.req_applicability,
+            req_justification: _new.req_justification.clone(),
+            project_id: _new.project_id,
+        };
+        self.requirements.insert(id, req);
+        Ok(id)
     }
 
     fn edit_requirement(&mut self, _new: &NewRequirement) -> Result<bool, RepoError> {
-        Ok(false)
+        let id = _new.req_id.ok_or(RepoError::NotFound)?;
+        match self.requirements.get_mut(&id) {
+            Some(req) => {
+                req.req_title = _new.req_title.clone();
+                req.req_description = _new.req_description.clone();
+                req.req_verification = _new.req_verification;
+                req.req_current_status = _new.req_current_status;
+                req.req_author = _new.req_author;
+                req.req_reviewer = _new.req_reviewer;
+                req.req_link = _new.req_link.clone();
+                req.req_reference = _new.req_reference.clone();
+                req.req_category = _new.req_category;
+                req.req_parent = _new.req_parent;
+                req.req_applicability = _new.req_applicability;
+                req.req_justification = _new.req_justification.clone();
+                req.project_id = _new.project_id;
+                req.req_update_date = epoch();
+                Ok(true)
+            }
+            None => Err(RepoError::NotFound),
+        }
     }
 
-    fn delete_requirement(&mut self, _id: i32) -> Result<bool, RepoError> {
-        Ok(false)
+    fn delete_requirement(&mut self, id: i32) -> Result<Requirement, RepoError> {
+        self.requirements.remove(&id).ok_or(RepoError::NotFound)
     }
 
     fn update_requirement(&mut self, _req: i32) -> Result<(), RepoError> {
-        Ok(())
+        match self.requirements.get_mut(&_req) {
+            Some(req) => {
+                req.req_update_date = epoch();
+                Ok(())
+            }
+            None => Err(RepoError::NotFound),
+        }
     }
 }
 
@@ -301,22 +457,6 @@ impl TestsRepository for FakeRepo {
             .tests
             .values()
             .filter(|t| t.project_id == project_id)
-            .cloned()
-            .collect())
-    }
-
-    fn get_tests_by_status(&self, status_id: i32) -> Result<Vec<Test>, RepoError> {
-        Ok(self.tests
-            .values()
-            .filter(|t| t.test_status == status_id)
-            .cloned()
-            .collect())
-    }
-
-    fn get_tests_by_parent(&self, parent_id: i32) -> Result<Vec<Test>, RepoError> {
-        Ok(self.tests
-            .values()
-            .filter(|t| t.test_parent == parent_id)
             .cloned()
             .collect())
     }
@@ -348,15 +488,40 @@ impl TestsRepository for FakeRepo {
     }
 
     fn insert_test(&mut self, _new: &NewTest) -> Result<i32, RepoError> {
-        Ok(0)
+        let id = _new
+            .test_id
+            .unwrap_or_else(|| self.tests.keys().max().map(|i| i + 1).unwrap_or(1));
+        let test = Test {
+            test_id: id,
+            test_name: _new.test_name.clone(),
+            test_description: _new.test_description.clone(),
+            test_source: _new.test_source.clone(),
+            test_status: _new.test_status,
+            test_parent: _new.test_parent,
+            project_id: _new.project_id,
+        };
+        self.tests.insert(id, test);
+        Ok(id)
     }
 
     fn edit_test(&mut self, _new: &NewTest) -> Result<bool, RepoError> {
-        Ok(false)
+        let id = _new.test_id.ok_or(RepoError::NotFound)?;
+        match self.tests.get_mut(&id) {
+            Some(test) => {
+                test.test_name = _new.test_name.clone();
+                test.test_description = _new.test_description.clone();
+                test.test_source = _new.test_source.clone();
+                test.test_status = _new.test_status;
+                test.test_parent = _new.test_parent;
+                test.project_id = _new.project_id;
+                Ok(true)
+            }
+            None => Err(RepoError::NotFound),
+        }
     }
 
-    fn delete_test(&mut self, _id: i32) -> Result<bool, RepoError> {
-        Ok(false)
+    fn delete_test(&mut self, id: i32) -> Result<Test, RepoError> {
+        self.tests.remove(&id).ok_or(RepoError::NotFound)
     }
 
     fn update_test_requirement_links(
@@ -364,21 +529,54 @@ impl TestsRepository for FakeRepo {
         _test_id: i32,
         _requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
+        // Remove existing links for this test
+        self.matrices
+            .retain(|m| m.matrix_test_id != _test_id);
+        let project_id = self
+            .tests
+            .get(&_test_id)
+            .map(|t| t.project_id)
+            .unwrap_or(0);
+        for &req_id in _requirement_ids {
+            self.matrices.push(Matrix {
+                matrix_req_id: req_id,
+                matrix_test_id: _test_id,
+                matrix_creation_date: epoch(),
+                project_id,
+            });
+        }
         Ok(())
     }
 }
 
 impl ProjectsRepository for FakeRepo {
     fn get_projects_all(&self) -> Result<Vec<Project>, RepoError> {
-        Ok(Vec::new())
+        Ok(self.projects.values().cloned().collect())
     }
 
     fn get_project_by_id(&self, _id: i32) -> Result<Project, RepoError> {
-        Err(RepoError::NotFound)
+        self.projects.get(&_id).cloned().ok_or(RepoError::NotFound)
     }
 
     fn insert_new_project(&mut self, _new: &NewProject) -> Result<i32, RepoError> {
-        Ok(0)
+        let id = self
+            .projects
+            .keys()
+            .max()
+            .map(|i| i + 1)
+            .unwrap_or(1);
+        let now = epoch();
+        let proj = Project {
+            project_id: id,
+            project_name: _new.project_name.clone(),
+            project_description: _new.project_description.clone(),
+            project_creation_date: Some(now),
+            project_update_date: Some(now),
+            project_status: Some(_new.project_status.clone()),
+            project_owner_id: _new.project_owner_id,
+        };
+        self.projects.insert(id, proj);
+        Ok(id)
     }
 
     fn edit_project(
@@ -386,19 +584,25 @@ impl ProjectsRepository for FakeRepo {
         _project_id: i32,
         _update: &UpdateProject,
     ) -> Result<bool, RepoError> {
-        Ok(false)
+        match self.projects.get_mut(&_project_id) {
+            Some(proj) => {
+                proj.project_name = _update.project_name.clone();
+                proj.project_description = _update.project_description.clone();
+                proj.project_status = Some(_update.project_status.clone());
+                proj.project_owner_id = _update.project_owner_id;
+                proj.project_update_date = Some(epoch());
+                Ok(true)
+            }
+            None => Err(RepoError::NotFound),
+        }
     }
 
-    fn delete_project(&mut self, _project_id: i32) -> Result<bool, RepoError> {
-        Ok(false)
+    fn delete_project(&mut self, _project_id: i32) -> Result<Project, RepoError> {
+        self.projects.remove(&_project_id).ok_or(RepoError::NotFound)
     }
 }
 
 impl MatrixRepository for FakeRepo {
-    fn get_matrix_all(&self) -> Result<Vec<Matrix>, RepoError> {
-        Ok(self.matrices.iter().cloned().collect())
-    }
-
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
         Ok(self
             .matrices
@@ -416,21 +620,5 @@ impl MatrixRepository for FakeRepo {
             project_id: new.project_id,
         });
         Ok(())
-    }
-
-    fn insert_matrix_link(&mut self, req_id: i32, test_id: i32, project_id: i32) -> Result<bool, RepoError> {
-        self.matrices.push(Matrix {
-            matrix_req_id: req_id,
-            matrix_test_id: test_id,
-            matrix_creation_date: epoch(),
-            project_id,
-        });
-        Ok(true)
-    }
-
-    fn delete_matrix_link(&mut self, req_id: i32, test_id: i32) -> Result<bool, RepoError> {
-        let initial_len = self.matrices.len();
-        self.matrices.retain(|m| !(m.matrix_req_id == req_id && m.matrix_test_id == test_id));
-        Ok(self.matrices.len() < initial_len)
     }
 }

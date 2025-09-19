@@ -1,10 +1,11 @@
+pub mod cache;
+pub mod cache_middleware;
 pub mod diesel_repo;
 pub mod errors;
 pub mod fake_repo;
 
-#[cfg(test)]
-mod tests;
-
+pub use cache::*;
+pub use cache_middleware::CacheRepository;
 pub use diesel_repo::*;
 
 use crate::models::*;
@@ -19,19 +20,17 @@ pub trait UserRepository {
     fn update_user_password(&mut self, id: i32, new_hash: &str) -> Result<(), RepoError>;
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError>;
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError>;
-    fn delete_user(&mut self, id: i32) -> Result<bool, RepoError>;
+    fn delete_user(&mut self, id: i32) -> Result<User, RepoError>;
 }
 
 pub trait RequirementsRepository {
     fn get_requirement_by_id(&self, id: i32) -> Result<Requirement, RepoError>;
     fn get_requirements_all(&self) -> Result<Vec<Requirement>, RepoError>;
     fn get_requirements_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError>;
-    fn get_requirements_by_category(&self, category_id: i32) -> Result<Vec<Requirement>, RepoError>;
-    fn get_requirements_by_status(&self, status_id: i32) -> Result<Vec<Requirement>, RepoError>;
 
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError>;
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError>;
-    fn delete_requirement(&mut self, id: i32) -> Result<bool, RepoError>;
+    fn delete_requirement(&mut self, id: i32) -> Result<Requirement, RepoError>;
     fn update_requirement(&mut self, req: i32) -> Result<(), RepoError>;
 }
 
@@ -39,14 +38,12 @@ pub trait TestsRepository {
     fn get_test_by_id(&self, id: i32) -> Result<Test, RepoError>;
     fn get_tests_all(&self) -> Result<Vec<Test>, RepoError>;
     fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<Test>, RepoError>;
-    fn get_tests_by_status(&self, status_id: i32) -> Result<Vec<Test>, RepoError>;
-    fn get_tests_by_parent(&self, parent_id: i32) -> Result<Vec<Test>, RepoError>;
     fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError>;
     fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<Test>, RepoError>;
 
     fn insert_test(&mut self, new: &NewTest) -> Result<i32, RepoError>;
     fn edit_test(&mut self, new: &NewTest) -> Result<bool, RepoError>;
-    fn delete_test(&mut self, id: i32) -> Result<bool, RepoError>;
+    fn delete_test(&mut self, id: i32) -> Result<Test, RepoError>;
     fn update_test_requirement_links(
         &mut self,
         test_id: i32,
@@ -55,6 +52,9 @@ pub trait TestsRepository {
 }
 
 pub trait LookupRepository {
+    fn get_status_all(&self) -> Result<Vec<Status>, RepoError>;
+    fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError>;
+    
     fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError>;
     fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError>;
     
@@ -76,16 +76,15 @@ pub trait LookupRepository {
     fn get_verification_by_id(&self, id: i32) -> Result<Verification, RepoError>;
     fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<Verification>, RepoError>;
 
-    fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError>;
-    fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError>;
+    fn create_status(&mut self, new: &NewStatus) -> Result<i32, RepoError>;
 
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError>;
     fn edit_category(&mut self, new: &NewCategory) -> Result<bool, RepoError>;
-    fn delete_category(&mut self, id: i32) -> Result<bool, RepoError>;
+    fn delete_category(&mut self, id: i32) -> Result<Category, RepoError>;
 
     fn insert_new_applicability(&mut self, new: &NewApplicability) -> Result<i32, RepoError>;
     fn edit_applicability(&mut self, new: &NewApplicability) -> Result<bool, RepoError>;
-    fn delete_applicability(&mut self, id: i32) -> Result<bool, RepoError>;
+    fn delete_applicability(&mut self, id: i32) -> Result<Applicability, RepoError>;
 }
 
 pub trait ProjectsRepository {
@@ -94,15 +93,12 @@ pub trait ProjectsRepository {
 
     fn insert_new_project(&mut self, new: &NewProject) -> Result<i32, RepoError>;
     fn edit_project(&mut self, project_id: i32, update: &UpdateProject) -> Result<bool, RepoError>;
-    fn delete_project(&mut self, project_id: i32) -> Result<bool, RepoError>;
+    fn delete_project(&mut self, project_id: i32) -> Result<Project, RepoError>;
 }
 
 pub trait MatrixRepository {
-    fn get_matrix_all(&self) -> Result<Vec<Matrix>, RepoError>;
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError>;
     fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError>;
-    fn insert_matrix_link(&mut self, req_id: i32, test_id: i32, project_id: i32) -> Result<bool, RepoError>;
-    fn delete_matrix_link(&mut self, req_id: i32, test_id: i32) -> Result<bool, RepoError>;
 }
 
 pub trait Repository:

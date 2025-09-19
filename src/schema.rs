@@ -112,20 +112,6 @@ diesel::table! {
         test_status -> Int4,
         test_parent -> Int4,
         project_id -> Int4,
-        test_reference -> Varchar,
-    }
-}
-
-diesel::table! {
-    user_project_mapping (mapping_id) {
-        mapping_id -> Int4,
-        user_id -> Int4,
-        project_id -> Int4,
-        #[max_length = 50]
-        permission_level -> Varchar,
-        assigned_date -> Nullable<Timestamp>,
-        assigned_by -> Nullable<Int4>,
-        is_active -> Nullable<Bool>,
     }
 }
 
@@ -159,15 +145,11 @@ diesel::joinable!(categories -> projects (project_id));
 diesel::joinable!(logs -> projects (project_id));
 diesel::joinable!(logs -> users (user_id));
 diesel::joinable!(matrix -> projects (project_id));
-diesel::joinable!(matrix -> requirements (matrix_req_id));
-diesel::joinable!(matrix -> tests (matrix_test_id));
 diesel::joinable!(requirements -> applicability (req_applicability));
 diesel::joinable!(requirements -> projects (project_id));
 diesel::joinable!(requirements -> requirement_status (req_current_status));
 diesel::joinable!(tests -> projects (project_id));
 diesel::joinable!(tests -> test_status (test_status));
-diesel::joinable!(user_project_mapping -> projects (project_id));
-diesel::joinable!(users -> projects (project_id));
 diesel::joinable!(verification -> projects (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -180,7 +162,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     requirements,
     test_status,
     tests,
-    user_project_mapping,
     users,
     verification,
 );

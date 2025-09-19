@@ -2,33 +2,16 @@
 <div class="card requirement-card mb-3">
   <div class="requirement-header">
     <div class="requirement-title">
-      <h3>{{user_name}}</h3>
-    </div>
-    <div class="requirement-meta">
-      <div class="meta-item">
-        <span class="meta-label">Username:</span>
-        <span class="meta-value">{{user_username}}</span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-label">Email:</span>
-        <span class="meta-value">{{user_email}}</span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-label">Level:</span>
-        <span class="meta-value">{{user_level}}</span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-label">Created:</span>
-        <span class="meta-value">{{user_creation_date}}</span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-label">Last Login:</span>
-        <span class="meta-value">{{user_last_login}}</span>
-      </div>
+      <h3 class="mb-0">{{user_name}}</h3>
     </div>
   </div>
   <div class="card-footer">
-    <a href="/users/{{user_id}}" class="btn btn-outline btn-sm">View Details</a>
+    {{#if show_back_button}}
+      <a href="/users" class="btn btn-outline btn-sm">Back to Users</a>
+    {{/if}}
+    {{#if show_details_button}}
+      <a href="/users/{{user_id}}" class="btn btn-outline btn-sm">View Details</a>
+    {{/if}}
     <a href="/edit_user/{{user_id}}" class="btn btn-primary btn-sm">Edit User</a>
   </div>
 </div>

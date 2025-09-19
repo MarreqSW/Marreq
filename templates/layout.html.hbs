@@ -1,81 +1,43 @@
 <!doctype html>
 <html lang='en'>
-  <head>
-    <title>ReqMan</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel='stylesheet' href='/static/reqman.css'>
-    <link rel='icon' type='image/x-icon' href='/static/favicon.ico'>
-  </head>
-  <body>
-    {{> nav}}
-    <main class="container">
-      {{~> page}}
-    </main>
-    {{> footer}}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <script>
-      // Delete confirmation functions
-      function deleteRequirement(reqId, reqTitle) {
-        if (confirm(`Are you sure you want to delete requirement "${reqTitle}"? This action cannot be undone.`)) {
-          fetch(`/delete_requirement/${reqId}`, {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          })
-          .then(response => {
-            if (response.redirected) {
-              // Follow the redirect to the requirements list
-              window.location.href = response.url;
-            } else if (response.status === 403) {
-              alert('Access denied. Only admin users can delete requirements with status other than Draft or Proposal.');
-            } else if (response.status === 200) {
-              // If no redirect, reload the page
-              window.location.reload();
-            } else {
-              alert('Error deleting requirement. Please try again.');
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting requirement. Please try again.');
-          });
+
+<head>
+  <title>ReqMan</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel='stylesheet' href='/static/reqman.css'>
+  <link rel='icon' type='image/x-icon' href='/static/favicon.ico'>
+  <script>
+    (function () {
+      try {
+        const storedTheme = localStorage.getItem('reqman-theme');
+        if (
+          storedTheme === 'dark' ||
+          (!storedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        ) {
+          document.documentElement.setAttribute('data-theme', 'dark');
         }
+      } catch (error) {
+        // Ignore storage access errors
       }
-      
-      function deleteTest(testId, testName) {
-        if (confirm(`Are you sure you want to delete test "${testName}"? This action cannot be undone.`)) {
-          fetch(`/delete_test/${testId}`, {
-            method: 'DELETE',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          })
-          .then(response => {
-            if (response.redirected) {
-              // Follow the redirect to the tests list
-              window.location.href = response.url;
-            } else if (response.status === 403) {
-              alert('Access denied. Only admin users can delete tests with status other than Draft or Proposal.');
-            } else if (response.status === 200) {
-              // If no redirect, reload the page
-              window.location.reload();
-            } else {
-              alert('Error deleting test. Please try again.');
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting test. Please try again.');
-          });
-        }
-      }
-    </script>
-  </body>
+    })();
+  </script>
+</head>
+
+<body>
+  {{#if user}}
+  {{> nav}}
+  {{/if}}
+  <main {{#if user}}class="container" {{/if}}>
+    {{~> page}}
+  </main>
+  {{> footer}}
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/static/reqman.js"></script>
+</body>
+
 </html>

@@ -82,15 +82,20 @@ fn decorate_requirements_impl<R: Repository>(
                 req_id: r.req_id,
                 req_title: r.req_title,
                 req_verification: verification,
+                req_verification_id: r.req_verification,
                 req_description: r.req_description,
                 req_current_status: status,
                 req_current_status_id: r.req_current_status,
                 req_author: author,
+                req_author_id: r.req_author,
                 req_reviewer: reviewer,
+                req_reviewer_id: r.req_reviewer,
                 req_link: r.req_link,
                 req_reference: r.req_reference,
                 req_category: category,
+                req_category_id: r.req_category,
                 req_applicability: applicability,
+                req_applicability_id: r.req_applicability,
                 req_parent_id: r.req_parent,
                 req_parent_title: parent_title,
                 req_creation_date: r
@@ -139,6 +144,7 @@ fn decorate_requirements_impl<R: Repository>(
                 test_name: t.test_name,
                 test_description: t.test_description,
                 test_source: t.test_source,
+                test_reference: t.test_reference,
                 test_status: status,
                 test_status_id: t.test_status,
                 test_parent_id: t.test_parent,
@@ -194,13 +200,13 @@ mod tests {
         let mut repo = FakeRepo::default();
 
         // Lookup data
-        repo.statuses.insert(
+        repo.requirement_statuses.insert(
             1,
-            Status {
-                st_id: 1,
-                st_title: "Open".into(),
-                st_description: String::new(),
-                st_short_name: String::new(),
+            RequirementStatus {
+                req_st_id: 1,
+                req_st_title: "Open".into(),
+                req_st_description: String::new(),
+                req_st_short_name: String::new(),
             },
         );
         repo.verifications.insert(
@@ -378,13 +384,13 @@ mod tests {
     #[test]
     fn decorate_tests_impl_covers_branches() {
         let mut repo = FakeRepo::default();
-        repo.statuses.insert(
+        repo.test_statuses.insert(
             1,
-            Status {
-                st_id: 1,
-                st_title: "Open".into(),
-                st_description: String::new(),
-                st_short_name: String::new(),
+            TestStatus {
+                test_st_id: 1,
+                test_st_title: "Open".into(),
+                test_st_description: String::new(),
+                test_st_short_name: String::new(),
             },
         );
         // parent test for branch
@@ -395,6 +401,7 @@ mod tests {
                 test_name: "Parent".into(),
                 test_description: String::new(),
                 test_source: String::new(),
+                test_reference: "TEST-10".into(),
                 test_status: 1,
                 test_parent: 0,
                 project_id: 1,
@@ -406,6 +413,7 @@ mod tests {
             test_name: "T1".into(),
             test_description: String::new(),
             test_source: String::new(),
+            test_reference: "TEST-20".into(),
             test_status: 1,
             test_parent: 0,
             project_id: 1,
@@ -415,6 +423,7 @@ mod tests {
             test_name: "T2".into(),
             test_description: String::new(),
             test_source: String::new(),
+            test_reference: "TEST-21".into(),
             test_status: 99,
             test_parent: 10,
             project_id: 1,
@@ -424,6 +433,7 @@ mod tests {
             test_name: "T3".into(),
             test_description: String::new(),
             test_source: String::new(),
+            test_reference: "TEST-22".into(),
             test_status: 1,
             test_parent: 999,
             project_id: 1,
@@ -442,13 +452,22 @@ mod tests {
     fn get_linked_tests_for_requirement_impl_works() {
         let now = dt();
         let mut repo = FakeRepo::default();
-        repo.statuses.insert(
+        repo.requirement_statuses.insert(
             1,
-            Status {
-                st_id: 1,
-                st_title: "Open".into(),
-                st_description: String::new(),
-                st_short_name: String::new(),
+            RequirementStatus {
+                req_st_id: 1,
+                req_st_title: "Open".into(),
+                req_st_description: String::new(),
+                req_st_short_name: String::new(),
+            },
+        );
+        repo.test_statuses.insert(
+            1,
+            TestStatus {
+                test_st_id: 1,
+                test_st_title: "Open".into(),
+                test_st_description: String::new(),
+                test_st_short_name: String::new(),
             },
         );
         let req = Requirement {
@@ -475,6 +494,7 @@ mod tests {
             test_name: "T".into(),
             test_description: String::new(),
             test_source: String::new(),
+            test_reference: "TEST-10".into(),
             test_status: 1,
             test_parent: 0,
             project_id: 1,

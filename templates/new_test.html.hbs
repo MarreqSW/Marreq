@@ -17,6 +17,12 @@
         </div>
 
         <div class="form-group">
+          <label for="test_reference" class="form-label">Test Reference</label>
+          <input type="text" name="test_reference" id="test_reference" class="form-control" required>
+          <small class="text-secondary">Must follow format TEST-NUMBER (e.g., TEST-1, TEST-2)</small>
+        </div>
+
+        <div class="form-group">
           <label for="test_description" class="form-label">Description</label>
           <textarea name="test_description" id="test_description" class="form-control" rows="4" required></textarea>
         </div>
@@ -31,7 +37,7 @@
             <label for="test_status" class="form-label">Status</label>
             <select name="test_status" id="test_status" class="form-control" required>
               {{#each status }}
-                <option value="{{st_id}}">{{st_title}}</option>
+                <option value="{{test_st_id}}">{{test_st_title}}</option>
               {{/each}}
             </select>
           </div>

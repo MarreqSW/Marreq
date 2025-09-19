@@ -110,6 +110,7 @@ diesel::table! {
         test_description -> Varchar,
         test_source -> Varchar,
         test_status -> Int4,
+        test_reference -> Varchar,
         test_parent -> Int4,
         project_id -> Int4,
     }

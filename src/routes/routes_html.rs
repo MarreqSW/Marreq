@@ -721,7 +721,7 @@ pub fn get_edit_requirement(
 
     #[cfg(debug_assertions)]
     println!("Requirement: {:#}", ctx);
-    Ok(Template::render("edit_requirement_by_id", ctx))
+    Ok(Template::render("edit_requirement", ctx))
 }
 
 #[post("/edit_requirement/<req_id>", data = "<new_req>")]
@@ -1337,7 +1337,7 @@ pub fn get_edit_test(
     let test_decorate_json = json!(test_decorate[0]);
 
     let status = DieselCachedRepo::read()
-        .get_status_all()
+        .get_test_status_all()
         .unwrap_or_default();
     let status_json = json!(status);
 
@@ -1419,6 +1419,7 @@ pub fn get_edit_test(
 
     let ctx = json!({
         "tests": test_decorate_json,
+        "test_status_id": test_decorate[0].test_status_id,
         "categories": categories_json,
         "status": status_json,
         "parent": parents_json,

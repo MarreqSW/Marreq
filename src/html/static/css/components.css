@@ -4,32 +4,23 @@
 .footer {
   background-color: var(--surface-color);
   border-top: 1px solid var(--border-color);
-  padding: 2rem var(--space-4);
-  margin: 4rem var(--space-1) var(--space-1) var(--space-1);
-  text-align: center;
+  padding: 1rem;
   color: var(--text-secondary);
+
+  display: flex;              /* Activa flexbox */
+  justify-content: center;    /* Centra horizontalmente */
+  align-items: center;        /* Centra verticalmente */
+  text-align: center;
+
   flex-shrink: 0;
   width: 100%;
+  min-height: 60px;           /* Altura mínima opcional */
 }
 
-/* Responsive footer padding */
-@media (min-width: 576px) {
-  .footer {
-    padding: 2rem var(--space-6);
-  }
+.footer p {
+  margin: 0; /* Evita desajustes por márgenes por defecto */
 }
 
-@media (min-width: 768px) {
-  .footer {
-    padding: 2rem var(--space-8);
-  }
-}
-
-@media (min-width: 1200px) {
-  .footer {
-    padding: 2rem var(--space-12);
-  }
-}
 
 /* Theme Toggle */
 .theme-toggle {

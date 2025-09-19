@@ -12,7 +12,7 @@ use rocket::serde::json::json;
 use rocket_dyn_templates::Template;
 
 use chrono::Utc;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path;
 
 use crate::auth::*;
@@ -23,8 +23,8 @@ use crate::logger::Logger;
 use crate::models::*;
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
-    DieselCachedRepo, LookupRepository, MatrixRepository, ProjectsRepository,
-    RequirementsRepository, TestsRepository, UserRepository, ProjectMembersRepository
+    DieselCachedRepo, LookupRepository, MatrixRepository, ProjectMembersRepository,
+    ProjectsRepository, RequirementsRepository, TestsRepository, UserRepository,
 };
 
 // --------------------------------
@@ -39,17 +39,167 @@ fn get_db_connection() -> Result<PooledConnectionWrapper, Box<dyn std::error::Er
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
 }
 
+fn get_accessible_projects(user: &User) -> Vec<Project> {
+    let repo = DieselCachedRepo::read();
+
+    if user.is_admin {
+        let mut projects = repo.get_projects_all().unwrap_or_default();
+        projects.sort_by(|a, b| {
+            a.project_name
+                .to_lowercase()
+                .cmp(&b.project_name.to_lowercase())
+        });
+        return projects;
+    }
+
+    let memberships = repo.get_projects_for_user(user.user_id).unwrap_or_default();
+
+    if memberships.is_empty() {
+        return Vec::new();
+    }
+
+    let mut projects: Vec<Project> = memberships
+        .into_iter()
+        .filter_map(|membership| repo.get_project_by_id(membership.project_id).ok())
+        .collect();
+
+    projects.sort_by(|a, b| {
+        a.project_name
+            .to_lowercase()
+            .cmp(&b.project_name.to_lowercase())
+    });
+    projects
+}
+
+fn resolve_selected_project_id(requested: Option<i32>, projects: &[Project]) -> Option<i32> {
+    match requested {
+        Some(project_id)
+            if projects
+                .iter()
+                .any(|project| project.project_id == project_id) =>
+        {
+            Some(project_id)
+        }
+        _ => projects.first().map(|project| project.project_id),
+    }
+}
+
+fn get_user_projects_and_selection(
+    user: &User,
+    cookies: &CookieJar<'_>,
+) -> (Vec<Project>, Option<i32>) {
+    let projects = get_accessible_projects(user);
+    let requested = get_selected_project_id(cookies);
+    let selected_project_id = resolve_selected_project_id(requested, &projects);
+    (projects, selected_project_id)
+}
+
 fn build_context_with_projects(user: User, cookies: &CookieJar<'_>) -> rocket::serde::json::Value {
-    let projects = DieselCachedRepo::read()
-        .get_projects_all()
-        .unwrap_or_default();
-    let selected_project_id = get_selected_project_id(cookies);
+    let (projects, selected_project_id) = get_user_projects_and_selection(&user, cookies);
 
     json!({
         "user": user,
         "projects": projects,
         "selected_project_id": selected_project_id
     })
+}
+
+fn decorate_projects_for_listing(
+    user: &User,
+    projects: &[Project],
+) -> Vec<rocket::serde::json::Value> {
+    use rocket::serde::json::Value;
+
+    let repo = DieselCachedRepo::read();
+
+    let membership_by_project: HashMap<i32, ProjectMember> = repo
+        .get_projects_for_user(user.user_id)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|membership| (membership.project_id, membership))
+        .collect();
+
+    let owner_lookup: HashMap<i32, String> = repo
+        .get_users_all()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|u| (u.user_id, u.user_name))
+        .collect();
+
+    let mut decorated: Vec<Value> = Vec::with_capacity(projects.len());
+
+    for project in projects {
+        if !user.is_admin && !membership_by_project.contains_key(&project.project_id) {
+            continue;
+        }
+
+        let role_label = membership_by_project
+            .get(&project.project_id)
+            .map(|membership| describe_project_role(membership.role).to_string())
+            .or_else(|| {
+                if user.is_admin {
+                    Some("Administrator".to_string())
+                } else {
+                    None
+                }
+            });
+
+        let role_id = membership_by_project
+            .get(&project.project_id)
+            .map(|membership| membership.role);
+
+        let owner_name = project
+            .project_owner_id
+            .and_then(|owner_id| owner_lookup.get(&owner_id).cloned());
+
+        let status_original = project
+            .project_status
+            .as_ref()
+            .map(|status| status.trim().to_string());
+        let status_display = status_original
+            .clone()
+            .unwrap_or_else(|| "Unknown".to_string());
+        let status_normalized = status_original
+            .as_ref()
+            .map(|status| status.to_ascii_lowercase())
+            .unwrap_or_else(|| "unknown".to_string());
+        let status_badge = project_status_badge(status_display.as_str());
+
+        decorated.push(json!({
+            "project_id": project.project_id,
+            "project_name": project.project_name,
+            "project_description": project.project_description,
+            "project_creation_date": project
+                .project_creation_date
+                .map(|dt| dt.format("%Y-%m-%d").to_string()),
+            "project_update_date": project
+                .project_update_date
+                .map(|dt| dt.format("%Y-%m-%d").to_string()),
+            "project_status": status_display,
+            "project_status_normalized": status_normalized,
+            "project_status_badge": status_badge,
+            "project_owner_id": project.project_owner_id,
+            "project_owner_name": owner_name,
+            "role_label": role_label,
+            "role_id": role_id
+        }));
+    }
+
+    decorated.sort_by(|a, b| {
+        let a_name = a
+            .get("project_name")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_lowercase();
+        let b_name = b
+            .get("project_name")
+            .and_then(|value| value.as_str())
+            .unwrap_or("")
+            .to_lowercase();
+        a_name.cmp(&b_name)
+    });
+
+    decorated
 }
 
 fn describe_project_role(role: i32) -> &'static str {
@@ -297,111 +447,66 @@ pub fn get_project_by_id_pooled_safe(project_id: i32) -> Project {
 pub fn index(session_user: SessionUser, cookies: &CookieJar<'_>) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
 
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
+    let (projects, selected_project_id) = get_user_projects_and_selection(&user, cookies);
 
-    // Get selected project name
-    let selected_project_name = if let Some(project_id) = selected_project_id {
-        let project = get_project_by_id_pooled_safe(project_id);
-        project.project_name
-    } else {
-        // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            first_project.project_name.clone()
-        } else {
-            "Requirements Manager".to_string()
-        }
-    };
+    let selected_project_name = selected_project_id
+        .and_then(|project_id| {
+            projects
+                .iter()
+                .find(|project| project.project_id == project_id)
+                .map(|project| project.project_name.clone())
+        })
+        .unwrap_or_else(|| "Requirements Manager".to_string());
 
-    // Get counts for requirements and tests
-    let requirements_count = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read()
-            .get_requirements_by_project(project_id)
-            .map(|reqs| reqs.len())
-            .unwrap_or(0)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
-        if let Some(first_project) = projects.first() {
+    let requirements_count = selected_project_id
+        .map(|project_id| {
             DieselCachedRepo::read()
-                .get_requirements_by_project(first_project.project_id)
+                .get_requirements_by_project(project_id)
                 .map(|reqs| reqs.len())
                 .unwrap_or(0)
-        } else {
-            DieselCachedRepo::read()
-                .get_requirements_all()
-                .map(|reqs| reqs.len())
-                .unwrap_or(0)
-        }
-    };
+        })
+        .unwrap_or(0);
 
-    let tests_count = if let Some(project_id) = selected_project_id {
-        DieselCachedRepo::read()
-            .get_tests_by_project(project_id)
-            .map(|tests| tests.len())
-            .unwrap_or(0)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = DieselCachedRepo::read()
-            .get_projects_all()
-            .unwrap_or_default();
-        if let Some(first_project) = projects.first() {
+    let tests_count = selected_project_id
+        .map(|project_id| {
             DieselCachedRepo::read()
-                .get_tests_by_project(first_project.project_id)
+                .get_tests_by_project(project_id)
                 .map(|tests| tests.len())
                 .unwrap_or(0)
-        } else {
-            DieselCachedRepo::read()
-                .get_tests_all()
-                .map(|tests| tests.len())
-                .unwrap_or(0)
-        }
-    };
-
-    let projects = DieselCachedRepo::read()
-        .get_projects_all()
-        .unwrap_or_default();
+        })
+        .unwrap_or(0);
 
     let user_memberships = DieselCachedRepo::read()
         .get_projects_for_user(user.user_id)
         .unwrap_or_default();
 
-    let user_projects: Vec<_> = user_memberships
+    let membership_map: HashMap<i32, ProjectMember> = user_memberships
         .into_iter()
-        .filter_map(|membership| {
-            DieselCachedRepo::read()
-                .get_project_by_id(membership.project_id)
-                .ok()
-                .map(|project| {
-                    let Project {
-                        project_id,
-                        project_name,
-                        project_description,
-                        project_status,
-                        ..
-                    } = project;
+        .map(|membership| (membership.project_id, membership))
+        .collect();
 
-                    let project_status_label =
-                        project_status.unwrap_or_else(|| "Unknown".to_string());
-                    let status_class = project_status_badge(&project_status_label).to_string();
-                    let role_label = describe_project_role(membership.role).to_string();
-                    let role_id = membership.role;
+    let user_projects: Vec<_> = projects
+        .iter()
+        .filter_map(|project| {
+            membership_map.get(&project.project_id).map(|membership| {
+                let project_status_label = project
+                    .project_status
+                    .clone()
+                    .unwrap_or_else(|| "Unknown".to_string());
+                let status_class = project_status_badge(&project_status_label).to_string();
+                let role_label = describe_project_role(membership.role).to_string();
+                let role_id = membership.role;
 
-                    json!({
-                        "project_id": project_id,
-                        "project_name": project_name,
-                        "project_description": project_description,
-                        "project_status": project_status_label,
-                        "status_class": status_class,
-                        "role_label": role_label,
-                        "role_id": role_id,
-                    })
+                json!({
+                    "project_id": project.project_id,
+                    "project_name": project.project_name.clone(),
+                    "project_description": project.project_description.clone(),
+                    "project_status": project_status_label,
+                    "status_class": status_class,
+                    "role_label": role_label,
+                    "role_id": role_id,
                 })
+            })
         })
         .collect();
 
@@ -507,10 +612,7 @@ pub fn show_requirements(
 }
 
 #[get("/requirements/<req_id>")]
-pub fn show_requirement_id(
-    session_user: SessionUser,
-    req_id: i32,
-) -> Result<Template, Redirect> {
+pub fn show_requirement_id(session_user: SessionUser, req_id: i32) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
 
     // Use the safe function that returns a Result
@@ -567,8 +669,7 @@ pub fn show_users(
     let users = if let Some(project_id) = selected_project_id {
         match repo.get_members_by_project(project_id) {
             Ok(members) => {
-                let member_ids: std::collections::HashSet<i32> =
-                    members.into_iter().map(|m| m.user_id).collect();
+                let member_ids: HashSet<i32> = members.into_iter().map(|m| m.user_id).collect();
 
                 match repo.get_users_all() {
                     Ok(all_users) => all_users
@@ -595,10 +696,7 @@ pub fn show_users(
 }
 
 #[get("/users/<user_id>")]
-pub fn show_user_id(
-    session_user: SessionUser,
-    user_id: i32,
-) -> Result<Template, Redirect> {
+pub fn show_user_id(session_user: SessionUser, user_id: i32) -> Result<Template, Redirect> {
     let current_user = session_user.into_inner();
     let user = DieselCachedRepo::read()
         .get_user_by_id(user_id)
@@ -618,10 +716,7 @@ pub fn show_user_id(
 }
 
 #[get("/edit_user/<user_id>")]
-pub fn edit_user(
-    session_user: SessionUser,
-    user_id: i32,
-) -> Result<Template, Redirect> {
+pub fn edit_user(session_user: SessionUser, user_id: i32) -> Result<Template, Redirect> {
     let current_user = session_user.into_inner();
     let user = DieselCachedRepo::read()
         .get_user_by_id(user_id)
@@ -1294,10 +1389,7 @@ pub fn show_tests(
 }
 
 #[get("/tests/<test_id_param>")]
-pub fn show_test_id(
-    session_user: SessionUser,
-    test_id_param: i32,
-) -> Result<Template, Redirect> {
+pub fn show_test_id(session_user: SessionUser, test_id_param: i32) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
 
     // Use the safe function that returns a Result
@@ -2110,10 +2202,7 @@ pub fn post_category(
 }
 
 #[get("/edit_category/<cat_id>")]
-pub fn get_edit_category(
-    session_user: SessionUser,
-    cat_id: i32,
-) -> Result<Template, Redirect> {
+pub fn get_edit_category(session_user: SessionUser, cat_id: i32) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
     let category = get_category_by_id_cached(cat_id);
     let ctx = json!({
@@ -2217,10 +2306,7 @@ pub fn delete_category_route(
 }
 
 #[post("/new_user", data = "<new_user>")]
-pub fn post_user(
-    session_user: SessionUser,
-    new_user: Form<NewUser>,
-) -> Result<Redirect, Redirect> {
+pub fn post_user(session_user: SessionUser, new_user: Form<NewUser>) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
@@ -2495,9 +2581,7 @@ pub fn delete_applicability_route(
 }
 
 #[get("/requirements/tree")]
-pub fn show_requirements_tree(
-    session_user: SessionUser,
-) -> Result<Template, Redirect> {
+pub fn show_requirements_tree(session_user: SessionUser) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
 
     // Get all requirements
@@ -2889,24 +2973,17 @@ pub fn generate_pdf_report(
 #[get("/projects")]
 pub fn show_projects(
     session_user: SessionUser,
+    cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
-    let projects = DieselCachedRepo::read().get_projects_all();
+    let (projects, selected_project_id) = get_user_projects_and_selection(&user, cookies);
+    let decorated_projects = decorate_projects_for_listing(&user, &projects);
 
-    let ctx = match projects {
-        Ok(projs) => {
-            json!({
-                "projects": projs,
-                "user": user
-            })
-        }
-        Err(_) => {
-            json!({
-                "projects": [],
-                "user": user
-            })
-        }
-    };
+    let ctx = json!({
+        "projects": decorated_projects,
+        "user": user,
+        "selected_project_id": selected_project_id
+    });
 
     Ok(Template::render("projects", ctx))
 }
@@ -2914,6 +2991,7 @@ pub fn show_projects(
 #[get("/projects/<project_id>")]
 pub fn show_project_id(
     session_user: SessionUser,
+    cookies: &CookieJar<'_>,
     project_id: i32,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
@@ -2971,11 +3049,12 @@ pub fn show_project_id(
         })
         .collect();
 
-    let ctx = json!({
-        "project": project,
-        "members": decorated_members,
-        "user": user
-    });
+    let mut ctx = build_context_with_projects(user.clone(), cookies);
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        ctx_obj.insert("project".to_string(), json!(project));
+        ctx_obj.insert("members".to_string(), json!(decorated_members));
+        ctx_obj.insert("user".to_string(), json!(user));
+    }
 
     Ok(Template::render("project_detail", ctx))
 }
@@ -3980,14 +4059,14 @@ pub fn show_requirements_table(
     user: SessionUser,
 ) -> Result<Template, rocket::http::Status> {
     use crate::helper_functions::decorators::decorate_requirements;
-    
+
     let _connection = get_db_connection().map_err(|_| rocket::http::Status::InternalServerError)?;
-    
+
     // Get all requirements
     let requirements = DieselCachedRepo::read()
         .get_requirements_all()
         .map_err(|_| rocket::http::Status::InternalServerError)?;
-    
+
     // Apply filters
     let mut filtered_requirements = requirements;
     if let Some(status_id) = status_filter {
@@ -3999,11 +4078,11 @@ pub fn show_requirements_table(
     if let Some(category_id) = category_filter {
         filtered_requirements.retain(|r| r.req_category == category_id);
     }
-    
+
     // Apply sorting
     let sort_by = sort_by.unwrap_or_else(|| "req_id".to_string());
     let sort_order = sort_order.unwrap_or_else(|| "asc".to_string());
-    
+
     filtered_requirements.sort_by(|a, b| {
         let comparison = match sort_by.as_str() {
             "req_id" => a.req_id.cmp(&b.req_id),
@@ -4015,23 +4094,29 @@ pub fn show_requirements_table(
             "req_category" => a.req_category.cmp(&b.req_category),
             _ => a.req_id.cmp(&b.req_id),
         };
-        
+
         if sort_order == "desc" {
             comparison.reverse()
         } else {
             comparison
         }
     });
-    
+
     // Decorate requirements
     let decorated_requirements = decorate_requirements(filtered_requirements);
-    
+
     // Get lookup data for dropdowns
     let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
-    let categories = DieselCachedRepo::read().get_categories_all().unwrap_or_default();
-    let statuses = DieselCachedRepo::read().get_requirement_status_all().unwrap_or_default();
-    let verifications = DieselCachedRepo::read().get_verification_all().unwrap_or_default();
-    
+    let categories = DieselCachedRepo::read()
+        .get_categories_all()
+        .unwrap_or_default();
+    let statuses = DieselCachedRepo::read()
+        .get_requirement_status_all()
+        .unwrap_or_default();
+    let verifications = DieselCachedRepo::read()
+        .get_verification_all()
+        .unwrap_or_default();
+
     let mut ctx = json!({
         "user": user.0,
         "projects": DieselCachedRepo::read().get_projects_all().unwrap_or_default(),
@@ -4047,12 +4132,14 @@ pub fn show_requirements_table(
     ctx["status_filter"] = json!(status_filter);
     ctx["verification_filter"] = json!(verification_filter);
     ctx["category_filter"] = json!(category_filter);
-    
+
     Ok(Template::render("requirements_table", ctx))
 }
 
 /// Show tests table view
-#[get("/tests_table?<sort_by>&<sort_order>&<status_filter>&<verification_filter>&<category_filter>")]
+#[get(
+    "/tests_table?<sort_by>&<sort_order>&<status_filter>&<verification_filter>&<category_filter>"
+)]
 pub fn show_tests_table(
     sort_by: Option<String>,
     sort_order: Option<String>,
@@ -4062,14 +4149,14 @@ pub fn show_tests_table(
     user: SessionUser,
 ) -> Result<Template, rocket::http::Status> {
     use crate::helper_functions::decorators::decorate_tests;
-    
+
     let _connection = get_db_connection().map_err(|_| rocket::http::Status::InternalServerError)?;
-    
+
     // Get all tests
     let tests = DieselCachedRepo::read()
         .get_tests_all()
         .map_err(|_| rocket::http::Status::InternalServerError)?;
-    
+
     // Apply filters
     let mut filtered_tests = tests;
     if let Some(status_id) = status_filter {
@@ -4077,11 +4164,11 @@ pub fn show_tests_table(
     }
     // Note: Test struct doesn't have verification or category fields
     // These filters are not applicable to tests
-    
+
     // Apply sorting
     let sort_by = sort_by.unwrap_or_else(|| "test_id".to_string());
     let sort_order = sort_order.unwrap_or_else(|| "asc".to_string());
-    
+
     filtered_tests.sort_by(|a, b| {
         let comparison = match sort_by.as_str() {
             "test_id" => a.test_id.cmp(&b.test_id),
@@ -4092,23 +4179,29 @@ pub fn show_tests_table(
             "test_parent" => a.test_parent.cmp(&b.test_parent),
             _ => a.test_id.cmp(&b.test_id),
         };
-        
+
         if sort_order == "desc" {
             comparison.reverse()
         } else {
             comparison
         }
     });
-    
+
     // Decorate tests
     let decorated_tests = decorate_tests(filtered_tests);
-    
+
     // Get lookup data for dropdowns
     let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
-    let categories = DieselCachedRepo::read().get_categories_all().unwrap_or_default();
-    let statuses = DieselCachedRepo::read().get_test_status_all().unwrap_or_default();
-    let verifications = DieselCachedRepo::read().get_verification_all().unwrap_or_default();
-    
+    let categories = DieselCachedRepo::read()
+        .get_categories_all()
+        .unwrap_or_default();
+    let statuses = DieselCachedRepo::read()
+        .get_test_status_all()
+        .unwrap_or_default();
+    let verifications = DieselCachedRepo::read()
+        .get_verification_all()
+        .unwrap_or_default();
+
     let mut ctx = json!({
         "user": user.0,
         "projects": DieselCachedRepo::read().get_projects_all().unwrap_or_default(),
@@ -4124,6 +4217,6 @@ pub fn show_tests_table(
     ctx["status_filter"] = json!(status_filter);
     ctx["verification_filter"] = json!(verification_filter);
     ctx["category_filter"] = json!(category_filter);
-    
+
     Ok(Template::render("tests_table", ctx))
 }

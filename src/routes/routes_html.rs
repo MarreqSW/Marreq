@@ -12,6 +12,7 @@ use rocket::serde::json::json;
 use rocket_dyn_templates::Template;
 
 use chrono::Utc;
+use std::collections::HashMap;
 use std::path;
 
 use crate::auth::*;
@@ -2931,8 +2932,48 @@ pub fn show_project_id(
     }
     let project = get_project_by_id_pooled_safe(project_id);
 
+    let members = DieselCachedRepo::read()
+        .get_members_by_project(project_id)
+        .unwrap_or_default();
+
+    let user_map: HashMap<i32, User> = DieselCachedRepo::read()
+        .get_users_all()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|u| (u.user_id, u))
+        .collect();
+
+    let decorated_members: Vec<_> = members
+        .into_iter()
+        .map(|membership| {
+            let role_label = describe_project_role(membership.role).to_string();
+            if let Some(user) = user_map.get(&membership.user_id) {
+                json!({
+                    "user_id": user.user_id,
+                    "user_name": user.user_name,
+                    "user_username": user.user_username,
+                    "user_email": user.user_email,
+                    "role_label": role_label,
+                    "role_id": membership.role,
+                    "is_admin": user.is_admin
+                })
+            } else {
+                json!({
+                    "user_id": membership.user_id,
+                    "user_name": format!("Unknown User #{}", membership.user_id),
+                    "user_username": "unknown",
+                    "user_email": "",
+                    "role_label": role_label,
+                    "role_id": membership.role,
+                    "is_admin": false
+                })
+            }
+        })
+        .collect();
+
     let ctx = json!({
         "project": project,
+        "members": decorated_members,
         "user": user
     });
 

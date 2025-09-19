@@ -79,7 +79,7 @@
             <label for="req_current_status" class="form-label">Status</label>
             <select name="req_current_status" id="req_current_status" class="form-control" required>
               {{#each status }}
-                <option value="{{req_st_id}}">{{req_st_title}}</option>
+                <option value="{{st_id}}">{{st_title}}</option>
               {{/each}}
             </select>
           </div>
@@ -119,13 +119,7 @@
           <a href="/requirements" class="btn btn-outline">Back to Requirements</a>
           
           <!-- Delete Button with Access Control -->
-          {{#if (or (eq requirements.req_current_status 1) (eq requirements.req_current_status 2))}}
-            <button onclick="deleteRequirement({{requirements.req_id}}, '{{requirements.req_title}}')" class="btn btn-danger">Delete Requirement</button>
-          {{else}}
-            {{#if ../user.is_admin}}
-              <button onclick="deleteRequirement({{requirements.req_id}}, '{{requirements.req_title}}')" class="btn btn-danger">Delete Requirement</button>
-            {{/if}}
-          {{/if}}
+          <button id="delete-btn" onclick="deleteRequirement({{requirements.req_id}}, '{{requirements.req_title}}')" class="btn btn-danger" style="display: none;">Delete Requirement</button>
         </div>
       </form>
     </div>
@@ -156,43 +150,43 @@ function setSelectedValues() {
   // Set author
   const authorSelect = document.getElementById('req_author');
   if (authorSelect) {
-    authorSelect.value = requirementData.req_author;
+    authorSelect.value = String(requirementData.req_author);
   }
   
   // Set reviewer
   const reviewerSelect = document.getElementById('req_reviewer');
   if (reviewerSelect) {
-    reviewerSelect.value = requirementData.req_reviewer;
+    reviewerSelect.value = String(requirementData.req_reviewer);
   }
   
   // Set category
   const categorySelect = document.getElementById('req_category');
   if (categorySelect) {
-    categorySelect.value = requirementData.req_category;
+    categorySelect.value = String(requirementData.req_category);
   }
   
   // Set applicability
   const applicabilitySelect = document.getElementById('req_applicability');
   if (applicabilitySelect) {
-    applicabilitySelect.value = requirementData.req_applicability;
+    applicabilitySelect.value = String(requirementData.req_applicability);
   }
   
   // Set status
   const statusSelect = document.getElementById('req_current_status');
   if (statusSelect) {
-    statusSelect.value = requirementData.req_current_status;
+    statusSelect.value = String(requirementData.req_current_status);
   }
   
   // Set verification
   const verificationSelect = document.getElementById('req_verification');
   if (verificationSelect) {
-    verificationSelect.value = requirementData.req_verification;
+    verificationSelect.value = String(requirementData.req_verification);
   }
   
   // Set parent
   const parentSelect = document.getElementById('req_parent');
   if (parentSelect) {
-    parentSelect.value = requirementData.req_parent;
+    parentSelect.value = String(requirementData.req_parent);
   }
 }
 
@@ -244,10 +238,27 @@ function validateReference() {
   return true;
 }
 
+// Function to show/hide delete button based on status and user permissions
+function updateDeleteButtonVisibility() {
+  const deleteBtn = document.getElementById('delete-btn');
+  const statusId = parseInt(requirementData.req_current_status);
+  const isAdmin = {{#if user.is_admin}}true{{else}}false{{/if}};
+  
+  // Show delete button if status is Draft (1) or Proposal (2), or if user is admin
+  if (statusId === 1 || statusId === 2 || isAdmin) {
+    deleteBtn.style.display = 'inline-block';
+  } else {
+    deleteBtn.style.display = 'none';
+  }
+}
+
 // Add event listeners
 document.addEventListener('DOMContentLoaded', function() {
   // Set selected values first
   setSelectedValues();
+  
+  // Update delete button visibility
+  updateDeleteButtonVisibility();
   
   const referenceInput = document.getElementById('req_reference');
   const categorySelect = document.getElementById('req_category');

@@ -15,7 +15,7 @@ body {
   display: flex;
   flex-direction: column;
   transition: background-color 0.3s ease, color 0.3s ease;
-  margin: var(--space-1);
+  margin: 0;
 }
 
 main {

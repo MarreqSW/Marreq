@@ -879,7 +879,7 @@ mod tests {
         assert!(cache.get(keys::STATUS_ALL).is_some());
         repo.get_status_by_id(1).unwrap();
         assert!(cache.get(&keys::Status::by_id(1)).is_some());
-        let ns = NewStatus { st_title: "Closed".into(), st_description: "".into(), st_short_name: "C".into() };
+        let ns = NewStatus { req_st_title: "Closed".into(), req_st_description: "".into(), req_st_short_name: "C".into() };
         let stid = repo.create_status(&ns).unwrap();
         assert!(cache.get(&keys::Status::by_id(stid)).is_none());
 

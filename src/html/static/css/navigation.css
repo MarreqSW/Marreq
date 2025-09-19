@@ -8,6 +8,7 @@
   top: 0;
   z-index: var(--z-sticky);
   width: 100%;
+  margin: var(--space-1) var(--space-1) 0 var(--space-1);
 }
 
 .nav-container {

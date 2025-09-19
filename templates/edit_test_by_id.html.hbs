@@ -17,6 +17,12 @@
         </div>
 
         <div class="form-group">
+          <label for="test_reference" class="form-label">Test Reference</label>
+          <input type="text" name="test_reference" id="test_reference" value="{{tests.test_reference}}" class="form-control" required>
+          <small class="text-secondary">Must follow format TEST-NUMBER (e.g., TEST-1, TEST-2)</small>
+        </div>
+
+        <div class="form-group">
           <label for="test_description" class="form-label">Description</label>
           <textarea name="test_description" id="test_description" class="form-control" rows="4" required>{{tests.test_description}}</textarea>
         </div>
@@ -31,7 +37,7 @@
             <label for="test_status" class="form-label">Status</label>
             <select name="test_status" id="test_status" class="form-control" required>
               {{#each status }}
-                <option value="{{st_id}}" {{#if (eq st_id ../tests.test_status)}}selected{{/if}}>{{st_title}}</option>
+                <option value="{{test_st_id}}" {{#if (eq test_st_id ../tests.test_status_id)}}selected{{/if}}>{{test_st_title}}</option>
               {{/each}}
             </select>
           </div>
@@ -41,44 +47,17 @@
           <div class="form-group">
             <label for="test_parent" class="form-label">Parent Test</label>
             <select name="test_parent" id="test_parent" class="form-control">
-              <option value="0" {{#if (eq ../tests.test_parent 0)}}selected{{/if}}>None</option>
+              <option value="0" {{#if (eq ../tests.test_parent_id 0)}}selected{{/if}}>None</option>
               {{#each parent }}
-                <option value="{{test_id}}" {{#if (eq test_id ../tests.test_parent)}}selected{{/if}}>{{test_name}}</option>
+                <option value="{{test_id}}" {{#if (eq test_id ../tests.test_parent_id)}}selected{{/if}}>{{test_name}}</option>
               {{/each}}
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="test_category" class="form-label">Category</label>
-            <select name="test_category" id="test_category" class="form-control">
-              {{#each categories }}
-                <option value="{{cat_id}}" {{#if (eq cat_id ../tests.test_category)}}selected{{/if}}>{{cat_title}}</option>
-              {{/each}}
-            </select>
-          </div>
-        </div>
-
-        <div class="grid grid-2">
-          <div class="form-group">
-            <label for="test_verification" class="form-label">Verification Mode</label>
-            <select name="test_verification" id="test_verification" class="form-control">
-              {{#each verification}}
-                <option value="{{verification_id}}" {{#if (eq verification_id ../tests.test_verification)}}selected{{/if}}>{{verification_name}}</option>
-              {{/each}}
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="test_reviewer" class="form-label">Reviewer</label>
-            <select name="test_reviewer" id="test_reviewer" class="form-control">
-              {{#each users }}
-                <option value="{{user_id}}" {{#if (eq user_id ../tests.test_reviewer)}}selected{{/if}}>{{user_name}}</option>
-              {{/each}}
-            </select>
-          </div>
         </div>
 
         <input type="hidden" id="test_id" name="test_id" value="{{tests.test_id}}">
+        <input type="hidden" id="project_id" name="project_id" value="{{tests.project_id}}">
 
         <div class="form-group mt-4">
           <label for="linked_requirements" class="form-label">Linked Requirements</label>

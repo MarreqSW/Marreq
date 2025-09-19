@@ -540,6 +540,7 @@ mod tests {
             test_description: "".into(),
             test_source: "src".into(),
             test_status: 1,
+            test_reference: "TEST-1".into(),
             test_parent: 0,
             project_id: 1,
         };
@@ -565,6 +566,8 @@ mod tests {
         FakeRepo {
             users,
             statuses,
+            requirement_statuses: HashMap::new(),
+            test_statuses: HashMap::new(),
             verifications,
             categories,
             applicability,
@@ -842,6 +845,7 @@ mod tests {
             test_description: "".into(),
             test_source: "s".into(),
             test_status: 1,
+            test_reference: "TEST-2".into(),
             test_parent: 0,
             project_id: 1,
         };
@@ -854,6 +858,7 @@ mod tests {
             test_description: "".into(),
             test_source: "s".into(),
             test_status: 1,
+            test_reference: "TEST-2".into(),
             test_parent: 0,
             project_id: 1,
         };

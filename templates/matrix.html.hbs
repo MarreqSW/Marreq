@@ -18,7 +18,7 @@
             <select name="test_status_filter" id="test_status_filter" class="filter-select">
               <option value="">All Statuses</option>
               {{#each statuses}}
-                <option value="{{st_id}}" {{#if (eq ../test_status_filter st_id)}}selected{{/if}}>{{st_title}}</option>
+                <option value="{{test_st_id}}" {{#if (eq ../test_status_filter test_st_id)}}selected{{/if}}>{{test_st_title}}</option>
               {{/each}}
             </select>
           </div>

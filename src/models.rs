@@ -70,14 +70,19 @@ pub struct DecoratedRequirement {
     pub req_title: String,
     pub req_description: String,
     pub req_verification: String,
+    pub req_verification_id: i32,
     pub req_current_status: String,
     pub req_current_status_id: i32, // Add numeric status ID for access control
     pub req_author: String,
+    pub req_author_id: i32,
     pub req_reviewer: String,
+    pub req_reviewer_id: i32,
     pub req_link: String,
     pub req_reference: String,
     pub req_category: String,
+    pub req_category_id: i32,
     pub req_applicability: String,
+    pub req_applicability_id: i32,
     pub req_parent_id: i32,
     pub req_parent_title: String,
     pub req_creation_date: String,
@@ -262,6 +267,7 @@ pub struct Test {
     pub test_description: String,
     pub test_source: String,
     pub test_status: i32,
+    pub test_reference: String,
     pub test_parent: i32,
     pub project_id: i32,
 }
@@ -275,6 +281,7 @@ pub struct DecoratedTest {
     pub test_source: String,
     pub test_status: String,
     pub test_status_id: i32, // Add numeric status ID for access control
+    pub test_reference: String,
     pub test_parent_id: i32,
     pub test_parent_title: String,
     pub project_id: i32,
@@ -291,6 +298,7 @@ pub struct NewTest {
     pub test_description: String,
     pub test_source: String,
     pub test_status: i32,
+    pub test_reference: String,
     pub test_parent: i32,
     pub project_id: i32,
 }

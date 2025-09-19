@@ -64,6 +64,8 @@ DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS applicability CASCADE;
 DROP TABLE IF EXISTS verification CASCADE;
+DROP TABLE IF EXISTS requirement_status CASCADE;
+DROP TABLE IF EXISTS test_status CASCADE;
 DROP TABLE IF EXISTS status CASCADE;
 DROP TABLE IF EXISTS projects CASCADE;
 SQL
@@ -79,7 +81,7 @@ echo ""
 echo "🔍 Verifying database setup..."
 echo "📋 Tables created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "\dt" \
-  | grep -E "(projects|users|requirements|tests|matrix|logs|categories|applicability|verification|status)" || true
+  | grep -E "(projects|users|requirements|tests|matrix|logs|categories|applicability|verification|requirement_status|test_status)" || true
 echo ""
 
 echo "👥 Users created:"
@@ -103,6 +105,10 @@ UNION ALL
 SELECT 'Categories', COUNT(*) FROM categories
 UNION ALL
 SELECT 'Applicability', COUNT(*) FROM applicability
+UNION ALL
+SELECT 'Requirement Status', COUNT(*) FROM requirement_status
+UNION ALL
+SELECT 'Test Status', COUNT(*) FROM test_status
 UNION ALL
 SELECT 'Logs', COUNT(*) FROM logs;
 "

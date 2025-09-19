@@ -109,8 +109,8 @@ mod tests {
     fn filter_tests_filters_by_status() {
         let only_status1 = filter_tests(
             vec![
-                Test { test_id: 1, test_name: "T1".into(), test_description: String::new(), test_source: String::new(), test_status: 1, test_parent: 0, project_id: 0 },
-                Test { test_id: 2, test_name: "T2".into(), test_description: String::new(), test_source: String::new(), test_status: 2, test_parent: 0, project_id: 0 },
+                Test { test_id: 1, test_name: "T1".into(), test_description: String::new(), test_source: String::new(), test_reference: "TEST-1".into(), test_status: 1, test_parent: 0, project_id: 0 },
+                Test { test_id: 2, test_name: "T2".into(), test_description: String::new(), test_source: String::new(), test_reference: "TEST-2".into(), test_status: 2, test_parent: 0, project_id: 0 },
             ],
             Some(1), None, None
         );
@@ -119,8 +119,8 @@ mod tests {
 
         let all = filter_tests(
             vec![
-                Test { test_id: 1, test_name: "T1".into(), test_description: String::new(), test_source: String::new(), test_status: 1, test_parent: 0, project_id: 0 },
-                Test { test_id: 2, test_name: "T2".into(), test_description: String::new(), test_source: String::new(), test_status: 2, test_parent: 0, project_id: 0 },
+                Test { test_id: 1, test_name: "T1".into(), test_description: String::new(), test_source: String::new(), test_reference: "TEST-1".into(), test_status: 1, test_parent: 0, project_id: 0 },
+                Test { test_id: 2, test_name: "T2".into(), test_description: String::new(), test_source: String::new(), test_reference: "TEST-2".into(), test_status: 2, test_parent: 0, project_id: 0 },
             ],
             None, None, None
         );

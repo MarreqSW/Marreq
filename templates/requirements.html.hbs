@@ -25,8 +25,8 @@
           <option value="">All Statuses</option>
           {{#if statuses}}
             {{#each statuses}}
-              <option value="{{st_id}}" {{#if (eq st_id ../current_status_filter)}}selected{{/if}}>
-                {{st_title}}
+              <option value="{{req_st_id}}" {{#if (eq req_st_id ../current_status_filter)}}selected{{/if}}>
+                {{req_st_title}}
               </option>
             {{/each}}
           {{/if}}

@@ -62,12 +62,20 @@ CREATE TABLE users (
     is_admin BOOLEAN NOT NULL DEFAULT false
 );
 
--- Status table
-CREATE TABLE status (
-    st_id SERIAL PRIMARY KEY,
-    st_title VARCHAR NOT NULL DEFAULT ' ',
-    st_description VARCHAR NOT NULL DEFAULT ' ',
-    st_short_name VARCHAR NOT NULL DEFAULT ' '
+-- Requirement Status table
+CREATE TABLE requirement_status (
+    req_st_id SERIAL PRIMARY KEY,
+    req_st_title VARCHAR NOT NULL DEFAULT ' ',
+    req_st_description VARCHAR NOT NULL DEFAULT ' ',
+    req_st_short_name VARCHAR NOT NULL DEFAULT ' '
+);
+
+-- Test Status table
+CREATE TABLE test_status (
+    test_st_id SERIAL PRIMARY KEY,
+    test_st_title VARCHAR NOT NULL DEFAULT ' ',
+    test_st_description VARCHAR NOT NULL DEFAULT ' ',
+    test_st_short_name VARCHAR NOT NULL DEFAULT ' '
 );
 
 -- Categories table
@@ -175,8 +183,14 @@ ALTER TABLE requirements ADD CONSTRAINT fk_requirements_project
 ALTER TABLE requirements ADD CONSTRAINT fk_requirements_applicability 
     FOREIGN KEY (req_applicability) REFERENCES applicability(app_id);
 
+ALTER TABLE requirements ADD CONSTRAINT fk_requirements_status 
+    FOREIGN KEY (req_current_status) REFERENCES requirement_status(req_st_id);
+
 ALTER TABLE tests ADD CONSTRAINT fk_tests_project 
     FOREIGN KEY (project_id) REFERENCES projects(project_id);
+
+ALTER TABLE tests ADD CONSTRAINT fk_tests_status 
+    FOREIGN KEY (test_status) REFERENCES test_status(test_st_id);
 
 ALTER TABLE matrix ADD CONSTRAINT fk_matrix_project 
     FOREIGN KEY (project_id) REFERENCES projects(project_id);
@@ -246,16 +260,21 @@ INSERT INTO projects (project_id, project_name, project_description, project_cre
     (2, 'ReqMan Project', 'Requirements management system development and testing', NOW(), 'Active'),
     (3, 'Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 'Active');
 
--- Status definitions
-INSERT INTO status (st_title, st_description, st_short_name) VALUES
+-- Requirement Status definitions
+INSERT INTO requirement_status (req_st_title, req_st_description, req_st_short_name) VALUES
     ('Draft', 'The requirement is still being edited and developed', 'Drf'),
     ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro'),
     ('Accepted', 'The requirement is accepted and must be processed', 'Acc'),
     ('Rejected', 'The requirement is not accepted and needs revision', 'Rej'),
     ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can'),
-    ('Finished', 'The requirement is finished and completed', 'Fsh'),
+    ('Finished', 'The requirement is finished and completed', 'Fsh');
+
+-- Test Status definitions
+INSERT INTO test_status (test_st_title, test_st_description, test_st_short_name) VALUES
     ('Passed', 'The test has passed all criteria', 'Pass'),
-    ('Failed', 'The test has failed one or more criteria', 'Fail');
+    ('Failed', 'The test has failed one or more criteria', 'Fail'),
+    ('Pending', 'The test is pending execution', 'Pend'),
+    ('In Progress', 'The test is currently being executed', 'Prog');
 
 -- Users with working passwords (all users have password: 'password')
 -- Password hash: $2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m
@@ -304,11 +323,11 @@ INSERT INTO requirements (req_title, req_description, req_reference, req_categor
 
 -- Tests for Space Project
 INSERT INTO tests (test_name, test_description, test_status, test_source, project_id) VALUES
-    ('TEST-PWR-001', 'Verify solar array generates 500W under AM0 illumination in thermal vacuum chamber', 7, 'Solar array testing in thermal vacuum chamber', 1),
-    ('TEST-PWR-002', 'Verify battery provides 200W for 45 minutes during discharge test cycle', 7, 'Battery cycle testing and capacity verification', 1),
-    ('TEST-COMM-001', 'Verify S-band communication link performance and data rate capabilities', 7, 'RF testing in anechoic chamber', 1),
-    ('TEST-ACS-001', 'Verify star tracker pointing accuracy and attitude determination', 7, 'Star tracker calibration and pointing accuracy testing', 1),
-    ('TEST-THERM-001', 'Verify thermal control system performance in vacuum environment', 7, 'Thermal vacuum testing and temperature cycling', 1);
+    ('TEST-PWR-001', 'Verify solar array generates 500W under AM0 illumination in thermal vacuum chamber', 1, 'Solar array testing in thermal vacuum chamber', 1),
+    ('TEST-PWR-002', 'Verify battery provides 200W for 45 minutes during discharge test cycle', 1, 'Battery cycle testing and capacity verification', 1),
+    ('TEST-COMM-001', 'Verify S-band communication link performance and data rate capabilities', 1, 'RF testing in anechoic chamber', 1),
+    ('TEST-ACS-001', 'Verify star tracker pointing accuracy and attitude determination', 1, 'Star tracker calibration and pointing accuracy testing', 1),
+    ('TEST-THERM-001', 'Verify thermal control system performance in vacuum environment', 1, 'Thermal vacuum testing and temperature cycling', 1);
 
 -- Traceability Matrix (requirements to tests mapping)
 INSERT INTO matrix (matrix_req_id, matrix_test_id, project_id) VALUES
@@ -339,7 +358,8 @@ BEGIN
     RAISE NOTICE 'Database Setup:';
     RAISE NOTICE '- 3 Projects created';
     RAISE NOTICE '- 6 Users created (all with password: password)';
-    RAISE NOTICE '- 8 Status definitions';
+    RAISE NOTICE '- 6 Requirement Status definitions';
+    RAISE NOTICE '- 4 Test Status definitions';
     RAISE NOTICE '- 8 Categories for Space Project';
     RAISE NOTICE '- 6 Applicability definitions';
     RAISE NOTICE '- 4 Verification methods';

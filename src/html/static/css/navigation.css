@@ -3,18 +3,40 @@
   background-color: var(--surface-color);
   border-bottom: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
-  padding: var(--space-4) var(--space-8);
+  padding: var(--space-4) var(--space-4);
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
+  width: 100%;
 }
 
 .nav-container {
   width: 100%;
+  max-width: none;
   margin: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 0;
+}
+
+/* Responsive navigation padding */
+@media (min-width: 576px) {
+  .navbar {
+    padding: var(--space-4) var(--space-6);
+  }
+}
+
+@media (min-width: 768px) {
+  .navbar {
+    padding: var(--space-4) var(--space-8);
+  }
+}
+
+@media (min-width: 1200px) {
+  .navbar {
+    padding: var(--space-4) var(--space-12);
+  }
 }
 
 .nav-brand {

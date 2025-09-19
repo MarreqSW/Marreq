@@ -8,6 +8,7 @@
   position: relative;
   display: block;
   overflow-x: auto;
+  width: 100%;
   max-width: 100%;
   scrollbar-width: thin;
   scrollbar-color: var(--primary-color) var(--surface-muted);
@@ -42,9 +43,18 @@
 }
 
 .table-container .table {
-  min-width: max-content;
+  width: 100%;
   table-layout: auto;
-  width: max-content;
+  min-width: 100%;
+}
+
+/* Ensure full width for table cards */
+.card-body.p-0 {
+  width: 100%;
+}
+
+.table-responsive {
+  width: 100%;
 }
 
 .table th {

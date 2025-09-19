@@ -546,24 +546,49 @@ pub fn show_requirement_id(
 #[get("/users")]
 pub fn show_users(
     session_user: SessionUser,
+    cookies: &CookieJar<'_>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
-    let users = DieselCachedRepo::read().get_users_all();
+    let repo = DieselCachedRepo::read();
+    let projects = repo.get_projects_all().unwrap_or_default();
 
-    let ctx = match users {
-        Ok(users_list) => {
-            json!({
-                "users": users_list,
-                "user": user
-            })
+    let mut selected_project_id = get_selected_project_id(cookies);
+    if selected_project_id.is_none() {
+        if let Some(first_project) = projects.first() {
+            cookies.add(Cookie::new(
+                "selected_project_id",
+                first_project.project_id.to_string(),
+            ));
+            selected_project_id = Some(first_project.project_id);
         }
-        Err(_) => {
-            json!({
-                "users": [],
-                "user": user
-            })
+    }
+
+    let users = if let Some(project_id) = selected_project_id {
+        match repo.get_members_by_project(project_id) {
+            Ok(members) => {
+                let member_ids: std::collections::HashSet<i32> =
+                    members.into_iter().map(|m| m.user_id).collect();
+
+                match repo.get_users_all() {
+                    Ok(all_users) => all_users
+                        .into_iter()
+                        .filter(|u| member_ids.contains(&u.user_id))
+                        .collect::<Vec<User>>(),
+                    Err(_) => Vec::new(),
+                }
+            }
+            Err(_) => Vec::new(),
         }
+    } else {
+        Vec::new()
     };
+
+    let ctx = json!({
+        "users": users,
+        "user": user,
+        "projects": projects,
+        "selected_project_id": selected_project_id
+    });
 
     Ok(Template::render("users", ctx))
 }

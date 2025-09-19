@@ -179,6 +179,44 @@ impl LookupRepository for FakeRepo {
         self.statuses.get(&id).cloned().ok_or(RepoError::NotFound)
     }
 
+    fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
+        // Convert Status to RequirementStatus for testing
+        Ok(self.statuses.values().map(|s| RequirementStatus {
+            req_st_id: s.st_id,
+            req_st_title: s.st_title.clone(),
+            req_st_description: s.st_description.clone(),
+            req_st_short_name: s.st_short_name.clone(),
+        }).collect())
+    }
+
+    fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError> {
+        self.statuses.get(&id).map(|s| RequirementStatus {
+            req_st_id: s.st_id,
+            req_st_title: s.st_title.clone(),
+            req_st_description: s.st_description.clone(),
+            req_st_short_name: s.st_short_name.clone(),
+        }).ok_or(RepoError::NotFound)
+    }
+
+    fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
+        // Convert Status to TestStatus for testing
+        Ok(self.statuses.values().map(|s| TestStatus {
+            test_st_id: s.st_id,
+            test_st_title: s.st_title.clone(),
+            test_st_description: s.st_description.clone(),
+            test_st_short_name: s.st_short_name.clone(),
+        }).collect())
+    }
+
+    fn get_test_status_by_id(&self, id: i32) -> Result<TestStatus, RepoError> {
+        self.statuses.get(&id).map(|s| TestStatus {
+            test_st_id: s.st_id,
+            test_st_title: s.st_title.clone(),
+            test_st_description: s.st_description.clone(),
+            test_st_short_name: s.st_short_name.clone(),
+        }).ok_or(RepoError::NotFound)
+    }
+
     fn get_categories_all(&self) -> Result<Vec<Category>, RepoError> {
         Ok(self.categories.values().cloned().collect())
     }
@@ -308,9 +346,9 @@ impl LookupRepository for FakeRepo {
             .unwrap_or(1);
         let status = Status {
             st_id: id,
-            st_title: _new.st_title.clone(),
-            st_description: _new.st_description.clone(),
-            st_short_name: _new.st_short_name.clone(),
+            st_title: _new.req_st_title.clone(),
+            st_description: _new.req_st_description.clone(),
+            st_short_name: _new.req_st_short_name.clone(),
         };
         self.statuses.insert(id, status);
         Ok(id)

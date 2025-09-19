@@ -4,6 +4,8 @@ use std::fmt::Display;
 pub const PROJECTS_NAV: &str = "projects:nav";
 pub const PROJECTS_ALL: &str = "projects:all";
 pub const STATUS_ALL: &str = "status:all";
+pub const REQUIREMENT_STATUS_ALL: &str = "requirement_status:all";
+pub const TEST_STATUS_ALL: &str = "test_status:all";
 pub const CATEGORIES_ALL: &str = "categories:all";
 pub const APPLICABILITY_ALL: &str = "applicability:all";
 pub const VERIFICATION_ALL: &str = "verification:all";
@@ -53,6 +55,7 @@ pub struct Verification;
 pub struct Users;
 pub struct Requirements;
 pub struct RequirementTitle;
+pub struct RequirementStatus;
 pub struct Tests;
 pub struct TestStatus;
 pub struct Matrix;
@@ -70,6 +73,7 @@ impl Keyspace for Tests         { const PREFIX: &'static str = "test"; }
 impl Keyspace for TestStatus    { const PREFIX: &'static str = "test_status"; }
 impl Keyspace for Matrix        { const PREFIX: &'static str = "matrix"; }
 impl Keyspace for Requirements  { const PREFIX: &'static str = "requirement"; }
+impl Keyspace for RequirementStatus { const PREFIX: &'static str = "requirement_status"; }
 impl Keyspace for RequirementTitle   { const PREFIX: &'static str = "requirement_title"; }
 impl Keyspace for LinkedRequirements { const PREFIX: &'static str = "linked_tests"; }
 impl Keyspace for LinkedTests { const PREFIX: &'static str = "linked_requirements"; }

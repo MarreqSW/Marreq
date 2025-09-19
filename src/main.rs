@@ -111,6 +111,7 @@ async fn main() -> Result<(), rocket::Error> {
                 api_post_requirement,
                 api_delete_requirement_by_id,
                 api_get_status,
+                debug_status,
                 api_post_status,
                 api_get_categories,
                 api_get_test,

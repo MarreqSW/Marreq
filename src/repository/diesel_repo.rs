@@ -319,19 +319,65 @@ impl UserRepository for DieselRepo {
 
 impl LookupRepository for DieselRepo {
     fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
-        use schema::status::dsl::*;
-        let mut conn = self.get_conn()?;
-        status
-            .order(st_id)
-            .load::<Status>(conn.as_mut())
-            .map_err(|e| e.into())
+        // For backward compatibility, return requirement status as status
+        let req_statuses = self.get_requirement_status_all()?;
+        Ok(req_statuses.into_iter().map(|rs| Status {
+            st_id: rs.req_st_id,
+            st_title: rs.req_st_title,
+            st_description: rs.req_st_description,
+            st_short_name: rs.req_st_short_name,
+        }).collect())
     }
 
     fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError> {
-        use schema::status::dsl::*;
+        // For backward compatibility, get from requirement status
+        let req_status = self.get_requirement_status_by_id(id)?;
+        Ok(Status {
+            st_id: req_status.req_st_id,
+            st_title: req_status.req_st_title,
+            st_description: req_status.req_st_description,
+            st_short_name: req_status.req_st_short_name,
+        })
+    }
+
+    fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
+        use schema::requirement_status::dsl::*;
         let mut conn = self.get_conn()?;
-        status
-            .filter(st_id.eq(id))
+        requirement_status
+            .order(req_st_id)
+            .load::<RequirementStatus>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError> {
+        use schema::requirement_status::dsl::*;
+        let mut conn = self.get_conn()?;
+        requirement_status
+            .filter(req_st_id.eq(id))
+            .get_result(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })
+    }
+
+    fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
+        use schema::test_status::dsl::*;
+        let mut conn = self.get_conn()?;
+        test_status
+            .order(test_st_id)
+            .load::<TestStatus>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn get_test_status_by_id(&self, id: i32) -> Result<TestStatus, RepoError> {
+        use schema::test_status::dsl::*;
+        let mut conn = self.get_conn()?;
+        test_status
+            .filter(test_st_id.eq(id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -528,10 +574,10 @@ impl LookupRepository for DieselRepo {
 
     fn create_status(&mut self, new: &NewStatus) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
-        let res: Status = diesel::insert_into(schema::status::table)
+        let res: RequirementStatus = diesel::insert_into(schema::requirement_status::table)
             .values(new)
             .get_result(conn.as_mut())?;
-        Ok(res.st_id)
+        Ok(res.req_st_id)
     }
 }
 

@@ -497,6 +497,7 @@ impl TestsRepository for FakeRepo {
             test_description: _new.test_description.clone(),
             test_source: _new.test_source.clone(),
             test_status: _new.test_status,
+            test_reference: _new.test_reference.clone(),
             test_parent: _new.test_parent,
             project_id: _new.project_id,
         };

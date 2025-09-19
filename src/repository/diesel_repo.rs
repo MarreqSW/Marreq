@@ -712,6 +712,7 @@ impl TestsRepository for DieselRepo {
                 t::test_description,
                 t::test_source,
                 t::test_status,
+                t::test_reference,
                 t::test_parent,
                 t::project_id,
             ))

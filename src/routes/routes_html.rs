@@ -1459,6 +1459,7 @@ pub fn post_edit_test(
         test_description: edit_test_form.test_description.clone(),
         test_source: edit_test_form.test_source.clone(),
         test_status: edit_test_form.test_status,
+        test_reference: old_test.test_reference.clone(),
         test_parent: edit_test_form.test_parent,
         project_id: edit_test_form.project_id,
     };
@@ -1515,6 +1516,7 @@ pub fn post_test(
         test_description: new_test.test_description.clone(),
         test_source: new_test.test_source.clone(),
         test_status: new_test.test_status,
+        test_reference: format!("TEST-{}", chrono::Utc::now().timestamp()),
         test_parent: new_test.test_parent,
         project_id: new_test.project_id,
     };
@@ -3837,7 +3839,7 @@ pub fn show_requirements_table(
 ) -> Result<Template, rocket::http::Status> {
     use crate::helper_functions::decorators::decorate_requirements;
     
-    let mut connection = get_db_connection().map_err(|_| rocket::http::Status::InternalServerError)?;
+    let _connection = get_db_connection().map_err(|_| rocket::http::Status::InternalServerError)?;
     
     // Get all requirements
     let requirements = DieselCachedRepo::read()
@@ -3880,7 +3882,7 @@ pub fn show_requirements_table(
     });
     
     // Decorate requirements
-    let decorated_requirements = decorate_requirements(&DieselCachedRepo::read(), filtered_requirements);
+    let decorated_requirements = decorate_requirements(filtered_requirements);
     
     // Get lookup data for dropdowns
     let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
@@ -3888,7 +3890,11 @@ pub fn show_requirements_table(
     let statuses = DieselCachedRepo::read().get_requirement_status_all().unwrap_or_default();
     let verifications = DieselCachedRepo::read().get_verification_all().unwrap_or_default();
     
-    let mut ctx = build_context_with_projects(user.0, &rocket::request::Request::from(&rocket::State::new(())));
+    let mut ctx = json!({
+        "user": user.0,
+        "projects": DieselCachedRepo::read().get_projects_all().unwrap_or_default(),
+        "selected_project_id": 1
+    });
     ctx["requirements"] = json!(decorated_requirements);
     ctx["users"] = json!(users);
     ctx["categories"] = json!(categories);
@@ -3915,7 +3921,7 @@ pub fn show_tests_table(
 ) -> Result<Template, rocket::http::Status> {
     use crate::helper_functions::decorators::decorate_tests;
     
-    let mut connection = get_db_connection().map_err(|_| rocket::http::Status::InternalServerError)?;
+    let _connection = get_db_connection().map_err(|_| rocket::http::Status::InternalServerError)?;
     
     // Get all tests
     let tests = DieselCachedRepo::read()
@@ -3927,12 +3933,8 @@ pub fn show_tests_table(
     if let Some(status_id) = status_filter {
         filtered_tests.retain(|t| t.test_status == status_id);
     }
-    if let Some(verification_id) = verification_filter {
-        filtered_tests.retain(|t| t.test_verification == verification_id);
-    }
-    if let Some(category_id) = category_filter {
-        filtered_tests.retain(|t| t.test_category == category_id);
-    }
+    // Note: Test struct doesn't have verification or category fields
+    // These filters are not applicable to tests
     
     // Apply sorting
     let sort_by = sort_by.unwrap_or_else(|| "test_id".to_string());
@@ -3941,12 +3943,11 @@ pub fn show_tests_table(
     filtered_tests.sort_by(|a, b| {
         let comparison = match sort_by.as_str() {
             "test_id" => a.test_id.cmp(&b.test_id),
-            "test_title" => a.test_title.cmp(&b.test_title),
+            "test_name" => a.test_name.cmp(&b.test_name),
             "test_status" => a.test_status.cmp(&b.test_status),
-            "test_verification" => a.test_verification.cmp(&b.test_verification),
-            "test_author" => a.test_author.cmp(&b.test_author),
-            "test_reviewer" => a.test_reviewer.cmp(&b.test_reviewer),
-            "test_category" => a.test_category.cmp(&b.test_category),
+            "test_source" => a.test_source.cmp(&b.test_source),
+            "test_reference" => a.test_reference.cmp(&b.test_reference),
+            "test_parent" => a.test_parent.cmp(&b.test_parent),
             _ => a.test_id.cmp(&b.test_id),
         };
         
@@ -3958,7 +3959,7 @@ pub fn show_tests_table(
     });
     
     // Decorate tests
-    let decorated_tests = decorate_tests(&DieselCachedRepo::read(), filtered_tests);
+    let decorated_tests = decorate_tests(filtered_tests);
     
     // Get lookup data for dropdowns
     let users = DieselCachedRepo::read().get_users_all().unwrap_or_default();
@@ -3966,7 +3967,11 @@ pub fn show_tests_table(
     let statuses = DieselCachedRepo::read().get_test_status_all().unwrap_or_default();
     let verifications = DieselCachedRepo::read().get_verification_all().unwrap_or_default();
     
-    let mut ctx = build_context_with_projects(user.0, &rocket::request::Request::from(&rocket::State::new(())));
+    let mut ctx = json!({
+        "user": user.0,
+        "projects": DieselCachedRepo::read().get_projects_all().unwrap_or_default(),
+        "selected_project_id": 1
+    });
     ctx["tests"] = json!(decorated_tests);
     ctx["users"] = json!(users);
     ctx["categories"] = json!(categories);

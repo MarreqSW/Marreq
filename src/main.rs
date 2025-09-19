@@ -18,6 +18,8 @@ use crate::html::cors::*;
 use crate::routes::catchers::*;
 use crate::routes::routes_api::*;
 use crate::routes::routes_html::*;
+use crate::routes::api::requirements::update_requirement_field;
+use crate::routes::api::tests::update_test_field;
 
 #[rocket_sync_db_pools::database("my_db")]
 pub struct MyDbConn(rocket_sync_db_pools::diesel::PgConnection);
@@ -79,6 +81,8 @@ async fn main() -> Result<(), rocket::Error> {
                 post_edit_applicability,
                 delete_applicability_route,
                 show_requirements_tree,
+                show_requirements_table,
+                show_tests_table,
                 show_reports,
                 generate_pdf_report,
                 show_projects,
@@ -130,6 +134,10 @@ async fn main() -> Result<(), rocket::Error> {
                 api_post_applicability,
                 api_put_applicability,
                 api_delete_applicability_by_id,
+                
+                // Table view API endpoints
+                update_requirement_field,
+                update_test_field,
             ],
         )
         .register("/", catchers![unauthorized, forbidden])

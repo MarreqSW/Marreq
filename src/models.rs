@@ -221,11 +221,9 @@ pub struct User {
     pub user_username: String,
     pub user_name: String,
     pub user_email: String,
-    pub user_level: i32,
     pub user_creation_date: chrono::NaiveDateTime,
     pub user_last_login: chrono::NaiveDateTime,
     pub user_password: String,
-    pub project_id: Option<i32>,
     pub is_admin: bool,
 }
 
@@ -240,9 +238,7 @@ pub struct NewUser {
     pub user_username: String,
     pub user_name: String,
     pub user_email: String,
-    pub user_level: i32,
     pub user_password: String,
-    pub project_id: Option<i32>,
     pub is_admin: bool,
 }
 
@@ -254,7 +250,6 @@ pub struct UpdateUser {
     pub user_username: String,
     pub user_name: String,
     pub user_email: String,
-    pub user_level: i32,
     pub is_admin: bool,
 }
 
@@ -459,6 +454,29 @@ pub struct Project {
     pub project_update_date: Option<chrono::NaiveDateTime>,
     pub project_status: Option<String>,
     pub project_owner_id: Option<i32>,
+}
+
+
+/// Membership that links a user to a project with a specific role.
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::project_members)]
+#[diesel(primary_key(project_id, user_id))]
+pub struct ProjectMember {
+    pub project_id: i32,
+    pub user_id: i32,
+    pub role: i32,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+/// Data required to create or update a project membership entry.
+#[derive(Insertable, Serialize, Deserialize, Debug, Clone)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = crate::schema::project_members)]
+pub struct NewProjectMember {
+    pub project_id: i32,
+    pub user_id: i32,
+    pub role: i32,
 }
 
 /// Data required to create a new [`Project`].

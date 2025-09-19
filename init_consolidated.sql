@@ -62,11 +62,9 @@ CREATE TABLE users (
     user_username VARCHAR NOT NULL,
     user_name VARCHAR NOT NULL,
     user_email VARCHAR NOT NULL DEFAULT ' ',
-    user_level INTEGER NOT NULL DEFAULT 0,
     user_creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_last_login TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_password VARCHAR(255) NOT NULL DEFAULT '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4J/HS.iK8i',
-    project_id INTEGER,
     is_admin BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -165,12 +163,8 @@ CREATE TABLE logs (
 -- FOREIGN KEY CONSTRAINTS
 -- =============================================================================
 
--- Users -> Projects
-ALTER TABLE users ADD CONSTRAINT fk_users_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
-
 -- Categories -> Projects
-ALTER TABLE categories ADD CONSTRAINT fk_categories_project 
+ALTER TABLE categories ADD CONSTRAINT fk_categories_project
     FOREIGN KEY (project_id) REFERENCES projects(project_id);
 
 -- Applicability -> Projects
@@ -263,12 +257,12 @@ INSERT INTO status (st_title, st_description, st_short_name) VALUES
     ('Failed', 'The test has failed', 'Fail');
 
 -- Insert default users (Space Project team)
-INSERT INTO users (user_username, user_name, user_email, user_level, project_id, is_admin) VALUES
-    ('dr_smith', 'Dr. Sarah Smith', 'sarah.smith@spacecorp.com', 1, 1, true),
-    ('eng_jones', 'Engineer Mike Jones', 'mike.jones@spacecorp.com', 1, 1, false),
-    ('tech_lee', 'Technician Lisa Lee', 'lisa.lee@spacecorp.com', 1, 1, false),
-    ('qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', 1, 1, false),
-    ('admin', 'System Administrator', 'admin@reqman.com', 1, 2, true);
+INSERT INTO users (user_username, user_name, user_email, is_admin) VALUES
+    ('dr_smith', 'Dr. Sarah Smith', 'sarah.smith@spacecorp.com', true),
+    ('eng_jones', 'Engineer Mike Jones', 'mike.jones@spacecorp.com', false),
+    ('tech_lee', 'Technician Lisa Lee', 'lisa.lee@spacecorp.com', false),
+    ('qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', false),
+    ('admin', 'System Administrator', 'admin@reqman.com', true);
 
 -- Insert categories for Space Project
 INSERT INTO categories (cat_title, cat_description, cat_tag, project_id) VALUES

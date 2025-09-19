@@ -210,12 +210,19 @@ impl Cache {
         self.remove(&keys::Categories::by_project(project_id));
         self.remove(&keys::Applicability::by_project(project_id));
         self.remove(&keys::Projects::by_id(project_id));
+        self.remove(&keys::ProjectMembers::by_project(project_id));
     }
 
     /// Invalidate all user-related cache entries
     pub fn invalidate_user(&self, user_id: i32) {
         self.remove(&keys::Users::by_id(user_id));
         self.remove(keys::USERS_ALL);
+    }
+
+    /// Invalidate cache entries related to a user/project membership tuple
+    pub fn invalidate_project_membership(&self, project_id: i32, user_id: i32) {
+        self.remove(&keys::ProjectMembers::by_project(project_id));
+        self.remove(&keys::ProjectMembers::for_user(user_id));
     }
 
     /// Invalidate all requirement-related cache entries
@@ -359,6 +366,7 @@ mod tests {
         cache.set(&keys::Categories::by_project(pid), "c".to_string());
         cache.set(&keys::Applicability::by_project(pid), "a".to_string());
         cache.set(&keys::Projects::by_id(pid), "p".to_string());
+        cache.set(&keys::ProjectMembers::by_project(pid), "pm".to_string());
         cache.invalidate_project(pid);
         assert!(cache.get(&keys::Requirements::by_project(pid)).is_none());
         assert!(cache.get(&keys::Tests::by_project(pid)).is_none());
@@ -367,6 +375,7 @@ mod tests {
         assert!(cache.get(&keys::Categories::by_project(pid)).is_none());
         assert!(cache.get(&keys::Applicability::by_project(pid)).is_none());
         assert!(cache.get(&keys::Projects::by_id(pid)).is_none());
+        assert!(cache.get(&keys::ProjectMembers::by_project(pid)).is_none());
     }
 
     #[test]
@@ -378,6 +387,19 @@ mod tests {
         cache.invalidate_user(uid);
         assert!(cache.get(&keys::Users::by_id(uid)).is_none());
         assert!(cache.get(keys::USERS_ALL).is_none());
+        assert!(cache.get(&keys::ProjectMembers::for_user(uid)).is_none());
+    }
+
+    #[test]
+    fn test_invalidate_project_membership_removes_related_keys() {
+        let cache = Cache::new(300);
+        let uid = 11;
+        let pid = 22;
+        cache.set(&keys::ProjectMembers::by_project(pid), "pm".to_string());
+        cache.set(&keys::ProjectMembers::for_user(uid), "pmu".to_string());
+        cache.invalidate_project_membership(pid, uid);
+        assert!(cache.get(&keys::ProjectMembers::by_project(pid)).is_none());
+        assert!(cache.get(&keys::ProjectMembers::for_user(uid)).is_none());
     }
 
     #[test]

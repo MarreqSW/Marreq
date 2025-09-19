@@ -3,7 +3,8 @@ use super::cache::{keys, Cache};
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    LookupRepository, MatrixRepository, ProjectsRepository, Repository, RequirementsRepository, TestsRepository, UserRepository
+    LookupRepository, MatrixRepository, ProjectsRepository, Repository,
+    ProjectMembersRepository, RequirementsRepository, TestsRepository, UserRepository
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -169,9 +170,6 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
         let id = self.inner.insert_user(new)?;
         self.cache.invalidate_user(id);
-        if let Some(project_id) = new.project_id {
-            self.cache.invalidate_project(project_id);
-        }
         Ok(id)
     }
 
@@ -198,12 +196,65 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
     }
 
     fn delete_user(&mut self, id: i32) -> Result<User, RepoError> {
+        let memberships = self.inner.get_projects_for_user(id)?;
         let user = self.inner.delete_user(id)?;
         self.cache.invalidate_user(id);
-        if let Some(pid) = user.project_id {
-            self.cache.invalidate_project(pid);
+        for membership in memberships {
+            self.cache
+                .invalidate_project_membership(membership.project_id, id);
+            self.cache.invalidate_project(membership.project_id);
         }
         Ok(user)
+    }
+}
+
+
+impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
+    fn get_members_by_project(&self, project_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
+        let key = keys::ProjectMembers::by_project(project_id);
+        self.get_or_fetch(&key, Duration::from_secs(300), || {
+            self.inner.get_members_by_project(project_id)
+        })
+    }
+
+    fn get_projects_for_user(&self, user_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
+        let key = keys::ProjectMembers::for_user(user_id);
+        self.get_or_fetch(&key, Duration::from_secs(300), || {
+            self.inner.get_projects_for_user(user_id)
+        })
+    }
+
+    fn add_project_member(&mut self, new: &NewProjectMember) -> Result<(), RepoError> {
+        self.inner.add_project_member(new)?;
+        self.cache
+            .invalidate_project_membership(new.project_id, new.user_id);
+        self.cache.invalidate_project(new.project_id);
+        self.cache.invalidate_user(new.user_id);
+        Ok(())
+    }
+
+    fn update_project_member_role(
+        &mut self,
+        project_id: i32,
+        user_id: i32,
+        role: i32,
+    ) -> Result<(), RepoError> {
+        self.inner
+            .update_project_member_role(project_id, user_id, role)?;
+        self.cache
+            .invalidate_project_membership(project_id, user_id);
+        self.cache.invalidate_project(project_id);
+        self.cache.invalidate_user(user_id);
+        Ok(())
+    }
+
+    fn remove_project_member(&mut self, project_id: i32, user_id: i32) -> Result<(), RepoError> {
+        self.inner.remove_project_member(project_id, user_id)?;
+        self.cache
+            .invalidate_project_membership(project_id, user_id);
+        self.cache.invalidate_project(project_id);
+        self.cache.invalidate_user(user_id);
+        Ok(())
     }
 }
 
@@ -575,6 +626,7 @@ mod tests {
             tests,
             projects,
             matrices: vec![matrix],
+            project_members: Vec::new(),
             force_err: false,
         }
     }
@@ -595,9 +647,7 @@ mod tests {
             user_username: "eve".into(),
             user_name: "Eve".into(),
             user_email: "eve@example.com".into(),
-            user_level: 0,
             user_password: "pw".into(),
-            project_id: None,
             is_admin: false,
         };
         let _new_id = repo.insert_user(&new_user).unwrap();
@@ -669,9 +719,7 @@ mod tests {
             user_username: "charlie".into(),
             user_name: "Charlie".into(),
             user_email: "charlie@example.com".into(),
-            user_level: 0,
             user_password: "pw".into(),
-            project_id: None,
             is_admin: false,
         };
         repo.insert_user(&new_user).unwrap();
@@ -722,9 +770,7 @@ mod tests {
             user_username: "bob".into(),
             user_name: "Bob".into(),
             user_email: "b@example.com".into(),
-            user_level: 0,
             user_password: "pw".into(),
-            project_id: Some(1),
             is_admin: false,
         };
         let new_id = repo.insert_user(&new_user).unwrap();
@@ -739,9 +785,7 @@ mod tests {
             user_username: "bob".into(),
             user_name: "Bob".into(),
             user_email: "b@example.com".into(),
-            user_level: 0,
             user_password: "pw".into(),
-            project_id: Some(1),
             is_admin: false,
         };
         repo.update_user(&upd).unwrap();
@@ -752,7 +796,6 @@ mod tests {
             user_username: "b2".into(),
             user_name: "B2".into(),
             user_email: "b2@example.com".into(),
-            user_level: 1,
             is_admin: false,
         };
         repo.update_user_without_password(&upd2).unwrap();

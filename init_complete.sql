@@ -291,6 +291,21 @@ INSERT INTO users (user_username, user_name, user_email, is_admin, user_password
     ('qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', false, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
     ('admin', 'System Administrator', 'admin@reqman.com', true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m');
 
+-- Project membership assignments (role: 1=Owner, 2=Manager, 3=Contributor, 4=Viewer)
+INSERT INTO project_members (project_id, user_id, role) VALUES
+    -- Space Project team
+    (1, 2, 1),  -- Dr. Smith owns the Space Project
+    (1, 3, 3),  -- Engineer Jones contributes to Space Project
+    (1, 4, 3),  -- Technician Lee contributes to Space Project
+    (1, 5, 4),  -- QA Wilson views the Space Project
+    -- ReqMan Product team
+    (2, 1, 1),  -- Alice owns the ReqMan Project
+    (2, 6, 2),  -- Admin manages the ReqMan Project
+    (2, 5, 3),  -- QA Wilson contributes to ReqMan Project
+    -- Empty project defaults
+    (3, 6, 1),  -- Admin owns the Empty Project
+    (3, 1, 2);  -- Alice manages the Empty Project
+
 -- Categories for Space Project
 INSERT INTO categories (cat_title, cat_description, cat_tag, project_id) VALUES
     ('Power System', 'Solar panels, batteries, and power distribution systems', 'PWR', 1),
@@ -371,6 +386,7 @@ BEGIN
     RAISE NOTICE '- 5 Requirements for Space Project';
     RAISE NOTICE '- 5 Tests for Space Project';
     RAISE NOTICE '- 5 Traceability matrix entries';
+    RAISE NOTICE '- 9 Project membership assignments';
     RAISE NOTICE '- 5 Sample audit logs';
     RAISE NOTICE '';
     RAISE NOTICE 'Login Credentials:';

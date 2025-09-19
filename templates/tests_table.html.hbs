@@ -1,0 +1,451 @@
+{{#*inline "page"}}
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1>Tests Table</h1>
+    <div>
+      <a href="/tests" class="btn btn-outline-secondary me-2">Card View</a>
+      <a href="/tests.xls" class="btn btn-success me-2">Export Excel</a>
+      {{#if user.is_admin}}
+      <a href="/import_excel" class="btn btn-warning me-2">Import Excel</a>
+      {{/if}}
+      <button id="addNewTest" class="btn btn-primary">Add New Test</button>
+    </div>
+  </div>
+</div>
+
+<!-- Filters Section -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Filters</h5>
+  </div>
+  <div class="card-body">
+    <form method="GET" action="/tests_table" class="d-flex align-items-end gap-3">
+      <div class="flex-grow-1">
+        <label for="status_filter" class="form-label">Status</label>
+        <select class="form-select" id="status_filter" name="status_filter">
+          <option value="">All Statuses</option>
+          {{#if statuses}}
+            {{#each statuses}}
+              <option value="{{test_st_id}}" {{#if (eq test_st_id ../current_status_filter)}}selected{{/if}}>
+                {{test_st_title}}
+              </option>
+            {{/each}}
+          {{/if}}
+        </select>
+      </div>
+      <div class="flex-grow-1">
+        <label for="verification_filter" class="form-label">Verification Mode</label>
+        <select class="form-select" id="verification_filter" name="verification_filter">
+          <option value="">All Verification Modes</option>
+          {{#if verifications}}
+            {{#each verifications}}
+              <option value="{{verification_id}}" {{#if (eq verification_id ../current_verification_filter)}}selected{{/if}}>
+                {{verification_name}}
+              </option>
+            {{/each}}
+          {{/if}}
+        </select>
+      </div>
+      <div class="flex-grow-1">
+        <label for="category_filter" class="form-label">Category</label>
+        <select class="form-select" id="category_filter" name="category_filter">
+          <option value="">All Categories</option>
+          {{#if categories}}
+            {{#each categories}}
+              <option value="{{cat_id}}" {{#if (eq cat_id ../current_category_filter)}}selected{{/if}}>
+                {{cat_title}}
+              </option>
+            {{/each}}
+          {{/if}}
+        </select>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Apply Filters</button>
+        <a href="/tests_table" class="btn btn-secondary">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Tests Table -->
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="testsTable">
+        <thead class="table-light">
+          <tr>
+            <th class="sortable" data-sort="test_id" style="width: 80px;">
+              <a href="#" onclick="sortTable('test_id', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                ID
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_name" style="width: 200px;">
+              <a href="#" onclick="sortTable('test_name', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Name
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_reference" style="width: 150px;">
+              <a href="#" onclick="sortTable('test_reference', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Reference
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_description" style="width: 200px;">
+              <a href="#" onclick="sortTable('test_description', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Description
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_status" style="width: 120px;">
+              <a href="#" onclick="sortTable('test_status', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Status
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_source" style="width: 120px;">
+              <a href="#" onclick="sortTable('test_source', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Source
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="test_parent" style="width: 150px;">
+              <a href="#" onclick="sortTable('test_parent', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Parent
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th style="width: 100px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each tests}}
+          <tr data-test-id="{{test_id}}">
+            <td>
+              <a href="/tests/{{test_id}}" class="text-decoration-none fw-bold">TEST-{{test_id}}</a>
+            </td>
+            <td>
+              <span class="editable-field" data-field="test_name" data-id="{{test_id}}">{{test_name}}</span>
+            </td>
+            <td>
+              <span class="text-muted">{{test_reference}}</span>
+            </td>
+            <td>
+              <span class="editable-field" data-field="test_description" data-id="{{test_id}}">{{test_description}}</span>
+            </td>
+            <td>
+              <select class="form-select form-select-sm editable-select" data-field="test_status" data-id="{{test_id}}">
+                {{#each ../statuses}}
+                  <option value="{{test_st_id}}" {{#if (eq test_st_id ../test_status_id)}}selected{{/if}}>{{test_st_title}}</option>
+                {{/each}}
+              </select>
+            </td>
+            <td>
+              <span class="editable-field" data-field="test_source" data-id="{{test_id}}">{{test_source}}</span>
+            </td>
+            <td>
+              <select class="form-select form-select-sm editable-select" data-field="test_parent" data-id="{{test_id}}">
+                <option value="0">None</option>
+                {{#each ../tests}}
+                  {{#if (ne test_id ../test_id)}}
+                    <option value="{{test_id}}" {{#if (eq test_id ../test_parent_id)}}selected{{/if}}>{{test_name}}</option>
+                  {{/if}}
+                {{/each}}
+              </select>
+            </td>
+            <td>
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary btn-sm" onclick="editTest({{test_id}})" title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteTest({{test_id}}, '{{test_name}}')" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add New Test Modal -->
+<div class="modal fade" id="addTestModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add New Test</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="addTestForm">
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="new_test_name" class="form-label">Name *</label>
+                <input type="text" class="form-control" id="new_test_name" name="test_name" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="new_test_reference" class="form-label">Reference</label>
+                <input type="text" class="form-control" id="new_test_reference" name="test_reference">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="new_test_description" class="form-label">Description *</label>
+            <textarea class="form-control" id="new_test_description" name="test_description" rows="3" required></textarea>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="new_test_status" class="form-label">Status</label>
+                <select class="form-select" id="new_test_status" name="test_status">
+                  {{#each statuses}}
+                    <option value="{{test_st_id}}">{{test_st_title}}</option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="new_test_source" class="form-label">Source</label>
+                <input type="text" class="form-control" id="new_test_source" name="test_source">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="new_test_parent" class="form-label">Parent Test</label>
+            <select class="form-select" id="new_test_parent" name="test_parent">
+              <option value="0">None</option>
+              {{#each tests}}
+                <option value="{{test_id}}">{{test_name}}</option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Test</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Table sorting functionality
+let currentSortColumn = null;
+let currentSortOrder = 'asc';
+
+function sortTable(column, order) {
+  const table = document.getElementById('testsTable');
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  
+  // Toggle order if clicking the same column
+  if (currentSortColumn === column) {
+    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+  } else {
+    currentSortColumn = column;
+    currentSortOrder = order;
+  }
+  
+  rows.sort((a, b) => {
+    const aVal = getCellValue(a, column);
+    const bVal = getCellValue(b, column);
+    
+    if (aVal < bVal) return currentSortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return currentSortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+  
+  // Clear tbody and re-append sorted rows
+  tbody.innerHTML = '';
+  rows.forEach(row => tbody.appendChild(row));
+  
+  // Update sort indicators
+  updateSortIndicators(column, currentSortOrder);
+}
+
+function getCellValue(row, column) {
+  const cellIndex = getColumnIndex(column);
+  const cell = row.cells[cellIndex];
+  
+  if (!cell) return '';
+  
+  // Handle different cell types
+  const input = cell.querySelector('input');
+  const select = cell.querySelector('select');
+  const span = cell.querySelector('span');
+  
+  if (input) return input.value;
+  if (select) return select.options[select.selectedIndex].text;
+  if (span) return span.textContent;
+  
+  return cell.textContent || cell.innerText;
+}
+
+function getColumnIndex(column) {
+  const columnMap = {
+    'test_id': 0,
+    'test_name': 1,
+    'test_reference': 2,
+    'test_description': 3,
+    'test_status': 4,
+    'test_source': 5,
+    'test_parent': 6
+  };
+  return columnMap[column] || 0;
+}
+
+function updateSortIndicators(activeColumn, order) {
+  // Reset all indicators
+  document.querySelectorAll('.sort-indicator').forEach(indicator => {
+    indicator.textContent = '↕';
+  });
+  
+  // Set active indicator
+  const activeIndicator = document.querySelector(`[data-sort="${activeColumn}"] .sort-indicator`);
+  if (activeIndicator) {
+    activeIndicator.textContent = order === 'asc' ? '↑' : '↓';
+  }
+}
+
+// Inline editing functionality
+document.addEventListener('DOMContentLoaded', function() {
+  // Handle editable fields
+  const editableFields = document.querySelectorAll('.editable-field');
+  editableFields.forEach(field => {
+    field.addEventListener('click', function() {
+      const currentValue = this.textContent;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = currentValue;
+      input.className = 'form-control form-control-sm';
+      
+      this.innerHTML = '';
+      this.appendChild(input);
+      input.focus();
+      input.select();
+      
+      const saveEdit = () => {
+        const newValue = input.value;
+        this.textContent = newValue;
+        updateTest(this.dataset.id, this.dataset.field, newValue);
+      };
+      
+      const cancelEdit = () => {
+        this.textContent = currentValue;
+      };
+      
+      input.addEventListener('blur', saveEdit);
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          saveEdit();
+        } else if (e.key === 'Escape') {
+          cancelEdit();
+        }
+      });
+    });
+  });
+  
+  // Handle editable selects
+  const editableSelects = document.querySelectorAll('.editable-select');
+  editableSelects.forEach(select => {
+    select.addEventListener('change', function() {
+      updateTest(this.dataset.id, this.dataset.field, this.value);
+    });
+  });
+  
+  // Add new test button
+  document.getElementById('addNewTest').addEventListener('click', function() {
+    const modal = new bootstrap.Modal(document.getElementById('addTestModal'));
+    modal.show();
+  });
+  
+  // Add new test form
+  document.getElementById('addTestForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    addNewTest(formData);
+  });
+});
+
+function updateTest(id, field, value) {
+  fetch(`/api/v1/tests/${id}/field`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      field: field,
+      value: value
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showNotification('Test updated successfully', 'success');
+    } else {
+      showNotification('Error updating test: ' + data.message, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showNotification('Error updating test', 'error');
+  });
+}
+
+function addNewTest(formData) {
+  const data = Object.fromEntries(formData);
+  
+  fetch('/api/v1/tests', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showNotification('Test added successfully', 'success');
+      location.reload();
+    } else {
+      showNotification('Error adding test: ' + data.message, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showNotification('Error adding test', 'error');
+  });
+}
+
+function editTest(id) {
+  window.location.href = `/edit_test/${id}`;
+}
+
+function showNotification(message, type) {
+  // Simple notification - you can enhance this with a proper notification system
+  const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+  const notification = document.createElement('div');
+  notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+  notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+  notification.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.remove();
+  }, 3000);
+}
+</script>
+{{/inline}}
+{{> layout}}

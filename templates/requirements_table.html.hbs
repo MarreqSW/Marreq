@@ -1,0 +1,525 @@
+{{#*inline "page"}}
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1>Requirements Table</h1>
+    <div>
+      <a href="/requirements" class="btn btn-outline-secondary me-2">Card View</a>
+      <a href="/requirements.xls" class="btn btn-success me-2">Export Excel</a>
+      {{#if user.is_admin}}
+      <a href="/import_excel" class="btn btn-warning me-2">Import Excel</a>
+      {{/if}}
+      <button id="addNewRequirement" class="btn btn-primary">Add New Requirement</button>
+    </div>
+  </div>
+</div>
+
+<!-- Filters Section -->
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Filters</h5>
+  </div>
+  <div class="card-body">
+    <form method="GET" action="/requirements_table" class="d-flex align-items-end gap-3">
+      <div class="flex-grow-1">
+        <label for="status_filter" class="form-label">Status</label>
+        <select class="form-select" id="status_filter" name="status_filter">
+          <option value="">All Statuses</option>
+          {{#if statuses}}
+            {{#each statuses}}
+              <option value="{{req_st_id}}" {{#if (eq req_st_id ../current_status_filter)}}selected{{/if}}>
+                {{req_st_title}}
+              </option>
+            {{/each}}
+          {{/if}}
+        </select>
+      </div>
+      <div class="flex-grow-1">
+        <label for="verification_filter" class="form-label">Verification Mode</label>
+        <select class="form-select" id="verification_filter" name="verification_filter">
+          <option value="">All Verification Modes</option>
+          {{#if verifications}}
+            {{#each verifications}}
+              <option value="{{verification_id}}" {{#if (eq verification_id ../current_verification_filter)}}selected{{/if}}>
+                {{verification_name}}
+              </option>
+            {{/each}}
+          {{/if}}
+        </select>
+      </div>
+      <div class="flex-grow-1">
+        <label for="category_filter" class="form-label">Category</label>
+        <select class="form-select" id="category_filter" name="category_filter">
+          <option value="">All Categories</option>
+          {{#if categories}}
+            {{#each categories}}
+              <option value="{{cat_id}}" {{#if (eq cat_id ../current_category_filter)}}selected{{/if}}>
+                {{cat_title}}
+              </option>
+            {{/each}}
+          {{/if}}
+        </select>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Apply Filters</button>
+        <a href="/requirements_table" class="btn btn-secondary">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Requirements Table -->
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" id="requirementsTable">
+        <thead class="table-light">
+          <tr>
+            <th class="sortable" data-sort="req_id" style="width: 80px;">
+              <a href="#" onclick="sortTable('req_id', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                ID
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="req_title" style="width: 200px;">
+              <a href="#" onclick="sortTable('req_title', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Title
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="req_reference" style="width: 150px;">
+              <a href="#" onclick="sortTable('req_reference', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Reference
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="req_category" style="width: 120px;">
+              <a href="#" onclick="sortTable('req_category', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Category
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="req_current_status" style="width: 120px;">
+              <a href="#" onclick="sortTable('req_current_status', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Status
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="req_verification" style="width: 120px;">
+              <a href="#" onclick="sortTable('req_verification', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Verification
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="req_author" style="width: 100px;">
+              <a href="#" onclick="sortTable('req_author', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Author
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="req_reviewer" style="width: 100px;">
+              <a href="#" onclick="sortTable('req_reviewer', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Reviewer
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="req_creation_date" style="width: 120px;">
+              <a href="#" onclick="sortTable('req_creation_date', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Creation Date
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th class="sortable" data-sort="req_deadline_date" style="width: 120px;">
+              <a href="#" onclick="sortTable('req_deadline_date', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+                Deadline
+                <span class="sort-indicator">↕</span>
+              </a>
+            </th>
+            <th style="width: 100px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each requirements}}
+          <tr data-requirement-id="{{req_id}}">
+            <td>
+              <a href="/requirements/{{req_id}}" class="text-decoration-none fw-bold">REQ-{{req_id}}</a>
+            </td>
+            <td>
+              <span class="editable-field" data-field="req_title" data-id="{{req_id}}">{{req_title}}</span>
+            </td>
+            <td>
+              <span class="text-muted">{{req_reference}}</span>
+            </td>
+            <td>
+              <select class="form-select form-select-sm editable-select" data-field="req_category" data-id="{{req_id}}">
+                {{#each ../categories}}
+                  <option value="{{cat_id}}" {{#if (eq cat_id ../req_category_id)}}selected{{/if}}>{{cat_title}}</option>
+                {{/each}}
+              </select>
+            </td>
+            <td>
+              <select class="form-select form-select-sm editable-select" data-field="req_current_status" data-id="{{req_id}}">
+                {{#each ../statuses}}
+                  <option value="{{req_st_id}}" {{#if (eq req_st_id ../req_current_status_id)}}selected{{/if}}>{{req_st_title}}</option>
+                {{/each}}
+              </select>
+            </td>
+            <td>
+              <select class="form-select form-select-sm editable-select" data-field="req_verification" data-id="{{req_id}}">
+                {{#each ../verifications}}
+                  <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification_id)}}selected{{/if}}>{{verification_name}}</option>
+                {{/each}}
+              </select>
+            </td>
+            <td>
+              <select class="form-select form-select-sm editable-select" data-field="req_author" data-id="{{req_id}}">
+                {{#each ../users}}
+                  <option value="{{user_id}}" {{#if (eq user_id ../req_author_id)}}selected{{/if}}>{{user_name}}</option>
+                {{/each}}
+              </select>
+            </td>
+            <td>
+              <select class="form-select form-select-sm editable-select" data-field="req_reviewer" data-id="{{req_id}}">
+                {{#each ../users}}
+                  <option value="{{user_id}}" {{#if (eq user_id ../req_reviewer_id)}}selected{{/if}}>{{user_name}}</option>
+                {{/each}}
+              </select>
+            </td>
+            <td>
+              <span class="text-muted small">{{req_creation_date}}</span>
+            </td>
+            <td>
+              <input type="date" class="form-control form-control-sm editable-date" data-field="req_deadline_date" data-id="{{req_id}}" value="{{req_deadline_date}}">
+            </td>
+            <td>
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary btn-sm" onclick="editRequirement({{req_id}})" title="Edit">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteRequirement({{req_id}}, '{{req_title}}')" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Add New Requirement Modal -->
+<div class="modal fade" id="addRequirementModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Add New Requirement</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="addRequirementForm">
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="new_req_title" class="form-label">Title *</label>
+                <input type="text" class="form-control" id="new_req_title" name="req_title" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="new_req_reference" class="form-label">Reference</label>
+                <input type="text" class="form-control" id="new_req_reference" name="req_reference">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="new_req_description" class="form-label">Description *</label>
+            <textarea class="form-control" id="new_req_description" name="req_description" rows="3" required></textarea>
+          </div>
+          <div class="row">
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="new_req_category" class="form-label">Category</label>
+                <select class="form-select" id="new_req_category" name="req_category">
+                  {{#each categories}}
+                    <option value="{{cat_id}}">{{cat_title}}</option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="new_req_status" class="form-label">Status</label>
+                <select class="form-select" id="new_req_status" name="req_current_status">
+                  {{#each statuses}}
+                    <option value="{{req_st_id}}">{{req_st_title}}</option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="mb-3">
+                <label for="new_req_verification" class="form-label">Verification</label>
+                <select class="form-select" id="new_req_verification" name="req_verification">
+                  {{#each verifications}}
+                    <option value="{{verification_id}}">{{verification_name}}</option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="new_req_author" class="form-label">Author</label>
+                <select class="form-select" id="new_req_author" name="req_author">
+                  {{#each users}}
+                    <option value="{{user_id}}">{{user_name}}</option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="new_req_reviewer" class="form-label">Reviewer</label>
+                <select class="form-select" id="new_req_reviewer" name="req_reviewer">
+                  {{#each users}}
+                    <option value="{{user_id}}">{{user_name}}</option>
+                  {{/each}}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Add Requirement</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Table sorting functionality
+let currentSortColumn = null;
+let currentSortOrder = 'asc';
+
+function sortTable(column, order) {
+  const table = document.getElementById('requirementsTable');
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  
+  // Toggle order if clicking the same column
+  if (currentSortColumn === column) {
+    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+  } else {
+    currentSortColumn = column;
+    currentSortOrder = order;
+  }
+  
+  rows.sort((a, b) => {
+    const aVal = getCellValue(a, column);
+    const bVal = getCellValue(b, column);
+    
+    if (aVal < bVal) return currentSortOrder === 'asc' ? -1 : 1;
+    if (aVal > bVal) return currentSortOrder === 'asc' ? 1 : -1;
+    return 0;
+  });
+  
+  // Clear tbody and re-append sorted rows
+  tbody.innerHTML = '';
+  rows.forEach(row => tbody.appendChild(row));
+  
+  // Update sort indicators
+  updateSortIndicators(column, currentSortOrder);
+}
+
+function getCellValue(row, column) {
+  const cellIndex = getColumnIndex(column);
+  const cell = row.cells[cellIndex];
+  
+  if (!cell) return '';
+  
+  // Handle different cell types
+  const input = cell.querySelector('input');
+  const select = cell.querySelector('select');
+  const span = cell.querySelector('span');
+  
+  if (input) return input.value;
+  if (select) return select.options[select.selectedIndex].text;
+  if (span) return span.textContent;
+  
+  return cell.textContent || cell.innerText;
+}
+
+function getColumnIndex(column) {
+  const columnMap = {
+    'req_id': 0,
+    'req_title': 1,
+    'req_reference': 2,
+    'req_category': 3,
+    'req_current_status': 4,
+    'req_verification': 5,
+    'req_author': 6,
+    'req_reviewer': 7,
+    'req_creation_date': 8,
+    'req_deadline_date': 9
+  };
+  return columnMap[column] || 0;
+}
+
+function updateSortIndicators(activeColumn, order) {
+  // Reset all indicators
+  document.querySelectorAll('.sort-indicator').forEach(indicator => {
+    indicator.textContent = '↕';
+  });
+  
+  // Set active indicator
+  const activeIndicator = document.querySelector(`[data-sort="${activeColumn}"] .sort-indicator`);
+  if (activeIndicator) {
+    activeIndicator.textContent = order === 'asc' ? '↑' : '↓';
+  }
+}
+
+// Inline editing functionality
+document.addEventListener('DOMContentLoaded', function() {
+  // Handle editable fields
+  const editableFields = document.querySelectorAll('.editable-field');
+  editableFields.forEach(field => {
+    field.addEventListener('click', function() {
+      const currentValue = this.textContent;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = currentValue;
+      input.className = 'form-control form-control-sm';
+      
+      this.innerHTML = '';
+      this.appendChild(input);
+      input.focus();
+      input.select();
+      
+      const saveEdit = () => {
+        const newValue = input.value;
+        this.textContent = newValue;
+        updateRequirement(this.dataset.id, this.dataset.field, newValue);
+      };
+      
+      const cancelEdit = () => {
+        this.textContent = currentValue;
+      };
+      
+      input.addEventListener('blur', saveEdit);
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          saveEdit();
+        } else if (e.key === 'Escape') {
+          cancelEdit();
+        }
+      });
+    });
+  });
+  
+  // Handle editable selects
+  const editableSelects = document.querySelectorAll('.editable-select');
+  editableSelects.forEach(select => {
+    select.addEventListener('change', function() {
+      updateRequirement(this.dataset.id, this.dataset.field, this.value);
+    });
+  });
+  
+  // Handle editable dates
+  const editableDates = document.querySelectorAll('.editable-date');
+  editableDates.forEach(date => {
+    date.addEventListener('change', function() {
+      updateRequirement(this.dataset.id, this.dataset.field, this.value);
+    });
+  });
+  
+  // Add new requirement button
+  document.getElementById('addNewRequirement').addEventListener('click', function() {
+    const modal = new bootstrap.Modal(document.getElementById('addRequirementModal'));
+    modal.show();
+  });
+  
+  // Add new requirement form
+  document.getElementById('addRequirementForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    addNewRequirement(formData);
+  });
+});
+
+function updateRequirement(id, field, value) {
+  fetch(`/api/v1/requirements/${id}/field`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      field: field,
+      value: value
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showNotification('Requirement updated successfully', 'success');
+    } else {
+      showNotification('Error updating requirement: ' + data.message, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showNotification('Error updating requirement', 'error');
+  });
+}
+
+function addNewRequirement(formData) {
+  const data = Object.fromEntries(formData);
+  
+  fetch('/api/v1/requirements', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      showNotification('Requirement added successfully', 'success');
+      location.reload();
+    } else {
+      showNotification('Error adding requirement: ' + data.message, 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showNotification('Error adding requirement', 'error');
+  });
+}
+
+function editRequirement(id) {
+  window.location.href = `/edit_requirement/${id}`;
+}
+
+function showNotification(message, type) {
+  // Simple notification - you can enhance this with a proper notification system
+  const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+  const notification = document.createElement('div');
+  notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+  notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
+  notification.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  document.body.appendChild(notification);
+  
+  setTimeout(() => {
+    notification.remove();
+  }, 3000);
+}
+</script>
+{{/inline}}
+{{> layout}}

@@ -1,6 +1,7 @@
 use crate::models::*;
 use diesel::prelude::*;
 use crate::repository::DieselRepo;
+use crate::helper_functions::decorators;
 use std::fs;
 
 pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
@@ -19,7 +20,7 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
     let selected_project_id = get_selected_project_id(cookies);
     
     // Get requirements for the selected project
-    let mut all_reqs = if let Some(selected_pid) = selected_project_id {
+    let all_reqs = if let Some(selected_pid) = selected_project_id {
         requirements
             .filter(crate::schema::requirements::project_id.eq(selected_pid))
             .load::<Requirement>(connection.as_mut())
@@ -31,7 +32,7 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
     };
 
     // Get tests for the selected project
-    let mut all_tests = if let Some(selected_pid) = selected_project_id {
+    let all_tests = if let Some(selected_pid) = selected_project_id {
         tests
             .filter(crate::schema::tests::project_id.eq(selected_pid))
             .load::<Test>(connection.as_mut())
@@ -42,13 +43,17 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
             .map_err(|e| format!("Error querying tests: {:?}", e))?
     };
 
+    eprintln!("Found {} requirements and {} tests", all_reqs.len(), all_tests.len());
+
+    // Decorate requirements and tests to get real names
+    let mut decorated_reqs = decorators::decorate_requirements(all_reqs);
+    let mut decorated_tests = decorators::decorate_tests(all_tests);
+
     // Sort requirements by ID
-    all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
+    decorated_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
     
     // Sort tests by ID
-    all_tests.sort_by(|a, b| a.test_id.cmp(&b.test_id));
-    
-    eprintln!("Found {} requirements and {} tests", all_reqs.len(), all_tests.len());
+    decorated_tests.sort_by(|a, b| a.test_id.cmp(&b.test_id));
     
     let workbook = xlsxwriter::Workbook::new("target/matrix.xls")?;
     let mut sheet1 = workbook.add_worksheet(None)?;
@@ -58,26 +63,30 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
     sheet1.write_string(0, 0, "Req ID", None)?;
     sheet1.write_string(0, 1, "Title", None)?;
     sheet1.write_string(0, 2, "Reference", None)?;
+    sheet1.write_string(0, 3, "Category", None)?;
+    sheet1.write_string(0, 4, "Status", None)?;
     
-    // Test headers starting from column 3
-    for (col_idx, test) in all_tests.iter().enumerate() {
-        let col = (col_idx + 3) as u16;
+    // Test headers starting from column 5
+    for (col_idx, test) in decorated_tests.iter().enumerate() {
+        let col = (col_idx + 5) as u16;
         let header = format!("Test #{} ({})", test.test_id, test.test_name);
         sheet1.write_string(0, col, &header, None)?;
     }
     
     // Write requirement rows
-    for (row_idx, req) in all_reqs.iter().enumerate() {
+    for (row_idx, req) in decorated_reqs.iter().enumerate() {
         let row = (row_idx + 1) as u32;
         
         // Write requirement info
         sheet1.write_number(row, 0, req.req_id as f64, None)?;
         sheet1.write_string(row, 1, &req.req_title, None)?;
         sheet1.write_string(row, 2, &req.req_reference, None)?;
+        sheet1.write_string(row, 3, &req.req_category, None)?;
+        sheet1.write_string(row, 4, &req.req_current_status, None)?;
         
         // Check matrix links for each test
-        for (col_idx, test) in all_tests.iter().enumerate() {
-            let col = (col_idx + 3) as u16;
+        for (col_idx, test) in decorated_tests.iter().enumerate() {
+            let col = (col_idx + 5) as u16;
             
             // Check if this requirement is linked to this test
             let test_present: i64 = matrix
@@ -117,6 +126,9 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
         .load::<Requirement>(connection.as_mut())
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
+    // Decorate requirements to get real names instead of IDs
+    let decorated_requirements = decorators::decorate_requirements(all_requirements);
+
     // Create workbook
     let workbook = xlsxwriter::Workbook::new("target/requirements.xls")?;
     let mut worksheet = workbook.add_worksheet(Some("Requirements"))?;
@@ -131,27 +143,31 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
     worksheet.write_string(0, 6, "Status", None)?;
     worksheet.write_string(0, 7, "Verification", None)?;
     worksheet.write_string(0, 8, "Author", None)?;
-    worksheet.write_string(0, 9, "Link", None)?;
-    worksheet.write_string(0, 10, "Creation Date", None)?;
-    worksheet.write_string(0, 11, "Update Date", None)?;
-    worksheet.write_string(0, 12, "Deadline Date", None)?;
+    worksheet.write_string(0, 9, "Reviewer", None)?;
+    worksheet.write_string(0, 10, "Link", None)?;
+    worksheet.write_string(0, 11, "Creation Date", None)?;
+    worksheet.write_string(0, 12, "Update Date", None)?;
+    worksheet.write_string(0, 13, "Deadline Date", None)?;
+    worksheet.write_string(0, 14, "Justification", None)?;
 
     // Write data
-    for (i, req) in all_requirements.iter().enumerate() {
+    for (i, req) in decorated_requirements.iter().enumerate() {
         let row = (i + 1) as u32;
         worksheet.write_number(row, 0, req.req_id as f64, None)?;
         worksheet.write_string(row, 1, &req.req_title, None)?;
         worksheet.write_string(row, 2, &req.req_description, None)?;
         worksheet.write_string(row, 3, &req.req_reference, None)?;
-        worksheet.write_string(row, 4, &req.req_category.to_string(), None)?;
-        worksheet.write_string(row, 5, &req.req_applicability.to_string(), None)?;
-        worksheet.write_string(row, 6, &req.req_current_status.to_string(), None)?;
-        worksheet.write_string(row, 7, &req.req_verification.to_string(), None)?;
-        worksheet.write_string(row, 8, &req.req_author.to_string(), None)?;
-        worksheet.write_string(row, 9, &req.req_link, None)?;
-        worksheet.write_string(row, 10, &req.req_creation_date.to_string(), None)?;
-        worksheet.write_string(row, 11, &req.req_update_date.to_string(), None)?;
-        worksheet.write_string(row, 12, &req.req_deadline_date.to_string(), None)?;
+        worksheet.write_string(row, 4, &req.req_category, None)?;
+        worksheet.write_string(row, 5, &req.req_applicability, None)?;
+        worksheet.write_string(row, 6, &req.req_current_status, None)?;
+        worksheet.write_string(row, 7, &req.req_verification, None)?;
+        worksheet.write_string(row, 8, &req.req_author, None)?;
+        worksheet.write_string(row, 9, &req.req_reviewer, None)?;
+        worksheet.write_string(row, 10, &req.req_link, None)?;
+        worksheet.write_string(row, 11, &req.req_creation_date, None)?;
+        worksheet.write_string(row, 12, &req.req_update_date, None)?;
+        worksheet.write_string(row, 13, &req.req_deadline_date, None)?;
+        worksheet.write_string(row, 14, &req.req_justification.as_deref().unwrap_or(""), None)?;
     }
 
     workbook.close()?;
@@ -168,6 +184,9 @@ pub fn create_tests_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
         .load::<Test>(connection.as_mut())
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
+    // Decorate tests to get real names instead of IDs
+    let decorated_tests = decorators::decorate_tests(all_tests);
+
     // Create workbook
     let workbook = xlsxwriter::Workbook::new("target/tests.xls")?;
     let mut worksheet = workbook.add_worksheet(Some("Tests"))?;
@@ -177,18 +196,20 @@ pub fn create_tests_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     worksheet.write_string(0, 1, "Name", None)?;
     worksheet.write_string(0, 2, "Description", None)?;
     worksheet.write_string(0, 3, "Source", None)?;
-    worksheet.write_string(0, 4, "Status", None)?;
-    worksheet.write_string(0, 5, "Parent", None)?;
+    worksheet.write_string(0, 4, "Reference", None)?;
+    worksheet.write_string(0, 5, "Status", None)?;
+    worksheet.write_string(0, 6, "Parent", None)?;
 
     // Write data
-    for (i, test) in all_tests.iter().enumerate() {
+    for (i, test) in decorated_tests.iter().enumerate() {
         let row = (i + 1) as u32;
         worksheet.write_number(row, 0, test.test_id as f64, None)?;
         worksheet.write_string(row, 1, &test.test_name, None)?;
         worksheet.write_string(row, 2, &test.test_description, None)?;
         worksheet.write_string(row, 3, &test.test_source, None)?;
-        worksheet.write_string(row, 4, &test.test_status.to_string(), None)?;
-        worksheet.write_number(row, 5, test.test_parent as f64, None)?;
+        worksheet.write_string(row, 4, &test.test_reference, None)?;
+        worksheet.write_string(row, 5, &test.test_status, None)?;
+        worksheet.write_string(row, 6, &test.test_parent_title, None)?;
     }
 
     workbook.close()?;

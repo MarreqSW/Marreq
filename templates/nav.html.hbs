@@ -5,7 +5,6 @@
     {{#if projects}}
     <div class="nav-project-selector">
       <select id="project-selector" class="form-select" onchange="changeProject(this.value)">
-        <option value="">Select Project</option>
         {{#each projects}}
           <option value="{{project_id}}" {{#if (eq project_id ../selected_project_id)}}selected{{/if}}>
             {{project_name}}
@@ -70,14 +69,51 @@
         </ul>
       </li>
       {{/if}}
-      <li><a href="/change_password" class="nav-link">Change Password</a></li>
-      <li><a href="/logout" class="nav-link">Logout</a></li>
+      <li class="nav-item nav-item-theme">
+        <button
+          id="theme-toggle"
+          class="theme-toggle"
+          type="button"
+          aria-label="Toggle dark mode"
+          aria-pressed="false"
+          title="Toggle dark mode">
+          <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">☀</span>
+          <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">🌙</span>
+        </button>
+      </li>
+      <li class="nav-item dropdown nav-item-user">
+        <a
+          class="nav-link dropdown-toggle nav-user-toggle"
+          href="#"
+          id="user-menu-toggle"
+          role="button"
+          data-bs-toggle="dropdown"
+          aria-expanded="false">
+          {{#if user.user_name}}
+            <span class="nav-user-label">{{user.user_name}}</span>
+          {{else}}
+            <span class="nav-user-label">{{user.user_username}}</span>
+          {{/if}}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end nav-user-menu" aria-labelledby="user-menu-toggle">
+          <li>
+            <h6 class="dropdown-header nav-user-header">
+              {{#if user.user_name}}
+                <span class="nav-user-name">{{user.user_name}}</span>
+              {{else}}
+                <span class="nav-user-name">{{user.user_username}}</span>
+              {{/if}}
+              {{#if user.user_username}}
+                <span class="nav-user-username">@{{user.user_username}}</span>
+              {{/if}}
+            </h6>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="/change_password">Change Password</a></li>
+          <li><a class="dropdown-item nav-user-logout" href="/logout">Logout</a></li>
+        </ul>
+      </li>
     </ul>
-    {{#if user}}
-    <div class="nav-user">
-      <span class="nav-user-name">Welcome, {{user.user_name}}</span>
-    </div>
-    {{/if}}
   </div>
 </nav>
 
@@ -102,8 +138,8 @@ document.addEventListener('DOMContentLoaded', function() {
         );
         
         // If no project is selected and no cookie exists, select the first project
-        if ((!projectSelector.value || projectSelector.value === "") && !hasProjectCookie) {
-            const firstOption = projectSelector.querySelector('option[value]:not([value=""])');
+        if (!hasProjectCookie) {
+            const firstOption = projectSelector.querySelector('option[value]');
             if (firstOption) {
                 projectSelector.value = firstOption.value;
                 changeProject(firstOption.value);

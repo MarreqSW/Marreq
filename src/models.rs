@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Mirrors the database representation and is used when fetching or updating
 /// existing requirements.
-#[derive(Serialize, Deserialize, Queryable, AsChangeset, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, AsChangeset, Clone)]
 pub struct Requirement {
     pub req_id: i32,
     pub req_title: String,
@@ -70,19 +70,14 @@ pub struct DecoratedRequirement {
     pub req_title: String,
     pub req_description: String,
     pub req_verification: String,
-    pub req_verification_id: i32, // Add numeric verification ID for access control
     pub req_current_status: String,
     pub req_current_status_id: i32, // Add numeric status ID for access control
     pub req_author: String,
-    pub req_author_id: i32, // Add numeric author ID for access control
     pub req_reviewer: String,
-    pub req_reviewer_id: i32, // Add numeric reviewer ID for access control
     pub req_link: String,
     pub req_reference: String,
     pub req_category: String,
-    pub req_category_id: i32, // Add numeric category ID for access control
     pub req_applicability: String,
-    pub req_applicability_id: i32, // Add numeric applicability ID for access control
     pub req_parent_id: i32,
     pub req_parent_title: String,
     pub req_creation_date: String,
@@ -93,7 +88,7 @@ pub struct DecoratedRequirement {
 }
 
 /// A grouping category for requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Category {
     pub cat_id: i32,
@@ -118,7 +113,7 @@ pub struct NewCategory {
 }
 
 /// Applicability tags limit where a requirement applies.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Applicability {
     pub app_id: i32,
@@ -142,9 +137,10 @@ pub struct NewApplicability {
     pub project_id: i32,
 }
 
-/// A status that can be assigned to requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+/// Possible status values for requirements.
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(table_name = requirement_status)]
 pub struct RequirementStatus {
     pub req_st_id: i32,
     pub req_st_title: String,
@@ -152,9 +148,10 @@ pub struct RequirementStatus {
     pub req_st_short_name: String,
 }
 
-/// A status that can be assigned to tests.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+/// Possible status values for tests.
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(table_name = test_status)]
 pub struct TestStatus {
     pub test_st_id: i32,
     pub test_st_title: String,
@@ -162,28 +159,27 @@ pub struct TestStatus {
     pub test_st_short_name: String,
 }
 
-/// Form used to create a new [`RequirementStatus`].
+// Keep the old Status struct for backward compatibility
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Status {
+    pub st_id: i32,
+    pub st_title: String,
+    pub st_description: String,
+    pub st_short_name: String,
+}
+
+/// Form used to create a new [`Status`].
 #[derive(Serialize, Deserialize, Insertable, FromForm)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = requirement_status)]
-pub struct NewRequirementStatus {
+pub struct NewStatus {
     pub req_st_title: String,
     pub req_st_description: String,
     pub req_st_short_name: String,
 }
 
-/// Form used to create a new [`TestStatus`].
-#[derive(Serialize, Deserialize, Insertable, FromForm)]
-#[serde(crate = "rocket::serde")]
-#[diesel(table_name = test_status)]
-pub struct NewTestStatus {
-    pub test_st_title: String,
-    pub test_st_description: String,
-    pub test_st_short_name: String,
-}
-
 /// Verification methods available for requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Verification {
     pub verification_id: i32,
@@ -258,7 +254,7 @@ pub struct UpdateUser {
 }
 
 /// A test case that can verify one or more requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Test {
     pub test_id: i32,
@@ -268,7 +264,6 @@ pub struct Test {
     pub test_status: i32,
     pub test_parent: i32,
     pub project_id: i32,
-    pub test_reference: String,
 }
 
 /// Test information with resolved foreign keys for presentation.
@@ -278,7 +273,6 @@ pub struct DecoratedTest {
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
-    pub test_reference: String,
     pub test_status: String,
     pub test_status_id: i32, // Add numeric status ID for access control
     pub test_parent_id: i32,
@@ -296,7 +290,6 @@ pub struct NewTest {
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
-    pub test_reference: String,
     pub test_status: i32,
     pub test_parent: i32,
     pub project_id: i32,
@@ -310,7 +303,6 @@ pub struct NewTestForm {
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
-    pub test_reference: String,
     pub test_status: i32,
     pub test_parent: i32,
     pub test_req: Vec<i32>,
@@ -325,7 +317,6 @@ pub struct EditTestForm {
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
-    pub test_reference: String,
     pub test_status: i32,
     pub test_parent: i32,
     pub linked_requirements: Vec<i32>,
@@ -409,15 +400,9 @@ impl fmt::Display for Applicability {
     }
 }
 
-impl fmt::Display for RequirementStatus {
+impl fmt::Display for Status {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<div class='status'>Status: {}</div>", self.req_st_title)
-    }
-}
-
-impl fmt::Display for TestStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<div class='status'>Status: {}</div>", self.test_st_title)
+        write!(f, "<div class='status'>Status: {}</div>", self.st_title)
     }
 }
 
@@ -571,7 +556,6 @@ pub enum EntityType {
     User,
     Matrix,
     Verification,
-    Status,
 }
 
 impl std::fmt::Display for EntityType {
@@ -585,7 +569,6 @@ impl std::fmt::Display for EntityType {
             EntityType::User => write!(f, "USER"),
             EntityType::Matrix => write!(f, "MATRIX"),
             EntityType::Verification => write!(f, "VERIFICATION"),
-            EntityType::Status => write!(f, "STATUS"),
         }
     }
 }

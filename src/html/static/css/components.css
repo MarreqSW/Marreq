@@ -5,7 +5,7 @@
   background-color: var(--surface-color);
   border-top: 1px solid var(--border-color);
   padding: 2rem var(--space-4);
-  margin-top: 4rem;
+  margin: 4rem var(--space-1) var(--space-1) var(--space-1);
   text-align: center;
   color: var(--text-secondary);
   flex-shrink: 0;

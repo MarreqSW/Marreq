@@ -119,13 +119,7 @@
           <a href="/requirements" class="btn btn-outline">Back to Requirements</a>
           
           <!-- Delete Button with Access Control -->
-          {{#if (or (eq requirements.req_current_status 1) (eq requirements.req_current_status 2))}}
-            <button onclick="deleteRequirement({{requirements.req_id}}, '{{requirements.req_title}}')" class="btn btn-danger">Delete Requirement</button>
-          {{else}}
-            {{#if ../user.is_admin}}
-              <button onclick="deleteRequirement({{requirements.req_id}}, '{{requirements.req_title}}')" class="btn btn-danger">Delete Requirement</button>
-            {{/if}}
-          {{/if}}
+          <button id="delete-btn" onclick="deleteRequirement({{requirements.req_id}}, '{{requirements.req_title}}')" class="btn btn-danger" style="display: none;">Delete Requirement</button>
         </div>
       </form>
     </div>
@@ -244,10 +238,27 @@ function validateReference() {
   return true;
 }
 
+// Function to show/hide delete button based on status and user permissions
+function updateDeleteButtonVisibility() {
+  const deleteBtn = document.getElementById('delete-btn');
+  const statusId = parseInt(requirementData.req_current_status);
+  const isAdmin = {{#if user.is_admin}}true{{else}}false{{/if}};
+  
+  // Show delete button if status is Draft (1) or Proposal (2), or if user is admin
+  if (statusId === 1 || statusId === 2 || isAdmin) {
+    deleteBtn.style.display = 'inline-block';
+  } else {
+    deleteBtn.style.display = 'none';
+  }
+}
+
 // Add event listeners
 document.addEventListener('DOMContentLoaded', function() {
   // Set selected values first
   setSelectedValues();
+  
+  // Update delete button visibility
+  updateDeleteButtonVisibility();
   
   const referenceInput = document.getElementById('req_reference');
   const categorySelect = document.getElementById('req_category');

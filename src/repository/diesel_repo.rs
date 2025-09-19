@@ -995,3 +995,76 @@ impl MatrixRepository for DieselRepo {
         Ok(())
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::PoolStats;
+
+    #[test]
+    fn utilization_percentage_handles_zero() {
+        let stats = PoolStats {
+            max_size: 10,
+            min_idle: 0,
+            current_size: 5,
+            available: 5,
+        };
+        assert_eq!(stats.utilization_percentage(), 50.0);
+
+        let zero_max = PoolStats {
+            max_size: 0,
+            min_idle: 0,
+            current_size: 0,
+            available: 0,
+        };
+        assert_eq!(zero_max.utilization_percentage(), 0.0);
+    }
+
+    #[test]
+    fn health_assessment() {
+        let healthy = PoolStats {
+            max_size: 10,
+            min_idle: 0,
+            current_size: 5,
+            available: 1,
+        };
+        assert!(healthy.is_healthy());
+
+        let no_available = PoolStats {
+            max_size: 10,
+            min_idle: 0,
+            current_size: 5,
+            available: 0,
+        };
+        assert!(!no_available.is_healthy());
+
+        let too_many = PoolStats {
+            max_size: 5,
+            min_idle: 0,
+            current_size: 6,
+            available: 1,
+        };
+        assert!(!too_many.is_healthy());
+    }
+
+    #[test]
+    fn active_and_efficiency_metrics() {
+        let stats = PoolStats {
+            max_size: 12,
+            min_idle: 0,
+            current_size: 8,
+            available: 2,
+        };
+        assert_eq!(stats.active_connections(), 6);
+        assert!((stats.efficiency() - (2.0 / 8.0 * 100.0)).abs() < f64::EPSILON);
+
+        let empty = PoolStats {
+            max_size: 12,
+            min_idle: 0,
+            current_size: 0,
+            available: 0,
+        };
+        assert_eq!(empty.active_connections(), 0);
+        assert_eq!(empty.efficiency(), 0.0);
+    }
+}

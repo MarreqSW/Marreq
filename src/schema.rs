@@ -86,11 +86,20 @@ diesel::table! {
 }
 
 diesel::table! {
-    status (st_id) {
-        st_id -> Int4,
-        st_title -> Varchar,
-        st_description -> Varchar,
-        st_short_name -> Varchar,
+    requirement_status (req_st_id) {
+        req_st_id -> Int4,
+        req_st_title -> Varchar,
+        req_st_description -> Varchar,
+        req_st_short_name -> Varchar,
+    }
+}
+
+diesel::table! {
+    test_status (test_st_id) {
+        test_st_id -> Int4,
+        test_st_title -> Varchar,
+        test_st_description -> Varchar,
+        test_st_short_name -> Varchar,
     }
 }
 
@@ -138,7 +147,9 @@ diesel::joinable!(logs -> users (user_id));
 diesel::joinable!(matrix -> projects (project_id));
 diesel::joinable!(requirements -> applicability (req_applicability));
 diesel::joinable!(requirements -> projects (project_id));
+diesel::joinable!(requirements -> requirement_status (req_current_status));
 diesel::joinable!(tests -> projects (project_id));
+diesel::joinable!(tests -> test_status (test_status));
 diesel::joinable!(verification -> projects (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -147,8 +158,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     logs,
     matrix,
     projects,
+    requirement_status,
     requirements,
-    status,
+    test_status,
     tests,
     users,
     verification,

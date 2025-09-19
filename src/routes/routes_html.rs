@@ -1560,7 +1560,7 @@ pub fn post_test(
 
 #[get("/status")]
 pub fn show_status() -> content::RawHtml<String> {
-    use crate::schema::status::dsl::*;
+    use crate::schema::requirement_status::dsl::*;
 
     let mut out_str = print_header();
     let mut connection = match get_db_connection() {
@@ -1571,7 +1571,7 @@ pub fn show_status() -> content::RawHtml<String> {
         }
     };
 
-    let all_status = match status.load::<Status>(connection.as_mut()) {
+    let all_status = match requirement_status.load::<RequirementStatus>(connection.as_mut()) {
         Ok(status_list) => status_list,
         Err(e) => {
             eprintln!("Database query error: {}", e);
@@ -1587,7 +1587,7 @@ pub fn show_status() -> content::RawHtml<String> {
             <div>Title: {}</div>
             <div>Description: {}</div>
         </div>",
-            out_str, st.st_id, st.st_title, st.st_description
+            out_str, st.req_st_id, st.req_st_title, st.req_st_description
         );
     }
 
@@ -3434,12 +3434,12 @@ pub async fn generate_backup(
     let backup_path = format!("{}/{}", backup_dir, filename);
 
     // Database configuration from Rocket.toml
-    let _db_url = "postgres://rust:rust@127.0.0.1:5432/rust";
+    let _db_url = "postgres://rust:rust@127.0.0.1:5432/reqman";
     let password = "rust";
     let host = "127.0.0.1";
     let port = "5432";
     let username = "rust";
-    let database = "rust";
+    let database = "reqman";
 
     // Set environment variable for password
     std::env::set_var("PGPASSWORD", password);

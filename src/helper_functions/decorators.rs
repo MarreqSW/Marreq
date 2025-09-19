@@ -35,8 +35,8 @@ fn decorate_requirements_impl<R: Repository>(
                 .unwrap_or_else(|_| format!("Unknown Verification ({})", r.req_verification));
 
             let status = repo
-                .get_status_by_id(r.req_current_status)
-                .map(|s| s.st_title)
+                .get_requirement_status_by_id(r.req_current_status)
+                .map(|s| s.req_st_title)
                 .unwrap_or_else(|_| format!("Unknown Status ({})", r.req_current_status));
 
             let author = if r.req_author != 0 {
@@ -121,8 +121,8 @@ fn decorate_requirements_impl<R: Repository>(
         .into_iter()
         .map(|t| {
             let status = repo
-                .get_status_by_id(t.test_status)
-                .map(|s| s.st_title)
+                .get_test_status_by_id(t.test_status)
+                .map(|s| s.test_st_title)
                 .unwrap_or_else(|_| format!("Unknown Status ({})", t.test_status));
 
             let parent_title = if t.test_parent != 0 {

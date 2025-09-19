@@ -3434,12 +3434,12 @@ pub async fn generate_backup(
     let backup_path = format!("{}/{}", backup_dir, filename);
 
     // Database configuration from Rocket.toml
-    let _db_url = "postgres://rust:rust@127.0.0.1:5432/rust";
+    let _db_url = "postgres://rust:rust@127.0.0.1:5432/reqman";
     let password = "rust";
     let host = "127.0.0.1";
     let port = "5432";
     let username = "rust";
-    let database = "rust";
+    let database = "reqman";
 
     // Set environment variable for password
     std::env::set_var("PGPASSWORD", password);

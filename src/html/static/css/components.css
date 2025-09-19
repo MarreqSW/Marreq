@@ -4,11 +4,31 @@
 .footer {
   background-color: var(--surface-color);
   border-top: 1px solid var(--border-color);
-  padding: 2rem;
+  padding: 2rem var(--space-4);
   margin-top: 4rem;
   text-align: center;
   color: var(--text-secondary);
   flex-shrink: 0;
+  width: 100%;
+}
+
+/* Responsive footer padding */
+@media (min-width: 576px) {
+  .footer {
+    padding: 2rem var(--space-6);
+  }
+}
+
+@media (min-width: 768px) {
+  .footer {
+    padding: 2rem var(--space-8);
+  }
+}
+
+@media (min-width: 1200px) {
+  .footer {
+    padding: 2rem var(--space-12);
+  }
 }
 
 /* Theme Toggle */

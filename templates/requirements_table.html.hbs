@@ -452,12 +452,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function updateRequirement(id, field, value) {
   fetch(`/api/v1/requirements/${id}/field`, {
-    method: 'PUT',
+    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      [field]: value
+      field: field,
+      value: value
     })
   })
   .then(response => response.json())

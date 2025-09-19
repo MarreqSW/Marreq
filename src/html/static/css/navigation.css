@@ -1,6 +1,6 @@
 /* Navigation */
 .navbar {
-  background: rgba(15, 23, 42, 0.03);
+  background: var(--surface-color); /* color sólido */
   border-bottom: 1px solid rgba(148, 163, 184, 0.16);
   padding: 0.5rem 0.5rem;
   position: sticky;
@@ -8,13 +8,13 @@
   z-index: var(--z-sticky);
   width: 100%;
   margin: 0;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: none; /* desactiva el efecto blur */
+  -webkit-backdrop-filter: none;
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 [data-theme='dark'] .navbar {
-  background: rgba(15, 23, 42, 0.55);
+  background: #0f172a; /* azul oscuro sólido */
   border-bottom-color: rgba(148, 163, 184, 0.22);
 }
 

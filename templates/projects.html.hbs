@@ -17,22 +17,31 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h5 class="card-title mb-0">{{project_name}}</h5>
-                                <span class="badge {{#if (eq project_status 'active')}}bg-success{{else}}bg-secondary{{/if}}">
+                                <span class="badge {{project_status_badge}}">
                                     {{project_status}}
                                 </span>
                             </div>
-                            
+
                             {{#if project_description}}
                                 <p class="card-text text-muted">{{project_description}}</p>
                             {{/if}}
-                            
+
                             <div class="project-meta">
                                 <small class="text-muted">
                                     <i class="fas fa-calendar"></i> Created: {{project_creation_date}}
                                 </small>
-                                {{#if project_owner_id}}
+                                {{#if project_owner_name}}
+                                    <br><small class="text-muted">
+                                        <i class="fas fa-user"></i> Owner: {{project_owner_name}}
+                                    </small>
+                                {{else if project_owner_id}}
                                     <br><small class="text-muted">
                                         <i class="fas fa-user"></i> Owner: {{project_owner_id}}
+                                    </small>
+                                {{/if}}
+                                {{#if role_label}}
+                                    <br><small class="text-muted">
+                                        <i class="fas fa-id-badge"></i> Role: {{role_label}}
                                     </small>
                                 {{/if}}
                             </div>

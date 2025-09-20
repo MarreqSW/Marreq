@@ -96,6 +96,20 @@ pub trait ProjectsRepository {
     fn delete_project(&mut self, project_id: i32) -> Result<Project, RepoError>;
 }
 
+pub trait ProjectMembersRepository {
+    fn get_members_by_project(&self, project_id: i32) -> Result<Vec<ProjectMember>, RepoError>;
+    fn get_projects_for_user(&self, user_id: i32) -> Result<Vec<ProjectMember>, RepoError>;
+
+    fn add_project_member(&mut self, new: &NewProjectMember) -> Result<(), RepoError>;
+    fn update_project_member_role(
+        &mut self,
+        project_id: i32,
+        user_id: i32,
+        role: i32,
+    ) -> Result<(), RepoError>;
+    fn remove_project_member(&mut self, project_id: i32, user_id: i32) -> Result<(), RepoError>;
+}
+
 pub trait MatrixRepository {
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError>;
     fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError>;
@@ -107,6 +121,7 @@ pub trait Repository:
     + RequirementsRepository
     + TestsRepository
     + ProjectsRepository
+    + ProjectMembersRepository
     + MatrixRepository
 {
 }
@@ -117,6 +132,7 @@ impl<T> Repository for T where
         + RequirementsRepository
         + TestsRepository
         + ProjectsRepository
+        + ProjectMembersRepository
         + MatrixRepository
 {
 }

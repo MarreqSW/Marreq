@@ -34,13 +34,12 @@ CREATE TABLE users
     user_username        VARCHAR NOT NULL,
     user_name            VARCHAR NOT NULL,
     user_email           VARCHAR NOT NULL DEFAULT ' ',
-    user_level           INTEGER NOT NULL DEFAULT 0,
     user_creation_date   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_last_login      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO users (user_username, user_name, user_email, user_level) VALUES
-    ('marius', 'Màrius Montón', 'marius.monton@gmail.com', 1);
+INSERT INTO users (user_username, user_name, user_email) VALUES
+    ('marius', 'Màrius Montón', 'marius.monton@gmail.com');
 ;
 
 CREATE TABLE status

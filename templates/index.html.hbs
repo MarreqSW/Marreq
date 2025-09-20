@@ -1,36 +1,4 @@
 {{#*inline "page"}}
-<!-- Quick Actions Dropdown -->
-<div class="mb-4">
-  <div class="d-flex justify-content-between align-items-center">
-    <div class="dropdown">
-      <button class="btn btn-primary dropdown-toggle" type="button" id="quickActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-        Quick Actions
-      </button>
-      <ul class="dropdown-menu" aria-labelledby="quickActionsDropdown">
-        {{#if user.is_admin}}
-        <li><a class="dropdown-item" href="/new_project">New Project</a></li>
-        <li><hr class="dropdown-divider"></li>
-        {{/if}}
-        <li><a class="dropdown-item" href="/new_requirement">New Requirement</a></li>
-        <li><a class="dropdown-item" href="/new_test">New Test</a></li>
-        <li><a class="dropdown-item" href="/new_category">New Category</a></li>
-        <li><a class="dropdown-item" href="/new_applicability">New Applicability</a></li>
-        <li><a class="dropdown-item" href="/new_user">New User</a></li>
-        <li><hr class="dropdown-divider"></li>
-        {{#if user.is_admin}}
-        <li><a class="dropdown-item" href="/import_excel">Import Excel</a></li>
-        <li><hr class="dropdown-divider"></li>
-        {{/if}}
-        <li><a class="dropdown-item" href="/requirements.xls">Export Requirements</a></li>
-        <li><a class="dropdown-item" href="/tests.xls">Export Tests</a></li>
-        <li><a class="dropdown-item" href="/matrix.xls">Export Matrix</a></li>
-        <li><hr class="dropdown-divider"></li>
-        <li><a class="dropdown-item" href="/users">View Users</a></li>
-        <li><a class="dropdown-item" href="/reports">View Reports</a></li>
-      </ul>
-    </div>
-  </div>
-</div>
 
 <div class="text-center mb-5">
   <h2>{{selected_project_name}}</h2>

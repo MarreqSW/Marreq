@@ -1,0 +1,77 @@
+/* ---------- Parámetros (ajusta a tu gusto) ---------- */
+:root{
+  --btn-h: 44px;         /* alto de cada botón */
+  --btn-gap: 0.5rem;     /* separación entre botones */
+  --actions-rows: 3;     /* nº máx. de botones visibles por card */
+
+  /* Alto fijo de la zona de descripción (responsive con clamp) */
+  --desc-h: clamp(60px, 6vh, 120px);
+
+  /* Alto fijo de la zona de acciones calculado para N botones */
+  --actions-h: calc(var(--actions-rows) * var(--btn-h) +
+                    (var(--actions-rows) - 1) * var(--btn-gap));
+}
+
+/* ---------- Grid 2x3 en desktop ---------- */
+.dashboard-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: stretch;
+}
+
+@media (min-width: 992px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Card ---------- */
+.dashboard-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0; /* evita romper columnas por contenido largo */
+}
+
+.dashboard-card .card-header,
+.dashboard-card .card-body {
+  padding: var(--space-4);
+}
+
+.dashboard-card .card-header h3 {
+  font-size: 1.125rem;
+  margin-bottom: 0;
+}
+
+/* ---------- Body dividido en 2 zonas fijas ---------- */
+.dashboard-card .card-body {
+  display: grid;
+  grid-template-rows: var(--desc-h) var(--actions-h);
+  gap: var(--space-3);
+}
+
+/* Zona de descripción (alto fijo) */
+.dashboard-card .card-description {
+  overflow: hidden;                 /* evita que se desborde */
+  display: -webkit-box;             /* truncado multilinea (WebKit) */
+  -webkit-line-clamp: 4;            /* nº de líneas visibles aprox */
+  -webkit-box-orient: vertical;
+}
+
+.dashboard-card .card-description p { margin: 0; }
+
+/* Zona de acciones (alto fijo), botones de arriba hacia abajo */
+.dashboard-card .card-actions {
+  display: grid;
+  grid-auto-rows: var(--btn-h);
+  gap: var(--btn-gap);
+  align-content: start;             /* apila desde arriba */
+  overflow: hidden;                 /* evita que “salten” fuera */
+}
+
+/* Altura consistente de botones */
+.dashboard-card .card-actions .btn {
+  height: var(--btn-h);
+  width: 100%;
+}

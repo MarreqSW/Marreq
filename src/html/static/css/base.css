@@ -25,10 +25,9 @@ main {
 
 /* Main Content - Fluid Layout */
 .main-content {
-  width: 100%;
+  width: min(1200px, calc(100% - 2 * var(--space-8)));
   padding: var(--space-6) var(--space-4);
-  max-width: none;
-  margin: var(--space-2) var(--space-1);
+  margin: var(--space-6) auto;
 }
 
 /* Responsive padding for different screen sizes */

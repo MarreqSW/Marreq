@@ -7,18 +7,18 @@
   padding: 1rem;
   color: var(--text-secondary);
 
-  display: flex;              /* Activa flexbox */
-  justify-content: center;    /* Centra horizontalmente */
-  align-items: center;        /* Centra verticalmente */
+  display: flex; 
+  justify-content: center;
+  align-items: center;
   text-align: center;
 
   flex-shrink: 0;
   width: 100%;
-  min-height: 60px;           /* Altura mínima opcional */
+  min-height: 60px;
 }
 
 .footer p {
-  margin: 0; /* Evita desajustes por márgenes por defecto */
+  margin: 0;
 }
 
 

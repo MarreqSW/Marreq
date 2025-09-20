@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS matrix CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;
 DROP TABLE IF EXISTS requirements CASCADE;
 DROP TABLE IF EXISTS tests CASCADE;
+DROP TABLE IF EXISTS project_members CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS applicability CASCADE;
@@ -62,12 +63,20 @@ CREATE TABLE users (
     user_username VARCHAR NOT NULL,
     user_name VARCHAR NOT NULL,
     user_email VARCHAR NOT NULL DEFAULT ' ',
-    user_level INTEGER NOT NULL DEFAULT 0,
     user_creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_last_login TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     user_password VARCHAR(255) NOT NULL DEFAULT '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj4J/HS.iK8i',
-    project_id INTEGER,
     is_admin BOOLEAN NOT NULL DEFAULT false
+);
+
+-- Project membership table connecting users to projects with a role
+CREATE TABLE project_members (
+    project_id INTEGER NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    role INTEGER NOT NULL DEFAULT 2,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (project_id, user_id)
 );
 
 -- Status table
@@ -165,12 +174,8 @@ CREATE TABLE logs (
 -- FOREIGN KEY CONSTRAINTS
 -- =============================================================================
 
--- Users -> Projects
-ALTER TABLE users ADD CONSTRAINT fk_users_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
-
 -- Categories -> Projects
-ALTER TABLE categories ADD CONSTRAINT fk_categories_project 
+ALTER TABLE categories ADD CONSTRAINT fk_categories_project
     FOREIGN KEY (project_id) REFERENCES projects(project_id);
 
 -- Applicability -> Projects
@@ -241,6 +246,8 @@ CREATE INDEX idx_matrix_project_id ON matrix(project_id);
 CREATE INDEX idx_matrix_req_id ON matrix(matrix_req_id);
 CREATE INDEX idx_matrix_test_id ON matrix(matrix_test_id);
 
+CREATE INDEX project_members_user_idx ON project_members(user_id);
+
 -- =============================================================================
 -- DEFAULT DATA
 -- =============================================================================
@@ -263,12 +270,26 @@ INSERT INTO status (st_title, st_description, st_short_name) VALUES
     ('Failed', 'The test has failed', 'Fail');
 
 -- Insert default users (Space Project team)
-INSERT INTO users (user_username, user_name, user_email, user_level, project_id, is_admin) VALUES
-    ('dr_smith', 'Dr. Sarah Smith', 'sarah.smith@spacecorp.com', 1, 1, true),
-    ('eng_jones', 'Engineer Mike Jones', 'mike.jones@spacecorp.com', 1, 1, false),
-    ('tech_lee', 'Technician Lisa Lee', 'lisa.lee@spacecorp.com', 1, 1, false),
-    ('qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', 1, 1, false),
-    ('admin', 'System Administrator', 'admin@reqman.com', 1, 2, true);
+INSERT INTO users (user_username, user_name, user_email, is_admin) VALUES
+    ('dr_smith', 'Dr. Sarah Smith', 'sarah.smith@spacecorp.com', true),
+    ('eng_jones', 'Engineer Mike Jones', 'mike.jones@spacecorp.com', false),
+    ('tech_lee', 'Technician Lisa Lee', 'lisa.lee@spacecorp.com', false),
+    ('qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', false),
+    ('admin', 'System Administrator', 'admin@reqman.com', true);
+
+-- Assign users to projects with explicit membership roles
+INSERT INTO project_members (project_id, user_id, role) VALUES
+    -- Space Project team (project 1)
+    (1, 1, 1),  -- Dr. Smith owns the Space Project
+    (1, 2, 3),  -- Engineer Jones contributes to Space Project
+    (1, 3, 3),  -- Technician Lee contributes to Space Project
+    (1, 4, 4),  -- QA Wilson views the Space Project
+    -- ReqMan project support (project 2)
+    (2, 5, 1),  -- Admin owns the ReqMan Project
+    (2, 1, 2),  -- Dr. Smith manages ReqMan workstreams
+    (2, 4, 3),  -- QA Wilson contributes to ReqMan testing
+    -- Empty project defaults (project 3)
+    (3, 5, 1);  -- Admin owns the Empty Project
 
 -- Insert categories for Space Project
 INSERT INTO categories (cat_title, cat_description, cat_tag, project_id) VALUES

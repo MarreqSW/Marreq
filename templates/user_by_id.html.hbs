@@ -7,7 +7,11 @@
                 <span class="user-details-label">User profile</span>
                 <div class="user-name-row">
                     <h1 class="user-details-name">{{user_name}}</h1>
-                    <span class="user-level-badge">{{user_level}}</span>
+                    {{#if is_admin}}
+                        <span class="user-level-badge">Administrator</span>
+                    {{else}}
+                        <span class="user-level-badge">Standard User</span>
+                    {{/if}}
                 </div>
                 <p class="user-details-username">@{{user_username}}</p>
             </div>

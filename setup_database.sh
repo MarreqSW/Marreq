@@ -94,6 +94,27 @@ docker exec -i "${DB_CID}" psql -U rust -d reqman -c \
   "SELECT project_id, project_name, project_status FROM projects ORDER BY project_id;"
 echo ""
 
+echo "🤝 Project memberships:"
+docker exec -i "${DB_CID}" psql -U rust -d reqman <<'SQL'
+SELECT pm.project_id,
+       p.project_name,
+       pm.user_id,
+       u.user_username,
+       pm.role,
+       CASE pm.role
+           WHEN 1 THEN 'Owner'
+           WHEN 2 THEN 'Manager'
+           WHEN 3 THEN 'Contributor'
+           WHEN 4 THEN 'Viewer'
+           ELSE 'Member'
+       END AS role_name
+  FROM project_members pm
+  JOIN projects p ON p.project_id = pm.project_id
+  JOIN users u ON u.user_id = pm.user_id
+ ORDER BY pm.project_id, pm.user_id;
+SQL
+echo ""
+
 echo "📊 Sample data counts:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
 SELECT 'Requirements' AS entity, COUNT(*) FROM requirements

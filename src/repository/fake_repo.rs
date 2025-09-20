@@ -18,6 +18,7 @@ pub struct FakeRepo {
     pub tests: HashMap<i32, Test>,
     pub projects: HashMap<i32, Project>,
     pub matrices: Vec<Matrix>,
+    pub project_members: Vec<ProjectMember>,
     pub force_err: bool,
 }
 
@@ -46,6 +47,7 @@ impl FakeRepo {
             tests: HashMap::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
+            project_members: Vec::new(),
             force_err: false,
         }
     }
@@ -62,6 +64,7 @@ impl FakeRepo {
             tests: HashMap::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
+            project_members: Vec::new(),
             force_err: true,
         }
     }
@@ -72,11 +75,9 @@ impl FakeRepo {
             user_username: username.to_string(),
             user_name: "name".into(),
             user_email: "email@example.com".into(),
-            user_level: 0,
             user_creation_date: epoch(),
             user_last_login: epoch(),
             user_password: stored_pw.into(),
-            project_id: None,
             is_admin: false,
         }
     }
@@ -124,11 +125,9 @@ impl UserRepository for FakeRepo {
             user_username: new.user_username.clone(),
             user_name: new.user_name.clone(),
             user_email: new.user_email.clone(),
-            user_level: new.user_level,
             user_creation_date: epoch(),
             user_last_login: epoch(),
             user_password: new.user_password.clone(),
-            project_id: new.project_id,
             is_admin: new.is_admin,
         };
         self.users.insert(id, user);
@@ -136,17 +135,13 @@ impl UserRepository for FakeRepo {
     }
 
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError> {
-        let id = user_data
-            .user_id
-            .ok_or(RepoError::NotFound)?;
+        let id = user_data.user_id.ok_or(RepoError::NotFound)?;
         match self.users.get_mut(&id) {
             Some(user) => {
                 user.user_username = user_data.user_username.clone();
                 user.user_name = user_data.user_name.clone();
                 user.user_email = user_data.user_email.clone();
-                user.user_level = user_data.user_level;
                 user.user_password = user_data.user_password.clone();
-                user.project_id = user_data.project_id;
                 user.is_admin = user_data.is_admin;
                 Ok(true)
             }
@@ -155,15 +150,12 @@ impl UserRepository for FakeRepo {
     }
 
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError> {
-        let id = user_data
-            .user_id
-            .ok_or(RepoError::NotFound)?;
+        let id = user_data.user_id.ok_or(RepoError::NotFound)?;
         match self.users.get_mut(&id) {
             Some(user) => {
                 user.user_username = user_data.user_username.clone();
                 user.user_name = user_data.user_name.clone();
                 user.user_email = user_data.user_email.clone();
-                user.user_level = user_data.user_level;
                 user.is_admin = user_data.is_admin;
                 Ok(true)
             }
@@ -172,7 +164,9 @@ impl UserRepository for FakeRepo {
     }
 
     fn delete_user(&mut self, id: i32) -> Result<User, RepoError> {
-        self.users.remove(&id).ok_or(RepoError::NotFound)
+        let user = self.users.remove(&id).ok_or(RepoError::NotFound)?;
+        self.project_members.retain(|pm| pm.user_id != id);
+        Ok(user)
     }
 }
 
@@ -605,5 +599,77 @@ impl MatrixRepository for FakeRepo {
             project_id: new.project_id,
         });
         Ok(())
+    }
+}
+
+impl ProjectMembersRepository for FakeRepo {
+    fn get_members_by_project(&self, project_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
+        Ok(self
+            .project_members
+            .iter()
+            .filter(|pm| pm.project_id == project_id)
+            .cloned()
+            .collect())
+    }
+
+    fn get_projects_for_user(&self, user_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
+        Ok(self
+            .project_members
+            .iter()
+            .filter(|pm| pm.user_id == user_id)
+            .cloned()
+            .collect())
+    }
+
+    fn add_project_member(&mut self, new: &NewProjectMember) -> Result<(), RepoError> {
+        if self.force_err {
+            return Err(RepoError::Db(diesel::result::Error::RollbackTransaction));
+        }
+
+        self.project_members
+            .retain(|pm| !(pm.project_id == new.project_id && pm.user_id == new.user_id));
+        self.project_members.push(ProjectMember {
+            project_id: new.project_id,
+            user_id: new.user_id,
+            role: new.role,
+            created_at: epoch(),
+            updated_at: epoch(),
+        });
+        Ok(())
+    }
+
+    fn update_project_member_role(
+        &mut self,
+        project_id: i32,
+        user_id: i32,
+        role: i32,
+    ) -> Result<(), RepoError> {
+        if self.force_err {
+            return Err(RepoError::Db(diesel::result::Error::RollbackTransaction));
+        }
+
+        match self
+            .project_members
+            .iter_mut()
+            .find(|pm| pm.project_id == project_id && pm.user_id == user_id)
+        {
+            Some(pm) => {
+                pm.role = role;
+                pm.updated_at = epoch();
+                Ok(())
+            }
+            None => Err(RepoError::NotFound),
+        }
+    }
+
+    fn remove_project_member(&mut self, project_id: i32, user_id: i32) -> Result<(), RepoError> {
+        let len_before = self.project_members.len();
+        self.project_members
+            .retain(|pm| !(pm.project_id == project_id && pm.user_id == user_id));
+        if self.project_members.len() == len_before {
+            Err(RepoError::NotFound)
+        } else {
+            Ok(())
+        }
     }
 }

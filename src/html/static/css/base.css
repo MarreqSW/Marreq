@@ -15,7 +15,7 @@ body {
   display: flex;
   flex-direction: column;
   transition: background-color 0.3s ease, color 0.3s ease;
-  margin: var(--space-1);
+  margin: 0;
 }
 
 main {
@@ -25,10 +25,9 @@ main {
 
 /* Main Content - Fluid Layout */
 .main-content {
-  width: 100%;
+  width: min(1200px, calc(100% - 2 * var(--space-8)));
   padding: var(--space-6) var(--space-4);
-  max-width: none;
-  margin: var(--space-2) var(--space-1);
+  margin: var(--space-6) auto;
 }
 
 /* Responsive padding for different screen sizes */

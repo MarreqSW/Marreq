@@ -2,19 +2,21 @@ use crate::api::prelude::*;
 use crate::logger::Logger;
 use crate::models::{Applicability, EntityType, NewApplicability};
 use crate::repository::errors::RepoError;
-use crate::repository::{DieselCachedRepo, LookupRepository};
+use crate::repository::LookupRepository;
 
 #[get("/applicability")]
-pub fn list() -> ApiResult<Json<Vec<Applicability>>> {
-    DieselCachedRepo::read()
+pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Applicability>>> {
+    state
+        .repo_read()
         .get_applicability_all()
         .map(Json)
         .map_err(ApiError::from)
 }
 
 #[get("/applicability/<id>")]
-pub fn get(id: i32) -> ApiResult<Json<Applicability>> {
-    DieselCachedRepo::read()
+pub fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Applicability>> {
+    state
+        .repo_read()
         .get_applicability_by_id(id)
         .map(Json)
         .map_err(|err| match err {
@@ -24,12 +26,13 @@ pub fn get(id: i32) -> ApiResult<Json<Applicability>> {
 }
 
 #[post("/applicability", data = "<payload>")]
-pub fn create(payload: Json<NewApplicability>) -> ApiResult<Value> {
+pub fn create(state: &State<AppState>, payload: Json<NewApplicability>) -> ApiResult<Value> {
     let applicability = payload.into_inner();
     let title = applicability.app_title.clone();
     let project_id = applicability.project_id;
 
-    let id = DieselCachedRepo::write()
+    let id = state
+        .repo_write()
         .insert_new_applicability(&applicability)
         .map_err(|err| match err {
             RepoError::Db(e) => {
@@ -38,7 +41,7 @@ pub fn create(payload: Json<NewApplicability>) -> ApiResult<Value> {
             other => other.into(),
         })?;
 
-    if let Ok(mut conn) = DieselCachedRepo::read().inner_repo().get_conn() {
+    if let Ok(mut conn) = state.repo_read().inner_repo().get_conn() {
         if let Ok(new_values) = Logger::to_json_string(&applicability) {
             if let Err(err) = Logger::log_create(
                 conn.as_mut(),
@@ -59,12 +62,17 @@ pub fn create(payload: Json<NewApplicability>) -> ApiResult<Value> {
 }
 
 #[put("/applicability/<id>", data = "<payload>")]
-pub fn update(id: i32, payload: Json<NewApplicability>) -> ApiResult<Value> {
+pub fn update(
+    state: &State<AppState>,
+    id: i32,
+    payload: Json<NewApplicability>,
+) -> ApiResult<Value> {
     let mut applicability = payload.into_inner();
     applicability.app_id = Some(id);
-    let before = DieselCachedRepo::read().get_applicability_by_id(id).ok();
+    let before = state.repo_read().get_applicability_by_id(id).ok();
 
-    let updated = DieselCachedRepo::write()
+    let updated = state
+        .repo_write()
         .edit_applicability(&applicability)
         .map_err(|err| match err {
             RepoError::Db(e) => {
@@ -77,9 +85,7 @@ pub fn update(id: i32, payload: Json<NewApplicability>) -> ApiResult<Value> {
         return Err(ApiError::NotFound(format!("applicability {id} not found")));
     }
 
-    if let (Some(previous), Ok(mut conn)) =
-        (before, DieselCachedRepo::read().inner_repo().get_conn())
-    {
+    if let (Some(previous), Ok(mut conn)) = (before, state.repo_read().inner_repo().get_conn()) {
         if let (Ok(old_values), Ok(new_values)) = (
             Logger::to_json_string(&previous),
             Logger::to_json_string(&applicability),
@@ -107,18 +113,18 @@ pub fn update(id: i32, payload: Json<NewApplicability>) -> ApiResult<Value> {
 }
 
 #[delete("/applicability/<id>")]
-pub fn delete(id: i32) -> ApiResult<Status> {
-    let applicability =
-        DieselCachedRepo::write()
-            .delete_applicability(id)
-            .map_err(|err| match err {
-                RepoError::NotFound => ApiError::NotFound(format!("applicability {id} not found")),
-                other => other.into(),
-            })?;
+pub fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
+    let applicability = state
+        .repo_write()
+        .delete_applicability(id)
+        .map_err(|err| match err {
+            RepoError::NotFound => ApiError::NotFound(format!("applicability {id} not found")),
+            other => other.into(),
+        })?;
 
     if let (Ok(old_values), Ok(mut conn)) = (
         Logger::to_json_string(&applicability),
-        DieselCachedRepo::read().inner_repo().get_conn(),
+        state.repo_read().inner_repo().get_conn(),
     ) {
         if let Err(err) = Logger::log_delete(
             conn.as_mut(),

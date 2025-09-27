@@ -17,11 +17,6 @@ pub mod schema;
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {
-    use crate::repository::DieselCachedRepo;
-
-    DieselCachedRepo::write().warm_cache();
-    DieselCachedRepo::read().cache().start_cache_maintenance();
-
     app::build().launch().await?;
 
     Ok(())

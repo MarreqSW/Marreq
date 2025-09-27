@@ -4,7 +4,7 @@ use crate::api::prelude::*;
 use crate::logger::Logger;
 use crate::models::{EntityType, NewRequirement, Requirement};
 use crate::repository::errors::RepoError;
-use crate::repository::{DieselCachedRepo, RequirementsRepository};
+use crate::repository::RequirementsRepository;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -14,16 +14,18 @@ pub struct FieldUpdateRequest {
 }
 
 #[get("/requirements")]
-pub fn list() -> ApiResult<Json<Vec<Requirement>>> {
-    DieselCachedRepo::read()
+pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> {
+    state
+        .repo_read()
         .get_requirements_all()
         .map(Json)
         .map_err(ApiError::from)
 }
 
 #[get("/requirements/<id>")]
-pub fn get(id: i32) -> ApiResult<Json<Requirement>> {
-    DieselCachedRepo::read()
+pub fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Requirement>> {
+    state
+        .repo_read()
         .get_requirement_by_id(id)
         .map(Json)
         .map_err(|err| match err {
@@ -33,19 +35,20 @@ pub fn get(id: i32) -> ApiResult<Json<Requirement>> {
 }
 
 #[post("/requirements", data = "<payload>")]
-pub fn create(payload: Json<NewRequirement>) -> ApiResult<Value> {
+pub fn create(state: &State<AppState>, payload: Json<NewRequirement>) -> ApiResult<Value> {
     let requirement = payload.into_inner();
     let title = requirement.req_title.clone();
     let project_id = requirement.project_id;
 
-    let id = DieselCachedRepo::write()
+    let id = state
+        .repo_write()
         .insert_new_requirement(&requirement)
         .map_err(|err| match err {
             RepoError::Db(e) => ApiError::BadRequest(format!("failed to create requirement: {e}")),
             other => other.into(),
         })?;
 
-    if let Ok(mut conn) = DieselCachedRepo::read().inner_repo().get_conn() {
+    if let Ok(mut conn) = state.repo_read().inner_repo().get_conn() {
         if let Ok(new_values) = Logger::to_json_string(&requirement) {
             if let Err(err) = Logger::log_create(
                 conn.as_mut(),
@@ -66,18 +69,18 @@ pub fn create(payload: Json<NewRequirement>) -> ApiResult<Value> {
 }
 
 #[delete("/requirements/<id>")]
-pub fn delete(id: i32) -> ApiResult<Status> {
-    let requirement =
-        DieselCachedRepo::write()
-            .delete_requirement(id)
-            .map_err(|err| match err {
-                RepoError::NotFound => ApiError::NotFound(format!("requirement {id} not found")),
-                other => other.into(),
-            })?;
+pub fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
+    let requirement = state
+        .repo_write()
+        .delete_requirement(id)
+        .map_err(|err| match err {
+            RepoError::NotFound => ApiError::NotFound(format!("requirement {id} not found")),
+            other => other.into(),
+        })?;
 
     if let (Ok(old_values), Ok(mut conn)) = (
         Logger::to_json_string(&requirement),
-        DieselCachedRepo::read().inner_repo().get_conn(),
+        state.repo_read().inner_repo().get_conn(),
     ) {
         if let Err(err) = Logger::log_delete(
             conn.as_mut(),
@@ -100,9 +103,14 @@ pub fn delete(id: i32) -> ApiResult<Status> {
 }
 
 #[post("/requirements/<id>/field", data = "<update>")]
-pub fn update_field(id: i32, update: Json<FieldUpdateRequest>) -> ApiResult<Value> {
+pub fn update_field(
+    state: &State<AppState>,
+    id: i32,
+    update: Json<FieldUpdateRequest>,
+) -> ApiResult<Value> {
     let update = update.into_inner();
-    let mut requirement = DieselCachedRepo::read()
+    let mut requirement = state
+        .repo_read()
         .get_requirement_by_id(id)
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("requirement {id} not found")),
@@ -171,14 +179,15 @@ pub fn update_field(id: i32, update: Json<FieldUpdateRequest>) -> ApiResult<Valu
         project_id: requirement.project_id,
     };
 
-    DieselCachedRepo::write()
+    state
+        .repo_write()
         .edit_requirement(&payload)
         .map_err(ApiError::from)?;
 
     if let (Ok(old_values), Ok(new_values), Ok(mut conn)) = (
         Logger::to_json_string(&original),
         Logger::to_json_string(&requirement),
-        DieselCachedRepo::read().inner_repo().get_conn(),
+        state.repo_read().inner_repo().get_conn(),
     ) {
         if let Err(err) = Logger::log_update(
             conn.as_mut(),

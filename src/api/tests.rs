@@ -106,16 +106,16 @@ pub async fn update_field(
                     test.test_status = update
                         .value
                         .parse()
-                        .map_err(|_| RepoError::BadRequest("invalid status id".into()))?;
+                        .map_err(|_| RepoError::BadInput("invalid status id".into()))?;
                 }
                 "test_reference" => test.test_reference = update.value,
                 "test_parent" => {
                     test.test_parent = update
                         .value
                         .parse()
-                        .map_err(|_| RepoError::BadRequest("invalid parent id".into()))?;
+                        .map_err(|_| RepoError::BadInput("invalid parent id".into()))?;
                 }
-                other => return Err(RepoError::BadRequest(format!("unsupported field '{other}'"))),
+                other => return Err(RepoError::BadInput(format!("unsupported field '{other}'"))),
             }
 
             let payload = NewTest {

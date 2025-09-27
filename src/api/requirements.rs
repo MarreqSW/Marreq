@@ -23,7 +23,7 @@ pub struct RequirementPatch {
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> {
     let requirements = state
         .repo
-        .db_read(|repo| repo.get_requirements_all())
+        .async_read(|repo| repo.get_requirements_all())
         .await?;
     Ok(Json(requirements))
 }
@@ -32,7 +32,7 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> 
 pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Requirement>> {
     let requirement = state
         .repo
-        .db_read(move |repo| repo.get_requirement_by_id(id))
+        .async_read(move |repo| repo.get_requirement_by_id(id))
         .await?;
     Ok(Json(requirement))
 }
@@ -46,14 +46,9 @@ pub async fn create(state: &State<AppState>, payload: Json<NewRequirement>) -> A
 
     let id = state
         .repo
-        .db_write(move |repo| repo.insert_new_requirement(&requirement))
-        .await?;
-
-    let _ = state
-        .repo
-        .db_read(move |repo| {
-            let mut conn = repo.inner_repo().get_conn()?;
-            if let Some(payload) = new_values {
+        .async_write(move |repo| {
+            let id = repo.insert_new_requirement(&requirement)?;
+            if let (Some(payload), Ok(mut conn)) = (new_values, repo.inner_repo().get_conn()) {
                 let _ = Logger::log_create(
                     conn.as_mut(),
                     0,
@@ -65,44 +60,37 @@ pub async fn create(state: &State<AppState>, payload: Json<NewRequirement>) -> A
                     None,
                 );
             }
-            Ok::<(), RepoError>(())
+            Ok::<_, RepoError>(id)
         })
-        .await;
+        .await?;
 
     Ok(json!({ "status": "ok", "id": id }))
 }
 
+
 #[delete("/requirements/<id>")]
 pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
-    let removed = state
+    state
         .repo
-        .db_write(move |repo| repo.delete_requirement(id))
-        .await?;
-
-    let removed_for_log = removed.clone();
-    let _ = state
-        .repo
-        .db_read(move |repo| {
-            let mut conn = repo.inner_repo().get_conn()?;
-            if let Ok(old_values) = Logger::to_json_string(&removed_for_log) {
-                let _ = Logger::log_delete(
-                    conn.as_mut(),
-                    0,
-                    EntityType::Requirement,
-                    id,
-                    Some(removed_for_log.project_id),
-                    Some(old_values),
-                    Some(format!(
-                        "Deleted requirement via API: {}",
-                        removed_for_log.req_title
-                    )),
-                    None,
-                );
+        .async_write(move |repo| {
+            let removed = repo.delete_requirement(id)?;
+            if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                if let Ok(old_values) = Logger::to_json_string(&removed) {
+                    let _ = Logger::log_delete(
+                        conn.as_mut(),
+                        0,
+                        EntityType::Requirement,
+                        id,
+                        Some(removed.project_id),
+                        Some(old_values),
+                        Some(format!("Deleted requirement via API: {}", removed.req_title)),
+                        None,
+                    );
+                }
             }
-            Ok::<(), RepoError>(())
+            Ok::<_, RepoError>(())
         })
-        .await;
-
+        .await?;
     Ok(Status::NoContent)
 }
 
@@ -114,98 +102,75 @@ pub async fn patch_requirement(
 ) -> ApiResult<Value> {
     let patch = patch.into_inner();
 
-    let mut requirement = state
-        .repo
-        .db_read(move |repo| repo.get_requirement_by_id(id))
-        .await?;
-    let original = requirement.clone();
+    let any_updates =
+        patch.req_title.is_some()
+        || patch.req_description.is_some()
+        || patch.req_current_status.is_some()
+        || patch.req_verification.is_some()
+        || patch.req_author.is_some()
+        || patch.req_reviewer.is_some()
+        || patch.req_category.is_some()
+        || patch.req_applicability.is_some();
 
-    let mut updated = false;
-
-    if let Some(req_title) = patch.req_title {
-        requirement.req_title = req_title;
-        updated = true;
-    }
-    if let Some(req_description) = patch.req_description {
-        requirement.req_description = req_description;
-        updated = true;
-    }
-    if let Some(req_current_status) = patch.req_current_status {
-        requirement.req_current_status = req_current_status;
-        updated = true;
-    }
-    if let Some(req_verification) = patch.req_verification {
-        requirement.req_verification = req_verification;
-        updated = true;
-    }
-    if let Some(req_author) = patch.req_author {
-        requirement.req_author = req_author;
-        updated = true;
-    }
-    if let Some(req_reviewer) = patch.req_reviewer {
-        requirement.req_reviewer = req_reviewer;
-        updated = true;
-    }
-    if let Some(req_category) = patch.req_category {
-        requirement.req_category = req_category;
-        updated = true;
-    }
-    if let Some(req_applicability) = patch.req_applicability {
-        requirement.req_applicability = req_applicability;
-        updated = true;
-    }
-
-    if !updated {
+    if !any_updates {
         return Err(ApiError::BadRequest("no fields provided".into()));
     }
 
-    let payload = NewRequirement {
-        req_id: Some(requirement.req_id),
-        req_title: requirement.req_title.clone(),
-        req_description: requirement.req_description.clone(),
-        req_verification: requirement.req_verification,
-        req_author: requirement.req_author,
-        req_link: requirement.req_link.clone(),
-        req_category: requirement.req_category,
-        req_current_status: requirement.req_current_status,
-        req_parent: requirement.req_parent,
-        req_reference: requirement.req_reference.clone(),
-        req_reviewer: requirement.req_reviewer,
-        req_applicability: requirement.req_applicability,
-        req_justification: requirement.req_justification.clone(),
-        project_id: requirement.project_id,
-    };
-
     state
         .repo
-        .db_write(move |repo| repo.edit_requirement(&payload))
-        .await?;
+        .async_write(move |repo| {
+            let mut requirement = repo.get_requirement_by_id(id)?;
+            let original = requirement.clone();
 
-    let requirement_for_log = requirement.clone();
-    let original_for_log = original.clone();
-    let _ = state
-        .repo
-        .db_read(move |repo| {
-            let mut conn = repo.inner_repo().get_conn()?;
-            if let (Ok(old_values), Ok(new_values)) = (
-                Logger::to_json_string(&original_for_log),
-                Logger::to_json_string(&requirement_for_log),
-            ) {
-                let _ = Logger::log_update(
-                    conn.as_mut(),
-                    0,
-                    EntityType::Requirement,
-                    requirement_for_log.req_id,
-                    Some(requirement_for_log.project_id),
-                    Some(old_values),
-                    Some(new_values),
-                    Some("Updated requirement via API".into()),
-                    None,
-                );
+            if let Some(v) = patch.req_title { requirement.req_title = v; }
+            if let Some(v) = patch.req_description { requirement.req_description = v; }
+            if let Some(v) = patch.req_current_status { requirement.req_current_status = v; }
+            if let Some(v) = patch.req_verification { requirement.req_verification = v; }
+            if let Some(v) = patch.req_author { requirement.req_author = v; }
+            if let Some(v) = patch.req_reviewer { requirement.req_reviewer = v; }
+            if let Some(v) = patch.req_category { requirement.req_category = v; }
+            if let Some(v) = patch.req_applicability { requirement.req_applicability = v; }
+
+            let payload = NewRequirement {
+                req_id: Some(requirement.req_id),
+                req_title: requirement.req_title.clone(),
+                req_description: requirement.req_description.clone(),
+                req_verification: requirement.req_verification,
+                req_author: requirement.req_author,
+                req_link: requirement.req_link.clone(),
+                req_category: requirement.req_category,
+                req_current_status: requirement.req_current_status,
+                req_parent: requirement.req_parent,
+                req_reference: requirement.req_reference.clone(),
+                req_reviewer: requirement.req_reviewer,
+                req_applicability: requirement.req_applicability,
+                req_justification: requirement.req_justification.clone(),
+                project_id: requirement.project_id,
+            };
+
+            repo.edit_requirement(&payload)?;
+
+            if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                if let (Ok(old_values), Ok(new_values)) =
+                    (Logger::to_json_string(&original), Logger::to_json_string(&requirement))
+                {
+                    let _ = Logger::log_update(
+                        conn.as_mut(),
+                        0,
+                        EntityType::Requirement,
+                        requirement.req_id,
+                        Some(requirement.project_id),
+                        Some(old_values),
+                        Some(new_values),
+                        Some("Updated requirement via API".into()),
+                        None,
+                    );
+                }
             }
-            Ok::<(), RepoError>(())
+
+            Ok::<_, RepoError>(())
         })
-        .await;
+        .await?;
 
     Ok(json!({
         "success": true,

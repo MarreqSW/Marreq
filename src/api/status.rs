@@ -6,7 +6,7 @@ use crate::repository::LookupRepository;
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<LegacyStatus>>> {
     let statuses = state
         .repo
-        .db_read(|repo| repo.get_requirement_status_all())
+        .async_read(|repo| repo.get_requirement_status_all())
         .await?
         .into_iter()
         .map(|status: RequirementStatus| LegacyStatus {
@@ -23,7 +23,7 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<LegacyStatus>>>
 pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Value>> {
     let status = state
         .repo
-        .db_read(move |repo| repo.get_requirement_status_by_id(id))
+        .async_read(move |repo| repo.get_requirement_status_by_id(id))
         .await?;
 
     Ok(Json(json!({
@@ -42,7 +42,7 @@ pub async fn create(
     let status = payload.into_inner();
     let id = state
         .repo
-        .db_write(move |repo| repo.create_status(&status))
+        .async_write(move |repo| repo.create_status(&status))
         .await?;
 
     Ok((Status::Created, json!({ "status": "ok", "id": id })))

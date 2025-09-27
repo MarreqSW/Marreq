@@ -180,6 +180,7 @@ http://localhost:8000/api/v1
 - `GET /requirements` - List all requirements
 - `GET /requirements/{id}` - Get specific requirement
 - `POST /requirements` - Create new requirement
+- `PATCH /requirements/{id}` - Partially update supported requirement fields
 - `DELETE /requirements/{id}` - Delete requirement
 
 #### Tests

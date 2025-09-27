@@ -4,13 +4,14 @@ use crate::api::prelude::*;
 use crate::models::Matrix;
 
 #[get("/matrix")]
-pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Matrix>>> {
+pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Matrix>>> {
     use crate::schema::matrix::dsl::matrix;
 
     let mut conn = state
-        .repo_read()
-        .inner_repo()
-        .get_conn()
+        .repo
+        .clone()
+        .db_read(|repo| repo.inner_repo().get_conn())
+        .await
         .map_err(ApiError::from)?;
 
     let entries = matrix

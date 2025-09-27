@@ -1,20 +1,29 @@
 use chrono::Utc;
 
 use crate::api::prelude::*;
+use crate::repository::errors::RepoError;
 
 #[get("/cache/stats")]
-pub fn stats(state: &State<AppState>) -> ApiResult<Json<Value>> {
-    let stats = state.repo_read().cache().stats();
-    Ok(Json(json!({
-        "total_entries": stats.total_entries,
-        "active_entries": stats.active_entries,
-        "expired_entries": stats.expired_entries,
-    })))
+pub async fn stats(state: &State<AppState>) -> ApiResult<Json<crate::repository::cache::stats::CacheStats>> {
+    let stats = state
+        .repo
+        .db_read(|repo| {
+            Ok::<_, RepoError>(repo.cache().stats())
+        })
+        .await?;
+    Ok(Json(stats))
 }
 
+
 #[post("/cache/clear")]
-pub fn clear(state: &State<AppState>) -> ApiResult<Json<Value>> {
-    state.repo_read().cache().clear();
+pub async fn clear(state: &State<AppState>) -> ApiResult<Json<Value>> {
+    state
+        .repo
+        .db_write(|repo| {
+            repo.cache().clear();
+            Ok::<_, RepoError>(())
+        })
+        .await?;
     Ok(Json(json!({
         "message": "Cache cleared successfully",
         "timestamp": Utc::now().to_rfc3339(),
@@ -22,10 +31,11 @@ pub fn clear(state: &State<AppState>) -> ApiResult<Json<Value>> {
 }
 
 #[post("/cache/cleanup")]
-pub fn cleanup(state: &State<AppState>) -> ApiResult<Json<Value>> {
-    let cache = state.repo_read().cache();
-    let cleaned = cache.cleanup();
-
+pub async fn cleanup(state: &State<AppState>) -> ApiResult<Json<Value>> {
+    let cleaned = state
+        .repo
+        .db_write(|repo| Ok::<_, RepoError>(repo.cache().cleanup()))
+        .await?;
     Ok(Json(json!({
         "message": format!("Cleaned up {} expired entries", cleaned),
         "cleaned_entries": cleaned,
@@ -34,20 +44,32 @@ pub fn cleanup(state: &State<AppState>) -> ApiResult<Json<Value>> {
 }
 
 #[get("/cache/performance")]
-pub fn performance(state: &State<AppState>) -> ApiResult<Json<Value>> {
-    let performance = state.repo_read().cache().get_performance();
+pub async fn performance(state: &State<AppState>) -> ApiResult<Json<Value>> {
+    let performance = state
+        .repo
+        .db_read(|repo| Ok::<_, RepoError>(repo.cache().get_performance()))
+        .await?;
     Ok(Json(performance))
 }
 
 #[get("/cache/recommendations")]
-pub fn recommendations(state: &State<AppState>) -> ApiResult<Json<Value>> {
-    let recommendations = state.repo_read().cache().get_recommendations();
+pub async fn recommendations(state: &State<AppState>) -> ApiResult<Json<Value>> {
+    let recommendations = state
+        .repo
+        .db_read(|repo| Ok::<_, RepoError>(repo.cache().get_recommendations()))
+        .await?;
     Ok(Json(recommendations))
 }
 
 #[post("/cache/reset-counters")]
-pub fn reset_counters(state: &State<AppState>) -> ApiResult<Json<Value>> {
-    state.repo_read().cache().reset_counters();
+pub async fn reset_counters(state: &State<AppState>) -> ApiResult<Json<Value>> {
+    state
+        .repo
+        .db_write(|repo| {
+            repo.cache().reset_counters();
+            Ok::<_, RepoError>(())
+        })
+        .await?;
     Ok(Json(json!({
         "message": "Cache performance counters reset successfully",
         "timestamp": Utc::now().to_rfc3339(),
@@ -55,7 +77,11 @@ pub fn reset_counters(state: &State<AppState>) -> ApiResult<Json<Value>> {
 }
 
 #[get("/cache/health")]
-pub fn health(state: &State<AppState>) -> ApiResult<Json<Value>> {
-    let health = state.repo_read().cache().get_health();
+pub async fn health(state: &State<AppState>) -> ApiResult<Json<Value>> {
+    let health = state
+        .repo
+        .db_read(|repo| Ok::<_, RepoError>(repo.cache().get_health()))
+        .await?;
     Ok(Json(health))
 }
+

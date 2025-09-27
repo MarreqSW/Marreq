@@ -14,101 +14,114 @@ pub struct FieldUpdateRequest {
 }
 
 #[get("/tests")]
-pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Test>>> {
-    state
-        .repo_read()
-        .get_tests_all()
-        .map(Json)
-        .map_err(ApiError::from)
+pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Test>>> {
+    let tests = state
+        .repo
+        .db_read(|repo| repo.get_tests_all())
+        .await
+        .map_err(ApiError::from)?;
+    Ok(Json(tests))
 }
 
 #[get("/tests/<id>")]
-pub fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Test>> {
-    state
-        .repo_read()
-        .get_test_by_id(id)
-        .map(Json)
+pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
+    let test = state
+        .repo
+        .db_read(move |repo| repo.get_test_by_id(id))
+        .await
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("test {id} not found")),
             other => other.into(),
-        })
+        })?;
+    Ok(Json(test))
 }
 
 #[post("/tests", data = "<payload>")]
-pub fn create(state: &State<AppState>, payload: Json<NewTest>) -> ApiResult<Value> {
+pub async fn create(state: &State<AppState>, payload: Json<NewTest>) -> ApiResult<Value> {
     let test = payload.into_inner();
     let name = test.test_name.clone();
     let project_id = test.project_id;
+    let new_values = Logger::to_json_string(&test).ok();
 
     let id = state
-        .repo_write()
-        .insert_test(&test)
+        .repo
+        .db_write(move |repo| repo.insert_test(&test))
+        .await
         .map_err(|err| match err {
             RepoError::Db(e) => ApiError::BadRequest(format!("failed to create test: {e}")),
             other => other.into(),
         })?;
 
-    if let Ok(mut conn) = state.repo_read().inner_repo().get_conn() {
-        if let Ok(new_values) = Logger::to_json_string(&test) {
-            if let Err(err) = Logger::log_create(
-                conn.as_mut(),
-                0,
-                EntityType::Test,
-                id,
-                Some(project_id),
-                Some(new_values),
-                Some(format!("Created test via API: {name}")),
-                None,
-            ) {
-                eprintln!("failed to record test creation log: {err}");
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            let mut conn = repo.inner_repo().get_conn()?;
+            if let Some(payload) = new_values {
+                let _ = Logger::log_create(
+                    conn.as_mut(),
+                    0,
+                    EntityType::Test,
+                    id,
+                    Some(project_id),
+                    Some(payload),
+                    Some(format!("Created test via API: {name}")),
+                    None,
+                );
             }
-        }
-    }
+            Ok::<(), RepoError>(())
+        })
+        .await;
 
     Ok(json!({ "status": "ok", "id": id }))
 }
 
 #[delete("/tests/<id>")]
-pub fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
-    let test = state
-        .repo_write()
-        .delete_test(id)
+pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
+    let removed = state
+        .repo
+        .db_write(move |repo| repo.delete_test(id))
+        .await
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("test {id} not found")),
             other => other.into(),
         })?;
 
-    if let (Ok(old_values), Ok(mut conn)) = (
-        Logger::to_json_string(&test),
-        state.repo_read().inner_repo().get_conn(),
-    ) {
-        if let Err(err) = Logger::log_delete(
-            conn.as_mut(),
-            0,
-            EntityType::Test,
-            id,
-            Some(test.project_id),
-            Some(old_values),
-            Some(format!("Deleted test via API: {}", test.test_name)),
-            None,
-        ) {
-            eprintln!("failed to record test deletion log: {err}");
-        }
-    }
+    let removed_for_log = removed.clone();
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            let mut conn = repo.inner_repo().get_conn()?;
+            if let Ok(old_values) = Logger::to_json_string(&removed_for_log) {
+                let _ = Logger::log_delete(
+                    conn.as_mut(),
+                    0,
+                    EntityType::Test,
+                    id,
+                    Some(removed_for_log.project_id),
+                    Some(old_values),
+                    Some(format!("Deleted test via API: {}", removed_for_log.test_name)),
+                    None,
+                );
+            }
+            Ok::<(), RepoError>(())
+        })
+        .await;
 
     Ok(Status::NoContent)
 }
 
 #[post("/tests/<id>/field", data = "<update>")]
-pub fn update_field(
-    state: &State<AppState>,
+pub async fn update_field(
     id: i32,
+    state: &State<AppState>,
     update: Json<FieldUpdateRequest>,
 ) -> ApiResult<Value> {
     let update = update.into_inner();
+
     let mut test = state
-        .repo_read()
-        .get_test_by_id(id)
+        .repo
+        .db_read(move |repo| repo.get_test_by_id(id))
+        .await
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("test {id} not found")),
             other => other.into(),
@@ -132,9 +145,7 @@ pub fn update_field(
                 .parse()
                 .map_err(|_| ApiError::BadRequest("invalid parent id".into()))?;
         }
-        other => {
-            return Err(ApiError::BadRequest(format!("unsupported field '{other}'")));
-        }
+        other => return Err(ApiError::BadRequest(format!("unsupported field '{other}'"))),
     }
 
     let payload = NewTest {
@@ -149,29 +160,35 @@ pub fn update_field(
     };
 
     state
-        .repo_write()
-        .edit_test(&payload)
+        .repo
+        .db_write(move |repo| repo.edit_test(&payload))
+        .await
         .map_err(ApiError::from)?;
 
-    if let (Ok(old_values), Ok(new_values), Ok(mut conn)) = (
-        Logger::to_json_string(&original),
-        Logger::to_json_string(&test),
-        state.repo_read().inner_repo().get_conn(),
-    ) {
-        if let Err(err) = Logger::log_update(
-            conn.as_mut(),
-            0,
-            EntityType::Test,
-            test.test_id,
-            Some(test.project_id),
-            Some(old_values),
-            Some(new_values),
-            Some("Updated test via API".into()),
-            None,
-        ) {
-            eprintln!("failed to record test update log: {err}");
-        }
-    }
+    let original_for_log = original.clone();
+    let test_for_log = test.clone();
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            let mut conn = repo.inner_repo().get_conn()?;
+            if let (Ok(old_values), Ok(new_values)) =
+                (Logger::to_json_string(&original_for_log), Logger::to_json_string(&test_for_log))
+            {
+                let _ = Logger::log_update(
+                    conn.as_mut(),
+                    0,
+                    EntityType::Test,
+                    test_for_log.test_id,
+                    Some(test_for_log.project_id),
+                    Some(old_values),
+                    Some(new_values),
+                    Some("Updated test via API".into()),
+                    None,
+                );
+            }
+            Ok::<(), RepoError>(())
+        })
+        .await;
 
     Ok(json!({
         "success": true,

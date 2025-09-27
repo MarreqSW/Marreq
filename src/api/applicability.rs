@@ -5,79 +5,97 @@ use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 
 #[get("/applicability")]
-pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Applicability>>> {
-    state
-        .repo_read()
-        .get_applicability_all()
-        .map(Json)
-        .map_err(ApiError::from)
+pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Applicability>>> {
+    let items = state
+        .repo
+        .db_read(|repo| repo.get_applicability_all())
+        .await?;
+    Ok(Json(items))
 }
 
 #[get("/applicability/<id>")]
-pub fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Applicability>> {
-    state
-        .repo_read()
-        .get_applicability_by_id(id)
-        .map(Json)
+pub async fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Applicability>> {
+    let applicability = state
+        .repo
+        .db_read(move |repo| repo.get_applicability_by_id(id))
+        .await
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("applicability {id} not found")),
             other => other.into(),
-        })
+        })?;
+
+    Ok(Json(applicability))
 }
 
 #[post("/applicability", data = "<payload>")]
-pub fn create(state: &State<AppState>, payload: Json<NewApplicability>) -> ApiResult<Value> {
+pub async fn create(state: &State<AppState>, payload: Json<NewApplicability>) -> ApiResult<Value> {
     let applicability = payload.into_inner();
+
     let title = applicability.app_title.clone();
     let project_id = applicability.project_id;
+    let new_values = Logger::to_json_string(&applicability).ok();
 
     let id = state
-        .repo_write()
-        .insert_new_applicability(&applicability)
+        .repo
+        .db_write(move |repo| repo.insert_new_applicability(&applicability))
+        .await
         .map_err(|err| match err {
-            RepoError::Db(e) => {
-                ApiError::BadRequest(format!("failed to create applicability: {e}"))
-            }
+            RepoError::Db(e) => ApiError::BadRequest(format!("failed to create applicability: {e}")),
             other => other.into(),
         })?;
 
-    if let Ok(mut conn) = state.repo_read().inner_repo().get_conn() {
-        if let Ok(new_values) = Logger::to_json_string(&applicability) {
-            if let Err(err) = Logger::log_create(
-                conn.as_mut(),
-                0,
-                EntityType::Applicability,
-                id,
-                Some(project_id),
-                Some(new_values),
-                Some(format!("Created applicability via API: {title}")),
-                None,
-            ) {
-                eprintln!("failed to record applicability creation log: {err}");
+    let title_for_log = title.clone();
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            let mut conn = repo.inner_repo().get_conn()?;
+            if let Some(payload) = new_values {
+                let _ = Logger::log_create(
+                    conn.as_mut(),
+                    0,
+                    EntityType::Applicability,
+                    id,
+                    Some(project_id),
+                    Some(payload),
+                    Some(format!("Created applicability via API: {}", title_for_log)),
+                    None,
+                );
             }
-        }
-    }
+            Ok(())
+        })
+        .await;
 
     Ok(json!({ "status": "ok", "id": id }))
 }
 
+
 #[put("/applicability/<id>", data = "<payload>")]
-pub fn update(
+pub async fn update(
     state: &State<AppState>,
     id: i32,
     payload: Json<NewApplicability>,
 ) -> ApiResult<Value> {
     let mut applicability = payload.into_inner();
     applicability.app_id = Some(id);
-    let before = state.repo_read().get_applicability_by_id(id).ok();
+
+    let before = state
+        .repo
+        .db_read(move |repo| match repo.get_applicability_by_id(id) {
+            Ok(a) => Ok::<Option<_>, RepoError>(Some(a)),
+            Err(RepoError::NotFound) => Ok(None),
+            Err(e) => Err(e),
+        })
+        .await?;
 
     let updated = state
-        .repo_write()
-        .edit_applicability(&applicability)
+        .repo
+        .db_write({
+            let applicability = applicability.clone();
+            move |repo| repo.edit_applicability(&applicability)
+        })
+        .await
         .map_err(|err| match err {
-            RepoError::Db(e) => {
-                ApiError::BadRequest(format!("failed to update applicability: {e}"))
-            }
+            RepoError::Db(e) => ApiError::BadRequest(format!("failed to update applicability: {e}")),
             other => other.into(),
         })?;
 
@@ -85,26 +103,31 @@ pub fn update(
         return Err(ApiError::NotFound(format!("applicability {id} not found")));
     }
 
-    if let (Some(previous), Ok(mut conn)) = (before, state.repo_read().inner_repo().get_conn()) {
-        if let (Ok(old_values), Ok(new_values)) = (
-            Logger::to_json_string(&previous),
-            Logger::to_json_string(&applicability),
-        ) {
-            if let Err(err) = Logger::log_update(
-                conn.as_mut(),
-                0,
-                EntityType::Applicability,
-                id,
-                Some(applicability.project_id),
-                Some(old_values),
-                Some(new_values),
-                Some("Updated applicability via API".into()),
-                None,
-            ) {
-                eprintln!("failed to record applicability update log: {err}");
+    let app_for_log = applicability.clone();
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            let mut conn = repo.inner_repo().get_conn()?;
+            if let Some(previous) = before {
+                if let (Ok(old_values), Ok(new_values)) =
+                    (Logger::to_json_string(&previous), Logger::to_json_string(&app_for_log))
+                {
+                    let _ = Logger::log_update(
+                        conn.as_mut(),
+                        0,
+                        EntityType::Applicability,
+                        id,
+                        Some(app_for_log.project_id),
+                        Some(old_values),
+                        Some(new_values),
+                        Some("Updated applicability via API".into()),
+                        None,
+                    );
+                }
             }
-        }
-    }
+            Ok::<(), RepoError>(())
+        })
+        .await;
 
     Ok(json!({
         "status": "ok",
@@ -112,36 +135,38 @@ pub fn update(
     }))
 }
 
+
 #[delete("/applicability/<id>")]
-pub fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
-    let applicability = state
-        .repo_write()
-        .delete_applicability(id)
+pub async fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
+    let removed = state
+        .repo
+        .db_write(move |repo| repo.delete_applicability(id))
+        .await
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("applicability {id} not found")),
             other => other.into(),
         })?;
 
-    if let (Ok(old_values), Ok(mut conn)) = (
-        Logger::to_json_string(&applicability),
-        state.repo_read().inner_repo().get_conn(),
-    ) {
-        if let Err(err) = Logger::log_delete(
-            conn.as_mut(),
-            0,
-            EntityType::Applicability,
-            id,
-            Some(applicability.project_id),
-            Some(old_values),
-            Some(format!(
-                "Deleted applicability via API: {}",
-                applicability.app_title
-            )),
-            None,
-        ) {
-            eprintln!("failed to record applicability deletion log: {err}");
-        }
-    }
+    let removed_for_log = removed.clone();
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            let mut conn = repo.inner_repo().get_conn()?;
+            if let Ok(old_values) = Logger::to_json_string(&removed_for_log) {
+                let _ = Logger::log_delete(
+                    conn.as_mut(),
+                    0,
+                    EntityType::Applicability,
+                    id,
+                    Some(removed_for_log.project_id),
+                    Some(old_values),
+                    Some(format!("Deleted applicability via API: {}", removed_for_log.app_title)),
+                    None,
+                );
+            }
+            Ok::<(), RepoError>(())
+        })
+        .await;
 
     Ok(Status::NoContent)
 }

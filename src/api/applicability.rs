@@ -24,7 +24,10 @@ pub async fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Applicabili
 }
 
 #[post("/applicability", data = "<payload>")]
-pub async fn create(state: &State<AppState>, payload: Json<NewApplicability>) -> ApiResult<(Status, Value)> {
+pub async fn create(
+    state: &State<AppState>,
+    payload: Json<NewApplicability>,
+) -> ApiResult<(Status, Value)> {
     let app = payload.into_inner();
     let title = app.app_title.clone();
     let pid = app.project_id;
@@ -52,10 +55,7 @@ pub async fn create(state: &State<AppState>, payload: Json<NewApplicability>) ->
         })
         .await?;
 
-    Ok((
-        Status::Created,
-        json!({ "status": "ok", "id": id }),
-    ))
+    Ok((Status::Created, json!({ "status": "ok", "id": id })))
 }
 
 #[put("/applicability/<id>", data = "<payload>")]
@@ -126,7 +126,10 @@ pub async fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
                         id,
                         Some(removed.project_id),
                         Some(old_values),
-                        Some(format!("Deleted applicability via API: {}", removed.app_title)),
+                        Some(format!(
+                            "Deleted applicability via API: {}",
+                            removed.app_title
+                        )),
                         None,
                     );
                 }

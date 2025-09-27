@@ -6,7 +6,10 @@ use crate::repository::LookupRepository;
 
 #[get("/categories")]
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Category>>> {
-    let categories = state.repo.async_read(|repo| repo.get_categories_all()).await?;
+    let categories = state
+        .repo
+        .async_read(|repo| repo.get_categories_all())
+        .await?;
     Ok(Json(categories))
 }
 
@@ -51,7 +54,6 @@ pub async fn create(state: &State<AppState>, payload: Json<NewCategory>) -> ApiR
     Ok(json!({ "status": "ok", "id": id }))
 }
 
-
 #[put("/categories/<id>", data = "<payload>")]
 pub async fn update(
     state: &State<AppState>,
@@ -78,9 +80,10 @@ pub async fn update(
 
             if let Some(previous) = before {
                 if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                    if let (Ok(old_values), Ok(new_values)) =
-                        (Logger::to_json_string(&previous), Logger::to_json_string(&category))
-                    {
+                    if let (Ok(old_values), Ok(new_values)) = (
+                        Logger::to_json_string(&previous),
+                        Logger::to_json_string(&category),
+                    ) {
                         let _ = Logger::log_update(
                             conn.as_mut(),
                             0,

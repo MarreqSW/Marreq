@@ -67,7 +67,6 @@ pub async fn create(state: &State<AppState>, payload: Json<NewRequirement>) -> A
     Ok(json!({ "status": "ok", "id": id }))
 }
 
-
 #[delete("/requirements/<id>")]
 pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
     state
@@ -83,7 +82,10 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
                         id,
                         Some(removed.project_id),
                         Some(old_values),
-                        Some(format!("Deleted requirement via API: {}", removed.req_title)),
+                        Some(format!(
+                            "Deleted requirement via API: {}",
+                            removed.req_title
+                        )),
                         None,
                     );
                 }
@@ -102,8 +104,7 @@ pub async fn patch_requirement(
 ) -> ApiResult<Value> {
     let patch = patch.into_inner();
 
-    let any_updates =
-        patch.req_title.is_some()
+    let any_updates = patch.req_title.is_some()
         || patch.req_description.is_some()
         || patch.req_current_status.is_some()
         || patch.req_verification.is_some()
@@ -122,14 +123,30 @@ pub async fn patch_requirement(
             let mut requirement = repo.get_requirement_by_id(id)?;
             let original = requirement.clone();
 
-            if let Some(v) = patch.req_title { requirement.req_title = v; }
-            if let Some(v) = patch.req_description { requirement.req_description = v; }
-            if let Some(v) = patch.req_current_status { requirement.req_current_status = v; }
-            if let Some(v) = patch.req_verification { requirement.req_verification = v; }
-            if let Some(v) = patch.req_author { requirement.req_author = v; }
-            if let Some(v) = patch.req_reviewer { requirement.req_reviewer = v; }
-            if let Some(v) = patch.req_category { requirement.req_category = v; }
-            if let Some(v) = patch.req_applicability { requirement.req_applicability = v; }
+            if let Some(v) = patch.req_title {
+                requirement.req_title = v;
+            }
+            if let Some(v) = patch.req_description {
+                requirement.req_description = v;
+            }
+            if let Some(v) = patch.req_current_status {
+                requirement.req_current_status = v;
+            }
+            if let Some(v) = patch.req_verification {
+                requirement.req_verification = v;
+            }
+            if let Some(v) = patch.req_author {
+                requirement.req_author = v;
+            }
+            if let Some(v) = patch.req_reviewer {
+                requirement.req_reviewer = v;
+            }
+            if let Some(v) = patch.req_category {
+                requirement.req_category = v;
+            }
+            if let Some(v) = patch.req_applicability {
+                requirement.req_applicability = v;
+            }
 
             let payload = NewRequirement {
                 req_id: Some(requirement.req_id),
@@ -151,9 +168,10 @@ pub async fn patch_requirement(
             repo.edit_requirement(&payload)?;
 
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let (Ok(old_values), Ok(new_values)) =
-                    (Logger::to_json_string(&original), Logger::to_json_string(&requirement))
-                {
+                if let (Ok(old_values), Ok(new_values)) = (
+                    Logger::to_json_string(&original),
+                    Logger::to_json_string(&requirement),
+                ) {
                     let _ = Logger::log_update(
                         conn.as_mut(),
                         0,

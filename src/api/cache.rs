@@ -4,16 +4,15 @@ use crate::api::prelude::*;
 use crate::repository::errors::RepoError;
 
 #[get("/cache/stats")]
-pub async fn stats(state: &State<AppState>) -> ApiResult<Json<crate::repository::cache::stats::CacheStats>> {
+pub async fn stats(
+    state: &State<AppState>,
+) -> ApiResult<Json<crate::repository::cache::stats::CacheStats>> {
     let stats = state
         .repo
-        .async_read(|repo| {
-            Ok::<_, RepoError>(repo.cache().stats())
-        })
+        .async_read(|repo| Ok::<_, RepoError>(repo.cache().stats()))
         .await?;
     Ok(Json(stats))
 }
-
 
 #[post("/cache/clear")]
 pub async fn clear(state: &State<AppState>) -> ApiResult<Json<Value>> {
@@ -84,4 +83,3 @@ pub async fn health(state: &State<AppState>) -> ApiResult<Json<Value>> {
         .await?;
     Ok(Json(health))
 }
-

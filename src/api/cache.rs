@@ -7,7 +7,7 @@ use crate::repository::errors::RepoError;
 pub async fn stats(state: &State<AppState>) -> ApiResult<Json<crate::repository::cache::stats::CacheStats>> {
     let stats = state
         .repo
-        .db_read(|repo| {
+        .async_read(|repo| {
             Ok::<_, RepoError>(repo.cache().stats())
         })
         .await?;
@@ -19,7 +19,7 @@ pub async fn stats(state: &State<AppState>) -> ApiResult<Json<crate::repository:
 pub async fn clear(state: &State<AppState>) -> ApiResult<Json<Value>> {
     state
         .repo
-        .db_write(|repo| {
+        .async_write(|repo| {
             repo.cache().clear();
             Ok::<_, RepoError>(())
         })
@@ -34,7 +34,7 @@ pub async fn clear(state: &State<AppState>) -> ApiResult<Json<Value>> {
 pub async fn cleanup(state: &State<AppState>) -> ApiResult<Json<Value>> {
     let cleaned = state
         .repo
-        .db_write(|repo| Ok::<_, RepoError>(repo.cache().cleanup()))
+        .async_write(|repo| Ok::<_, RepoError>(repo.cache().cleanup()))
         .await?;
     Ok(Json(json!({
         "message": format!("Cleaned up {} expired entries", cleaned),
@@ -47,7 +47,7 @@ pub async fn cleanup(state: &State<AppState>) -> ApiResult<Json<Value>> {
 pub async fn performance(state: &State<AppState>) -> ApiResult<Json<Value>> {
     let performance = state
         .repo
-        .db_read(|repo| Ok::<_, RepoError>(repo.cache().get_performance()))
+        .async_read(|repo| Ok::<_, RepoError>(repo.cache().get_performance()))
         .await?;
     Ok(Json(performance))
 }
@@ -56,7 +56,7 @@ pub async fn performance(state: &State<AppState>) -> ApiResult<Json<Value>> {
 pub async fn recommendations(state: &State<AppState>) -> ApiResult<Json<Value>> {
     let recommendations = state
         .repo
-        .db_read(|repo| Ok::<_, RepoError>(repo.cache().get_recommendations()))
+        .async_read(|repo| Ok::<_, RepoError>(repo.cache().get_recommendations()))
         .await?;
     Ok(Json(recommendations))
 }
@@ -65,7 +65,7 @@ pub async fn recommendations(state: &State<AppState>) -> ApiResult<Json<Value>> 
 pub async fn reset_counters(state: &State<AppState>) -> ApiResult<Json<Value>> {
     state
         .repo
-        .db_write(|repo| {
+        .async_write(|repo| {
             repo.cache().reset_counters();
             Ok::<_, RepoError>(())
         })
@@ -80,7 +80,7 @@ pub async fn reset_counters(state: &State<AppState>) -> ApiResult<Json<Value>> {
 pub async fn health(state: &State<AppState>) -> ApiResult<Json<Value>> {
     let health = state
         .repo
-        .db_read(|repo| Ok::<_, RepoError>(repo.cache().get_health()))
+        .async_read(|repo| Ok::<_, RepoError>(repo.cache().get_health()))
         .await?;
     Ok(Json(health))
 }

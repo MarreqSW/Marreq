@@ -6,7 +6,7 @@ use crate::repository::LookupRepository;
 
 #[get("/categories")]
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Category>>> {
-    let categories = state.repo.db_read(|repo| repo.get_categories_all()).await?;
+    let categories = state.repo.async_read(|repo| repo.get_categories_all()).await?;
     Ok(Json(categories))
 }
 
@@ -14,7 +14,7 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Category>>> {
 pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Category>> {
     let category = state
         .repo
-        .db_read(move |repo| repo.get_category_by_id(id))
+        .async_read(move |repo| repo.get_category_by_id(id))
         .await?;
     Ok(Json(category))
 }
@@ -28,14 +28,10 @@ pub async fn create(state: &State<AppState>, payload: Json<NewCategory>) -> ApiR
 
     let id = state
         .repo
-        .db_write(move |repo| repo.insert_new_category(&category))
-        .await?;
+        .async_write(move |repo| {
+            let id = repo.insert_new_category(&category)?;
 
-    let _ = state
-        .repo
-        .db_read(move |repo| {
-            let mut conn = repo.inner_repo().get_conn()?;
-            if let Some(payload) = new_values {
+            if let (Some(payload), Ok(mut conn)) = (new_values, repo.inner_repo().get_conn()) {
                 let _ = Logger::log_create(
                     conn.as_mut(),
                     0,
@@ -43,16 +39,18 @@ pub async fn create(state: &State<AppState>, payload: Json<NewCategory>) -> ApiR
                     id,
                     Some(project_id),
                     Some(payload),
-                    Some(format!("Created category via API: {title}")),
+                    Some(format!("Created category via API: {}", title)),
                     None,
                 );
             }
-            Ok::<(), RepoError>(())
+
+            Ok::<_, RepoError>(id)
         })
-        .await;
+        .await?;
 
     Ok(json!({ "status": "ok", "id": id }))
 }
+
 
 #[put("/categories/<id>", data = "<payload>")]
 pub async fn update(
@@ -62,55 +60,45 @@ pub async fn update(
 ) -> ApiResult<Value> {
     let mut category = payload.into_inner();
     category.cat_id = Some(id);
-
-    let before = state
-        .repo
-        .db_read(move |repo| match repo.get_category_by_id(id) {
-            Ok(c) => Ok::<Option<_>, RepoError>(Some(c)),
-            Err(RepoError::NotFound) => Ok(None),
-            Err(e) => Err(e),
-        })
-        .await?;
-
     let project_id = category.project_id;
-    let new_values = Logger::to_json_string(&category).ok();
 
-    let updated = state
+    state
         .repo
-        .db_write({
-            let category = category.clone();
-            move |repo| repo.edit_category(&category)
-        })
-        .await?;
+        .async_write(move |repo| {
+            let before = match repo.get_category_by_id(id) {
+                Ok(c) => Some(c),
+                Err(RepoError::NotFound) => None,
+                Err(e) => return Err(e),
+            };
 
-    if !updated {
-        return Err(ApiError::NotFound(format!("category {id} not found")));
-    }
+            let updated = repo.edit_category(&category)?;
+            if !updated {
+                return Err(RepoError::NotFound);
+            }
 
-    let _ = state
-        .repo
-        .db_read(move |repo| {
             if let Some(previous) = before {
-                let mut conn = repo.inner_repo().get_conn()?;
-                if let (Ok(old_values), Some(new_values)) =
-                    (Logger::to_json_string(&previous), new_values)
-                {
-                    let _ = Logger::log_update(
-                        conn.as_mut(),
-                        0,
-                        EntityType::Category,
-                        id,
-                        Some(project_id),
-                        Some(old_values),
-                        Some(new_values),
-                        Some("Updated category via API".into()),
-                        None,
-                    );
+                if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                    if let (Ok(old_values), Ok(new_values)) =
+                        (Logger::to_json_string(&previous), Logger::to_json_string(&category))
+                    {
+                        let _ = Logger::log_update(
+                            conn.as_mut(),
+                            0,
+                            EntityType::Category,
+                            id,
+                            Some(project_id),
+                            Some(old_values),
+                            Some(new_values),
+                            Some("Updated category via API".into()),
+                            None,
+                        );
+                    }
                 }
             }
-            Ok::<(), RepoError>(())
+
+            Ok::<_, RepoError>(())
         })
-        .await;
+        .await?;
 
     Ok(json!({
         "status": "ok",
@@ -120,30 +108,27 @@ pub async fn update(
 
 #[delete("/categories/<id>")]
 pub async fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
-    let removed = state
+    state
         .repo
-        .db_write(move |repo| repo.delete_category(id))
-        .await?;
-
-    let _ = state
-        .repo
-        .db_read(move |repo| {
-            let mut conn = repo.inner_repo().get_conn()?;
-            if let Ok(old_values) = Logger::to_json_string(&removed) {
-                let _ = Logger::log_delete(
-                    conn.as_mut(),
-                    0,
-                    EntityType::Category,
-                    id,
-                    Some(removed.project_id),
-                    Some(old_values),
-                    Some(format!("Deleted category via API: {}", removed.cat_title)),
-                    None,
-                );
+        .async_write(move |repo| {
+            let removed = repo.delete_category(id)?;
+            if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                if let Ok(old_values) = Logger::to_json_string(&removed) {
+                    let _ = Logger::log_delete(
+                        conn.as_mut(),
+                        0,
+                        EntityType::Category,
+                        id,
+                        Some(removed.project_id),
+                        Some(old_values),
+                        Some(format!("Deleted category via API: {}", removed.cat_title)),
+                        None,
+                    );
+                }
             }
-            Ok::<(), RepoError>(())
+            Ok::<_, RepoError>(())
         })
-        .await;
+        .await?;
 
     Ok(Status::NoContent)
 }

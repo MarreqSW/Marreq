@@ -1,4 +1,4 @@
-use rocket::serde::{Deserialize, Serialize};
+use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
 use crate::logger::Logger;
@@ -6,11 +6,17 @@ use crate::models::{EntityType, NewRequirement, Requirement};
 use crate::repository::errors::RepoError;
 use crate::repository::RequirementsRepository;
 
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct FieldUpdateRequest {
-    pub field: String,
-    pub value: String,
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct RequirementPatch {
+    pub req_title: Option<String>,
+    pub req_description: Option<String>,
+    pub req_current_status: Option<i32>,
+    pub req_verification: Option<i32>,
+    pub req_author: Option<i32>,
+    pub req_reviewer: Option<i32>,
+    pub req_category: Option<i32>,
+    pub req_applicability: Option<i32>,
 }
 
 #[get("/requirements")]
@@ -100,13 +106,13 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
     Ok(Status::NoContent)
 }
 
-#[post("/requirements/<id>/field", data = "<update>")]
-pub async fn update_field(
+#[patch("/requirements/<id>", data = "<patch>")]
+pub async fn patch_requirement(
     state: &State<AppState>,
     id: i32,
-    update: Json<FieldUpdateRequest>,
+    patch: Json<RequirementPatch>,
 ) -> ApiResult<Value> {
-    let update = update.into_inner();
+    let patch = patch.into_inner();
 
     let mut requirement = state
         .repo
@@ -114,46 +120,43 @@ pub async fn update_field(
         .await?;
     let original = requirement.clone();
 
-    match update.field.as_str() {
-        "req_title" => requirement.req_title = update.value,
-        "req_description" => requirement.req_description = update.value,
-        "req_current_status" => {
-            requirement.req_current_status = update
-                .value
-                .parse()
-                .map_err(|_| ApiError::BadRequest("invalid status id".into()))?;
-        }
-        "req_verification" => {
-            requirement.req_verification = update
-                .value
-                .parse()
-                .map_err(|_| ApiError::BadRequest("invalid verification id".into()))?;
-        }
-        "req_author" => {
-            requirement.req_author = update
-                .value
-                .parse()
-                .map_err(|_| ApiError::BadRequest("invalid author id".into()))?;
-        }
-        "req_reviewer" => {
-            requirement.req_reviewer = update
-                .value
-                .parse()
-                .map_err(|_| ApiError::BadRequest("invalid reviewer id".into()))?;
-        }
-        "req_category" => {
-            requirement.req_category = update
-                .value
-                .parse()
-                .map_err(|_| ApiError::BadRequest("invalid category id".into()))?;
-        }
-        "req_applicability" => {
-            requirement.req_applicability = update
-                .value
-                .parse()
-                .map_err(|_| ApiError::BadRequest("invalid applicability id".into()))?;
-        }
-        other => return Err(ApiError::BadRequest(format!("unsupported field '{other}'"))),
+    let mut updated = false;
+
+    if let Some(req_title) = patch.req_title {
+        requirement.req_title = req_title;
+        updated = true;
+    }
+    if let Some(req_description) = patch.req_description {
+        requirement.req_description = req_description;
+        updated = true;
+    }
+    if let Some(req_current_status) = patch.req_current_status {
+        requirement.req_current_status = req_current_status;
+        updated = true;
+    }
+    if let Some(req_verification) = patch.req_verification {
+        requirement.req_verification = req_verification;
+        updated = true;
+    }
+    if let Some(req_author) = patch.req_author {
+        requirement.req_author = req_author;
+        updated = true;
+    }
+    if let Some(req_reviewer) = patch.req_reviewer {
+        requirement.req_reviewer = req_reviewer;
+        updated = true;
+    }
+    if let Some(req_category) = patch.req_category {
+        requirement.req_category = req_category;
+        updated = true;
+    }
+    if let Some(req_applicability) = patch.req_applicability {
+        requirement.req_applicability = req_applicability;
+        updated = true;
+    }
+
+    if !updated {
+        return Err(ApiError::BadRequest("no fields provided".into()));
     }
 
     let payload = NewRequirement {

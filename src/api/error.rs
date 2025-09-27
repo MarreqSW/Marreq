@@ -53,13 +53,17 @@ impl From<RepoError> for ApiError {
         match value {
             RepoError::NotFound => ApiError::NotFound("record not found".into()),
             RepoError::Db(err) => match err {
-                DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, info) => {
-                    ApiError::BadRequest(info.message().to_string())
-                }
-                DieselError::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, info) => {
-                    ApiError::BadRequest(info.message().to_string())
-                }
-                other => ApiError::Internal(format!("database error: {}", other)),
+                DieselError::DatabaseError(kind, info) => match kind {
+                    DatabaseErrorKind::UniqueViolation
+                    | DatabaseErrorKind::ForeignKeyViolation
+                    | DatabaseErrorKind::CheckViolation
+                    | DatabaseErrorKind::NotNullViolation => {
+                        ApiError::BadRequest(info.message().to_string())
+                    }
+                    _ => ApiError::Internal("database query failed".into()),
+                },
+                DieselError::NotFound => ApiError::NotFound("record not found".into()),
+                _ => ApiError::Internal("database query failed".into()),
             },
             RepoError::Pool(err) => ApiError::Internal(format!("connection pool error: {}", err)),
         }

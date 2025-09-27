@@ -2,13 +2,13 @@ use diesel::prelude::*;
 
 use crate::api::prelude::*;
 use crate::models::Matrix;
-use crate::repository::DieselCachedRepo;
 
 #[get("/matrix")]
-pub fn list() -> ApiResult<Json<Vec<Matrix>>> {
+pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Matrix>>> {
     use crate::schema::matrix::dsl::matrix;
 
-    let mut conn = DieselCachedRepo::read()
+    let mut conn = state
+        .repo_read()
         .inner_repo()
         .get_conn()
         .map_err(ApiError::from)?;

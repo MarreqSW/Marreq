@@ -14,104 +14,114 @@ pub struct FieldUpdateRequest {
 }
 
 #[get("/requirements")]
-pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> {
-    state
-        .repo_read()
-        .get_requirements_all()
-        .map(Json)
-        .map_err(ApiError::from)
+pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> {
+    let requirements = state
+        .repo
+        .db_read(|repo| repo.get_requirements_all())
+        .await
+        .map_err(ApiError::from)?;
+    Ok(Json(requirements))
 }
 
 #[get("/requirements/<id>")]
-pub fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Requirement>> {
-    state
-        .repo_read()
-        .get_requirement_by_id(id)
-        .map(Json)
+pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Requirement>> {
+    let requirement = state
+        .repo
+        .db_read(move |repo| repo.get_requirement_by_id(id))
+        .await
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("requirement {id} not found")),
             other => other.into(),
-        })
+        })?;
+    Ok(Json(requirement))
 }
 
 #[post("/requirements", data = "<payload>")]
-pub fn create(state: &State<AppState>, payload: Json<NewRequirement>) -> ApiResult<Value> {
+pub async fn create(state: &State<AppState>, payload: Json<NewRequirement>) -> ApiResult<Value> {
     let requirement = payload.into_inner();
     let title = requirement.req_title.clone();
     let project_id = requirement.project_id;
+    let new_values = Logger::to_json_string(&requirement).ok();
 
     let id = state
-        .repo_write()
-        .insert_new_requirement(&requirement)
+        .repo
+        .db_write(move |repo| repo.insert_new_requirement(&requirement))
+        .await
         .map_err(|err| match err {
             RepoError::Db(e) => ApiError::BadRequest(format!("failed to create requirement: {e}")),
             other => other.into(),
         })?;
 
-    if let Ok(mut conn) = state.repo_read().inner_repo().get_conn() {
-        if let Ok(new_values) = Logger::to_json_string(&requirement) {
-            if let Err(err) = Logger::log_create(
-                conn.as_mut(),
-                0,
-                EntityType::Requirement,
-                id,
-                Some(project_id),
-                Some(new_values),
-                Some(format!("Created requirement via API: {title}")),
-                None,
-            ) {
-                eprintln!("failed to record requirement creation log: {err}");
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            let mut conn = repo.inner_repo().get_conn()?;
+            if let Some(payload) = new_values {
+                let _ = Logger::log_create(
+                    conn.as_mut(),
+                    0,
+                    EntityType::Requirement,
+                    id,
+                    Some(project_id),
+                    Some(payload),
+                    Some(format!("Created requirement via API: {title}")),
+                    None,
+                );
             }
-        }
-    }
+            Ok::<(), RepoError>(())
+        })
+        .await;
 
     Ok(json!({ "status": "ok", "id": id }))
 }
 
 #[delete("/requirements/<id>")]
-pub fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
-    let requirement = state
-        .repo_write()
-        .delete_requirement(id)
+pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
+    let removed = state
+        .repo
+        .db_write(move |repo| repo.delete_requirement(id))
+        .await
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("requirement {id} not found")),
             other => other.into(),
         })?;
 
-    if let (Ok(old_values), Ok(mut conn)) = (
-        Logger::to_json_string(&requirement),
-        state.repo_read().inner_repo().get_conn(),
-    ) {
-        if let Err(err) = Logger::log_delete(
-            conn.as_mut(),
-            0,
-            EntityType::Requirement,
-            id,
-            Some(requirement.project_id),
-            Some(old_values),
-            Some(format!(
-                "Deleted requirement via API: {}",
-                requirement.req_title
-            )),
-            None,
-        ) {
-            eprintln!("failed to record requirement deletion log: {err}");
-        }
-    }
+    let removed_for_log = removed.clone();
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            let mut conn = repo.inner_repo().get_conn()?;
+            if let Ok(old_values) = Logger::to_json_string(&removed_for_log) {
+                let _ = Logger::log_delete(
+                    conn.as_mut(),
+                    0,
+                    EntityType::Requirement,
+                    id,
+                    Some(removed_for_log.project_id),
+                    Some(old_values),
+                    Some(format!("Deleted requirement via API: {}", removed_for_log.req_title)),
+                    None,
+                );
+            }
+            Ok::<(), RepoError>(())
+        })
+        .await;
 
     Ok(Status::NoContent)
 }
 
 #[post("/requirements/<id>/field", data = "<update>")]
-pub fn update_field(
+pub async fn update_field(
     state: &State<AppState>,
     id: i32,
     update: Json<FieldUpdateRequest>,
 ) -> ApiResult<Value> {
     let update = update.into_inner();
+
     let mut requirement = state
-        .repo_read()
-        .get_requirement_by_id(id)
+        .repo
+        .db_read(move |repo| repo.get_requirement_by_id(id))
+        .await
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("requirement {id} not found")),
             other => other.into(),
@@ -157,9 +167,7 @@ pub fn update_field(
                 .parse()
                 .map_err(|_| ApiError::BadRequest("invalid applicability id".into()))?;
         }
-        other => {
-            return Err(ApiError::BadRequest(format!("unsupported field '{other}'")));
-        }
+        other => return Err(ApiError::BadRequest(format!("unsupported field '{other}'"))),
     }
 
     let payload = NewRequirement {
@@ -180,29 +188,35 @@ pub fn update_field(
     };
 
     state
-        .repo_write()
-        .edit_requirement(&payload)
+        .repo
+        .db_write(move |repo| repo.edit_requirement(&payload))
+        .await
         .map_err(ApiError::from)?;
 
-    if let (Ok(old_values), Ok(new_values), Ok(mut conn)) = (
-        Logger::to_json_string(&original),
-        Logger::to_json_string(&requirement),
-        state.repo_read().inner_repo().get_conn(),
-    ) {
-        if let Err(err) = Logger::log_update(
-            conn.as_mut(),
-            0,
-            EntityType::Requirement,
-            requirement.req_id,
-            Some(requirement.project_id),
-            Some(old_values),
-            Some(new_values),
-            Some("Updated requirement via API".into()),
-            None,
-        ) {
-            eprintln!("failed to record requirement update log: {err}");
-        }
-    }
+    let requirement_for_log = requirement.clone();
+    let original_for_log = original.clone();
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            let mut conn = repo.inner_repo().get_conn()?;
+            if let (Ok(old_values), Ok(new_values)) =
+                (Logger::to_json_string(&original_for_log), Logger::to_json_string(&requirement_for_log))
+            {
+                let _ = Logger::log_update(
+                    conn.as_mut(),
+                    0,
+                    EntityType::Requirement,
+                    requirement_for_log.req_id,
+                    Some(requirement_for_log.project_id),
+                    Some(old_values),
+                    Some(new_values),
+                    Some("Updated requirement via API".into()),
+                    None,
+                );
+            }
+            Ok::<(), RepoError>(())
+        })
+        .await;
 
     Ok(json!({
         "success": true,

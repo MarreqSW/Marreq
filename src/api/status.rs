@@ -4,10 +4,11 @@ use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 
 #[get("/status")]
-pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<LegacyStatus>>> {
+pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<LegacyStatus>>> {
     let statuses = state
-        .repo_read()
-        .get_requirement_status_all()
+        .repo
+        .db_read(|repo| repo.get_requirement_status_all())
+        .await
         .map_err(ApiError::from)?
         .into_iter()
         .map(|status: RequirementStatus| LegacyStatus {
@@ -17,15 +18,15 @@ pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<LegacyStatus>>> {
             st_short_name: status.req_st_short_name,
         })
         .collect();
-
     Ok(Json(statuses))
 }
 
 #[get("/status/<id>")]
-pub fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Value>> {
+pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Value>> {
     let status = state
-        .repo_read()
-        .get_requirement_status_by_id(id)
+        .repo
+        .db_read(move |repo| repo.get_requirement_status_by_id(id))
+        .await
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("status {id} not found")),
             other => other.into(),
@@ -40,11 +41,15 @@ pub fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Value>> {
 }
 
 #[post("/status", data = "<payload>")]
-pub fn create(state: &State<AppState>, payload: Json<NewStatus>) -> ApiResult<(Status, Value)> {
+pub async fn create(
+    state: &State<AppState>,
+    payload: Json<NewStatus>,
+) -> ApiResult<(Status, Value)> {
     let status = payload.into_inner();
     let id = state
-        .repo_write()
-        .create_status(&status)
+        .repo
+        .db_write(move |repo| repo.create_status(&status))
+        .await
         .map_err(|err| match err {
             RepoError::Db(e) => ApiError::BadRequest(format!("failed to create status: {e}")),
             other => other.into(),
@@ -52,9 +57,6 @@ pub fn create(state: &State<AppState>, payload: Json<NewStatus>) -> ApiResult<(S
 
     Ok((
         Status::Created,
-        json!({
-            "status": "ok",
-            "id": id,
-        }),
+        json!({ "status": "ok", "id": id }),
     ))
 }

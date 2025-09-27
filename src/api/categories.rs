@@ -5,69 +5,95 @@ use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 
 #[get("/categories")]
-pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Category>>> {
-    state
-        .repo_read()
-        .get_categories_all()
-        .map(Json)
-        .map_err(ApiError::from)
+pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Category>>> {
+    let categories = state
+        .repo
+        .db_read(|repo| repo.get_categories_all())
+        .await
+        .map_err(ApiError::from)?;
+    Ok(Json(categories))
 }
 
 #[get("/categories/<id>")]
-pub fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Category>> {
-    state
-        .repo_read()
-        .get_category_by_id(id)
-        .map(Json)
+pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Category>> {
+    let category = state
+        .repo
+        .db_read(move |repo| repo.get_category_by_id(id))
+        .await
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("category {id} not found")),
             other => other.into(),
-        })
+        })?;
+    Ok(Json(category))
 }
 
 #[post("/categories", data = "<payload>")]
-pub fn create(state: &State<AppState>, payload: Json<NewCategory>) -> ApiResult<Value> {
+pub async fn create(state: &State<AppState>, payload: Json<NewCategory>) -> ApiResult<Value> {
     let category = payload.into_inner();
     let title = category.cat_title.clone();
     let project_id = category.project_id;
+    let new_values = Logger::to_json_string(&category).ok();
 
     let id = state
-        .repo_write()
-        .insert_new_category(&category)
+        .repo
+        .db_write(move |repo| repo.insert_new_category(&category))
+        .await
         .map_err(|err| match err {
             RepoError::Db(e) => ApiError::BadRequest(format!("failed to create category: {e}")),
             other => other.into(),
         })?;
 
-    if let Ok(mut conn) = state.repo_read().inner_repo().get_conn() {
-        if let Ok(new_values) = Logger::to_json_string(&category) {
-            if let Err(err) = Logger::log_create(
-                conn.as_mut(),
-                0,
-                EntityType::Category,
-                id,
-                Some(project_id),
-                Some(new_values),
-                Some(format!("Created category via API: {title}")),
-                None,
-            ) {
-                eprintln!("failed to record category creation log: {err}");
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            let mut conn = repo.inner_repo().get_conn()?;
+            if let Some(payload) = new_values {
+                let _ = Logger::log_create(
+                    conn.as_mut(),
+                    0,
+                    EntityType::Category,
+                    id,
+                    Some(project_id),
+                    Some(payload),
+                    Some(format!("Created category via API: {title}")),
+                    None,
+                );
             }
-        }
-    }
+            Ok::<(), RepoError>(())
+        })
+        .await;
 
     Ok(json!({ "status": "ok", "id": id }))
 }
 
 #[put("/categories/<id>", data = "<payload>")]
-pub fn update(state: &State<AppState>, id: i32, payload: Json<NewCategory>) -> ApiResult<Value> {
+pub async fn update(
+    state: &State<AppState>,
+    id: i32,
+    payload: Json<NewCategory>,
+) -> ApiResult<Value> {
     let mut category = payload.into_inner();
     category.cat_id = Some(id);
-    let before = state.repo_read().get_category_by_id(id).ok();
+
+    let before = state
+        .repo
+        .db_read(move |repo| match repo.get_category_by_id(id) {
+            Ok(c) => Ok::<Option<_>, RepoError>(Some(c)),
+            Err(RepoError::NotFound) => Ok(None),
+            Err(e) => Err(e),
+        })
+        .await?;
+
+    let project_id = category.project_id;
+    let new_values = Logger::to_json_string(&category).ok();
 
     let updated = state
-        .repo_write()
-        .edit_category(&category)
+        .repo
+        .db_write({
+            let category = category.clone();
+            move |repo| repo.edit_category(&category)
+        })
+        .await
         .map_err(|err| match err {
             RepoError::Db(e) => ApiError::BadRequest(format!("failed to update category: {e}")),
             other => other.into(),
@@ -77,26 +103,30 @@ pub fn update(state: &State<AppState>, id: i32, payload: Json<NewCategory>) -> A
         return Err(ApiError::NotFound(format!("category {id} not found")));
     }
 
-    if let (Some(previous), Ok(mut conn)) = (before, state.repo_read().inner_repo().get_conn()) {
-        if let (Ok(old_values), Ok(new_values)) = (
-            Logger::to_json_string(&previous),
-            Logger::to_json_string(&category),
-        ) {
-            if let Err(err) = Logger::log_update(
-                conn.as_mut(),
-                0,
-                EntityType::Category,
-                id,
-                Some(category.project_id),
-                Some(old_values),
-                Some(new_values),
-                Some("Updated category via API".into()),
-                None,
-            ) {
-                eprintln!("failed to record category update log: {err}");
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            if let Some(previous) = before {
+                let mut conn = repo.inner_repo().get_conn()?;
+                if let (Ok(old_values), Some(new_values)) =
+                    (Logger::to_json_string(&previous), new_values)
+                {
+                    let _ = Logger::log_update(
+                        conn.as_mut(),
+                        0,
+                        EntityType::Category,
+                        id,
+                        Some(project_id),
+                        Some(old_values),
+                        Some(new_values),
+                        Some("Updated category via API".into()),
+                        None,
+                    );
+                }
             }
-        }
-    }
+            Ok::<(), RepoError>(())
+        })
+        .await;
 
     Ok(json!({
         "status": "ok",
@@ -105,32 +135,35 @@ pub fn update(state: &State<AppState>, id: i32, payload: Json<NewCategory>) -> A
 }
 
 #[delete("/categories/<id>")]
-pub fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
-    let category = state
-        .repo_write()
-        .delete_category(id)
+pub async fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
+    let removed = state
+        .repo
+        .db_write(move |repo| repo.delete_category(id))
+        .await
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("category {id} not found")),
             other => other.into(),
         })?;
 
-    if let (Ok(old_values), Ok(mut conn)) = (
-        Logger::to_json_string(&category),
-        state.repo_read().inner_repo().get_conn(),
-    ) {
-        if let Err(err) = Logger::log_delete(
-            conn.as_mut(),
-            0,
-            EntityType::Category,
-            id,
-            Some(category.project_id),
-            Some(old_values),
-            Some(format!("Deleted category via API: {}", category.cat_title)),
-            None,
-        ) {
-            eprintln!("failed to record category deletion log: {err}");
-        }
-    }
+    let _ = state
+        .repo
+        .db_read(move |repo| {
+            let mut conn = repo.inner_repo().get_conn()?;
+            if let Ok(old_values) = Logger::to_json_string(&removed) {
+                let _ = Logger::log_delete(
+                    conn.as_mut(),
+                    0,
+                    EntityType::Category,
+                    id,
+                    Some(removed.project_id),
+                    Some(old_values),
+                    Some(format!("Deleted category via API: {}", removed.cat_title)),
+                    None,
+                );
+            }
+            Ok::<(), RepoError>(())
+        })
+        .await;
 
     Ok(Status::NoContent)
 }

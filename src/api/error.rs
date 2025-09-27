@@ -66,6 +66,7 @@ impl From<RepoError> for ApiError {
                 _ => ApiError::Internal("database query failed".into()),
             },
             RepoError::Pool(err) => ApiError::Internal(format!("connection pool error: {}", err)),
+            RepoError::BadInput(msg) => ApiError::BadRequest(msg),
         }
     }
 }

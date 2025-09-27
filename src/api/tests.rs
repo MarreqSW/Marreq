@@ -132,9 +132,10 @@ pub async fn update_field(
             repo.edit_test(&payload)?;
 
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let (Ok(old_values), Ok(new_values)) =
-                    (Logger::to_json_string(&original), Logger::to_json_string(&test))
-                {
+                if let (Ok(old_values), Ok(new_values)) = (
+                    Logger::to_json_string(&original),
+                    Logger::to_json_string(&test),
+                ) {
                     let _ = Logger::log_update(
                         conn.as_mut(),
                         0,

@@ -10,7 +10,7 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Matrix>>> {
     let mut conn = state
         .repo
         .clone()
-        .db_read(|repo| repo.inner_repo().get_conn())
+        .async_read(|repo| repo.inner_repo().get_conn())
         .await?;
 
     let entries = matrix

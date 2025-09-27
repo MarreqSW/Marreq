@@ -6,7 +6,7 @@ use crate::repository::UserRepository;
 
 #[get("/users")]
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<User>>> {
-    let users = state.repo.db_read(|repo| repo.get_users_all()).await?;
+    let users = state.repo.async_read(|repo| repo.get_users_all()).await?;
     Ok(Json(users))
 }
 
@@ -14,7 +14,7 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<User>>> {
 pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<User>> {
     let user = state
         .repo
-        .db_read(move |repo| repo.get_user_by_id(id))
+        .async_read(move |repo| repo.get_user_by_id(id))
         .await?;
     Ok(Json(user))
 }
@@ -27,14 +27,9 @@ pub async fn create(state: &State<AppState>, payload: Json<NewUser>) -> ApiResul
 
     let id = state
         .repo
-        .db_write(move |repo| repo.insert_user(&user))
-        .await?;
-
-    let _ = state
-        .repo
-        .db_read(move |repo| {
-            let mut conn = repo.inner_repo().get_conn()?;
-            if let Some(payload) = new_values {
+        .async_write(move |repo| {
+            let id = repo.insert_user(&user)?;
+            if let (Some(payload), Ok(mut conn)) = (new_values, repo.inner_repo().get_conn()) {
                 let _ = Logger::log_create(
                     conn.as_mut(),
                     0,
@@ -46,9 +41,9 @@ pub async fn create(state: &State<AppState>, payload: Json<NewUser>) -> ApiResul
                     None,
                 );
             }
-            Ok::<(), RepoError>(())
+            Ok::<_, RepoError>(id)
         })
-        .await;
+        .await?;
 
     Ok(json!({ "status": "ok", "id": id }))
 }
@@ -57,7 +52,7 @@ pub async fn create(state: &State<AppState>, payload: Json<NewUser>) -> ApiResul
 pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
     state
         .repo
-        .db_write(move |repo| repo.delete_user(id))
+        .async_write(move |repo| repo.delete_user(id))
         .await?;
     Ok(Status::NoContent)
 }

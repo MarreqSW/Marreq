@@ -27,12 +27,12 @@ use diesel::result::Error as DieselError;
 
 #[async_trait]
 pub trait DieselRepoLockExt {
-    async fn db_read<F, T>(&self, f: F) -> Result<T, RepoError>
+    async fn async_read<F, T>(&self, f: F) -> Result<T, RepoError>
     where
         F: FnOnce(&DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
         T: Send + 'static;
 
-    async fn db_write<F, T>(&self, f: F) -> Result<T, RepoError>
+    async fn async_write<F, T>(&self, f: F) -> Result<T, RepoError>
     where
         F: FnOnce(&mut DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
         T: Send + 'static;
@@ -40,7 +40,7 @@ pub trait DieselRepoLockExt {
 
 #[async_trait]
 impl DieselRepoLockExt for Arc<RwLock<DieselCachedRepo>> {
-    async fn db_read<F, T>(&self, f: F) -> Result<T, RepoError>
+    async fn async_read<F, T>(&self, f: F) -> Result<T, RepoError>
     where
         F: FnOnce(&DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
         T: Send + 'static,
@@ -54,7 +54,7 @@ impl DieselRepoLockExt for Arc<RwLock<DieselCachedRepo>> {
         .map_err(|_| RepoError::from(DieselError::NotFound))?
     }
 
-    async fn db_write<F, T>(&self, f: F) -> Result<T, RepoError>
+    async fn async_write<F, T>(&self, f: F) -> Result<T, RepoError>
     where
         F: FnOnce(&mut DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
         T: Send + 'static,

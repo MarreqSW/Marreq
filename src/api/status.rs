@@ -1,11 +1,12 @@
 use crate::api::prelude::*;
 use crate::models::{NewStatus, RequirementStatus, Status as LegacyStatus};
 use crate::repository::errors::RepoError;
-use crate::repository::{DieselCachedRepo, LookupRepository};
+use crate::repository::LookupRepository;
 
 #[get("/status")]
-pub fn list() -> ApiResult<Json<Vec<LegacyStatus>>> {
-    let statuses = DieselCachedRepo::read()
+pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<LegacyStatus>>> {
+    let statuses = state
+        .repo_read()
         .get_requirement_status_all()
         .map_err(ApiError::from)?
         .into_iter()
@@ -21,8 +22,9 @@ pub fn list() -> ApiResult<Json<Vec<LegacyStatus>>> {
 }
 
 #[get("/status/<id>")]
-pub fn get(id: i32) -> ApiResult<Json<Value>> {
-    let status = DieselCachedRepo::read()
+pub fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Value>> {
+    let status = state
+        .repo_read()
         .get_requirement_status_by_id(id)
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("status {id} not found")),
@@ -38,9 +40,10 @@ pub fn get(id: i32) -> ApiResult<Json<Value>> {
 }
 
 #[post("/status", data = "<payload>")]
-pub fn create(payload: Json<NewStatus>) -> ApiResult<(Status, Value)> {
+pub fn create(state: &State<AppState>, payload: Json<NewStatus>) -> ApiResult<(Status, Value)> {
     let status = payload.into_inner();
-    let id = DieselCachedRepo::write()
+    let id = state
+        .repo_write()
         .create_status(&status)
         .map_err(|err| match err {
             RepoError::Db(e) => ApiError::BadRequest(format!("failed to create status: {e}")),

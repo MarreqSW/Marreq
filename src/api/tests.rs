@@ -4,7 +4,7 @@ use crate::api::prelude::*;
 use crate::logger::Logger;
 use crate::models::{EntityType, NewTest, Test};
 use crate::repository::errors::RepoError;
-use crate::repository::{DieselCachedRepo, TestsRepository};
+use crate::repository::TestsRepository;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -14,16 +14,18 @@ pub struct FieldUpdateRequest {
 }
 
 #[get("/tests")]
-pub fn list() -> ApiResult<Json<Vec<Test>>> {
-    DieselCachedRepo::read()
+pub fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Test>>> {
+    state
+        .repo_read()
         .get_tests_all()
         .map(Json)
         .map_err(ApiError::from)
 }
 
 #[get("/tests/<id>")]
-pub fn get(id: i32) -> ApiResult<Json<Test>> {
-    DieselCachedRepo::read()
+pub fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Test>> {
+    state
+        .repo_read()
         .get_test_by_id(id)
         .map(Json)
         .map_err(|err| match err {
@@ -33,19 +35,20 @@ pub fn get(id: i32) -> ApiResult<Json<Test>> {
 }
 
 #[post("/tests", data = "<payload>")]
-pub fn create(payload: Json<NewTest>) -> ApiResult<Value> {
+pub fn create(state: &State<AppState>, payload: Json<NewTest>) -> ApiResult<Value> {
     let test = payload.into_inner();
     let name = test.test_name.clone();
     let project_id = test.project_id;
 
-    let id = DieselCachedRepo::write()
+    let id = state
+        .repo_write()
         .insert_test(&test)
         .map_err(|err| match err {
             RepoError::Db(e) => ApiError::BadRequest(format!("failed to create test: {e}")),
             other => other.into(),
         })?;
 
-    if let Ok(mut conn) = DieselCachedRepo::read().inner_repo().get_conn() {
+    if let Ok(mut conn) = state.repo_read().inner_repo().get_conn() {
         if let Ok(new_values) = Logger::to_json_string(&test) {
             if let Err(err) = Logger::log_create(
                 conn.as_mut(),
@@ -66,8 +69,9 @@ pub fn create(payload: Json<NewTest>) -> ApiResult<Value> {
 }
 
 #[delete("/tests/<id>")]
-pub fn delete(id: i32) -> ApiResult<Status> {
-    let test = DieselCachedRepo::write()
+pub fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
+    let test = state
+        .repo_write()
         .delete_test(id)
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("test {id} not found")),
@@ -76,7 +80,7 @@ pub fn delete(id: i32) -> ApiResult<Status> {
 
     if let (Ok(old_values), Ok(mut conn)) = (
         Logger::to_json_string(&test),
-        DieselCachedRepo::read().inner_repo().get_conn(),
+        state.repo_read().inner_repo().get_conn(),
     ) {
         if let Err(err) = Logger::log_delete(
             conn.as_mut(),
@@ -96,9 +100,14 @@ pub fn delete(id: i32) -> ApiResult<Status> {
 }
 
 #[post("/tests/<id>/field", data = "<update>")]
-pub fn update_field(id: i32, update: Json<FieldUpdateRequest>) -> ApiResult<Value> {
+pub fn update_field(
+    state: &State<AppState>,
+    id: i32,
+    update: Json<FieldUpdateRequest>,
+) -> ApiResult<Value> {
     let update = update.into_inner();
-    let mut test = DieselCachedRepo::read()
+    let mut test = state
+        .repo_read()
         .get_test_by_id(id)
         .map_err(|err| match err {
             RepoError::NotFound => ApiError::NotFound(format!("test {id} not found")),
@@ -139,14 +148,15 @@ pub fn update_field(id: i32, update: Json<FieldUpdateRequest>) -> ApiResult<Valu
         project_id: test.project_id,
     };
 
-    DieselCachedRepo::write()
+    state
+        .repo_write()
         .edit_test(&payload)
         .map_err(ApiError::from)?;
 
     if let (Ok(old_values), Ok(new_values), Ok(mut conn)) = (
         Logger::to_json_string(&original),
         Logger::to_json_string(&test),
-        DieselCachedRepo::read().inner_repo().get_conn(),
+        state.repo_read().inner_repo().get_conn(),
     ) {
         if let Err(err) = Logger::log_update(
             conn.as_mut(),

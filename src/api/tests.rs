@@ -15,11 +15,7 @@ pub struct FieldUpdateRequest {
 
 #[get("/tests")]
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Test>>> {
-    let tests = state
-        .repo
-        .db_read(|repo| repo.get_tests_all())
-        .await
-        .map_err(ApiError::from)?;
+    let tests = state.repo.db_read(|repo| repo.get_tests_all()).await?;
     Ok(Json(tests))
 }
 
@@ -28,11 +24,7 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
     let test = state
         .repo
         .db_read(move |repo| repo.get_test_by_id(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("test {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
     Ok(Json(test))
 }
 
@@ -46,11 +38,7 @@ pub async fn create(state: &State<AppState>, payload: Json<NewTest>) -> ApiResul
     let id = state
         .repo
         .db_write(move |repo| repo.insert_test(&test))
-        .await
-        .map_err(|err| match err {
-            RepoError::Db(e) => ApiError::BadRequest(format!("failed to create test: {e}")),
-            other => other.into(),
-        })?;
+        .await?;
 
     let _ = state
         .repo
@@ -80,11 +68,7 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
     let removed = state
         .repo
         .db_write(move |repo| repo.delete_test(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("test {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
 
     let removed_for_log = removed.clone();
     let _ = state
@@ -99,7 +83,10 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
                     id,
                     Some(removed_for_log.project_id),
                     Some(old_values),
-                    Some(format!("Deleted test via API: {}", removed_for_log.test_name)),
+                    Some(format!(
+                        "Deleted test via API: {}",
+                        removed_for_log.test_name
+                    )),
                     None,
                 );
             }
@@ -121,11 +108,7 @@ pub async fn update_field(
     let mut test = state
         .repo
         .db_read(move |repo| repo.get_test_by_id(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("test {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
     let original = test.clone();
 
     match update.field.as_str() {
@@ -162,8 +145,7 @@ pub async fn update_field(
     state
         .repo
         .db_write(move |repo| repo.edit_test(&payload))
-        .await
-        .map_err(ApiError::from)?;
+        .await?;
 
     let original_for_log = original.clone();
     let test_for_log = test.clone();
@@ -171,9 +153,10 @@ pub async fn update_field(
         .repo
         .db_read(move |repo| {
             let mut conn = repo.inner_repo().get_conn()?;
-            if let (Ok(old_values), Ok(new_values)) =
-                (Logger::to_json_string(&original_for_log), Logger::to_json_string(&test_for_log))
-            {
+            if let (Ok(old_values), Ok(new_values)) = (
+                Logger::to_json_string(&original_for_log),
+                Logger::to_json_string(&test_for_log),
+            ) {
                 let _ = Logger::log_update(
                     conn.as_mut(),
                     0,

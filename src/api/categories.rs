@@ -6,11 +6,7 @@ use crate::repository::LookupRepository;
 
 #[get("/categories")]
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Category>>> {
-    let categories = state
-        .repo
-        .db_read(|repo| repo.get_categories_all())
-        .await
-        .map_err(ApiError::from)?;
+    let categories = state.repo.db_read(|repo| repo.get_categories_all()).await?;
     Ok(Json(categories))
 }
 
@@ -19,11 +15,7 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Category>> 
     let category = state
         .repo
         .db_read(move |repo| repo.get_category_by_id(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("category {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
     Ok(Json(category))
 }
 
@@ -37,11 +29,7 @@ pub async fn create(state: &State<AppState>, payload: Json<NewCategory>) -> ApiR
     let id = state
         .repo
         .db_write(move |repo| repo.insert_new_category(&category))
-        .await
-        .map_err(|err| match err {
-            RepoError::Db(e) => ApiError::BadRequest(format!("failed to create category: {e}")),
-            other => other.into(),
-        })?;
+        .await?;
 
     let _ = state
         .repo
@@ -93,11 +81,7 @@ pub async fn update(
             let category = category.clone();
             move |repo| repo.edit_category(&category)
         })
-        .await
-        .map_err(|err| match err {
-            RepoError::Db(e) => ApiError::BadRequest(format!("failed to update category: {e}")),
-            other => other.into(),
-        })?;
+        .await?;
 
     if !updated {
         return Err(ApiError::NotFound(format!("category {id} not found")));
@@ -139,11 +123,7 @@ pub async fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
     let removed = state
         .repo
         .db_write(move |repo| repo.delete_category(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("category {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
 
     let _ = state
         .repo

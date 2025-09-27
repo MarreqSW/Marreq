@@ -6,11 +6,7 @@ use crate::repository::UserRepository;
 
 #[get("/users")]
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<User>>> {
-    let users = state
-        .repo
-        .db_read(|repo| repo.get_users_all())
-        .await
-        .map_err(ApiError::from)?;
+    let users = state.repo.db_read(|repo| repo.get_users_all()).await?;
     Ok(Json(users))
 }
 
@@ -19,11 +15,7 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<User>> {
     let user = state
         .repo
         .db_read(move |repo| repo.get_user_by_id(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("user {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
     Ok(Json(user))
 }
 
@@ -36,11 +28,7 @@ pub async fn create(state: &State<AppState>, payload: Json<NewUser>) -> ApiResul
     let id = state
         .repo
         .db_write(move |repo| repo.insert_user(&user))
-        .await
-        .map_err(|err| match err {
-            RepoError::Db(e) => ApiError::BadRequest(format!("failed to create user: {e}")),
-            other => other.into(),
-        })?;
+        .await?;
 
     let _ = state
         .repo
@@ -70,10 +58,6 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
     state
         .repo
         .db_write(move |repo| repo.delete_user(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("user {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
     Ok(Status::NoContent)
 }

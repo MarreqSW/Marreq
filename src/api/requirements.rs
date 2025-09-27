@@ -18,8 +18,7 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> 
     let requirements = state
         .repo
         .db_read(|repo| repo.get_requirements_all())
-        .await
-        .map_err(ApiError::from)?;
+        .await?;
     Ok(Json(requirements))
 }
 
@@ -28,11 +27,7 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Requirement
     let requirement = state
         .repo
         .db_read(move |repo| repo.get_requirement_by_id(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("requirement {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
     Ok(Json(requirement))
 }
 
@@ -46,11 +41,7 @@ pub async fn create(state: &State<AppState>, payload: Json<NewRequirement>) -> A
     let id = state
         .repo
         .db_write(move |repo| repo.insert_new_requirement(&requirement))
-        .await
-        .map_err(|err| match err {
-            RepoError::Db(e) => ApiError::BadRequest(format!("failed to create requirement: {e}")),
-            other => other.into(),
-        })?;
+        .await?;
 
     let _ = state
         .repo
@@ -80,11 +71,7 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
     let removed = state
         .repo
         .db_write(move |repo| repo.delete_requirement(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("requirement {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
 
     let removed_for_log = removed.clone();
     let _ = state
@@ -99,7 +86,10 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
                     id,
                     Some(removed_for_log.project_id),
                     Some(old_values),
-                    Some(format!("Deleted requirement via API: {}", removed_for_log.req_title)),
+                    Some(format!(
+                        "Deleted requirement via API: {}",
+                        removed_for_log.req_title
+                    )),
                     None,
                 );
             }
@@ -121,11 +111,7 @@ pub async fn update_field(
     let mut requirement = state
         .repo
         .db_read(move |repo| repo.get_requirement_by_id(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("requirement {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
     let original = requirement.clone();
 
     match update.field.as_str() {
@@ -190,8 +176,7 @@ pub async fn update_field(
     state
         .repo
         .db_write(move |repo| repo.edit_requirement(&payload))
-        .await
-        .map_err(ApiError::from)?;
+        .await?;
 
     let requirement_for_log = requirement.clone();
     let original_for_log = original.clone();
@@ -199,9 +184,10 @@ pub async fn update_field(
         .repo
         .db_read(move |repo| {
             let mut conn = repo.inner_repo().get_conn()?;
-            if let (Ok(old_values), Ok(new_values)) =
-                (Logger::to_json_string(&original_for_log), Logger::to_json_string(&requirement_for_log))
-            {
+            if let (Ok(old_values), Ok(new_values)) = (
+                Logger::to_json_string(&original_for_log),
+                Logger::to_json_string(&requirement_for_log),
+            ) {
                 let _ = Logger::log_update(
                     conn.as_mut(),
                     0,

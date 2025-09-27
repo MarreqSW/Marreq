@@ -3,6 +3,8 @@ use rocket::response::{Responder, Response};
 use rocket::serde::json::json;
 use rocket::Request;
 
+use diesel::result::{DatabaseErrorKind, Error as DieselError};
+
 use crate::repository::errors::RepoError;
 
 pub type ApiResult<T> = Result<T, ApiError>;
@@ -50,7 +52,15 @@ impl From<RepoError> for ApiError {
     fn from(value: RepoError) -> Self {
         match value {
             RepoError::NotFound => ApiError::NotFound("record not found".into()),
-            RepoError::Db(err) => ApiError::Internal(format!("database error: {}", err)),
+            RepoError::Db(err) => match err {
+                DieselError::DatabaseError(DatabaseErrorKind::UniqueViolation, info) => {
+                    ApiError::BadRequest(info.message().to_string())
+                }
+                DieselError::DatabaseError(DatabaseErrorKind::ForeignKeyViolation, info) => {
+                    ApiError::BadRequest(info.message().to_string())
+                }
+                other => ApiError::Internal(format!("database error: {}", other)),
+            },
             RepoError::Pool(err) => ApiError::Internal(format!("connection pool error: {}", err)),
         }
     }

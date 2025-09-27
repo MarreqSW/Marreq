@@ -11,8 +11,7 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Matrix>>> {
         .repo
         .clone()
         .db_read(|repo| repo.inner_repo().get_conn())
-        .await
-        .map_err(ApiError::from)?;
+        .await?;
 
     let entries = matrix
         .load::<Matrix>(conn.as_mut())

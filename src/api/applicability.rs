@@ -18,11 +18,7 @@ pub async fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Applicabili
     let applicability = state
         .repo
         .db_read(move |repo| repo.get_applicability_by_id(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("applicability {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
 
     Ok(Json(applicability))
 }
@@ -38,11 +34,7 @@ pub async fn create(state: &State<AppState>, payload: Json<NewApplicability>) ->
     let id = state
         .repo
         .db_write(move |repo| repo.insert_new_applicability(&applicability))
-        .await
-        .map_err(|err| match err {
-            RepoError::Db(e) => ApiError::BadRequest(format!("failed to create applicability: {e}")),
-            other => other.into(),
-        })?;
+        .await?;
 
     let title_for_log = title.clone();
     let _ = state
@@ -68,7 +60,6 @@ pub async fn create(state: &State<AppState>, payload: Json<NewApplicability>) ->
     Ok(json!({ "status": "ok", "id": id }))
 }
 
-
 #[put("/applicability/<id>", data = "<payload>")]
 pub async fn update(
     state: &State<AppState>,
@@ -93,11 +84,7 @@ pub async fn update(
             let applicability = applicability.clone();
             move |repo| repo.edit_applicability(&applicability)
         })
-        .await
-        .map_err(|err| match err {
-            RepoError::Db(e) => ApiError::BadRequest(format!("failed to update applicability: {e}")),
-            other => other.into(),
-        })?;
+        .await?;
 
     if !updated {
         return Err(ApiError::NotFound(format!("applicability {id} not found")));
@@ -109,9 +96,10 @@ pub async fn update(
         .db_read(move |repo| {
             let mut conn = repo.inner_repo().get_conn()?;
             if let Some(previous) = before {
-                if let (Ok(old_values), Ok(new_values)) =
-                    (Logger::to_json_string(&previous), Logger::to_json_string(&app_for_log))
-                {
+                if let (Ok(old_values), Ok(new_values)) = (
+                    Logger::to_json_string(&previous),
+                    Logger::to_json_string(&app_for_log),
+                ) {
                     let _ = Logger::log_update(
                         conn.as_mut(),
                         0,
@@ -135,17 +123,12 @@ pub async fn update(
     }))
 }
 
-
 #[delete("/applicability/<id>")]
 pub async fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
     let removed = state
         .repo
         .db_write(move |repo| repo.delete_applicability(id))
-        .await
-        .map_err(|err| match err {
-            RepoError::NotFound => ApiError::NotFound(format!("applicability {id} not found")),
-            other => other.into(),
-        })?;
+        .await?;
 
     let removed_for_log = removed.clone();
     let _ = state
@@ -160,7 +143,10 @@ pub async fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
                     id,
                     Some(removed_for_log.project_id),
                     Some(old_values),
-                    Some(format!("Deleted applicability via API: {}", removed_for_log.app_title)),
+                    Some(format!(
+                        "Deleted applicability via API: {}",
+                        removed_for_log.app_title
+                    )),
                     None,
                 );
             }

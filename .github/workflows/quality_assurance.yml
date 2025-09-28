@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-and-coverage:
+  qa-pipeline:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgres://rust:rust@127.0.0.1:5432/reqman
@@ -27,11 +27,14 @@ jobs:
       - name: Start database
         run: docker compose up -d db
 
-      - name: Set up Rust (nightly + llvm-tools)
+      - name: Set up Rust (nightly + llvm-tools + rustfmt)
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: nightly
-          components: llvm-tools-preview
+          components: rustfmt, llvm-tools-preview
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2

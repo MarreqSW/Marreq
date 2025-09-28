@@ -200,7 +200,7 @@ impl Logger {
             None,
             None,
             description,
-            None
+            None,
         )
     }
 
@@ -227,7 +227,6 @@ impl Logger {
             description,
         )
     }
-
 
     fn log_action(
         conn: &mut PgConnection,
@@ -312,7 +311,6 @@ impl Logger {
             entity.display_name()
         )
     }
-
 
     pub fn get_logs_for_entity(
         conn: &mut PgConnection,

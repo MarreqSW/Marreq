@@ -184,7 +184,10 @@ impl LookupRepository for FakeRepo {
     }
 
     fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError> {
-        self.requirement_statuses.get(&id).cloned().ok_or(RepoError::NotFound)
+        self.requirement_statuses
+            .get(&id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
     }
 
     fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
@@ -192,7 +195,10 @@ impl LookupRepository for FakeRepo {
     }
 
     fn get_test_status_by_id(&self, id: i32) -> Result<TestStatus, RepoError> {
-        self.test_statuses.get(&id).cloned().ok_or(RepoError::NotFound)
+        self.test_statuses
+            .get(&id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
     }
 
     fn get_categories_all(&self) -> Result<Vec<Category>, RepoError> {
@@ -316,12 +322,7 @@ impl LookupRepository for FakeRepo {
         self.applicability.remove(&id).ok_or(RepoError::NotFound)
     }
     fn create_status(&mut self, _new: &NewStatus) -> Result<i32, RepoError> {
-        let id = self
-            .statuses
-            .keys()
-            .max()
-            .map(|i| i + 1)
-            .unwrap_or(1);
+        let id = self.statuses.keys().max().map(|i| i + 1).unwrap_or(1);
         let status = Status {
             st_id: id,
             st_title: _new.req_st_title.clone(),
@@ -509,13 +510,8 @@ impl TestsRepository for FakeRepo {
         _requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
         // Remove existing links for this test
-        self.matrices
-            .retain(|m| m.matrix_test_id != _test_id);
-        let project_id = self
-            .tests
-            .get(&_test_id)
-            .map(|t| t.project_id)
-            .unwrap_or(0);
+        self.matrices.retain(|m| m.matrix_test_id != _test_id);
+        let project_id = self.tests.get(&_test_id).map(|t| t.project_id).unwrap_or(0);
         for &req_id in _requirement_ids {
             self.matrices.push(Matrix {
                 matrix_req_id: req_id,
@@ -538,12 +534,7 @@ impl ProjectsRepository for FakeRepo {
     }
 
     fn insert_new_project(&mut self, _new: &NewProject) -> Result<i32, RepoError> {
-        let id = self
-            .projects
-            .keys()
-            .max()
-            .map(|i| i + 1)
-            .unwrap_or(1);
+        let id = self.projects.keys().max().map(|i| i + 1).unwrap_or(1);
         let now = epoch();
         let proj = Project {
             project_id: id,
@@ -577,7 +568,9 @@ impl ProjectsRepository for FakeRepo {
     }
 
     fn delete_project(&mut self, _project_id: i32) -> Result<Project, RepoError> {
-        self.projects.remove(&_project_id).ok_or(RepoError::NotFound)
+        self.projects
+            .remove(&_project_id)
+            .ok_or(RepoError::NotFound)
     }
 }
 

@@ -1099,11 +1099,7 @@ pub fn delete_requirement_route(
         Ok(deleted) => {
             // Log the requirement deletion
             let log_ctx = LogCtx::new(user.user_id);
-            let _ = Logger::deleted(
-                connection.as_mut(),
-                &log_ctx,
-                &deleted
-            );
+            let _ = Logger::deleted(connection.as_mut(), &log_ctx, &deleted);
 
             // Redirect to requirements list page
             Ok(Redirect::to(uri!(show_requirements(
@@ -1150,11 +1146,7 @@ pub fn delete_test_route(
     match DieselCachedRepo::write().delete_test(test_id) {
         Ok(test) => {
             let log_ctx = LogCtx::new(user.user_id);
-            let _ = Logger::deleted(
-                connection.as_mut(),
-                &log_ctx,
-                &test
-            );
+            let _ = Logger::deleted(connection.as_mut(), &log_ctx, &test);
 
             // Redirect to tests list page
             Ok(Redirect::to(uri!(show_tests(
@@ -1754,13 +1746,8 @@ pub fn post_test(
         .expect("Error reading table Tests");
 
     // Log the test creation
-        let log_ctx = LogCtx::new(user.user_id);
-        let _ = Logger::created(
-            connection,
-            &log_ctx,
-            test_id,
-            &test,
-        );
+    let log_ctx = LogCtx::new(user.user_id);
+    let _ = Logger::created(connection, &log_ctx, test_id, &test);
 
     #[cfg(debug_assertions)]
     println!("NewTestForm requirements: {:#?}", new_test.test_req);
@@ -2218,14 +2205,11 @@ pub fn post_category(
     match result {
         Ok(category_id) => {
             // Log the category creation
-            let category = DieselCachedRepo::read().get_category_by_id(category_id).expect("Error reading table Categories");
+            let category = DieselCachedRepo::read()
+                .get_category_by_id(category_id)
+                .expect("Error reading table Categories");
             let log_ctx = LogCtx::new(user.user_id);
-            let _ = Logger::created(
-                connection,
-                &log_ctx,
-                category_id,
-                &category
-            );
+            let _ = Logger::created(connection, &log_ctx, category_id, &category);
 
             Ok(Redirect::to(uri!(show_categories)))
         }
@@ -2275,7 +2259,9 @@ pub fn post_edit_category(
                 connection,
                 &log_ctx,
                 &old_category,
-                &DieselCachedRepo::read().get_category_by_id(cat_id).expect("Error reading table Categories after update"),
+                &DieselCachedRepo::read()
+                    .get_category_by_id(cat_id)
+                    .expect("Error reading table Categories after update"),
             );
 
             Ok(Redirect::to(uri!(show_categories)))
@@ -2307,11 +2293,7 @@ pub fn delete_category_route(
         Ok(category) => {
             // Log the category deletion
             let log_ctx = LogCtx::new(user.user_id);
-            let _ = Logger::deleted(
-                connection.as_mut(),
-                &log_ctx,
-                &category
-            );
+            let _ = Logger::deleted(connection.as_mut(), &log_ctx, &category);
 
             Ok(rocket::http::Status::Ok)
         }
@@ -2347,12 +2329,7 @@ pub fn post_user(session_user: SessionUser, new_user: Form<NewUser>) -> Result<R
                 .get_user_by_id(user_id)
                 .expect("Error reading table Users");
             let log_ctx = LogCtx::new(session_user.into_inner().user_id);
-            let _ = Logger::created(
-                connection,
-                &log_ctx,
-                user_id,
-                &user
-            );
+            let _ = Logger::created(connection, &log_ctx, user_id, &user);
 
             Ok(Redirect::to(uri!(show_user_id(user_id))))
         }
@@ -2453,15 +2430,12 @@ pub fn post_applicability(
     let result = DieselCachedRepo::write().insert_new_applicability(&applicability_data);
     match result {
         Ok(applicability_id) => {
-            let applicability = DieselCachedRepo::read().get_applicability_by_id(applicability_id).expect("Error reading table Applicability");
+            let applicability = DieselCachedRepo::read()
+                .get_applicability_by_id(applicability_id)
+                .expect("Error reading table Applicability");
             // Log the applicability creation
             let log_ctx = LogCtx::new(user.user_id);
-            let _ = Logger::created(
-                connection,
-                &log_ctx,
-                applicability_id,
-                &applicability,
-            );
+            let _ = Logger::created(connection, &log_ctx, applicability_id, &applicability);
 
             Ok(Redirect::to(uri!(show_applicability)))
         }
@@ -2513,7 +2487,9 @@ pub fn post_edit_applicability(
                 connection,
                 &log_ctx,
                 &old_applicability,
-                &DieselCachedRepo::read().get_applicability_by_id(app_id).expect("Error reading table Applicability after update"),
+                &DieselCachedRepo::read()
+                    .get_applicability_by_id(app_id)
+                    .expect("Error reading table Applicability after update"),
             );
             Ok(Redirect::to(uri!(show_applicability)))
         }
@@ -2545,11 +2521,7 @@ pub fn delete_applicability_route(
             // Log the applicability deletion
             let log_ctx = LogCtx::new(user.user_id);
 
-            let _ = Logger::deleted(
-                connection.as_mut(),
-                &log_ctx,
-                &applicability
-            );
+            let _ = Logger::deleted(connection.as_mut(), &log_ctx, &applicability);
 
             Ok(rocket::http::Status::Ok)
         }
@@ -3066,15 +3038,12 @@ pub fn post_project(admin: AdminOnly, new_project: Form<NewProject>) -> Result<R
     let result = DieselCachedRepo::write().insert_new_project(&project_data);
     match result {
         Ok(project_id) => {
-            let project = DieselCachedRepo::read().get_project_by_id(project_id).expect("Error reading table Projects");
+            let project = DieselCachedRepo::read()
+                .get_project_by_id(project_id)
+                .expect("Error reading table Projects");
             // Log the project creation
             let log_ctx = LogCtx::new(user.user_id);
-            let _ = Logger::created(
-                connection,
-                &log_ctx,
-                project_id,
-                &project
-            );
+            let _ = Logger::created(connection, &log_ctx, project_id, &project);
 
             Ok(Redirect::to(uri!(show_projects)))
         }
@@ -3125,7 +3094,9 @@ pub fn post_edit_project(
                 connection,
                 &log_ctx,
                 &old_project,
-                &DieselCachedRepo::read().get_project_by_id(project_id).expect("Error reading table Projects after update"),
+                &DieselCachedRepo::read()
+                    .get_project_by_id(project_id)
+                    .expect("Error reading table Projects after update"),
             );
 
             Ok(Redirect::to(uri!(show_projects)))
@@ -3158,11 +3129,7 @@ pub fn delete_project_route(
         Ok(project) => {
             // Log the project deletion
             let log_ctx = LogCtx::new(user.user_id);
-            let _ = Logger::deleted(
-                connection.as_mut(),
-                &log_ctx,
-                &project
-            );
+            let _ = Logger::deleted(connection.as_mut(), &log_ctx, &project);
 
             Ok(rocket::http::Status::Ok)
         }
@@ -3835,7 +3802,7 @@ pub async fn export_logs(
         connection,
         &log_ctx,
         Some(format!("Exported logs to {}", filename)),
-        crate::logger::LogAction::Export
+        crate::logger::LogAction::Export,
     );
 
     Ok((

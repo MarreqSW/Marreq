@@ -20,7 +20,6 @@ pub const CACHE_PERFORMANCE: &str = "cache:performance";
 pub const REQUIREMENTS_ALL: &str = "requirements:all";
 pub const TESTS_ALL: &str = "tests:all";
 
-
 /// Generic builder for "prefix[:project]:id" style keys.
 pub trait Keyspace {
     const PREFIX: &'static str;
@@ -69,21 +68,51 @@ pub struct LinkedRequirements;
 pub struct ProjectMembers;
 
 // Implement the prefix per namespace
-impl Keyspace for Projects      { const PREFIX: &'static str = "project"; }
-impl Keyspace for Status        { const PREFIX: &'static str = "status"; }
-impl Keyspace for Categories    { const PREFIX: &'static str = "category"; }
-impl Keyspace for Applicability { const PREFIX: &'static str = "applicability"; }
-impl Keyspace for Verification  { const PREFIX: &'static str = "verification"; }
-impl Keyspace for Users         { const PREFIX: &'static str = "user"; }
-impl Keyspace for Tests         { const PREFIX: &'static str = "test"; }
-impl Keyspace for TestStatus    { const PREFIX: &'static str = "test_status"; }
-impl Keyspace for Matrix        { const PREFIX: &'static str = "matrix"; }
-impl Keyspace for Requirements  { const PREFIX: &'static str = "requirement"; }
-impl Keyspace for RequirementStatus { const PREFIX: &'static str = "requirement_status"; }
-impl Keyspace for RequirementTitle   { const PREFIX: &'static str = "requirement_title"; }
-impl Keyspace for LinkedRequirements { const PREFIX: &'static str = "linked_tests"; }
-impl Keyspace for LinkedTests { const PREFIX: &'static str = "linked_requirements"; }
-impl Keyspace for ProjectMembers { const PREFIX: &'static str = "project_member"; }
+impl Keyspace for Projects {
+    const PREFIX: &'static str = "project";
+}
+impl Keyspace for Status {
+    const PREFIX: &'static str = "status";
+}
+impl Keyspace for Categories {
+    const PREFIX: &'static str = "category";
+}
+impl Keyspace for Applicability {
+    const PREFIX: &'static str = "applicability";
+}
+impl Keyspace for Verification {
+    const PREFIX: &'static str = "verification";
+}
+impl Keyspace for Users {
+    const PREFIX: &'static str = "user";
+}
+impl Keyspace for Tests {
+    const PREFIX: &'static str = "test";
+}
+impl Keyspace for TestStatus {
+    const PREFIX: &'static str = "test_status";
+}
+impl Keyspace for Matrix {
+    const PREFIX: &'static str = "matrix";
+}
+impl Keyspace for Requirements {
+    const PREFIX: &'static str = "requirement";
+}
+impl Keyspace for RequirementStatus {
+    const PREFIX: &'static str = "requirement_status";
+}
+impl Keyspace for RequirementTitle {
+    const PREFIX: &'static str = "requirement_title";
+}
+impl Keyspace for LinkedRequirements {
+    const PREFIX: &'static str = "linked_tests";
+}
+impl Keyspace for LinkedTests {
+    const PREFIX: &'static str = "linked_requirements";
+}
+impl Keyspace for ProjectMembers {
+    const PREFIX: &'static str = "project_member";
+}
 
 #[cfg(test)]
 mod tests {
@@ -92,9 +121,18 @@ mod tests {
     macro_rules! check_keyspace {
         ($ty:ty, $prefix:expr) => {
             assert_eq!(<$ty as Keyspace>::by_id(1), format!("{}:1", $prefix));
-            assert_eq!(<$ty as Keyspace>::by_project("p"), format!("{}:project:p", $prefix));
-            assert_eq!(<$ty as Keyspace>::for_requirement(2), format!("{}:requirement:2", $prefix));
-            assert_eq!(<$ty as Keyspace>::for_test(3), format!("{}:test:3", $prefix));
+            assert_eq!(
+                <$ty as Keyspace>::by_project("p"),
+                format!("{}:project:p", $prefix)
+            );
+            assert_eq!(
+                <$ty as Keyspace>::for_requirement(2),
+                format!("{}:requirement:2", $prefix)
+            );
+            assert_eq!(
+                <$ty as Keyspace>::for_test(3),
+                format!("{}:test:3", $prefix)
+            );
         };
     }
 

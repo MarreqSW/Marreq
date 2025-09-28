@@ -635,51 +635,94 @@ macro_rules! impl_loggable {
     // For types with direct `id`
     ($ty:ty, $entity:expr, $id:ident, $name:ident) => {
         impl Loggable for $ty {
-            fn entity_type() -> EntityType { $entity }
-            fn id(&self) -> i32 { self.$id }
-            fn project_id(&self) -> Option<i32> { Some(self.project_id) }
-            fn display_name(&self) -> String { self.$name.clone() }
+            fn entity_type() -> EntityType {
+                $entity
+            }
+            fn id(&self) -> i32 {
+                self.$id
+            }
+            fn project_id(&self) -> Option<i32> {
+                Some(self.project_id)
+            }
+            fn display_name(&self) -> String {
+                self.$name.clone()
+            }
         }
     };
 
     // For types with `Option` id
     ($ty:ty, $entity:expr, $id:ident?, $name:ident) => {
         impl Loggable for $ty {
-            fn entity_type() -> EntityType { $entity }
-            fn id(&self) -> i32 { self.$id.unwrap_or_default() }
-            fn project_id(&self) -> Option<i32> { Some(self.project_id) }
-            fn display_name(&self) -> String { self.$name.clone() }
+            fn entity_type() -> EntityType {
+                $entity
+            }
+            fn id(&self) -> i32 {
+                self.$id.unwrap_or_default()
+            }
+            fn project_id(&self) -> Option<i32> {
+                Some(self.project_id)
+            }
+            fn display_name(&self) -> String {
+                self.$name.clone()
+            }
         }
     };
 
     // Special case: no project_id
     ($ty:ty, $entity:expr, $id:ident, $name:ident, no_project) => {
         impl Loggable for $ty {
-            fn entity_type() -> EntityType { $entity }
-            fn id(&self) -> i32 { self.$id }
-            fn project_id(&self) -> Option<i32> { None }
-            fn display_name(&self) -> String { self.$name.clone() }
+            fn entity_type() -> EntityType {
+                $entity
+            }
+            fn id(&self) -> i32 {
+                self.$id
+            }
+            fn project_id(&self) -> Option<i32> {
+                None
+            }
+            fn display_name(&self) -> String {
+                self.$name.clone()
+            }
         }
     };
 
     ($ty:ty, $entity:expr, $id:ident?, $name:ident, no_project) => {
         impl Loggable for $ty {
-            fn entity_type() -> EntityType { $entity }
-            fn id(&self) -> i32 { self.$id.unwrap_or_default() }
-            fn project_id(&self) -> Option<i32> { None }
-            fn display_name(&self) -> String { self.$name.clone() }
+            fn entity_type() -> EntityType {
+                $entity
+            }
+            fn id(&self) -> i32 {
+                self.$id.unwrap_or_default()
+            }
+            fn project_id(&self) -> Option<i32> {
+                None
+            }
+            fn display_name(&self) -> String {
+                self.$name.clone()
+            }
         }
     };
 }
 
-impl_loggable!(Project,          EntityType::Project,       project_id, project_name);
-impl_loggable!(Requirement,      EntityType::Requirement,   req_id,     req_title);
-impl_loggable!(NewRequirement,   EntityType::Requirement,   req_id?,    req_title);
-impl_loggable!(Category,         EntityType::Category,      cat_id,     cat_title);
-impl_loggable!(NewCategory,      EntityType::Category,      cat_id?,    cat_title);
-impl_loggable!(Applicability,    EntityType::Applicability, app_id,     app_title);
-impl_loggable!(NewApplicability, EntityType::Applicability, app_id?,    app_title);
-impl_loggable!(Test,             EntityType::Test,          test_id,    test_name);
-impl_loggable!(NewTest,          EntityType::Test,          test_id?,   test_name);
-impl_loggable!(User,             EntityType::User,          user_id,    user_username, no_project);
-impl_loggable!(NewUser,          EntityType::User,          user_id?,   user_username, no_project);
+impl_loggable!(Project, EntityType::Project, project_id, project_name);
+impl_loggable!(Requirement, EntityType::Requirement, req_id, req_title);
+impl_loggable!(NewRequirement, EntityType::Requirement, req_id?, req_title);
+impl_loggable!(Category, EntityType::Category, cat_id, cat_title);
+impl_loggable!(NewCategory, EntityType::Category, cat_id?, cat_title);
+impl_loggable!(Applicability, EntityType::Applicability, app_id, app_title);
+impl_loggable!(
+    NewApplicability,
+    EntityType::Applicability,
+    app_id?,
+    app_title
+);
+impl_loggable!(Test, EntityType::Test, test_id, test_name);
+impl_loggable!(NewTest, EntityType::Test, test_id?, test_name);
+impl_loggable!(User, EntityType::User, user_id, user_username, no_project);
+impl_loggable!(
+    NewUser,
+    EntityType::User,
+    user_id?,
+    user_username,
+    no_project
+);

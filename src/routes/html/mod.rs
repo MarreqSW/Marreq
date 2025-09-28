@@ -1115,20 +1115,14 @@ pub fn delete_requirement_route(
     }
 
     match DieselCachedRepo::write().delete_requirement(req_id) {
-        Ok(_deleted) => {
+        Ok(deleted) => {
             // Log the requirement deletion
-            if let Ok(old_values) = Logger::to_json_string(&requirement) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_delete(
-                    connection.as_mut(),
-                    &log_ctx,
-                    EntityType::Requirement,
-                    req_id,
-                    Some(requirement.project_id),
-                    Some(old_values),
-                    Some(format!("Deleted requirement: {}", requirement.req_title)),
-                );
-            }
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::deleted(
+                connection.as_mut(),
+                &log_ctx,
+                &deleted
+            );
 
             // Redirect to requirements list page
             Ok(Redirect::to(uri!(show_requirements(
@@ -1173,20 +1167,13 @@ pub fn delete_test_route(
     }
 
     match DieselCachedRepo::write().delete_test(test_id) {
-        Ok(_deleted) => {
-            // Log the test deletion
-            if let Ok(old_values) = Logger::to_json_string(&test) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_delete(
-                    connection,
-                    &log_ctx,
-                    EntityType::Test,
-                    test_id,
-                    Some(test.project_id),
-                    Some(old_values),
-                    Some(format!("Deleted test: {}", test.test_name)),
-                );
-            }
+        Ok(test) => {
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::deleted(
+                connection.as_mut(),
+                &log_ctx,
+                &test
+            );
 
             // Redirect to tests list page
             Ok(Redirect::to(uri!(show_tests(
@@ -2360,25 +2347,16 @@ pub fn delete_category_route(
         }
     };
 
-    // Get the category details before deleting
-    let category = get_category_by_id_cached(cat_id);
-
     let result = DieselCachedRepo::write().delete_category(cat_id);
     match result {
-        Ok(_) => {
+        Ok(category) => {
             // Log the category deletion
-            if let Ok(old_values) = Logger::to_json_string(&category) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_delete(
-                    connection.as_mut(),
-                    &log_ctx,
-                    EntityType::Category,
-                    cat_id,
-                    Some(category.project_id),
-                    Some(old_values),
-                    Some(format!("Deleted category: {}", category.cat_title)),
-                );
-            }
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::deleted(
+                connection.as_mut(),
+                &log_ctx,
+                &category
+            );
 
             Ok(rocket::http::Status::Ok)
         }
@@ -2632,28 +2610,17 @@ pub fn delete_applicability_route(
         }
     };
 
-    // Get the applicability details before deleting
-    let applicability = get_applicability_by_id_cached(app_id);
-
     let result = DieselCachedRepo::write().delete_applicability(app_id);
     match result {
-        Ok(_) => {
+        Ok(applicability) => {
             // Log the applicability deletion
-            if let Ok(old_values) = Logger::to_json_string(&applicability) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_delete(
-                    connection.as_mut(),
-                    &log_ctx,
-                    EntityType::Applicability,
-                    app_id,
-                    Some(applicability.project_id),
-                    Some(old_values),
-                    Some(format!(
-                        "Deleted applicability: {}",
-                        applicability.app_title
-                    )),
-                );
-            }
+            let log_ctx = LogCtx::new(user.user_id);
+
+            let _ = Logger::deleted(
+                connection.as_mut(),
+                &log_ctx,
+                &applicability
+            );
 
             Ok(rocket::http::Status::Ok)
         }
@@ -3272,25 +3239,16 @@ pub fn delete_project_route(
         }
     };
 
-    // Get the project details before deleting
-    let project = get_project_by_id_pooled_safe(project_id);
-
     let result = DieselCachedRepo::write().delete_project(project_id);
     match result {
-        Ok(_) => {
+        Ok(project) => {
             // Log the project deletion
-            if let Ok(old_values) = Logger::to_json_string(&project) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_delete(
-                    connection.as_mut(),
-                    &log_ctx,
-                    EntityType::Project,
-                    project_id,
-                    None,
-                    Some(old_values),
-                    Some(format!("Deleted project: {}", project.project_name)),
-                );
-            }
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::deleted(
+                connection.as_mut(),
+                &log_ctx,
+                &project
+            );
 
             Ok(rocket::http::Status::Ok)
         }

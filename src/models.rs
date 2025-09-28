@@ -4,6 +4,7 @@
 //! auxiliary forms used to create or update them. Most of the types derive
 //! Diesel traits so they can be mapped directly to the PostgreSQL database.
 
+use crate::logger::Loggable;
 use crate::schema::*;
 use diesel::prelude::*;
 use std::fmt;
@@ -456,7 +457,6 @@ pub struct Project {
     pub project_owner_id: Option<i32>,
 }
 
-
 /// Membership that links a user to a project with a specific role.
 #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::project_members)]
@@ -596,5 +596,185 @@ impl std::fmt::Display for EntityType {
             EntityType::Matrix => write!(f, "MATRIX"),
             EntityType::Verification => write!(f, "VERIFICATION"),
         }
+    }
+}
+
+impl Loggable for Requirement {
+    fn entity_type() -> EntityType {
+        EntityType::Requirement
+    }
+
+    fn id(&self) -> i32 {
+        self.req_id
+    }
+
+    fn project_id(&self) -> Option<i32> {
+        Some(self.project_id)
+    }
+
+    fn display_name(&self) -> String {
+        self.req_title.clone()
+    }
+}
+
+impl Loggable for NewRequirement {
+    fn entity_type() -> EntityType {
+        EntityType::Requirement
+    }
+
+    fn id(&self) -> i32 {
+        self.req_id.unwrap_or_default()
+    }
+
+    fn project_id(&self) -> Option<i32> {
+        Some(self.project_id)
+    }
+
+    fn display_name(&self) -> String {
+        self.req_title.clone()
+    }
+}
+
+impl Loggable for Category {
+    fn entity_type() -> EntityType {
+        EntityType::Category
+    }
+
+    fn id(&self) -> i32 {
+        self.cat_id
+    }
+
+    fn project_id(&self) -> Option<i32> {
+        Some(self.project_id)
+    }
+
+    fn display_name(&self) -> String {
+        self.cat_title.clone()
+    }
+}
+
+impl Loggable for NewCategory {
+    fn entity_type() -> EntityType {
+        EntityType::Category
+    }
+
+    fn id(&self) -> i32 {
+        self.cat_id.unwrap_or_default()
+    }
+
+    fn project_id(&self) -> Option<i32> {
+        Some(self.project_id)
+    }
+
+    fn display_name(&self) -> String {
+        self.cat_title.clone()
+    }
+}
+
+impl Loggable for Applicability {
+    fn entity_type() -> EntityType {
+        EntityType::Applicability
+    }
+
+    fn id(&self) -> i32 {
+        self.app_id
+    }
+
+    fn project_id(&self) -> Option<i32> {
+        Some(self.project_id)
+    }
+
+    fn display_name(&self) -> String {
+        self.app_title.clone()
+    }
+}
+
+impl Loggable for NewApplicability {
+    fn entity_type() -> EntityType {
+        EntityType::Applicability
+    }
+
+    fn id(&self) -> i32 {
+        self.app_id.unwrap_or_default()
+    }
+
+    fn project_id(&self) -> Option<i32> {
+        Some(self.project_id)
+    }
+
+    fn display_name(&self) -> String {
+        self.app_title.clone()
+    }
+}
+
+impl Loggable for Test {
+    fn entity_type() -> EntityType {
+        EntityType::Test
+    }
+
+    fn id(&self) -> i32 {
+        self.test_id
+    }
+
+    fn project_id(&self) -> Option<i32> {
+        Some(self.project_id)
+    }
+
+    fn display_name(&self) -> String {
+        self.test_name.clone()
+    }
+}
+
+impl Loggable for NewTest {
+    fn entity_type() -> EntityType {
+        EntityType::Test
+    }
+
+    fn id(&self) -> i32 {
+        self.test_id.unwrap_or_default()
+    }
+
+    fn project_id(&self) -> Option<i32> {
+        Some(self.project_id)
+    }
+
+    fn display_name(&self) -> String {
+        self.test_name.clone()
+    }
+}
+
+impl Loggable for User {
+    fn entity_type() -> EntityType {
+        EntityType::User
+    }
+
+    fn id(&self) -> i32 {
+        self.user_id
+    }
+
+    fn project_id(&self) -> Option<i32> {
+        None
+    }
+
+    fn display_name(&self) -> String {
+        self.user_username.clone()
+    }
+}
+
+impl Loggable for NewUser {
+    fn entity_type() -> EntityType {
+        EntityType::User
+    }
+
+    fn id(&self) -> i32 {
+        self.user_id.unwrap_or_default()
+    }
+
+    fn project_id(&self) -> Option<i32> {
+        None
+    }
+
+    fn display_name(&self) -> String {
+        self.user_username.clone()
     }
 }

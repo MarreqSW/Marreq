@@ -1,5 +1,5 @@
 use crate::auth::{clear_session_cookie, read_session_user_id};
-use crate::logger::Logger;
+use crate::logger::{LogCtx, Logger};
 use crate::repository::DieselRepo;
 use rocket::http::CookieJar;
 
@@ -25,7 +25,8 @@ pub fn logout_user(cookies: &CookieJar<'_>) {
     // Log logout if possible
     if let Some(uid) = user_id {
         if let Ok(mut conn) = DieselRepo::new().get_conn() {
-            let _ = Logger::log_logout(&mut conn, uid, None);
+            let ctx = LogCtx::new(uid);
+            let _ = Logger::log_logout(&mut conn, &ctx);
         }
     }
 }

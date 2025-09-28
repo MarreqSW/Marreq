@@ -451,15 +451,33 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function updateRequirement(id, field, value) {
-  fetch(`/api/v1/requirements/${id}/field`, {
-    method: 'POST',
+  const numericFields = new Set([
+    'req_current_status',
+    'req_verification',
+    'req_author',
+    'req_reviewer',
+    'req_category',
+    'req_applicability'
+  ]);
+
+  const payload = {};
+  if (numericFields.has(field)) {
+    const parsedValue = Number(value);
+    if (Number.isNaN(parsedValue)) {
+      showNotification('Invalid value provided for requirement update', 'error');
+      return;
+    }
+    payload[field] = parsedValue;
+  } else {
+    payload[field] = value;
+  }
+
+  fetch(`/api/v1/requirements/${id}`, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      field: field,
-      value: value
-    })
+    body: JSON.stringify(payload)
   })
   .then(response => response.json())
   .then(data => {

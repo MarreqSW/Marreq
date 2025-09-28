@@ -1,3 +1,9 @@
+pub mod cache;
+
+pub use cache::{
+    cache_health_page, cache_stats_page, cleanup_cache, clear_cache, warm_cache_route,
+};
+
 use chrono;
 use diesel::prelude::*;
 use regex::Regex;
@@ -8,6 +14,7 @@ use rocket::http::{Cookie, CookieJar};
 use rocket::response::status::NotFound;
 use rocket::response::{content, Redirect};
 use rocket::serde::json::json;
+use rocket::Route;
 
 use rocket_dyn_templates::Template;
 
@@ -26,6 +33,84 @@ use crate::repository::{
     DieselCachedRepo, LookupRepository, MatrixRepository, ProjectMembersRepository,
     ProjectsRepository, RequirementsRepository, TestsRepository, UserRepository,
 };
+
+pub fn routes() -> Vec<Route> {
+    routes![
+        login_page,
+        login,
+        logout,
+        change_password_page,
+        change_password,
+        index,
+        show_requirements,
+        show_requirement_id,
+        show_tests,
+        show_test_id,
+        show_status,
+        new_requirement,
+        get_edit_requirement,
+        post_edit_requirement,
+        post_requirement,
+        delete_requirement_route,
+        delete_test_route,
+        new_test,
+        get_edit_test,
+        post_edit_test,
+        post_test,
+        get_matrix,
+        get_matrix_xls,
+        get_requirements_xls,
+        get_tests_xls,
+        new_user,
+        post_user,
+        show_users,
+        show_user_id,
+        edit_user,
+        post_edit_user,
+        show_categories,
+        new_category,
+        post_category,
+        get_edit_category,
+        post_edit_category,
+        delete_category_route,
+        show_applicability,
+        new_applicability,
+        post_applicability,
+        get_edit_applicability,
+        post_edit_applicability,
+        delete_applicability_route,
+        show_requirements_tree,
+        show_requirements_table,
+        show_tests_table,
+        show_reports,
+        generate_pdf_report,
+        show_projects,
+        show_project_id,
+        new_project,
+        post_project,
+        get_edit_project,
+        post_edit_project,
+        delete_project_route,
+        import_excel_page,
+        upload_excel_file,
+        process_excel_import,
+        admin_dashboard,
+        admin_users_page,
+        admin_backup_page,
+        generate_backup,
+        show_logs,
+        show_entity_logs,
+        export_logs,
+        export_entity_logs,
+        cleanup_logs,
+        log_analytics,
+        cache_stats_page,
+        clear_cache,
+        cleanup_cache,
+        cache_health_page,
+        warm_cache_route,
+    ]
+}
 
 // --------------------------------
 // Helper Functions

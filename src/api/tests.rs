@@ -2,7 +2,7 @@ use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
 use crate::logger::Logger;
-use crate::models::{EntityType, NewTest, Test};
+use crate::models::{NewTest, Test};
 use crate::repository::errors::RepoError;
 use crate::repository::TestsRepository;
 
@@ -14,13 +14,13 @@ pub struct FieldUpdateRequest {
 }
 
 #[get("/tests")]
-pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Test>>> {
+pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Test>>> {
     let tests = state.repo.async_read(|repo| repo.get_tests_all()).await?;
     Ok(Json(tests))
 }
 
 #[get("/tests/<id>")]
-pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
+pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
     let test = state
         .repo
         .async_read(move |repo| repo.get_test_by_id(id))
@@ -29,27 +29,20 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
 }
 
 #[post("/tests", data = "<payload>")]
-pub async fn create(state: &State<AppState>, payload: Json<NewTest>) -> ApiResult<Value> {
+pub async fn create(
+    user: ApiUser,
+    state: &State<AppState>,
+    payload: Json<NewTest>,
+) -> ApiResult<Value> {
     let test = payload.into_inner();
-    let name = test.test_name.clone();
-    let project_id = test.project_id;
-    let new_values = Logger::to_json_string(&test).ok();
+    let log_ctx = user.log_ctx().clone();
 
     let id = state
         .repo
         .async_write(move |repo| {
             let id = repo.insert_test(&test)?;
-            if let (Some(payload), Ok(mut conn)) = (new_values, repo.inner_repo().get_conn()) {
-                let _ = Logger::log_create(
-                    conn.as_mut(),
-                    0,
-                    EntityType::Test,
-                    id,
-                    Some(project_id),
-                    Some(payload),
-                    Some(format!("Created test via API: {name}")),
-                    None,
-                );
+            if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                let _ = Logger::created(conn.as_mut(), &log_ctx, id, &test);
             }
             Ok::<_, RepoError>(id)
         })
@@ -59,24 +52,14 @@ pub async fn create(state: &State<AppState>, payload: Json<NewTest>) -> ApiResul
 }
 
 #[delete("/tests/<id>")]
-pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
+pub async fn delete(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Status> {
+    let log_ctx = user.log_ctx().clone();
     state
         .repo
         .async_write(move |repo| {
             let removed = repo.delete_test(id)?;
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let Ok(old_values) = Logger::to_json_string(&removed) {
-                    let _ = Logger::log_delete(
-                        conn.as_mut(),
-                        0,
-                        EntityType::Test,
-                        id,
-                        Some(removed.project_id),
-                        Some(old_values),
-                        Some(format!("Deleted test via API: {}", removed.test_name)),
-                        None,
-                    );
-                }
+                let _ = Logger::deleted(conn.as_mut(), &log_ctx, &removed);
             }
             Ok::<_, RepoError>(())
         })
@@ -86,11 +69,13 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
 
 #[post("/tests/<id>/field", data = "<update>")]
 pub async fn update_field(
+    user: ApiUser,
     id: i32,
     state: &State<AppState>,
     update: Json<FieldUpdateRequest>,
 ) -> ApiResult<Value> {
     let update = update.into_inner();
+    let log_ctx = user.log_ctx().clone();
 
     state
         .repo
@@ -132,22 +117,7 @@ pub async fn update_field(
             repo.edit_test(&payload)?;
 
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let (Ok(old_values), Ok(new_values)) = (
-                    Logger::to_json_string(&original),
-                    Logger::to_json_string(&test),
-                ) {
-                    let _ = Logger::log_update(
-                        conn.as_mut(),
-                        0,
-                        EntityType::Test,
-                        test.test_id,
-                        Some(test.project_id),
-                        Some(old_values),
-                        Some(new_values),
-                        Some("Updated test via API".into()),
-                        None,
-                    );
-                }
+                let _ = Logger::updated(conn.as_mut(), &log_ctx, &original, &test);
             }
 
             Ok::<_, RepoError>(())

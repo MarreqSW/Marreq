@@ -1,10 +1,16 @@
 #[cfg(test)]
 use crate::repository::diesel_repo_mock::DieselRepoMock;
-use crate::repository::DieselCachedRepo;
+use crate::repository::CacheRepository;
 #[cfg(not(test))]
 use crate::repository::DieselRepo;
 use rocket::{Build, Rocket};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+
+#[cfg(not(test))]
+pub type DieselCachedRepo = CacheRepository<crate::repository::diesel_repo::DieselRepo>;
+
+#[cfg(test)]
+pub type DieselCachedRepo = CacheRepository<crate::repository::diesel_repo_mock::DieselRepoMock>;
 
 #[derive(Clone)]
 pub struct AppState<R = DieselCachedRepo> {

@@ -189,38 +189,44 @@ pub fn generate_pdf_content(
     content
 }
 use printpdf::{
-    BuiltinFont, IndirectFontRef, Mm, PdfDocument, PdfDocumentReference, PdfLayerReference,
+    BuiltinFont, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, PdfWarnMsg, Point, Pt, TextItem,
 };
-use std::io::{BufWriter, Cursor};
 
-fn add_text(
-    layer: &PdfLayerReference,
-    font: &IndirectFontRef,
-    size: f32,
-    x: Mm,
-    y: Mm,
-    text: &str,
-) {
-    layer.use_text(text, size, x, y, font);
+const PAGE_WIDTH: f32 = 210.0;
+const PAGE_HEIGHT: f32 = 297.0;
+const INITIAL_Y: f32 = 280.0;
+const CONTENT_START_Y: f32 = 250.0;
+const PAGE_BREAK_Y: f32 = 50.0;
+
+fn push_text(ops: &mut Vec<Op>, font: BuiltinFont, size: f32, x: Mm, y: Mm, text: &str) {
+    ops.push(Op::StartTextSection);
+    ops.push(Op::SetTextCursor {
+        pos: Point::new(x, y),
+    });
+    ops.push(Op::SetFontSizeBuiltinFont {
+        size: Pt(size),
+        font,
+    });
+    ops.push(Op::WriteTextBuiltinFont {
+        items: vec![TextItem::Text(text.to_string())],
+        font,
+    });
+    ops.push(Op::EndTextSection);
 }
 
-fn add_header(
-    layer: &PdfLayerReference,
-    title_font: &IndirectFontRef,
-    date_font: &IndirectFontRef,
-) {
-    add_text(
-        layer,
-        title_font,
+fn add_header(ops: &mut Vec<Op>) {
+    push_text(
+        ops,
+        BuiltinFont::HelveticaBold,
         18.0,
         Mm(105.0),
-        Mm(280.0),
+        Mm(INITIAL_Y),
         "ReqMan Project Report",
     );
     let current_date = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
-    add_text(
-        layer,
-        date_font,
+    push_text(
+        ops,
+        BuiltinFont::Helvetica,
         10.0,
         Mm(20.0),
         Mm(270.0),
@@ -228,10 +234,10 @@ fn add_header(
     );
 }
 
-fn add_footer(layer: &PdfLayerReference, font: &IndirectFontRef) {
-    add_text(
-        layer,
-        font,
+fn add_footer(ops: &mut Vec<Op>) {
+    push_text(
+        ops,
+        BuiltinFont::Helvetica,
         8.0,
         Mm(20.0),
         Mm(20.0),
@@ -239,56 +245,81 @@ fn add_footer(layer: &PdfLayerReference, font: &IndirectFontRef) {
     );
 }
 
-fn save_pdf(doc: PdfDocumentReference) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let cursor = Cursor::new(Vec::new());
-    let mut buf_writer = BufWriter::new(cursor);
-    doc.save(&mut buf_writer)?;
-    Ok(buf_writer.into_inner()?.into_inner())
-}
-
-fn add_page(
-    doc: &PdfDocumentReference,
-    font: &IndirectFontRef,
-    page_number: usize,
-) -> (PdfLayerReference, Mm) {
-    let (page_idx, layer_idx) =
-        doc.add_page(Mm(210.0), Mm(297.0), &format!("Page {}", page_number));
-    let page = doc.get_page(page_idx);
-    let layer = page.get_layer(layer_idx);
-    add_text(
-        &layer,
-        font,
+fn add_page_number(ops: &mut Vec<Op>, page_number: usize) {
+    push_text(
+        ops,
+        BuiltinFont::Helvetica,
         12.0,
         Mm(20.0),
         Mm(20.0),
         &format!("Page {}", page_number),
     );
-    (layer, Mm(280.0))
+}
+
+fn save_pdf(
+    mut doc: PdfDocument,
+    pages_ops: Vec<Vec<Op>>,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let pages = pages_ops
+        .into_iter()
+        .map(|ops| PdfPage::new(Mm(PAGE_WIDTH), Mm(PAGE_HEIGHT), ops))
+        .collect();
+
+    let mut warnings = Vec::<PdfWarnMsg>::new();
+    let bytes = doc
+        .with_pages(pages)
+        .save(&PdfSaveOptions::default(), &mut warnings);
+    Ok(bytes)
+}
+
+fn ensure_page_space(
+    pages: &mut Vec<Vec<Op>>,
+    current_page: &mut usize,
+    y: &mut Mm,
+    page_num: &mut usize,
+) -> bool {
+    if *y < Mm(PAGE_BREAK_Y) {
+        *page_num += 1;
+        pages.push(Vec::new());
+        *current_page = pages.len() - 1;
+        add_page_number(&mut pages[*current_page], *page_num);
+        *y = Mm(INITIAL_Y);
+        return true;
+    }
+    false
 }
 
 fn add_list_section(
-    doc: &PdfDocumentReference,
-    layer: &mut PdfLayerReference,
+    pages: &mut Vec<Vec<Op>>,
+    current_page: &mut usize,
     title: &str,
     items: Vec<String>,
-    title_font: &IndirectFontRef,
-    content_font: &IndirectFontRef,
     y: &mut Mm,
     page_num: &mut usize,
 ) {
-    add_text(layer, title_font, 14.0, Mm(20.0), *y, title);
+    push_text(
+        &mut pages[*current_page],
+        BuiltinFont::HelveticaBold,
+        14.0,
+        Mm(20.0),
+        *y,
+        title,
+    );
     *y -= Mm(12.0);
     for item in items {
-        add_text(layer, content_font, 12.0, Mm(25.0), *y, &item);
+        push_text(
+            &mut pages[*current_page],
+            BuiltinFont::Helvetica,
+            12.0,
+            Mm(25.0),
+            *y,
+            &item,
+        );
         *y -= Mm(8.0);
-        if *y < Mm(50.0) {
-            *page_num += 1;
-            let (new_layer, new_y) = add_page(doc, content_font, *page_num);
-            *layer = new_layer;
-            *y = new_y;
-            add_text(
-                layer,
-                title_font,
+        if ensure_page_space(pages, current_page, y, page_num) {
+            push_text(
+                &mut pages[*current_page],
+                BuiltinFont::HelveticaBold,
                 14.0,
                 Mm(20.0),
                 *y,
@@ -301,44 +332,26 @@ fn add_list_section(
 }
 
 fn add_status_section(
-    doc: &PdfDocumentReference,
-    layer: &mut PdfLayerReference,
+    pages: &mut Vec<Vec<Op>>,
+    current_page: &mut usize,
     title: &str,
     data: &std::collections::HashMap<String, i32>,
-    title_font: &IndirectFontRef,
-    content_font: &IndirectFontRef,
     y: &mut Mm,
     page_num: &mut usize,
 ) {
     let items: Vec<String> = data.iter().map(|(s, c)| format!("{}: {}", s, c)).collect();
-    add_list_section(
-        doc,
-        layer,
-        title,
-        items,
-        title_font,
-        content_font,
-        y,
-        page_num,
-    );
+    add_list_section(pages, current_page, title, items, y, page_num);
 }
 
 pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let (doc, page_idx, layer_idx) =
-        PdfDocument::new("ReqMan Report", Mm(210.0), Mm(297.0), "Layer 1");
-    let page = doc.get_page(page_idx);
-    let first_layer = page.get_layer(layer_idx);
-    let mut current_layer = first_layer.clone();
-
-    let title_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)?;
-    let regular_font = doc.add_builtin_font(BuiltinFont::Helvetica)?;
-    let bold_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)?;
-    let footer_font = doc.add_builtin_font(BuiltinFont::Helvetica)?;
-
-    add_header(&first_layer, &title_font, &regular_font);
-
-    let mut y_position = Mm(250.0);
+    let doc = PdfDocument::new("ReqMan Report");
+    let mut pages = vec![Vec::new()];
+    let mut current_page = 0usize;
     let mut page_number = 1usize;
+
+    add_header(&mut pages[current_page]);
+
+    let mut y_position = Mm(CONTENT_START_Y);
     let sections = vec![
         (
             "Project Overview",
@@ -354,18 +367,18 @@ pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn st
     ];
 
     for (title, desc) in sections {
-        add_text(
-            &current_layer,
-            &bold_font,
+        push_text(
+            &mut pages[current_page],
+            BuiltinFont::HelveticaBold,
             14.0,
             Mm(20.0),
             y_position,
             title,
         );
         y_position -= Mm(8.0);
-        add_text(
-            &current_layer,
-            &regular_font,
+        push_text(
+            &mut pages[current_page],
+            BuiltinFont::Helvetica,
             12.0,
             Mm(20.0),
             y_position,
@@ -373,16 +386,16 @@ pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn st
         );
         y_position -= Mm(15.0);
 
-        if y_position < Mm(50.0) {
-            page_number += 1;
-            let (new_layer, new_y) = add_page(&doc, &regular_font, page_number);
-            current_layer = new_layer;
-            y_position = new_y;
-        }
+        ensure_page_space(
+            &mut pages,
+            &mut current_page,
+            &mut y_position,
+            &mut page_number,
+        );
     }
 
-    add_footer(&first_layer, &footer_font);
-    save_pdf(doc)
+    add_footer(&mut pages[0]);
+    save_pdf(doc, pages)
 }
 
 pub fn generate_pdf_report_data(
@@ -398,21 +411,14 @@ pub fn generate_pdf_report_data(
     tests_by_status: std::collections::HashMap<String, i32>,
     _requirements_by_category: std::collections::HashMap<String, i32>,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let (doc, page_idx, layer_idx) =
-        PdfDocument::new("ReqMan Report", Mm(210.0), Mm(297.0), "Layer 1");
-    let page = doc.get_page(page_idx);
-    let first_layer = page.get_layer(layer_idx);
-    let mut layer = first_layer.clone();
-
-    let title_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)?;
-    let regular_font = doc.add_builtin_font(BuiltinFont::Helvetica)?;
-    let bold_font = doc.add_builtin_font(BuiltinFont::HelveticaBold)?;
-    let footer_font = doc.add_builtin_font(BuiltinFont::Helvetica)?;
-
-    add_header(&first_layer, &title_font, &regular_font);
-
-    let mut y_position = Mm(250.0);
+    let doc = PdfDocument::new("ReqMan Report");
+    let mut pages = vec![Vec::new()];
+    let mut current_page = 0usize;
     let mut page_number = 1usize;
+
+    add_header(&mut pages[current_page]);
+
+    let mut y_position = Mm(CONTENT_START_Y);
 
     let overview_items = vec![
         format!("Total Requirements: {}", total_requirements),
@@ -421,12 +427,10 @@ pub fn generate_pdf_report_data(
         format!("Total Users: {}", total_users),
     ];
     add_list_section(
-        &doc,
-        &mut layer,
+        &mut pages,
+        &mut current_page,
         "Project Overview",
         overview_items,
-        &bold_font,
-        &regular_font,
         &mut y_position,
         &mut page_number,
     );
@@ -443,40 +447,34 @@ pub fn generate_pdf_report_data(
         ),
     ];
     add_list_section(
-        &doc,
-        &mut layer,
+        &mut pages,
+        &mut current_page,
         "Coverage Analysis",
         coverage_items,
-        &bold_font,
-        &regular_font,
         &mut y_position,
         &mut page_number,
     );
 
     add_status_section(
-        &doc,
-        &mut layer,
+        &mut pages,
+        &mut current_page,
         "Requirements by Status",
         &requirements_by_status,
-        &bold_font,
-        &regular_font,
         &mut y_position,
         &mut page_number,
     );
 
     add_status_section(
-        &doc,
-        &mut layer,
+        &mut pages,
+        &mut current_page,
         "Tests by Status",
         &tests_by_status,
-        &bold_font,
-        &regular_font,
         &mut y_position,
         &mut page_number,
     );
 
-    add_footer(&first_layer, &footer_font);
-    save_pdf(doc)
+    add_footer(&mut pages[0]);
+    save_pdf(doc, pages)
 }
 
 #[cfg(test)]

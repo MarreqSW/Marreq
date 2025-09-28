@@ -9,17 +9,17 @@ license = "GNU General Public License"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diesel = { version = "2.2.4", features = ["postgres","chrono", "r2d2"] }
-dotenvy = "0.15.7"
-chrono = {version = "0.4.38", features = ["serde"] }
-serde = "1.0.209"
-serde_json = "1.0.127"
+diesel = { version = "2.2", features = ["postgres","chrono", "r2d2"] }
+dotenvy = "0.15"
+chrono = {version = "0.4", features = ["serde"] }
+serde = "1.0"
+serde_json = "1.0"
 lazy_static = "1.4"
-rocket = {version = "0.5.1",  features = ["json", "secrets"]}
+rocket = {version = "0.5",  features = ["json", "secrets"]}
 bcrypt = "0.17"
 time = "0.3"
-xlsxwriter = "0.6.1"
-printpdf = "0.6"
+xlsxwriter = "0.6"
+printpdf = "=0.8"
 calamine = "0.31"
 anyhow = "1.0"
 regex = "1.10"

@@ -129,3 +129,144 @@ pub async fn update_field(
         "message": "Field updated successfully"
     }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::repository::{fake_repo::FakeRepo, CacheRepository};
+    use rocket::http::{ContentType, Header};
+    use rocket::local::asynchronous::Client;
+    use serde_json::{json, Value};
+    use std::sync::{Arc, RwLock};
+
+    type TestState = AppState<CacheRepository<FakeRepo>>;
+
+    fn state_from_repo(repo: FakeRepo) -> TestState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn client_with_repo(repo: FakeRepo) -> Client {
+        let rocket = rocket::build()
+            .manage(state_from_repo(repo))
+            .mount("/api", routes![list, get, create, delete, update_field]);
+        Client::tracked(rocket).await.unwrap()
+    }
+
+    fn auth_header() -> Header<'static> {
+        Header::new("x-test-user", "admin")
+    }
+
+    fn sample_test(name: &str) -> Value {
+        json!({
+            "test_id": null,
+            "test_name": name,
+            "test_description": format!("{name} description"),
+            "test_source": "manual",
+            "test_status": 1,
+            "test_reference": "T-1",
+            "test_parent": 0,
+            "project_id": 1
+        })
+    }
+
+    #[rocket::async_test]
+    async fn list_returns_empty_array() {
+        let client = client_with_repo(FakeRepo::default()).await;
+        let response = client
+            .get("/api/tests")
+            .header(auth_header())
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Ok);
+        let items: Vec<Test> = response.into_json().await.unwrap();
+        assert!(items.is_empty());
+    }
+
+    #[rocket::async_test]
+    async fn create_returns_identifier() {
+        let client = client_with_repo(FakeRepo::default()).await;
+        let response = client
+            .post("/api/tests")
+            .header(ContentType::JSON)
+            .header(auth_header())
+            .body(sample_test("Baseline").to_string())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let payload: Value = response.into_json().await.unwrap();
+        assert_eq!(payload.get("status"), Some(&Value::from("ok")));
+        assert_eq!(payload.get("id"), Some(&Value::from(1)));
+    }
+
+    #[rocket::async_test]
+    async fn update_field_changes_name() {
+        let client = client_with_repo(FakeRepo::default()).await;
+        let create_response = client
+            .post("/api/tests")
+            .header(ContentType::JSON)
+            .header(auth_header())
+            .body(sample_test("Scenario").to_string())
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let response = client
+            .post(format!("/api/tests/{id}/field"))
+            .header(ContentType::JSON)
+            .header(auth_header())
+            .body(
+                json!({
+                    "field": "test_name",
+                    "value": "Updated"
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let payload: Value = response.into_json().await.unwrap();
+        assert_eq!(payload.get("success"), Some(&Value::from(true)));
+
+        let get_response = client
+            .get(format!("/api/tests/{id}"))
+            .header(auth_header())
+            .dispatch()
+            .await;
+        let test: Test = get_response.into_json().await.unwrap();
+        assert_eq!(test.test_name, "Updated");
+    }
+
+    #[rocket::async_test]
+    async fn delete_removes_test() {
+        let client = client_with_repo(FakeRepo::default()).await;
+        let create_response = client
+            .post("/api/tests")
+            .header(ContentType::JSON)
+            .header(auth_header())
+            .body(sample_test("Disposable").to_string())
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let delete_response = client
+            .delete(format!("/api/tests/{id}"))
+            .header(auth_header())
+            .dispatch()
+            .await;
+        assert_eq!(delete_response.status(), Status::NoContent);
+
+        let not_found = client
+            .get(format!("/api/tests/{id}"))
+            .header(auth_header())
+            .dispatch()
+            .await;
+        assert_eq!(not_found.status(), Status::NotFound);
+    }
+}

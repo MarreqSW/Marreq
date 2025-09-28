@@ -1,13 +1,17 @@
-use crate::repository::{DieselCachedRepo, DieselRepo};
+#[cfg(test)]
+use crate::repository::fake_repo::FakeRepo;
+use crate::repository::DieselCachedRepo;
+#[cfg(not(test))]
+use crate::repository::DieselRepo;
 use rocket::{Build, Rocket};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 #[derive(Clone)]
-pub struct AppState {
-    pub repo: Arc<RwLock<DieselCachedRepo>>,
+pub struct AppState<R = DieselCachedRepo> {
+    pub repo: Arc<RwLock<R>>,
 }
 
-impl AppState {
+impl AppState<DieselCachedRepo> {
     pub fn repo_read(&self) -> RwLockReadGuard<'_, DieselCachedRepo> {
         self.repo.read().expect("repo lock poisoned")
     }
@@ -21,7 +25,7 @@ impl AppState {
 pub struct MyDbConn(rocket_sync_db_pools::diesel::PgConnection);
 
 pub fn build() -> Rocket<Build> {
-    let cached = DieselCachedRepo::new(DieselRepo::new(), 5 * 60);
+    let cached = DieselCachedRepo::new(default_inner_repo(), 5 * 60);
     let repo = Arc::new(RwLock::new(cached));
 
     {
@@ -48,4 +52,14 @@ pub fn build() -> Rocket<Build> {
         .attach(crate::html::cors::CorsFairing)
         .attach(rocket_dyn_templates::Template::fairing())
         .attach(crate::app::MyDbConn::fairing())
+}
+
+#[cfg(not(test))]
+fn default_inner_repo() -> DieselRepo {
+    DieselRepo::new()
+}
+
+#[cfg(test)]
+fn default_inner_repo() -> FakeRepo {
+    FakeRepo::default()
 }

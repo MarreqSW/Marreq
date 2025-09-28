@@ -839,26 +839,24 @@ pub fn post_edit_user(
     let mut user_data = user_form.into_inner();
     user_data.user_id = Some(user_id);
 
+    // TODO: update_user_without_password should return new user, then this can be removed
+    let mut updated_user: User = old_user.clone();
+    updated_user.user_name = user_data.user_name.clone();
+    updated_user.user_username = user_data.user_username.clone();
+    updated_user.user_email = user_data.user_email.clone();
+    updated_user.is_admin = user_data.is_admin;
+
     // Update the user in the database
     match DieselCachedRepo::write().update_user_without_password(&user_data) {
         Ok(_) => {
             // Log the user update
-            if let (Ok(old_values), Ok(new_values)) = (
-                Logger::to_json_string(&old_user),
-                Logger::to_json_string(&user_data),
-            ) {
                 let log_ctx = LogCtx::new(current_user.user_id);
-                let _ = Logger::log_update(
-                    connection,
-                    &log_ctx,
-                    EntityType::User,
-                    user_id,
-                    None,
-                    Some(old_values),
-                    Some(new_values),
-                    Some(format!("Updated user: {}", user_data.user_username)),
-                );
-            }
+            let _ = Logger::updated(
+                connection,
+                &log_ctx,
+                &old_user,
+                &old_user,
+            );
             Ok(Redirect::to(uri!(show_user_id(user_id))))
         }
         Err(_e) => {
@@ -1050,6 +1048,22 @@ pub fn post_edit_requirement(
         }
     };
 
+    // TODO: edit_requirement should return new requirement, then this can be removed
+    let mut new_requirement: Requirement = old_requirement.clone();
+    new_requirement.req_title = requirement_data.req_title.clone();
+    new_requirement.req_description = requirement_data.req_description.clone();
+    new_requirement.req_verification = requirement_data.req_verification.clone();
+    new_requirement.req_author = requirement_data.req_author.clone();
+    new_requirement.req_link = requirement_data.req_link.clone();
+    new_requirement.req_category = requirement_data.req_category.clone();
+    new_requirement.req_current_status = requirement_data.req_current_status.clone();
+    new_requirement.req_parent = requirement_data.req_parent.clone();
+    new_requirement.req_reference = requirement_data.req_reference.clone();
+    new_requirement.req_reviewer = requirement_data.req_reviewer.clone();
+    new_requirement.req_applicability = requirement_data.req_applicability.clone();
+    new_requirement.req_justification = requirement_data.req_justification.clone();
+    new_requirement.project_id = requirement_data.project_id.clone();
+
     DieselCachedRepo::write()
         .edit_requirement(&requirement_data)
         .map_err(|e| {
@@ -1061,26 +1075,13 @@ pub fn post_edit_requirement(
             )))
         })?;
 
-    // Log the requirement update
-    if let (Ok(old_values), Ok(new_values)) = (
-        Logger::to_json_string(&old_requirement),
-        Logger::to_json_string(&requirement_data),
-    ) {
-        let log_ctx = LogCtx::new(user.user_id);
-        let _ = Logger::log_update(
-            connection,
-            &log_ctx,
-            EntityType::Requirement,
-            req_id,
-            Some(requirement_data.project_id),
-            Some(old_values),
-            Some(new_values),
-            Some(format!(
-                "Updated requirement: {}",
-                requirement_data.req_title
-            )),
-        );
-    }
+    let log_ctx = LogCtx::new(user.user_id);
+    let _ = Logger::updated(
+        connection,
+        &log_ctx,
+        &old_requirement,
+        &new_requirement,
+    );
 
     Ok(Redirect::to(uri!(show_requirement_id(my_id))))
 }
@@ -1717,6 +1718,14 @@ pub fn post_edit_test(
         project_id: edit_test_form.project_id,
     };
 
+    let mut updated_test = old_test.clone();
+    updated_test.test_name = new_test.test_name.clone();
+    updated_test.test_description = new_test.test_description.clone();
+    updated_test.test_source = new_test.test_source.clone();
+    updated_test.test_status = new_test.test_status;
+    updated_test.test_parent = new_test.test_parent;
+    updated_test.project_id = new_test.project_id;
+
     DieselCachedRepo::write()
         .edit_test(&new_test)
         .map_err(|e| {
@@ -1724,23 +1733,13 @@ pub fn post_edit_test(
             Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
         })?;
 
-    // Log the test update
-    if let (Ok(old_values), Ok(new_values)) = (
-        Logger::to_json_string(&old_test),
-        Logger::to_json_string(&new_test),
-    ) {
-        let log_ctx = LogCtx::new(user.user_id);
-        let _ = Logger::log_update(
-            connection,
-            &log_ctx,
-            EntityType::Test,
-            test_id,
-            Some(edit_test_form.project_id),
-            Some(old_values),
-            Some(new_values),
-            Some(format!("Updated test: {}", new_test.test_name)),
-        );
-    }
+    let log_ctx = LogCtx::new(user.user_id);
+    let _ = Logger::updated(
+        connection,
+        &log_ctx,
+        &old_test,
+        &updated_test,
+    );
 
     // Then, update the requirement links
     DieselCachedRepo::write()
@@ -2302,26 +2301,23 @@ pub fn post_edit_category(
     let mut category_with_id = category.into_inner();
     category_with_id.cat_id = Some(cat_id);
 
+    // TODO: Once edit_category return the updated category, use that instead of cloning
+    let mut new_category = old_category.clone();
+    new_category.cat_title = category_with_id.cat_title.clone();
+    new_category.cat_description = category_with_id.cat_description.clone();
+    new_category.project_id = category_with_id.project_id;
+
     let result = DieselCachedRepo::write().edit_category(&category_with_id);
     match result {
         Ok(_) => {
             // Log the category update
-            if let (Ok(old_values), Ok(new_values)) = (
-                Logger::to_json_string(&old_category),
-                Logger::to_json_string(&category_with_id),
-            ) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_update(
-                    connection,
-                    &log_ctx,
-                    EntityType::Category,
-                    cat_id,
-                    Some(category_with_id.project_id),
-                    Some(old_values),
-                    Some(new_values),
-                    Some(format!("Updated category: {}", category_with_id.cat_title)),
-                );
-            }
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::updated(
+                connection,
+                &log_ctx,
+                &old_category,
+                &new_category,
+            );
 
             Ok(Redirect::to(uri!(show_categories)))
         }
@@ -2563,29 +2559,22 @@ pub fn post_edit_applicability(
     let mut applicability_with_id = applicability.into_inner();
     applicability_with_id.app_id = Some(app_id);
 
+    //TODO: Once edit_applicability return the updated applicability, use that instead of cloning
+    let mut new_applicability = old_applicability.clone();
+    new_applicability.app_title = applicability_with_id.app_title.clone();
+    new_applicability.app_description = applicability_with_id.app_description.clone();
+    new_applicability.project_id = applicability_with_id.project_id;
+
     let result = DieselCachedRepo::write().edit_applicability(&applicability_with_id);
     match result {
         Ok(_) => {
-            // Log the applicability update
-            if let (Ok(old_values), Ok(new_values)) = (
-                Logger::to_json_string(&old_applicability),
-                Logger::to_json_string(&applicability_with_id),
-            ) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_update(
-                    connection,
-                    &log_ctx,
-                    EntityType::Applicability,
-                    app_id,
-                    Some(applicability_with_id.project_id),
-                    Some(old_values),
-                    Some(new_values),
-                    Some(format!(
-                        "Updated applicability: {}",
-                        applicability_with_id.app_title
-                    )),
-                );
-            }
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::updated(
+                connection,
+                &log_ctx,
+                &old_applicability,
+                &new_applicability,
+            );
             Ok(Redirect::to(uri!(show_applicability)))
         }
         Err(_e) => {
@@ -3196,23 +3185,20 @@ pub fn post_edit_project(
     match result {
         Ok(_) => {
             // Log the project update
+
+            // Once edit_project return the updated project, use that instead of cloning
             let project_data = project.into_inner();
-            if let (Ok(old_values), Ok(new_values)) = (
-                Logger::to_json_string(&old_project),
-                Logger::to_json_string(&project_data),
-            ) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_update(
-                    connection,
-                    &log_ctx,
-                    EntityType::Project,
-                    project_id,
-                    None,
-                    Some(old_values),
-                    Some(new_values),
-                    Some(format!("Updated project: {}", project_data.project_name)),
-                );
-            }
+            let mut new_project = old_project.clone();
+            new_project.project_name = project_data.project_name.clone();
+            new_project.project_description = project_data.project_description.clone();
+
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::updated(
+                connection,
+                &log_ctx,
+                &old_project,
+                &new_project,
+            );
 
             Ok(Redirect::to(uri!(show_projects)))
         }

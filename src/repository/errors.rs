@@ -1,5 +1,5 @@
-use thiserror::Error;
 use diesel::result::Error as DieselError;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum RepoError {

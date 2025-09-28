@@ -3,8 +3,8 @@ use super::cache::{keys, Cache};
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    LookupRepository, MatrixRepository, ProjectsRepository, Repository,
-    ProjectMembersRepository, RequirementsRepository, TestsRepository, UserRepository
+    LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository, Repository,
+    RequirementsRepository, TestsRepository, UserRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -52,7 +52,7 @@ impl<R: Repository> CacheRepository<R> {
         Ok(value)
     }
 
-        /// Warm up the cache with frequently accessed data
+    /// Warm up the cache with frequently accessed data
     ///
     /// Populates the cache with common queries to improve initial performance.
     /// Note: This function may copy significant amounts of data; use with caution.
@@ -60,35 +60,40 @@ impl<R: Repository> CacheRepository<R> {
         // Warm up projects cache
         if let Ok(projects) = self.inner.get_projects_all() {
             if let Ok(json_data) = serde_json::to_string(&projects) {
-                self.cache.set_with_ttl(keys::PROJECTS_ALL, json_data, Duration::from_secs(600));
+                self.cache
+                    .set_with_ttl(keys::PROJECTS_ALL, json_data, Duration::from_secs(600));
             }
         }
 
         // Warm up status cache
         if let Ok(statuses) = self.inner.get_status_all() {
             if let Ok(json_data) = serde_json::to_string(&statuses) {
-                self.cache.set_with_ttl(keys::STATUS_ALL, json_data, Duration::from_secs(900));
+                self.cache
+                    .set_with_ttl(keys::STATUS_ALL, json_data, Duration::from_secs(900));
             }
         }
 
         // Warm up categories cache
         if let Ok(categories) = self.inner.get_categories_all() {
             if let Ok(json_data) = serde_json::to_string(&categories) {
-                self.cache.set_with_ttl(keys::CATEGORIES_ALL, json_data, Duration::from_secs(900));
+                self.cache
+                    .set_with_ttl(keys::CATEGORIES_ALL, json_data, Duration::from_secs(900));
             }
         }
 
         // Warm up users cache
         if let Ok(users) = self.inner.get_users_all() {
             if let Ok(json_data) = serde_json::to_string(&users) {
-                self.cache.set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(600));
+                self.cache
+                    .set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(600));
             }
         }
 
         // Warm up projects navigation cache
         if let Ok(projects) = self.inner.get_projects_all() {
             if let Ok(json_data) = serde_json::to_string(&projects) {
-                self.cache.set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
+                self.cache
+                    .set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
             }
         }
     }
@@ -207,7 +212,6 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         Ok(user)
     }
 }
-
 
 impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
     fn get_members_by_project(&self, project_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
@@ -347,9 +351,11 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
     }
 
     fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
-        self.get_or_fetch(keys::REQUIREMENT_STATUS_ALL, Duration::from_secs(900), || {
-            self.inner.get_requirement_status_all()
-        })
+        self.get_or_fetch(
+            keys::REQUIREMENT_STATUS_ALL,
+            Duration::from_secs(900),
+            || self.inner.get_requirement_status_all(),
+        )
     }
 
     fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError> {
@@ -553,10 +559,32 @@ mod tests {
 
     fn populated_repo() -> FakeRepo {
         let user = FakeRepo::make_user(1, "alice", "hash");
-        let status = Status { st_id: 1, st_title: "Open".into(), st_description: "".into(), st_short_name: "O".into() };
-        let category = Category { cat_id: 1, cat_title: "Cat".into(), cat_description: "".into(), cat_tag: "C".into(), project_id: 1 };
-        let app = Applicability { app_id: 1, app_title: "App".into(), app_description: "".into(), app_tag: "A".into(), project_id: 1 };
-        let ver = Verification { verification_id: 1, verification_name: "Ver".into(), verification_description: "".into(), project_id: 1 };
+        let status = Status {
+            st_id: 1,
+            st_title: "Open".into(),
+            st_description: "".into(),
+            st_short_name: "O".into(),
+        };
+        let category = Category {
+            cat_id: 1,
+            cat_title: "Cat".into(),
+            cat_description: "".into(),
+            cat_tag: "C".into(),
+            project_id: 1,
+        };
+        let app = Applicability {
+            app_id: 1,
+            app_title: "App".into(),
+            app_description: "".into(),
+            app_tag: "A".into(),
+            project_id: 1,
+        };
+        let ver = Verification {
+            verification_id: 1,
+            verification_name: "Ver".into(),
+            verification_description: "".into(),
+            project_id: 1,
+        };
         let project = Project {
             project_id: 1,
             project_name: "Proj".into(),
@@ -595,7 +623,12 @@ mod tests {
             test_parent: 0,
             project_id: 1,
         };
-        let matrix = Matrix { matrix_req_id: 1, matrix_test_id: 1, matrix_creation_date: epoch(), project_id: 1 };
+        let matrix = Matrix {
+            matrix_req_id: 1,
+            matrix_test_id: 1,
+            matrix_creation_date: epoch(),
+            project_id: 1,
+        };
 
         let mut users = HashMap::new();
         users.insert(1, user);
@@ -661,8 +694,11 @@ mod tests {
     #[test]
     fn test_warm_cache_populates_common_keys() {
         let repo = CacheRepository::new(
-             FakeRepo{users: HashMap::new(), ..Default::default()},
-            60
+            FakeRepo {
+                users: HashMap::new(),
+                ..Default::default()
+            },
+            60,
         );
 
         let cache = repo.cache();
@@ -682,7 +718,13 @@ mod tests {
         let mut users = HashMap::new();
         users.insert(user.user_id, user.clone());
 
-        let repo = CacheRepository::new(FakeRepo { users, ..Default::default() }, 60);
+        let repo = CacheRepository::new(
+            FakeRepo {
+                users,
+                ..Default::default()
+            },
+            60,
+        );
         let cache = repo.cache();
         cache.reset_counters();
 
@@ -706,12 +748,21 @@ mod tests {
         let user = FakeRepo::make_user(1, "bob", "hash");
         let mut users = HashMap::new();
         users.insert(user.user_id, user);
-        let mut repo = CacheRepository::new(FakeRepo { users, ..Default::default() }, 60);
+        let mut repo = CacheRepository::new(
+            FakeRepo {
+                users,
+                ..Default::default()
+            },
+            60,
+        );
         let cache = repo.cache();
 
         // populate cache with all users
         let all = repo.get_users_all().unwrap();
-        assert_eq!(cache.get(keys::USERS_ALL), Some(serde_json::to_string(&all).unwrap()));
+        assert_eq!(
+            cache.get(keys::USERS_ALL),
+            Some(serde_json::to_string(&all).unwrap())
+        );
 
         // inserting a new user should invalidate USERS_ALL cache
         let new_user = NewUser {
@@ -732,7 +783,13 @@ mod tests {
         let user = FakeRepo::make_user(1, "dave", "old");
         let mut users = HashMap::new();
         users.insert(user.user_id, user);
-        let mut repo = CacheRepository::new(FakeRepo { users, ..Default::default() }, 60);
+        let mut repo = CacheRepository::new(
+            FakeRepo {
+                users,
+                ..Default::default()
+            },
+            60,
+        );
         let cache = repo.cache();
 
         // cache user entry
@@ -753,10 +810,7 @@ mod tests {
         cache.set(&keys::Users::by_id(1), "not-json".into());
         let user = repo.get_user_by_id(1).unwrap();
         assert_eq!(user.user_username, "alice");
-        assert!(cache
-            .get(&keys::Users::by_id(1))
-            .unwrap()
-            .contains("alice"));
+        assert!(cache.get(&keys::Users::by_id(1)).unwrap().contains("alice"));
 
         // Username lookup is cached
         repo.get_user_by_username("alice").unwrap();
@@ -927,7 +981,11 @@ mod tests {
         assert!(cache.get(keys::STATUS_ALL).is_some());
         repo.get_status_by_id(1).unwrap();
         assert!(cache.get(&keys::Status::by_id(1)).is_some());
-        let ns = NewStatus { req_st_title: "Closed".into(), req_st_description: "".into(), req_st_short_name: "C".into() };
+        let ns = NewStatus {
+            req_st_title: "Closed".into(),
+            req_st_description: "".into(),
+            req_st_short_name: "C".into(),
+        };
         let stid = repo.create_status(&ns).unwrap();
         assert!(cache.get(&keys::Status::by_id(stid)).is_none());
 
@@ -935,7 +993,13 @@ mod tests {
         repo.get_categories_all().unwrap();
         repo.get_category_by_id(1).unwrap();
         repo.get_categories_by_project(1).unwrap();
-        let nc = NewCategory { cat_id: None, cat_title: "Cat2".into(), cat_description: "".into(), cat_tag: "C2".into(), project_id: 1 };
+        let nc = NewCategory {
+            cat_id: None,
+            cat_title: "Cat2".into(),
+            cat_description: "".into(),
+            cat_tag: "C2".into(),
+            project_id: 1,
+        };
         let cid = repo.insert_new_category(&nc).unwrap();
         let ec = NewCategory {
             cat_id: Some(cid),
@@ -951,7 +1015,13 @@ mod tests {
         repo.get_applicability_all().unwrap();
         repo.get_applicability_by_id(1).unwrap();
         repo.get_applicability_by_project(1).unwrap();
-        let na = NewApplicability { app_id: None, app_title: "App2".into(), app_description: "".into(), app_tag: "A2".into(), project_id: 1 };
+        let na = NewApplicability {
+            app_id: None,
+            app_title: "App2".into(),
+            app_description: "".into(),
+            app_tag: "A2".into(),
+            project_id: 1,
+        };
         let aid = repo.insert_new_applicability(&na).unwrap();
         let ea = NewApplicability {
             app_id: Some(aid),
@@ -971,17 +1041,31 @@ mod tests {
         // Project operations
         repo.get_projects_all().unwrap();
         repo.get_project_by_id(1).unwrap();
-        let np = NewProject { project_name: "P2".into(), project_description: Some("".into()), project_status: "Active".into(), project_owner_id: Some(1) };
+        let np = NewProject {
+            project_name: "P2".into(),
+            project_description: Some("".into()),
+            project_status: "Active".into(),
+            project_owner_id: Some(1),
+        };
         let pid = repo.insert_new_project(&np).unwrap();
-        let up = UpdateProject { project_name: "P2a".into(), project_description: Some("".into()), project_status: "Active".into(), project_owner_id: Some(1) };
+        let up = UpdateProject {
+            project_name: "P2a".into(),
+            project_description: Some("".into()),
+            project_status: "Active".into(),
+            project_owner_id: Some(1),
+        };
         repo.edit_project(pid, &up).unwrap();
         repo.delete_project(pid).unwrap();
 
         // Matrix operations
         repo.get_matrix_by_project(1).unwrap();
         assert!(cache.get(&keys::Matrix::by_project(1)).is_some());
-        repo.insert_new_matrix_item(&NewMatrix { matrix_req_id: 1, matrix_test_id: 1, project_id: 1 })
-            .unwrap();
+        repo.insert_new_matrix_item(&NewMatrix {
+            matrix_req_id: 1,
+            matrix_test_id: 1,
+            project_id: 1,
+        })
+        .unwrap();
         assert!(cache.get(&keys::Matrix::by_project(1)).is_none());
     }
 }

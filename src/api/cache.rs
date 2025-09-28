@@ -98,7 +98,10 @@ mod tests {
 
     fn test_state() -> TestState {
         AppState {
-            repo: Arc::new(RwLock::new(CacheRepository::new(DieselRepoMock::default(), 0))),
+            repo: Arc::new(RwLock::new(CacheRepository::new(
+                DieselRepoMock::default(),
+                0,
+            ))),
         }
     }
 

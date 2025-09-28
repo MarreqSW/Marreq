@@ -133,7 +133,7 @@ impl Logger {
         Self::log_entity_action(conn, ctx, ActionType::Delete, entity, None, oldv, None)
     }
 
-    fn log_action(
+    pub fn log_action(
         conn: &mut PgConnection,
         ctx: &LogCtx,
         action_type: ActionType,
@@ -330,26 +330,6 @@ impl Logger {
         )
     }
 
-    pub fn log_import(
-        conn: &mut PgConnection,
-        ctx: &LogCtx,
-        entity_type: EntityType,
-        project_id: Option<i32>,
-        description: Option<String>,
-    ) -> Result<(), LoggerError> {
-        Self::log_action(
-            conn,
-            ctx,
-            ActionType::Import,
-            entity_type,
-            None,
-            project_id,
-            None,
-            None,
-            description,
-        )
-    }
-
     pub fn log_custom(
         conn: &mut PgConnection,
         ctx: &LogCtx,
@@ -389,36 +369,6 @@ impl Logger {
             .map_err(LoggerError::from)?;
 
         Ok(logs_list)
-    }
-
-    pub fn get_logs_for_project(
-        conn: &mut PgConnection,
-        project_id_param: i32,
-    ) -> Result<Vec<Log>, LoggerError> {
-        use crate::schema::logs::dsl::*;
-
-        let logs_list = logs
-            .filter(project_id.eq(project_id_param))
-            .order(created_at.desc())
-            .load::<Log>(conn)
-            .map_err(LoggerError::from)?;
-
-        Ok(logs_list)
-    }
-
-    pub fn get_logs_for_user(
-        conn: &mut PgConnection,
-        user_id_param: i32,
-    ) -> Result<Vec<Log>, LoggerError> {
-        use crate::schema::logs::dsl::*;
-
-        let logs_list = logs
-            .filter(user_id.eq(user_id_param))
-            .order(created_at.desc())
-            .load::<Log>(conn)
-            .map_err(LoggerError::from)?;
-
-        return Ok(logs_list);
     }
 
     pub fn get_recent_logs(conn: &mut PgConnection, limit: i64) -> Result<Vec<Log>, LoggerError> {

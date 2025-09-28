@@ -81,6 +81,12 @@ impl FakeRepo {
             is_admin: false,
         }
     }
+
+    pub fn get_conn(&self) -> Result<PooledConnectionWrapper, RepoError> {
+        Err(RepoError::Pool(
+            "fake repository has no database connection".into(),
+        ))
+    }
 }
 
 impl UserRepository for FakeRepo {

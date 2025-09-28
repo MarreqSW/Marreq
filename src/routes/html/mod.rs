@@ -4012,7 +4012,7 @@ pub fn cleanup_logs(admin: AdminOnly) -> Result<Redirect, Redirect> {
     };
 
     // Clean up logs older than 90 days
-    match crate::logger::cleanup_old_logs(connection.as_mut(), 90) {
+    match Logger::cleanup_old_logs(connection.as_mut(), 90) {
         Ok(deleted_count) => {
             // Log the cleanup action
             let log_ctx = LogCtx::new(user.user_id);

@@ -440,16 +440,16 @@ impl Logger {
     pub fn get_log_count(conn: &mut PgConnection, days: i64) -> Result<i64, LoggerError> {
         crate::logger::get_log_count(conn, Some(days))
     }
-}
 
-pub fn cleanup_old_logs(conn: &mut PgConnection, days: i64) -> Result<usize, LoggerError> {
-    use crate::schema::logs::dsl::*;
+    pub fn cleanup_old_logs(conn: &mut PgConnection, days: i64) -> Result<usize, LoggerError> {
+        use crate::schema::logs::dsl::*;
 
-    let cutoff_datetime = calculate_cutoff(days)?;
-    let deleted_count =
-        diesel::delete(logs.filter(created_at.lt(cutoff_datetime))).execute(conn)?;
+        let cutoff_datetime = calculate_cutoff(days)?;
+        let deleted_count =
+            diesel::delete(logs.filter(created_at.lt(cutoff_datetime))).execute(conn)?;
 
-    Ok(deleted_count)
+        Ok(deleted_count)
+    }
 }
 
 pub fn get_log_count(conn: &mut PgConnection, days: Option<i64>) -> Result<i64, LoggerError> {

@@ -544,7 +544,7 @@ pub struct NewLog {
 }
 
 /// Different categories of actions that can appear in the audit log.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ActionType {
     Create,
     Update,

@@ -286,28 +286,6 @@ impl Logger {
         )
     }
 
-    pub(crate) fn log_delete(
-        conn: &mut PgConnection,
-        ctx: &LogCtx,
-        entity_type: EntityType,
-        entity_id: i32,
-        project_id: Option<i32>,
-        old_values: Option<String>,
-        description: Option<String>,
-    ) -> Result<(), LoggerError> {
-        Self::log_action(
-            conn,
-            ctx,
-            ActionType::Delete,
-            Some(entity_type),
-            Some(entity_id),
-            project_id,
-            old_values,
-            None,
-            description,
-        )
-    }
-
     pub fn log_login(conn: &mut PgConnection, ctx: &LogCtx) -> Result<(), LoggerError> {
         Self::log_action(
             conn,

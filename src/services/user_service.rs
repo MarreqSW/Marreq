@@ -83,21 +83,15 @@ impl UserService {
         let old_user = self.get_user_by_id(id).await?;
         
         let mut repo = crate::repository::DieselRepo::new();
-        let success = repo.delete_user(id)
+        let user = repo.delete_user(id)
             .map_err(|e| ApiError::Repository(e))?;
         
         if success {
-            if let Ok(old_values) = crate::services::serialize_for_logging(&old_user) {
-                let _ = self.base.log_delete(
-                    user_id,
-                    EntityType::User,
-                    id,
-                    None, // Users don't have project_id
-                    Some(old_values),
-                    Some(format!("Deleted user: {}", old_user.user_username)),
-                );
-            }
-            
+            let _ = Logger::deleted(
+                connection.as_mut(),
+                &log_ctx,
+                &user
+            );
             self.base.invalidate_cache(&self.base.cache_key("user", id));
             self.base.invalidate_cache(&self.base.cache_key_list("user", None));
             crate::cache::invalidate_user_cache(id);

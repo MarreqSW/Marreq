@@ -1348,7 +1348,7 @@ pub fn post_requirement(
         }
     }
 
-    let my_id = DieselCachedRepo::write()
+    let req_id = DieselCachedRepo::write()
         .insert_new_requirement(&requirement_data)
         .map_err(|e| {
             eprintln!("Error inserting new requirement: {:?}", e);
@@ -1359,24 +1359,20 @@ pub fn post_requirement(
             )))
         })?;
 
-    // Log the requirement creation
-    if let Ok(new_values) = Logger::to_json_string(&requirement_data) {
-        let log_ctx = LogCtx::new(user.user_id);
-        let _ = Logger::log_create(
-            connection,
-            &log_ctx,
-            EntityType::Requirement,
-            my_id,
-            Some(requirement_data.project_id),
-            Some(new_values),
-            Some(format!(
-                "Created requirement: {}",
-                requirement_data.req_title
-            )),
-        );
-    }
+    let new_requirement = DieselCachedRepo::read()
+        .get_requirement_by_id(req_id)
+        .expect("Error reading table Requirements");
 
-    Ok(Redirect::to(uri!(show_requirement_id(my_id))))
+    // Log the requirement creation
+    let log_ctx = LogCtx::new(user.user_id);
+    let _ = Logger::created(
+        connection,
+        &log_ctx,
+        req_id, // TODO: isn't this redundant?
+        &new_requirement,
+    );
+
+    Ok(Redirect::to(uri!(show_requirement_id(req_id))))
 }
 
 #[get("/tests?<status_filter>&<verification_filter>&<category_filter>")]
@@ -1772,33 +1768,32 @@ pub fn post_test(
         test_parent: new_test.test_parent,
         project_id: new_test.project_id,
     };
-    let my_id = DieselCachedRepo::write()
+    let test_id = DieselCachedRepo::write()
         .insert_test(&my_new_test)
         .map_err(|e| {
             eprintln!("Error inserting new test: {:?}", e);
             Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
         })?;
 
+    let test = DieselCachedRepo::read()
+        .get_test_by_id(test_id)
+        .expect("Error reading table Tests");
+
     // Log the test creation
-    if let Ok(new_values) = Logger::to_json_string(&my_new_test) {
         let log_ctx = LogCtx::new(user.user_id);
-        let _ = Logger::log_create(
+        let _ = Logger::created(
             connection,
             &log_ctx,
-            EntityType::Test,
-            my_id,
-            Some(new_test.project_id),
-            Some(new_values),
-            Some(format!("Created test: {}", my_new_test.test_name)),
+            test_id,
+            &test,
         );
-    }
 
     #[cfg(debug_assertions)]
     println!("NewTestForm requirements: {:#?}", new_test.test_req);
     for req in new_test.test_req.iter() {
         let matrix_item = NewMatrix {
             matrix_req_id: *req,
-            matrix_test_id: my_id,
+            matrix_test_id: test_id,
             project_id: new_test.project_id,
         };
         DieselCachedRepo::write()
@@ -1809,7 +1804,7 @@ pub fn post_test(
             })?;
     }
 
-    Ok(Redirect::to(uri!(show_test_id(my_id))))
+    Ok(Redirect::to(uri!(show_test_id(test_id))))
 }
 
 #[get("/status")]
@@ -2249,18 +2244,14 @@ pub fn post_category(
     match result {
         Ok(category_id) => {
             // Log the category creation
-            if let Ok(new_values) = Logger::to_json_string(&category_data) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_create(
-                    connection,
-                    &log_ctx,
-                    EntityType::Category,
-                    category_id,
-                    Some(category_data.project_id),
-                    Some(new_values),
-                    Some(format!("Created category: {}", category_data.cat_title)),
-                );
-            }
+            let category = DieselCachedRepo::read().get_category_by_id(category_id).expect("Error reading table Categories");
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::created(
+                connection,
+                &log_ctx,
+                category_id,
+                &category
+            );
 
             Ok(Redirect::to(uri!(show_categories)))
         }
@@ -2366,7 +2357,6 @@ pub fn delete_category_route(
 
 #[post("/new_user", data = "<new_user>")]
 pub fn post_user(session_user: SessionUser, new_user: Form<NewUser>) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
     let connection = &mut get_db_connection().map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(new_user))
@@ -2377,7 +2367,7 @@ pub fn post_user(session_user: SessionUser, new_user: Form<NewUser>) -> Result<R
     match hash_password(&user_with_hashed_password.user_password) {
         Ok(hashed_password) => {
             user_with_hashed_password.user_password = hashed_password;
-            let my_id = DieselCachedRepo::write()
+            let user_id = DieselCachedRepo::write()
                 .insert_user(&user_with_hashed_password)
                 .map_err(|e| {
                     eprintln!("Error inserting new user: {:?}", e);
@@ -2385,23 +2375,18 @@ pub fn post_user(session_user: SessionUser, new_user: Form<NewUser>) -> Result<R
                 })?;
 
             // Log the user creation
-            if let Ok(new_values) = Logger::to_json_string(&user_with_hashed_password) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_create(
-                    connection,
-                    &log_ctx,
-                    EntityType::User,
-                    my_id,
-                    None,
-                    Some(new_values),
-                    Some(format!(
-                        "Created user: {}",
-                        user_with_hashed_password.user_username
-                    )),
-                );
-            }
+            let user = DieselCachedRepo::read()
+                .get_user_by_id(user_id)
+                .expect("Error reading table Users");
+            let log_ctx = LogCtx::new(session_user.into_inner().user_id);
+            let _ = Logger::created(
+                connection,
+                &log_ctx,
+                user_id,
+                &user
+            );
 
-            Ok(Redirect::to(uri!(show_user_id(my_id))))
+            Ok(Redirect::to(uri!(show_user_id(user_id))))
         }
         Err(_e) => {
             #[cfg(debug_assertions)]
@@ -2500,22 +2485,15 @@ pub fn post_applicability(
     let result = DieselCachedRepo::write().insert_new_applicability(&applicability_data);
     match result {
         Ok(applicability_id) => {
+            let applicability = DieselCachedRepo::read().get_applicability_by_id(applicability_id).expect("Error reading table Applicability");
             // Log the applicability creation
-            if let Ok(new_values) = Logger::to_json_string(&applicability_data) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_create(
-                    connection,
-                    &log_ctx,
-                    EntityType::Applicability,
-                    applicability_id,
-                    Some(applicability_data.project_id),
-                    Some(new_values),
-                    Some(format!(
-                        "Created applicability: {}",
-                        applicability_data.app_title
-                    )),
-                );
-            }
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::created(
+                connection,
+                &log_ctx,
+                applicability_id,
+                &applicability,
+            );
 
             Ok(Redirect::to(uri!(show_applicability)))
         }
@@ -3126,19 +3104,15 @@ pub fn post_project(admin: AdminOnly, new_project: Form<NewProject>) -> Result<R
     let result = DieselCachedRepo::write().insert_new_project(&project_data);
     match result {
         Ok(project_id) => {
+            let project = DieselCachedRepo::read().get_project_by_id(project_id).expect("Error reading table Projects");
             // Log the project creation
-            if let Ok(new_values) = Logger::to_json_string(&project_data) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_create(
-                    connection,
-                    &log_ctx,
-                    EntityType::Project,
-                    project_id,
-                    None,
-                    Some(new_values),
-                    Some(format!("Created project: {}", project_data.project_name)),
-                );
-            }
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::created(
+                connection,
+                &log_ctx,
+                project_id,
+                &project
+            );
 
             Ok(Redirect::to(uri!(show_projects)))
         }

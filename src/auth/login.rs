@@ -57,14 +57,14 @@ fn authenticate_user<R: Repository>(
 mod tests {
     use super::*;
     use crate::auth::hash_password;
-    use crate::repository::fake_repo::FakeRepo;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
 
     // ---------- authenticate_user tests ----------
 
     #[test]
     fn auth_ok_when_password_matches() {
         let pwd: String = hash_password("secret").unwrap();
-        let repo = FakeRepo::with_users([FakeRepo::make_user(1, "alice", &pwd)]);
+        let repo = DieselRepoMock::with_users([DieselRepoMock::make_user(1, "alice", &pwd)]);
         let got = authenticate_user(&repo, "alice", "secret");
         assert!(got.is_ok());
         let user = got.unwrap();
@@ -74,7 +74,7 @@ mod tests {
     #[test]
     fn auth_err_when_password_mismatch() {
         let pwd = hash_password("secret").unwrap();
-        let repo = FakeRepo::with_users([FakeRepo::make_user(1, "alice", &pwd)]);
+        let repo = DieselRepoMock::with_users([DieselRepoMock::make_user(1, "alice", &pwd)]);
         let got = authenticate_user(&repo, "alice", "wrong");
         assert!(got.is_err());
         match got {
@@ -85,7 +85,7 @@ mod tests {
 
     #[test]
     fn auth_err_when_user_not_found() {
-        let repo = FakeRepo::with_users([]);
+        let repo = DieselRepoMock::with_users([]);
         let got = authenticate_user(&repo, "ghost", "anything");
         assert!(got.is_err());
         match got {
@@ -96,7 +96,7 @@ mod tests {
 
     #[test]
     fn returns_err_on_repo_error() {
-        let repo = FakeRepo::with_error();
+        let repo = DieselRepoMock::with_error();
         let err = authenticate_user(&repo, "alice", "secret");
         assert!(err.is_err());
         match err {
@@ -108,7 +108,7 @@ mod tests {
     #[test]
     fn returns_err_when_verifier_fails() {
         // stored "ERR" triggers verifier error in our stub
-        let repo = FakeRepo::with_users([FakeRepo::make_user(1, "alice", "ERR")]);
+        let repo = DieselRepoMock::with_users([DieselRepoMock::make_user(1, "alice", "ERR")]);
         let err = authenticate_user(&repo, "alice", "doesnt_matter");
         assert!(err.is_err());
         match err {

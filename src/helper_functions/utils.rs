@@ -31,7 +31,7 @@ where
 mod tests {
     use super::*;
     use crate::models::Category;
-    use crate::repository::fake_repo::FakeRepo;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use rocket::http::Cookie;
     use rocket::local::blocking::Client;
     use rocket::{get, routes};
@@ -75,7 +75,7 @@ mod tests {
 
     #[test]
     fn generate_requirement_reference_creates_incremental_reference() {
-        let mut repo = FakeRepo::default();
+        let mut repo = DieselRepoMock::default();
         let project_id = 1;
         let category = Category {
             cat_id: 1,
@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn generate_requirement_reference_missing_category_returns_error() {
-        let repo = FakeRepo::default();
+        let repo = DieselRepoMock::default();
         let result = generate_requirement_reference(&repo, -1, -1);
         assert!(result.is_err());
     }

@@ -546,7 +546,7 @@ impl<R: Repository> MatrixRepository for CacheRepository<R> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::repository::fake_repo::FakeRepo;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::collections::HashMap;
 
@@ -557,8 +557,8 @@ mod tests {
             .unwrap()
     }
 
-    fn populated_repo() -> FakeRepo {
-        let user = FakeRepo::make_user(1, "alice", "hash");
+    fn populated_repo() -> DieselRepoMock {
+        let user = DieselRepoMock::make_user(1, "alice", "hash");
         let status = Status {
             st_id: 1,
             st_title: "Open".into(),
@@ -647,7 +647,7 @@ mod tests {
         let mut projects = HashMap::new();
         projects.insert(1, project);
 
-        FakeRepo {
+        DieselRepoMock {
             users,
             statuses,
             requirement_statuses: HashMap::new(),
@@ -694,7 +694,7 @@ mod tests {
     #[test]
     fn test_warm_cache_populates_common_keys() {
         let repo = CacheRepository::new(
-            FakeRepo {
+            DieselRepoMock {
                 users: HashMap::new(),
                 ..Default::default()
             },
@@ -714,12 +714,12 @@ mod tests {
 
     #[test]
     fn test_get_user_by_id_is_cached() {
-        let user = FakeRepo::make_user(1, "alice", "hash");
+        let user = DieselRepoMock::make_user(1, "alice", "hash");
         let mut users = HashMap::new();
         users.insert(user.user_id, user.clone());
 
         let repo = CacheRepository::new(
-            FakeRepo {
+            DieselRepoMock {
                 users,
                 ..Default::default()
             },
@@ -745,11 +745,11 @@ mod tests {
 
     #[test]
     fn test_insert_user_invalidates_users_all_cache() {
-        let user = FakeRepo::make_user(1, "bob", "hash");
+        let user = DieselRepoMock::make_user(1, "bob", "hash");
         let mut users = HashMap::new();
         users.insert(user.user_id, user);
         let mut repo = CacheRepository::new(
-            FakeRepo {
+            DieselRepoMock {
                 users,
                 ..Default::default()
             },
@@ -780,11 +780,11 @@ mod tests {
 
     #[test]
     fn test_update_user_password_invalidates_cache() {
-        let user = FakeRepo::make_user(1, "dave", "old");
+        let user = DieselRepoMock::make_user(1, "dave", "old");
         let mut users = HashMap::new();
         users.insert(user.user_id, user);
         let mut repo = CacheRepository::new(
-            FakeRepo {
+            DieselRepoMock {
                 users,
                 ..Default::default()
             },

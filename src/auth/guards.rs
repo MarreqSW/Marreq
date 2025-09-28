@@ -4,11 +4,12 @@ use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{async_trait, Request};
 
+use crate::app::AppState;
 use crate::auth::{clear_session_cookie, read_session_user_id};
 use crate::logger::LogCtx;
 use crate::models::User;
 use crate::repository::errors::RepoError;
-use crate::repository::{DieselCachedRepo, UserRepository};
+use crate::repository::UserRepository;
 
 /// Request guard that ensures the user is authenticated and loaded from the database.
 pub struct SessionUser(pub User);
@@ -42,8 +43,15 @@ impl<'r> FromRequest<'r> for SessionUser {
             }
         };
 
+        let repo = match request.rocket().state::<AppState>() {
+            Some(state) => state.repo.clone(),
+            None => return Outcome::Error((Status::InternalServerError, ())),
+        };
+
         let result = rocket::tokio::task::spawn_blocking(move || {
-            DieselCachedRepo::read().get_user_by_id(user_id)
+            repo.read()
+                .expect("repo lock poisoned")
+                .get_user_by_id(user_id)
         })
         .await;
 
@@ -122,7 +130,6 @@ impl Deref for ApiUser {
         &self.user
     }
 }
-
 #[async_trait]
 impl<'r> FromRequest<'r> for ApiUser {
     type Error = ();

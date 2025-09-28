@@ -1,8 +1,9 @@
 pub mod cache;
 pub mod cache_middleware;
 pub mod diesel_repo;
+#[cfg(test)]
+pub mod diesel_repo_mock;
 pub mod errors;
-pub mod fake_repo;
 
 pub use cache::*;
 pub use cache_middleware::CacheRepository;
@@ -10,6 +11,9 @@ pub use diesel_repo::*;
 
 use crate::models::*;
 use errors::RepoError;
+use rocket::async_trait;
+use rocket::tokio::task;
+use std::sync::{Arc, RwLock};
 
 pub trait UserRepository {
     fn get_users_all(&self) -> Result<Vec<User>, RepoError>;
@@ -135,4 +139,55 @@ impl<T> Repository for T where
         + ProjectMembersRepository
         + MatrixRepository
 {
+}
+
+#[async_trait]
+pub trait RepoLockExt<R>: Send + Sync {
+    async fn async_read<F, T>(&self, f: F) -> Result<T, RepoError>
+    where
+        F: FnOnce(&R) -> Result<T, RepoError> + Send + 'static,
+        T: Send + 'static;
+
+    async fn async_write<F, T>(&self, f: F) -> Result<T, RepoError>
+    where
+        F: FnOnce(&mut R) -> Result<T, RepoError> + Send + 'static,
+        T: Send + 'static;
+}
+
+#[async_trait]
+impl<R> RepoLockExt<R> for Arc<RwLock<R>>
+where
+    R: Send + Sync + 'static,
+{
+    async fn async_read<F, T>(&self, f: F) -> Result<T, RepoError>
+    where
+        F: FnOnce(&R) -> Result<T, RepoError> + Send + 'static,
+        T: Send + 'static,
+    {
+        let repo = Arc::clone(self);
+        task::spawn_blocking(move || {
+            let guard = repo
+                .read()
+                .map_err(|_| RepoError::Pool("repo lock poisoned".into()))?;
+            f(&*guard)
+        })
+        .await
+        .map_err(|_| RepoError::Pool("async task join error".into()))?
+    }
+
+    async fn async_write<F, T>(&self, f: F) -> Result<T, RepoError>
+    where
+        F: FnOnce(&mut R) -> Result<T, RepoError> + Send + 'static,
+        T: Send + 'static,
+    {
+        let repo = Arc::clone(self);
+        task::spawn_blocking(move || {
+            let mut guard = repo
+                .write()
+                .map_err(|_| RepoError::Pool("repo lock poisoned".into()))?;
+            f(&mut *guard)
+        })
+        .await
+        .map_err(|_| RepoError::Pool("async task join error".into()))?
+    }
 }

@@ -10,8 +10,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::RunQueryDsl;
 use lazy_static::lazy_static;
-use rocket::async_trait;
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::sync::Arc;
 use std::time::Duration;
 
 /// Database connection wrapper for use in Rocket handlers
@@ -20,83 +19,6 @@ pub type DbConn = rocket_sync_db_pools::diesel::PgConnection;
 /// Connection pool type
 pub type ConnectionPool = Pool<ConnectionManager<PgConnection>>;
 pub type PooledConn = PooledConnection<ConnectionManager<PgConnection>>;
-pub type DieselCachedRepo = super::CacheRepository<DieselRepo>;
-use diesel::result::Error as DieselError;
-use rocket::tokio::task;
-
-#[async_trait]
-pub trait DieselRepoLockExt {
-    async fn async_read<F, T>(&self, f: F) -> Result<T, RepoError>
-    where
-        F: FnOnce(&DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
-        T: Send + 'static;
-
-    async fn async_write<F, T>(&self, f: F) -> Result<T, RepoError>
-    where
-        F: FnOnce(&mut DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
-        T: Send + 'static;
-}
-
-#[async_trait]
-impl DieselRepoLockExt for Arc<RwLock<DieselCachedRepo>> {
-    async fn async_read<F, T>(&self, f: F) -> Result<T, RepoError>
-    where
-        F: FnOnce(&DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
-        T: Send + 'static,
-    {
-        let repo = self.clone();
-        task::spawn_blocking(move || {
-            let guard = repo
-                .read()
-                .map_err(|_| RepoError::from(DieselError::NotFound))?;
-            f(&*guard)
-        })
-        .await
-        .map_err(|_| RepoError::from(DieselError::NotFound))?
-    }
-
-    async fn async_write<F, T>(&self, f: F) -> Result<T, RepoError>
-    where
-        F: FnOnce(&mut DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
-        T: Send + 'static,
-    {
-        let repo = self.clone();
-        task::spawn_blocking(move || {
-            let mut guard = repo
-                .write()
-                .map_err(|_| RepoError::from(DieselError::NotFound))?;
-            f(&mut *guard)
-        })
-        .await
-        .map_err(|_| RepoError::from(DieselError::NotFound))?
-    }
-}
-
-lazy_static! {
-    /// Shared, mutable, thread-safe repository singleton.
-    static ref SHARED_CACHED_REPO: RwLock<DieselCachedRepo> = RwLock::new(
-        DieselCachedRepo::new(
-            DieselRepo::new(),
-            5 * 60, // 5 min
-        )
-    );
-}
-
-impl DieselCachedRepo {
-    /// Access the global repo lock (call `.read()` or `.write()` as needed).
-    pub fn shared() -> &'static RwLock<DieselCachedRepo> {
-        &*SHARED_CACHED_REPO
-    }
-
-    /// Convenience helpers if you prefer to grab the guards directly.
-    pub fn read() -> RwLockReadGuard<'static, DieselCachedRepo> {
-        SHARED_CACHED_REPO.read().expect("repo lock poisoned")
-    }
-
-    pub fn write() -> RwLockWriteGuard<'static, DieselCachedRepo> {
-        SHARED_CACHED_REPO.write().expect("repo lock poisoned")
-    }
-}
 
 /// Wrapper for pooled connections that can be used in place of regular connections
 pub struct PooledConnectionWrapper {

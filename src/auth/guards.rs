@@ -121,39 +121,6 @@ impl ApiUser {
     pub fn into_parts(self) -> (User, LogCtx) {
         (self.user, self.log_ctx)
     }
-
-    #[cfg(test)]
-    pub fn fake_admin() -> Self {
-        let epoch = chrono::NaiveDate::from_ymd_opt(1970, 1, 1)
-            .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap();
-
-        let user = User {
-            user_id: 1,
-            user_username: "admin".into(),
-            user_name: "Administrator".into(),
-            user_email: "admin@example.com".into(),
-            user_creation_date: epoch,
-            user_last_login: epoch,
-            user_password: "".into(),
-            is_admin: true,
-        };
-
-        ApiUser {
-            log_ctx: LogCtx::new(user.user_id),
-            user,
-        }
-    }
-
-    #[cfg(test)]
-    fn from_test_request(request: &Request<'_>) -> Option<Self> {
-        if request.headers().get_one("x-test-user").is_some() {
-            Some(Self::fake_admin())
-        } else {
-            None
-        }
-    }
 }
 
 impl Deref for ApiUser {
@@ -163,17 +130,11 @@ impl Deref for ApiUser {
         &self.user
     }
 }
-
 #[async_trait]
 impl<'r> FromRequest<'r> for ApiUser {
     type Error = ();
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        #[cfg(test)]
-        if let Some(user) = Self::from_test_request(request) {
-            return Outcome::Success(user);
-        }
-
         match request.guard::<SessionUser>().await {
             Outcome::Success(session_user) => {
                 let user = session_user.into_inner();

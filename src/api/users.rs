@@ -55,14 +55,17 @@ pub async fn delete(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResu
 mod tests {
     use super::*;
     use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{ContentType, Header};
+    use rocket::http::{ContentType, Cookie};
     use rocket::local::asynchronous::Client;
     use serde_json::{json, Value};
     use std::collections::HashMap;
     use std::sync::{Arc, RwLock};
 
     type TestState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
 
     fn state_from_repo(repo: DieselRepoMock) -> TestState {
         AppState {
@@ -72,13 +75,15 @@ mod tests {
 
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
         let rocket = rocket::build()
-            .manage(state_from_repo(repo))
+            .manage(state_from_repo(repo.with_admin_user()))
             .mount("/api", routes![list, get, create, delete]);
         Client::tracked(rocket).await.unwrap()
     }
 
-    fn auth_header() -> Header<'static> {
-        Header::new("x-test-user", "admin")
+    fn auth_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
     }
 
     #[rocket::async_test]
@@ -93,7 +98,7 @@ mod tests {
         let client = client_with_repo(repo).await;
         let response = client
             .get("/api/users")
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
@@ -108,7 +113,7 @@ mod tests {
         let response = client
             .post("/api/users")
             .header(ContentType::JSON)
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .body(
                 json!({
                     "user_id": null,
@@ -126,7 +131,7 @@ mod tests {
         assert_eq!(response.status(), Status::Ok);
         let payload: Value = response.into_json().await.unwrap();
         assert_eq!(payload.get("status"), Some(&Value::from("ok")));
-        assert_eq!(payload.get("id"), Some(&Value::from(1)));
+        assert_eq!(payload.get("id"), Some(&Value::from(2)));
     }
 
     #[rocket::async_test]
@@ -135,7 +140,7 @@ mod tests {
         let create_response = client
             .post("/api/users")
             .header(ContentType::JSON)
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .body(
                 json!({
                     "user_id": null,
@@ -154,14 +159,14 @@ mod tests {
 
         let delete_response = client
             .delete(format!("/api/users/{id}"))
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .dispatch()
             .await;
         assert_eq!(delete_response.status(), Status::NoContent);
 
         let not_found = client
             .get(format!("/api/users/{id}"))
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .dispatch()
             .await;
         assert_eq!(not_found.status(), Status::NotFound);

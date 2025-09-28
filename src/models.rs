@@ -631,6 +631,24 @@ impl EntityType {
     }
 }
 
+impl Loggable for Project {
+    fn entity_type() -> EntityType {
+        EntityType::Project
+    }
+
+    fn id(&self) -> i32 {
+        self.project_id
+    }
+
+    fn project_id(&self) -> Option<i32> {
+        Some(self.project_id)
+    }
+
+    fn display_name(&self) -> String {
+        self.project_name.clone()
+    }
+}
+
 impl Loggable for Requirement {
     fn entity_type() -> EntityType {
         EntityType::Requirement

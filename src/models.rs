@@ -104,7 +104,7 @@ pub struct Category {
 }
 
 /// Form used to insert or update a [`Category`].
-#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
+#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = categories)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -129,7 +129,7 @@ pub struct Applicability {
 }
 
 /// Form used to insert or update an [`Applicability`].
-#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
+#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = applicability)]
 #[diesel(check_for_backend(diesel::pg::Pg))]

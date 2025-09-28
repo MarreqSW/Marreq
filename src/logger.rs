@@ -440,36 +440,6 @@ impl Logger {
     pub fn get_log_count(conn: &mut PgConnection, days: i64) -> Result<i64, LoggerError> {
         crate::logger::get_log_count(conn, Some(days))
     }
-
-    pub fn create_description(
-        action_type: &ActionType,
-        entity_type: &EntityType,
-        _entity_id: Option<i32>,
-    ) -> String {
-        match (action_type, entity_type) {
-            (ActionType::Create, EntityType::Requirement) => "Created new requirement".to_string(),
-            (ActionType::Update, EntityType::Requirement) => "Updated requirement".to_string(),
-            (ActionType::Delete, EntityType::Requirement) => "Deleted requirement".to_string(),
-            (ActionType::Create, EntityType::Test) => "Created new test".to_string(),
-            (ActionType::Update, EntityType::Test) => "Updated test".to_string(),
-            (ActionType::Delete, EntityType::Test) => "Deleted test".to_string(),
-            (ActionType::Create, EntityType::Category) => "Created new category".to_string(),
-            (ActionType::Update, EntityType::Category) => "Updated category".to_string(),
-            (ActionType::Delete, EntityType::Category) => "Deleted category".to_string(),
-            (ActionType::Create, EntityType::Project) => "Created new project".to_string(),
-            (ActionType::Update, EntityType::Project) => "Updated project".to_string(),
-            (ActionType::Delete, EntityType::Project) => "Deleted project".to_string(),
-            (ActionType::Create, EntityType::User) => "Created new user".to_string(),
-            (ActionType::Update, EntityType::User) => "Updated user".to_string(),
-            (ActionType::Delete, EntityType::User) => "Deleted user".to_string(),
-            (ActionType::Create, EntityType::Applicability) => {
-                "Created new applicability".to_string()
-            }
-            (ActionType::Update, EntityType::Applicability) => "Updated applicability".to_string(),
-            (ActionType::Delete, EntityType::Applicability) => "Deleted applicability".to_string(),
-            _ => format!("{:?} {:?}", action_type, entity_type),
-        }
-    }
 }
 
 pub fn cleanup_old_logs(conn: &mut PgConnection, days: i64) -> Result<usize, LoggerError> {

@@ -1,7 +1,7 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::logger::{LogCtx, Logger};
+use crate::logger::Logger;
 use crate::models::{NewTest, Test};
 use crate::repository::errors::RepoError;
 use crate::repository::TestsRepository;
@@ -14,13 +14,13 @@ pub struct FieldUpdateRequest {
 }
 
 #[get("/tests")]
-pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Test>>> {
+pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Test>>> {
     let tests = state.repo.async_read(|repo| repo.get_tests_all()).await?;
     Ok(Json(tests))
 }
 
 #[get("/tests/<id>")]
-pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
+pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
     let test = state
         .repo
         .async_read(move |repo| repo.get_test_by_id(id))
@@ -29,16 +29,20 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
 }
 
 #[post("/tests", data = "<payload>")]
-pub async fn create(state: &State<AppState>, payload: Json<NewTest>) -> ApiResult<Value> {
+pub async fn create(
+    user: ApiUser,
+    state: &State<AppState>,
+    payload: Json<NewTest>,
+) -> ApiResult<Value> {
     let test = payload.into_inner();
+    let log_ctx = user.log_ctx().clone();
 
     let id = state
         .repo
         .async_write(move |repo| {
             let id = repo.insert_test(&test)?;
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                let ctx = LogCtx::new(0);
-                let _ = Logger::created(conn.as_mut(), &ctx, id, &test);
+                let _ = Logger::created(conn.as_mut(), &log_ctx, id, &test);
             }
             Ok::<_, RepoError>(id)
         })
@@ -48,14 +52,14 @@ pub async fn create(state: &State<AppState>, payload: Json<NewTest>) -> ApiResul
 }
 
 #[delete("/tests/<id>")]
-pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
+pub async fn delete(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Status> {
+    let log_ctx = user.log_ctx().clone();
     state
         .repo
         .async_write(move |repo| {
             let removed = repo.delete_test(id)?;
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                let ctx = LogCtx::new(0);
-                let _ = Logger::deleted(conn.as_mut(), &ctx, &removed);
+                let _ = Logger::deleted(conn.as_mut(), &log_ctx, &removed);
             }
             Ok::<_, RepoError>(())
         })
@@ -65,11 +69,13 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
 
 #[post("/tests/<id>/field", data = "<update>")]
 pub async fn update_field(
+    user: ApiUser,
     id: i32,
     state: &State<AppState>,
     update: Json<FieldUpdateRequest>,
 ) -> ApiResult<Value> {
     let update = update.into_inner();
+    let log_ctx = user.log_ctx().clone();
 
     state
         .repo
@@ -111,8 +117,7 @@ pub async fn update_field(
             repo.edit_test(&payload)?;
 
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                let ctx = LogCtx::new(0);
-                let _ = Logger::updated(conn.as_mut(), &ctx, &original, &test);
+                let _ = Logger::updated(conn.as_mut(), &log_ctx, &original, &test);
             }
 
             Ok::<_, RepoError>(())

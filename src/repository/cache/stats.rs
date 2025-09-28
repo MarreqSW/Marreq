@@ -204,7 +204,7 @@ impl Cache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, atomic::Ordering};
+    use std::sync::{atomic::Ordering, Arc};
     use std::thread;
     use std::time::{Duration, Instant};
 
@@ -217,7 +217,11 @@ mod tests {
         let start = Instant::now();
         let stats = cache.stats();
         let duration = start.elapsed();
-        assert!(duration.as_micros() < 1000, "Stats should be calculated in under 1ms, took {:?}", duration);
+        assert!(
+            duration.as_micros() < 1000,
+            "Stats should be calculated in under 1ms, took {:?}",
+            duration
+        );
         assert_eq!(stats.total_entries, 10000);
         assert_eq!(stats.active_entries, 10000);
         assert_eq!(stats.expired_entries, 0);
@@ -317,11 +321,21 @@ mod tests {
         assert_eq!(health_warning["status"].as_str(), Some("warning"));
         let recs_bad = cache.get_recommendations();
         let recs_bad_arr = recs_bad["recommendations"].as_array().unwrap();
-        assert!(recs_bad_arr.iter().any(|r| r.as_str().unwrap().contains("increasing cache TTL")));
-        assert!(recs_bad_arr.iter().any(|r| r.as_str().unwrap().contains("hit rate is low")));
-        assert!(recs_bad_arr.iter().any(|r| r.as_str().unwrap().contains("expired entries")));
-        assert!(recs_bad_arr.iter().any(|r| r.as_str().unwrap().contains("memory usage is high")));
-        assert!(recs_bad_arr.iter().any(|r| r.as_str().unwrap().contains("access time is slow")));
+        assert!(recs_bad_arr
+            .iter()
+            .any(|r| r.as_str().unwrap().contains("increasing cache TTL")));
+        assert!(recs_bad_arr
+            .iter()
+            .any(|r| r.as_str().unwrap().contains("hit rate is low")));
+        assert!(recs_bad_arr
+            .iter()
+            .any(|r| r.as_str().unwrap().contains("expired entries")));
+        assert!(recs_bad_arr
+            .iter()
+            .any(|r| r.as_str().unwrap().contains("memory usage is high")));
+        assert!(recs_bad_arr
+            .iter()
+            .any(|r| r.as_str().unwrap().contains("access time is slow")));
         assert_eq!(recs_bad["priority"].as_str(), Some("high"));
         cache.clear();
         cache.reset_counters();
@@ -332,7 +346,10 @@ mod tests {
         let recs_good = cache.get_recommendations();
         let recs_good_arr = recs_good["recommendations"].as_array().unwrap();
         assert_eq!(recs_good_arr.len(), 1);
-        assert!(recs_good_arr[0].as_str().unwrap().contains("performing well"));
+        assert!(recs_good_arr[0]
+            .as_str()
+            .unwrap()
+            .contains("performing well"));
         assert_eq!(recs_good["priority"].as_str(), Some("low"));
         let health_healthy = cache.get_health();
         assert_eq!(health_healthy["status"].as_str(), Some("healthy"));

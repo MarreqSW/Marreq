@@ -1,5 +1,5 @@
 use crate::models::*;
-use crate::repository::{errors::RepoError, Repository, DieselRepo};
+use crate::repository::{errors::RepoError, DieselRepo, Repository};
 
 /// Decorate requirements using the default Diesel repository.
 pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement> {
@@ -14,9 +14,7 @@ pub fn decorate_tests(tests: Vec<Test>) -> Vec<DecoratedTest> {
 }
 
 /// Get linked tests for a requirement using the default Diesel repository.
-pub fn get_linked_tests_for_requirement(
-    req_id: i32,
-) -> Result<Vec<DecoratedTest>, RepoError> {
+pub fn get_linked_tests_for_requirement(req_id: i32) -> Result<Vec<DecoratedTest>, RepoError> {
     let repo = DieselRepo::new();
     get_linked_tests_for_requirement_impl(&repo, req_id)
 }
@@ -26,8 +24,7 @@ fn decorate_requirements_impl<R: Repository>(
     repo: &R,
     reqs: Vec<Requirement>,
 ) -> Vec<DecoratedRequirement> {
-    reqs
-        .into_iter()
+    reqs.into_iter()
         .map(|r| {
             let verification = repo
                 .get_verification_by_id(r.req_verification)
@@ -40,8 +37,7 @@ fn decorate_requirements_impl<R: Repository>(
                 .unwrap_or_else(|_| format!("Unknown Status ({})", r.req_current_status));
 
             let author = if r.req_author != 0 {
-                repo
-                    .get_user_by_id(r.req_author)
+                repo.get_user_by_id(r.req_author)
                     .map(|u| u.user_name)
                     .unwrap_or_default()
             } else {
@@ -49,8 +45,7 @@ fn decorate_requirements_impl<R: Repository>(
             };
 
             let reviewer = if r.req_reviewer != 0 {
-                repo
-                    .get_user_by_id(r.req_reviewer)
+                repo.get_user_by_id(r.req_reviewer)
                     .map(|u| u.user_name)
                     .unwrap_or_default()
             } else {
@@ -65,9 +60,7 @@ fn decorate_requirements_impl<R: Repository>(
             let applicability = repo
                 .get_applicability_by_id(r.req_applicability)
                 .map(|a| a.app_title)
-                .unwrap_or_else(|_| {
-                    format!("Unknown Applicability ({})", r.req_applicability)
-                });
+                .unwrap_or_else(|_| format!("Unknown Applicability ({})", r.req_applicability));
 
             let parent_title = if r.req_parent != 0 {
                 match repo.get_requirement_by_id(r.req_parent) {
@@ -98,18 +91,9 @@ fn decorate_requirements_impl<R: Repository>(
                 req_applicability_id: r.req_applicability,
                 req_parent_id: r.req_parent,
                 req_parent_title: parent_title,
-                req_creation_date: r
-                    .req_creation_date
-                    .format("%d-%m-%Y %H:%M:%S")
-                    .to_string(),
-                req_update_date: r
-                    .req_update_date
-                    .format("%d-%m-%Y %H:%M:%S")
-                    .to_string(),
-                req_deadline_date: r
-                    .req_deadline_date
-                    .format("%d-%m-%Y %H:%M:%S")
-                    .to_string(),
+                req_creation_date: r.req_creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+                req_update_date: r.req_update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+                req_deadline_date: r.req_deadline_date.format("%d-%m-%Y %H:%M:%S").to_string(),
                 req_justification: r.req_justification,
                 project_id: r.project_id,
             }
@@ -118,10 +102,7 @@ fn decorate_requirements_impl<R: Repository>(
 }
 
 /// Decorate a list of tests using repository lookups.
- fn decorate_tests_impl<R: Repository>(
-    repo: &R,
-    tests: Vec<Test>,
-) -> Vec<DecoratedTest> {
+fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<Test>) -> Vec<DecoratedTest> {
     tests
         .into_iter()
         .map(|t| {
@@ -131,8 +112,7 @@ fn decorate_requirements_impl<R: Repository>(
                 .unwrap_or_else(|_| format!("Unknown Status ({})", t.test_status));
 
             let parent_title = if t.test_parent != 0 {
-                repo
-                    .get_test_by_id(t.test_parent)
+                repo.get_test_by_id(t.test_parent)
                     .map(|p| p.test_name)
                     .unwrap_or_default()
             } else {

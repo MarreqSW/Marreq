@@ -1,6 +1,6 @@
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use rocket::{Build, Rocket};
 use crate::repository::{DieselCachedRepo, DieselRepo};
+use rocket::{Build, Rocket};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -34,8 +34,17 @@ pub fn build() -> Rocket<Build> {
         .manage(AppState { repo })
         .mount("/", crate::routes::html::routes())
         .mount("/api", crate::api::routes())
-        .register("/", catchers![crate::routes::catchers::unauthorized, crate::routes::catchers::forbidden])
-        .mount("/static", rocket::fs::FileServer::from(rocket::fs::relative!("src/html/static")))
+        .register(
+            "/",
+            catchers![
+                crate::routes::catchers::unauthorized,
+                crate::routes::catchers::forbidden
+            ],
+        )
+        .mount(
+            "/static",
+            rocket::fs::FileServer::from(rocket::fs::relative!("src/html/static")),
+        )
         .attach(crate::html::cors::CorsFairing)
         .attach(rocket_dyn_templates::Template::fairing())
         .attach(crate::app::MyDbConn::fairing())

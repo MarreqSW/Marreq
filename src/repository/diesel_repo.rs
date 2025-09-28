@@ -21,9 +21,8 @@ pub type DbConn = rocket_sync_db_pools::diesel::PgConnection;
 pub type ConnectionPool = Pool<ConnectionManager<PgConnection>>;
 pub type PooledConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub type DieselCachedRepo = super::CacheRepository<DieselRepo>;
-use rocket::tokio::task;
 use diesel::result::Error as DieselError;
-
+use rocket::tokio::task;
 
 #[async_trait]
 pub trait DieselRepoLockExt {
@@ -47,7 +46,9 @@ impl DieselRepoLockExt for Arc<RwLock<DieselCachedRepo>> {
     {
         let repo = self.clone();
         task::spawn_blocking(move || {
-            let guard = repo.read().map_err(|_| RepoError::from(DieselError::NotFound))?;
+            let guard = repo
+                .read()
+                .map_err(|_| RepoError::from(DieselError::NotFound))?;
             f(&*guard)
         })
         .await
@@ -61,15 +62,15 @@ impl DieselRepoLockExt for Arc<RwLock<DieselCachedRepo>> {
     {
         let repo = self.clone();
         task::spawn_blocking(move || {
-            let mut guard = repo.write().map_err(|_| RepoError::from(DieselError::NotFound))?;
+            let mut guard = repo
+                .write()
+                .map_err(|_| RepoError::from(DieselError::NotFound))?;
             f(&mut *guard)
         })
         .await
         .map_err(|_| RepoError::from(DieselError::NotFound))?
     }
 }
-
-
 
 lazy_static! {
     /// Shared, mutable, thread-safe repository singleton.

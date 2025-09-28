@@ -88,17 +88,17 @@ pub async fn health(state: &State<AppState>) -> ApiResult<Json<Value>> {
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::repository::{fake_repo::FakeRepo, CacheRepository};
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
     use serde_json::Value;
     use std::sync::{Arc, RwLock};
 
-    type TestState = AppState<CacheRepository<FakeRepo>>;
+    type TestState = AppState<CacheRepository<DieselRepoMock>>;
 
     fn test_state() -> TestState {
         AppState {
-            repo: Arc::new(RwLock::new(CacheRepository::new(FakeRepo::default(), 0))),
+            repo: Arc::new(RwLock::new(CacheRepository::new(DieselRepoMock::default(), 0))),
         }
     }
 

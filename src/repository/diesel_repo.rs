@@ -20,10 +20,21 @@ pub type DbConn = rocket_sync_db_pools::diesel::PgConnection;
 pub type ConnectionPool = Pool<ConnectionManager<PgConnection>>;
 pub type PooledConn = PooledConnection<ConnectionManager<PgConnection>>;
 
-#[cfg(test)]
-pub type DieselCachedRepo = super::CacheRepository<super::fake_repo::FakeRepo>;
 #[cfg(not(test))]
 pub type DieselCachedRepo = super::CacheRepository<DieselRepo>;
+
+#[cfg(test)]
+pub type DieselCachedRepo = super::CacheRepository<super::diesel_repo_mock::DieselRepoMock>;
+
+#[cfg(not(test))]
+fn default_cached_repo() -> DieselCachedRepo {
+    DieselCachedRepo::new(DieselRepo::new(), 5 * 60)
+}
+
+#[cfg(test)]
+fn default_cached_repo() -> DieselCachedRepo {
+    DieselCachedRepo::new(super::diesel_repo_mock::DieselRepoMock::default(), 5 * 60)
+}
 
 lazy_static! {
     /// Shared, mutable, thread-safe repository singleton.
@@ -45,16 +56,6 @@ impl DieselCachedRepo {
     pub fn write() -> RwLockWriteGuard<'static, DieselCachedRepo> {
         SHARED_CACHED_REPO.write().expect("repo lock poisoned")
     }
-}
-
-#[cfg(not(test))]
-fn default_cached_repo() -> DieselCachedRepo {
-    DieselCachedRepo::new(DieselRepo::new(), 5 * 60)
-}
-
-#[cfg(test)]
-fn default_cached_repo() -> DieselCachedRepo {
-    DieselCachedRepo::new(super::fake_repo::FakeRepo::default(), 5 * 60)
 }
 
 /// Wrapper for pooled connections that can be used in place of regular connections

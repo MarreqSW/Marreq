@@ -55,22 +55,22 @@ pub async fn delete(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResu
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::repository::{fake_repo::FakeRepo, CacheRepository};
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::http::{ContentType, Header};
     use rocket::local::asynchronous::Client;
     use serde_json::{json, Value};
     use std::collections::HashMap;
     use std::sync::{Arc, RwLock};
 
-    type TestState = AppState<CacheRepository<FakeRepo>>;
+    type TestState = AppState<CacheRepository<DieselRepoMock>>;
 
-    fn state_from_repo(repo: FakeRepo) -> TestState {
+    fn state_from_repo(repo: DieselRepoMock) -> TestState {
         AppState {
             repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
         }
     }
 
-    async fn client_with_repo(repo: FakeRepo) -> Client {
+    async fn client_with_repo(repo: DieselRepoMock) -> Client {
         let rocket = rocket::build()
             .manage(state_from_repo(repo))
             .mount("/api", routes![list, get, create, delete]);
@@ -83,9 +83,9 @@ mod tests {
 
     #[rocket::async_test]
     async fn list_returns_seeded_users() {
-        let mut repo = FakeRepo::default();
+        let mut repo = DieselRepoMock::default();
         let mut users = HashMap::new();
-        let mut user = FakeRepo::make_user(1, "alice", "hash");
+        let mut user = DieselRepoMock::make_user(1, "alice", "hash");
         user.is_admin = true;
         users.insert(1, user);
         repo.users = users;
@@ -104,7 +104,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn create_returns_new_identifier() {
-        let client = client_with_repo(FakeRepo::default()).await;
+        let client = client_with_repo(DieselRepoMock::default()).await;
         let response = client
             .post("/api/users")
             .header(ContentType::JSON)
@@ -131,7 +131,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn delete_removes_existing_user() {
-        let client = client_with_repo(FakeRepo::default()).await;
+        let client = client_with_repo(DieselRepoMock::default()).await;
         let create_response = client
             .post("/api/users")
             .header(ContentType::JSON)

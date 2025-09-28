@@ -52,22 +52,22 @@ pub async fn create(
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::repository::{fake_repo::FakeRepo, CacheRepository};
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
     use serde_json::{json, Value};
     use std::collections::HashMap;
     use std::sync::{Arc, RwLock};
 
-    type TestState = AppState<CacheRepository<FakeRepo>>;
+    type TestState = AppState<CacheRepository<DieselRepoMock>>;
 
-    fn state_from_repo(repo: FakeRepo) -> TestState {
+    fn state_from_repo(repo: DieselRepoMock) -> TestState {
         AppState {
             repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
         }
     }
 
-    async fn client_with_repo(repo: FakeRepo) -> Client {
+    async fn client_with_repo(repo: DieselRepoMock) -> Client {
         let rocket = rocket::build()
             .manage(state_from_repo(repo))
             .mount("/api", routes![list, get, create]);
@@ -76,7 +76,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn list_returns_seeded_statuses() {
-        let mut repo = FakeRepo::default();
+        let mut repo = DieselRepoMock::default();
         let mut statuses = HashMap::new();
         statuses.insert(
             1,
@@ -99,7 +99,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn get_returns_specific_status() {
-        let mut repo = FakeRepo::default();
+        let mut repo = DieselRepoMock::default();
         repo.requirement_statuses.insert(
             5,
             RequirementStatus {
@@ -120,7 +120,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn create_returns_created_identifier() {
-        let client = client_with_repo(FakeRepo::default()).await;
+        let client = client_with_repo(DieselRepoMock::default()).await;
         let response = client
             .post("/api/status")
             .header(ContentType::JSON)

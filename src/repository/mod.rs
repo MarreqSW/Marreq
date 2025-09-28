@@ -1,6 +1,7 @@
 pub mod cache;
 pub mod cache_middleware;
 pub mod diesel_repo;
+#[cfg(test)]
 pub mod diesel_repo_mock;
 pub mod errors;
 

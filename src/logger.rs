@@ -94,6 +94,30 @@ pub trait Loggable {
 
 pub struct Logger;
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum LogEntity {
+    Project,
+    Requirement,
+    Test,
+    Category,
+    Applicability,
+    User,
+    Matrix,
+    Verification,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum LogAction {
+    Create(LogEntity),
+    Update(LogEntity),
+    Delete(LogEntity),
+    Login,
+    Logout,
+    Export,
+    Import,
+    StatusChange,
+}
+
 impl Logger {
     pub fn created<T: serde::Serialize + Loggable>(
         conn: &mut PgConnection,
@@ -137,7 +161,7 @@ impl Logger {
         conn: &mut PgConnection,
         ctx: &LogCtx,
         action_type: ActionType,
-        entity_type: EntityType,
+        entity_type: Option<EntityType>, // still optional in input
         entity_id: Option<i32>,
         project_id: Option<i32>,
         old_values: Option<String>,
@@ -147,7 +171,10 @@ impl Logger {
         let new_log = NewLog {
             user_id: ctx.user_id(),
             action_type: action_type.to_string(),
-            entity_type: entity_type.to_string(),
+            // If None, default to empty string
+            entity_type: entity_type
+                .map(|et| et.to_string())
+                .unwrap_or_else(|| "".to_string()),
             entity_id,
             project_id,
             old_values,
@@ -185,7 +212,7 @@ impl Logger {
             conn,
             ctx,
             action_type,
-            entity_type,
+            Some(entity_type),
             entity_id,
             entity.project_id(),
             old_values,
@@ -227,7 +254,7 @@ impl Logger {
             conn,
             ctx,
             ActionType::Create,
-            entity_type,
+            Some(entity_type),
             Some(entity_id),
             project_id,
             None,
@@ -250,7 +277,7 @@ impl Logger {
             conn,
             ctx,
             ActionType::Update,
-            entity_type,
+            Some(entity_type),
             Some(entity_id),
             project_id,
             old_values,
@@ -272,7 +299,7 @@ impl Logger {
             conn,
             ctx,
             ActionType::Delete,
-            entity_type,
+            Some(entity_type),
             Some(entity_id),
             project_id,
             old_values,
@@ -286,7 +313,7 @@ impl Logger {
             conn,
             ctx,
             ActionType::Login,
-            EntityType::User,
+            Some(EntityType::User),
             Some(ctx.user_id()),
             None,
             None,
@@ -300,7 +327,7 @@ impl Logger {
             conn,
             ctx,
             ActionType::Logout,
-            EntityType::User,
+            Some(EntityType::User),
             Some(ctx.user_id()),
             None,
             None,
@@ -312,24 +339,21 @@ impl Logger {
     pub fn log_export(
         conn: &mut PgConnection,
         ctx: &LogCtx,
-        entity_type: EntityType,
-        entity_id: Option<i32>,
-        project_id: Option<i32>,
         description: Option<String>,
+        _action: LogAction,
     ) -> Result<(), LoggerError> {
         Self::log_action(
             conn,
             ctx,
             ActionType::Export,
-            entity_type,
-            entity_id,
-            project_id,
+            None,
+            None,
             None,
             None,
             description,
+            None
         )
     }
-
     pub fn log_custom(
         conn: &mut PgConnection,
         ctx: &LogCtx,
@@ -345,7 +369,7 @@ impl Logger {
             conn,
             ctx,
             action_type,
-            entity_type,
+            Some(entity_type),
             entity_id,
             project_id,
             old_values,

@@ -3,7 +3,7 @@ use crate::repository::{
     DieselRepo, LookupRepository, RequirementsRepository, TestsRepository, UserRepository,
 };
 use anyhow::{anyhow, Result};
-use calamine::{open_workbook, Reader, Xlsx};
+use calamine::{open_workbook, Reader, Xlsx, DataType};
 use diesel::{Connection, PgConnection};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -51,8 +51,9 @@ impl ExcelImporter {
         let sheet_name = workbook.sheet_names()[0].clone();
         let range = workbook
             .worksheet_range(&sheet_name)
-            .ok_or_else(|| anyhow!("Sheet not found: {}", sheet_name))?
-            .map_err(|e| anyhow!("Failed to read sheet: {}", e))?;
+            .map_err(|e| anyhow!("Failed to read sheet `{}`: {}", sheet_name, e))?;
+
+
 
         let mut columns = Vec::new();
         let mut data = Vec::new();

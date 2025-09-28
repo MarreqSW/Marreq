@@ -45,13 +45,13 @@ jobs:
         run: ./setup_database.sh
 
       - name: Coverage (run, no report)
-        run: cargo llvm-cov --workspace --all-features --doctests --no-report
+        run: cargo cov --workspace --all-features --doctests --no-report
 
       - name: Coverage (Cobertura XML)
-        run: cargo llvm-cov report --cobertura --output-path coverage.xml
+        run: cargo cov report --cobertura --output-path coverage.xml
 
       - name: Coverage (HTML)
-        run: cargo llvm-cov report --html --output-dir coverage_html
+        run: cargo cov report --html --output-dir coverage_html
 
       - name: Build coverage summary (Markdown)
         uses: irongut/CodeCoverageSummary@v1.3.0
@@ -72,7 +72,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Coverage gate
-        run: cargo llvm-cov --workspace --all-features --doctests --no-run --fail-under-lines 25
+        run: cargo cov --workspace --all-features --doctests --no-run --fail-under-lines 40
 
       - name: Upload coverage HTML
         if: always()

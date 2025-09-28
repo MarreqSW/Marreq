@@ -1,8 +1,8 @@
 use super::errors::RepoError;
 use crate::models::*;
 use crate::repository::{
-    LookupRepository, MatrixRepository, ProjectsRepository, RequirementsRepository,
-    TestsRepository, UserRepository, ProjectMembersRepository
+    LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository,
+    RequirementsRepository, TestsRepository, UserRepository,
 };
 use crate::schema;
 use diesel::pg::{upsert::excluded, PgConnection};
@@ -10,6 +10,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::RunQueryDsl;
 use lazy_static::lazy_static;
+use rocket::async_trait;
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 
@@ -20,6 +21,55 @@ pub type DbConn = rocket_sync_db_pools::diesel::PgConnection;
 pub type ConnectionPool = Pool<ConnectionManager<PgConnection>>;
 pub type PooledConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub type DieselCachedRepo = super::CacheRepository<DieselRepo>;
+use rocket::tokio::task;
+use diesel::result::Error as DieselError;
+
+
+#[async_trait]
+pub trait DieselRepoLockExt {
+    async fn async_read<F, T>(&self, f: F) -> Result<T, RepoError>
+    where
+        F: FnOnce(&DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
+        T: Send + 'static;
+
+    async fn async_write<F, T>(&self, f: F) -> Result<T, RepoError>
+    where
+        F: FnOnce(&mut DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
+        T: Send + 'static;
+}
+
+#[async_trait]
+impl DieselRepoLockExt for Arc<RwLock<DieselCachedRepo>> {
+    async fn async_read<F, T>(&self, f: F) -> Result<T, RepoError>
+    where
+        F: FnOnce(&DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
+        T: Send + 'static,
+    {
+        let repo = self.clone();
+        task::spawn_blocking(move || {
+            let guard = repo.read().map_err(|_| RepoError::from(DieselError::NotFound))?;
+            f(&*guard)
+        })
+        .await
+        .map_err(|_| RepoError::from(DieselError::NotFound))?
+    }
+
+    async fn async_write<F, T>(&self, f: F) -> Result<T, RepoError>
+    where
+        F: FnOnce(&mut DieselCachedRepo) -> Result<T, RepoError> + Send + 'static,
+        T: Send + 'static,
+    {
+        let repo = self.clone();
+        task::spawn_blocking(move || {
+            let mut guard = repo.write().map_err(|_| RepoError::from(DieselError::NotFound))?;
+            f(&mut *guard)
+        })
+        .await
+        .map_err(|_| RepoError::from(DieselError::NotFound))?
+    }
+}
+
+
 
 lazy_static! {
     /// Shared, mutable, thread-safe repository singleton.
@@ -323,7 +373,6 @@ impl UserRepository for DieselRepo {
     }
 }
 
-
 impl ProjectMembersRepository for DieselRepo {
     fn get_members_by_project(&self, pid: i32) -> Result<Vec<ProjectMember>, RepoError> {
         use crate::schema::project_members::dsl::*;
@@ -413,12 +462,15 @@ impl LookupRepository for DieselRepo {
     fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
         // For backward compatibility, return requirement status as status
         let req_statuses = self.get_requirement_status_all()?;
-        Ok(req_statuses.into_iter().map(|rs| Status {
-            st_id: rs.req_st_id,
-            st_title: rs.req_st_title,
-            st_description: rs.req_st_description,
-            st_short_name: rs.req_st_short_name,
-        }).collect())
+        Ok(req_statuses
+            .into_iter()
+            .map(|rs| Status {
+                st_id: rs.req_st_id,
+                st_title: rs.req_st_title,
+                st_description: rs.req_st_description,
+                st_short_name: rs.req_st_short_name,
+            })
+            .collect())
     }
 
     fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError> {
@@ -995,7 +1047,6 @@ impl MatrixRepository for DieselRepo {
         Ok(())
     }
 }
-
 
 #[cfg(test)]
 mod tests {

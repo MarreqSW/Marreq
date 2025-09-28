@@ -9,4 +9,6 @@ pub enum RepoError {
     Db(#[from] DieselError),
     #[error("pool error: {0}")]
     Pool(String),
+    #[error("bad input: {0}")]
+    BadInput(String),
 }

@@ -15,7 +15,6 @@ concurrency:
 
 jobs:
   test-and-coverage:
-    if: ${{ github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgres://rust:rust@127.0.0.1:5432/reqman

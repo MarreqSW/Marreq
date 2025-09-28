@@ -1,19 +1,19 @@
+use crate::app::AppState;
 use crate::auth::AdminOnly;
-use crate::repository::DieselCachedRepo;
 use rocket::response::Redirect;
 use rocket::serde::json::json;
+use rocket::State;
 use rocket_dyn_templates::Template;
 
 /// Show cache statistics page
 #[get("/admin/cache")]
-pub fn cache_stats_page() -> Template {
-    let cache = DieselCachedRepo::read().cache();
+pub fn cache_stats_page(state: &State<AppState>) -> Template {
+    let repo = state.repo_read();
+    let cache = repo.cache();
     let stats = cache.stats();
     let cleaned = cache.cleanup();
-
-    // Get performance metrics
-    let performance = DieselCachedRepo::read().cache().get_performance();
-    let recommendations = DieselCachedRepo::read().cache().get_recommendations();
+    let performance = cache.get_performance();
+    let recommendations = cache.get_recommendations();
 
     let ctx = json!({
         "title": "Cache Statistics",
@@ -28,10 +28,12 @@ pub fn cache_stats_page() -> Template {
 
 /// Clear all cache entries
 #[post("/admin/cache/clear")]
-pub fn clear_cache() -> Template {
-    DieselCachedRepo::read().cache().clear();
+pub fn clear_cache(state: &State<AppState>) -> Template {
+    let repo = state.repo_read();
+    let cache = repo.cache();
+    cache.clear();
 
-    let stats = DieselCachedRepo::read().cache().stats();
+    let stats = cache.stats();
 
     let ctx = json!({
         "title": "Cache Statistics",
@@ -45,8 +47,9 @@ pub fn clear_cache() -> Template {
 
 /// Clean up expired cache entries
 #[post("/admin/cache/cleanup")]
-pub fn cleanup_cache() -> Template {
-    let cache = DieselCachedRepo::read().cache();
+pub fn cleanup_cache(state: &State<AppState>) -> Template {
+    let repo = state.repo_read();
+    let cache = repo.cache();
     let cleaned = cache.cleanup();
     let stats = cache.stats();
 
@@ -62,10 +65,11 @@ pub fn cleanup_cache() -> Template {
 
 /// Cache health page for administrators
 #[get("/cache/health")]
-pub fn cache_health_page(admin: AdminOnly) -> Template {
+pub fn cache_health_page(admin: AdminOnly, state: &State<AppState>) -> Template {
     let user = admin.into_inner();
 
-    let health_data = DieselCachedRepo::read().cache().get_health();
+    let repo = state.repo_read();
+    let health_data = repo.cache().get_health();
     let ctx = json!({
         "user": user,
         "health": health_data
@@ -75,9 +79,8 @@ pub fn cache_health_page(admin: AdminOnly) -> Template {
 }
 
 #[get("/cache/warm")]
-pub fn warm_cache_route(_admin: AdminOnly) -> Redirect {
-    // Warm up the cache
-    DieselCachedRepo::write().warm_cache();
+pub fn warm_cache_route(_admin: AdminOnly, state: &State<AppState>) -> Redirect {
+    state.repo_write().warm_cache();
 
     Redirect::to("/admin/cache")
 }

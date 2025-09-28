@@ -1,8 +1,8 @@
 pub mod cache;
 pub mod cache_middleware;
 pub mod diesel_repo;
-pub mod errors;
 pub mod diesel_repo_mock;
+pub mod errors;
 
 pub use cache::*;
 pub use cache_middleware::CacheRepository;

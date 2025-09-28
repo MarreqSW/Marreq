@@ -1,6 +1,6 @@
 use super::errors::AuthError;
 use crate::auth::set_session_cookie;
-use crate::logger::Logger;
+use crate::logger::{LogCtx, Logger};
 use crate::models::*;
 use crate::repository::DieselRepo;
 use crate::repository::Repository;
@@ -26,8 +26,8 @@ pub fn login_user<R: Repository>(
     let mut conn = DieselRepo::new()
         .get_conn()
         .map_err(|e| AuthError::Db(e.to_string()))?;
-    Logger::log_login(&mut conn, user.user_id, None)
-        .map_err(|e| AuthError::Audit(e.to_string()))?;
+    let ctx = LogCtx::new(user.user_id);
+    Logger::log_login(&mut conn, &ctx).map_err(|e| AuthError::Audit(e.to_string()))?;
 
     Ok(())
 }

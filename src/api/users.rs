@@ -1,6 +1,6 @@
 use crate::api::prelude::*;
-use crate::logger::Logger;
-use crate::models::{EntityType, NewUser, User};
+use crate::logger::{LogCtx, Logger};
+use crate::models::{NewUser, User};
 use crate::repository::errors::RepoError;
 use crate::repository::UserRepository;
 
@@ -22,24 +22,14 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<User>> {
 #[post("/users", data = "<payload>")]
 pub async fn create(state: &State<AppState>, payload: Json<NewUser>) -> ApiResult<Value> {
     let user = payload.into_inner();
-    let username = user.user_username.clone();
-    let new_values = Logger::to_json_string(&user).ok();
 
     let id = state
         .repo
         .async_write(move |repo| {
             let id = repo.insert_user(&user)?;
-            if let (Some(payload), Ok(mut conn)) = (new_values, repo.inner_repo().get_conn()) {
-                let _ = Logger::log_create(
-                    conn.as_mut(),
-                    0,
-                    EntityType::User,
-                    id,
-                    None,
-                    Some(payload),
-                    Some(format!("Created user via API: {username}")),
-                    None,
-                );
+            if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                let ctx = LogCtx::new(0);
+                let _ = Logger::created(conn.as_mut(), &ctx, id, &user);
             }
             Ok::<_, RepoError>(id)
         })

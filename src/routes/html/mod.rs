@@ -26,7 +26,7 @@ use crate::auth::*;
 use crate::generators::*;
 use crate::helper_functions::*;
 use crate::html::*;
-use crate::logger::Logger;
+use crate::logger::{LogCtx, Logger};
 use crate::models::*;
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
@@ -847,16 +847,16 @@ pub fn post_edit_user(
                 Logger::to_json_string(&old_user),
                 Logger::to_json_string(&user_data),
             ) {
+                let log_ctx = LogCtx::new(current_user.user_id);
                 let _ = Logger::log_update(
                     connection,
-                    current_user.user_id,
+                    &log_ctx,
                     EntityType::User,
                     user_id,
                     None,
                     Some(old_values),
                     Some(new_values),
                     Some(format!("Updated user: {}", user_data.user_username)),
-                    None,
                 );
             }
             Ok(Redirect::to(uri!(show_user_id(user_id))))
@@ -1066,9 +1066,10 @@ pub fn post_edit_requirement(
         Logger::to_json_string(&old_requirement),
         Logger::to_json_string(&requirement_data),
     ) {
+        let log_ctx = LogCtx::new(user.user_id);
         let _ = Logger::log_update(
             connection,
-            user.user_id,
+            &log_ctx,
             EntityType::Requirement,
             req_id,
             Some(requirement_data.project_id),
@@ -1078,7 +1079,6 @@ pub fn post_edit_requirement(
                 "Updated requirement: {}",
                 requirement_data.req_title
             )),
-            None,
         );
     }
 
@@ -1118,15 +1118,15 @@ pub fn delete_requirement_route(
         Ok(_deleted) => {
             // Log the requirement deletion
             if let Ok(old_values) = Logger::to_json_string(&requirement) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_delete(
                     connection.as_mut(),
-                    user.user_id,
+                    &log_ctx,
                     EntityType::Requirement,
                     req_id,
                     Some(requirement.project_id),
                     Some(old_values),
                     Some(format!("Deleted requirement: {}", requirement.req_title)),
-                    None,
                 );
             }
 
@@ -1176,15 +1176,15 @@ pub fn delete_test_route(
         Ok(_deleted) => {
             // Log the test deletion
             if let Ok(old_values) = Logger::to_json_string(&test) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_delete(
                     connection,
-                    user.user_id,
+                    &log_ctx,
                     EntityType::Test,
                     test_id,
                     Some(test.project_id),
                     Some(old_values),
                     Some(format!("Deleted test: {}", test.test_name)),
-                    None,
                 );
             }
 
@@ -1373,9 +1373,10 @@ pub fn post_requirement(
 
     // Log the requirement creation
     if let Ok(new_values) = Logger::to_json_string(&requirement_data) {
+        let log_ctx = LogCtx::new(user.user_id);
         let _ = Logger::log_create(
             connection,
-            user.user_id,
+            &log_ctx,
             EntityType::Requirement,
             my_id,
             Some(requirement_data.project_id),
@@ -1384,7 +1385,6 @@ pub fn post_requirement(
                 "Created requirement: {}",
                 requirement_data.req_title
             )),
-            None,
         );
     }
 
@@ -1742,16 +1742,16 @@ pub fn post_edit_test(
         Logger::to_json_string(&old_test),
         Logger::to_json_string(&new_test),
     ) {
+        let log_ctx = LogCtx::new(user.user_id);
         let _ = Logger::log_update(
             connection,
-            user.user_id,
+            &log_ctx,
             EntityType::Test,
             test_id,
             Some(edit_test_form.project_id),
             Some(old_values),
             Some(new_values),
             Some(format!("Updated test: {}", new_test.test_name)),
-            None,
         );
     }
 
@@ -1795,15 +1795,15 @@ pub fn post_test(
 
     // Log the test creation
     if let Ok(new_values) = Logger::to_json_string(&my_new_test) {
+        let log_ctx = LogCtx::new(user.user_id);
         let _ = Logger::log_create(
             connection,
-            user.user_id,
+            &log_ctx,
             EntityType::Test,
             my_id,
             Some(new_test.project_id),
             Some(new_values),
             Some(format!("Created test: {}", my_new_test.test_name)),
-            None,
         );
     }
 
@@ -2264,15 +2264,15 @@ pub fn post_category(
         Ok(category_id) => {
             // Log the category creation
             if let Ok(new_values) = Logger::to_json_string(&category_data) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_create(
                     connection,
-                    user.user_id,
+                    &log_ctx,
                     EntityType::Category,
                     category_id,
                     Some(category_data.project_id),
                     Some(new_values),
                     Some(format!("Created category: {}", category_data.cat_title)),
-                    None,
                 );
             }
 
@@ -2323,16 +2323,16 @@ pub fn post_edit_category(
                 Logger::to_json_string(&old_category),
                 Logger::to_json_string(&category_with_id),
             ) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_update(
                     connection,
-                    user.user_id,
+                    &log_ctx,
                     EntityType::Category,
                     cat_id,
                     Some(category_with_id.project_id),
                     Some(old_values),
                     Some(new_values),
                     Some(format!("Updated category: {}", category_with_id.cat_title)),
-                    None,
                 );
             }
 
@@ -2368,15 +2368,15 @@ pub fn delete_category_route(
         Ok(_) => {
             // Log the category deletion
             if let Ok(old_values) = Logger::to_json_string(&category) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_delete(
                     connection.as_mut(),
-                    user.user_id,
+                    &log_ctx,
                     EntityType::Category,
                     cat_id,
                     Some(category.project_id),
                     Some(old_values),
                     Some(format!("Deleted category: {}", category.cat_title)),
-                    None,
                 );
             }
 
@@ -2412,9 +2412,10 @@ pub fn post_user(session_user: SessionUser, new_user: Form<NewUser>) -> Result<R
 
             // Log the user creation
             if let Ok(new_values) = Logger::to_json_string(&user_with_hashed_password) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_create(
                     connection,
-                    user.user_id,
+                    &log_ctx,
                     EntityType::User,
                     my_id,
                     None,
@@ -2423,7 +2424,6 @@ pub fn post_user(session_user: SessionUser, new_user: Form<NewUser>) -> Result<R
                         "Created user: {}",
                         user_with_hashed_password.user_username
                     )),
-                    None,
                 );
             }
 
@@ -2528,9 +2528,10 @@ pub fn post_applicability(
         Ok(applicability_id) => {
             // Log the applicability creation
             if let Ok(new_values) = Logger::to_json_string(&applicability_data) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_create(
                     connection,
-                    user.user_id,
+                    &log_ctx,
                     EntityType::Applicability,
                     applicability_id,
                     Some(applicability_data.project_id),
@@ -2539,7 +2540,6 @@ pub fn post_applicability(
                         "Created applicability: {}",
                         applicability_data.app_title
                     )),
-                    None,
                 );
             }
 
@@ -2593,9 +2593,10 @@ pub fn post_edit_applicability(
                 Logger::to_json_string(&old_applicability),
                 Logger::to_json_string(&applicability_with_id),
             ) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_update(
                     connection,
-                    user.user_id,
+                    &log_ctx,
                     EntityType::Applicability,
                     app_id,
                     Some(applicability_with_id.project_id),
@@ -2605,7 +2606,6 @@ pub fn post_edit_applicability(
                         "Updated applicability: {}",
                         applicability_with_id.app_title
                     )),
-                    None,
                 );
             }
             Ok(Redirect::to(uri!(show_applicability)))
@@ -2640,9 +2640,10 @@ pub fn delete_applicability_route(
         Ok(_) => {
             // Log the applicability deletion
             if let Ok(old_values) = Logger::to_json_string(&applicability) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_delete(
                     connection.as_mut(),
-                    user.user_id,
+                    &log_ctx,
                     EntityType::Applicability,
                     app_id,
                     Some(applicability.project_id),
@@ -2651,7 +2652,6 @@ pub fn delete_applicability_route(
                         "Deleted applicability: {}",
                         applicability.app_title
                     )),
-                    None,
                 );
             }
 
@@ -3172,15 +3172,15 @@ pub fn post_project(admin: AdminOnly, new_project: Form<NewProject>) -> Result<R
         Ok(project_id) => {
             // Log the project creation
             if let Ok(new_values) = Logger::to_json_string(&project_data) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_create(
                     connection,
-                    user.user_id,
+                    &log_ctx,
                     EntityType::Project,
                     project_id,
                     None,
                     Some(new_values),
                     Some(format!("Created project: {}", project_data.project_name)),
-                    None,
                 );
             }
 
@@ -3234,16 +3234,16 @@ pub fn post_edit_project(
                 Logger::to_json_string(&old_project),
                 Logger::to_json_string(&project_data),
             ) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_update(
                     connection,
-                    user.user_id,
+                    &log_ctx,
                     EntityType::Project,
                     project_id,
                     None,
                     Some(old_values),
                     Some(new_values),
                     Some(format!("Updated project: {}", project_data.project_name)),
-                    None,
                 );
             }
 
@@ -3280,15 +3280,15 @@ pub fn delete_project_route(
         Ok(_) => {
             // Log the project deletion
             if let Ok(old_values) = Logger::to_json_string(&project) {
+                let log_ctx = LogCtx::new(user.user_id);
                 let _ = Logger::log_delete(
                     connection.as_mut(),
-                    user.user_id,
+                    &log_ctx,
                     EntityType::Project,
                     project_id,
                     None,
                     Some(old_values),
                     Some(format!("Deleted project: {}", project.project_name)),
-                    None,
                 );
             }
 
@@ -3777,9 +3777,10 @@ pub async fn generate_backup(
             if output.status.success() {
                 // Log the successful backup
                 if let Ok(mut conn) = get_db_connection() {
-                    let _ = Logger::log_action(
+                    let log_ctx = LogCtx::new(user.user_id);
+                    let _ = Logger::log_custom(
                         &mut conn,
-                        user.user_id,
+                        &log_ctx,
                         crate::models::ActionType::StatusChange,
                         crate::models::EntityType::User,
                         None,
@@ -3787,7 +3788,6 @@ pub async fn generate_backup(
                         None,
                         None,
                         Some(format!("Database backup generated: {}", filename)),
-                        None,
                     );
                 }
 
@@ -3801,9 +3801,10 @@ pub async fn generate_backup(
             } else {
                 // Log the failed backup
                 if let Ok(mut conn) = get_db_connection() {
-                    let _ = Logger::log_action(
+                    let log_ctx = LogCtx::new(user.user_id);
+                    let _ = Logger::log_custom(
                         &mut conn,
-                        user.user_id,
+                        &log_ctx,
                         crate::models::ActionType::StatusChange,
                         crate::models::EntityType::User,
                         None,
@@ -3814,7 +3815,6 @@ pub async fn generate_backup(
                             "Database backup failed: {}",
                             String::from_utf8_lossy(&output.stderr)
                         )),
-                        None,
                     );
                 }
 
@@ -3825,9 +3825,10 @@ pub async fn generate_backup(
         Err(e) => {
             // Log the command failure
             if let Ok(mut conn) = get_db_connection() {
-                let _ = Logger::log_action(
+                let log_ctx = LogCtx::new(user.user_id);
+                let _ = Logger::log_custom(
                     &mut conn,
-                    user.user_id,
+                    &log_ctx,
                     crate::models::ActionType::StatusChange,
                     crate::models::EntityType::User,
                     None,
@@ -3835,7 +3836,6 @@ pub async fn generate_backup(
                     None,
                     None,
                     Some(format!("Database backup command failed: {}", e)),
-                    None,
                 );
             }
 
@@ -3958,14 +3958,14 @@ pub async fn export_logs(
     std::fs::write(&export_path, logs_json).map_err(|_| Redirect::to(uri!(show_logs)))?;
 
     // Log the successful export
+    let log_ctx = LogCtx::new(user.user_id);
     let _ = Logger::log_export(
         connection,
-        user.user_id,
+        &log_ctx,
         crate::models::EntityType::User,
         None,
         None,
         Some(format!("Exported logs to {}", filename)),
-        None,
     );
 
     Ok((
@@ -4015,9 +4015,10 @@ pub fn cleanup_logs(admin: AdminOnly) -> Result<Redirect, Redirect> {
     match crate::logger::cleanup_old_logs(connection.as_mut(), 90) {
         Ok(deleted_count) => {
             // Log the cleanup action
-            let _ = Logger::log_action(
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::log_custom(
                 connection.as_mut(),
-                user.user_id,
+                &log_ctx,
                 crate::models::ActionType::StatusChange,
                 crate::models::EntityType::User,
                 None,
@@ -4025,14 +4026,14 @@ pub fn cleanup_logs(admin: AdminOnly) -> Result<Redirect, Redirect> {
                 None,
                 None,
                 Some(format!("Cleaned up {} old log entries", deleted_count)),
-                None,
             );
         }
         Err(_) => {
             // Log the failed cleanup action
-            let _ = Logger::log_action(
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::log_custom(
                 connection.as_mut(),
-                user.user_id,
+                &log_ctx,
                 crate::models::ActionType::StatusChange,
                 crate::models::EntityType::User,
                 None,
@@ -4040,7 +4041,6 @@ pub fn cleanup_logs(admin: AdminOnly) -> Result<Redirect, Redirect> {
                 None,
                 None,
                 Some("Failed to clean up old log entries".to_string()),
-                None,
             );
         }
     }

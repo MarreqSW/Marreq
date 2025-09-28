@@ -1,24 +1,26 @@
-use crate::models::*;
-use diesel::prelude::*;
-use crate::repository::DieselRepo;
 use crate::helper_functions::decorators;
+use crate::models::*;
+use crate::repository::DieselRepo;
+use diesel::prelude::*;
 use std::fs;
 
-pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+pub fn create_matrix_workbook(
+    cookies: &rocket::http::CookieJar<'_>,
+) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
     eprintln!("Creating matrix workbook");
-    
+
+    use crate::helper_functions::*;
     use crate::schema::matrix::dsl::*;
     use crate::schema::requirements::dsl::*;
     use crate::schema::tests::dsl::*;
-    use crate::helper_functions::*;
-    
+
     let mut connection = DieselRepo::new()
         .get_conn()
         .map_err(|e| format!("Database connection error: {}", e))?;
-    
+
     // Get selected project ID
     let selected_project_id = get_selected_project_id(cookies);
-    
+
     // Get requirements for the selected project
     let all_reqs = if let Some(selected_pid) = selected_project_id {
         requirements
@@ -43,7 +45,11 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
             .map_err(|e| format!("Error querying tests: {:?}", e))?
     };
 
-    eprintln!("Found {} requirements and {} tests", all_reqs.len(), all_tests.len());
+    eprintln!(
+        "Found {} requirements and {} tests",
+        all_reqs.len(),
+        all_tests.len()
+    );
 
     // Decorate requirements and tests to get real names
     let mut decorated_reqs = decorators::decorate_requirements(all_reqs);
@@ -51,13 +57,13 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
 
     // Sort requirements by ID
     decorated_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
-    
+
     // Sort tests by ID
     decorated_tests.sort_by(|a, b| a.test_id.cmp(&b.test_id));
-    
+
     let workbook = xlsxwriter::Workbook::new("target/matrix.xls")?;
     let mut sheet1 = workbook.add_worksheet(None)?;
-    
+
     // Write headers
     // First column headers (requirement info)
     sheet1.write_string(0, 0, "Req ID", None)?;
@@ -65,29 +71,29 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
     sheet1.write_string(0, 2, "Reference", None)?;
     sheet1.write_string(0, 3, "Category", None)?;
     sheet1.write_string(0, 4, "Status", None)?;
-    
+
     // Test headers starting from column 5
     for (col_idx, test) in decorated_tests.iter().enumerate() {
         let col = (col_idx + 5) as u16;
         let header = format!("Test #{} ({})", test.test_id, test.test_name);
         sheet1.write_string(0, col, &header, None)?;
     }
-    
+
     // Write requirement rows
     for (row_idx, req) in decorated_reqs.iter().enumerate() {
         let row = (row_idx + 1) as u32;
-        
+
         // Write requirement info
         sheet1.write_number(row, 0, req.req_id as f64, None)?;
         sheet1.write_string(row, 1, &req.req_title, None)?;
         sheet1.write_string(row, 2, &req.req_reference, None)?;
         sheet1.write_string(row, 3, &req.req_category, None)?;
         sheet1.write_string(row, 4, &req.req_current_status, None)?;
-        
+
         // Check matrix links for each test
         for (col_idx, test) in decorated_tests.iter().enumerate() {
             let col = (col_idx + 5) as u16;
-            
+
             // Check if this requirement is linked to this test
             let test_present: i64 = matrix
                 .filter(matrix_req_id.eq(req.req_id))
@@ -95,24 +101,27 @@ pub fn create_matrix_workbook(cookies: &rocket::http::CookieJar<'_>) -> Result<V
                 .count()
                 .get_result(connection.as_mut())
                 .map_err(|e| format!("Error checking matrix link: {:?}", e))?;
-            
+
             if test_present > 0 {
                 sheet1.write_string(row, col, "Yes", None)?;
             }
             // Leave cell empty if no link exists
         }
     }
-    
+
     eprintln!("Matrix data written successfully");
-    
-    workbook.close().map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-        format!("Error closing workbook: {:?}", e).into()
-    })?;
-    
-    let result = fs::read("target/matrix.xls").map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-        format!("Error reading generated file: {:?}", e).into()
-    })?;
-    
+
+    workbook
+        .close()
+        .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
+            format!("Error closing workbook: {:?}", e).into()
+        })?;
+
+    let result =
+        fs::read("target/matrix.xls").map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
+            format!("Error reading generated file: {:?}", e).into()
+        })?;
+
     eprintln!("Matrix workbook created successfully");
     Ok(result)
 }
@@ -167,7 +176,12 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
         worksheet.write_string(row, 11, &req.req_creation_date, None)?;
         worksheet.write_string(row, 12, &req.req_update_date, None)?;
         worksheet.write_string(row, 13, &req.req_deadline_date, None)?;
-        worksheet.write_string(row, 14, &req.req_justification.as_deref().unwrap_or(""), None)?;
+        worksheet.write_string(
+            row,
+            14,
+            &req.req_justification.as_deref().unwrap_or(""),
+            None,
+        )?;
     }
 
     workbook.close()?;

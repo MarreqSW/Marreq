@@ -1,7 +1,7 @@
 use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
-use crate::logger::{LogCtx, Logger};
+use crate::logger::Logger;
 use crate::models::{NewRequirement, Requirement};
 use crate::repository::errors::RepoError;
 use crate::repository::RequirementsRepository;
@@ -20,7 +20,7 @@ pub struct RequirementPatch {
 }
 
 #[get("/requirements")]
-pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> {
+pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> {
     let requirements = state
         .repo
         .async_read(|repo| repo.get_requirements_all())
@@ -29,7 +29,7 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> 
 }
 
 #[get("/requirements/<id>")]
-pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Requirement>> {
+pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Requirement>> {
     let requirement = state
         .repo
         .async_read(move |repo| repo.get_requirement_by_id(id))
@@ -38,16 +38,20 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Requirement
 }
 
 #[post("/requirements", data = "<payload>")]
-pub async fn create(state: &State<AppState>, payload: Json<NewRequirement>) -> ApiResult<Value> {
+pub async fn create(
+    user: ApiUser,
+    state: &State<AppState>,
+    payload: Json<NewRequirement>,
+) -> ApiResult<Value> {
     let requirement = payload.into_inner();
+    let log_ctx = user.log_ctx().clone();
 
     let id = state
         .repo
         .async_write(move |repo| {
             let id = repo.insert_new_requirement(&requirement)?;
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                let ctx = LogCtx::new(0);
-                let _ = Logger::created(conn.as_mut(), &ctx, id, &requirement);
+                let _ = Logger::created(conn.as_mut(), &log_ctx, id, &requirement);
             }
             Ok::<_, RepoError>(id)
         })
@@ -57,14 +61,14 @@ pub async fn create(state: &State<AppState>, payload: Json<NewRequirement>) -> A
 }
 
 #[delete("/requirements/<id>")]
-pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
+pub async fn delete(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Status> {
+    let log_ctx = user.log_ctx().clone();
     state
         .repo
         .async_write(move |repo| {
             let removed = repo.delete_requirement(id)?;
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                let ctx = LogCtx::new(0);
-                let _ = Logger::deleted(conn.as_mut(), &ctx, &removed);
+                let _ = Logger::deleted(conn.as_mut(), &log_ctx, &removed);
             }
             Ok::<_, RepoError>(())
         })
@@ -74,11 +78,13 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
 
 #[patch("/requirements/<id>", data = "<patch>")]
 pub async fn patch_requirement(
+    user: ApiUser,
     state: &State<AppState>,
     id: i32,
     patch: Json<RequirementPatch>,
 ) -> ApiResult<Value> {
     let patch = patch.into_inner();
+    let log_ctx = user.log_ctx().clone();
 
     let any_updates = patch.req_title.is_some()
         || patch.req_description.is_some()
@@ -144,8 +150,7 @@ pub async fn patch_requirement(
             repo.edit_requirement(&payload)?;
 
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                let ctx = LogCtx::new(0);
-                let _ = Logger::updated(conn.as_mut(), &ctx, &original, &requirement);
+                let _ = Logger::updated(conn.as_mut(), &log_ctx, &original, &requirement);
             }
 
             Ok::<_, RepoError>(())

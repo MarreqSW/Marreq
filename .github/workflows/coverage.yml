@@ -34,10 +34,7 @@ jobs:
           components: rustfmt, llvm-tools-preview
 
       - name: Check formatting
-        run: |
-          if ! cargo fmt --all -- --check; then
-            echo "::warning::Code is not formatted according to cargo fmt. Run cargo fmt before committing."
-          fi
+        run: cargo fmt --all -- --check
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2

@@ -157,7 +157,79 @@ impl Logger {
         Self::log_entity_action(conn, ctx, ActionType::Delete, entity, None, oldv, None)
     }
 
-    pub fn log_action(
+    pub fn log_login(conn: &mut PgConnection, ctx: &LogCtx) -> Result<(), LoggerError> {
+        Self::log_action(
+            conn,
+            ctx,
+            ActionType::Login,
+            Some(EntityType::User),
+            Some(ctx.user_id()),
+            None,
+            None,
+            None,
+            Some("User logged in".to_string()),
+        )
+    }
+
+    pub fn log_logout(conn: &mut PgConnection, ctx: &LogCtx) -> Result<(), LoggerError> {
+        Self::log_action(
+            conn,
+            ctx,
+            ActionType::Logout,
+            Some(EntityType::User),
+            Some(ctx.user_id()),
+            None,
+            None,
+            None,
+            Some("User logged out".to_string()),
+        )
+    }
+
+    pub fn log_export(
+        conn: &mut PgConnection,
+        ctx: &LogCtx,
+        description: Option<String>,
+        _action: LogAction,
+    ) -> Result<(), LoggerError> {
+        Self::log_action(
+            conn,
+            ctx,
+            ActionType::Export,
+            None,
+            None,
+            None,
+            None,
+            description,
+            None
+        )
+    }
+
+    pub fn log_custom(
+        conn: &mut PgConnection,
+        ctx: &LogCtx,
+        action_type: ActionType,
+        entity_type: EntityType,
+        entity_id: Option<i32>,
+        project_id: Option<i32>,
+        old_values: Option<String>,
+        new_values: Option<String>,
+        description: Option<String>,
+    ) -> Result<(), LoggerError> {
+        Self::log_action(
+            conn,
+            ctx,
+            action_type,
+            Some(entity_type),
+            entity_id,
+            project_id,
+            old_values,
+            new_values,
+            description,
+        )
+    }
+
+
+    fn log_action(
         conn: &mut PgConnection,
         ctx: &LogCtx,
         action_type: ActionType,
@@ -241,75 +313,6 @@ impl Logger {
         )
     }
 
-    pub fn log_login(conn: &mut PgConnection, ctx: &LogCtx) -> Result<(), LoggerError> {
-        Self::log_action(
-            conn,
-            ctx,
-            ActionType::Login,
-            Some(EntityType::User),
-            Some(ctx.user_id()),
-            None,
-            None,
-            None,
-            Some("User logged in".to_string()),
-        )
-    }
-
-    pub fn log_logout(conn: &mut PgConnection, ctx: &LogCtx) -> Result<(), LoggerError> {
-        Self::log_action(
-            conn,
-            ctx,
-            ActionType::Logout,
-            Some(EntityType::User),
-            Some(ctx.user_id()),
-            None,
-            None,
-            None,
-            Some("User logged out".to_string()),
-        )
-    }
-
-    pub fn log_export(
-        conn: &mut PgConnection,
-        ctx: &LogCtx,
-        description: Option<String>,
-        _action: LogAction,
-    ) -> Result<(), LoggerError> {
-        Self::log_action(
-            conn,
-            ctx,
-            ActionType::Export,
-            None,
-            None,
-            None,
-            None,
-            description,
-            None
-        )
-    }
-    pub fn log_custom(
-        conn: &mut PgConnection,
-        ctx: &LogCtx,
-        action_type: ActionType,
-        entity_type: EntityType,
-        entity_id: Option<i32>,
-        project_id: Option<i32>,
-        old_values: Option<String>,
-        new_values: Option<String>,
-        description: Option<String>,
-    ) -> Result<(), LoggerError> {
-        Self::log_action(
-            conn,
-            ctx,
-            action_type,
-            Some(entity_type),
-            entity_id,
-            project_id,
-            old_values,
-            new_values,
-            description,
-        )
-    }
 
     pub fn get_logs_for_entity(
         conn: &mut PgConnection,

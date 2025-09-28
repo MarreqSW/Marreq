@@ -1,11 +1,11 @@
 use crate::api::prelude::*;
 use crate::logger::Logger;
-use crate::models::{Applicability, EntityType, NewApplicability};
+use crate::models::{Applicability, NewApplicability};
 use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 
 #[get("/applicability")]
-pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Applicability>>> {
+pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Applicability>>> {
     let items = state
         .repo
         .async_read(|repo| repo.get_applicability_all())
@@ -14,7 +14,11 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Applicability>>
 }
 
 #[get("/applicability/<id>")]
-pub async fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Applicability>> {
+pub async fn get(
+    _user: ApiUser,
+    state: &State<AppState>,
+    id: i32,
+) -> ApiResult<Json<Applicability>> {
     let applicability = state
         .repo
         .async_read(move |repo| repo.get_applicability_by_id(id))
@@ -25,31 +29,19 @@ pub async fn get(state: &State<AppState>, id: i32) -> ApiResult<Json<Applicabili
 
 #[post("/applicability", data = "<payload>")]
 pub async fn create(
+    user: ApiUser,
     state: &State<AppState>,
     payload: Json<NewApplicability>,
 ) -> ApiResult<(Status, Value)> {
     let app = payload.into_inner();
-    let title = app.app_title.clone();
-    let pid = app.project_id;
-    let json_for_log = Logger::to_json_string(&app).ok();
+    let log_ctx = user.log_ctx().clone();
 
     let id = state
         .repo
         .async_write(move |repo| {
             let id = repo.insert_new_applicability(&app)?;
-            if let Some(payload) = json_for_log {
-                if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                    let _ = Logger::log_create(
-                        conn.as_mut(),
-                        0,
-                        EntityType::Applicability,
-                        id,
-                        Some(pid),
-                        Some(payload),
-                        Some(format!("Created applicability via API: {title}")),
-                        None,
-                    );
-                }
+            if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                let _ = Logger::created(conn.as_mut(), &log_ctx, id, &app);
             }
             Ok::<_, RepoError>(id)
         })
@@ -60,12 +52,14 @@ pub async fn create(
 
 #[put("/applicability/<id>", data = "<payload>")]
 pub async fn update(
+    user: ApiUser,
     state: &State<AppState>,
     id: i32,
     payload: Json<NewApplicability>,
 ) -> ApiResult<Value> {
     let mut app = payload.into_inner();
     app.app_id = Some(id);
+    let log_ctx = user.log_ctx().clone();
 
     state
         .repo
@@ -81,23 +75,16 @@ pub async fn update(
                 return Err(RepoError::NotFound);
             }
 
-            if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let Some(prev) = before {
-                    if let (Ok(old_values), Ok(new_values)) =
-                        (Logger::to_json_string(&prev), Logger::to_json_string(&app))
-                    {
-                        let _ = Logger::log_update(
-                            conn.as_mut(),
-                            0,
-                            EntityType::Applicability,
-                            id,
-                            Some(app.project_id),
-                            Some(old_values),
-                            Some(new_values),
-                            Some("Updated applicability via API".into()),
-                            None,
-                        );
-                    }
+            if let Some(prev) = before {
+                let after = Applicability {
+                    app_id: id,
+                    app_title: app.app_title.clone(),
+                    app_description: app.app_description.clone(),
+                    app_tag: app.app_tag.clone(),
+                    project_id: app.project_id,
+                };
+                if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                    let _ = Logger::updated(conn.as_mut(), &log_ctx, &prev, &after);
                 }
             }
 
@@ -112,27 +99,14 @@ pub async fn update(
 }
 
 #[delete("/applicability/<id>")]
-pub async fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
+pub async fn delete(user: ApiUser, state: &State<AppState>, id: i32) -> ApiResult<Status> {
+    let log_ctx = user.log_ctx().clone();
     state
         .repo
         .async_write(move |repo| {
             let removed = repo.delete_applicability(id)?;
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let Ok(old_values) = Logger::to_json_string(&removed) {
-                    let _ = Logger::log_delete(
-                        conn.as_mut(),
-                        0,
-                        EntityType::Applicability,
-                        id,
-                        Some(removed.project_id),
-                        Some(old_values),
-                        Some(format!(
-                            "Deleted applicability via API: {}",
-                            removed.app_title
-                        )),
-                        None,
-                    );
-                }
+                let _ = Logger::deleted(conn.as_mut(), &log_ctx, &removed);
             }
             Ok::<_, RepoError>(())
         })

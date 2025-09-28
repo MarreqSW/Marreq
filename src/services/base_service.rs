@@ -5,6 +5,7 @@
 
 use crate::errors::{ApiError, ApiResult};
 use crate::repository::DieselRepo;
+use crate::logger::{LogCtx, Logger};
 use crate::cache;
 use std::time::Duration;
 
@@ -61,36 +62,6 @@ impl BaseService {
             .map_err(|e| ApiError::Internal(format!("Database connection error: {}", e)))
     }
     
-    /// Log operation for audit trail
-    pub fn log_operation(
-        &self,
-        user_id: i32,
-        action_type: crate::models::ActionType,
-        entity_type: crate::models::EntityType,
-        entity_id: Option<i32>,
-        project_id: Option<i32>,
-        old_values: Option<String>,
-        new_values: Option<String>,
-        description: Option<String>,
-    ) -> ApiResult<()> {
-        let mut conn = self.get_connection()?;
-        
-        crate::logger::Logger::log_action(
-            conn.as_mut(),
-            user_id,
-            action_type,
-            entity_type,
-            entity_id,
-            project_id,
-            old_values,
-            new_values,
-            description,
-            None, // No request context in service layer
-        ).map_err(|e| ApiError::Internal(format!("Failed to log operation: {}", e)))?;
-        
-        Ok(())
-    }
-    
     /// Log creation operation
     pub fn log_create(
         &self,
@@ -101,18 +72,20 @@ impl BaseService {
         new_values: Option<String>,
         description: Option<String>,
     ) -> ApiResult<()> {
-        self.log_operation(
-            user_id,
-            crate::models::ActionType::Create,
+        let mut conn = self.get_connection()?;
+        let ctx = LogCtx::new(user_id);
+        Logger::log_create(
+            conn.as_mut(),
+            &ctx,
             entity_type,
-            Some(entity_id),
+            entity_id,
             project_id,
-            None,
             new_values,
             description,
         )
+        .map_err(|e| ApiError::Internal(format!("Failed to log operation: {}", e)))
     }
-    
+
     /// Log update operation
     pub fn log_update(
         &self,
@@ -124,18 +97,21 @@ impl BaseService {
         new_values: Option<String>,
         description: Option<String>,
     ) -> ApiResult<()> {
-        self.log_operation(
-            user_id,
-            crate::models::ActionType::Update,
+        let mut conn = self.get_connection()?;
+        let ctx = LogCtx::new(user_id);
+        Logger::log_update(
+            conn.as_mut(),
+            &ctx,
             entity_type,
-            Some(entity_id),
+            entity_id,
             project_id,
             old_values,
             new_values,
             description,
         )
+        .map_err(|e| ApiError::Internal(format!("Failed to log operation: {}", e)))
     }
-    
+
     /// Log deletion operation
     pub fn log_delete(
         &self,
@@ -146,16 +122,18 @@ impl BaseService {
         old_values: Option<String>,
         description: Option<String>,
     ) -> ApiResult<()> {
-        self.log_operation(
-            user_id,
-            crate::models::ActionType::Delete,
+        let mut conn = self.get_connection()?;
+        let ctx = LogCtx::new(user_id);
+        Logger::log_delete(
+            conn.as_mut(),
+            &ctx,
             entity_type,
-            Some(entity_id),
+            entity_id,
             project_id,
             old_values,
-            None,
             description,
         )
+        .map_err(|e| ApiError::Internal(format!("Failed to log operation: {}", e)))
     }
 }
 

@@ -4,6 +4,7 @@
 //! auxiliary forms used to create or update them. Most of the types derive
 //! Diesel traits so they can be mapped directly to the PostgreSQL database.
 
+use crate::logger::Loggable;
 use crate::schema::*;
 use diesel::prelude::*;
 use std::fmt;
@@ -456,7 +457,6 @@ pub struct Project {
     pub project_owner_id: Option<i32>,
 }
 
-
 /// Membership that links a user to a project with a specific role.
 #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::project_members)]
@@ -544,7 +544,7 @@ pub struct NewLog {
 }
 
 /// Different categories of actions that can appear in the audit log.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum ActionType {
     Create,
     Update,
@@ -567,6 +567,22 @@ impl std::fmt::Display for ActionType {
             ActionType::Export => write!(f, "EXPORT"),
             ActionType::Import => write!(f, "IMPORT"),
             ActionType::StatusChange => write!(f, "STATUS_CHANGE"),
+        }
+    }
+}
+
+impl ActionType {
+    /// Human-friendly past tense description used in audit log messages.
+    pub fn past_tense(self) -> &'static str {
+        match self {
+            ActionType::Create => "Created",
+            ActionType::Update => "Updated",
+            ActionType::Delete => "Deleted",
+            ActionType::Login => "Logged in",
+            ActionType::Logout => "Logged out",
+            ActionType::Export => "Exported",
+            ActionType::Import => "Imported",
+            ActionType::StatusChange => "Changed status", // catch-all phrasing
         }
     }
 }
@@ -598,3 +614,72 @@ impl std::fmt::Display for EntityType {
         }
     }
 }
+
+impl EntityType {
+    /// Lowercase, human-oriented label for log descriptions.
+    pub fn human_name(self) -> &'static str {
+        match self {
+            EntityType::Project => "project",
+            EntityType::Requirement => "requirement",
+            EntityType::Test => "test",
+            EntityType::Category => "category",
+            EntityType::Applicability => "applicability",
+            EntityType::User => "user",
+            EntityType::Matrix => "matrix",
+            EntityType::Verification => "verification",
+        }
+    }
+}
+
+macro_rules! impl_loggable {
+    // For types with direct `id`
+    ($ty:ty, $entity:expr, $id:ident, $name:ident) => {
+        impl Loggable for $ty {
+            fn entity_type() -> EntityType { $entity }
+            fn id(&self) -> i32 { self.$id }
+            fn project_id(&self) -> Option<i32> { Some(self.project_id) }
+            fn display_name(&self) -> String { self.$name.clone() }
+        }
+    };
+
+    // For types with `Option` id
+    ($ty:ty, $entity:expr, $id:ident?, $name:ident) => {
+        impl Loggable for $ty {
+            fn entity_type() -> EntityType { $entity }
+            fn id(&self) -> i32 { self.$id.unwrap_or_default() }
+            fn project_id(&self) -> Option<i32> { Some(self.project_id) }
+            fn display_name(&self) -> String { self.$name.clone() }
+        }
+    };
+
+    // Special case: no project_id
+    ($ty:ty, $entity:expr, $id:ident, $name:ident, no_project) => {
+        impl Loggable for $ty {
+            fn entity_type() -> EntityType { $entity }
+            fn id(&self) -> i32 { self.$id }
+            fn project_id(&self) -> Option<i32> { None }
+            fn display_name(&self) -> String { self.$name.clone() }
+        }
+    };
+
+    ($ty:ty, $entity:expr, $id:ident?, $name:ident, no_project) => {
+        impl Loggable for $ty {
+            fn entity_type() -> EntityType { $entity }
+            fn id(&self) -> i32 { self.$id.unwrap_or_default() }
+            fn project_id(&self) -> Option<i32> { None }
+            fn display_name(&self) -> String { self.$name.clone() }
+        }
+    };
+}
+
+impl_loggable!(Project,          EntityType::Project,       project_id, project_name);
+impl_loggable!(Requirement,      EntityType::Requirement,   req_id,     req_title);
+impl_loggable!(NewRequirement,   EntityType::Requirement,   req_id?,    req_title);
+impl_loggable!(Category,         EntityType::Category,      cat_id,     cat_title);
+impl_loggable!(NewCategory,      EntityType::Category,      cat_id?,    cat_title);
+impl_loggable!(Applicability,    EntityType::Applicability, app_id,     app_title);
+impl_loggable!(NewApplicability, EntityType::Applicability, app_id?,    app_title);
+impl_loggable!(Test,             EntityType::Test,          test_id,    test_name);
+impl_loggable!(NewTest,          EntityType::Test,          test_id?,   test_name);
+impl_loggable!(User,             EntityType::User,          user_id,    user_username, no_project);
+impl_loggable!(NewUser,          EntityType::User,          user_id?,   user_username, no_project);

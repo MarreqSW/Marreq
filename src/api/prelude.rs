@@ -4,4 +4,5 @@ pub use rocket::State;
 
 pub use crate::api::error::{ApiError, ApiResult};
 pub use crate::app::AppState;
+pub use crate::auth::guards::ApiUser;
 pub use crate::repository::DieselRepoLockExt;

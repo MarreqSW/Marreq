@@ -111,3 +111,171 @@ pub async fn delete(user: ApiUser, state: &State<AppState>, id: i32) -> ApiResul
 
     Ok(Status::NoContent)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use rocket::http::{ContentType, Cookie};
+    use rocket::local::asynchronous::Client;
+    use serde_json::{json, Value};
+    use std::sync::{Arc, RwLock};
+
+    type TestState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
+
+    fn test_state() -> TestState {
+        let repo = CacheRepository::new(DieselRepoMock::default().with_admin_user(), 0);
+        AppState {
+            repo: Arc::new(RwLock::new(repo)),
+        }
+    }
+
+    async fn test_client() -> Client {
+        let rocket = rocket::build()
+            .manage(test_state())
+            .mount("/api", routes![list, get, create, update, delete]);
+        Client::tracked(rocket).await.unwrap()
+    }
+
+    fn auth_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    #[rocket::async_test]
+    async fn list_returns_empty_array() {
+        let client = test_client().await;
+        let response = client
+            .get("/api/categories")
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Ok);
+        let categories: Vec<Category> = response.into_json().await.unwrap();
+        assert!(categories.is_empty());
+    }
+
+    #[rocket::async_test]
+    async fn create_returns_created_id() {
+        let client = test_client().await;
+        let response = client
+            .post("/api/categories")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(
+                json!({
+                    "cat_id": null,
+                    "cat_title": "Category",
+                    "cat_description": "Initial description",
+                    "cat_tag": "tag",
+                    "project_id": 1
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let payload: Value = response.into_json().await.unwrap();
+        assert_eq!(payload.get("status"), Some(&Value::from("ok")));
+        assert_eq!(payload.get("id"), Some(&Value::from(1)));
+    }
+
+    #[rocket::async_test]
+    async fn update_changes_existing_category() {
+        let client = test_client().await;
+        let create_response = client
+            .post("/api/categories")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(
+                json!({
+                    "cat_id": null,
+                    "cat_title": "Legacy",
+                    "cat_description": "Old",
+                    "cat_tag": "legacy",
+                    "project_id": 7
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let response = client
+            .put(format!("/api/categories/{id}"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(
+                json!({
+                    "cat_id": id,
+                    "cat_title": "Updated",
+                    "cat_description": "Refreshed",
+                    "cat_tag": "updated",
+                    "project_id": 7
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let payload: Value = response.into_json().await.unwrap();
+        assert_eq!(
+            payload.get("message"),
+            Some(&Value::from("Category updated successfully"))
+        );
+
+        let get_response = client
+            .get(format!("/api/categories/{id}"))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        let category: Category = get_response.into_json().await.unwrap();
+        assert_eq!(category.cat_title, "Updated");
+        assert_eq!(category.cat_description, "Refreshed");
+    }
+
+    #[rocket::async_test]
+    async fn delete_removes_category() {
+        let client = test_client().await;
+        let create_response = client
+            .post("/api/categories")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(
+                json!({
+                    "cat_id": null,
+                    "cat_title": "Disposable",
+                    "cat_description": "Temporary",
+                    "cat_tag": "temp",
+                    "project_id": 1
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let delete_response = client
+            .delete(format!("/api/categories/{id}"))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(delete_response.status(), Status::NoContent);
+
+        let not_found = client
+            .get(format!("/api/categories/{id}"))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(not_found.status(), Status::NotFound);
+    }
+}

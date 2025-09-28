@@ -54,7 +54,7 @@ pub fn change_user_password<R: Repository>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::repository::fake_repo::FakeRepo; // adjust path to your FakeRepo
+    use crate::repository::diesel_repo_mock::DieselRepoMock; // adjust path to your DieselRepoMock
     use crate::repository::UserRepository;
 
     // --- hash/verify ---------------------------------------------------------
@@ -80,8 +80,8 @@ mod tests {
         let current = "oldpw";
         let newpw = "newpw-123";
         let current_hash = hash_password(current).unwrap();
-        let user = FakeRepo::make_user(1, "alice", &current_hash);
-        let mut repo = FakeRepo::with_users([user]);
+        let user = DieselRepoMock::make_user(1, "alice", &current_hash);
+        let mut repo = DieselRepoMock::with_users([user]);
 
         // Act
         change_user_password_impl(&mut repo, 1, current, newpw).expect("should succeed");
@@ -96,8 +96,8 @@ mod tests {
     #[test]
     fn change_user_password_rejects_wrong_current_password() {
         let current_hash = hash_password("right-now").unwrap();
-        let user = FakeRepo::make_user(7, "bob", &current_hash);
-        let mut repo = FakeRepo::with_users([user]);
+        let user = DieselRepoMock::make_user(7, "bob", &current_hash);
+        let mut repo = DieselRepoMock::with_users([user]);
 
         let err = change_user_password_impl(&mut repo, 7, "nope", "new").unwrap_err();
         // Exact variant depends on your AuthError; the function returns InvalidCredentials here.
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn change_user_password_fails_when_user_not_found() {
-        let mut repo = FakeRepo::with_users([]); // empty
+        let mut repo = DieselRepoMock::with_users([]); // empty
         let result = change_user_password_impl(&mut repo, 99, "x", "y");
         assert!(result.is_err());
         // usually mapped from RepoError::NotFound -> AuthError (Db or similar)
@@ -123,8 +123,8 @@ mod tests {
     #[test]
     fn change_user_password_propagates_update_failure() {
         let current_hash = hash_password("pw").unwrap();
-        let user = FakeRepo::make_user(3, "carol", &current_hash);
-        let mut repo = FakeRepo::with_users([user]);
+        let user = DieselRepoMock::make_user(3, "carol", &current_hash);
+        let mut repo = DieselRepoMock::with_users([user]);
         repo.force_err = true; // make update_user_password error
 
         let result = change_user_password_impl(&mut repo, 3, "pw", "newpw");

@@ -171,7 +171,10 @@ impl Cache {
         let initial_count = data.len();
 
         // Count expired entries before removal
-        let expired_count = data.values().filter(|entry| entry.expires_at <= now).count();
+        let expired_count = data
+            .values()
+            .filter(|entry| entry.expires_at <= now)
+            .count();
 
         data.retain(|_, entry| entry.expires_at > now);
 
@@ -179,7 +182,8 @@ impl Cache {
 
         // Update counters for cleaned entries
         if expired_count > 0 {
-            self.expired_entries.fetch_sub(expired_count as u64, Ordering::Relaxed);
+            self.expired_entries
+                .fetch_sub(expired_count as u64, Ordering::Relaxed);
         }
 
         // Update last cleanup time
@@ -195,10 +199,14 @@ impl Cache {
         let now = Instant::now();
 
         let actual_active = data.values().filter(|entry| entry.expires_at > now).count() as u64;
-        let actual_expired = data.values().filter(|entry| entry.expires_at <= now).count() as u64;
+        let actual_expired = data
+            .values()
+            .filter(|entry| entry.expires_at <= now)
+            .count() as u64;
 
         self.active_entries.store(actual_active, Ordering::Relaxed);
-        self.expired_entries.store(actual_expired, Ordering::Relaxed);
+        self.expired_entries
+            .store(actual_expired, Ordering::Relaxed);
     }
 
     /// Invalidate all project-related cache entries
@@ -268,14 +276,12 @@ impl Cache {
         self.remove(&keys::Applicability::by_id(applicability_id));
         self.remove(keys::APPLICABILITY_ALL);
     }
-
 }
-
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::keys;
+    use super::*;
     use std::sync::Arc;
     use std::thread;
     use std::time::{Duration, Instant};
@@ -346,7 +352,10 @@ mod tests {
         }
 
         let duration = start.elapsed();
-        println!("Concurrent read performance test completed in {:?}", duration);
+        println!(
+            "Concurrent read performance test completed in {:?}",
+            duration
+        );
 
         // Verify cache integrity
         assert_eq!(cache.get("key0"), Some("value0".to_string()));
@@ -412,7 +421,9 @@ mod tests {
         cache.set(keys::REQUIREMENTS_ALL, "ra".to_string());
         cache.invalidate_requirement(rid);
         assert!(cache.get(&keys::Requirements::by_id(rid)).is_none());
-        assert!(cache.get(&keys::LinkedTests::for_requirement(rid)).is_none());
+        assert!(cache
+            .get(&keys::LinkedTests::for_requirement(rid))
+            .is_none());
         assert!(cache.get(&keys::RequirementTitle::by_id(rid)).is_none());
         assert!(cache.get(keys::REQUIREMENTS_ALL).is_none());
     }
@@ -427,7 +438,9 @@ mod tests {
         cache.set(keys::TESTS_ALL, "ta".to_string());
         cache.invalidate_test(tid);
         assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
-        assert!(cache.get(&keys::LinkedRequirements::for_test(tid)).is_none());
+        assert!(cache
+            .get(&keys::LinkedRequirements::for_test(tid))
+            .is_none());
         assert!(cache.get(&keys::TestStatus::by_id(tid)).is_none());
         assert!(cache.get(keys::TESTS_ALL).is_none());
     }
@@ -475,7 +488,6 @@ mod tests {
         assert!(cache.get(&keys::Applicability::by_id(aid)).is_none());
         assert!(cache.get(keys::APPLICABILITY_ALL).is_none());
     }
-
 
     #[test]
     fn test_start_cache_maintenance_cleans_expired_entries() {

@@ -546,7 +546,8 @@ mod tests {
             req_status,
             test_status,
             HashMap::new(),
-        ).unwrap();
+        )
+        .unwrap();
         assert!(pdf_bytes.starts_with(b"%PDF"));
     }
 

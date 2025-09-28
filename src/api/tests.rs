@@ -134,13 +134,16 @@ pub async fn update_field(
 mod tests {
     use super::*;
     use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{ContentType, Header};
+    use rocket::http::{ContentType, Cookie};
     use rocket::local::asynchronous::Client;
     use serde_json::{json, Value};
     use std::sync::{Arc, RwLock};
 
     type TestState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
 
     fn state_from_repo(repo: DieselRepoMock) -> TestState {
         AppState {
@@ -150,13 +153,15 @@ mod tests {
 
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
         let rocket = rocket::build()
-            .manage(state_from_repo(repo))
+            .manage(state_from_repo(repo.with_admin_user()))
             .mount("/api", routes![list, get, create, delete, update_field]);
         Client::tracked(rocket).await.unwrap()
     }
 
-    fn auth_header() -> Header<'static> {
-        Header::new("x-test-user", "admin")
+    fn auth_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
     }
 
     fn sample_test(name: &str) -> Value {
@@ -177,7 +182,7 @@ mod tests {
         let client = client_with_repo(DieselRepoMock::default()).await;
         let response = client
             .get("/api/tests")
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
@@ -191,7 +196,7 @@ mod tests {
         let response = client
             .post("/api/tests")
             .header(ContentType::JSON)
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .body(sample_test("Baseline").to_string())
             .dispatch()
             .await;
@@ -208,7 +213,7 @@ mod tests {
         let create_response = client
             .post("/api/tests")
             .header(ContentType::JSON)
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .body(sample_test("Scenario").to_string())
             .dispatch()
             .await;
@@ -218,7 +223,7 @@ mod tests {
         let response = client
             .post(format!("/api/tests/{id}/field"))
             .header(ContentType::JSON)
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .body(
                 json!({
                     "field": "test_name",
@@ -235,7 +240,7 @@ mod tests {
 
         let get_response = client
             .get(format!("/api/tests/{id}"))
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .dispatch()
             .await;
         let test: Test = get_response.into_json().await.unwrap();
@@ -248,7 +253,7 @@ mod tests {
         let create_response = client
             .post("/api/tests")
             .header(ContentType::JSON)
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .body(sample_test("Disposable").to_string())
             .dispatch()
             .await;
@@ -257,14 +262,14 @@ mod tests {
 
         let delete_response = client
             .delete(format!("/api/tests/{id}"))
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .dispatch()
             .await;
         assert_eq!(delete_response.status(), Status::NoContent);
 
         let not_found = client
             .get(format!("/api/tests/{id}"))
-            .header(auth_header())
+            .private_cookie(auth_cookie())
             .dispatch()
             .await;
         assert_eq!(not_found.status(), Status::NotFound);

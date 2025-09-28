@@ -69,6 +69,15 @@ impl DieselRepoMock {
         }
     }
 
+    pub fn with_admin_user(mut self) -> Self {
+        let mut admin = Self::make_user(1, "admin", "");
+        admin.is_admin = true;
+        if !self.users.contains_key(&admin.user_id) {
+            self.users.insert(admin.user_id, admin);
+        }
+        self
+    }
+
     pub fn make_user(id: i32, username: &str, stored_pw: &str) -> User {
         User {
             user_id: id,

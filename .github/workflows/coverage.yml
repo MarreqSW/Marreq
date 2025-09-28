@@ -27,11 +27,17 @@ jobs:
       - name: Start database
         run: docker compose up -d db
 
-      - name: Set up Rust (nightly + llvm-tools)
+      - name: Set up Rust (nightly + llvm-tools + rustfmt)
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: nightly
-          components: llvm-tools-preview
+          components: rustfmt, llvm-tools-preview
+
+      - name: Check formatting
+        run: |
+          if ! cargo fmt --all -- --check; then
+            echo "::warning::Code is not formatted according to cargo fmt. Run cargo fmt before committing."
+          fi
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2

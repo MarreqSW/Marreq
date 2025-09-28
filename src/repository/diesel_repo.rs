@@ -20,12 +20,6 @@ pub type DbConn = rocket_sync_db_pools::diesel::PgConnection;
 pub type ConnectionPool = Pool<ConnectionManager<PgConnection>>;
 pub type PooledConn = PooledConnection<ConnectionManager<PgConnection>>;
 
-#[cfg(not(test))]
-pub type DieselCachedRepo = super::CacheRepository<DieselRepo>;
-
-#[cfg(test)]
-pub type DieselCachedRepo = super::CacheRepository<super::diesel_repo_mock::DieselRepoMock>;
-
 /// Wrapper for pooled connections that can be used in place of regular connections
 pub struct PooledConnectionWrapper {
     inner: PooledConn,

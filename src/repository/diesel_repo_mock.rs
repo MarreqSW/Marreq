@@ -6,7 +6,7 @@ use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
 
 #[derive(Default)]
-pub struct FakeRepo {
+pub struct DieselRepoMock {
     pub users: HashMap<i32, User>,
     pub statuses: HashMap<i32, Status>,
     pub requirement_statuses: HashMap<i32, RequirementStatus>,
@@ -29,7 +29,7 @@ fn epoch() -> NaiveDateTime {
         .unwrap()
 }
 
-impl FakeRepo {
+impl DieselRepoMock {
     pub fn with_users(users: impl IntoIterator<Item = User>) -> Self {
         let mut map = HashMap::new();
         for u in users {
@@ -89,7 +89,7 @@ impl FakeRepo {
     }
 }
 
-impl UserRepository for FakeRepo {
+impl UserRepository for DieselRepoMock {
     fn get_users_all(&self) -> Result<Vec<User>, RepoError> {
         Ok(self.users.values().cloned().collect())
     }
@@ -176,7 +176,7 @@ impl UserRepository for FakeRepo {
     }
 }
 
-impl LookupRepository for FakeRepo {
+impl LookupRepository for DieselRepoMock {
     fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
         Ok(self.statuses.values().cloned().collect())
     }
@@ -340,7 +340,7 @@ impl LookupRepository for FakeRepo {
     }
 }
 
-impl RequirementsRepository for FakeRepo {
+impl RequirementsRepository for DieselRepoMock {
     fn get_requirement_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
         self.requirements
             .get(&id)
@@ -428,7 +428,7 @@ impl RequirementsRepository for FakeRepo {
     }
 }
 
-impl TestsRepository for FakeRepo {
+impl TestsRepository for DieselRepoMock {
     fn get_test_by_id(&self, id: i32) -> Result<Test, RepoError> {
         self.tests.get(&id).cloned().ok_or(RepoError::NotFound)
     }
@@ -530,7 +530,7 @@ impl TestsRepository for FakeRepo {
     }
 }
 
-impl ProjectsRepository for FakeRepo {
+impl ProjectsRepository for DieselRepoMock {
     fn get_projects_all(&self) -> Result<Vec<Project>, RepoError> {
         Ok(self.projects.values().cloned().collect())
     }
@@ -580,7 +580,7 @@ impl ProjectsRepository for FakeRepo {
     }
 }
 
-impl MatrixRepository for FakeRepo {
+impl MatrixRepository for DieselRepoMock {
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
         Ok(self
             .matrices
@@ -601,7 +601,7 @@ impl MatrixRepository for FakeRepo {
     }
 }
 
-impl ProjectMembersRepository for FakeRepo {
+impl ProjectMembersRepository for DieselRepoMock {
     fn get_members_by_project(&self, project_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
         Ok(self
             .project_members

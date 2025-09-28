@@ -1,5 +1,5 @@
 #[cfg(test)]
-use crate::repository::fake_repo::FakeRepo;
+use crate::repository::diesel_repo_mock::DieselRepoMock;
 use crate::repository::DieselCachedRepo;
 #[cfg(not(test))]
 use crate::repository::DieselRepo;
@@ -60,6 +60,6 @@ fn default_inner_repo() -> DieselRepo {
 }
 
 #[cfg(test)]
-fn default_inner_repo() -> FakeRepo {
-    FakeRepo::default()
+fn default_inner_repo() -> DieselRepoMock {
+    DieselRepoMock::default()
 }

@@ -24,15 +24,15 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Matrix>>> {
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::repository::{fake_repo::FakeRepo, CacheRepository};
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::local::asynchronous::Client;
     use std::sync::{Arc, RwLock};
 
-    type TestState = AppState<CacheRepository<FakeRepo>>;
+    type TestState = AppState<CacheRepository<DieselRepoMock>>;
 
     fn test_state() -> TestState {
         AppState {
-            repo: Arc::new(RwLock::new(CacheRepository::new(FakeRepo::default(), 0))),
+            repo: Arc::new(RwLock::new(CacheRepository::new(DieselRepoMock::default(), 0))),
         }
     }
 

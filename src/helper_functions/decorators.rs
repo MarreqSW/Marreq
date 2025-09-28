@@ -164,7 +164,7 @@ fn get_linked_tests_for_requirement_impl<R: Repository>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::repository::fake_repo::FakeRepo;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
 
     fn dt() -> NaiveDateTime {
@@ -177,7 +177,7 @@ mod tests {
     #[test]
     fn decorate_requirements_impl_covers_branches() {
         let now = dt();
-        let mut repo = FakeRepo::default();
+        let mut repo = DieselRepoMock::default();
 
         // Lookup data
         repo.requirement_statuses.insert(
@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn decorate_tests_impl_covers_branches() {
-        let mut repo = FakeRepo::default();
+        let mut repo = DieselRepoMock::default();
         repo.test_statuses.insert(
             1,
             TestStatus {
@@ -427,7 +427,7 @@ mod tests {
     #[test]
     fn get_linked_tests_for_requirement_impl_works() {
         let now = dt();
-        let mut repo = FakeRepo::default();
+        let mut repo = DieselRepoMock::default();
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
@@ -493,7 +493,7 @@ mod tests {
     #[test]
     fn get_linked_tests_for_requirement_impl_empty_when_no_links() {
         let now = dt();
-        let mut repo = FakeRepo::default();
+        let mut repo = DieselRepoMock::default();
         let req = Requirement {
             req_id: 2,
             req_title: "R".into(),
@@ -528,7 +528,7 @@ mod tests {
 
     #[test]
     fn get_linked_tests_for_requirement_impl_errors_when_req_missing() {
-        let repo = FakeRepo::default();
+        let repo = DieselRepoMock::default();
         let err = get_linked_tests_for_requirement_impl(&repo, 123).unwrap_err();
         matches!(err, RepoError::NotFound);
     }
@@ -536,7 +536,7 @@ mod tests {
     #[test]
     fn get_linked_tests_for_requirement_impl_errors_when_test_missing() {
         let now = dt();
-        let mut repo = FakeRepo::default();
+        let mut repo = DieselRepoMock::default();
         let req = Requirement {
             req_id: 3,
             req_title: "R".into(),

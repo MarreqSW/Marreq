@@ -167,21 +167,21 @@ pub async fn patch_requirement(
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::repository::{fake_repo::FakeRepo, CacheRepository};
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::http::{ContentType, Header};
     use rocket::local::asynchronous::Client;
     use serde_json::{json, Value};
     use std::sync::{Arc, RwLock};
 
-    type TestState = AppState<CacheRepository<FakeRepo>>;
+    type TestState = AppState<CacheRepository<DieselRepoMock>>;
 
-    fn state_from_repo(repo: FakeRepo) -> TestState {
+    fn state_from_repo(repo: DieselRepoMock) -> TestState {
         AppState {
             repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
         }
     }
 
-    async fn client_with_repo(repo: FakeRepo) -> Client {
+    async fn client_with_repo(repo: DieselRepoMock) -> Client {
         let rocket = rocket::build().manage(state_from_repo(repo)).mount(
             "/api",
             routes![list, get, create, delete, patch_requirement],
@@ -214,7 +214,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn list_returns_empty_array() {
-        let client = client_with_repo(FakeRepo::default()).await;
+        let client = client_with_repo(DieselRepoMock::default()).await;
         let response = client
             .get("/api/requirements")
             .header(auth_header())
@@ -227,7 +227,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn create_returns_identifier() {
-        let client = client_with_repo(FakeRepo::default()).await;
+        let client = client_with_repo(DieselRepoMock::default()).await;
         let response = client
             .post("/api/requirements")
             .header(ContentType::JSON)
@@ -244,7 +244,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn patch_updates_fields() {
-        let client = client_with_repo(FakeRepo::default()).await;
+        let client = client_with_repo(DieselRepoMock::default()).await;
         let create_response = client
             .post("/api/requirements")
             .header(ContentType::JSON)
@@ -285,7 +285,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn delete_removes_requirement() {
-        let client = client_with_repo(FakeRepo::default()).await;
+        let client = client_with_repo(DieselRepoMock::default()).await;
         let create_response = client
             .post("/api/requirements")
             .header(ContentType::JSON)

@@ -571,6 +571,22 @@ impl std::fmt::Display for ActionType {
     }
 }
 
+impl ActionType {
+    /// Human-friendly past tense description used in audit log messages.
+    pub fn past_tense(self) -> &'static str {
+        match self {
+            ActionType::Create => "Created",
+            ActionType::Update => "Updated",
+            ActionType::Delete => "Deleted",
+            ActionType::Login => "Logged in",
+            ActionType::Logout => "Logged out",
+            ActionType::Export => "Exported",
+            ActionType::Import => "Imported",
+            ActionType::StatusChange => "Changed status", // catch-all phrasing
+        }
+    }
+}
+
 /// Entities that can be referenced by a [`Log`] entry.
 #[derive(Debug, Clone, Copy)]
 pub enum EntityType {
@@ -595,6 +611,22 @@ impl std::fmt::Display for EntityType {
             EntityType::User => write!(f, "USER"),
             EntityType::Matrix => write!(f, "MATRIX"),
             EntityType::Verification => write!(f, "VERIFICATION"),
+        }
+    }
+}
+
+impl EntityType {
+    /// Lowercase, human-oriented label for log descriptions.
+    pub fn human_name(self) -> &'static str {
+        match self {
+            EntityType::Project => "project",
+            EntityType::Requirement => "requirement",
+            EntityType::Test => "test",
+            EntityType::Category => "category",
+            EntityType::Applicability => "applicability",
+            EntityType::User => "user",
+            EntityType::Matrix => "matrix",
+            EntityType::Verification => "verification",
         }
     }
 }

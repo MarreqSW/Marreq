@@ -1,6 +1,6 @@
 use crate::models::{ActionType, EntityType, Log, NewLog};
 use crate::schema::logs;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{Duration, NaiveDateTime, Utc};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 
@@ -56,11 +56,9 @@ impl LogCtx {
     }
 
     pub fn from_optional_request(user_id: i32, request: Option<&rocket::Request<'_>>) -> Self {
-        let mut ctx = Self::new(user_id);
-        if let Some(req) = request {
-            ctx = ctx.with_request(req);
-        }
-        ctx
+        request
+            .map(|req| Self::new(user_id).with_request(req))
+            .unwrap_or_else(|| Self::new(user_id))
     }
 
     pub fn with_request(mut self, request: &rocket::Request<'_>) -> Self {
@@ -104,18 +102,14 @@ impl Logger {
         entity: &T,
     ) -> Result<(), LoggerError> {
         let payload = Some(Self::to_json_string(entity)?);
-        Self::log_create(
+        Self::log_entity_action(
             conn,
             ctx,
-            T::entity_type(),
-            created_id,
-            entity.project_id(),
+            ActionType::Create,
+            entity,
+            Some(created_id),
+            None,
             payload,
-            Some(format!(
-                "Created {} via API: {}",
-                std::any::type_name::<T>(),
-                entity.display_name()
-            )),
         )
     }
 
@@ -127,20 +121,7 @@ impl Logger {
     ) -> Result<(), LoggerError> {
         let oldv = Some(Self::to_json_string(before)?);
         let newv = Some(Self::to_json_string(after)?);
-        Self::log_update(
-            conn,
-            ctx,
-            T::entity_type(),
-            after.id(),
-            after.project_id(),
-            oldv,
-            newv,
-            Some(format!(
-                "Updated {} via API: {}",
-                std::any::type_name::<T>(),
-                after.display_name()
-            )),
-        )
+        Self::log_entity_action(conn, ctx, ActionType::Update, after, None, oldv, newv)
     }
 
     pub fn deleted<T: serde::Serialize + Loggable>(
@@ -149,19 +130,7 @@ impl Logger {
         entity: &T,
     ) -> Result<(), LoggerError> {
         let oldv = Some(Self::to_json_string(entity)?);
-        Self::log_delete(
-            conn,
-            ctx,
-            T::entity_type(),
-            entity.id(),
-            entity.project_id(),
-            oldv,
-            Some(format!(
-                "Deleted {} via API: {}",
-                std::any::type_name::<T>(),
-                entity.display_name()
-            )),
-        )
+        Self::log_entity_action(conn, ctx, ActionType::Delete, entity, None, oldv, None)
     }
 
     fn log_action(
@@ -184,8 +153,8 @@ impl Logger {
             old_values,
             new_values,
             description,
-            ip_address: ctx.ip_address().map(|s| s.to_string()),
-            user_agent: ctx.user_agent().map(|s| s.to_string()),
+            ip_address: ctx.ip_address().map(str::to_owned),
+            user_agent: ctx.user_agent().map(str::to_owned),
         };
 
         diesel::insert_into(logs::table)
@@ -193,6 +162,56 @@ impl Logger {
             .execute(conn)
             .map(|_| ())
             .map_err(LoggerError::from)
+    }
+
+    fn log_entity_action<T: serde::Serialize + Loggable>(
+        conn: &mut PgConnection,
+        ctx: &LogCtx,
+        action_type: ActionType,
+        entity: &T,
+        entity_id_override: Option<i32>,
+        old_values: Option<String>,
+        new_values: Option<String>,
+    ) -> Result<(), LoggerError> {
+        let entity_type = T::entity_type();
+        let entity_id = entity_id_override.or_else(|| Self::entity_id_for_logging(entity));
+        let description = Some(Self::describe_entity_action(
+            action_type,
+            entity_type,
+            entity,
+        ));
+
+        Self::log_action(
+            conn,
+            ctx,
+            action_type,
+            entity_type,
+            entity_id,
+            entity.project_id(),
+            old_values,
+            new_values,
+            description,
+        )
+    }
+
+    fn entity_id_for_logging<T: Loggable>(entity: &T) -> Option<i32> {
+        match entity.id() {
+            0 => None,
+            id => Some(id),
+        }
+    }
+
+    fn describe_entity_action<T: Loggable>(
+        action_type: ActionType,
+        entity_type: EntityType,
+        entity: &T,
+    ) -> String {
+        format!(
+            "{} {} via API: {}",
+            action_type.past_tense(),
+            entity_type.human_name(),
+            entity.display_name()
+        )
     }
 
     pub(crate) fn log_create(
@@ -419,7 +438,7 @@ impl Logger {
     }
 
     pub fn get_log_count(conn: &mut PgConnection, days: i64) -> Result<i64, LoggerError> {
-        get_log_count(conn, Some(days))
+        crate::logger::get_log_count(conn, Some(days))
     }
 
     pub fn create_description(
@@ -456,11 +475,7 @@ impl Logger {
 pub fn cleanup_old_logs(conn: &mut PgConnection, days: i64) -> Result<usize, LoggerError> {
     use crate::schema::logs::dsl::*;
 
-    let cutoff_timestamp = Utc::now() - Duration::days(days);
-    let cutoff_datetime = DateTime::from_timestamp(cutoff_timestamp.timestamp(), 0)
-        .ok_or_else(|| LoggerError::Other("Invalid timestamp".into()))?
-        .naive_utc();
-
+    let cutoff_datetime = calculate_cutoff(days)?;
     let deleted_count =
         diesel::delete(logs.filter(created_at.lt(cutoff_datetime))).execute(conn)?;
 
@@ -471,11 +486,7 @@ pub fn get_log_count(conn: &mut PgConnection, days: Option<i64>) -> Result<i64, 
     use crate::schema::logs::dsl::*;
 
     let query = if let Some(days) = days {
-        let cutoff_timestamp = Utc::now() - Duration::days(days);
-        let cutoff_datetime = DateTime::from_timestamp(cutoff_timestamp.timestamp(), 0)
-            .ok_or_else(|| LoggerError::Other("Invalid timestamp".into()))?
-            .naive_utc();
-
+        let cutoff_datetime = calculate_cutoff(days)?;
         logs.filter(created_at.ge(cutoff_datetime)).into_boxed()
     } else {
         logs.into_boxed()
@@ -483,4 +494,11 @@ pub fn get_log_count(conn: &mut PgConnection, days: Option<i64>) -> Result<i64, 
 
     let count = query.count().get_result(conn)?;
     Ok(count)
+}
+
+fn calculate_cutoff(days: i64) -> Result<NaiveDateTime, LoggerError> {
+    Utc::now()
+        .checked_sub_signed(Duration::days(days))
+        .ok_or_else(|| LoggerError::Other("Invalid cutoff interval".into()))
+        .map(|dt| dt.naive_utc())
 }

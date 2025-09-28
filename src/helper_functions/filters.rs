@@ -9,9 +9,13 @@ pub fn filter_requirements(
     let mut filtered_requirements: Vec<Requirement> = requirements
         .into_iter()
         .filter(|req| {
-            let status_match = status_filter.map_or(true, |status_id| req.req_current_status == status_id);
-            let verification_match = verification_filter.map_or(true, |verification_id| req.req_verification == verification_id);
-            let category_match = category_filter.map_or(true, |category_id| req.req_category == category_id);
+            let status_match =
+                status_filter.map_or(true, |status_id| req.req_current_status == status_id);
+            let verification_match = verification_filter.map_or(true, |verification_id| {
+                req.req_verification == verification_id
+            });
+            let category_match =
+                category_filter.map_or(true, |category_id| req.req_category == category_id);
             status_match && verification_match && category_match
         })
         .collect();
@@ -37,12 +41,12 @@ pub fn filter_tests(
     tests
         .into_iter()
         .filter(|test| {
-            let status_match = status_filter.map_or(true, |status_id| test.test_status == status_id);
+            let status_match =
+                status_filter.map_or(true, |status_id| test.test_status == status_id);
             status_match
         })
         .collect()
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -51,7 +55,10 @@ mod tests {
     use chrono::NaiveDate;
 
     fn dummy_datetime() -> chrono::NaiveDateTime {
-        NaiveDate::from_ymd_opt(2020, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap()
+        NaiveDate::from_ymd_opt(2020, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
     }
 
     fn sample_requirement(
@@ -109,23 +116,61 @@ mod tests {
     fn filter_tests_filters_by_status() {
         let only_status1 = filter_tests(
             vec![
-                Test { test_id: 1, test_name: "T1".into(), test_description: String::new(), test_source: String::new(), test_reference: "TEST-1".into(), test_status: 1, test_parent: 0, project_id: 0 },
-                Test { test_id: 2, test_name: "T2".into(), test_description: String::new(), test_source: String::new(), test_reference: "TEST-2".into(), test_status: 2, test_parent: 0, project_id: 0 },
+                Test {
+                    test_id: 1,
+                    test_name: "T1".into(),
+                    test_description: String::new(),
+                    test_source: String::new(),
+                    test_reference: "TEST-1".into(),
+                    test_status: 1,
+                    test_parent: 0,
+                    project_id: 0,
+                },
+                Test {
+                    test_id: 2,
+                    test_name: "T2".into(),
+                    test_description: String::new(),
+                    test_source: String::new(),
+                    test_reference: "TEST-2".into(),
+                    test_status: 2,
+                    test_parent: 0,
+                    project_id: 0,
+                },
             ],
-            Some(1), None, None
+            Some(1),
+            None,
+            None,
         );
         assert_eq!(only_status1.len(), 1);
         assert_eq!(only_status1[0].test_id, 1);
 
         let all = filter_tests(
             vec![
-                Test { test_id: 1, test_name: "T1".into(), test_description: String::new(), test_source: String::new(), test_reference: "TEST-1".into(), test_status: 1, test_parent: 0, project_id: 0 },
-                Test { test_id: 2, test_name: "T2".into(), test_description: String::new(), test_source: String::new(), test_reference: "TEST-2".into(), test_status: 2, test_parent: 0, project_id: 0 },
+                Test {
+                    test_id: 1,
+                    test_name: "T1".into(),
+                    test_description: String::new(),
+                    test_source: String::new(),
+                    test_reference: "TEST-1".into(),
+                    test_status: 1,
+                    test_parent: 0,
+                    project_id: 0,
+                },
+                Test {
+                    test_id: 2,
+                    test_name: "T2".into(),
+                    test_description: String::new(),
+                    test_source: String::new(),
+                    test_reference: "TEST-2".into(),
+                    test_status: 2,
+                    test_parent: 0,
+                    project_id: 0,
+                },
             ],
-            None, None, None
+            None,
+            None,
+            None,
         );
         assert_eq!(all.len(), 2);
     }
 }
-
-

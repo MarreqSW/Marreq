@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-and-coverage:
+  qa-pipeline:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgres://rust:rust@127.0.0.1:5432/reqman

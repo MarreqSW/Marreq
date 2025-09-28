@@ -1,8 +1,8 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::logger::Logger;
-use crate::models::{EntityType, NewTest, Test};
+use crate::logger::{LogCtx, Logger};
+use crate::models::{NewTest, Test};
 use crate::repository::errors::RepoError;
 use crate::repository::TestsRepository;
 
@@ -31,25 +31,14 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
 #[post("/tests", data = "<payload>")]
 pub async fn create(state: &State<AppState>, payload: Json<NewTest>) -> ApiResult<Value> {
     let test = payload.into_inner();
-    let name = test.test_name.clone();
-    let project_id = test.project_id;
-    let new_values = Logger::to_json_string(&test).ok();
 
     let id = state
         .repo
         .async_write(move |repo| {
             let id = repo.insert_test(&test)?;
-            if let (Some(payload), Ok(mut conn)) = (new_values, repo.inner_repo().get_conn()) {
-                let _ = Logger::log_create(
-                    conn.as_mut(),
-                    0,
-                    EntityType::Test,
-                    id,
-                    Some(project_id),
-                    Some(payload),
-                    Some(format!("Created test via API: {name}")),
-                    None,
-                );
+            if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                let ctx = LogCtx::new(0);
+                let _ = Logger::created(conn.as_mut(), &ctx, id, &test);
             }
             Ok::<_, RepoError>(id)
         })
@@ -65,18 +54,8 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
         .async_write(move |repo| {
             let removed = repo.delete_test(id)?;
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let Ok(old_values) = Logger::to_json_string(&removed) {
-                    let _ = Logger::log_delete(
-                        conn.as_mut(),
-                        0,
-                        EntityType::Test,
-                        id,
-                        Some(removed.project_id),
-                        Some(old_values),
-                        Some(format!("Deleted test via API: {}", removed.test_name)),
-                        None,
-                    );
-                }
+                let ctx = LogCtx::new(0);
+                let _ = Logger::deleted(conn.as_mut(), &ctx, &removed);
             }
             Ok::<_, RepoError>(())
         })
@@ -132,22 +111,8 @@ pub async fn update_field(
             repo.edit_test(&payload)?;
 
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let (Ok(old_values), Ok(new_values)) = (
-                    Logger::to_json_string(&original),
-                    Logger::to_json_string(&test),
-                ) {
-                    let _ = Logger::log_update(
-                        conn.as_mut(),
-                        0,
-                        EntityType::Test,
-                        test.test_id,
-                        Some(test.project_id),
-                        Some(old_values),
-                        Some(new_values),
-                        Some("Updated test via API".into()),
-                        None,
-                    );
-                }
+                let ctx = LogCtx::new(0);
+                let _ = Logger::updated(conn.as_mut(), &ctx, &original, &test);
             }
 
             Ok::<_, RepoError>(())

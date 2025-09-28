@@ -1,6 +1,6 @@
 use crate::api::prelude::*;
-use crate::logger::Logger;
-use crate::models::{Applicability, EntityType, NewApplicability};
+use crate::logger::{LogCtx, Logger};
+use crate::models::{Applicability, NewApplicability};
 use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 
@@ -29,27 +29,14 @@ pub async fn create(
     payload: Json<NewApplicability>,
 ) -> ApiResult<(Status, Value)> {
     let app = payload.into_inner();
-    let title = app.app_title.clone();
-    let pid = app.project_id;
-    let json_for_log = Logger::to_json_string(&app).ok();
 
     let id = state
         .repo
         .async_write(move |repo| {
             let id = repo.insert_new_applicability(&app)?;
-            if let Some(payload) = json_for_log {
-                if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                    let _ = Logger::log_create(
-                        conn.as_mut(),
-                        0,
-                        EntityType::Applicability,
-                        id,
-                        Some(pid),
-                        Some(payload),
-                        Some(format!("Created applicability via API: {title}")),
-                        None,
-                    );
-                }
+            if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                let ctx = LogCtx::new(0);
+                let _ = Logger::created(conn.as_mut(), &ctx, id, &app);
             }
             Ok::<_, RepoError>(id)
         })
@@ -81,23 +68,17 @@ pub async fn update(
                 return Err(RepoError::NotFound);
             }
 
-            if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let Some(prev) = before {
-                    if let (Ok(old_values), Ok(new_values)) =
-                        (Logger::to_json_string(&prev), Logger::to_json_string(&app))
-                    {
-                        let _ = Logger::log_update(
-                            conn.as_mut(),
-                            0,
-                            EntityType::Applicability,
-                            id,
-                            Some(app.project_id),
-                            Some(old_values),
-                            Some(new_values),
-                            Some("Updated applicability via API".into()),
-                            None,
-                        );
-                    }
+            if let Some(prev) = before {
+                let after = Applicability {
+                    app_id: id,
+                    app_title: app.app_title.clone(),
+                    app_description: app.app_description.clone(),
+                    app_tag: app.app_tag.clone(),
+                    project_id: app.project_id,
+                };
+                if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                    let ctx = LogCtx::new(0);
+                    let _ = Logger::updated(conn.as_mut(), &ctx, &prev, &after);
                 }
             }
 
@@ -118,21 +99,8 @@ pub async fn delete(state: &State<AppState>, id: i32) -> ApiResult<Status> {
         .async_write(move |repo| {
             let removed = repo.delete_applicability(id)?;
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let Ok(old_values) = Logger::to_json_string(&removed) {
-                    let _ = Logger::log_delete(
-                        conn.as_mut(),
-                        0,
-                        EntityType::Applicability,
-                        id,
-                        Some(removed.project_id),
-                        Some(old_values),
-                        Some(format!(
-                            "Deleted applicability via API: {}",
-                            removed.app_title
-                        )),
-                        None,
-                    );
-                }
+                let ctx = LogCtx::new(0);
+                let _ = Logger::deleted(conn.as_mut(), &ctx, &removed);
             }
             Ok::<_, RepoError>(())
         })

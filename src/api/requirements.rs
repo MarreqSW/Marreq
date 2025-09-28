@@ -1,8 +1,8 @@
 use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
-use crate::logger::Logger;
-use crate::models::{EntityType, NewRequirement, Requirement};
+use crate::logger::{LogCtx, Logger};
+use crate::models::{NewRequirement, Requirement};
 use crate::repository::errors::RepoError;
 use crate::repository::RequirementsRepository;
 
@@ -40,25 +40,14 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Requirement
 #[post("/requirements", data = "<payload>")]
 pub async fn create(state: &State<AppState>, payload: Json<NewRequirement>) -> ApiResult<Value> {
     let requirement = payload.into_inner();
-    let title = requirement.req_title.clone();
-    let project_id = requirement.project_id;
-    let new_values = Logger::to_json_string(&requirement).ok();
 
     let id = state
         .repo
         .async_write(move |repo| {
             let id = repo.insert_new_requirement(&requirement)?;
-            if let (Some(payload), Ok(mut conn)) = (new_values, repo.inner_repo().get_conn()) {
-                let _ = Logger::log_create(
-                    conn.as_mut(),
-                    0,
-                    EntityType::Requirement,
-                    id,
-                    Some(project_id),
-                    Some(payload),
-                    Some(format!("Created requirement via API: {title}")),
-                    None,
-                );
+            if let Ok(mut conn) = repo.inner_repo().get_conn() {
+                let ctx = LogCtx::new(0);
+                let _ = Logger::created(conn.as_mut(), &ctx, id, &requirement);
             }
             Ok::<_, RepoError>(id)
         })
@@ -74,21 +63,8 @@ pub async fn delete(id: i32, state: &State<AppState>) -> ApiResult<Status> {
         .async_write(move |repo| {
             let removed = repo.delete_requirement(id)?;
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let Ok(old_values) = Logger::to_json_string(&removed) {
-                    let _ = Logger::log_delete(
-                        conn.as_mut(),
-                        0,
-                        EntityType::Requirement,
-                        id,
-                        Some(removed.project_id),
-                        Some(old_values),
-                        Some(format!(
-                            "Deleted requirement via API: {}",
-                            removed.req_title
-                        )),
-                        None,
-                    );
-                }
+                let ctx = LogCtx::new(0);
+                let _ = Logger::deleted(conn.as_mut(), &ctx, &removed);
             }
             Ok::<_, RepoError>(())
         })
@@ -168,22 +144,8 @@ pub async fn patch_requirement(
             repo.edit_requirement(&payload)?;
 
             if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                if let (Ok(old_values), Ok(new_values)) = (
-                    Logger::to_json_string(&original),
-                    Logger::to_json_string(&requirement),
-                ) {
-                    let _ = Logger::log_update(
-                        conn.as_mut(),
-                        0,
-                        EntityType::Requirement,
-                        requirement.req_id,
-                        Some(requirement.project_id),
-                        Some(old_values),
-                        Some(new_values),
-                        Some("Updated requirement via API".into()),
-                        None,
-                    );
-                }
+                let ctx = LogCtx::new(0);
+                let _ = Logger::updated(conn.as_mut(), &ctx, &original, &requirement);
             }
 
             Ok::<_, RepoError>(())

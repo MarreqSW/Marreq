@@ -241,28 +241,6 @@ impl Logger {
         )
     }
 
-    pub(crate) fn log_create(
-        conn: &mut PgConnection,
-        ctx: &LogCtx,
-        entity_type: EntityType,
-        entity_id: i32,
-        project_id: Option<i32>,
-        new_values: Option<String>,
-        description: Option<String>,
-    ) -> Result<(), LoggerError> {
-        Self::log_action(
-            conn,
-            ctx,
-            ActionType::Create,
-            Some(entity_type),
-            Some(entity_id),
-            project_id,
-            None,
-            new_values,
-            description,
-        )
-    }
-
     pub fn log_login(conn: &mut PgConnection, ctx: &LogCtx) -> Result<(), LoggerError> {
         Self::log_action(
             conn,

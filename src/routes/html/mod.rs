@@ -3962,10 +3962,8 @@ pub async fn export_logs(
     let _ = Logger::log_export(
         connection,
         &log_ctx,
-        crate::models::EntityType::User,
-        None,
-        None,
         Some(format!("Exported logs to {}", filename)),
+        crate::logger::LogAction::Export
     );
 
     Ok((

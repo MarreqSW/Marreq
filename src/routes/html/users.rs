@@ -202,5 +202,12 @@ pub fn post_user(
 }
 
 pub fn routes() -> Vec<Route> {
-    routes![show_users, show_user_id, edit_user, post_edit_user, new_user, post_user]
+    routes![
+        show_users,
+        show_user_id,
+        edit_user,
+        post_edit_user,
+        new_user,
+        post_user
+    ]
 }

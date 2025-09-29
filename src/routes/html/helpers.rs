@@ -13,8 +13,8 @@ use crate::models::{
 use crate::repository::errors::RepoError;
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
-    LookupRepository, ProjectMembersRepository, ProjectsRepository,
-    RequirementsRepository, TestsRepository, UserRepository,
+    LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
+    TestsRepository, UserRepository,
 };
 
 /// Helper function to get a database connection with proper error handling

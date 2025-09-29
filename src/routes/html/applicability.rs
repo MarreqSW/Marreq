@@ -1,0 +1,215 @@
+use super::helpers::*;
+use super::prelude::*;
+
+#[get("/applicability")]
+pub fn show_applicability(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
+    let mut ctx = build_context_with_projects(state, user, cookies);
+
+    // Get selected project ID
+    let selected_project_id = get_selected_project_id(cookies);
+
+    let applicability = if let Some(project_id) = selected_project_id {
+        state.repo_read().get_applicability_by_project(project_id)
+    } else {
+        // Default to the first project if no project is selected
+        let projects = state.repo_read().get_projects_all().unwrap_or_default();
+        if let Some(first_project) = projects.first() {
+            state
+                .repo_read()
+                .get_applicability_by_project(first_project.project_id)
+        } else {
+            state.repo_read().get_applicability_all()
+        }
+    };
+
+    match applicability {
+        Ok(apps) => {
+            ctx["applicability"] = json!(apps);
+        }
+        Err(_) => {
+            ctx["applicability"] = json!([]);
+        }
+    };
+
+    Ok(Template::render("applicability", ctx))
+}
+
+#[get("/new_applicability")]
+pub fn new_applicability(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
+
+    // Get projects and selected project
+    let projects = state.repo_read().get_projects_all().unwrap_or_default();
+    let mut selected_project_id = get_selected_project_id(cookies);
+
+    // If no project is selected and there are projects available, select the first one
+    if selected_project_id.is_none() && !projects.is_empty() {
+        selected_project_id = Some(projects[0].project_id);
+        // Set the cookie for the selected project
+        cookies.add(Cookie::new(
+            "selected_project_id",
+            projects[0].project_id.to_string(),
+        ));
+    }
+
+    let ctx = json!({
+        "user": user,
+        "projects": projects,
+        "selected_project_id": selected_project_id
+    });
+    Ok(Template::render("new_applicability", ctx))
+}
+
+#[post("/new_applicability", data = "<new_applicability>")]
+pub fn post_applicability(
+    session_user: SessionUser,
+    new_applicability: Form<NewApplicability>,
+    state: &State<AppState>,
+) -> Result<Redirect, Redirect> {
+    let user = session_user.into_inner();
+
+    // Check if project_id is provided
+    if new_applicability.project_id == 0 {
+        return Ok(Redirect::to(uri!(new_applicability)));
+    }
+
+    let connection = &mut get_db_connection(state).map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(new_applicability))
+    })?;
+
+    let applicability_data = new_applicability.into_inner();
+    let result = state
+        .repo_write()
+        .insert_new_applicability(&applicability_data);
+    match result {
+        Ok(applicability_id) => {
+            let applicability = state
+                .repo_read()
+                .get_applicability_by_id(applicability_id)
+                .expect("Error reading table Applicability");
+            // Log the applicability creation
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::created(connection, &log_ctx, applicability_id, &applicability);
+
+            Ok(Redirect::to(uri!(show_applicability)))
+        }
+        Err(_e) => {
+            #[cfg(debug_assertions)]
+            println!("Error.*: {:?}", _e);
+            Ok(Redirect::to(uri!(new_applicability)))
+        }
+    }
+}
+
+#[get("/edit_applicability/<app_id>")]
+pub fn get_edit_applicability(
+    session_user: SessionUser,
+    app_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user = session_user.into_inner();
+    let applicability = get_applicability_by_id_cached(state, app_id);
+    let ctx = json!({
+        "applicability": applicability,
+        "user": user
+    });
+    Ok(Template::render("edit_applicability", ctx))
+}
+
+#[post("/edit_applicability/<app_id>", data = "<applicability>")]
+pub fn post_edit_applicability(
+    session_user: SessionUser,
+    app_id: i32,
+    applicability: Form<NewApplicability>,
+    state: &State<AppState>,
+) -> Result<Redirect, Redirect> {
+    let user = session_user.into_inner();
+    let connection = &mut get_db_connection(state).map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!(get_edit_applicability(app_id)))
+    })?;
+
+    // Get the old values before updating
+    let old_applicability = get_applicability_by_id_cached(state, app_id);
+
+    let mut applicability_with_id = applicability.into_inner();
+    applicability_with_id.app_id = Some(app_id);
+
+    let result = state
+        .repo_write()
+        .edit_applicability(&applicability_with_id);
+    match result {
+        Ok(_) => {
+            let log_ctx = LogCtx::new(user.user_id);
+            let _ = Logger::updated(
+                connection,
+                &log_ctx,
+                &old_applicability,
+                &state
+                    .repo_read()
+                    .get_applicability_by_id(app_id)
+                    .expect("Error reading table Applicability after update"),
+            );
+            Ok(Redirect::to(uri!(show_applicability)))
+        }
+        Err(_e) => {
+            #[cfg(debug_assertions)]
+            println!("Error.*: {:?}", _e);
+            Ok(Redirect::to(uri!(get_edit_applicability(app_id))))
+        }
+    }
+}
+
+#[delete("/delete_applicability/<app_id>")]
+pub fn delete_applicability_route(
+    session_user: SessionUser,
+    app_id: i32,
+    state: &State<AppState>,
+) -> Result<rocket::http::Status, Redirect> {
+    let user = session_user.into_inner();
+    let mut connection = match get_db_connection(state) {
+        Ok(conn) => conn,
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            return Err(Redirect::to(uri!(show_applicability)));
+        }
+    };
+
+    let result = state.repo_write().delete_applicability(app_id);
+    match result {
+        Ok(applicability) => {
+            // Log the applicability deletion
+            let log_ctx = LogCtx::new(user.user_id);
+
+            let _ = Logger::deleted(connection.as_mut(), &log_ctx, &applicability);
+
+            Ok(rocket::http::Status::Ok)
+        }
+        Err(_e) => {
+            #[cfg(debug_assertions)]
+            println!("Error.*: {:?}", _e);
+            Ok(rocket::http::Status::InternalServerError)
+        }
+    }
+}
+
+pub fn routes() -> Vec<Route> {
+    routes![
+        show_applicability,
+        new_applicability,
+        post_applicability,
+        get_edit_applicability,
+        post_edit_applicability,
+        delete_applicability_route
+    ]
+}

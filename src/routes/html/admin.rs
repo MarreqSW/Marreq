@@ -1,5 +1,6 @@
-use super::helpers::*;
+use super::helpers::get_db_connection;
 use super::prelude::*;
+use std::path::{Path, PathBuf};
 
 #[get("/admin")]
 pub fn admin_dashboard(admin: AdminOnly) -> Template {
@@ -46,123 +47,101 @@ pub async fn generate_backup(
     filename: String,
     state: &State<AppState>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let user = admin.into_inner();
+    const HOST: &str = "127.0.0.1";
+    const PORT: &str = "5432";
+    const USER: &str = "rust";
+    const PASSWORD: &str = "rust";
+    const DB: &str = "reqman";
+    const DIR: &str = "backups";
 
-    // Use the filename from the URL parameter
-    let filename = if filename.ends_with(".sql") {
-        filename
-    } else {
-        format!("{}.sql", filename)
-    };
+    let user_id = admin.into_inner().user_id;
+    let filename = ensure_sql_extension(&filename);
+    let backup_path = Path::new(DIR).join(&filename);
 
-    // Create backup directory if it doesn't exist
-    let backup_dir = "backups";
-    if !std::path::Path::new(backup_dir).exists() {
-        std::fs::create_dir(backup_dir).map_err(|_| Redirect::to(uri!(admin_backup_page)))?;
-    }
+    ensure_dir(DIR).map_err(|_| admin_redirect())?;
+    std::env::set_var("PGPASSWORD", PASSWORD);
 
-    let backup_path = format!("{}/{}", backup_dir, filename);
-
-    // Database configuration from Rocket.toml
-    let _db_url = "postgres://rust:rust@127.0.0.1:5432/reqman";
-    let password = "rust";
-    let host = "127.0.0.1";
-    let port = "5432";
-    let username = "rust";
-    let database = "reqman";
-
-    // Set environment variable for password
-    std::env::set_var("PGPASSWORD", password);
-
-    // Execute pg_dump command with explicit table inclusion to ensure logs are included
-    let output = std::process::Command::new("pg_dump")
-        .args(&[
-            "-h",
-            host,
-            "-p",
-            port,
-            "-U",
-            username,
-            "-d",
-            database,
-            "-f",
-            &backup_path,
-            "--no-password",
-            "--verbose",       // Add verbose output for debugging
-            "--no-owner",      // Don't include ownership information
-            "--no-privileges", // Don't include privilege information
-        ])
-        .output();
-
-    match output {
-        Ok(output) => {
-            if output.status.success() {
-                // Log the successful backup
-                if let Ok(mut conn) = get_db_connection(state) {
-                    let log_ctx = LogCtx::new(user.user_id);
-                    let _ = Logger::log_custom(
-                        &mut conn,
-                        &log_ctx,
-                        crate::models::ActionType::StatusChange,
-                        crate::models::EntityType::User,
-                        None,
-                        None,
-                        None,
-                        None,
-                        Some(format!("Database backup generated: {}", filename)),
-                    );
-                }
-
-                // Return the backup file for download
-                let file = NamedFile::open(&backup_path)
-                    .await
-                    .map_err(|_| Redirect::to(uri!(admin_backup_page)))?;
-
-                let content_type = ContentType::new("application", "sql");
-                Ok((content_type, file))
-            } else {
-                // Log the failed backup
-                if let Ok(mut conn) = get_db_connection(state) {
-                    let log_ctx = LogCtx::new(user.user_id);
-                    let _ = Logger::log_custom(
-                        &mut conn,
-                        &log_ctx,
-                        crate::models::ActionType::StatusChange,
-                        crate::models::EntityType::User,
-                        None,
-                        None,
-                        None,
-                        None,
-                        Some(format!(
-                            "Database backup failed: {}",
-                            String::from_utf8_lossy(&output.stderr)
-                        )),
-                    );
-                }
-
-                // If backup failed, redirect to backup page with error
-                Err(Redirect::to(uri!(admin_backup_page)))
-            }
+    match run_pg_dump(HOST, PORT, USER, DB, &backup_path) {
+        Err(e) => fail(
+            state,
+            user_id,
+            format!("Database backup command failed: {e}"),
+        ),
+        // pg_dump started, but returned error
+        Ok(output) if !output.status.success() => {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            fail(
+                state,
+                user_id,
+                format!("Database backup failed: {}", stderr.trim()),
+            )
         }
-        Err(e) => {
-            // Log the command failure
-            if let Ok(mut conn) = get_db_connection(state) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_custom(
-                    &mut conn,
-                    &log_ctx,
-                    crate::models::ActionType::StatusChange,
-                    crate::models::EntityType::User,
-                    None,
-                    None,
-                    None,
-                    None,
-                    Some(format!("Database backup command failed: {}", e)),
+        Ok(_) => {
+            if let Ok(mut conn) = get_db_connection(state.inner()) {
+                let ctx = LogCtx::new(user_id);
+                let _ = Logger::log_export(
+                    conn.as_mut(),
+                    &ctx,
+                    Some(format!("Database backup generated: {filename}")),
                 );
             }
 
-            // If command failed, redirect to backup page with error
-            Err(Redirect::to(uri!(admin_backup_page)))
+            let file = NamedFile::open(&backup_path)
+                .await
+                .map_err(|_| admin_redirect())?;
+            Ok((ContentType::new("application", "sql"), file))
         }
     }
+}
+
+fn ensure_sql_extension(name: &str) -> String {
+    if name.ends_with(".sql") {
+        name.to_owned()
+    } else {
+        format!("{name}.sql")
+    }
+}
+
+fn ensure_dir(dir: &str) -> std::io::Result<()> {
+    if !Path::new(dir).exists() {
+        std::fs::create_dir_all(dir)?;
+    }
+    Ok(())
+}
+
+fn run_pg_dump(
+    host: &str,
+    port: &str,
+    user: &str,
+    database: &str,
+    out_path: &PathBuf,
+) -> std::io::Result<std::process::Output> {
+    std::process::Command::new("pg_dump")
+        .arg("-h")
+        .arg(host)
+        .arg("-p")
+        .arg(port)
+        .arg("-U")
+        .arg(user)
+        .arg("-d")
+        .arg(database)
+        .arg("-f")
+        .arg(out_path)
+        .arg("--no-password")
+        .arg("--verbose")
+        .arg("--no-owner")
+        .arg("--no-privileges")
+        .output()
+}
+
+fn admin_redirect() -> Redirect {
+    Redirect::to(uri!(admin_backup_page))
+}
+
+fn fail<T>(state: &State<AppState>, user_id: i32, msg: impl Into<String>) -> Result<T, Redirect> {
+    if let Ok(mut conn) = get_db_connection(state.inner()) {
+        let ctx = LogCtx::new(user_id);
+        let _ = Logger::log_export(conn.as_mut(), &ctx, Some(msg.into()));
+    }
+    Err(admin_redirect())
 }

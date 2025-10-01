@@ -145,3 +145,115 @@ fn fail<T>(state: &State<AppState>, user_id: i32, msg: impl Into<String>) -> Res
     }
     Err(admin_redirect())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::repository::CacheRepository;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use rocket::http::{Cookie, Status};
+    use rocket::local::asynchronous::Client;
+    use rocket_dyn_templates::Template;
+    use std::sync::{Arc, RwLock};
+
+    const ADMIN_ID: i32 = 1;
+
+    fn make_user(id: i32, username: &str, is_admin: bool) -> crate::models::User {
+        let mut user = DieselRepoMock::make_user(id, username, "");
+        user.is_admin = is_admin;
+        user.user_name = format!("User {id}");
+        user.user_email = format!("{username}@example.com");
+        user
+    }
+
+    fn test_state() -> AppState<CacheRepository<DieselRepoMock>> {
+        let users = vec![
+            make_user(ADMIN_ID, "admin", true),
+            make_user(2, "helper", false),
+        ];
+
+        let inner = DieselRepoMock::with_users(users);
+        let repo = CacheRepository::new(inner, 60);
+
+        AppState {
+            repo: Arc::new(RwLock::new(repo)),
+        }
+    }
+
+    async fn test_client() -> Client {
+        let rocket = rocket::build()
+            .manage(test_state())
+            .attach(Template::fairing())
+            .mount(
+                "/",
+                routes![admin_dashboard, admin_users_page, admin_backup_page],
+            );
+        Client::tracked(rocket).await.expect("client")
+    }
+
+    fn admin_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    #[rocket::async_test]
+    async fn admin_dashboard_renders_dashboard_template() {
+        let client = test_client().await;
+        let response = client
+            .get("/admin")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Admin Dashboard"));
+        assert!(body.contains("Manage Users"));
+    }
+
+    #[rocket::async_test]
+    async fn admin_users_page_lists_known_users() {
+        let client = test_client().await;
+        let response = client
+            .get("/admin/users")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("User Management"));
+        assert!(body.contains("helper"));
+    }
+
+    #[rocket::async_test]
+    async fn admin_backup_page_renders_backup_template() {
+        let client = test_client().await;
+        let response = client
+            .get("/admin/backup")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Database Backup"));
+    }
+
+    #[test]
+    fn ensure_sql_extension_adds_suffix_when_missing() {
+        let name = "backup";
+        let result = super::ensure_sql_extension(name);
+        assert_eq!(result, "backup.sql");
+    }
+
+    #[test]
+    fn ensure_sql_extension_keeps_existing_suffix() {
+        let name = "archive.sql";
+        let result = super::ensure_sql_extension(name);
+        assert_eq!(result, "archive.sql");
+    }
+}

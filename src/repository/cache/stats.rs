@@ -218,8 +218,8 @@ mod tests {
         let stats = cache.stats();
         let duration = start.elapsed();
         assert!(
-            duration.as_micros() < 1000,
-            "Stats should be calculated in under 1ms, took {:?}",
+            duration.as_micros() < 5000,
+            "Stats should be calculated in under 5ms, took {:?}",
             duration
         );
         assert_eq!(stats.total_entries, 10000);

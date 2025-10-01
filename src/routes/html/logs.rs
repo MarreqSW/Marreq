@@ -123,7 +123,6 @@ pub async fn export_logs(
         connection,
         &log_ctx,
         Some(format!("Exported logs to {}", filename)),
-        crate::logger::LogAction::Export,
     );
 
     Ok((

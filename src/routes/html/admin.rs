@@ -1,8 +1,9 @@
-use super::helpers::*;
+use super::helpers::get_db_connection;
 use super::prelude::*;
+use std::path::{Path, PathBuf};
 
 #[get("/admin")]
-pub fn admin_dashboard(admin: AdminOnly) -> Template {
+pub async fn admin_dashboard(admin: AdminOnly) -> Template {
     let user = admin.into_inner();
 
     let context = json!({
@@ -14,7 +15,7 @@ pub fn admin_dashboard(admin: AdminOnly) -> Template {
 }
 
 #[get("/admin/users")]
-pub fn admin_users_page(admin: AdminOnly, state: &State<AppState>) -> Template {
+pub async fn admin_users_page(admin: AdminOnly, state: &State<AppState>) -> Template {
     let user = admin.into_inner();
 
     let users = state.repo_read().get_users_all().unwrap_or_default();
@@ -29,7 +30,7 @@ pub fn admin_users_page(admin: AdminOnly, state: &State<AppState>) -> Template {
 }
 
 #[get("/admin/backup")]
-pub fn admin_backup_page(admin: AdminOnly) -> Template {
+pub async fn admin_backup_page(admin: AdminOnly) -> Template {
     let user = admin.into_inner();
 
     let context = json!({
@@ -46,123 +47,258 @@ pub async fn generate_backup(
     filename: String,
     state: &State<AppState>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let user = admin.into_inner();
+    const HOST: &str = "127.0.0.1";
+    const PORT: &str = "5432";
+    const USER: &str = "rust";
+    const PASSWORD: &str = "rust";
+    const DB: &str = "reqman";
+    const DIR: &str = "backups";
 
-    // Use the filename from the URL parameter
-    let filename = if filename.ends_with(".sql") {
-        filename
-    } else {
-        format!("{}.sql", filename)
+    let user_id = admin.into_inner().user_id;
+    let filename = ensure_sql_extension(&filename);
+    let backup_path = Path::new(DIR).join(&filename);
+
+    ensure_dir(DIR).map_err(|_| admin_redirect())?;
+    std::env::set_var("PGPASSWORD", PASSWORD);
+
+    let mut conn = get_db_connection(state.inner()).ok();
+    let ctx = LogCtx::new(user_id);
+
+    // tiny helper to avoid repeating the logging boilerplate
+    let mut log = |msg: String| {
+        if let Some(c) = conn.as_mut() {
+            let _ = Logger::log_export(c, &ctx, Some(msg));
+        } else {
+            eprintln!("Could not reach Database! Message: {}", msg);
+        }
     };
 
-    // Create backup directory if it doesn't exist
-    let backup_dir = "backups";
-    if !std::path::Path::new(backup_dir).exists() {
-        std::fs::create_dir(backup_dir).map_err(|_| Redirect::to(uri!(admin_backup_page)))?;
+    let output = match run_pg_dump(HOST, PORT, USER, DB, &backup_path) {
+        Ok(o) => o,
+        Err(e) => {
+            log(format!("Database backup command failed: {e}"));
+            return Err(admin_redirect());
+        }
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log(format!("Database backup failed: {}", stderr.trim()));
+        return Err(admin_redirect());
     }
 
-    let backup_path = format!("{}/{}", backup_dir, filename);
+    log(format!("Database backup generated: {filename}"));
 
-    // Database configuration from Rocket.toml
-    let _db_url = "postgres://rust:rust@127.0.0.1:5432/reqman";
-    let password = "rust";
-    let host = "127.0.0.1";
-    let port = "5432";
-    let username = "rust";
-    let database = "reqman";
+    let file = NamedFile::open(&backup_path)
+        .await
+        .map_err(|_| admin_redirect())?;
 
-    // Set environment variable for password
-    std::env::set_var("PGPASSWORD", password);
+    Ok((ContentType::new("application", "sql"), file))
+}
 
-    // Execute pg_dump command with explicit table inclusion to ensure logs are included
-    let output = std::process::Command::new("pg_dump")
-        .args(&[
-            "-h",
-            host,
-            "-p",
-            port,
-            "-U",
-            username,
-            "-d",
-            database,
-            "-f",
-            &backup_path,
-            "--no-password",
-            "--verbose",       // Add verbose output for debugging
-            "--no-owner",      // Don't include ownership information
-            "--no-privileges", // Don't include privilege information
-        ])
-        .output();
+fn ensure_sql_extension(name: &str) -> String {
+    if name.ends_with(".sql") {
+        name.to_owned()
+    } else {
+        format!("{name}.sql")
+    }
+}
 
-    match output {
-        Ok(output) => {
-            if output.status.success() {
-                // Log the successful backup
-                if let Ok(mut conn) = get_db_connection(state) {
-                    let log_ctx = LogCtx::new(user.user_id);
-                    let _ = Logger::log_custom(
-                        &mut conn,
-                        &log_ctx,
-                        crate::models::ActionType::StatusChange,
-                        crate::models::EntityType::User,
-                        None,
-                        None,
-                        None,
-                        None,
-                        Some(format!("Database backup generated: {}", filename)),
-                    );
-                }
+fn ensure_dir(dir: &str) -> std::io::Result<()> {
+    if !Path::new(dir).exists() {
+        std::fs::create_dir_all(dir)?;
+    }
+    Ok(())
+}
 
-                // Return the backup file for download
-                let file = NamedFile::open(&backup_path)
-                    .await
-                    .map_err(|_| Redirect::to(uri!(admin_backup_page)))?;
+fn run_pg_dump(
+    host: &str,
+    port: &str,
+    user: &str,
+    database: &str,
+    out_path: &PathBuf,
+) -> std::io::Result<std::process::Output> {
+    std::process::Command::new("pg_dump")
+        .arg("-h")
+        .arg(host)
+        .arg("-p")
+        .arg(port)
+        .arg("-U")
+        .arg(user)
+        .arg("-d")
+        .arg(database)
+        .arg("-f")
+        .arg(out_path)
+        .arg("--no-password")
+        .arg("--verbose")
+        .arg("--no-owner")
+        .arg("--no-privileges")
+        .output()
+}
 
-                let content_type = ContentType::new("application", "sql");
-                Ok((content_type, file))
-            } else {
-                // Log the failed backup
-                if let Ok(mut conn) = get_db_connection(state) {
-                    let log_ctx = LogCtx::new(user.user_id);
-                    let _ = Logger::log_custom(
-                        &mut conn,
-                        &log_ctx,
-                        crate::models::ActionType::StatusChange,
-                        crate::models::EntityType::User,
-                        None,
-                        None,
-                        None,
-                        None,
-                        Some(format!(
-                            "Database backup failed: {}",
-                            String::from_utf8_lossy(&output.stderr)
-                        )),
-                    );
-                }
+fn admin_redirect() -> Redirect {
+    Redirect::to(uri!(admin_backup_page))
+}
 
-                // If backup failed, redirect to backup page with error
-                Err(Redirect::to(uri!(admin_backup_page)))
-            }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::repository::CacheRepository;
+    use rocket::http::{Cookie, Status};
+    use rocket::local::asynchronous::Client;
+    use rocket_dyn_templates::Template;
+    use std::sync::{Arc, RwLock};
+
+    const ADMIN_ID: i32 = 1;
+
+    fn make_user(id: i32, username: &str, is_admin: bool) -> crate::models::User {
+        let mut user = DieselRepoMock::make_user(id, username, "");
+        user.is_admin = is_admin;
+        user.user_name = format!("User {id}");
+        user.user_email = format!("{username}@example.com");
+        user
+    }
+
+    fn test_state() -> AppState<CacheRepository<DieselRepoMock>> {
+        let users = vec![
+            make_user(ADMIN_ID, "admin", true),
+            make_user(2, "helper", false),
+        ];
+
+        let inner = DieselRepoMock::with_users(users);
+        let repo = CacheRepository::new(inner, 60);
+
+        AppState {
+            repo: Arc::new(RwLock::new(repo)),
         }
-        Err(e) => {
-            // Log the command failure
-            if let Ok(mut conn) = get_db_connection(state) {
-                let log_ctx = LogCtx::new(user.user_id);
-                let _ = Logger::log_custom(
-                    &mut conn,
-                    &log_ctx,
-                    crate::models::ActionType::StatusChange,
-                    crate::models::EntityType::User,
-                    None,
-                    None,
-                    None,
-                    None,
-                    Some(format!("Database backup command failed: {}", e)),
-                );
-            }
+    }
 
-            // If command failed, redirect to backup page with error
-            Err(Redirect::to(uri!(admin_backup_page)))
-        }
+    async fn test_client() -> Client {
+        let rocket = rocket::build()
+            .manage(test_state())
+            .attach(Template::fairing())
+            .mount(
+                "/",
+                routes![
+                    admin_dashboard,
+                    admin_users_page,
+                    admin_backup_page,
+                    generate_backup
+                ],
+            );
+        Client::tracked(rocket).await.expect("client")
+    }
+
+    fn admin_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    #[rocket::async_test]
+    async fn admin_dashboard_renders_dashboard_template() {
+        let client = test_client().await;
+        let response = client
+            .get("/admin")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Admin Dashboard"));
+        assert!(body.contains("Manage Users"));
+    }
+
+    #[rocket::async_test]
+    async fn admin_users_page_lists_known_users() {
+        let client = test_client().await;
+        let response = client
+            .get("/admin/users")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("User Management"));
+        assert!(body.contains("helper"));
+    }
+
+    #[rocket::async_test]
+    async fn admin_backup_page_renders_backup_template() {
+        let client = test_client().await;
+        let response = client
+            .get("/admin/backup")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Database Backup"));
+    }
+
+    #[rocket::async_test]
+    async fn generate_backup_redirects_on_failure_and_sets_env() {
+        let _ = std::fs::remove_dir_all("backups");
+
+        let client = test_client().await;
+        let response = client
+            .post("/admin/backup/generate/nightly")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/admin/backup")
+        );
+        assert_eq!(std::env::var("PGPASSWORD").ok().as_deref(), Some("rust"));
+        assert!(std::path::Path::new("backups").exists());
+
+        let _ = std::fs::remove_dir_all("backups");
+        std::env::remove_var("PGPASSWORD");
+    }
+
+    #[test]
+    fn ensure_sql_extension_adds_suffix_when_missing() {
+        let name = "backup";
+        let result = super::ensure_sql_extension(name);
+        assert_eq!(result, "backup.sql");
+    }
+
+    #[test]
+    fn ensure_sql_extension_keeps_existing_suffix() {
+        let name = "archive.sql";
+        let result = super::ensure_sql_extension(name);
+        assert_eq!(result, "archive.sql");
+    }
+
+    #[test]
+    fn ensure_dir_creates_directory_and_is_idempotent() {
+        let unique = format!(
+            "reqman-test-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
+
+        let path = std::env::temp_dir().join(unique);
+        let dir_str = path.to_string_lossy().to_string();
+
+        let _ = std::fs::remove_dir_all(&path);
+
+        super::ensure_dir(&dir_str).expect("first creation should succeed");
+        assert!(path.exists() && path.is_dir());
+
+        super::ensure_dir(&dir_str).expect("second creation should succeed");
+
+        let _ = std::fs::remove_dir_all(&path);
     }
 }

@@ -185,6 +185,26 @@ impl Logger {
         )
     }
 
+    pub fn log_unauthorized(conn: &mut PgConnection, ctx: &LogCtx) -> Result<(), LoggerError> {
+        let new_log = NewLog {
+            user_id: ctx.user_id(),
+            action_type: "ILLEGAL_ACCESS".to_string(),
+            entity_type: "entity_type".to_string(),
+            project_id: None,
+            entity_id: None,
+            old_values: None,
+            new_values: None,
+            description: None,
+            ip_address: ctx.ip_address().map(str::to_owned),
+            user_agent: ctx.user_agent().map(str::to_owned),
+        };
+        diesel::insert_into(logs::table)
+            .values(&new_log)
+            .execute(conn)
+            .map(|_| ())
+            .map_err(LoggerError::from)
+    }
+
     pub fn log_export(
         conn: &mut PgConnection,
         ctx: &LogCtx,

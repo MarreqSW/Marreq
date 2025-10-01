@@ -64,44 +64,36 @@ pub async fn generate_backup(
     let mut conn = get_db_connection(state.inner()).ok();
     let ctx = LogCtx::new(user_id);
 
-    match run_pg_dump(HOST, PORT, USER, DB, &backup_path) {
-        Err(e) => {
-            if let Some(conn) = conn.as_mut() {
-                let _ = Logger::log_export(
-                    conn.as_mut(),
-                    &ctx,
-                    Some(format!("Database backup command failed: {e}")),
-                );
-            }
-            Err(admin_redirect())
+    // tiny helper to avoid repeating the logging boilerplate
+    let mut log = |msg: String| {
+        if let Some(c) = conn.as_mut() {
+            let _ = Logger::log_export(c, &ctx, Some(msg));
+        } else {
+            eprintln!("Could not reach Database! Message: {}", msg);
         }
-        // pg_dump started, but returned error
-        Ok(output) if !output.status.success() => {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            if let Some(conn) = conn.as_mut() {
-                let _ = Logger::log_export(
-                    conn.as_mut(),
-                    &ctx,
-                    Some(format!("Database backup failed: {}", stderr.trim())),
-                );
-            }
-            Err(admin_redirect())
-        }
-        Ok(_) => {
-            if let Some(conn) = conn.as_mut() {
-                let _ = Logger::log_export(
-                    conn.as_mut(),
-                    &ctx,
-                    Some(format!("Database backup generated: {filename}")),
-                );
-            }
+    };
 
-            let file = NamedFile::open(&backup_path)
-                .await
-                .map_err(|_| admin_redirect())?;
-            Ok((ContentType::new("application", "sql"), file))
+    let output = match run_pg_dump(HOST, PORT, USER, DB, &backup_path) {
+        Ok(o) => o,
+        Err(e) => {
+            log(format!("Database backup command failed: {e}"));
+            return Err(admin_redirect());
         }
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log(format!("Database backup failed: {}", stderr.trim()));
+        return Err(admin_redirect());
     }
+
+    log(format!("Database backup generated: {filename}"));
+
+    let file = NamedFile::open(&backup_path)
+        .await
+        .map_err(|_| admin_redirect())?;
+
+    Ok((ContentType::new("application", "sql"), file))
 }
 
 fn ensure_sql_extension(name: &str) -> String {
@@ -262,7 +254,10 @@ mod tests {
             .await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/admin/backup"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/admin/backup")
+        );
         assert_eq!(std::env::var("PGPASSWORD").ok().as_deref(), Some("rust"));
         assert!(std::path::Path::new("backups").exists());
 

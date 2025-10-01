@@ -61,34 +61,40 @@ pub async fn generate_backup(
     ensure_dir(DIR).map_err(|_| admin_redirect())?;
     std::env::set_var("PGPASSWORD", PASSWORD);
 
-    let mut conn = get_db_connection(state.inner()).expect("Failed to connect to DB!");
+    let mut conn = get_db_connection(state.inner()).ok();
     let ctx = LogCtx::new(user_id);
 
     match run_pg_dump(HOST, PORT, USER, DB, &backup_path) {
         Err(e) => {
-            let _ = Logger::log_export(
-                conn.as_mut(),
-                &ctx,
-                Some(format!("Database backup command failed: {e}")),
-            );
+            if let Some(conn) = conn.as_mut() {
+                let _ = Logger::log_export(
+                    conn.as_mut(),
+                    &ctx,
+                    Some(format!("Database backup command failed: {e}")),
+                );
+            }
             Err(admin_redirect())
         }
         // pg_dump started, but returned error
         Ok(output) if !output.status.success() => {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            let _ = Logger::log_export(
-                conn.as_mut(),
-                &ctx,
-                Some(format!("Database backup failed: {}", stderr.trim())),
-            );
+            if let Some(conn) = conn.as_mut() {
+                let _ = Logger::log_export(
+                    conn.as_mut(),
+                    &ctx,
+                    Some(format!("Database backup failed: {}", stderr.trim())),
+                );
+            }
             Err(admin_redirect())
         }
         Ok(_) => {
-            let _ = Logger::log_export(
-                conn.as_mut(),
-                &ctx,
-                Some(format!("Database backup generated: {filename}")),
-            );
+            if let Some(conn) = conn.as_mut() {
+                let _ = Logger::log_export(
+                    conn.as_mut(),
+                    &ctx,
+                    Some(format!("Database backup generated: {filename}")),
+                );
+            }
 
             let file = NamedFile::open(&backup_path)
                 .await
@@ -184,7 +190,12 @@ mod tests {
             .attach(Template::fairing())
             .mount(
                 "/",
-                routes![admin_dashboard, admin_users_page, admin_backup_page],
+                routes![
+                    admin_dashboard,
+                    admin_users_page,
+                    admin_backup_page,
+                    generate_backup
+                ],
             );
         Client::tracked(rocket).await.expect("client")
     }
@@ -239,6 +250,26 @@ mod tests {
         assert!(body.contains("Database Backup"));
     }
 
+    #[rocket::async_test]
+    async fn generate_backup_redirects_on_failure_and_sets_env() {
+        let _ = std::fs::remove_dir_all("backups");
+
+        let client = test_client().await;
+        let response = client
+            .post("/admin/backup/generate/nightly")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/admin/backup"));
+        assert_eq!(std::env::var("PGPASSWORD").ok().as_deref(), Some("rust"));
+        assert!(std::path::Path::new("backups").exists());
+
+        let _ = std::fs::remove_dir_all("backups");
+        std::env::remove_var("PGPASSWORD");
+    }
+
     #[test]
     fn ensure_sql_extension_adds_suffix_when_missing() {
         let name = "backup";
@@ -251,5 +282,28 @@ mod tests {
         let name = "archive.sql";
         let result = super::ensure_sql_extension(name);
         assert_eq!(result, "archive.sql");
+    }
+
+    #[test]
+    fn ensure_dir_creates_directory_and_is_idempotent() {
+        let unique = format!(
+            "reqman-test-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
+
+        let path = std::env::temp_dir().join(unique);
+        let dir_str = path.to_string_lossy().to_string();
+
+        let _ = std::fs::remove_dir_all(&path);
+
+        super::ensure_dir(&dir_str).expect("first creation should succeed");
+        assert!(path.exists() && path.is_dir());
+
+        super::ensure_dir(&dir_str).expect("second creation should succeed");
+
+        let _ = std::fs::remove_dir_all(&path);
     }
 }

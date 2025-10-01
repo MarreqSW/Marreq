@@ -61,30 +61,34 @@ pub async fn generate_backup(
     ensure_dir(DIR).map_err(|_| admin_redirect())?;
     std::env::set_var("PGPASSWORD", PASSWORD);
 
+    let mut conn = get_db_connection(state.inner()).expect("Failed to connect to DB!");
+    let ctx = LogCtx::new(user_id);
+
     match run_pg_dump(HOST, PORT, USER, DB, &backup_path) {
-        Err(e) => fail(
-            state,
-            user_id,
-            format!("Database backup command failed: {e}"),
-        ),
+        Err(e) => {
+            let _ = Logger::log_export(
+                conn.as_mut(),
+                &ctx,
+                Some(format!("Database backup command failed: {e}")),
+            );
+            Err(admin_redirect())
+        }
         // pg_dump started, but returned error
         Ok(output) if !output.status.success() => {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            fail(
-                state,
-                user_id,
-                format!("Database backup failed: {}", stderr.trim()),
-            )
+            let _ = Logger::log_export(
+                conn.as_mut(),
+                &ctx,
+                Some(format!("Database backup failed: {}", stderr.trim())),
+            );
+            Err(admin_redirect())
         }
         Ok(_) => {
-            if let Ok(mut conn) = get_db_connection(state.inner()) {
-                let ctx = LogCtx::new(user_id);
-                let _ = Logger::log_export(
-                    conn.as_mut(),
-                    &ctx,
-                    Some(format!("Database backup generated: {filename}")),
-                );
-            }
+            let _ = Logger::log_export(
+                conn.as_mut(),
+                &ctx,
+                Some(format!("Database backup generated: {filename}")),
+            );
 
             let file = NamedFile::open(&backup_path)
                 .await
@@ -138,21 +142,13 @@ fn admin_redirect() -> Redirect {
     Redirect::to(uri!(admin_backup_page))
 }
 
-fn fail<T>(state: &State<AppState>, user_id: i32, msg: impl Into<String>) -> Result<T, Redirect> {
-    if let Ok(mut conn) = get_db_connection(state.inner()) {
-        let ctx = LogCtx::new(user_id);
-        let _ = Logger::log_export(conn.as_mut(), &ctx, Some(msg.into()));
-    }
-    Err(admin_redirect())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::app::AppState;
     use crate::auth::session::SESSION_COOKIE;
-    use crate::repository::CacheRepository;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::repository::CacheRepository;
     use rocket::http::{Cookie, Status};
     use rocket::local::asynchronous::Client;
     use rocket_dyn_templates::Template;

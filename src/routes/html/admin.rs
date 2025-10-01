@@ -3,7 +3,7 @@ use super::prelude::*;
 use std::path::{Path, PathBuf};
 
 #[get("/admin")]
-pub fn admin_dashboard(admin: AdminOnly) -> Template {
+pub async fn admin_dashboard(admin: AdminOnly) -> Template {
     let user = admin.into_inner();
 
     let context = json!({
@@ -15,7 +15,7 @@ pub fn admin_dashboard(admin: AdminOnly) -> Template {
 }
 
 #[get("/admin/users")]
-pub fn admin_users_page(admin: AdminOnly, state: &State<AppState>) -> Template {
+pub async fn admin_users_page(admin: AdminOnly, state: &State<AppState>) -> Template {
     let user = admin.into_inner();
 
     let users = state.repo_read().get_users_all().unwrap_or_default();
@@ -30,7 +30,7 @@ pub fn admin_users_page(admin: AdminOnly, state: &State<AppState>) -> Template {
 }
 
 #[get("/admin/backup")]
-pub fn admin_backup_page(admin: AdminOnly) -> Template {
+pub async fn admin_backup_page(admin: AdminOnly) -> Template {
     let user = admin.into_inner();
 
     let context = json!({

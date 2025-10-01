@@ -1,6 +1,13 @@
 use super::helpers::*;
 use super::prelude::*;
 
+
+fn has_access(state: &State<AppState>, user: &User, project_id: i32) -> bool {
+    get_accessible_projects(state, &user)
+        .iter()
+        .any(|project| project.project_id == project_id)
+}
+
 #[get("/applicability")]
 pub fn show_applicability(
     session_user: SessionUser,
@@ -8,24 +15,21 @@ pub fn show_applicability(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
-    let mut ctx = build_context_with_projects(state, user, cookies);
+    let project_id = get_selected_project_id(cookies).expect("Project must exist!");
 
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
+    if !has_access(state, &user, project_id) {
+        //log_unauthorized_attempt();
+        return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
+    }
 
-    let applicability = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_applicability_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_applicability_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_applicability_all()
-        }
-    };
+    let mut ctx: serde_json::Value = json!({
+        "user": user,
+        "selected_project_id": Some(project_id)
+    });
+
+    let applicability = state
+        .repo_read()
+        .get_applicability_by_project(project_id);
 
     match applicability {
         Ok(apps) => {

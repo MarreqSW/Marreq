@@ -189,7 +189,6 @@ impl Logger {
         conn: &mut PgConnection,
         ctx: &LogCtx,
         description: Option<String>,
-        _action: LogAction,
     ) -> Result<(), LoggerError> {
         Self::log_action(
             conn,

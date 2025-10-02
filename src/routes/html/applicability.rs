@@ -1,6 +1,6 @@
 use super::helpers::*;
 use super::prelude::*;
-
+use rocket::http::Cookie;
 
 fn has_access(state: &State<AppState>, user: &User, project_id: i32) -> bool {
     get_accessible_projects(state, &user)
@@ -8,28 +8,28 @@ fn has_access(state: &State<AppState>, user: &User, project_id: i32) -> bool {
         .any(|project| project.project_id == project_id)
 }
 
-#[get("/applicability")]
+#[get("/p/<project_id>/applicability")]
 pub fn show_applicability(
     session_user: SessionUser,
     cookies: &CookieJar<'_>,
+    project_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
-    let project_id = get_selected_project_id(cookies).expect("Project must exist!");
 
     if !has_access(state, &user, project_id) {
         //log_unauthorized_attempt();
         return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
     }
 
+    cookies.add(Cookie::new("selected_project_id", project_id.to_string()));
+
     let mut ctx: serde_json::Value = json!({
         "user": user,
         "selected_project_id": Some(project_id)
     });
 
-    let applicability = state
-        .repo_read()
-        .get_applicability_by_project(project_id);
+    let applicability = state.repo_read().get_applicability_by_project(project_id);
 
     match applicability {
         Ok(apps) => {
@@ -43,19 +43,21 @@ pub fn show_applicability(
     Ok(Template::render("applicability", ctx))
 }
 
-#[get("/new_applicability")]
+#[get("/p/<project_id>/new_applicability")]
 pub fn new_applicability(
     session_user: SessionUser,
     cookies: &CookieJar<'_>,
+    project_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
-    let project_id = get_selected_project_id(cookies).expect("Project must exist!");
 
     if !has_access(state, &user, project_id) {
         //log_unauthorized_attempt();
         return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
     }
+
+    cookies.add(Cookie::new("selected_project_id", project_id.to_string()));
 
     let ctx = json!({
         "user": user,
@@ -65,24 +67,33 @@ pub fn new_applicability(
     Ok(Template::render("new_applicability", ctx))
 }
 
-#[post("/new_applicability", data = "<new_applicability>")]
+#[post("/p/<project_id>/new_applicability", data = "<new_applicability>")]
 pub fn post_applicability(
     session_user: SessionUser,
+    project_id: i32,
     new_applicability: Form<NewApplicability>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
+    let mut new_applicability = new_applicability.into_inner();
 
-    if !has_access(state, &user, new_applicability.project_id) {
+    if new_applicability.project_id != project_id {
+        new_applicability.project_id = project_id;
+    }
+
+    if !has_access(state, &user, project_id) {
         return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
     }
 
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(new_applicability))
+        Redirect::to(uri!(new_applicability(project_id = project_id)))
     })?;
 
-    match state.repo_write().insert_new_applicability(&new_applicability.into_inner()) {
+    match state
+        .repo_write()
+        .insert_new_applicability(&new_applicability)
+    {
         Ok(applicability_id) => {
             let applicability = state
                 .repo_read()
@@ -92,48 +103,73 @@ pub fn post_applicability(
             let log_ctx = LogCtx::new(user.user_id);
             let _ = Logger::created(connection, &log_ctx, applicability_id, &applicability);
 
-            Ok(Redirect::to(uri!(show_applicability)))
+            Ok(Redirect::to(uri!(show_applicability(
+                project_id = project_id
+            ))))
         }
         Err(err) => {
             #[cfg(debug_assertions)]
             eprintln!("Error inserting applicability: {:?}", err);
-            Ok(Redirect::to(uri!(new_applicability)))
+            Ok(Redirect::to(uri!(new_applicability(
+                project_id = project_id
+            ))))
         }
     }
 }
 
-
-#[get("/edit_applicability/<app_id>")]
+#[get("/p/<project_id>/edit_applicability/<app_id>")]
 pub fn get_edit_applicability(
     session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+    project_id: i32,
     app_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
     let applicability = get_applicability_by_id_cached(state, app_id);
-    let project_id = applicability.project_id;
+
+    if applicability.project_id != project_id {
+        return Err(Redirect::to(uri!(show_applicability(
+            project_id = applicability.project_id
+        ))));
+    }
 
     if !has_access(state, &user, project_id) {
         return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
     }
 
+    cookies.add(Cookie::new("selected_project_id", project_id.to_string()));
+
     let ctx = json!({
         "applicability": applicability,
-        "user": user
+        "user": user,
+        "selected_project_id": project_id
     });
     Ok(Template::render("edit_applicability", ctx))
 }
 
-#[post("/edit_applicability/<app_id>", data = "<applicability>")]
+#[post("/p/<project_id>/edit_applicability/<app_id>", data = "<applicability>")]
 pub fn post_edit_applicability(
     session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+    project_id: i32,
     app_id: i32,
     applicability: Form<NewApplicability>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
     let applicability_old = get_applicability_by_id_cached(state, app_id);
-    let project_id = applicability.project_id;
+
+    if applicability_old.project_id != project_id {
+        return Err(Redirect::to(uri!(show_applicability(
+            project_id = applicability_old.project_id
+        ))));
+    }
+
+    let mut applicability = applicability.into_inner();
+    if applicability.project_id != project_id {
+        applicability.project_id = project_id;
+    }
 
     if !has_access(state, &user, project_id) {
         return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
@@ -141,12 +177,13 @@ pub fn post_edit_applicability(
 
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(get_edit_applicability(app_id)))
+        Redirect::to(uri!(get_edit_applicability(
+            project_id = project_id,
+            app_id = app_id
+        )))
     })?;
 
-    let result = state
-        .repo_write()
-        .edit_applicability(&applicability);
+    let result = state.repo_write().edit_applicability(&applicability);
     match result {
         Ok(_) => {
             let log_ctx = LogCtx::new(user.user_id);
@@ -159,35 +196,49 @@ pub fn post_edit_applicability(
                     .get_applicability_by_id(app_id)
                     .expect("Error reading table Applicability after update"),
             );
-            Ok(Redirect::to(uri!(show_applicability)))
+            cookies.add(Cookie::new("selected_project_id", project_id.to_string()));
+            Ok(Redirect::to(uri!(show_applicability(
+                project_id = project_id
+            ))))
         }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
-            Ok(Redirect::to(uri!(get_edit_applicability(app_id))))
+            Ok(Redirect::to(uri!(get_edit_applicability(
+                project_id = project_id,
+                app_id = app_id
+            ))))
         }
     }
 }
 
-#[delete("/delete_applicability/<app_id>")]
+#[delete("/p/<project_id>/delete_applicability/<app_id>")]
 pub fn delete_applicability_route(
     session_user: SessionUser,
+    project_id: i32,
     app_id: i32,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, Redirect> {
     let user = session_user.into_inner();
     let applicability = get_applicability_by_id_cached(state, app_id);
-    let project_id = applicability.project_id;
+
+    if applicability.project_id != project_id {
+        return Err(Redirect::to(uri!(show_applicability(
+            project_id = applicability.project_id
+        ))));
+    }
 
     if !has_access(state, &user, project_id) {
         return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
     }
-    
+
     let mut connection = match get_db_connection(state) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
-            return Err(Redirect::to(uri!(show_applicability)));
+            return Err(Redirect::to(uri!(show_applicability(
+                project_id = project_id
+            ))));
         }
     };
 

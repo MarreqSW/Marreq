@@ -73,9 +73,8 @@ pub fn post_applicability(
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
 
-    // Check if project_id is provided
-    if new_applicability.project_id == 0 {
-        return Ok(Redirect::to(uri!(new_applicability)));
+    if !has_access(state, &user, new_applicability.project_id) {
+        return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
     }
 
     let connection = &mut get_db_connection(state).map_err(|e| {
@@ -83,29 +82,26 @@ pub fn post_applicability(
         Redirect::to(uri!(new_applicability))
     })?;
 
-    let applicability_data = new_applicability.into_inner();
-    let result = state
-        .repo_write()
-        .insert_new_applicability(&applicability_data);
-    match result {
+    match state.repo_write().insert_new_applicability(&new_applicability.into_inner()) {
         Ok(applicability_id) => {
             let applicability = state
                 .repo_read()
                 .get_applicability_by_id(applicability_id)
                 .expect("Error reading table Applicability");
-            // Log the applicability creation
+
             let log_ctx = LogCtx::new(user.user_id);
             let _ = Logger::created(connection, &log_ctx, applicability_id, &applicability);
 
             Ok(Redirect::to(uri!(show_applicability)))
         }
-        Err(_e) => {
+        Err(err) => {
             #[cfg(debug_assertions)]
-            println!("Error.*: {:?}", _e);
+            eprintln!("Error inserting applicability: {:?}", err);
             Ok(Redirect::to(uri!(new_applicability)))
         }
     }
 }
+
 
 #[get("/edit_applicability/<app_id>")]
 pub fn get_edit_applicability(
@@ -115,6 +111,12 @@ pub fn get_edit_applicability(
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
     let applicability = get_applicability_by_id_cached(state, app_id);
+    let project_id = applicability.project_id;
+
+    if !has_access(state, &user, project_id) {
+        return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
+    }
+
     let ctx = json!({
         "applicability": applicability,
         "user": user
@@ -130,27 +132,28 @@ pub fn post_edit_applicability(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = session_user.into_inner();
+    let applicability_old = get_applicability_by_id_cached(state, app_id);
+    let project_id = applicability.project_id;
+
+    if !has_access(state, &user, project_id) {
+        return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
+    }
+
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(uri!(get_edit_applicability(app_id)))
     })?;
 
-    // Get the old values before updating
-    let old_applicability = get_applicability_by_id_cached(state, app_id);
-
-    let mut applicability_with_id = applicability.into_inner();
-    applicability_with_id.app_id = Some(app_id);
-
     let result = state
         .repo_write()
-        .edit_applicability(&applicability_with_id);
+        .edit_applicability(&applicability);
     match result {
         Ok(_) => {
             let log_ctx = LogCtx::new(user.user_id);
             let _ = Logger::updated(
                 connection,
                 &log_ctx,
-                &old_applicability,
+                &applicability_old,
                 &state
                     .repo_read()
                     .get_applicability_by_id(app_id)
@@ -173,6 +176,13 @@ pub fn delete_applicability_route(
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, Redirect> {
     let user = session_user.into_inner();
+    let applicability = get_applicability_by_id_cached(state, app_id);
+    let project_id = applicability.project_id;
+
+    if !has_access(state, &user, project_id) {
+        return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
+    }
+    
     let mut connection = match get_db_connection(state) {
         Ok(conn) => conn,
         Err(e) => {

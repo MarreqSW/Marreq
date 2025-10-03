@@ -6,7 +6,7 @@
         <h3 class="requirement-title">{{cat_title}}</h3>
       </div>
       <div class="requirement-actions">
-        <a href="/edit_category/{{cat_id}}" class="btn btn-outline btn-sm">Edit</a>
+        <a href="/p/{{@root.selected_project_id}}/categories/edit/{{cat_id}}" class="btn btn-outline btn-sm">Edit</a>
         <button onclick="deleteCategory({{cat_id}})" class="btn btn-danger btn-sm">Delete</button>
       </div>
     </div>
@@ -29,7 +29,7 @@
 <script>
 function deleteCategory(categoryId) {
   if (confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
-    fetch(`/delete_category/${categoryId}`, {
+    fetch(`/p/{{@root.selected_project_id}}/categories/delete/${categoryId}`, {
       method: 'DELETE',
     })
     .then(response => {

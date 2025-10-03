@@ -1,93 +1,67 @@
 use super::helpers::*;
 use super::prelude::*;
 
-#[get("/categories")]
+#[get("/<project_id>/categories")]
 pub fn show_categories(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
+    project_access: ProjectAccess,
+    project_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-    let mut ctx = build_context_with_projects(state, user, cookies);
+    let user = project_access.into_user();
+    let projects = get_accessible_projects(state, &user);
 
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
-
-    let categories = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_categories_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_categories_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_categories_all()
-        }
-    };
-
-    match categories {
-        Ok(cats) => {
-            ctx["categories"] = json!(cats);
-        }
-        Err(_) => {
-            ctx["categories"] = json!([]);
-        }
-    };
-
-    Ok(Template::render("categories", ctx))
-}
-
-#[get("/new_category")]
-pub fn new_category(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
-    state: &State<AppState>,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-
-    // Get projects and selected project
-    let projects = state.repo_read().get_projects_all().unwrap_or_default();
-    let mut selected_project_id = get_selected_project_id(cookies);
-
-    // If no project is selected and there are projects available, select the first one
-    if selected_project_id.is_none() && !projects.is_empty() {
-        selected_project_id = Some(projects[0].project_id);
-        // Set the cookie for the selected project
-        cookies.add(Cookie::new(
-            "selected_project_id",
-            projects[0].project_id.to_string(),
-        ));
-    }
+    let categories = state
+        .repo_read()
+        .get_categories_by_project(project_id)
+        .unwrap_or_default();
 
     let ctx = json!({
         "user": user,
         "projects": projects,
-        "selected_project_id": selected_project_id
+        "selected_project_id": project_id,
+        "categories": categories,
+    });
+
+    Ok(Template::render("categories", ctx))
+}
+
+#[get("/<project_id>/categories/new")]
+pub fn new_category(
+    project_access: ProjectAccess,
+    project_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user = project_access.into_user();
+    let projects = get_accessible_projects(state, &user);
+
+    let ctx = json!({
+        "user": user,
+        "projects": projects,
+        "selected_project_id": project_id
     });
     Ok(Template::render("new_category", ctx))
 }
 
-#[post("/new_category", data = "<new_category>")]
+#[post("/<project_id>/categories/new", data = "<new_category>")]
 pub fn post_category(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     new_category: Form<NewCategory>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
 
-    // Check if project_id is provided
-    if new_category.project_id == 0 {
-        return Ok(Redirect::to(uri!(new_category)));
-    }
+    let new_url = uri!("/p", new_category(project_id = project_id));
+    let show_url = uri!("/p", show_categories(project_id = project_id));
 
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(new_category))
+        Redirect::to(new_url.clone())
     })?;
 
-    let category_data = new_category.into_inner();
+    let mut category_data = new_category.into_inner();
+    category_data.project_id = project_id;
+
     let result = state.repo_write().insert_new_category(&category_data);
     match result {
         Ok(category_id) => {
@@ -99,49 +73,90 @@ pub fn post_category(
             let log_ctx = LogCtx::new(user.user_id);
             let _ = Logger::created(connection, &log_ctx, category_id, &category);
 
-            Ok(Redirect::to(uri!(show_categories)))
+            Ok(Redirect::to(show_url))
         }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
-            Ok(Redirect::to(uri!(new_category)))
+            Ok(Redirect::to(new_url))
         }
     }
 }
 
-#[get("/edit_category/<cat_id>")]
+#[get("/<project_id>/categories/edit/<cat_id>")]
 pub fn get_edit_category(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     cat_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-    let category = get_category_by_id_cached(state, cat_id);
+    let user = project_access.into_user();
+    let projects = get_accessible_projects(state, &user);
+
+    let category = match state.repo_read().get_category_by_id(cat_id) {
+        Ok(category) => category,
+        Err(_) => {
+            return Err(Redirect::to(uri!(
+                "/p",
+                show_categories(project_id = project_id)
+            )))
+        }
+    };
+
+    if category.project_id != project_id {
+        return Err(Redirect::to(uri!(
+            "/p",
+            show_categories(project_id = category.project_id)
+        )));
+    }
+
     let ctx = json!({
         "categories": category,
-        "user": user
+        "user": user,
+        "projects": projects,
+        "selected_project_id": project_id
     });
     Ok(Template::render("edit_category", ctx))
 }
 
-#[post("/edit_category/<cat_id>", data = "<category>")]
+#[post("/<project_id>/categories/edit/<cat_id>", data = "<category>")]
 pub fn post_edit_category(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     cat_id: i32,
     category: Form<NewCategory>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
+    let edit_url = uri!(
+        "/p",
+        get_edit_category(project_id = project_id, cat_id = cat_id)
+    );
+    let show_url = uri!("/p", show_categories(project_id = project_id));
+
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(get_edit_category(cat_id)))
+        Redirect::to(edit_url.clone())
     })?;
 
     // Get the old values before updating
-    let old_category = get_category_by_id_cached(state, cat_id);
+    let old_category = match state.repo_read().get_category_by_id(cat_id) {
+        Ok(category) => category,
+        Err(_) => {
+            return Err(Redirect::to(show_url));
+        }
+    };
+
+    if old_category.project_id != project_id {
+        return Err(Redirect::to(uri!(
+            "/p",
+            show_categories(project_id = old_category.project_id)
+        )));
+    }
 
     let mut category_with_id = category.into_inner();
     category_with_id.cat_id = Some(cat_id);
+    category_with_id.project_id = project_id;
 
     let result = state.repo_write().edit_category(&category_with_id);
     match result {
@@ -158,28 +173,43 @@ pub fn post_edit_category(
                     .expect("Error reading table Categories after update"),
             );
 
-            Ok(Redirect::to(uri!(show_categories)))
+            Ok(Redirect::to(show_url))
         }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("Error.*: {:?}", _e);
-            Ok(Redirect::to(uri!(get_edit_category(cat_id))))
+            Ok(Redirect::to(edit_url))
         }
     }
 }
 
-#[delete("/delete_category/<cat_id>")]
+#[delete("/<project_id>/categories/delete/<cat_id>")]
 pub fn delete_category_route(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     cat_id: i32,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
+    let show_url = uri!("/p", show_categories(project_id = project_id));
+
+    let category = match state.repo_read().get_category_by_id(cat_id) {
+        Ok(category) => category,
+        Err(_) => return Ok(rocket::http::Status::NotFound),
+    };
+
+    if category.project_id != project_id {
+        return Err(Redirect::to(uri!(
+            "/p",
+            show_categories(project_id = category.project_id)
+        )));
+    }
+
     let mut connection = match get_db_connection(state) {
         Ok(conn) => conn,
         Err(e) => {
             eprintln!("Database connection error: {}", e);
-            return Err(Redirect::to(uri!(show_categories)));
+            return Err(Redirect::to(show_url));
         }
     };
 

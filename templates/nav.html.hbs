@@ -60,7 +60,13 @@
             <li><a class="dropdown-item" href="/new_project">New Project</a></li>
             <li><a class="dropdown-item" href="/new_requirement">New Requirement</a></li>
             <li><a class="dropdown-item" href="/new_test">New Test</a></li>
-            <li><a class="dropdown-item" href="/new_category">New Category</a></li>
+            <li>
+              {{#if selected_project_id}}
+                <a class="dropdown-item" href="/p/{{selected_project_id}}/categories/new">New Category</a>
+              {{else}}
+                <span class="dropdown-item disabled" aria-disabled="true">New Category</span>
+              {{/if}}
+            </li>
             <li>
               {{#if selected_project_id}}
                 <a class="dropdown-item" href="/p/{{selected_project_id}}/applicability/new">New Applicability</a>
@@ -142,10 +148,22 @@
 
 <script>
 function changeProject(projectId) {
-    if (projectId) {
-        // Set the selected project in a cookie
-        document.cookie = `selected_project_id=${projectId}; path=/; max-age=86400`;
-        // Reload the current page to show filtered data
+    if (!projectId) {
+        return;
+    }
+
+    // Persist selection for pages that still rely on cookies.
+    document.cookie = `selected_project_id=${projectId}; path=/; max-age=86400`;
+
+    const path = window.location.pathname;
+    const segments = path.split('/').filter(Boolean);
+
+    if (segments[0] === 'p' && segments.length >= 2) {
+        segments[1] = projectId;
+        const newPath = `/${segments.join('/')}`;
+        const suffix = window.location.search + window.location.hash;
+        window.location.assign(`${newPath}${suffix}`);
+    } else {
         window.location.reload();
     }
 }

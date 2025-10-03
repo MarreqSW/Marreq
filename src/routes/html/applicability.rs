@@ -11,7 +11,7 @@ struct ApplicabilityCtx<'a> {
 }
 
 #[get("/<project_id>/applicability")]
-pub fn show_applicability(
+pub async fn show_applicability(
     project_access: ProjectAccess,
     project_id: i32,
     state: &State<AppState>,
@@ -32,7 +32,7 @@ pub fn show_applicability(
 }
 
 #[get("/<project_id>/applicability/new")]
-pub fn new_applicability(
+pub async fn new_applicability(
     project_access: ProjectAccess,
     project_id: i32,
 ) -> Result<Template, Redirect> {
@@ -46,7 +46,7 @@ pub fn new_applicability(
 }
 
 #[post("/<project_id>/applicability/new", data = "<form>")]
-pub fn post_applicability(
+pub async fn post_applicability(
     project_access: ProjectAccess,
     project_id: i32,
     form: Form<NewApplicability>,
@@ -83,7 +83,7 @@ pub fn post_applicability(
 
 
 #[get("/<project_id>/applicability/edit/<app_id>")]
-pub fn get_edit_applicability(
+pub async fn get_edit_applicability(
     project_access: ProjectAccess,
     project_id: i32,
     app_id: i32,
@@ -108,7 +108,7 @@ pub fn get_edit_applicability(
 }
 
 #[post("/<project_id>/applicability/edit/<app_id>", data = "<form>")]
-pub fn post_edit_applicability(
+pub async fn post_edit_applicability(
     project_access: ProjectAccess,
     project_id: i32,
     app_id: i32,
@@ -159,7 +159,7 @@ pub fn post_edit_applicability(
 
 
 #[delete("/<project_id>/applicability/delete/<app_id>")]
-pub fn delete_applicability_route(
+pub async fn delete_applicability_route(
     project_access: ProjectAccess,
     project_id: i32,
     app_id: i32,

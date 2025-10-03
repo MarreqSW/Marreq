@@ -54,8 +54,8 @@ pub fn post_applicability(
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
 
-    let new_url  = uri!(new_applicability(project_id = project_id));
-    let show_url = uri!(show_applicability(project_id = project_id));
+    let new_url  = uri!("/p", new_applicability(project_id = project_id));
+    let show_url = uri!("/p", show_applicability(project_id = project_id));
 
     let new_applicability = NewApplicability {
         project_id,
@@ -93,9 +93,10 @@ pub fn get_edit_applicability(
     let applicability = get_applicability_by_id_cached(state, app_id);
 
     if applicability.project_id != project_id {
-        return Err(Redirect::to(uri!(show_applicability(
-            project_id = applicability.project_id
-        ))));
+        return Err(Redirect::to(uri!(
+            "/p",
+            show_applicability(project_id = applicability.project_id)
+        )));
     }
 
     let ctx = json!({
@@ -116,14 +117,18 @@ pub fn post_edit_applicability(
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
 
-    let edit_url = uri!(get_edit_applicability(project_id = project_id, app_id = app_id));
-    let show_url = uri!(show_applicability(project_id = project_id));
+    let edit_url = uri!(
+        "/p",
+        get_edit_applicability(project_id = project_id, app_id = app_id)
+    );
+    let show_url = uri!("/p", show_applicability(project_id = project_id));
 
     let old = get_applicability_by_id_cached(state, app_id);
     if old.project_id != project_id {
-        return Err(Redirect::to(uri!(show_applicability(
-            project_id = old.project_id
-        ))));
+        return Err(Redirect::to(uri!(
+            "/p",
+            show_applicability(project_id = old.project_id)
+        )));
     }
 
     let new = NewApplicability {
@@ -161,13 +166,14 @@ pub fn delete_applicability_route(
     state: &State<AppState>,
 ) -> Result<Status, Redirect> {
     let user = project_access.into_user();
-    let show_url = uri!(show_applicability(project_id = project_id));
+    let show_url = uri!("/p", show_applicability(project_id = project_id));
 
     let applicability = get_applicability_by_id_cached(state, app_id);
     if applicability.project_id != project_id {
-        return Err(Redirect::to(uri!(show_applicability(
-            project_id = applicability.project_id
-        ))));
+        return Err(Redirect::to(uri!(
+            "/p",
+            show_applicability(project_id = applicability.project_id)
+        )));
     }
 
     let mut conn = get_db_connection(state).map_err(|e| {

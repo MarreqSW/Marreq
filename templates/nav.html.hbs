@@ -61,7 +61,13 @@
             <li><a class="dropdown-item" href="/new_requirement">New Requirement</a></li>
             <li><a class="dropdown-item" href="/new_test">New Test</a></li>
             <li><a class="dropdown-item" href="/new_category">New Category</a></li>
-            <li><a class="dropdown-item" href="/new_applicability">New Applicability</a></li>
+            <li>
+              {{#if selected_project_id}}
+                <a class="dropdown-item" href="/p/{{selected_project_id}}/applicability/new">New Applicability</a>
+              {{else}}
+                <span class="dropdown-item disabled" aria-disabled="true">New Applicability</span>
+              {{/if}}
+            </li>
             <li><a class="dropdown-item" href="/new_user">New User</a></li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item" href="/import_excel">Import Excel</a></li>

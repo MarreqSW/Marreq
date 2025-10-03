@@ -43,6 +43,7 @@ pub fn build() -> Rocket<Build> {
     rocket::build()
         .manage(AppState { repo })
         .mount("/", crate::routes::html::routes())
+        .mount("/p", crate::routes::html::applicability::routes())
         .mount("/api", crate::api::routes())
         .register(
             "/",

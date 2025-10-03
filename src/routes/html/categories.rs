@@ -59,9 +59,9 @@ async fn post_category(
     let category_id = state
         .repo_write()
         .insert_new_category(&category)
-        .map_err(|e| {
+        .map_err(|_e| {
             #[cfg(debug_assertions)]
-            eprintln!("insert_new_category error: {:?}", e);
+            eprintln!("insert_new_category error: {:?}", _e);
             Redirect::to(new_url.clone())
         })?;
 
@@ -137,9 +137,9 @@ async fn post_edit_category(
     edited.cat_id = Some(cat_id);
     edited.project_id = project_id;
 
-    state.repo_write().edit_category(&edited).map_err(|e| {
+    state.repo_write().edit_category(&edited).map_err(|_e| {
         #[cfg(debug_assertions)]
-        eprintln!("edit_category error: {:?}", e);
+        eprintln!("edit_category error: {:?}", _e);
         Redirect::to(edit_url.clone())
     })?;
 
@@ -176,9 +176,9 @@ async fn delete_category_route(
 
     let deleted = match state.repo_write().delete_category(cat_id) {
         Ok(c) => c,
-        Err(e) => {
+        Err(_e) => {
             #[cfg(debug_assertions)]
-            eprintln!("delete_category error: {:?}", e);
+            eprintln!("delete_category error: {:?}", _e);
             return Ok(rocket::http::Status::InternalServerError);
         }
     };

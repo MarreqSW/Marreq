@@ -11,14 +11,10 @@ use super::prelude::*;
 
 use crate::app::AppState;
 use crate::helper_functions::generate_requirement_reference;
-use crate::helper_functions::{
-    decorate_requirements, filter_requirements,
-};
+use crate::helper_functions::{decorate_requirements, filter_requirements};
 use crate::logger::{LogCtx, Logger};
 use crate::models::*;
-use crate::repository::{
-    LookupRepository, RequirementsRepository, UserRepository,
-};
+use crate::repository::{LookupRepository, RequirementsRepository, UserRepository};
 
 use super::helpers::{
     build_context_with_projects, get_category_by_id_cached, get_db_connection,
@@ -45,24 +41,29 @@ pub fn show_requirements(
     let decorated = repo
         .get_requirements_by_project(project_id)
         .map(|reqs| {
-            let filtered = filter_requirements(reqs, status_filter, verification_filter, category_filter);
+            let filtered =
+                filter_requirements(reqs, status_filter, verification_filter, category_filter);
             decorate_requirements(filtered)
         })
         .unwrap_or_default();
     ctx["requirements"] = json!(decorated);
 
     // Static lists; all default to empty on error
-    let statuses      = repo.get_status_all().unwrap_or_default();
-    let verifications = repo.get_verification_by_project(project_id).unwrap_or_default();
-    let categories    = repo.get_categories_by_project(project_id).unwrap_or_default();
+    let statuses = repo.get_status_all().unwrap_or_default();
+    let verifications = repo
+        .get_verification_by_project(project_id)
+        .unwrap_or_default();
+    let categories = repo
+        .get_categories_by_project(project_id)
+        .unwrap_or_default();
 
     // Filters for template state
-    ctx["statuses"]                    = json!(statuses);
-    ctx["verifications"]               = json!(verifications);
-    ctx["categories"]                  = json!(categories);
-    ctx["current_status_filter"]       = json!(status_filter);
+    ctx["statuses"] = json!(statuses);
+    ctx["verifications"] = json!(verifications);
+    ctx["categories"] = json!(categories);
+    ctx["current_status_filter"] = json!(status_filter);
     ctx["current_verification_filter"] = json!(verification_filter);
-    ctx["current_category_filter"]     = json!(category_filter);
+    ctx["current_category_filter"] = json!(category_filter);
 
     Ok(Template::render("requirements", ctx))
 }
@@ -110,8 +111,7 @@ pub fn show_requirement_id(
     }
 
     let reqs = decorate_requirements(vec![requirement]);
-    let linked_tests =
-        get_linked_tests_for_requirement_cached(state, req_id).unwrap_or_default();
+    let linked_tests = get_linked_tests_for_requirement_cached(state, req_id).unwrap_or_default();
 
     let ctx = json!({
         "requirements": reqs,
@@ -165,24 +165,32 @@ pub fn get_edit_requirement(
     }
 
     // Keep IDs without cloning the whole req later
-    let req_author_id         = req.req_author;
-    let req_reviewer_id       = req.req_reviewer;
-    let req_category_id       = req.req_category;
-    let req_applicability_id  = req.req_applicability;
+    let req_author_id = req.req_author;
+    let req_reviewer_id = req.req_reviewer;
+    let req_category_id = req.req_category;
+    let req_applicability_id = req.req_applicability;
     let req_current_status_id = req.req_current_status;
-    let req_verification_id   = req.req_verification;
-    let req_parent_id         = req.req_parent;
+    let req_verification_id = req.req_verification;
+    let req_parent_id = req.req_parent;
 
     // Decorate for the template (single-item vec)
     let requirement_json = json!(decorate_requirements(vec![req]).remove(0));
 
     // Project-scoped lookups; default to empty on error
-    let statuses      = repo.get_status_all().unwrap_or_default();
-    let categories    = repo.get_categories_by_project(project_id).unwrap_or_default();
-    let parents       = repo.get_requirements_by_project(project_id).unwrap_or_default();
-    let users         = repo.get_users_all().unwrap_or_default();
-    let verifications = repo.get_verification_by_project(project_id).unwrap_or_default();
-    let applicability = repo.get_applicability_by_project(project_id).unwrap_or_default();
+    let statuses = repo.get_status_all().unwrap_or_default();
+    let categories = repo
+        .get_categories_by_project(project_id)
+        .unwrap_or_default();
+    let parents = repo
+        .get_requirements_by_project(project_id)
+        .unwrap_or_default();
+    let users = repo.get_users_all().unwrap_or_default();
+    let verifications = repo
+        .get_verification_by_project(project_id)
+        .unwrap_or_default();
+    let applicability = repo
+        .get_applicability_by_project(project_id)
+        .unwrap_or_default();
 
     let ctx = json!({
         "requirements": requirement_json,
@@ -266,11 +274,17 @@ pub fn post_edit_requirement(
         return Err(Redirect::to(url));
     }
 
-    state.repo_write().edit_requirement(&requirement_data).map_err(|e| {
-        #[cfg(debug_assertions)]
-        eprintln!("Error editing requirement {} in project {}: {:?}", req_id, project_id, e);
-        Redirect::to(list_url.clone())
-    })?;
+    state
+        .repo_write()
+        .edit_requirement(&requirement_data)
+        .map_err(|e| {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "Error editing requirement {} in project {}: {:?}",
+                req_id, project_id, e
+            );
+            Redirect::to(list_url.clone())
+        })?;
 
     if let Ok(mut conn) = get_db_connection(state) {
         if let Ok(new_row) = state.repo_read().get_requirement_by_id(req_id) {
@@ -360,12 +374,20 @@ pub fn new_requirement(
     let repo = state.repo_read();
 
     // Project-scoped lookups; default to empty on error
-    let statuses      = repo.get_status_all().unwrap_or_default();
-    let categories    = repo.get_categories_by_project(project_id).unwrap_or_default();
-    let parents       = repo.get_requirements_by_project(project_id).unwrap_or_default();
-    let users         = repo.get_users_all().unwrap_or_default();
-    let verifications = repo.get_verification_by_project(project_id).unwrap_or_default();
-    let applicability = repo.get_applicability_by_project(project_id).unwrap_or_default();
+    let statuses = repo.get_status_all().unwrap_or_default();
+    let categories = repo
+        .get_categories_by_project(project_id)
+        .unwrap_or_default();
+    let parents = repo
+        .get_requirements_by_project(project_id)
+        .unwrap_or_default();
+    let users = repo.get_users_all().unwrap_or_default();
+    let verifications = repo
+        .get_verification_by_project(project_id)
+        .unwrap_or_default();
+    let applicability = repo
+        .get_applicability_by_project(project_id)
+        .unwrap_or_default();
 
     let ctx = json!({
         "categories": categories,
@@ -386,7 +408,6 @@ pub fn new_requirement(
 
     Ok(Template::render("new_requirement", ctx))
 }
-
 
 #[post("/<project_id>/requirements/new", data = "<new_req>")]
 pub fn post_requirement(
@@ -450,11 +471,14 @@ pub fn post_requirement(
     }
 
     // --- Insert ---
-    let req_id = state.repo_write().insert_new_requirement(&req).map_err(|e| {
-        #[cfg(debug_assertions)]
-        eprintln!("insert_new_requirement failed: {:?}", e);
-        Redirect::to(list_url.clone())
-    })?;
+    let req_id = state
+        .repo_write()
+        .insert_new_requirement(&req)
+        .map_err(|e| {
+            #[cfg(debug_assertions)]
+            eprintln!("insert_new_requirement failed: {:?}", e);
+            Redirect::to(list_url.clone())
+        })?;
 
     // --- Best-effort logging (don’t affect control flow) ---
     if let (Ok(mut conn), Ok(new_row)) = (
@@ -466,7 +490,10 @@ pub fn post_requirement(
     }
 
     // --- Success: show the new requirement ---
-    Ok(Redirect::to(uri!("/p", show_requirement_id(project_id, req_id))))
+    Ok(Redirect::to(uri!(
+        "/p",
+        show_requirement_id(project_id, req_id)
+    )))
 }
 
 #[get("/<project_id>/requirements/tree")]
@@ -479,7 +506,9 @@ pub fn show_requirements_tree(
     let repo = state.repo_read();
 
     // Only this project's requirements
-    let reqs = repo.get_requirements_by_project(project_id).unwrap_or_default();
+    let reqs = repo
+        .get_requirements_by_project(project_id)
+        .unwrap_or_default();
 
     // Index children by parent_id; collect roots
     let mut children: HashMap<i32, Vec<&Requirement>> = HashMap::new();
@@ -504,9 +533,10 @@ pub fn show_requirements_tree(
         req: &'a Requirement,
         idx: &HashMap<i32, Vec<&'a Requirement>>,
     ) -> serde_json::Value {
-        let kids = idx.get(&req.req_id).map(|vs| {
-            vs.iter().map(|c| build_node(c, idx)).collect::<Vec<_>>()
-        }).unwrap_or_default();
+        let kids = idx
+            .get(&req.req_id)
+            .map(|vs| vs.iter().map(|c| build_node(c, idx)).collect::<Vec<_>>())
+            .unwrap_or_default();
 
         json!({
             "requirement": req,
@@ -514,17 +544,21 @@ pub fn show_requirements_tree(
         })
     }
 
-    let tree = roots.into_iter().map(|r| build_node(r, &children)).collect::<Vec<_>>();
+    let tree = roots
+        .into_iter()
+        .map(|r| build_node(r, &children))
+        .collect::<Vec<_>>();
 
     let ctx = json!({
         "tree_data": tree,
         "total_requirements": reqs.len(),
-        "user": user
+        "user": user,
+        "project_id": project_id,
+        "selected_project_id": project_id
     });
 
     Ok(Template::render("requirements_tree", ctx))
 }
-
 
 pub fn routes() -> Vec<Route> {
     routes![

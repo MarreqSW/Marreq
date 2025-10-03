@@ -4,19 +4,19 @@
     <div class="requirement-header">
       <div>
         {{#if req_reference}}
-          <a href="/requirements/{{req_id}}" class="requirement-reference-tag">{{req_reference}}</a>
+          <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="requirement-reference-tag">{{req_reference}}</a>
         {{else}}
-          <a href="/requirements/{{req_id}}" class="requirement-id">REQ-{{req_id}}</a>
+          <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="requirement-id">REQ-{{req_id}}</a>
         {{/if}}
         <h3 class="requirement-title">{{req_title}}</h3>
       </div>
       <div class="requirement-actions">
-        <a href="/p/{{@root.selected_project_id}}/requirements/edit/{{req_id}}" class="btn btn-outline btn-sm">Edit</a>
+        <a href="/p/{{project_id}}/requirements/edit/{{req_id}}" class="btn btn-outline btn-sm">Edit</a>
         {{#if (or (eq req_current_status_id 1) (eq req_current_status_id 2))}}
-          <button onclick="deleteRequirement({{req_id}}, '{{req_title}}')" class="btn btn-danger btn-sm">Delete</button>
+          <button onclick="deleteRequirement({{project_id}}, {{req_id}}, '{{req_title}}')" class="btn btn-danger btn-sm">Delete</button>
         {{else}}
           {{#if ../user.is_admin}}
-            <button onclick="deleteRequirement({{req_id}}, '{{req_title}}')" class="btn btn-danger btn-sm">Delete</button>
+            <button onclick="deleteRequirement({{project_id}}, {{req_id}}, '{{req_title}}')" class="btn btn-danger btn-sm">Delete</button>
           {{/if}}
         {{/if}}
       </div>
@@ -57,7 +57,7 @@
         <span class="meta-label">Parent</span>
         <span class="meta-value">
           {{#if req_parent_id}}
-            <a href="/requirements/{{req_parent_id}}">{{req_parent_title}}</a>
+            <a href="/p/{{project_id}}/requirements/show/{{req_parent_id}}">{{req_parent_title}}</a>
           {{else}}
             None
           {{/if}}

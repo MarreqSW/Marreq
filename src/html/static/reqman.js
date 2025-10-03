@@ -91,13 +91,45 @@
         }
     });
 
-    function deleteRequirement(reqId, reqTitle) {
+    function getActiveProjectId(explicitProjectId) {
+        if (explicitProjectId !== undefined && explicitProjectId !== null) {
+            return explicitProjectId;
+        }
+
+        const pathMatch = window.location.pathname.match(/^\/p\/(\d+)/);
+        if (pathMatch) {
+            return Number(pathMatch[1]);
+        }
+
+        const projectCookie = document.cookie
+            .split(';')
+            .map((cookie) => cookie.trim())
+            .find((cookie) => cookie.startsWith('selected_project_id='));
+
+        if (projectCookie) {
+            const value = projectCookie.split('=')[1];
+            const parsed = Number(value);
+            if (!Number.isNaN(parsed)) {
+                return parsed;
+            }
+        }
+
+        return null;
+    }
+
+    function deleteRequirement(projectId, reqId, reqTitle) {
+        const resolvedProjectId = getActiveProjectId(projectId);
+        if (resolvedProjectId === null) {
+            alert('Unable to determine the current project. Please reload the page and try again.');
+            return;
+        }
+
         if (
             confirm(
                 `Are you sure you want to delete requirement "${reqTitle}"? This action cannot be undone.`
             )
         ) {
-            fetch(`/delete_requirement/${reqId}`, {
+            fetch(`/p/${resolvedProjectId}/requirements/delete/${reqId}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',

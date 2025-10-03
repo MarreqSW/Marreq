@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use chrono::Utc;
-use regex::Regex;
 use rocket::form::Form;
 use rocket::http::CookieJar;
 use rocket::response::Redirect;
@@ -12,21 +10,21 @@ use rocket_dyn_templates::Template;
 use super::prelude::*;
 
 use crate::app::AppState;
-use crate::auth::SessionUser;
 use crate::helper_functions::generate_requirement_reference;
 use crate::helper_functions::{
-    decorate_requirements, filter_requirements, get_selected_project_id,
+    decorate_requirements, filter_requirements,
 };
 use crate::logger::{LogCtx, Logger};
 use crate::models::*;
 use crate::repository::{
-    LookupRepository, ProjectsRepository, RequirementsRepository, UserRepository,
+    LookupRepository, RequirementsRepository, UserRepository,
 };
 
 use super::helpers::{
     build_context_with_projects, get_category_by_id_cached, get_db_connection,
     get_linked_tests_for_requirement_cached, get_requirement_by_id_cached_safe,
 };
+
 #[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>")]
 pub fn show_requirements(
     project_access: ProjectAccess,
@@ -40,73 +38,31 @@ pub fn show_requirements(
     let user = project_access.into_user();
     let mut ctx = build_context_with_projects(state, user, cookies);
 
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
+    // Repo handle once; reuse
+    let repo = state.repo_read();
 
-    let requirements = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_requirements_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_requirements_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_requirements_all()
-        }
-    };
+    // Load → filter → decorate in one go; default to empty on error
+    let decorated = repo
+        .get_requirements_by_project(project_id)
+        .map(|reqs| {
+            let filtered = filter_requirements(reqs, status_filter, verification_filter, category_filter);
+            decorate_requirements(filtered)
+        })
+        .unwrap_or_default();
+    ctx["requirements"] = json!(decorated);
 
-    match requirements {
-        Ok(req) => {
-            // Apply filters
-            let filtered_requirements =
-                filter_requirements(req, status_filter, verification_filter, category_filter);
-            let requirements_decorate = decorate_requirements(filtered_requirements);
-            ctx["requirements"] = json!(requirements_decorate);
-        }
-        Err(_) => {
-            ctx["requirements"] = json!([]);
-        }
-    };
+    // Static lists; all default to empty on error
+    let statuses      = repo.get_status_all().unwrap_or_default();
+    let verifications = repo.get_verification_by_project(project_id).unwrap_or_default();
+    let categories    = repo.get_categories_by_project(project_id).unwrap_or_default();
 
-    // Add filter data to context for the template
-    let statuses = state.repo_read().get_status_all().unwrap_or_default();
-    let verifications = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_verification_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_verification_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_verification_all()
-        }
-    };
-
-    // Get categories filtered by selected project
-    let categories = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_categories_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_categories_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_categories_all()
-        }
-    };
-
-    ctx["statuses"] = json!(statuses);
-    ctx["verifications"] = json!(verifications.unwrap_or_default());
-    ctx["categories"] = json!(categories.unwrap_or_default());
-    ctx["current_status_filter"] = json!(status_filter);
+    // Filters for template state
+    ctx["statuses"]                    = json!(statuses);
+    ctx["verifications"]               = json!(verifications);
+    ctx["categories"]                  = json!(categories);
+    ctx["current_status_filter"]       = json!(status_filter);
     ctx["current_verification_filter"] = json!(verification_filter);
-    ctx["current_category_filter"] = json!(category_filter);
+    ctx["current_category_filter"]     = json!(category_filter);
 
     Ok(Template::render("requirements", ctx))
 }
@@ -120,36 +76,50 @@ pub fn show_requirement_id(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
-    // Use the safe function that returns a Result
-    match get_requirement_by_id_cached_safe(state, req_id) {
-        Ok(req) => {
-            let req_decorate = decorate_requirements(vec![req]);
-
-            // Get linked tests for this requirement
-            let linked_tests =
-                get_linked_tests_for_requirement_cached(state, req_id).unwrap_or_default();
-            let linked_tests_json = json!(linked_tests);
-
-            let ctx = json!({
-                "requirements": req_decorate,
-                "linked_tests": linked_tests_json,
-                "user": user
-            });
-
-            Ok(Template::render("requirement_by_id", ctx))
-        }
+    let requirement = match get_requirement_by_id_cached_safe(state, req_id) {
+        Ok(req) => req,
         Err(error_msg) => {
-            // Render error template instead of panicking
             let ctx = json!({
                 "title": "Requirement Not Found",
                 "message": "The requirement you're looking for could not be found.",
                 "details": error_msg,
                 "user": user
             });
-
-            Ok(Template::render("error", ctx))
+            return Ok(Template::render("error", ctx));
         }
+    };
+
+    // Enforce project ownership
+    if requirement.project_id != project_id {
+        let reqs_url = uri!(
+            "/p",
+            show_requirements(
+                project_id = requirement.project_id,
+                status_filter = Option::<i32>::None,
+                verification_filter = Option::<i32>::None,
+                category_filter = Option::<i32>::None
+            )
+        );
+
+        eprintln!(
+            "Project ID mismatch: route {}, requirement {}",
+            project_id, requirement.project_id
+        );
+
+        return Err(Redirect::to(reqs_url));
     }
+
+    let reqs = decorate_requirements(vec![requirement]);
+    let linked_tests =
+        get_linked_tests_for_requirement_cached(state, req_id).unwrap_or_default();
+
+    let ctx = json!({
+        "requirements": reqs,
+        "linked_tests": linked_tests,
+        "user": user
+    });
+
+    Ok(Template::render("requirement_by_id", ctx))
 }
 
 #[get("/<project_id>/requirements/edit/<req_id>")]
@@ -157,121 +127,84 @@ pub fn get_edit_requirement(
     project_access: ProjectAccess,
     project_id: i32,
     req_id: i32,
-    cookies: &CookieJar<'_>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
+    let repo = state.repo_read();
 
-    // Use the safe function that returns a Result
     let req = match get_requirement_by_id_cached_safe(state, req_id) {
-        Ok(req) => req,
+        Ok(r) => r,
         Err(error_msg) => {
-            // Render error template instead of panicking
             let ctx = json!({
                 "title": "Requirement Not Found",
                 "message": "The requirement you're trying to edit could not be found.",
                 "details": error_msg,
                 "user": user
             });
-
             return Ok(Template::render("error", ctx));
         }
     };
 
-    let req_decorate = decorate_requirements(vec![req.clone()]);
-    let req_decorate_json = json!(req_decorate[0]);
+    // Enforce project ownership; redirect if mismatched
+    if req.project_id != project_id {
+        eprintln!(
+            "Project mismatch on edit: route {}, requirement {}",
+            project_id, req.project_id
+        );
 
-    let status = state.repo_read().get_status_all().unwrap_or_default();
-    let status_json = json!(status);
+        let url = uri!(
+            "/p",
+            show_requirements(
+                project_id = req.project_id,
+                status_filter = Option::<i32>::None,
+                verification_filter = Option::<i32>::None,
+                category_filter = Option::<i32>::None
+            )
+        );
+        return Err(Redirect::to(url));
+    }
 
-    // Get selected project ID and filter categories accordingly
-    let selected_project_id = get_selected_project_id(cookies);
-    let categories = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_categories_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_categories_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_categories_all()
-        }
-    };
-    let categories_json = json!(categories.unwrap_or_default());
+    // Keep IDs without cloning the whole req later
+    let req_author_id         = req.req_author;
+    let req_reviewer_id       = req.req_reviewer;
+    let req_category_id       = req.req_category;
+    let req_applicability_id  = req.req_applicability;
+    let req_current_status_id = req.req_current_status;
+    let req_verification_id   = req.req_verification;
+    let req_parent_id         = req.req_parent;
 
-    // Get parent requirements filtered by project
-    let parents = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_requirements_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_requirements_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_requirements_all()
-        }
-    };
-    let parents_json = json!(parents.unwrap_or_default());
+    // Decorate for the template (single-item vec)
+    let requirement_json = json!(decorate_requirements(vec![req]).remove(0));
 
-    let users = state.repo_read().get_users_all().unwrap_or_default();
-    let users_json = json!(users);
-
-    // Get verification types filtered by project
-    let verification_types = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_verification_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_verification_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_verification_all()
-        }
-    };
-    let verification_json = json!(verification_types.unwrap_or_default());
-
-    // Get applicability filtered by project
-    let applicability = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_applicability_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_applicability_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_applicability_all()
-        }
-    };
-    let applicability_json = json!(applicability.unwrap_or_default());
+    // Project-scoped lookups; default to empty on error
+    let statuses      = repo.get_status_all().unwrap_or_default();
+    let categories    = repo.get_categories_by_project(project_id).unwrap_or_default();
+    let parents       = repo.get_requirements_by_project(project_id).unwrap_or_default();
+    let users         = repo.get_users_all().unwrap_or_default();
+    let verifications = repo.get_verification_by_project(project_id).unwrap_or_default();
+    let applicability = repo.get_applicability_by_project(project_id).unwrap_or_default();
 
     let ctx = json!({
-        "requirements": req_decorate_json,
-        "req_author_id": req.req_author,
-        "req_reviewer_id": req.req_reviewer,
-        "req_category_id": req.req_category,
-        "req_applicability_id": req.req_applicability,
-        "req_current_status_id": req.req_current_status,
-        "req_verification_id": req.req_verification,
-        "req_parent_id": req.req_parent,
-        "categories": categories_json,
-        "status": status_json,
-        "parent": parents_json,
-        "users": users_json,
-        "verification": verification_json,
-        "applicability": applicability_json,
+        "requirements": requirement_json,
+        "req_author_id": req_author_id,
+        "req_reviewer_id": req_reviewer_id,
+        "req_category_id": req_category_id,
+        "req_applicability_id": req_applicability_id,
+        "req_current_status_id": req_current_status_id,
+        "req_verification_id": req_verification_id,
+        "req_parent_id": req_parent_id,
+        "categories": categories,
+        "status": statuses,
+        "parent": parents,
+        "users": users,
+        "verification": verifications,
+        "applicability": applicability,
         "user": user
     });
 
     #[cfg(debug_assertions)]
-    println!("Requirement: {:#}", ctx);
+    println!("Edit requirement ctx: {:#}", ctx);
+
     Ok(Template::render("edit_requirement", ctx))
 }
 
@@ -283,83 +216,70 @@ pub fn post_edit_requirement(
     new_req: Form<NewRequirement>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user = project_access.into_user();
+    let user_id = project_access.into_user().user_id;
+
+    let edit_url = uri!("/p", get_edit_requirement(project_id, req_id));
+    let list_url = uri!(
+        "/p",
+        show_requirements(
+            project_id = project_id,
+            status_filter = Option::<i32>::None,
+            verification_filter = Option::<i32>::None,
+            category_filter = Option::<i32>::None
+        )
+    );
+    let show_url = uri!("/p", show_requirement_id(project_id, req_id));
 
     let requirement_data = new_req.into_inner();
 
-    // Server-side validation: Check if reference follows general format
     if !requirement_data.req_reference.is_empty() {
-        // Check general format: REQ-TAG-NUMBER
-        let general_pattern = match Regex::new(r"^REQ-[A-Z]+-\d+$") {
-            Ok(pattern) => pattern,
-            Err(_) => {
-                eprintln!("Failed to compile regex pattern");
-                return Err(Redirect::to(uri!("/p", get_edit_requirement(project_id, req_id))));
-            }
-        };
+        let general_pattern = regex::Regex::new(r"^REQ-[A-Z]+-\d+$").unwrap();
         if !general_pattern.is_match(&requirement_data.req_reference) {
-            // Invalid reference format - redirect back to form with error
-            return Err(Redirect::to(uri!("/p", get_edit_requirement(project_id, req_id))));
+            return Err(Redirect::to(edit_url));
         }
 
-        // Get the category to check if reference matches
         let category = get_category_by_id_cached(state, requirement_data.req_category);
         let expected_prefix = format!("REQ-{}-", category.cat_tag);
-
-        // Only warn if reference doesn't match category, but don't block the update
         if !requirement_data.req_reference.starts_with(&expected_prefix) {
-            // Log a warning but continue with the update
-            println!(
-                "Warning: Reference '{}' doesn't match category tag '{}' for requirement {}",
+            eprintln!(
+                "Warning: reference '{}' doesn't match category tag '{}' (req_id={})",
                 requirement_data.req_reference, category.cat_tag, req_id
             );
         }
     }
 
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!("/p", post_edit_requirement(project_id, req_id)))
-    })?;
-
-    // Get the old values before updating
-    let old_requirement = match get_requirement_by_id_cached_safe(state, req_id) {
+    let old = match get_requirement_by_id_cached_safe(state, req_id) {
         Ok(req) => req,
-        Err(_) => {
-            // Requirement not found - redirect back to requirements list
-            return Err(Redirect::to(uri!("/p", show_requirements(
-                project_id,
-                None::<i32>,
-                None::<i32>,
-                None::<i32>
-            ))));
-        }
+        Err(_) => return Err(Redirect::to(list_url)),
     };
 
-    state
-        .repo_write()
-        .edit_requirement(&requirement_data)
-        .map_err(|e| {
-            eprintln!("Error editing requirement: {:?}", e);
-            Redirect::to(uri!("/p", show_requirements(
-                project_id,
-                None::<i32>,
-                None::<i32>,
-                None::<i32>
-            )))
-        })?;
+    if old.project_id != project_id {
+        let url = uri!(
+            "/p",
+            show_requirements(
+                project_id = old.project_id,
+                status_filter = Option::<i32>::None,
+                verification_filter = Option::<i32>::None,
+                category_filter = Option::<i32>::None
+            )
+        );
+        return Err(Redirect::to(url));
+    }
 
-    let log_ctx = LogCtx::new(user.user_id);
-    let _ = Logger::updated(
-        connection,
-        &log_ctx,
-        &old_requirement,
-        &state
-            .repo_read()
-            .get_requirement_by_id(req_id)
-            .expect("Error reading table Requirements after update"),
-    );
+    state.repo_write().edit_requirement(&requirement_data).map_err(|e| {
+        #[cfg(debug_assertions)]
+        eprintln!("Error editing requirement {} in project {}: {:?}", req_id, project_id, e);
+        Redirect::to(list_url.clone())
+    })?;
 
-    Ok(Redirect::to(uri!("/p", show_requirement_id(project_id, req_id))))
+    if let Ok(mut conn) = get_db_connection(state) {
+        if let Ok(new_row) = state.repo_read().get_requirement_by_id(req_id) {
+            let log_ctx = LogCtx::new(user_id);
+            let _ = Logger::updated(&mut conn, &log_ctx, &old, &new_row);
+        }
+    }
+
+    Ok(Redirect::to(show_url))
 }
 
 #[delete("/<project_id>/requirements/delete/<req_id>")]
@@ -370,139 +290,92 @@ pub fn delete_requirement_route(
     state: &State<AppState>,
 ) -> Result<Redirect, rocket::http::Status> {
     let user = project_access.into_user();
-    let mut connection = match get_db_connection(state) {
-        Ok(conn) => conn,
+    let user_id = user.user_id;
+    let list_url = uri!(
+        "/p",
+        show_requirements(
+            project_id = project_id,
+            status_filter = Option::<i32>::None,
+            verification_filter = Option::<i32>::None,
+            category_filter = Option::<i32>::None
+        )
+    );
+
+    // 1) Load requirement or 404
+    let req = match get_requirement_by_id_cached_safe(state, req_id) {
+        Ok(r) => r,
+        Err(_) => return Err(rocket::http::Status::NotFound),
+    };
+
+    // 2) Enforce project ownership; if mismatched, just bounce to the right project’s list
+    if req.project_id != project_id {
+        let right_list = uri!(
+            "/p",
+            show_requirements(
+                project_id = req.project_id,
+                status_filter = Option::<i32>::None,
+                verification_filter = Option::<i32>::None,
+                category_filter = Option::<i32>::None
+            )
+        );
+        return Ok(Redirect::to(right_list));
+    }
+
+    // 3) Permission gate: allow only Draft(1) or Proposal(2) or admin
+    if req.req_current_status > 2 && !user.is_admin {
+        return Err(rocket::http::Status::Forbidden);
+    }
+
+    // 4) Delete
+    let deleted = match state.repo_write().delete_requirement(req_id) {
+        Ok(d) => d,
+        Err(crate::repository::errors::RepoError::NotFound) => {
+            return Err(rocket::http::Status::NotFound)
+        }
         Err(e) => {
-            eprintln!("Database connection error: {}", e);
+            #[cfg(debug_assertions)]
+            eprintln!("delete_requirement({}) failed: {:?}", req_id, e);
             return Err(rocket::http::Status::InternalServerError);
         }
     };
 
-    // Get the requirement details before deleting
-    let requirement = match get_requirement_by_id_cached_safe(state, req_id) {
-        Ok(req) => req,
-        Err(_) => {
-            // Requirement not found
-            return Err(rocket::http::Status::NotFound);
-        }
-    };
-
-    // Check if user can delete this requirement
-    // Only allow deletion if status is Draft (1) or Proposal (2), or if user is admin
-    if requirement.req_current_status > 2 && !user.is_admin {
-        return Err(rocket::http::Status::Forbidden);
+    // 5) Best-effort logging (don’t affect result)
+    if let Ok(mut conn) = get_db_connection(state) {
+        let log_ctx = LogCtx::new(user_id);
+        let _ = Logger::deleted(conn.as_mut(), &log_ctx, &deleted);
     }
 
-    match state.repo_write().delete_requirement(req_id) {
-        Ok(deleted) => {
-            // Log the requirement deletion
-            let log_ctx = LogCtx::new(user.user_id);
-            let _ = Logger::deleted(connection.as_mut(), &log_ctx, &deleted);
-
-            // Redirect to requirements list page
-            Ok(Redirect::to(uri!("/p", show_requirements(
-                project_id,
-                None::<i32>,
-                None::<i32>,
-                None::<i32>
-            ))))
-        }
-        Err(crate::repository::errors::RepoError::NotFound) => Err(rocket::http::Status::NotFound),
-        Err(_e) => {
-            #[cfg(debug_assertions)]
-            println!("Error deleting requirement: {:?}", _e);
-            Err(rocket::http::Status::InternalServerError)
-        }
-    }
+    // 6) Redirect to this project’s requirements
+    Ok(Redirect::to(list_url))
 }
 
 #[get("/<project_id>/requirements/new")]
 pub fn new_requirement(
     project_access: ProjectAccess,
     project_id: i32,
-    cookies: &CookieJar<'_>,
+    _cookies: &CookieJar<'_>, // not needed; keep underscored if you can't remove it yet
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    let status = state.repo_read().get_status_all().unwrap_or_default();
-    let status_json = json!(status);
+    let repo = state.repo_read();
 
-    // Get selected project ID and filter categories accordingly
-    let selected_project_id = get_selected_project_id(cookies);
-    let categories = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_categories_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_categories_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_categories_all()
-        }
-    };
-    let categories_json = json!(categories.unwrap_or_default());
-
-    // Get parent requirements filtered by project
-    let parents = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_requirements_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_requirements_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_requirements_all()
-        }
-    };
-    let parents_json = json!(parents.unwrap_or_default());
-
-    let users = state.repo_read().get_users_all().unwrap_or_default();
-    let users_json = json!(users);
-
-    // Get verification types filtered by project
-    let verification_types = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_verification_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_verification_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_verification_all()
-        }
-    };
-    let verification_json = json!(verification_types.unwrap_or_default());
-
-    // Get applicability filtered by project
-    let applicability = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_applicability_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_applicability_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_applicability_all()
-        }
-    };
-    let applicability_json = json!(applicability.unwrap_or_default());
+    // Project-scoped lookups; default to empty on error
+    let statuses      = repo.get_status_all().unwrap_or_default();
+    let categories    = repo.get_categories_by_project(project_id).unwrap_or_default();
+    let parents       = repo.get_requirements_by_project(project_id).unwrap_or_default();
+    let users         = repo.get_users_all().unwrap_or_default();
+    let verifications = repo.get_verification_by_project(project_id).unwrap_or_default();
+    let applicability = repo.get_applicability_by_project(project_id).unwrap_or_default();
 
     let ctx = json!({
-        "categories": categories_json,
-        "status": status_json,
-        "parent": parents_json,
-        "users": users_json,
-        "verification": verification_json,
-        "applicability": applicability_json,
-        "selected_project_id": selected_project_id.unwrap_or(1),
+        "categories": categories,
+        "status": statuses,
+        "parent": parents,
+        "users": users,
+        "verification": verifications,
+        "applicability": applicability,
+        "project_id": project_id,
+        // empty defaults for the form
         "req_title": "",
         "req_description": "",
         "req_justification": "",
@@ -514,6 +387,7 @@ pub fn new_requirement(
     Ok(Template::render("new_requirement", ctx))
 }
 
+
 #[post("/<project_id>/requirements/new", data = "<new_req>")]
 pub fn post_requirement(
     project_access: ProjectAccess,
@@ -521,85 +395,77 @@ pub fn post_requirement(
     new_req: Form<NewRequirement>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user = project_access.into_user();
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!("/p", new_requirement(project_id)))
-    })?;
+    let user_id = project_access.into_user().user_id;
 
-    let mut requirement_data = new_req.into_inner();
-
-    // Server-side validation: Check if reference matches category
-    if !requirement_data.req_reference.is_empty() {
-        // Get the category to validate the reference
-        let category = get_category_by_id_cached(state, requirement_data.req_category);
-        let expected_prefix = format!("REQ-{}-", category.cat_tag);
-
-        if !requirement_data.req_reference.starts_with(&expected_prefix) {
-            // Invalid reference format - redirect back to form with error
-            return Err(Redirect::to(uri!("/p", new_requirement(project_id))));
-        }
-
-        // Validate format: REQ-TAG-NUMBER
-        let reference_pattern = format!("^REQ-{}-\\d+$", category.cat_tag);
-        let regex = match Regex::new(&reference_pattern) {
-            Ok(pattern) => pattern,
-            Err(_) => {
-                eprintln!("Failed to compile regex pattern: {}", reference_pattern);
-                return Err(Redirect::to(uri!("/p", new_requirement(project_id))));
-            }
-        };
-        if !regex.is_match(&requirement_data.req_reference) {
-            // Invalid reference format - redirect back to form with error
-            return Err(Redirect::to(uri!("/p", new_requirement(project_id))));
-        }
-    }
-
-    // Generate automatic reference code if not provided
-    if requirement_data.req_reference.is_empty() {
-        let repo = state.repo_write();
-        match generate_requirement_reference(
-            &*repo,
-            requirement_data.req_category,
-            requirement_data.project_id,
-        ) {
-            Ok(reference) => {
-                requirement_data.req_reference = reference;
-            }
-            Err(_e) => {
-                // If generation fails, use a fallback reference
-                requirement_data.req_reference = format!("REQ-UNKNOWN-{}", Utc::now().timestamp());
-            }
-        }
-    }
-
-    let req_id = state
-        .repo_write()
-        .insert_new_requirement(&requirement_data)
-        .map_err(|e| {
-            eprintln!("Error inserting new requirement: {:?}", e);
-            Redirect::to(uri!("/p", show_requirements(
-                project_id,
-                None::<i32>,
-                None::<i32>,
-                None::<i32>
-            )))
-        })?;
-
-    let new_requirement = state
-        .repo_read()
-        .get_requirement_by_id(req_id)
-        .expect("Error reading table Requirements");
-
-    // Log the requirement creation
-    let log_ctx = LogCtx::new(user.user_id);
-    let _ = Logger::created(
-        connection,
-        &log_ctx,
-        req_id, // TODO: isn't this redundant?
-        &new_requirement,
+    // Reuse these URLs
+    let new_url = uri!("/p", new_requirement(project_id));
+    let list_url = uri!(
+        "/p",
+        show_requirements(
+            project_id = project_id,
+            status_filter = Option::<i32>::None,
+            verification_filter = Option::<i32>::None,
+            category_filter = Option::<i32>::None
+        )
     );
 
+    // Take ownership and enforce project_id from the route
+    let mut req = new_req.into_inner();
+    req.project_id = project_id;
+
+    // --- Reference validation / generation ---
+    if !req.req_reference.is_empty() {
+        // Validate against the category’s tag
+        let category = get_category_by_id_cached(state, req.req_category);
+        let expected_prefix = format!("REQ-{}-", category.cat_tag);
+        if !req.req_reference.starts_with(&expected_prefix) {
+            return Err(Redirect::to(new_url));
+        }
+
+        // Strict pattern: REQ-<CAT_TAG>-<NUMBER>
+        // Escape the tag just in case and compile once.
+        let pat = format!(r"^REQ-{}-\d+$", regex::escape(&category.cat_tag));
+        let re = match regex::Regex::new(&pat) {
+            Ok(r) => r,
+            Err(e) => {
+                #[cfg(debug_assertions)]
+                eprintln!("regex compile failed for '{}': {:?}", pat, e);
+                return Err(Redirect::to(new_url));
+            }
+        };
+        if !re.is_match(&req.req_reference) {
+            return Err(Redirect::to(new_url));
+        }
+    } else {
+        // Generate when missing
+        match generate_requirement_reference(&*state.repo_write(), req.req_category, req.project_id)
+        {
+            Ok(reference) => req.req_reference = reference,
+            Err(e) => {
+                #[cfg(debug_assertions)]
+                eprintln!("reference generation failed: {:?}", e);
+                req.req_reference = format!("REQ-UNKNOWN-{}", chrono::Utc::now().timestamp());
+            }
+        }
+    }
+
+    // --- Insert ---
+    let req_id = state.repo_write().insert_new_requirement(&req).map_err(|e| {
+        #[cfg(debug_assertions)]
+        eprintln!("insert_new_requirement failed: {:?}", e);
+        Redirect::to(list_url.clone())
+    })?;
+
+    // --- Best-effort logging (don’t affect control flow) ---
+    if let (Ok(mut conn), Ok(new_row)) = (
+        get_db_connection(state),
+        state.repo_read().get_requirement_by_id(req_id),
+    ) {
+        let log_ctx = LogCtx::new(user_id);
+        let _ = Logger::created(&mut conn, &log_ctx, req_id, &new_row);
+    }
+
+    // --- Success: show the new requirement ---
     Ok(Redirect::to(uri!("/p", show_requirement_id(project_id, req_id))))
 }
 
@@ -610,68 +476,55 @@ pub fn show_requirements_tree(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
+    let repo = state.repo_read();
 
-    // Get all requirements
-    let all_requirements = state.repo_read().get_requirements_all().unwrap_or_default();
+    // Only this project's requirements
+    let reqs = repo.get_requirements_by_project(project_id).unwrap_or_default();
 
-    // Build tree structure
-    let mut tree_data = Vec::new();
-    let mut children_map: HashMap<i32, Vec<&Requirement>> = HashMap::new();
+    // Index children by parent_id; collect roots
+    let mut children: HashMap<i32, Vec<&Requirement>> = HashMap::new();
+    let mut roots: Vec<&Requirement> = Vec::new();
 
-    // Group requirements by parent
-    for req in &all_requirements {
-        if req.req_parent == 0 {
-            // Root requirements
-            tree_data.push(req);
+    for r in &reqs {
+        if r.req_parent == 0 {
+            roots.push(r);
         } else {
-            // Child requirements
-            children_map
-                .entry(req.req_parent)
-                .or_insert_with(Vec::new)
-                .push(req);
+            children.entry(r.req_parent).or_default().push(r);
         }
     }
 
-    // Sort requirements by ID
-    tree_data.sort_by(|a, b| a.req_id.cmp(&b.req_id));
-
-    // Create tree structure with children
-    let mut tree_structure = Vec::new();
-    for root_req in tree_data {
-        let mut node = json!({
-            "requirement": root_req,
-            "children": Vec::<serde_json::Value>::new()
-        });
-
-        // Add children if any
-        if let Some(children) = children_map.get(&root_req.req_id) {
-            let mut sorted_children = children.clone();
-            sorted_children.sort_by(|a, b| a.req_id.cmp(&b.req_id));
-
-            let children_json: Vec<serde_json::Value> = sorted_children
-                .iter()
-                .map(|child| {
-                    json!({
-                        "requirement": child,
-                        "children": Vec::<serde_json::Value>::new()
-                    })
-                })
-                .collect();
-
-            node["children"] = json!(children_json);
-        }
-
-        tree_structure.push(node);
+    // Sort roots and each child list by req_id for deterministic output
+    roots.sort_by_key(|r| r.req_id);
+    for v in children.values_mut() {
+        v.sort_by_key(|r| r.req_id);
     }
+
+    // Recursive builder
+    fn build_node<'a>(
+        req: &'a Requirement,
+        idx: &HashMap<i32, Vec<&'a Requirement>>,
+    ) -> serde_json::Value {
+        let kids = idx.get(&req.req_id).map(|vs| {
+            vs.iter().map(|c| build_node(c, idx)).collect::<Vec<_>>()
+        }).unwrap_or_default();
+
+        json!({
+            "requirement": req,
+            "children": kids
+        })
+    }
+
+    let tree = roots.into_iter().map(|r| build_node(r, &children)).collect::<Vec<_>>();
 
     let ctx = json!({
-        "tree_data": tree_structure,
-        "total_requirements": all_requirements.len(),
+        "tree_data": tree,
+        "total_requirements": reqs.len(),
         "user": user
     });
 
     Ok(Template::render("requirements_tree", ctx))
 }
+
 
 pub fn routes() -> Vec<Route> {
     routes![

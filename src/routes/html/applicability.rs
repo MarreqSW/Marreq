@@ -31,7 +31,7 @@ pub fn show_applicability(
     Ok(Template::render("applicability", &ctx))
 }
 
-#[get("/<project_id>/new_applicability")]
+#[get("/<project_id>/applicability/new")]
 pub fn new_applicability(
     project_access: ProjectAccess,
     project_id: i32,
@@ -45,7 +45,7 @@ pub fn new_applicability(
     Ok(Template::render("new_applicability", ctx))
 }
 
-#[post("/<project_id>/new_applicability", data = "<form>")]
+#[post("/<project_id>/applicability/new", data = "<form>")]
 pub fn post_applicability(
     project_access: ProjectAccess,
     project_id: i32,

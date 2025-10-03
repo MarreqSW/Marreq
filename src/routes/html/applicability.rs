@@ -82,7 +82,7 @@ pub fn post_applicability(
 }
 
 
-#[get("/<project_id>/edit_applicability/<app_id>")]
+#[get("/<project_id>/applicability/edit/<app_id>")]
 pub fn get_edit_applicability(
     project_access: ProjectAccess,
     project_id: i32,
@@ -107,7 +107,7 @@ pub fn get_edit_applicability(
     Ok(Template::render("edit_applicability", ctx))
 }
 
-#[post("/<project_id>/edit_applicability/<app_id>", data = "<form>")]
+#[post("/<project_id>/applicability/edit/<app_id>", data = "<form>")]
 pub fn post_edit_applicability(
     project_access: ProjectAccess,
     project_id: i32,

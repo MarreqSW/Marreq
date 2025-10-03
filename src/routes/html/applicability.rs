@@ -66,9 +66,9 @@ pub async fn post_applicability(
         .insert_new_applicability(&new_applicability)
     {
         Ok(id) => id,
-        Err(err) => {
+        Err(_err) => {
             #[cfg(debug_assertions)]
-            eprintln!("Error inserting applicability: {:?}", err);
+            eprintln!("Error inserting applicability: {:?}", _err);
             return Ok(Redirect::to(new_url));
         }
     };
@@ -137,9 +137,9 @@ pub async fn post_edit_applicability(
         ..form.into_inner()
     };
 
-    if let Err(err) = state.repo_write().edit_applicability(&new) {
+    if let Err(_err) = state.repo_write().edit_applicability(&new) {
         #[cfg(debug_assertions)]
-        eprintln!("Error updating applicability {app_id}: {err:?}");
+        eprintln!("Error updating applicability {app_id}: {_err:?}");
         return Ok(Redirect::to(edit_url));
     }
 
@@ -183,9 +183,9 @@ pub async fn delete_applicability_route(
 
     let deleted = match state.repo_write().delete_applicability(app_id) {
         Ok(app) => app,
-        Err(err) => {
+        Err(_err) => {
             #[cfg(debug_assertions)]
-            eprintln!("Error deleting applicability {app_id}: {err:?}");
+            eprintln!("Error deleting applicability {app_id}: {_err:?}");
             return Ok(Status::InternalServerError);
         }
     };

@@ -2,7 +2,7 @@ use super::helpers::*;
 use super::prelude::*;
 
 #[get("/<project_id>/categories")]
-pub fn show_categories(
+async fn show_categories(
     project_access: ProjectAccess,
     project_id: i32,
     state: &State<AppState>,
@@ -25,7 +25,7 @@ pub fn show_categories(
 }
 
 #[get("/<project_id>/categories/new")]
-pub fn new_category(
+async fn new_category(
     project_access: ProjectAccess,
     project_id: i32,
     state: &State<AppState>,
@@ -42,7 +42,7 @@ pub fn new_category(
 }
 
 #[post("/<project_id>/categories/new", data = "<new_category>")]
-pub fn post_category(
+async fn post_category(
     project_access: ProjectAccess,
     project_id: i32,
     new_category: Form<NewCategory>,
@@ -77,7 +77,7 @@ pub fn post_category(
 
 
 #[get("/<project_id>/categories/edit/<cat_id>")]
-pub fn get_edit_category(
+async fn get_edit_category(
     project_access: ProjectAccess,
     project_id: i32,
     cat_id: i32,
@@ -111,7 +111,7 @@ pub fn get_edit_category(
 
 
 #[post("/<project_id>/categories/edit/<cat_id>", data = "<category>")]
-pub fn post_edit_category(
+async fn post_edit_category(
     project_access: ProjectAccess,
     project_id: i32,
     cat_id: i32,
@@ -160,7 +160,7 @@ pub fn post_edit_category(
 
 
 #[delete("/<project_id>/categories/delete/<cat_id>")]
-pub fn delete_category_route(
+async fn delete_category_route(
     project_access: ProjectAccess,
     project_id: i32,
     cat_id: i32,

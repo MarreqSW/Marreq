@@ -158,7 +158,7 @@ pub fn post_edit_applicability(
 }
 
 
-#[delete("/<project_id>/delete_applicability/<app_id>")]
+#[delete("/<project_id>/applicability/delete/<app_id>")]
 pub fn delete_applicability_route(
     project_access: ProjectAccess,
     project_id: i32,

@@ -27,16 +27,17 @@ use super::helpers::{
     build_context_with_projects, get_category_by_id_cached, get_db_connection,
     get_linked_tests_for_requirement_cached, get_requirement_by_id_cached_safe,
 };
-#[get("/requirements?<status_filter>&<verification_filter>&<category_filter>")]
+#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>")]
 pub fn show_requirements(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     cookies: &CookieJar<'_>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
     let mut ctx = build_context_with_projects(state, user, cookies);
 
     // Get selected project ID
@@ -110,13 +111,14 @@ pub fn show_requirements(
     Ok(Template::render("requirements", ctx))
 }
 
-#[get("/requirements/<req_id>")]
+#[get("/<project_id>/requirements/<req_id>")]
 pub fn show_requirement_id(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     req_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
 
     // Use the safe function that returns a Result
     match get_requirement_by_id_cached_safe(state, req_id) {
@@ -150,14 +152,15 @@ pub fn show_requirement_id(
     }
 }
 
-#[get("/edit_requirement/<req_id>")]
+#[get("/<project_id>/requirements/edit/<req_id>")]
 pub fn get_edit_requirement(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     req_id: i32,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
 
     // Use the safe function that returns a Result
     let req = match get_requirement_by_id_cached_safe(state, req_id) {
@@ -272,14 +275,15 @@ pub fn get_edit_requirement(
     Ok(Template::render("edit_requirement", ctx))
 }
 
-#[post("/edit_requirement/<req_id>", data = "<new_req>")]
+#[post("/<project_id>/requirements/edit/<req_id>", data = "<new_req>")]
 pub fn post_edit_requirement(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     req_id: i32,
     new_req: Form<NewRequirement>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
 
     let requirement_data = new_req.into_inner();
 
@@ -290,12 +294,12 @@ pub fn post_edit_requirement(
             Ok(pattern) => pattern,
             Err(_) => {
                 eprintln!("Failed to compile regex pattern");
-                return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
+                return Err(Redirect::to(uri!("/p", get_edit_requirement(project_id, req_id))));
             }
         };
         if !general_pattern.is_match(&requirement_data.req_reference) {
             // Invalid reference format - redirect back to form with error
-            return Err(Redirect::to(uri!(get_edit_requirement(req_id))));
+            return Err(Redirect::to(uri!("/p", get_edit_requirement(project_id, req_id))));
         }
 
         // Get the category to check if reference matches
@@ -314,7 +318,7 @@ pub fn post_edit_requirement(
 
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(post_edit_requirement(req_id)))
+        Redirect::to(uri!("/p", post_edit_requirement(project_id, req_id)))
     })?;
 
     // Get the old values before updating
@@ -322,7 +326,8 @@ pub fn post_edit_requirement(
         Ok(req) => req,
         Err(_) => {
             // Requirement not found - redirect back to requirements list
-            return Err(Redirect::to(uri!(show_requirements(
+            return Err(Redirect::to(uri!("/p", show_requirements(
+                project_id,
                 None::<i32>,
                 None::<i32>,
                 None::<i32>
@@ -335,7 +340,8 @@ pub fn post_edit_requirement(
         .edit_requirement(&requirement_data)
         .map_err(|e| {
             eprintln!("Error editing requirement: {:?}", e);
-            Redirect::to(uri!(show_requirements(
+            Redirect::to(uri!("/p", show_requirements(
+                project_id,
                 None::<i32>,
                 None::<i32>,
                 None::<i32>
@@ -353,16 +359,17 @@ pub fn post_edit_requirement(
             .expect("Error reading table Requirements after update"),
     );
 
-    Ok(Redirect::to(uri!(show_requirement_id(req_id))))
+    Ok(Redirect::to(uri!("/p", show_requirement_id(project_id, req_id))))
 }
 
-#[delete("/delete_requirement/<req_id>")]
+#[delete("/<project_id>/requirements/delete/<req_id>")]
 pub fn delete_requirement_route(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     req_id: i32,
     state: &State<AppState>,
 ) -> Result<Redirect, rocket::http::Status> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
     let mut connection = match get_db_connection(state) {
         Ok(conn) => conn,
         Err(e) => {
@@ -393,7 +400,8 @@ pub fn delete_requirement_route(
             let _ = Logger::deleted(connection.as_mut(), &log_ctx, &deleted);
 
             // Redirect to requirements list page
-            Ok(Redirect::to(uri!(show_requirements(
+            Ok(Redirect::to(uri!("/p", show_requirements(
+                project_id,
                 None::<i32>,
                 None::<i32>,
                 None::<i32>
@@ -408,13 +416,14 @@ pub fn delete_requirement_route(
     }
 }
 
-#[get("/new_requirement")]
+#[get("/<project_id>/requirements/new")]
 pub fn new_requirement(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
     let status = state.repo_read().get_status_all().unwrap_or_default();
     let status_json = json!(status);
 
@@ -505,16 +514,17 @@ pub fn new_requirement(
     Ok(Template::render("new_requirement", ctx))
 }
 
-#[post("/new_requirement", data = "<new_req>")]
+#[post("/<project_id>/requirements/new", data = "<new_req>")]
 pub fn post_requirement(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     new_req: Form<NewRequirement>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(new_requirement))
+        Redirect::to(uri!("/p", new_requirement(project_id)))
     })?;
 
     let mut requirement_data = new_req.into_inner();
@@ -527,7 +537,7 @@ pub fn post_requirement(
 
         if !requirement_data.req_reference.starts_with(&expected_prefix) {
             // Invalid reference format - redirect back to form with error
-            return Err(Redirect::to(uri!(new_requirement)));
+            return Err(Redirect::to(uri!("/p", new_requirement(project_id))));
         }
 
         // Validate format: REQ-TAG-NUMBER
@@ -536,12 +546,12 @@ pub fn post_requirement(
             Ok(pattern) => pattern,
             Err(_) => {
                 eprintln!("Failed to compile regex pattern: {}", reference_pattern);
-                return Err(Redirect::to(uri!(new_requirement)));
+                return Err(Redirect::to(uri!("/p", new_requirement(project_id))));
             }
         };
         if !regex.is_match(&requirement_data.req_reference) {
             // Invalid reference format - redirect back to form with error
-            return Err(Redirect::to(uri!(new_requirement)));
+            return Err(Redirect::to(uri!("/p", new_requirement(project_id))));
         }
     }
 
@@ -568,7 +578,8 @@ pub fn post_requirement(
         .insert_new_requirement(&requirement_data)
         .map_err(|e| {
             eprintln!("Error inserting new requirement: {:?}", e);
-            Redirect::to(uri!(show_requirements(
+            Redirect::to(uri!("/p", show_requirements(
+                project_id,
                 None::<i32>,
                 None::<i32>,
                 None::<i32>
@@ -589,15 +600,16 @@ pub fn post_requirement(
         &new_requirement,
     );
 
-    Ok(Redirect::to(uri!(show_requirement_id(req_id))))
+    Ok(Redirect::to(uri!("/p", show_requirement_id(project_id, req_id))))
 }
 
-#[get("/requirements/tree")]
+#[get("/<project_id>/requirements/tree")]
 pub fn show_requirements_tree(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
 
     // Get all requirements
     let all_requirements = state.repo_read().get_requirements_all().unwrap_or_default();

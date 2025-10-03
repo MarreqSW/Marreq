@@ -9,6 +9,7 @@ use crate::auth::{clear_session_cookie, read_session_user_id};
 use crate::logger::LogCtx;
 use crate::models::User;
 use crate::repository::errors::RepoError;
+use crate::repository::ProjectMembersRepository;
 use crate::repository::UserRepository;
 
 /// Request guard that ensures the user is authenticated and loaded from the database.
@@ -140,6 +141,114 @@ impl<'r> FromRequest<'r> for ApiUser {
                 let user = session_user.into_inner();
                 let log_ctx = LogCtx::from_request(user.user_id, request);
                 Outcome::Success(ApiUser { user, log_ctx })
+            }
+            Outcome::Error((status, ())) => Outcome::Error((status, ())),
+            Outcome::Forward(status) => Outcome::Forward(status),
+        }
+    }
+}
+
+/// Request guard ensuring the authenticated user may access the requested project.
+pub struct ProjectAccess {
+    user: User,
+    project_id: i32,
+}
+
+impl ProjectAccess {
+    pub fn user(&self) -> &User {
+        &self.user
+    }
+
+    pub fn project_id(&self) -> i32 {
+        self.project_id
+    }
+
+    pub fn into_user(self) -> User {
+        self.user
+    }
+
+    pub fn into_parts(self) -> (User, i32) {
+        (self.user, self.project_id)
+    }
+}
+
+impl Deref for ProjectAccess {
+    type Target = User;
+
+    fn deref(&self) -> &Self::Target {
+        &self.user
+    }
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for ProjectAccess {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let route = match request.route() {
+            Some(route) => route,
+            None => return Outcome::Error((Status::InternalServerError, ())),
+        };
+
+        let route_segments: Vec<_> = route
+            .uri
+            .path()
+            .split('/')
+            .filter(|segment| !segment.is_empty())
+            .collect();
+
+        let request_segments: Vec<_> = request
+            .uri()
+            .path()
+            .segments()
+            .filter(|segment| !segment.is_empty())
+            .collect();
+
+        let project_index = match route_segments
+            .iter()
+            .position(|segment| *segment == "<project_id>")
+        {
+            Some(index) => index,
+            None => return Outcome::Error((Status::InternalServerError, ())),
+        };
+
+        let project_id_segment = match request_segments.get(project_index).copied() {
+            Some(segment) => segment,
+            None => return Outcome::Error((Status::BadRequest, ())),
+        };
+
+        let project_id = match project_id_segment.parse::<i32>() {
+            Ok(project_id) => project_id,
+            Err(_) => return Outcome::Error((Status::BadRequest, ())),
+        };
+
+        let state = match request.rocket().state::<AppState>() {
+            Some(state) => state,
+            None => return Outcome::Error((Status::InternalServerError, ())),
+        };
+
+        match request.guard::<SessionUser>().await {
+            Outcome::Success(session_user) => {
+                let user = session_user.into_inner();
+
+                if user.is_admin {
+                    return Outcome::Success(ProjectAccess { user, project_id });
+                }
+
+                let repo = state.repo_read();
+                match repo.get_projects_for_user(user.user_id) {
+                    Ok(memberships) => {
+                        if memberships
+                            .iter()
+                            .any(|membership| membership.project_id == project_id)
+                        {
+                            Outcome::Success(ProjectAccess { user, project_id })
+                        } else {
+                            Outcome::Error((Status::Forbidden, ()))
+                        }
+                    }
+                    Err(_) => Outcome::Error((Status::InternalServerError, ())),
+                }
             }
             Outcome::Error((status, ())) => Outcome::Error((status, ())),
             Outcome::Forward(status) => Outcome::Forward(status),

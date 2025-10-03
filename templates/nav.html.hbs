@@ -58,7 +58,13 @@
           </a>
           <ul class="dropdown-menu">
             <li><a class="dropdown-item" href="/new_project">New Project</a></li>
-            <li><a class="dropdown-item" href="/new_requirement">New Requirement</a></li>
+            <li>
+              {{#if selected_project_id}}
+                <a class="dropdown-item" href="/p/{{selected_project_id}}/requirements/new">New Requirement</a>
+              {{else}}
+                <span class="dropdown-item disabled" aria-disabled="true">New Requirement</span>
+              {{/if}}
+            </li>
             <li><a class="dropdown-item" href="/new_test">New Test</a></li>
             <li>
               {{#if selected_project_id}}

@@ -67,7 +67,7 @@ pub fn show_requirements(
     Ok(Template::render("requirements", ctx))
 }
 
-#[get("/<project_id>/requirements/<req_id>")]
+#[get("/<project_id>/requirements/show/<req_id>")]
 pub fn show_requirement_id(
     project_access: ProjectAccess,
     project_id: i32,

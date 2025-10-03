@@ -29,7 +29,7 @@
 <script>
 function deleteApplicability(projectId, applicabilityId) {
   if (confirm('Are you sure you want to delete this applicability? This action cannot be undone.')) {
-    fetch(`/p/${projectId}/delete_applicability/${applicabilityId}`, {
+    fetch(`/p/${projectId}/applicability/delete/${applicabilityId}`, {
       method: 'DELETE',
     })
     .then(response => {

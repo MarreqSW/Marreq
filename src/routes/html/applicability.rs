@@ -1,7 +1,7 @@
 use super::helpers::*;
 use super::prelude::*;
-use rocket::serde::Serialize;
 use rocket::http::Status;
+use rocket::serde::Serialize;
 
 #[derive(Serialize)]
 struct ApplicabilityCtx<'a> {
@@ -16,7 +16,6 @@ pub async fn show_applicability(
     project_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-
     let apps = state
         .repo_read()
         .get_applicability_by_project(project_id)
@@ -54,7 +53,7 @@ pub async fn post_applicability(
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
 
-    let new_url  = uri!("/p", new_applicability(project_id = project_id));
+    let new_url = uri!("/p", new_applicability(project_id = project_id));
     let show_url = uri!("/p", show_applicability(project_id = project_id));
 
     let new_applicability = NewApplicability {
@@ -62,7 +61,10 @@ pub async fn post_applicability(
         ..form.into_inner()
     };
 
-    let applicability_id = match state.repo_write().insert_new_applicability(&new_applicability) {
+    let applicability_id = match state
+        .repo_write()
+        .insert_new_applicability(&new_applicability)
+    {
         Ok(id) => id,
         Err(err) => {
             #[cfg(debug_assertions)]
@@ -80,7 +82,6 @@ pub async fn post_applicability(
 
     Ok(Redirect::to(show_url))
 }
-
 
 #[get("/<project_id>/applicability/edit/<app_id>")]
 pub async fn get_edit_applicability(
@@ -157,7 +158,6 @@ pub async fn post_edit_applicability(
     Ok(Redirect::to(show_url))
 }
 
-
 #[delete("/<project_id>/applicability/delete/<app_id>")]
 pub async fn delete_applicability_route(
     project_access: ProjectAccess,
@@ -195,7 +195,6 @@ pub async fn delete_applicability_route(
 
     Ok(Status::Ok)
 }
-
 
 pub fn routes() -> Vec<Route> {
     routes![
@@ -260,7 +259,8 @@ mod tests {
         let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
         admin.is_admin = true;
         repo.users.insert(ADMIN_ID, admin);
-        repo.projects.insert(PRIMARY_PROJECT, sample_project(PRIMARY_PROJECT, "Mars"));
+        repo.projects
+            .insert(PRIMARY_PROJECT, sample_project(PRIMARY_PROJECT, "Mars"));
         repo.applicability
             .insert(1, sample_applicability(1, PRIMARY_PROJECT, "Flight"));
         repo.project_members.push(ProjectMember {

@@ -67,8 +67,13 @@
         <p>Organize requirements with categories</p>
       </div>
       <div class="card-actions">
-        <a href="/categories" class="btn btn-primary">View Categories</a>
-        <a href="/new_category" class="btn btn-outline">New Category</a>
+        {{#if selected_project_id}}
+          <a href="/p/{{selected_project_id}}/categories" class="btn btn-primary">View Categories</a>
+          <a href="/p/{{selected_project_id}}/categories/new" class="btn btn-outline">New Category</a>
+        {{else}}
+          <span class="btn btn-primary disabled" aria-disabled="true">View Categories</span>
+          <span class="btn btn-outline disabled" aria-disabled="true">New Category</span>
+        {{/if}}
       </div>
     </div>
   </div>

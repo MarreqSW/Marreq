@@ -50,7 +50,7 @@ async fn post_category(
 ) -> Result<Redirect, Redirect> {
     let user_id = project_access.into_user().user_id;
 
-    let new_url  = uri!("/p", new_category(project_id));
+    let new_url = uri!("/p", new_category(project_id));
     let show_url = uri!("/p", show_categories(project_id));
 
     let mut category = new_category.into_inner();
@@ -74,7 +74,6 @@ async fn post_category(
 
     Ok(Redirect::to(show_url))
 }
-
 
 #[get("/<project_id>/categories/edit/<cat_id>")]
 async fn get_edit_category(
@@ -109,7 +108,6 @@ async fn get_edit_category(
     Ok(Template::render("edit_category", ctx))
 }
 
-
 #[post("/<project_id>/categories/edit/<cat_id>", data = "<category>")]
 async fn post_edit_category(
     project_access: ProjectAccess,
@@ -139,14 +137,11 @@ async fn post_edit_category(
     edited.cat_id = Some(cat_id);
     edited.project_id = project_id;
 
-    state
-        .repo_write()
-        .edit_category(&edited)
-        .map_err(|e| {
-            #[cfg(debug_assertions)]
-            eprintln!("edit_category error: {:?}", e);
-            Redirect::to(edit_url.clone())
-        })?;
+    state.repo_write().edit_category(&edited).map_err(|e| {
+        #[cfg(debug_assertions)]
+        eprintln!("edit_category error: {:?}", e);
+        Redirect::to(edit_url.clone())
+    })?;
 
     if let Ok(mut conn) = get_db_connection(state) {
         if let Ok(new_row) = state.repo_read().get_category_by_id(cat_id) {
@@ -157,7 +152,6 @@ async fn post_edit_category(
 
     Ok(Redirect::to(show_url))
 }
-
 
 #[delete("/<project_id>/categories/delete/<cat_id>")]
 async fn delete_category_route(
@@ -196,7 +190,6 @@ async fn delete_category_route(
 
     Ok(rocket::http::Status::Ok)
 }
-
 
 pub fn routes() -> Vec<Route> {
     routes![
@@ -278,8 +271,7 @@ mod tests {
     fn repo_with_secondary_category() -> DieselRepoMock {
         let mut repo = base_repo();
         repo.projects.insert(2, sample_project(2, "Lander"));
-        repo.categories
-            .insert(2, sample_category(2, 2, "Surface"));
+        repo.categories.insert(2, sample_category(2, 2, "Surface"));
         repo
     }
 
@@ -371,7 +363,10 @@ mod tests {
         .await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/1/categories"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/categories")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
@@ -397,7 +392,10 @@ mod tests {
         let client = test_client(repo_with_secondary_category()).await;
         let response = get(&client, "/p/1/categories/edit/2").await;
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/2/categories"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/2/categories")
+        );
     }
 
     #[rocket::async_test]
@@ -411,7 +409,10 @@ mod tests {
         .await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/1/categories"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/categories")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
@@ -431,7 +432,10 @@ mod tests {
         .await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/1/categories"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/categories")
+        );
     }
 
     #[rocket::async_test]
@@ -445,7 +449,10 @@ mod tests {
         .await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/2/categories"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/2/categories")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
@@ -472,7 +479,10 @@ mod tests {
         let client = test_client(repo_with_secondary_category()).await;
         let response = delete_path(&client, "/p/1/categories/delete/2").await;
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/2/categories"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/2/categories")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");

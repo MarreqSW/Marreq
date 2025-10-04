@@ -13,7 +13,7 @@ pub mod reports;
 pub mod requirements;
 pub mod tables;
 pub mod tests;
-pub mod users;
+pub mod user;
 pub mod members;
 
 pub use admin::*;
@@ -28,7 +28,7 @@ pub use reports::*;
 pub use requirements::*;
 pub use tables::*;
 pub use tests::*;
-pub use users::*;
+pub use user::*;
 pub use members::*;
 
 pub use cache::{
@@ -73,11 +73,6 @@ pub fn routes() -> Vec<Route> {
         auth::change_password,
         dashboard::index,
         dashboard::show_status,
-        users::new_user,
-        users::post_user,
-        users::show_user_id,
-        users::edit_user,
-        users::post_edit_user,
         tables::show_requirements_table,
         tables::show_tests_table,
         projects::show_projects,

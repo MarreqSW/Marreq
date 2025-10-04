@@ -1,8 +1,8 @@
 use super::helpers::*;
 use super::prelude::*;
 
-#[get("/users/<user_id>")]
-pub fn show_user_id(
+#[get("/show/<user_id>")]
+async fn show_user_id(
     admin: AdminOnly,
     user_id: i32,
     state: &State<AppState>,
@@ -26,8 +26,8 @@ pub fn show_user_id(
     Ok(Template::render("user_by_id", ctx))
 }
 
-#[get("/edit_user/<user_id>")]
-pub fn edit_user(
+#[get("/edit/<user_id>")]
+async fn edit_user(
     admin: AdminOnly,
     user_id: i32,
     state: &State<AppState>,
@@ -48,8 +48,8 @@ pub fn edit_user(
     Ok(Template::render("edit_user_by_id", ctx))
 }
 
-#[post("/edit_user/<user_id>", data = "<user_form>")]
-pub fn post_edit_user(
+#[post("/edit/<user_id>", data = "<user_form>")]
+async fn post_edit_user(
     admin: AdminOnly,
     user_id: i32,
     user_form: Form<UpdateUser>,
@@ -92,8 +92,8 @@ pub fn post_edit_user(
     }
 }
 
-#[get("/new_user")]
-pub fn new_user(admin: AdminOnly, state: &State<AppState>) -> Result<Template, Redirect> {
+#[get("/new")]
+async fn new_user(admin: AdminOnly, state: &State<AppState>) -> Result<Template, Redirect> {
     let user = admin.into_inner();
     let status = state.repo_read().get_status_all().unwrap_or_default();
     let status_json = json!(status);
@@ -105,8 +105,8 @@ pub fn new_user(admin: AdminOnly, state: &State<AppState>) -> Result<Template, R
     Ok(Template::render("new_user", ctx))
 }
 
-#[post("/new_user", data = "<new_user>")]
-pub fn post_user(
+#[post("/new", data = "<new_user>")]
+async fn post_user(
     admin: AdminOnly,
     new_user: Form<NewUser>,
     state: &State<AppState>,

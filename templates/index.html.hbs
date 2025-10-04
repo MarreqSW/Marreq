@@ -15,7 +15,7 @@
       </div>
       <div class="card-actions">
         <a href="/p/{{selected_project_id}}/requirements" class="btn btn-primary">View Requirements</a>
-        <a href="/requirements.xls" class="btn btn-success">Export Excel</a>
+        <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success">Export Excel</a>
         {{#if user.is_admin}}
         <a href="/import_excel" class="btn btn-warning">Import Excel</a>
         {{/if}}

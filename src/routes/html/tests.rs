@@ -2,7 +2,7 @@ use super::helpers::*;
 use super::prelude::*;
 
 #[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>")]
-pub fn show_tests(
+async fn show_tests(
     project_access: ProjectAccess,
     project_id: i32,
     cookies: &CookieJar<'_>,
@@ -45,7 +45,7 @@ pub fn show_tests(
 }
 
 #[get("/<project_id>/tests/show/<test_id>")]
-pub fn show_test_id(
+async fn show_test_id(
     project_access: ProjectAccess,
     project_id: i32,
     test_id: i32,
@@ -92,7 +92,7 @@ pub fn show_test_id(
 }
 
 #[get("/<project_id>/tests/new")]
-pub fn new_test(
+async fn new_test(
     project_access: ProjectAccess,
     project_id: i32,
     cookies: &CookieJar<'_>,
@@ -120,7 +120,7 @@ pub fn new_test(
 }
 
 #[post("/<project_id>/tests/new", data = "<new_test>")]
-pub fn post_test(
+async fn post_test(
     project_access: ProjectAccess,
     project_id: i32,
     new_test: Form<NewTestForm>,
@@ -187,7 +187,7 @@ pub fn post_test(
 }
 
 #[get("/<project_id>/tests/edit/<test_id>")]
-pub fn get_edit_test(
+async fn get_edit_test(
     project_access: ProjectAccess,
     project_id: i32,
     test_id: i32,
@@ -229,7 +229,7 @@ pub fn get_edit_test(
 }
 
 #[post("/<project_id>/tests/edit/<test_id>", data = "<edit_test_form>")]
-pub fn post_edit_test(
+async fn post_edit_test(
     project_access: ProjectAccess,
     project_id: i32,
     test_id: i32,
@@ -301,7 +301,7 @@ pub fn post_edit_test(
 }
 
 #[delete("/<project_id>/tests/delete/<test_id>")]
-pub fn delete_test_route(
+async fn delete_test_route(
     project_access: ProjectAccess,
     project_id: i32,
     test_id: i32,
@@ -346,7 +346,7 @@ pub fn delete_test_route(
 }
 
 #[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
-pub fn get_matrix(
+async fn get_matrix(
     project_access: ProjectAccess,
     project_id: i32,
     cookies: &CookieJar<'_>,
@@ -488,7 +488,7 @@ pub fn get_matrix(
 }
 
 #[get("/<project_id>/matrix.xls")]
-pub async fn get_matrix_xls(
+async fn get_matrix_xls(
     project_access: ProjectAccess,
     project_id: i32,
     cookies: &CookieJar<'_>,
@@ -522,7 +522,7 @@ pub async fn get_matrix_xls(
 }
 
 #[get("/<project_id>/requirements.xls")]
-pub async fn get_requirements_xls(
+async fn get_requirements_xls(
     project_access: ProjectAccess,
     project_id: i32,
 ) -> Result<(ContentType, NamedFile), Redirect> {
@@ -551,7 +551,7 @@ pub async fn get_requirements_xls(
 }
 
 #[get("/<project_id>/tests.xls")]
-pub async fn get_tests_xls(
+async fn get_tests_xls(
     project_access: ProjectAccess,
     project_id: i32,
 ) -> Result<(ContentType, NamedFile), Redirect> {

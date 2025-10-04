@@ -2,33 +2,21 @@ pub mod cache;
 mod helpers;
 
 pub mod admin;
-pub mod applicability;
+pub mod project;
+pub mod projects;
 pub mod auth;
-pub mod categories;
 pub mod dashboard;
 pub mod excel;
 pub mod logs;
-pub mod members;
-pub mod projects;
-pub mod reports;
-pub mod requirements;
 pub mod tables;
-pub mod tests;
 pub mod user;
 
 pub use admin::*;
-pub use applicability::*;
 pub use auth::*;
-pub use categories::*;
-pub use dashboard::*;
 pub use excel::*;
 pub use logs::*;
-pub use members::*;
 pub use projects::*;
-pub use reports::*;
-pub use requirements::*;
 pub use tables::*;
-pub use tests::*;
 pub use user::*;
 
 pub use cache::{
@@ -39,25 +27,22 @@ pub(crate) mod prelude {
     pub(crate) use diesel::prelude::*;
     pub(crate) use rocket::form::Form;
     pub(crate) use rocket::fs::NamedFile;
-    pub(crate) use rocket::http::{ContentType, Cookie, CookieJar};
-    pub(crate) use rocket::response::status::NotFound;
+    pub(crate) use rocket::http::{ContentType, CookieJar};
     pub(crate) use rocket::response::{content, Redirect};
     pub(crate) use rocket::serde::json::json;
     pub(crate) use rocket::Route;
     pub(crate) use rocket::State;
     pub(crate) use rocket_dyn_templates::Template;
-    pub(crate) use std::collections::{HashMap, HashSet};
-    pub(crate) use std::path;
+    pub(crate) use std::collections::HashMap;
 
     pub(crate) use crate::app::AppState;
     pub(crate) use crate::auth::*;
-    pub(crate) use crate::generators::*;
     pub(crate) use crate::helper_functions::*;
     pub(crate) use crate::html::*;
     pub(crate) use crate::logger::{LogCtx, Logger};
     pub(crate) use crate::models::*;
     pub(crate) use crate::repository::{
-        LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository,
+        LookupRepository, ProjectMembersRepository, ProjectsRepository,
         RequirementsRepository, TestsRepository, UserRepository,
     };
 }

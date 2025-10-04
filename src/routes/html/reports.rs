@@ -162,3 +162,185 @@ async fn generate_pdf_report(
 pub fn routes() -> Vec<Route> {
     routes![show_reports, generate_pdf_report,]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::models::{Category, Matrix, Project, ProjectMember, Requirement, Status, Test};
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use chrono::{NaiveDate, NaiveDateTime};
+    use rocket::http::{ContentType, Cookie, Status as HttpStatus};
+    use rocket::local::asynchronous::{Client, LocalResponse};
+    use rocket_dyn_templates::Template;
+    use std::sync::{Arc, RwLock};
+
+    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
+    const PROJECT_ID: i32 = 1;
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn sample_project() -> Project {
+        Project {
+            project_id: PROJECT_ID,
+            project_name: "Orbiter".to_string(),
+            project_description: Some("Orbiter project".to_string()),
+            project_creation_date: Some(timestamp()),
+            project_update_date: Some(timestamp()),
+            project_status: Some("Active".to_string()),
+            project_owner_id: Some(ADMIN_ID),
+        }
+    }
+
+    fn sample_category() -> Category {
+        Category {
+            cat_id: 1,
+            cat_title: "Systems".to_string(),
+            cat_description: "Core systems".to_string(),
+            cat_tag: "systems".to_string(),
+            project_id: PROJECT_ID,
+        }
+    }
+
+    fn sample_status(id: i32, title: &str) -> Status {
+        Status {
+            st_id: id,
+            st_title: title.to_string(),
+            st_description: format!("{title} status"),
+            st_short_name: title.chars().take(3).collect(),
+        }
+    }
+
+    fn sample_requirement(id: i32) -> Requirement {
+        Requirement {
+            req_id: id,
+            req_title: format!("Requirement {id}"),
+            req_description: "Test requirement".to_string(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: ADMIN_ID,
+            req_reviewer: ADMIN_ID,
+            req_link: "".to_string(),
+            req_reference: format!("REQ-{:03}", id),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: Some("For testing".to_string()),
+            project_id: PROJECT_ID,
+        }
+    }
+
+    fn sample_test(id: i32, status_id: i32, name: &str) -> Test {
+        Test {
+            test_id: id,
+            test_name: name.to_string(),
+            test_description: "Validation test".to_string(),
+            test_source: "Spec".to_string(),
+            test_status: status_id,
+            test_reference: format!("TEST-{id:03}"),
+            test_parent: 0,
+            project_id: PROJECT_ID,
+        }
+    }
+
+    fn base_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+
+        let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        admin.is_admin = true;
+        repo.users.insert(ADMIN_ID, admin);
+
+        repo.projects.insert(PROJECT_ID, sample_project());
+        repo.categories.insert(1, sample_category());
+        repo.statuses.insert(1, sample_status(1, "Draft"));
+        repo.statuses.insert(2, sample_status(2, "In Review"));
+        repo.requirements.insert(1, sample_requirement(1));
+        repo.tests.insert(1, sample_test(1, 1, "System Validation"));
+        repo.matrices.push(Matrix {
+            matrix_req_id: 1,
+            matrix_test_id: 1,
+            matrix_creation_date: timestamp(),
+            project_id: PROJECT_ID,
+        });
+        repo.project_members.push(ProjectMember {
+            project_id: PROJECT_ID,
+            user_id: ADMIN_ID,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        repo
+    }
+
+    fn managed_state(repo: DieselRepoMock) -> TestAppState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn test_client(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(managed_state(repo))
+            .attach(Template::fairing())
+            .mount("/p", routes![show_reports, generate_pdf_report]);
+        Client::tracked(rocket).await.expect("rocket client")
+    }
+
+    fn admin_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await
+    }
+
+    #[rocket::async_test]
+    async fn show_reports_renders_metrics() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/p/1/reports").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("Project Reports & Analytics"));
+        assert!(body.contains("Orbiter"));
+        assert!(body.contains("1 out of 1"));
+        assert!(body.contains("Systems"));
+        assert!(body.contains("Draft"));
+    }
+
+    #[rocket::async_test]
+    async fn generate_pdf_report_returns_pdf_or_fallback_html() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/p/1/reports/pdf").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let content_type = response.content_type().expect("content type to be set");
+
+        if content_type == ContentType::PDF {
+            let body = response.into_bytes().await.expect("pdf bytes");
+            assert!(!body.is_empty());
+        } else {
+            assert_eq!(content_type, ContentType::new("text", "html"));
+            let body = response.into_string().await.expect("html body");
+            assert!(body.contains("ReqMan Project Report"));
+        }
+    }
+}

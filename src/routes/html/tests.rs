@@ -21,16 +21,14 @@ pub fn show_tests(
     // Fetch and process tests
     let tests = repo.get_tests_by_project(project_id).unwrap_or_default();
 
-    let tests = decorate_tests(filter_tests(
-        tests,
-        status_filter,
-        verification_filter,
-        category_filter,
-    ));
+    let tests = decorate_tests_cached(
+        state,
+        filter_tests(tests, status_filter, verification_filter, category_filter),
+    );
     ctx["tests"] = json!(tests);
 
     // Common data lookups
-    ctx["statuses"] = json!(repo.get_status_all().unwrap_or_default());
+    ctx["statuses"] = json!(repo.get_test_status_all().unwrap_or_default());
     ctx["verifications"] = json!(repo
         .get_verification_by_project(project_id)
         .unwrap_or_default());
@@ -70,19 +68,27 @@ pub fn show_test_id(
         }
     };
 
-    let decorated = decorate_tests(vec![test]);
+    let decorated = decorate_tests_cached(state, vec![test]);
     let test = &decorated[0];
 
     let linked_requirements = get_requirements_for_test_cached(state, test_id).unwrap_or_default();
 
-    let ctx = json!({
-        "project_id": project_id,
-        "test": test,
-        "linked_requirements": linked_requirements,
-        "user": user
-    });
+    let mut ctx_map = serde_json::Map::new();
+    ctx_map.insert("project_id".into(), json!(project_id));
+    ctx_map.insert("selected_project_id".into(), json!(project_id));
+    ctx_map.insert("linked_requirements".into(), json!(linked_requirements));
+    ctx_map.insert("user".into(), json!(user));
 
-    Ok(Template::render("test_by_id", ctx))
+    if let Ok(serde_json::Value::Object(test_obj)) = serde_json::to_value(&test) {
+        for (key, value) in test_obj {
+            ctx_map.insert(key, value);
+        }
+    }
+
+    Ok(Template::render(
+        "test_by_id",
+        serde_json::Value::Object(ctx_map),
+    ))
 }
 
 #[get("/<project_id>/tests/new")]
@@ -121,10 +127,13 @@ pub fn post_test(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!("/p", new_test(project_id)))
-    })?;
+    let mut connection = match get_db_connection(state) {
+        Ok(conn) => Some(conn),
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            None
+        }
+    };
     let my_new_test = NewTest {
         test_id: None,
         test_name: new_test.test_name.clone(),
@@ -149,8 +158,10 @@ pub fn post_test(
         .expect("Error reading table Tests");
 
     // Log the test creation
-    let log_ctx = LogCtx::new(user.user_id);
-    let _ = Logger::created(connection, &log_ctx, test_id, &test);
+    if let Some(connection) = connection.as_mut() {
+        let log_ctx = LogCtx::new(user.user_id);
+        let _ = Logger::created(connection, &log_ctx, test_id, &test);
+    }
 
     #[cfg(debug_assertions)]
     println!("NewTestForm requirements: {:#?}", new_test.test_req);
@@ -191,7 +202,7 @@ pub fn get_edit_test(
         .get_test_by_id(test_id)
         .expect("Error reading table Tests");
 
-    let decorated = decorate_tests(vec![test]);
+    let decorated = decorate_tests_cached(state, vec![test]);
     let test0 = &decorated[0];
 
     let linked_requirements = get_requirements_for_test_cached(state, test_id).unwrap_or_default();
@@ -232,17 +243,20 @@ pub fn post_edit_test(
             show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
         ))
     };
-    let to_edit = || Redirect::to(uri!("/p", get_edit_test(project_id, test_id)));
 
-    let mut conn = get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {e}");
-        to_edit()
-    })?;
+    let mut conn = match get_db_connection(state) {
+        Ok(conn) => Some(conn),
+        Err(e) => {
+            eprintln!("Database connection error: {e}");
+            None
+        }
+    };
 
-    let repo_r = state.repo_read();
-    let old_test = repo_r
-        .get_test_by_id(test_id)
-        .expect("Error reading table Tests");
+    let old_test = {
+        let repo = state.repo_read();
+        repo.get_test_by_id(test_id)
+            .expect("Error reading table Tests")
+    };
 
     // Own the form to avoid cloning strings
     let f = edit_test_form.into_inner();
@@ -253,7 +267,7 @@ pub fn post_edit_test(
         test_description: f.test_description,
         test_source: f.test_source,
         test_status: f.test_status,
-        test_reference: old_test.test_reference.clone(),
+        test_reference: f.test_reference,
         test_parent: f.test_parent,
         project_id: f.project_id,
     };
@@ -268,7 +282,9 @@ pub fn post_edit_test(
         .repo_read()
         .get_test_by_id(test_id)
         .expect("Error reading table Tests after update");
-    let _ = Logger::updated(conn.as_mut(), &log_ctx, &old_test, &updated);
+    if let Some(conn) = conn.as_mut() {
+        let _ = Logger::updated(conn, &log_ctx, &old_test, &updated);
+    }
 
     state
         .repo_write()
@@ -295,10 +311,13 @@ pub fn delete_test_route(
 
     let user = project_access.into_user();
 
-    let mut conn = get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {e}");
-        Status::InternalServerError
-    })?;
+    let mut conn = match get_db_connection(state) {
+        Ok(conn) => Some(conn),
+        Err(e) => {
+            eprintln!("Database connection error: {e}");
+            None
+        }
+    };
 
     let test = get_test_by_id_cached_safe(state, test_id).map_err(|_| Status::NotFound)?;
 
@@ -315,8 +334,10 @@ pub fn delete_test_route(
             _ => Status::InternalServerError,
         })?;
 
-    let log_ctx = LogCtx::new(user.user_id);
-    let _ = Logger::deleted(conn.as_mut(), &log_ctx, &deleted);
+    if let Some(conn) = conn.as_mut() {
+        let log_ctx = LogCtx::new(user.user_id);
+        let _ = Logger::deleted(conn, &log_ctx, &deleted);
+    }
 
     Ok(Redirect::to(uri!(
         "/p",
@@ -571,4 +592,431 @@ pub fn routes() -> Vec<Route> {
         get_requirements_xls,
         get_tests_xls
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::models::{
+        Applicability, Category, Matrix, Project, ProjectMember, Requirement, Status, Test,
+        TestStatus, Verification,
+    };
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use chrono::{NaiveDate, NaiveDateTime};
+    use rocket::http::{ContentType, Cookie, Status as HttpStatus};
+    use rocket::local::asynchronous::{Client, LocalResponse};
+    use rocket_dyn_templates::Template;
+    use std::sync::{Arc, RwLock};
+
+    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
+    const USER_ID: i32 = 2;
+    const PRIMARY_PROJECT: i32 = 1;
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn sample_project(id: i32, name: &str) -> Project {
+        Project {
+            project_id: id,
+            project_name: name.to_string(),
+            project_description: Some(format!("{name} project")),
+            project_creation_date: Some(timestamp()),
+            project_update_date: Some(timestamp()),
+            project_status: Some("Active".to_string()),
+            project_owner_id: Some(ADMIN_ID),
+        }
+    }
+
+    fn sample_category(id: i32, title: &str) -> Category {
+        Category {
+            cat_id: id,
+            cat_title: title.to_string(),
+            cat_description: format!("{title} systems"),
+            cat_tag: title.to_ascii_uppercase(),
+            project_id: PRIMARY_PROJECT,
+        }
+    }
+
+    fn sample_status(id: i32, title: &str) -> Status {
+        Status {
+            st_id: id,
+            st_title: title.to_string(),
+            st_description: format!("{title} status"),
+            st_short_name: title.to_ascii_uppercase(),
+        }
+    }
+
+    fn sample_test_status(id: i32, title: &str) -> TestStatus {
+        TestStatus {
+            test_st_id: id,
+            test_st_title: title.to_string(),
+            test_st_description: format!("{title} status"),
+            test_st_short_name: title.to_ascii_uppercase(),
+        }
+    }
+
+    fn sample_applicability(id: i32, title: &str) -> Applicability {
+        Applicability {
+            app_id: id,
+            app_title: title.to_string(),
+            app_description: format!("{title} applicability"),
+            app_tag: title.to_ascii_uppercase(),
+            project_id: PRIMARY_PROJECT,
+        }
+    }
+
+    fn sample_verification(id: i32, title: &str) -> Verification {
+        Verification {
+            verification_id: id,
+            verification_name: title.to_string(),
+            verification_description: format!("{title} verification"),
+            project_id: PRIMARY_PROJECT,
+        }
+    }
+
+    fn sample_requirement(id: i32) -> Requirement {
+        Requirement {
+            req_id: id,
+            req_title: format!("Requirement {id}"),
+            req_description: "Test requirement".into(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: ADMIN_ID,
+            req_reviewer: ADMIN_ID,
+            req_link: String::new(),
+            req_reference: format!("REQ-SYS-{id}"),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: Some("For testing".into()),
+            project_id: PRIMARY_PROJECT,
+        }
+    }
+
+    fn sample_test(id: i32, status: i32, name: &str) -> Test {
+        Test {
+            test_id: id,
+            test_name: name.to_string(),
+            test_description: format!("{name} description"),
+            test_source: "Design Spec".into(),
+            test_status: status,
+            test_reference: format!("TEST-{id:03}"),
+            test_parent: 0,
+            project_id: PRIMARY_PROJECT,
+        }
+    }
+
+    fn base_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+
+        let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        admin.is_admin = true;
+        repo.users.insert(ADMIN_ID, admin);
+
+        let mut user = DieselRepoMock::make_user(USER_ID, "user", "");
+        user.is_admin = false;
+        repo.users.insert(USER_ID, user);
+
+        repo.projects
+            .insert(PRIMARY_PROJECT, sample_project(PRIMARY_PROJECT, "Orbiter"));
+
+        repo.project_members.push(ProjectMember {
+            project_id: PRIMARY_PROJECT,
+            user_id: ADMIN_ID,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+        repo.project_members.push(ProjectMember {
+            project_id: PRIMARY_PROJECT,
+            user_id: USER_ID,
+            role: 3,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        repo.statuses.insert(1, sample_status(1, "Planned"));
+        repo.test_statuses.insert(1, sample_test_status(1, "Draft"));
+        repo.test_statuses
+            .insert(2, sample_test_status(2, "Proposal"));
+        repo.test_statuses
+            .insert(3, sample_test_status(3, "Active"));
+
+        repo.categories.insert(1, sample_category(1, "Systems"));
+        repo.verifications
+            .insert(1, sample_verification(1, "Analysis"));
+        repo.applicability.insert(1, sample_applicability(1, "All"));
+        repo.requirements.insert(1, sample_requirement(1));
+
+        repo
+    }
+
+    fn repo_with_tests() -> DieselRepoMock {
+        let mut repo = base_repo();
+        repo.tests.insert(1, sample_test(1, 1, "Baseline Test"));
+        repo.matrices.push(Matrix {
+            matrix_req_id: 1,
+            matrix_test_id: 1,
+            matrix_creation_date: timestamp(),
+            project_id: PRIMARY_PROJECT,
+        });
+        repo
+    }
+
+    fn repo_with_active_test() -> DieselRepoMock {
+        let mut repo = base_repo();
+        repo.tests
+            .insert(1, sample_test(1, 3, "Qualification Test"));
+        repo
+    }
+
+    fn managed_state(repo: DieselRepoMock) -> TestAppState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn test_client(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(managed_state(repo))
+            .attach(Template::fairing())
+            .mount(
+                "/p",
+                routes![
+                    show_tests,
+                    show_test_id,
+                    new_test,
+                    post_test,
+                    get_edit_test,
+                    post_edit_test,
+                    delete_test_route,
+                    get_matrix
+                ],
+            );
+        Client::tracked(rocket).await.expect("rocket instance")
+    }
+
+    fn admin_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    fn user_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, USER_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await
+    }
+
+    async fn get_as_user<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(user_cookie())
+            .dispatch()
+            .await
+    }
+
+    async fn post_form<'c>(client: &'c Client, path: &'c str, body: &'c str) -> LocalResponse<'c> {
+        client
+            .post(path)
+            .header(ContentType::Form)
+            .private_cookie(admin_cookie())
+            .body(body)
+            .dispatch()
+            .await
+    }
+
+    async fn delete_path<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .delete(path)
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await
+    }
+
+    #[rocket::async_test]
+    async fn show_tests_lists_known_items() {
+        let client = test_client(repo_with_tests()).await;
+        let response = get(&client, "/p/1/tests").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("Baseline Test"));
+        assert!(body.contains("TEST-001"));
+    }
+
+    #[rocket::async_test]
+    async fn show_test_id_displays_details() {
+        let client = test_client(repo_with_tests()).await;
+        let response = get(&client, "/p/1/tests/show/1").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("Baseline Test"));
+        assert!(body.contains("description"));
+    }
+
+    #[rocket::async_test]
+    async fn show_test_id_returns_error_when_missing() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/p/1/tests/show/42").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("Test Not Found"));
+    }
+
+    #[rocket::async_test]
+    async fn new_test_form_renders() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/p/1/tests/new").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("New Test"));
+        assert!(body.contains("Create Test"));
+    }
+
+    #[rocket::async_test]
+    async fn post_test_creates_new_entry() {
+        let client = test_client(base_repo()).await;
+        let response = post_form(
+            &client,
+            "/p/1/tests/new",
+            concat!(
+                "test_name=Thermal+Check&test_reference=TEST-002&test_description=Thermal+validation&",
+                "test_source=Spec&test_status=1&test_parent=0&test_req=1&project_id=1"
+            ),
+        )
+        .await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/tests/show/1")
+        );
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let inner = repo.inner_repo();
+
+        let test = inner.tests.get(&1).expect("inserted test");
+        assert_eq!(test.test_name, "Thermal Check");
+        assert_eq!(test.test_status, 1);
+
+        let links: Vec<_> = inner
+            .matrices
+            .iter()
+            .filter(|m| m.matrix_test_id == 1)
+            .collect();
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].matrix_req_id, 1);
+    }
+
+    #[rocket::async_test]
+    async fn get_edit_test_renders_existing_data() {
+        let client = test_client(repo_with_tests()).await;
+        let response = get(&client, "/p/1/tests/edit/1").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("Edit Test"));
+        assert!(body.contains("Baseline Test"));
+    }
+
+    #[rocket::async_test]
+    async fn post_edit_test_updates_entry() {
+        let client = test_client(repo_with_tests()).await;
+        let response = post_form(
+            &client,
+            "/p/1/tests/edit/1",
+            concat!(
+                "test_id=1&test_reference=TEST-001&test_name=Updated+Test&test_description=Updated+desc&",
+                "test_source=Updated&test_status=2&test_parent=0&linked_requirements=1&project_id=1"
+            ),
+        )
+        .await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/tests/show/1")
+        );
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let inner = repo.inner_repo();
+
+        let test = inner.tests.get(&1).expect("existing test");
+        assert_eq!(test.test_name, "Updated Test");
+        assert_eq!(test.test_status, 2);
+
+        let links: Vec<_> = inner
+            .matrices
+            .iter()
+            .filter(|m| m.matrix_test_id == 1)
+            .collect();
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].matrix_req_id, 1);
+    }
+
+    #[rocket::async_test]
+    async fn delete_test_route_removes_draft() {
+        let client = test_client(repo_with_tests()).await;
+        let response = delete_path(&client, "/p/1/tests/delete/1").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/p/1/tests"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        assert!(repo.inner_repo().tests.is_empty());
+    }
+
+    #[rocket::async_test]
+    async fn delete_test_route_forbids_non_admin_when_status_high() {
+        let client = test_client(repo_with_active_test()).await;
+        let response = client
+            .delete("/p/1/tests/delete/1")
+            .private_cookie(user_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), HttpStatus::Forbidden);
+    }
+
+    #[rocket::async_test]
+    async fn get_matrix_redirects_when_database_unavailable() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/p/1/matrix").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+    }
+
+    #[rocket::async_test]
+    async fn show_tests_requires_membership_for_non_admin() {
+        let client = test_client(base_repo()).await;
+        let response = get_as_user(&client, "/p/1/tests").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+    }
 }

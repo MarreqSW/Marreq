@@ -277,11 +277,11 @@ async fn post_edit_requirement(
     state
         .repo_write()
         .edit_requirement(&requirement_data)
-        .map_err(|_e| {
+        .map_err(|e| {
             #[cfg(debug_assertions)]
             eprintln!(
                 "Error editing requirement {} in project {}: {:?}",
-                req_id, project_id, _e
+                req_id, project_id, e
             );
             Redirect::to(list_url.clone())
         })?;
@@ -346,9 +346,9 @@ async fn delete_requirement_route(
         Err(crate::repository::errors::RepoError::NotFound) => {
             return Err(rocket::http::Status::NotFound)
         }
-        Err(_e) => {
+        Err(e) => {
             #[cfg(debug_assertions)]
-            eprintln!("delete_requirement({}) failed: {:?}", req_id, _e);
+            eprintln!("delete_requirement({}) failed: {:?}", req_id, e);
             return Err(rocket::http::Status::InternalServerError);
         }
     };
@@ -448,9 +448,9 @@ async fn post_requirement(
         let pat = format!(r"^REQ-{}-\d+$", regex::escape(&category.cat_tag));
         let re = match regex::Regex::new(&pat) {
             Ok(r) => r,
-            Err(_e) => {
+            Err(e) => {
                 #[cfg(debug_assertions)]
-                eprintln!("regex compile failed for '{}': {:?}", pat, _e);
+                eprintln!("regex compile failed for '{}': {:?}", pat, e);
                 return Err(Redirect::to(new_url));
             }
         };
@@ -462,9 +462,9 @@ async fn post_requirement(
         match generate_requirement_reference(&*state.repo_write(), req.req_category, req.project_id)
         {
             Ok(reference) => req.req_reference = reference,
-            Err(_e) => {
+            Err(e) => {
                 #[cfg(debug_assertions)]
-                eprintln!("reference generation failed: {:?}", _e);
+                eprintln!("reference generation failed: {:?}", e);
                 req.req_reference = format!("REQ-UNKNOWN-{}", chrono::Utc::now().timestamp());
             }
         }
@@ -474,9 +474,9 @@ async fn post_requirement(
     let req_id = state
         .repo_write()
         .insert_new_requirement(&req)
-        .map_err(|_e| {
+        .map_err(|e| {
             #[cfg(debug_assertions)]
-            eprintln!("insert_new_requirement failed: {:?}", _e);
+            eprintln!("insert_new_requirement failed: {:?}", e);
             Redirect::to(list_url.clone())
         })?;
 

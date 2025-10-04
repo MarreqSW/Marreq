@@ -572,3 +572,338 @@ pub fn routes() -> Vec<Route> {
         show_requirements_tree
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::models::{Project, ProjectMember};
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use chrono::{NaiveDate, NaiveDateTime};
+    use rocket::http::{ContentType, Cookie, Status};
+    use rocket::local::asynchronous::{Client, LocalResponse};
+    use rocket_dyn_templates::Template;
+    use std::sync::{Arc, RwLock};
+
+    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
+    const PRIMARY_PROJECT: i32 = 1;
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn auth_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await
+    }
+
+    async fn post_form<'c>(client: &'c Client, path: &'c str, body: &'c str) -> LocalResponse<'c> {
+        client
+            .post(path)
+            .header(ContentType::Form)
+            .private_cookie(auth_cookie())
+            .body(body)
+            .dispatch()
+            .await
+    }
+
+    async fn delete<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .delete(path)
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await
+    }
+
+    fn base_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+        let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        admin.is_admin = true;
+        repo.users.insert(ADMIN_ID, admin);
+        
+        // Add test data
+        repo.projects.insert(PRIMARY_PROJECT, Project {
+            project_id: PRIMARY_PROJECT,
+            project_name: "Test Project".into(),
+            project_description: Some("Description".into()),
+            project_creation_date: Some(timestamp()),
+            project_update_date: Some(timestamp()),
+            project_status: Some("Active".into()),
+            project_owner_id: Some(ADMIN_ID),
+        });
+
+        // Add membership
+        repo.project_members.push(ProjectMember {
+            project_id: PRIMARY_PROJECT,
+            user_id: ADMIN_ID,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        // Add lookups
+        repo.statuses.insert(1, crate::models::Status {
+            st_id: 1,
+            st_title: "Active".into(),
+            st_description: "".into(),
+            st_short_name: "A".into(),
+        });
+        
+        repo.requirement_statuses.insert(1, RequirementStatus {
+            req_st_id: 1,
+            req_st_title: "Draft".into(),
+            req_st_description: "".into(),
+            req_st_short_name: "D".into(),
+        });
+
+        repo.categories.insert(1, Category {
+            cat_id: 1,
+            cat_title: "Systems".into(),
+            cat_description: "".into(),
+            cat_tag: "SYS".into(),
+            project_id: PRIMARY_PROJECT,
+        });
+
+        repo.verifications.insert(1, Verification {
+            verification_id: 1,
+            verification_name: "Analysis".into(),
+            verification_description: "".into(),
+            project_id: PRIMARY_PROJECT,
+        });
+
+        repo.applicability.insert(1, Applicability {
+            app_id: 1,
+            app_title: "All".into(),
+            app_description: "".into(),
+            app_tag: "ALL".into(),
+            project_id: PRIMARY_PROJECT,
+        });
+
+        repo
+    }
+
+    fn sample_requirement(id: i32) -> Requirement {
+        Requirement {
+            req_id: id,
+            req_title: format!("Requirement {id}"),
+            req_description: "Test requirement".into(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: ADMIN_ID,
+            req_reviewer: ADMIN_ID,
+            req_link: "".into(),
+            req_reference: format!("REQ-SYS-{id}"),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: Some("For testing".into()),
+            project_id: PRIMARY_PROJECT,
+        }
+    }
+
+    fn managed_state(repo: DieselRepoMock) -> TestAppState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn test_client(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(managed_state(repo))
+            .attach(Template::fairing())
+            .mount("/p", routes());
+        Client::tracked(rocket).await.expect("valid rocket")
+    }
+
+    #[rocket::async_test]
+    async fn show_requirements_lists_project_items() {
+        let mut repo = base_repo();
+        repo.requirements.insert(1, sample_requirement(1));
+        let client = test_client(repo).await;
+
+        let response = get(&client, "/p/1/requirements").await;
+        assert_eq!(response.status(), Status::Ok);
+
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("REQ-SYS-1"));
+        assert!(body.contains("Requirement 1"));
+    }
+
+    #[rocket::async_test]
+    async fn show_requirement_by_id_displays_details() {
+        let mut repo = base_repo();
+        repo.requirements.insert(1, sample_requirement(1));
+        let client = test_client(repo).await;
+
+        let response = get(&client, "/p/1/requirements/show/1").await;
+        assert_eq!(response.status(), Status::Ok);
+
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("REQ-SYS-1"));
+        assert!(body.contains("For testing"));
+    }
+
+    #[rocket::async_test]
+    async fn show_requirement_by_id_redirects_on_project_mismatch() {
+        let mut repo = base_repo();
+        let mut req = sample_requirement(1);
+        req.project_id = 2;
+        repo.requirements.insert(1, req);
+        let client = test_client(repo).await;
+
+        let response = get(&client, "/p/1/requirements/show/1").await;
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/2/requirements")
+        );
+    }
+
+    #[rocket::async_test]
+    async fn new_requirement_form_renders() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/p/1/requirements/new").await;
+        assert_eq!(response.status(), Status::Ok);
+
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("New Requirement"));
+        assert!(body.contains("Create Requirement"));
+    }
+
+    #[rocket::async_test]
+    async fn post_requirement_creates_new_entry() {
+        let client = test_client(base_repo()).await;
+        let response = post_form(
+            &client,
+            "/p/1/requirements/new",
+            "req_title=Test&req_description=Description&req_verification=1&\
+             req_current_status=1&req_author=1&req_reviewer=1&req_link=&\
+             req_category=1&req_parent=0&req_applicability=1&req_reference=&\
+             req_justification=Testing&project_id=1",
+        )
+        .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let reqs = state
+            .repo_read()
+            .get_requirements_by_project(PRIMARY_PROJECT)
+            .unwrap();
+        assert_eq!(reqs.len(), 1);
+        assert!(reqs[0].req_reference.starts_with("REQ-SYS-"));
+    }
+
+    #[rocket::async_test]
+    async fn edit_requirement_form_shows_existing_data() {
+        let mut repo = base_repo();
+        repo.requirements.insert(1, sample_requirement(1));
+        let client = test_client(repo).await;
+
+        let response = get(&client, "/p/1/requirements/edit/1").await;
+        assert_eq!(response.status(), Status::Ok);
+
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("Edit Requirement"));
+        assert!(body.contains("REQ-SYS-1"));
+        assert!(body.contains("For testing"));
+    }
+
+    #[rocket::async_test]
+    async fn post_edit_requirement_updates_existing() {
+        let mut repo = base_repo();
+        repo.requirements.insert(1, sample_requirement(1));
+        let client = test_client(repo).await;
+
+        let response = post_form(
+            &client,
+            "/p/1/requirements/edit/1",
+            "req_id=1&req_title=Updated&req_description=New+desc&req_verification=1&\
+             req_current_status=1&req_author=1&req_reviewer=1&req_link=&\
+             req_category=1&req_parent=0&req_applicability=1&\
+             req_justification=Changed&project_id=1&req_reference=REQ-SYS-1",
+        )
+        .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let req = state.repo_read().get_requirement_by_id(1).unwrap();
+        assert_eq!(req.req_title, "Updated");
+        assert_eq!(req.req_description, "New desc");
+    }
+
+    #[rocket::async_test]
+    async fn delete_requirement_removes_draft() {
+        let mut repo = base_repo();
+        repo.requirements.insert(1, sample_requirement(1));
+        let client = test_client(repo).await;
+
+        let response = delete(&client, "/p/1/requirements/delete/1").await;
+        assert_eq!(response.status(), Status::SeeOther);
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let reqs = state
+            .repo_read()
+            .get_requirements_by_project(PRIMARY_PROJECT)
+            .unwrap();
+        assert!(reqs.is_empty());
+    }
+
+    #[rocket::async_test]
+    async fn delete_requirement_forbids_non_draft() {
+        let mut repo = base_repo();
+        let mut req = sample_requirement(1);
+        req.req_current_status = 3; // Released
+        repo.requirements.insert(1, req);
+        
+        // Use non-admin user
+        let mut non_admin = DieselRepoMock::make_user(2, "user", "");
+        non_admin.is_admin = false;
+        repo.users.insert(2, non_admin);
+
+        let client = test_client(repo).await;
+
+        // Use non-admin cookie
+        let response = client
+            .delete("/p/1/requirements/delete/1")
+            .private_cookie(Cookie::new(SESSION_COOKIE, "2"))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Forbidden);
+    }
+
+    #[rocket::async_test]
+    async fn show_requirements_tree_displays_hierarchy() {
+        let mut repo = base_repo();
+        repo.requirements.insert(1, sample_requirement(1));
+        let mut child = sample_requirement(2);
+        child.req_parent = 1;
+        repo.requirements.insert(2, child);
+        let client = test_client(repo).await;
+
+        let response = get(&client, "/p/1/requirements/tree").await;
+        assert_eq!(response.status(), Status::Ok);
+
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("REQ-SYS-1"));
+        assert!(body.contains("REQ-SYS-2"));
+    }
+}

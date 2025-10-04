@@ -89,6 +89,7 @@ pub fn show_test_id(
 pub fn new_test(
     project_access: ProjectAccess,
     project_id: i32,
+    cookies: &CookieJar<'_>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     use serde_json::json;
@@ -96,14 +97,18 @@ pub fn new_test(
     let user = project_access.into_user();
     let repo = state.repo_read();
 
-    let ctx = json!({
-        "categories": repo.get_categories_by_project(project_id).unwrap_or_default(),
-        "status": repo.get_test_status_all().unwrap_or_default(),
-        "parents": repo.get_tests_by_project(project_id).unwrap_or_default(),
-        "users": repo.get_users_all().unwrap_or_default(),
-        "requirements": repo.get_requirements_by_project(project_id).unwrap_or_default(),
-        "user": user
-    });
+    let mut ctx = build_context_with_projects(state, user, cookies);
+    ctx["categories"] = json!(repo
+        .get_categories_by_project(project_id)
+        .unwrap_or_default());
+    ctx["status"] = json!(repo.get_test_status_all().unwrap_or_default());
+    ctx["parents"] = json!(repo.get_tests_by_project(project_id).unwrap_or_default());
+    ctx["users"] = json!(repo.get_users_all().unwrap_or_default());
+    ctx["requirements"] = json!(repo
+        .get_requirements_by_project(project_id)
+        .unwrap_or_default());
+    ctx["project_id"] = json!(project_id);
+    ctx["selected_project_id"] = json!(project_id);
 
     Ok(Template::render("new_test", ctx))
 }
@@ -128,7 +133,7 @@ pub fn post_test(
         test_status: new_test.test_status,
         test_reference: format!("TEST-{}", chrono::Utc::now().timestamp()),
         test_parent: new_test.test_parent,
-        project_id: new_test.project_id,
+        project_id: project_id,
     };
     let test_id = state.repo_write().insert_test(&my_new_test).map_err(|e| {
         eprintln!("Error inserting new test: {:?}", e);

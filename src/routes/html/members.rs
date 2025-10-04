@@ -42,7 +42,7 @@ fn can_remove_member(
 }
 
 #[get("/<project_id>/members")]
-pub fn show_project_members(
+async fn show_project_members(
     project_access: ProjectAccess,
     project_id: i32,
     cookies: &CookieJar<'_>,
@@ -163,7 +163,7 @@ pub fn show_project_members(
 }
 
 #[post("/<project_id>/members", data = "<form>")]
-pub fn add_project_member(
+async fn add_project_member(
     project_access: ProjectAccess,
     project_id: i32,
     form: Form<ProjectMemberForm>,
@@ -190,7 +190,7 @@ pub fn add_project_member(
 }
 
 #[post("/<project_id>/members/<member_id>/remove")]
-pub fn remove_project_member(
+async fn remove_project_member(
     project_access: ProjectAccess,
     project_id: i32,
     member_id: i32,
@@ -232,4 +232,279 @@ pub fn routes() -> Vec<Route> {
         add_project_member,
         remove_project_member,
     ]
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::models::{Project, ProjectMember, User};
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use chrono::{NaiveDate, NaiveDateTime};
+    use rocket::http::{ContentType, Cookie, Status as HttpStatus};
+    use rocket::local::asynchronous::{Client, LocalResponse};
+    use rocket_dyn_templates::Template;
+    use std::sync::{Arc, RwLock};
+
+    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const OWNER_ID: i32 = 1;
+    const MEMBER_ID: i32 = 2;
+    const CANDIDATE_ID: i32 = 3;
+    const PROJECT_ID: i32 = 1;
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn sample_project() -> Project {
+        Project {
+            project_id: PROJECT_ID,
+            project_name: "Lunar Lander".into(),
+            project_description: Some("Exploration program".into()),
+            project_creation_date: Some(timestamp()),
+            project_update_date: Some(timestamp()),
+            project_status: Some("Active".into()),
+            project_owner_id: Some(OWNER_ID),
+        }
+    }
+
+    fn owner_user() -> User {
+        let mut user = DieselRepoMock::make_user(OWNER_ID, "owner", "");
+        user.user_name = "Mission Owner".into();
+        user.user_username = "owner".into();
+        user
+    }
+
+    fn member_user() -> User {
+        let mut user = DieselRepoMock::make_user(MEMBER_ID, "member", "");
+        user.user_name = "Payload Engineer".into();
+        user.user_username = "member".into();
+        user
+    }
+
+    fn candidate_user() -> User {
+        let mut user = DieselRepoMock::make_user(CANDIDATE_ID, "newhire", "");
+        user.user_name = "Flight Specialist".into();
+        user.user_username = "newhire".into();
+        user
+    }
+
+    fn base_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(OWNER_ID, owner_user());
+        repo.users.insert(MEMBER_ID, member_user());
+        repo.users.insert(CANDIDATE_ID, candidate_user());
+        repo.projects.insert(PROJECT_ID, sample_project());
+        repo.project_members.push(ProjectMember {
+            project_id: PROJECT_ID,
+            user_id: OWNER_ID,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+        repo.project_members.push(ProjectMember {
+            project_id: PROJECT_ID,
+            user_id: MEMBER_ID,
+            role: 2,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+        repo
+    }
+
+    fn repo_with_single_owner() -> DieselRepoMock {
+        let mut repo = base_repo();
+        repo.project_members
+            .retain(|member| member.user_id != MEMBER_ID);
+        repo
+    }
+
+    fn managed_state(repo: DieselRepoMock) -> TestAppState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn test_client(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(managed_state(repo))
+            .attach(Template::fairing())
+            .mount(
+                "/p",
+                routes![
+                    show_project_members,
+                    add_project_member,
+                    remove_project_member
+                ],
+            );
+        Client::tracked(rocket).await.expect("rocket instance")
+    }
+
+    fn owner_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, OWNER_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    fn member_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, MEMBER_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    async fn get_as_owner<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(owner_cookie())
+            .dispatch()
+            .await
+    }
+
+    async fn get_as_member<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(member_cookie())
+            .dispatch()
+            .await
+    }
+
+    async fn post_form_as_owner<'c>(
+        client: &'c Client,
+        path: &'c str,
+        body: &'c str,
+    ) -> LocalResponse<'c> {
+        client
+            .post(path)
+            .header(ContentType::Form)
+            .private_cookie(owner_cookie())
+            .body(body)
+            .dispatch()
+            .await
+    }
+
+    async fn post_form_as_member<'c>(
+        client: &'c Client,
+        path: &'c str,
+        body: &'c str,
+    ) -> LocalResponse<'c> {
+        client
+            .post(path)
+            .header(ContentType::Form)
+            .private_cookie(member_cookie())
+            .body(body)
+            .dispatch()
+            .await
+    }
+
+    async fn post_remove_as_owner<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .post(path)
+            .header(ContentType::Form)
+            .private_cookie(owner_cookie())
+            .dispatch()
+            .await
+    }
+
+    #[rocket::async_test]
+    async fn show_project_members_displays_roster_for_owner() {
+        let client = test_client(base_repo()).await;
+        let response = get_as_owner(&client, "/p/1/members").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Project Members"));
+        assert!(body.contains("Mission Owner"));
+        assert!(body.contains("Payload Engineer"));
+        assert!(body.contains("Add a Member"));
+    }
+
+    #[rocket::async_test]
+    async fn show_project_members_hides_management_for_non_owner() {
+        let client = test_client(base_repo()).await;
+        let response = get_as_member(&client, "/p/1/members").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Project Members"));
+        assert!(body.contains("Only project owners can modify the membership list."));
+        assert!(!body.contains("Add a Member"));
+    }
+
+    #[rocket::async_test]
+    async fn add_project_member_as_owner_persists_membership() {
+        let client = test_client(base_repo()).await;
+        let response = post_form_as_owner(&client, "/p/1/members", "user_id=3&role=2").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let members = repo
+            .get_members_by_project(PROJECT_ID)
+            .expect("project members");
+        assert!(members.iter().any(|member| member.user_id == CANDIDATE_ID));
+    }
+
+    #[rocket::async_test]
+    async fn add_project_member_requires_owner_role() {
+        let client = test_client(base_repo()).await;
+        let response = post_form_as_member(&client, "/p/1/members", "user_id=3&role=2").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let members = repo
+            .get_members_by_project(PROJECT_ID)
+            .expect("project members");
+        assert_eq!(
+            members
+                .iter()
+                .filter(|member| member.project_id == PROJECT_ID)
+                .count(),
+            2
+        );
+        assert!(members.iter().all(|member| member.user_id != CANDIDATE_ID));
+    }
+
+    #[rocket::async_test]
+    async fn remove_project_member_removes_non_owner() {
+        let client = test_client(base_repo()).await;
+        let response = post_remove_as_owner(&client, "/p/1/members/2/remove").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let members = repo
+            .get_members_by_project(PROJECT_ID)
+            .expect("project members");
+        assert!(members.iter().all(|member| member.user_id != MEMBER_ID));
+    }
+
+    #[rocket::async_test]
+    async fn remove_project_member_prevents_last_owner_removal() {
+        let client = test_client(repo_with_single_owner()).await;
+        let response = post_remove_as_owner(&client, "/p/1/members/1/remove").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let members = repo
+            .get_members_by_project(PROJECT_ID)
+            .expect("project members");
+        assert!(members.iter().any(|member| member.user_id == OWNER_ID));
+        assert_eq!(members.len(), 1);
+    }
 }

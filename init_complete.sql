@@ -136,6 +136,7 @@ CREATE TABLE requirements (
 CREATE TABLE tests (
     test_id SERIAL PRIMARY KEY,
     test_name VARCHAR NOT NULL DEFAULT ' ',
+    test_reference VARCHAR NOT NULL DEFAULT ' ',
     test_description VARCHAR NOT NULL DEFAULT ' ',
     test_source VARCHAR NOT NULL DEFAULT ' ',
     test_status INTEGER NOT NULL DEFAULT 0,
@@ -342,12 +343,12 @@ INSERT INTO requirements (req_title, req_description, req_reference, req_categor
     ('REQ-THERM-001', 'All electronic components shall operate within -20°C to +60°C temperature range throughout the mission', 'REQ-THERM-001', 4, 1, 2, 1, 1, 2, 0, '', '2024-01-18', '2024-01-18', '2024-07-15', 1);
 
 -- Tests for Space Project
-INSERT INTO tests (test_name, test_description, test_status, test_source, project_id) VALUES
-    ('TEST-PWR-001', 'Verify solar array generates 500W under AM0 illumination in thermal vacuum chamber', 1, 'Solar array testing in thermal vacuum chamber', 1),
-    ('TEST-PWR-002', 'Verify battery provides 200W for 45 minutes during discharge test cycle', 1, 'Battery cycle testing and capacity verification', 1),
-    ('TEST-COMM-001', 'Verify S-band communication link performance and data rate capabilities', 1, 'RF testing in anechoic chamber', 1),
-    ('TEST-ACS-001', 'Verify star tracker pointing accuracy and attitude determination', 1, 'Star tracker calibration and pointing accuracy testing', 1),
-    ('TEST-THERM-001', 'Verify thermal control system performance in vacuum environment', 1, 'Thermal vacuum testing and temperature cycling', 1);
+INSERT INTO tests (test_reference, test_name, test_description, test_status, test_source, project_id) VALUES
+    ('TEST-PWR-001', 'Solar Array Power Output Test', 'Verify solar array generates 500W under AM0 illumination in thermal vacuum chamber', 1, 'Solar array testing in thermal vacuum chamber', 1),
+    ('TEST-PWR-002', 'Battery Endurance Discharge Test', 'Verify battery provides 200W for 45 minutes during discharge test cycle', 1, 'Battery cycle testing and capacity verification', 1),
+    ('TEST-COMM-001', 'S-Band Communication Performance Test', 'Verify S-band communication link performance and data rate capabilities', 1, 'RF testing in anechoic chamber', 1),
+    ('TEST-ACS-001', 'Star Tracker Pointing Accuracy Test', 'Verify star tracker pointing accuracy and attitude determination', 1, 'Star tracker calibration and pointing accuracy testing', 1),
+    ('TEST-THERM-001', 'Thermal Vacuum Performance Test', 'Verify thermal control system performance in vacuum environment', 1, 'Thermal vacuum testing and temperature cycling', 1);
 
 -- Traceability Matrix (requirements to tests mapping)
 INSERT INTO matrix (matrix_req_id, matrix_test_id, project_id) VALUES

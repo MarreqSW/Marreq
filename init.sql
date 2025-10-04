@@ -92,6 +92,7 @@ CREATE TABLE tests
 (
     test_id             SERIAL PRIMARY KEY,
     test_name           VARCHAR NOT NULL DEFAULT ' ',
+    test_reference      VARCHAR NOT NULL DEFAULT ' ',
     test_description    VARCHAR NOT NULL DEFAULT ' ',
     test_source         VARCHAR NOT NULL DEFAULT ' ',
     test_status         INTEGER NOT NULL DEFAULT 0,

@@ -9,10 +9,10 @@
       <div class="requirement-actions">
         <a href="/p/{{selected_project_id}}/tests/edit/{{test_id}}" class="btn btn-outline btn-sm">Edit</a>
         {{#if (or (eq test_status_id 1) (eq test_status_id 2))}}
-          <button onclick="deleteTest({{test_id}}, '{{test_name}}')" class="btn btn-danger btn-sm">Delete</button>
+          <button onclick="deleteTest({{selected_project_id}}, {{test_id}}, '{{test_name}}')" class="btn btn-danger btn-sm">Delete</button>
         {{else}}
           {{#if ../user.is_admin}}
-            <button onclick="deleteTest({{test_id}}, '{{test_name}}')" class="btn btn-danger btn-sm">Delete</button>
+            <button onclick="deleteTest({{selected_project_id}}, {{test_id}}, '{{test_name}}')" class="btn btn-danger btn-sm">Delete</button>
           {{/if}}
         {{/if}}
       </div>

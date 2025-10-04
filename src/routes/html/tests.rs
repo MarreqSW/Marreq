@@ -131,7 +131,7 @@ pub fn post_test(
         test_description: new_test.test_description.clone(),
         test_source: new_test.test_source.clone(),
         test_status: new_test.test_status,
-        test_reference: format!("TEST-{}", chrono::Utc::now().timestamp()),
+        test_reference: new_test.test_reference.clone(),
         test_parent: new_test.test_parent,
         project_id: project_id,
     };

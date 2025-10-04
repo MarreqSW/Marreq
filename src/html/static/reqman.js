@@ -155,7 +155,7 @@
         }
     }
 
-    function deleteTest(testId, testName) {
+    function deleteTest(projectId, testId, testName) {
         const resolvedProjectId = getActiveProjectId(projectId);
         if (resolvedProjectId === null) {
             alert('Unable to determine the current project. Please reload the page and try again.');

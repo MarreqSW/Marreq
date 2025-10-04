@@ -8,12 +8,13 @@ pub mod categories;
 pub mod dashboard;
 pub mod excel;
 pub mod logs;
+pub mod members;
 pub mod projects;
 pub mod reports;
 pub mod requirements;
 pub mod tables;
 pub mod tests;
-pub mod users;
+pub mod user;
 
 pub use admin::*;
 pub use applicability::*;
@@ -22,12 +23,13 @@ pub use categories::*;
 pub use dashboard::*;
 pub use excel::*;
 pub use logs::*;
+pub use members::*;
 pub use projects::*;
 pub use reports::*;
 pub use requirements::*;
 pub use tables::*;
 pub use tests::*;
-pub use users::*;
+pub use user::*;
 
 pub use cache::{
     cache_health_page, cache_stats_page, cleanup_cache, clear_cache, warm_cache_route,
@@ -71,12 +73,6 @@ pub fn routes() -> Vec<Route> {
         auth::change_password,
         dashboard::index,
         dashboard::show_status,
-        users::new_user,
-        users::post_user,
-        users::show_users,
-        users::show_user_id,
-        users::edit_user,
-        users::post_edit_user,
         tables::show_requirements_table,
         tables::show_tests_table,
         projects::show_projects,

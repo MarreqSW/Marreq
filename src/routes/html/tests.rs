@@ -98,7 +98,7 @@ pub fn new_test(
 
     let ctx = json!({
         "categories": repo.get_categories_by_project(project_id).unwrap_or_default(),
-        "status": repo.get_status_all().unwrap_or_default(),
+        "status": repo.get_test_status_all().unwrap_or_default(),
         "parents": repo.get_tests_by_project(project_id).unwrap_or_default(),
         "users": repo.get_users_all().unwrap_or_default(),
         "requirements": repo.get_requirements_by_project(project_id).unwrap_or_default(),

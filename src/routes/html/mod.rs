@@ -14,6 +14,7 @@ pub mod requirements;
 pub mod tables;
 pub mod tests;
 pub mod users;
+pub mod members;
 
 pub use admin::*;
 pub use applicability::*;
@@ -28,6 +29,7 @@ pub use requirements::*;
 pub use tables::*;
 pub use tests::*;
 pub use users::*;
+pub use members::*;
 
 pub use cache::{
     cache_health_page, cache_stats_page, cleanup_cache, clear_cache, warm_cache_route,
@@ -71,9 +73,6 @@ pub fn routes() -> Vec<Route> {
         auth::change_password,
         dashboard::index,
         dashboard::show_status,
-        users::show_project_members,
-        users::add_project_member,
-        users::remove_project_member,
         users::new_user,
         users::post_user,
         users::show_user_id,

@@ -272,12 +272,12 @@ pub struct Test {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DecoratedTest {
     pub test_id: i32,
+    pub test_reference: String,
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
     pub test_status: String,
     pub test_status_id: i32, // Add numeric status ID for access control
-    pub test_reference: String,
     pub test_parent_id: i32,
     pub test_parent_title: String,
     pub project_id: i32,
@@ -290,11 +290,11 @@ pub struct DecoratedTest {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewTest {
     pub test_id: Option<i32>,
+    pub test_reference: String,
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,
     pub test_status: i32,
-    pub test_reference: String,
     pub test_parent: i32,
     pub project_id: i32,
 }
@@ -305,6 +305,7 @@ pub struct NewTest {
 #[serde(crate = "rocket::serde")]
 pub struct NewTestForm {
     pub test_name: String,
+    pub test_reference: String,
     pub test_description: String,
     pub test_source: String,
     pub test_status: i32,
@@ -318,6 +319,7 @@ pub struct NewTestForm {
 #[serde(crate = "rocket::serde")]
 pub struct EditTestForm {
     pub test_id: i32,
+    pub test_reference: String,
     pub test_name: String,
     pub test_description: String,
     pub test_source: String,

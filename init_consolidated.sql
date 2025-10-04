@@ -138,6 +138,7 @@ CREATE TABLE requirements (
 CREATE TABLE tests (
     test_id SERIAL PRIMARY KEY,
     test_name VARCHAR NOT NULL DEFAULT ' ',
+    test_reference VARCHAR NOT NULL DEFAULT ' ',
     test_description VARCHAR NOT NULL DEFAULT ' ',
     test_source VARCHAR NOT NULL DEFAULT ' ',
     test_status INTEGER NOT NULL DEFAULT 0,
@@ -375,60 +376,60 @@ INSERT INTO requirements (req_title, req_description, req_reference, req_categor
 -- =============================================================================
 
 -- Power System Tests
-INSERT INTO tests (test_name, test_description, test_status, test_source, project_id) VALUES
-    ('TEST-PWR-001', 'Verify solar array generates 500W under AM0 illumination', 7, 'Solar array testing in thermal vacuum chamber', 1),
-    ('TEST-PWR-002', 'Verify battery provides 200W for 45 minutes during discharge test', 7, 'Battery cycle testing', 1),
-    ('TEST-PWR-003', 'Verify redundant power paths function independently', 7, 'Power distribution system testing', 1),
-    ('TEST-PWR-004', 'Verify power system efficiency under various load conditions', 7, 'End-to-end power system testing', 1);
+INSERT INTO tests (test_reference, test_name, test_description, test_status, test_source, project_id) VALUES
+    ('TEST-PWR-001', 'TEST-PWR-001', 'Verify solar array generates 500W under AM0 illumination', 7, 'Solar array testing in thermal vacuum chamber', 1),
+    ('TEST-PWR-002', 'TEST-PWR-002', 'Verify battery provides 200W for 45 minutes during discharge test', 7, 'Battery cycle testing', 1),
+    ('TEST-PWR-003', 'TEST-PWR-003', 'Verify redundant power paths function independently', 7, 'Power distribution system testing', 1),
+    ('TEST-PWR-004', 'TEST-PWR-004', 'Verify power system efficiency under various load conditions', 7, 'End-to-end power system testing', 1);
 
 -- Communication System Tests
-INSERT INTO tests (test_name, test_description, test_status, test_source, project_id) VALUES
-    ('TEST-COMM-001', 'Verify S-band communication link performance', 7, 'RF testing in anechoic chamber', 1),
-    ('TEST-COMM-002', 'Verify X-band communication link performance', 7, 'RF testing in anechoic chamber', 1),
-    ('TEST-COMM-003', 'Verify 10 Mbps data rate capability', 7, 'Data transmission testing', 1),
-    ('TEST-COMM-004', 'Verify communication during simulated orbital conditions', 7, 'End-to-end communication testing', 1);
+INSERT INTO tests (test_reference, test_name, test_description, test_status, test_source, project_id) VALUES
+    ('TEST-COMM-001', 'TEST-COMM-001', 'Verify S-band communication link performance', 7, 'RF testing in anechoic chamber', 1),
+    ('TEST-COMM-002', 'TEST-COMM-002', 'Verify X-band communication link performance', 7, 'RF testing in anechoic chamber', 1),
+    ('TEST-COMM-003', 'TEST-COMM-003', 'Verify 10 Mbps data rate capability', 7, 'Data transmission testing', 1),
+    ('TEST-COMM-004', 'TEST-COMM-004', 'Verify communication during simulated orbital conditions', 7, 'End-to-end communication testing', 1);
 
 -- Attitude Control Tests
-INSERT INTO tests (test_name, test_description, test_status, test_source, project_id) VALUES
-    ('TEST-ACS-001', 'Verify star tracker pointing accuracy', 7, 'Star tracker calibration testing', 1),
-    ('TEST-ACS-002', 'Verify reaction wheel momentum capacity', 7, 'Reaction wheel testing', 1),
-    ('TEST-ACS-003', 'Verify attitude control loop performance', 7, 'Control system testing', 1),
-    ('TEST-ACS-004', 'Verify autonomous attitude determination', 7, 'System integration testing', 1);
+INSERT INTO tests (test_reference, test_name, test_description, test_status, test_source, project_id) VALUES
+    ('TEST-ACS-001', 'TEST-ACS-001', 'Verify star tracker pointing accuracy', 7, 'Star tracker calibration testing', 1),
+    ('TEST-ACS-002', 'TEST-ACS-002', 'Verify reaction wheel momentum capacity', 7, 'Reaction wheel testing', 1),
+    ('TEST-ACS-003', 'TEST-ACS-003', 'Verify attitude control loop performance', 7, 'Control system testing', 1),
+    ('TEST-ACS-004', 'TEST-ACS-004', 'Verify autonomous attitude determination', 7, 'System integration testing', 1);
 
 -- Thermal Control Tests
-INSERT INTO tests (test_name, test_description, test_status, test_source, project_id) VALUES
-    ('TEST-THERM-001', 'Verify thermal control system performance in vacuum', 7, 'Thermal vacuum testing', 1),
-    ('TEST-THERM-002', 'Verify payload temperature stability', 7, 'Thermal cycling testing', 1),
-    ('TEST-THERM-003', 'Verify passive thermal control effectiveness', 7, 'Thermal analysis and testing', 1),
-    ('TEST-THERM-004', 'Verify thermal blankets installation and performance', 7, 'Thermal blanket testing', 1);
+INSERT INTO tests (test_reference, test_name, test_description, test_status, test_source, project_id) VALUES
+    ('TEST-THERM-001', 'TEST-THERM-001', 'Verify thermal control system performance in vacuum', 7, 'Thermal vacuum testing', 1),
+    ('TEST-THERM-002', 'TEST-THERM-002', 'Verify payload temperature stability', 7, 'Thermal cycling testing', 1),
+    ('TEST-THERM-003', 'TEST-THERM-003', 'Verify passive thermal control effectiveness', 7, 'Thermal analysis and testing', 1),
+    ('TEST-THERM-004', 'TEST-THERM-004', 'Verify thermal blankets installation and performance', 7, 'Thermal blanket testing', 1);
 
 -- Payload Tests
-INSERT INTO tests (test_name, test_description, test_status, test_source, project_id) VALUES
-    ('TEST-PAY-001', 'Verify optical payload resolution performance', 7, 'Optical testing in clean room', 1),
-    ('TEST-PAY-002', 'Verify multi-spectral imaging capability', 7, 'Spectral calibration testing', 1),
-    ('TEST-PAY-003', 'Verify payload data storage capacity', 7, 'Data storage testing', 1),
-    ('TEST-PAY-004', 'Verify payload pointing accuracy', 7, 'Payload alignment testing', 1);
+INSERT INTO tests (test_reference, test_name, test_description, test_status, test_source, project_id) VALUES
+    ('TEST-PAY-001', 'TEST-PAY-001', 'Verify optical payload resolution performance', 7, 'Optical testing in clean room', 1),
+    ('TEST-PAY-002', 'TEST-PAY-002', 'Verify multi-spectral imaging capability', 7, 'Spectral calibration testing', 1),
+    ('TEST-PAY-003', 'TEST-PAY-003', 'Verify payload data storage capacity', 7, 'Data storage testing', 1),
+    ('TEST-PAY-004', 'TEST-PAY-004', 'Verify payload pointing accuracy', 7, 'Payload alignment testing', 1);
 
 -- Propulsion Tests
-INSERT INTO tests (test_name, test_description, test_status, test_source, project_id) VALUES
-    ('TEST-PROP-001', 'Verify thruster thrust performance', 7, 'Thruster hot fire testing', 1),
-    ('TEST-PROP-002', 'Verify delta-V capability', 7, 'Propulsion system testing', 1),
-    ('TEST-PROP-003', 'Verify propellant compatibility', 7, 'Material compatibility testing', 1),
-    ('TEST-PROP-004', 'Verify propulsion system safety', 7, 'Safety testing', 1);
+INSERT INTO tests (test_reference, test_name, test_description, test_status, test_source, project_id) VALUES
+    ('TEST-PROP-001', 'TEST-PROP-001', 'Verify thruster thrust performance', 7, 'Thruster hot fire testing', 1),
+    ('TEST-PROP-002', 'TEST-PROP-002', 'Verify delta-V capability', 7, 'Propulsion system testing', 1),
+    ('TEST-PROP-003', 'TEST-PROP-003', 'Verify propellant compatibility', 7, 'Material compatibility testing', 1),
+    ('TEST-PROP-004', 'TEST-PROP-004', 'Verify propulsion system safety', 7, 'Safety testing', 1);
 
 -- Structure Tests
-INSERT INTO tests (test_name, test_description, test_status, test_source, project_id) VALUES
-    ('TEST-STRUCT-001', 'Verify structural integrity under launch loads', 7, 'Vibration testing', 1),
-    ('TEST-STRUCT-002', 'Verify solar array deployment mechanism', 7, 'Deployment testing', 1),
-    ('TEST-STRUCT-003', 'Verify satellite fits launch envelope', 7, 'Dimensional verification', 1),
-    ('TEST-STRUCT-004', 'Verify structural thermal performance', 7, 'Thermal structural testing', 1);
+INSERT INTO tests (test_reference, test_name, test_description, test_status, test_source, project_id) VALUES
+    ('TEST-STRUCT-001', 'TEST-STRUCT-001', 'Verify structural integrity under launch loads', 7, 'Vibration testing', 1),
+    ('TEST-STRUCT-002', 'TEST-STRUCT-002', 'Verify solar array deployment mechanism', 7, 'Deployment testing', 1),
+    ('TEST-STRUCT-003', 'TEST-STRUCT-003', 'Verify satellite fits launch envelope', 7, 'Dimensional verification', 1),
+    ('TEST-STRUCT-004', 'TEST-STRUCT-004', 'Verify structural thermal performance', 7, 'Thermal structural testing', 1);
 
 -- Software Tests
-INSERT INTO tests (test_name, test_description, test_status, test_source, project_id) VALUES
-    ('TEST-SW-001', 'Verify fault detection and recovery algorithms', 7, 'Software testing', 1),
-    ('TEST-SW-002', 'Verify over-the-air update capability', 7, 'Software update testing', 1),
-    ('TEST-SW-003', 'Verify time synchronization accuracy', 7, 'Time synchronization testing', 1),
-    ('TEST-SW-004', 'Verify software integration with hardware', 7, 'System integration testing', 1);
+INSERT INTO tests (test_reference, test_name, test_description, test_status, test_source, project_id) VALUES
+    ('TEST-SW-001', 'TEST-SW-001', 'Verify fault detection and recovery algorithms', 7, 'Software testing', 1),
+    ('TEST-SW-002', 'TEST-SW-002', 'Verify over-the-air update capability', 7, 'Software update testing', 1),
+    ('TEST-SW-003', 'TEST-SW-003', 'Verify time synchronization accuracy', 7, 'Time synchronization testing', 1),
+    ('TEST-SW-004', 'TEST-SW-004', 'Verify software integration with hardware', 7, 'System integration testing', 1);
 
 -- =============================================================================
 -- TRACEABILITY MATRIX (SPACE PROJECT)

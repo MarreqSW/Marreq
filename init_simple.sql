@@ -270,12 +270,12 @@ INSERT INTO requirements (req_title, req_description, req_reference, req_categor
     ('REQ-THERM-001', 'All electronic components shall operate within -20°C to +60°C temperature range', 'REQ-THERM-001', 4, 1, 2, 1, 1, 2, 0, '', '2024-01-18', '2024-01-18', '2024-07-15', 1);
 
 -- Tests (simplified)
-INSERT INTO tests (test_name, test_description, test_status, test_source, project_id) VALUES
-    ('TEST-PWR-001', 'Verify solar array generates 500W under AM0 illumination', 7, 'Solar array testing in thermal vacuum chamber', 1),
-    ('TEST-PWR-002', 'Verify battery provides 200W for 45 minutes during discharge test', 7, 'Battery cycle testing', 1),
-    ('TEST-COMM-001', 'Verify S-band communication link performance', 7, 'RF testing in anechoic chamber', 1),
-    ('TEST-ACS-001', 'Verify star tracker pointing accuracy', 7, 'Star tracker calibration testing', 1),
-    ('TEST-THERM-001', 'Verify thermal control system performance in vacuum', 7, 'Thermal vacuum testing', 1);
+INSERT INTO tests (test_reference, test_name, test_description, test_status, test_source, project_id) VALUES
+    ('TEST-PWR-001', 'TEST-PWR-001', 'Verify solar array generates 500W under AM0 illumination', 7, 'Solar array testing in thermal vacuum chamber', 1),
+    ('TEST-PWR-002', 'TEST-PWR-002', 'Verify battery provides 200W for 45 minutes during discharge test', 7, 'Battery cycle testing', 1),
+    ('TEST-COMM-001', 'TEST-COMM-001', 'Verify S-band communication link performance', 7, 'RF testing in anechoic chamber', 1),
+    ('TEST-ACS-001', 'TEST-ACS-001', 'Verify star tracker pointing accuracy', 7, 'Star tracker calibration testing', 1),
+    ('TEST-THERM-001', 'TEST-THERM-001', 'Verify thermal control system performance in vacuum', 7, 'Thermal vacuum testing', 1);
 
 -- Matrix (simplified)
 INSERT INTO matrix (matrix_req_id, matrix_test_id, project_id) VALUES

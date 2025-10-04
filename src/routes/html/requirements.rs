@@ -635,17 +635,20 @@ mod tests {
         let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
         admin.is_admin = true;
         repo.users.insert(ADMIN_ID, admin);
-        
+
         // Add test data
-        repo.projects.insert(PRIMARY_PROJECT, Project {
-            project_id: PRIMARY_PROJECT,
-            project_name: "Test Project".into(),
-            project_description: Some("Description".into()),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("Active".into()),
-            project_owner_id: Some(ADMIN_ID),
-        });
+        repo.projects.insert(
+            PRIMARY_PROJECT,
+            Project {
+                project_id: PRIMARY_PROJECT,
+                project_name: "Test Project".into(),
+                project_description: Some("Description".into()),
+                project_creation_date: Some(timestamp()),
+                project_update_date: Some(timestamp()),
+                project_status: Some("Active".into()),
+                project_owner_id: Some(ADMIN_ID),
+            },
+        );
 
         // Add membership
         repo.project_members.push(ProjectMember {
@@ -657,42 +660,57 @@ mod tests {
         });
 
         // Add lookups
-        repo.statuses.insert(1, crate::models::Status {
-            st_id: 1,
-            st_title: "Active".into(),
-            st_description: "".into(),
-            st_short_name: "A".into(),
-        });
-        
-        repo.requirement_statuses.insert(1, RequirementStatus {
-            req_st_id: 1,
-            req_st_title: "Draft".into(),
-            req_st_description: "".into(),
-            req_st_short_name: "D".into(),
-        });
+        repo.statuses.insert(
+            1,
+            crate::models::Status {
+                st_id: 1,
+                st_title: "Active".into(),
+                st_description: "".into(),
+                st_short_name: "A".into(),
+            },
+        );
 
-        repo.categories.insert(1, Category {
-            cat_id: 1,
-            cat_title: "Systems".into(),
-            cat_description: "".into(),
-            cat_tag: "SYS".into(),
-            project_id: PRIMARY_PROJECT,
-        });
+        repo.requirement_statuses.insert(
+            1,
+            RequirementStatus {
+                req_st_id: 1,
+                req_st_title: "Draft".into(),
+                req_st_description: "".into(),
+                req_st_short_name: "D".into(),
+            },
+        );
 
-        repo.verifications.insert(1, Verification {
-            verification_id: 1,
-            verification_name: "Analysis".into(),
-            verification_description: "".into(),
-            project_id: PRIMARY_PROJECT,
-        });
+        repo.categories.insert(
+            1,
+            Category {
+                cat_id: 1,
+                cat_title: "Systems".into(),
+                cat_description: "".into(),
+                cat_tag: "SYS".into(),
+                project_id: PRIMARY_PROJECT,
+            },
+        );
 
-        repo.applicability.insert(1, Applicability {
-            app_id: 1,
-            app_title: "All".into(),
-            app_description: "".into(),
-            app_tag: "ALL".into(),
-            project_id: PRIMARY_PROJECT,
-        });
+        repo.verifications.insert(
+            1,
+            Verification {
+                verification_id: 1,
+                verification_name: "Analysis".into(),
+                verification_description: "".into(),
+                project_id: PRIMARY_PROJECT,
+            },
+        );
+
+        repo.applicability.insert(
+            1,
+            Applicability {
+                app_id: 1,
+                app_title: "All".into(),
+                app_description: "".into(),
+                app_tag: "ALL".into(),
+                project_id: PRIMARY_PROJECT,
+            },
+        );
 
         repo
     }
@@ -872,7 +890,7 @@ mod tests {
         let mut req = sample_requirement(1);
         req.req_current_status = 3; // Released
         repo.requirements.insert(1, req);
-        
+
         // Use non-admin user
         let mut non_admin = DieselRepoMock::make_user(2, "user", "");
         non_admin.is_admin = false;

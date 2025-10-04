@@ -122,9 +122,9 @@
         <tbody>
           {{#each tests}}
           <tr data-test-id="{{test_id}}">
-            <td>
-              <a href="/p/{{selected_project_id}}/tests/show/{{test_id}}" class="text-decoration-none fw-bold">TEST-{{test_id}}</a>
-            </td>
+              <td>
+                <a href="/p/{{../selected_project_id}}/tests/show/{{test_id}}" class="text-decoration-none fw-bold">TEST-{{test_id}}</a>
+              </td>
             <td>
               <span class="editable-field" data-field="test_name" data-id="{{test_id}}">{{test_name}}</span>
             </td>
@@ -159,7 +159,7 @@
                 <button class="btn btn-outline-primary btn-sm" onclick="editTest({{test_id}})" title="Edit">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn btn-outline-danger btn-sm" onclick="deleteTest({{selected_project_id}}, {{test_id}}, '{{test_name}}')" title="Delete">
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteTest({{../selected_project_id}}, {{test_id}}, '{{test_name}}')" title="Delete">
                   <i class="bi bi-trash"></i>
                 </button>
               </div>

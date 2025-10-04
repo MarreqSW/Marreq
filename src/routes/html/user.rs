@@ -154,3 +154,146 @@ pub fn routes() -> Vec<Route> {
         post_user
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use rocket::http::{ContentType, Cookie, Status};
+    use rocket::local::asynchronous::{Client, LocalResponse};
+    use rocket_dyn_templates::Template;
+    use std::sync::{Arc, RwLock};
+
+    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
+    const USER_ID: i32 = 2;
+
+    fn make_admin() -> crate::models::User {
+        let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        admin.is_admin = true;
+        admin.user_name = "Admin User".into();
+        admin.user_email = "admin@example.com".into();
+        admin
+    }
+
+    fn make_standard_user() -> crate::models::User {
+        let mut user = DieselRepoMock::make_user(USER_ID, "jane", "");
+        user.user_name = "Jane Doe".into();
+        user.user_email = "jane@example.com".into();
+        user
+    }
+
+    fn base_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(ADMIN_ID, make_admin());
+        repo.users.insert(USER_ID, make_standard_user());
+        repo
+    }
+
+    fn managed_state(repo: DieselRepoMock) -> TestAppState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn test_client(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(managed_state(repo))
+            .attach(Template::fairing())
+            .mount(
+                "/user",
+                routes![show_user_id, edit_user, post_edit_user, new_user, post_user],
+            );
+        Client::tracked(rocket).await.expect("client")
+    }
+
+    fn admin_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await
+    }
+
+    async fn post_form<'c>(client: &'c Client, path: &'c str, body: &'c str) -> LocalResponse<'c> {
+        client
+            .post(path)
+            .header(ContentType::Form)
+            .private_cookie(admin_cookie())
+            .body(body)
+            .dispatch()
+            .await
+    }
+
+    #[rocket::async_test]
+    async fn show_user_id_displays_profile_information() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/user/show/2").await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("User profile"));
+        assert!(body.contains("Jane Doe"));
+        assert!(body.contains("jane@example.com"));
+    }
+
+    #[rocket::async_test]
+    async fn edit_user_form_renders_existing_values() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/user/edit/2").await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Edit User"));
+        assert!(body.contains("value=\"Jane Doe\""));
+        assert!(body.contains("value=\"jane@example.com\""));
+    }
+
+    #[rocket::async_test]
+    async fn post_edit_user_redirects_when_connection_fails() {
+        let client = test_client(base_repo()).await;
+        let response = post_form(
+            &client,
+            "/user/edit/2",
+            "user_id=2&user_name=Updated+Name&user_username=jane&user_email=jane%40example.com&is_admin=false",
+        )
+        .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/edit/2"));
+    }
+
+    #[rocket::async_test]
+    async fn new_user_page_renders_creation_form() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/user/new").await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("New User"));
+        assert!(body.contains("Create User"));
+    }
+
+    #[rocket::async_test]
+    async fn post_user_redirects_back_to_form_when_connection_fails() {
+        let client = test_client(base_repo()).await;
+        let response = post_form(
+            &client,
+            "/user/new",
+            "user_username=alex&user_name=Alex+Smith&user_email=alex%40example.com&user_password=pass1234&is_admin=false",
+        )
+        .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/new"));
+    }
+}

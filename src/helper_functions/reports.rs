@@ -1,16 +1,33 @@
-pub fn generate_pdf_content(
-    total_requirements: usize,
-    total_tests: usize,
-    total_categories: usize,
-    total_users: usize,
-    coverage_percentage: f64,
-    avg_tests_per_requirement: f64,
-    covered_requirements: usize,
-    total_links: usize,
-    requirements_by_status: std::collections::HashMap<String, i32>,
-    tests_by_status: std::collections::HashMap<String, i32>,
-    requirements_by_category: std::collections::HashMap<String, i32>,
-) -> String {
+use crate::models::{Category, Status};
+use std::collections::HashMap;
+
+pub struct Metrics {
+    pub categories: Vec<Category>,
+    pub statuses: Vec<Status>,
+    pub users_len: usize,
+
+    // totals
+    pub total_requirements: usize,
+    pub total_tests: usize,
+    pub total_categories: usize,
+
+    // groupings (i32 to match generate_pdf_content)
+    pub requirements_by_status: HashMap<String, i32>,
+    pub tests_by_status: HashMap<String, i32>,
+    pub requirements_by_category: HashMap<String, i32>,
+
+    // coverage
+    pub covered_requirements: usize,
+    pub total_links: usize,
+    pub coverage_percentage: f64,
+    pub avg_tests_per_requirement: f64,
+
+    // placeholders
+    pub recent_requirements: usize,
+    pub recent_tests: usize,
+}
+
+pub fn generate_pdf_content(metrics: &Metrics) -> String {
     let mut content = String::new();
 
     // Header
@@ -58,7 +75,7 @@ pub fn generate_pdf_content(
                 <div class='metric-card'>
                     <div class='metric-value'>",
     );
-    content.push_str(&total_requirements.to_string());
+    content.push_str(&metrics.total_requirements.to_string());
     content.push_str(
         "</div>
                     <div class='metric-label'>Total Requirements</div>
@@ -66,7 +83,7 @@ pub fn generate_pdf_content(
                 <div class='metric-card'>
                     <div class='metric-value'>",
     );
-    content.push_str(&total_tests.to_string());
+    content.push_str(&metrics.total_tests.to_string());
     content.push_str(
         "</div>
                     <div class='metric-label'>Total Tests</div>
@@ -74,7 +91,7 @@ pub fn generate_pdf_content(
                 <div class='metric-card'>
                     <div class='metric-value'>",
     );
-    content.push_str(&format!("{:.1}%", coverage_percentage));
+    content.push_str(&format!("{:.1}%", metrics.coverage_percentage));
     content.push_str(
         "</div>
                     <div class='metric-label'>Coverage</div>
@@ -82,7 +99,7 @@ pub fn generate_pdf_content(
                 <div class='metric-card'>
                     <div class='metric-value'>",
     );
-    content.push_str(&format!("{:.1}", avg_tests_per_requirement));
+    content.push_str(&format!("{:.1}", metrics.avg_tests_per_requirement));
     content.push_str(
         "</div>
                     <div class='metric-label'>Avg Tests/Req</div>
@@ -94,7 +111,7 @@ pub fn generate_pdf_content(
             <h2>Requirements by Status</h2>",
     );
 
-    for (status, count) in requirements_by_status {
+    for (status, count) in metrics.requirements_by_status.clone() {
         content.push_str(&format!(
             "
             <div class='status-item'>
@@ -113,7 +130,7 @@ pub fn generate_pdf_content(
             <h2>Tests by Status</h2>",
     );
 
-    for (status, count) in tests_by_status {
+    for (status, count) in metrics.tests_by_status.clone() {
         content.push_str(&format!(
             "
             <div class='status-item'>
@@ -132,7 +149,7 @@ pub fn generate_pdf_content(
             <h2>Requirements by Category</h2>",
     );
 
-    for (category, count) in requirements_by_category {
+    for (category, count) in metrics.requirements_by_category.clone() {
         content.push_str(&format!(
             "
             <div class='status-item'>
@@ -176,14 +193,14 @@ pub fn generate_pdf_content(
         </div>
     </body>
     </html>",
-        covered_requirements,
-        total_requirements,
-        coverage_percentage,
-        coverage_percentage,
-        total_links,
-        avg_tests_per_requirement,
-        total_categories,
-        total_users
+        metrics.covered_requirements,
+        metrics.total_requirements,
+        metrics.coverage_percentage,
+        metrics.coverage_percentage,
+        metrics.total_links,
+        metrics.avg_tests_per_requirement,
+        metrics.total_categories,
+        metrics.users_len
     ));
 
     content
@@ -398,19 +415,7 @@ pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn st
     save_pdf(doc, pages)
 }
 
-pub fn generate_pdf_report_data(
-    total_requirements: usize,
-    total_tests: usize,
-    total_categories: usize,
-    total_users: usize,
-    coverage_percentage: f64,
-    avg_tests_per_requirement: f64,
-    covered_requirements: usize,
-    total_links: usize,
-    requirements_by_status: std::collections::HashMap<String, i32>,
-    tests_by_status: std::collections::HashMap<String, i32>,
-    _requirements_by_category: std::collections::HashMap<String, i32>,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn generate_pdf_report_data(metrics: &Metrics) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let doc = PdfDocument::new("ReqMan Report");
     let mut pages = vec![Vec::new()];
     let mut current_page = 0usize;
@@ -421,10 +426,10 @@ pub fn generate_pdf_report_data(
     let mut y_position = Mm(CONTENT_START_Y);
 
     let overview_items = vec![
-        format!("Total Requirements: {}", total_requirements),
-        format!("Total Tests: {}", total_tests),
-        format!("Total Categories: {}", total_categories),
-        format!("Total Users: {}", total_users),
+        format!("Total Requirements: {}", metrics.total_requirements),
+        format!("Total Tests: {}", metrics.total_tests),
+        format!("Total Categories: {}", metrics.total_categories),
+        format!("Total Users: {}", metrics.users_len),
     ];
     add_list_section(
         &mut pages,
@@ -438,12 +443,12 @@ pub fn generate_pdf_report_data(
     let coverage_items = vec![
         format!(
             "Covered Requirements: {} out of {} ({:.1}%)",
-            covered_requirements, total_requirements, coverage_percentage
+            metrics.covered_requirements, metrics.total_requirements, metrics.coverage_percentage
         ),
-        format!("Total Test Links: {}", total_links),
+        format!("Total Test Links: {}", metrics.total_links),
         format!(
             "Average Tests per Requirement: {:.1}",
-            avg_tests_per_requirement
+            metrics.avg_tests_per_requirement
         ),
     ];
     add_list_section(
@@ -459,7 +464,7 @@ pub fn generate_pdf_report_data(
         &mut pages,
         &mut current_page,
         "Requirements by Status",
-        &requirements_by_status,
+        &metrics.requirements_by_status,
         &mut y_position,
         &mut page_number,
     );
@@ -468,7 +473,7 @@ pub fn generate_pdf_report_data(
         &mut pages,
         &mut current_page,
         "Tests by Status",
-        &tests_by_status,
+        &metrics.tests_by_status,
         &mut y_position,
         &mut page_number,
     );
@@ -480,7 +485,7 @@ pub fn generate_pdf_report_data(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
+    use std::{collections::HashMap, vec};
 
     #[test]
     fn test_generate_pdf_content() {
@@ -496,19 +501,23 @@ mod tests {
         req_category.insert("Functional".to_string(), 4);
         req_category.insert("Performance".to_string(), 1);
 
-        let html = generate_pdf_content(
-            8,
-            12,
-            3,
-            2,
-            75.0,
-            1.5,
-            6,
-            20,
-            req_status.clone(),
-            test_status.clone(),
-            req_category.clone(),
-        );
+        let html = generate_pdf_content(&Metrics {
+            categories: vec![],
+            statuses: vec![],
+            users_len: 2,
+            total_requirements: 8,
+            total_tests: 12,
+            total_categories: 3,
+            requirements_by_status: req_status.clone(),
+            tests_by_status: test_status.clone(),
+            requirements_by_category: req_category.clone(),
+            recent_requirements: 0,
+            recent_tests: 0,
+            coverage_percentage: 75.0,
+            avg_tests_per_requirement: 1.5,
+            covered_requirements: 6,
+            total_links: 20,
+        });
 
         assert!(html.contains("Total Requirements"));
         assert!(html.contains("Functional"));
@@ -532,19 +541,23 @@ mod tests {
         for i in 0..15 {
             test_status.insert(format!("TestStatus{}", i), i as i32);
         }
-        let pdf_bytes = generate_pdf_report_data(
-            100,
-            50,
-            5,
-            3,
-            60.0,
-            2.0,
-            60,
-            80,
-            req_status,
-            test_status,
-            HashMap::new(),
-        )
+        let pdf_bytes = generate_pdf_report_data(&Metrics {
+            categories: vec![],
+            statuses: vec![],
+            users_len: 3,
+            total_requirements: 100,
+            total_tests: 50,
+            total_categories: 5,
+            requirements_by_status: req_status.clone(),
+            tests_by_status: test_status.clone(),
+            requirements_by_category: HashMap::new(),
+            recent_requirements: 0,
+            recent_tests: 0,
+            coverage_percentage: 60.0,
+            avg_tests_per_requirement: 2.0,
+            covered_requirements: 60,
+            total_links: 80,
+        })
         .unwrap();
         assert!(pdf_bytes.starts_with(b"%PDF"));
     }
@@ -556,19 +569,23 @@ mod tests {
             req_status.insert(format!("Status{}", i), i as i32);
         }
 
-        let pdf_bytes = generate_pdf_report_data(
-            100,
-            50,
-            5,
-            3,
-            60.0,
-            2.0,
-            60,
-            80,
-            req_status,
-            HashMap::new(),
-            HashMap::new(),
-        )
+        let pdf_bytes = generate_pdf_report_data(&Metrics {
+            categories: vec![],
+            statuses: vec![],
+            users_len: 3,
+            total_requirements: 100,
+            total_tests: 50,
+            total_categories: 5,
+            requirements_by_status: req_status.clone(),
+            tests_by_status: HashMap::new(),
+            requirements_by_category: HashMap::new(),
+            recent_requirements: 0,
+            recent_tests: 0,
+            coverage_percentage: 60.0,
+            avg_tests_per_requirement: 2.0,
+            covered_requirements: 60,
+            total_links: 80,
+        })
         .unwrap();
 
         let pdf_text = String::from_utf8_lossy(&pdf_bytes);

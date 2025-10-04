@@ -79,8 +79,6 @@ pub fn routes() -> Vec<Route> {
         users::post_edit_user,
         tables::show_requirements_table,
         tables::show_tests_table,
-        reports::show_reports,
-        reports::generate_pdf_report,
         projects::show_projects,
         projects::show_project_id,
         projects::new_project,

@@ -1,370 +1,346 @@
 use super::helpers::*;
 use super::prelude::*;
+use crate::app::DieselCachedRepo;
+use crate::models::{Category, Requirement, Test, User};
+use std::collections::HashMap;
 
-#[get("/reports")]
-pub fn show_reports(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
-    state: &State<AppState>,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+fn round1(x: f64) -> f64 {
+    (x * 10.0).round() / 10.0
+}
 
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
+fn get_details(
+    project_id: i32,
+    repo: &DieselCachedRepo,
+) -> (Vec<Requirement>, Vec<Test>, Vec<Category>) {
+    (
+        repo.get_requirements_by_project(project_id)
+            .unwrap_or_default(),
+        repo.get_tests_by_project(project_id).unwrap_or_default(),
+        repo.get_categories_by_project(project_id)
+            .unwrap_or_default(),
+    )
+}
 
-    // Get project-specific data for metrics
-    let (all_requirements, all_tests, all_categories) =
-        if let Some(project_id) = selected_project_id {
-            let requirements = state
-                .repo_read()
-                .get_requirements_by_project(project_id)
-                .unwrap_or_default();
-            let tests = state
-                .repo_read()
-                .get_tests_by_project(project_id)
-                .unwrap_or_default();
-            let categories = state
-                .repo_read()
-                .get_categories_by_project(project_id)
-                .unwrap_or_default();
-            (requirements, tests, categories)
-        } else {
-            // Default to the first project if no project is selected
-            let projects = state.repo_read().get_projects_all().unwrap_or_default();
-            if let Some(first_project) = projects.first() {
-                let requirements = state
-                    .repo_read()
-                    .get_requirements_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let tests = state
-                    .repo_read()
-                    .get_tests_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let categories = state
-                    .repo_read()
-                    .get_categories_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                (requirements, tests, categories)
-            } else {
-                // Fallback to all data if no projects exist
-                (
-                    state.repo_read().get_requirements_all().unwrap_or_default(),
-                    state.repo_read().get_tests_all().unwrap_or_default(),
-                    state.repo_read().get_categories_all().unwrap_or_default(),
-                )
-            }
-        };
+fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String) {
+    let repo = state.repo_read();
 
-    let all_users = state.repo_read().get_users_all().unwrap_or_default();
-    let all_statuses = state.repo_read().get_status_all().unwrap_or_default();
+    let (requirements, tests, categories) = get_details(project_id, &repo);
+    let users_len = repo.get_users_all().unwrap_or_default().len();
+    let all_statuses = repo.get_status_all().unwrap_or_default();
 
-    // Calculate metrics
-    let total_requirements = all_requirements.len();
-    let total_tests = all_tests.len();
-    let total_categories = all_categories.len();
-    let total_users = all_users.len();
+    // group helpers (i32 counts)
+    let requirements_by_status = requirements.iter().fold(HashMap::new(), |mut acc, req| {
+        let status = get_status_name_by_id_cached(state, req.req_current_status);
+        *acc.entry(status).or_insert(0) += 1i32;
+        acc
+    });
 
-    // Requirements by status
-    let mut requirements_by_status = std::collections::HashMap::new();
-    for req in &all_requirements {
-        let status_name = get_status_name_by_id_cached(state, req.req_current_status);
-        *requirements_by_status.entry(status_name).or_insert(0) += 1;
-    }
+    let tests_by_status = tests.iter().fold(HashMap::new(), |mut acc, t| {
+        let status = get_status_name_by_id_cached(state, t.test_status);
+        *acc.entry(status).or_insert(0) += 1i32;
+        acc
+    });
 
-    // Tests by status
-    let mut tests_by_status = std::collections::HashMap::new();
-    for test in &all_tests {
-        let status_name = get_status_name_by_id_cached(state, test.test_status);
-        *tests_by_status.entry(status_name).or_insert(0) += 1;
-    }
+    let requirements_by_category = requirements.iter().fold(HashMap::new(), |mut acc, req| {
+        let cat = get_category_by_id_cached(state, req.req_category);
+        *acc.entry(cat.cat_title.clone()).or_insert(0) += 1i32;
+        acc
+    });
 
-    // Requirements by category
-    let mut requirements_by_category = std::collections::HashMap::new();
-    for req in &all_requirements {
-        let category = get_category_by_id_cached(state, req.req_category);
-        let category_name = category.cat_title;
-        *requirements_by_category.entry(category_name).or_insert(0) += 1;
-    }
-
-    // Coverage metrics
-    let mut covered_requirements = 0;
-    let mut total_links = 0;
-    for req in &all_requirements {
+    // coverage
+    let mut covered = 0usize;
+    let mut total_links = 0usize;
+    for req in &requirements {
         let links = get_requirements_for_test_cached(state, req.req_id).unwrap_or_default();
         if !links.is_empty() {
-            covered_requirements += 1;
+            covered += 1;
         }
         total_links += links.len();
     }
 
+    let total_requirements = requirements.len();
     let coverage_percentage = if total_requirements > 0 {
-        ((covered_requirements as f64 / total_requirements as f64) * 100.0 * 10.0).round() / 10.0
+        round1((covered as f64 / total_requirements as f64) * 100.0)
     } else {
         0.0
     };
 
     let avg_tests_per_requirement = if total_requirements > 0 {
-        ((total_links as f64 / total_requirements as f64) * 10.0).round() / 10.0
+        round1(total_links as f64 / total_requirements as f64)
     } else {
         0.0
     };
 
-    // Recent activity (last 30 days)
-    let now = chrono::Utc::now();
-    let _thirty_days_ago = now - chrono::Duration::days(30);
+    let recent_requirements = requirements.len();
+    let recent_tests = tests.len();
 
-    let mut recent_requirements = 0;
-    let mut recent_tests = 0;
+    let selected_project_name = get_project_by_id_pooled_safe(state, project_id).project_name;
 
-    for _req in &all_requirements {
-        // For now, we'll use a placeholder since creation_date might not be available
-        recent_requirements += 1; // Placeholder
-    }
-
-    for _test in &all_tests {
-        // Assuming test has creation date - you might need to add this field
-        // For now, we'll use a placeholder
-        recent_tests += 1; // Placeholder
-    }
-
-    // Get selected project name for display
-    let selected_project_name = if let Some(project_id) = selected_project_id {
-        let project = get_project_by_id_pooled_safe(state, project_id);
-        project.project_name
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            first_project.project_name.clone()
-        } else {
-            "All Projects".to_string()
-        }
+    let metrics = Metrics {
+        users_len,
+        total_requirements,
+        total_tests: tests.len(),
+        statuses: all_statuses,
+        total_categories: categories.len(),
+        requirements_by_status,
+        tests_by_status,
+        requirements_by_category,
+        covered_requirements: covered,
+        total_links,
+        coverage_percentage,
+        avg_tests_per_requirement,
+        recent_requirements,
+        recent_tests,
+        categories,
     };
 
-    let ctx = json!({
+    (metrics, selected_project_name)
+}
+
+// --- routes (unchanged, but now types match) --------------------------------
+
+#[get("/<project_id>/reports")]
+async fn show_reports(
+    project_access: ProjectAccess,
+    project_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user: User = project_access.into_user();
+
+    let (m, project_name) = compute_metrics(state, project_id);
+
+    let ctx = serde_json::json!({
         "user": user,
-        "selected_project_name": selected_project_name,
+        "selected_project_id": project_id,
+        "selected_project_name": project_name,
         "metrics": {
-            "total_requirements": total_requirements,
-            "total_tests": total_tests,
-            "total_categories": total_categories,
-            "total_users": total_users,
-            "coverage_percentage": coverage_percentage,
-            "avg_tests_per_requirement": avg_tests_per_requirement,
-            "covered_requirements": covered_requirements,
-            "total_links": total_links,
-            "recent_requirements": recent_requirements,
-            "recent_tests": recent_tests
+            "total_requirements": m.total_requirements,
+            "total_tests": m.total_tests,
+            "total_categories": m.total_categories,
+            "total_users": m.users_len,
+            "coverage_percentage": m.coverage_percentage,
+            "avg_tests_per_requirement": m.avg_tests_per_requirement,
+            "covered_requirements": m.covered_requirements,
+            "total_links": m.total_links,
+            "recent_requirements": m.recent_requirements,
+            "recent_tests": m.recent_tests
         },
-        "requirements_by_status": requirements_by_status,
-        "tests_by_status": tests_by_status,
-        "requirements_by_category": requirements_by_category,
-        "all_statuses": all_statuses,
-        "all_categories": all_categories
+        "requirements_by_status": m.requirements_by_status,
+        "tests_by_status": m.tests_by_status,
+        "requirements_by_category": m.requirements_by_category,
+        "all_statuses": m.statuses,
+        "all_categories": m.categories
     });
 
     Ok(Template::render("reports", ctx))
 }
 
-#[get("/reports/pdf")]
-pub fn generate_pdf_report(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
+#[get("/<project_id>/reports/pdf")]
+async fn generate_pdf_report(
+    project_access: ProjectAccess,
+    project_id: i32,
     state: &State<AppState>,
 ) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
-    let _user = session_user.into_inner();
+    let _user: User = project_access.into_user();
 
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
+    let (m, _project_name) = compute_metrics(state, project_id);
 
-    // Get project-specific data for metrics
-    let (all_requirements, all_tests, all_categories) =
-        if let Some(project_id) = selected_project_id {
-            let requirements = state
-                .repo_read()
-                .get_requirements_by_project(project_id)
-                .unwrap_or_default();
-            let tests = state
-                .repo_read()
-                .get_tests_by_project(project_id)
-                .unwrap_or_default();
-            let categories = state
-                .repo_read()
-                .get_categories_by_project(project_id)
-                .unwrap_or_default();
-            (requirements, tests, categories)
-        } else {
-            // Default to the first project if no project is selected
-            let projects = state.repo_read().get_projects_all().unwrap_or_default();
-            if let Some(first_project) = projects.first() {
-                let requirements = state
-                    .repo_read()
-                    .get_requirements_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let tests = state
-                    .repo_read()
-                    .get_tests_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let categories = state
-                    .repo_read()
-                    .get_categories_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                (requirements, tests, categories)
-            } else {
-                // Fallback to all data if no projects exist
-                (
-                    state.repo_read().get_requirements_all().unwrap_or_default(),
-                    state.repo_read().get_tests_all().unwrap_or_default(),
-                    state.repo_read().get_categories_all().unwrap_or_default(),
-                )
-            }
-        };
-
-    let all_users = state.repo_read().get_users_all().unwrap_or_default();
-    let _all_statuses = state.repo_read().get_status_all().unwrap_or_default();
-
-    // Calculate the same metrics
-    let total_requirements = all_requirements.len();
-    let total_tests = all_tests.len();
-    let total_categories = all_categories.len();
-    let total_users = all_users.len();
-
-    // Requirements by status
-    let mut requirements_by_status = std::collections::HashMap::new();
-    for req in &all_requirements {
-        let status_name = get_status_name_by_id_cached(state, req.req_current_status);
-        *requirements_by_status.entry(status_name).or_insert(0) += 1;
-    }
-
-    // Tests by status
-    let mut tests_by_status = std::collections::HashMap::new();
-    for test in &all_tests {
-        let status_name = get_status_name_by_id_cached(state, test.test_status);
-        *tests_by_status.entry(status_name).or_insert(0) += 1;
-    }
-
-    // Requirements by category
-    let mut requirements_by_category = std::collections::HashMap::new();
-    for req in &all_requirements {
-        let category = get_category_by_id_cached(state, req.req_category);
-        let category_name = category.cat_title;
-        *requirements_by_category.entry(category_name).or_insert(0) += 1;
-    }
-
-    // Coverage metrics
-    let mut covered_requirements = 0;
-    let mut total_links = 0;
-    for req in &all_requirements {
-        let links = get_requirements_for_test_cached(state, req.req_id).unwrap_or_default();
-        if !links.is_empty() {
-            covered_requirements += 1;
-        }
-        total_links += links.len();
-    }
-
-    let coverage_percentage = if total_requirements > 0 {
-        ((covered_requirements as f64 / total_requirements as f64) * 100.0 * 10.0).round() / 10.0
-    } else {
-        0.0
-    };
-
-    let avg_tests_per_requirement = if total_requirements > 0 {
-        ((total_links as f64 / total_requirements as f64) * 10.0).round() / 10.0
-    } else {
-        0.0
-    };
-
-    // Generate HTML content
-    let html_content = generate_pdf_content(
-        total_requirements,
-        total_tests,
-        total_categories,
-        total_users,
-        coverage_percentage,
-        avg_tests_per_requirement,
-        covered_requirements,
-        total_links,
-        requirements_by_status.clone(),
-        tests_by_status.clone(),
-        requirements_by_category.clone(),
-    );
-
-    // Generate PDF using the new PDF generation function
-    match generate_pdf_report_data(
-        total_requirements,
-        total_tests,
-        total_categories,
-        total_users,
-        coverage_percentage,
-        avg_tests_per_requirement,
-        covered_requirements,
-        total_links,
-        requirements_by_status,
-        tests_by_status,
-        requirements_by_category,
-    ) {
+    match generate_pdf_report_data(&m) {
         Ok(pdf_bytes) => {
-            let content_type = rocket::http::ContentType::new("application", "pdf");
-            Ok((content_type, pdf_bytes))
+            let ct = rocket::http::ContentType::new("application", "pdf");
+            Ok((ct, pdf_bytes))
         }
         Err(_e) => {
             #[cfg(debug_assertions)]
             println!("PDF generation failed: {:?}", _e);
-            // Fallback to HTML if PDF generation fails
-            let content_type = rocket::http::ContentType::new("text", "html");
-            Ok((content_type, html_content.into_bytes()))
+            let ct = rocket::http::ContentType::new("text", "html");
+            Ok((ct, generate_pdf_content(&m).into_bytes()))
         }
     }
 }
 
-#[get("/test-pdf")]
-pub fn test_pdf_generation() -> Result<(rocket::http::ContentType, Vec<u8>), rocket::http::Status> {
-    // Test data
-    let total_requirements = 150;
-    let total_tests = 120;
-    let total_categories = 8;
-    let total_users = 12;
-    let coverage_percentage = 85.5;
-    let avg_tests_per_requirement = 1.2;
-    let covered_requirements = 128;
-    let total_links = 180;
+pub fn routes() -> Vec<Route> {
+    routes![show_reports, generate_pdf_report,]
+}
 
-    let mut requirements_by_status = std::collections::HashMap::new();
-    requirements_by_status.insert("Active".to_string(), 100);
-    requirements_by_status.insert("Draft".to_string(), 30);
-    requirements_by_status.insert("Deprecated".to_string(), 20);
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::models::{Category, Matrix, Project, ProjectMember, Requirement, Status, Test};
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use chrono::{NaiveDate, NaiveDateTime};
+    use rocket::http::{ContentType, Cookie, Status as HttpStatus};
+    use rocket::local::asynchronous::{Client, LocalResponse};
+    use rocket_dyn_templates::Template;
+    use std::sync::{Arc, RwLock};
 
-    let mut tests_by_status = std::collections::HashMap::new();
-    tests_by_status.insert("Passed".to_string(), 80);
-    tests_by_status.insert("Failed".to_string(), 15);
-    tests_by_status.insert("Pending".to_string(), 25);
+    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
 
-    let mut requirements_by_category = std::collections::HashMap::new();
-    requirements_by_category.insert("Functional".to_string(), 80);
-    requirements_by_category.insert("Non-Functional".to_string(), 40);
-    requirements_by_category.insert("Interface".to_string(), 30);
+    const ADMIN_ID: i32 = 1;
+    const PROJECT_ID: i32 = 1;
 
-    // Generate PDF using the PDF generation function
-    match generate_pdf_report_data(
-        total_requirements,
-        total_tests,
-        total_categories,
-        total_users,
-        coverage_percentage,
-        avg_tests_per_requirement,
-        covered_requirements,
-        total_links,
-        requirements_by_status,
-        tests_by_status,
-        requirements_by_category,
-    ) {
-        Ok(pdf_bytes) => {
-            let content_type = rocket::http::ContentType::new("application", "pdf");
-            Ok((content_type, pdf_bytes))
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn sample_project() -> Project {
+        Project {
+            project_id: PROJECT_ID,
+            project_name: "Orbiter".to_string(),
+            project_description: Some("Orbiter project".to_string()),
+            project_creation_date: Some(timestamp()),
+            project_update_date: Some(timestamp()),
+            project_status: Some("Active".to_string()),
+            project_owner_id: Some(ADMIN_ID),
         }
-        Err(e) => {
-            eprintln!("PDF generation failed: {:?}", e);
-            Err(rocket::http::Status::InternalServerError)
+    }
+
+    fn sample_category() -> Category {
+        Category {
+            cat_id: 1,
+            cat_title: "Systems".to_string(),
+            cat_description: "Core systems".to_string(),
+            cat_tag: "systems".to_string(),
+            project_id: PROJECT_ID,
+        }
+    }
+
+    fn sample_status(id: i32, title: &str) -> Status {
+        Status {
+            st_id: id,
+            st_title: title.to_string(),
+            st_description: format!("{title} status"),
+            st_short_name: title.chars().take(3).collect(),
+        }
+    }
+
+    fn sample_requirement(id: i32) -> Requirement {
+        Requirement {
+            req_id: id,
+            req_title: format!("Requirement {id}"),
+            req_description: "Test requirement".to_string(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: ADMIN_ID,
+            req_reviewer: ADMIN_ID,
+            req_link: "".to_string(),
+            req_reference: format!("REQ-{:03}", id),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: Some("For testing".to_string()),
+            project_id: PROJECT_ID,
+        }
+    }
+
+    fn sample_test(id: i32, status_id: i32, name: &str) -> Test {
+        Test {
+            test_id: id,
+            test_name: name.to_string(),
+            test_description: "Validation test".to_string(),
+            test_source: "Spec".to_string(),
+            test_status: status_id,
+            test_reference: format!("TEST-{id:03}"),
+            test_parent: 0,
+            project_id: PROJECT_ID,
+        }
+    }
+
+    fn base_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+
+        let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        admin.is_admin = true;
+        repo.users.insert(ADMIN_ID, admin);
+
+        repo.projects.insert(PROJECT_ID, sample_project());
+        repo.categories.insert(1, sample_category());
+        repo.statuses.insert(1, sample_status(1, "Draft"));
+        repo.statuses.insert(2, sample_status(2, "In Review"));
+        repo.requirements.insert(1, sample_requirement(1));
+        repo.tests.insert(1, sample_test(1, 1, "System Validation"));
+        repo.matrices.push(Matrix {
+            matrix_req_id: 1,
+            matrix_test_id: 1,
+            matrix_creation_date: timestamp(),
+            project_id: PROJECT_ID,
+        });
+        repo.project_members.push(ProjectMember {
+            project_id: PROJECT_ID,
+            user_id: ADMIN_ID,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        repo
+    }
+
+    fn managed_state(repo: DieselRepoMock) -> TestAppState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn test_client(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(managed_state(repo))
+            .attach(Template::fairing())
+            .mount("/p", routes![show_reports, generate_pdf_report]);
+        Client::tracked(rocket).await.expect("rocket client")
+    }
+
+    fn admin_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await
+    }
+
+    #[rocket::async_test]
+    async fn show_reports_renders_metrics() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/p/1/reports").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("Project Reports & Analytics"));
+        assert!(body.contains("Orbiter"));
+        assert!(body.contains("1 out of 1"));
+        assert!(body.contains("Systems"));
+        assert!(body.contains("Draft"));
+    }
+
+    #[rocket::async_test]
+    async fn generate_pdf_report_returns_pdf_or_fallback_html() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/p/1/reports/pdf").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let content_type = response.content_type().expect("content type to be set");
+
+        if content_type == ContentType::PDF {
+            let body = response.into_bytes().await.expect("pdf bytes");
+            assert!(!body.is_empty());
+        } else {
+            assert_eq!(content_type, ContentType::new("text", "html"));
+            let body = response.into_string().await.expect("html body");
+            assert!(body.contains("ReqMan Project Report"));
         }
     }
 }

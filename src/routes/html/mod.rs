@@ -8,13 +8,13 @@ pub mod categories;
 pub mod dashboard;
 pub mod excel;
 pub mod logs;
+pub mod members;
 pub mod projects;
 pub mod reports;
 pub mod requirements;
 pub mod tables;
 pub mod tests;
 pub mod user;
-pub mod members;
 
 pub use admin::*;
 pub use applicability::*;
@@ -23,13 +23,13 @@ pub use categories::*;
 pub use dashboard::*;
 pub use excel::*;
 pub use logs::*;
+pub use members::*;
 pub use projects::*;
 pub use reports::*;
 pub use requirements::*;
 pub use tables::*;
 pub use tests::*;
 pub use user::*;
-pub use members::*;
 
 pub use cache::{
     cache_health_page, cache_stats_page, cleanup_cache, clear_cache, warm_cache_route,

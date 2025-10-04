@@ -234,7 +234,6 @@ pub fn routes() -> Vec<Route> {
     ]
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

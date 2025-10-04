@@ -146,13 +146,7 @@ async fn post_user(
 }
 
 pub fn routes() -> Vec<Route> {
-    routes![
-        show_user_id,
-        edit_user,
-        post_edit_user,
-        new_user,
-        post_user
-    ]
+    routes![show_user_id, edit_user, post_edit_user, new_user, post_user]
 }
 
 #[cfg(test)]

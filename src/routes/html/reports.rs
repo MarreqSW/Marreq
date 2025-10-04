@@ -1,59 +1,31 @@
 use super::helpers::*;
 use super::prelude::*;
+use crate::app::DieselCachedRepo;
+use crate::models::{Category, Requirement, Test, User};
 
-#[get("/reports")]
-pub fn show_reports(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
+fn get_details(project_id: i32, repo: &DieselCachedRepo)
+    -> (Vec<Requirement>, Vec<Test>, Vec<Category>)
+{
+    (repo
+        .get_requirements_by_project(project_id)
+        .unwrap_or_default(),
+    repo
+        .get_tests_by_project(project_id)
+        .unwrap_or_default(),
+    repo
+        .get_categories_by_project(project_id)
+        .unwrap_or_default())
+}
+
+#[get("/<project_id>/reports")]
+async fn show_reports(
+    project_access: ProjectAccess,
+    project_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user: User = project_access.into_user();
 
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
-
-    // Get project-specific data for metrics
-    let (all_requirements, all_tests, all_categories) =
-        if let Some(project_id) = selected_project_id {
-            let requirements = state
-                .repo_read()
-                .get_requirements_by_project(project_id)
-                .unwrap_or_default();
-            let tests = state
-                .repo_read()
-                .get_tests_by_project(project_id)
-                .unwrap_or_default();
-            let categories = state
-                .repo_read()
-                .get_categories_by_project(project_id)
-                .unwrap_or_default();
-            (requirements, tests, categories)
-        } else {
-            // Default to the first project if no project is selected
-            let projects = state.repo_read().get_projects_all().unwrap_or_default();
-            if let Some(first_project) = projects.first() {
-                let requirements = state
-                    .repo_read()
-                    .get_requirements_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let tests = state
-                    .repo_read()
-                    .get_tests_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let categories = state
-                    .repo_read()
-                    .get_categories_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                (requirements, tests, categories)
-            } else {
-                // Fallback to all data if no projects exist
-                (
-                    state.repo_read().get_requirements_all().unwrap_or_default(),
-                    state.repo_read().get_tests_all().unwrap_or_default(),
-                    state.repo_read().get_categories_all().unwrap_or_default(),
-                )
-            }
-        };
+    let (all_requirements, all_tests, all_categories) = get_details(project_id, &state.repo_read());
 
     let all_users = state.repo_read().get_users_all().unwrap_or_default();
     let all_statuses = state.repo_read().get_status_all().unwrap_or_default();
@@ -128,18 +100,7 @@ pub fn show_reports(
     }
 
     // Get selected project name for display
-    let selected_project_name = if let Some(project_id) = selected_project_id {
-        let project = get_project_by_id_pooled_safe(state, project_id);
-        project.project_name
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            first_project.project_name.clone()
-        } else {
-            "All Projects".to_string()
-        }
-    };
+    let selected_project_name = get_project_by_id_pooled_safe(state, project_id).project_name;
 
     let ctx = json!({
         "user": user,
@@ -166,59 +127,16 @@ pub fn show_reports(
     Ok(Template::render("reports", ctx))
 }
 
-#[get("/reports/pdf")]
-pub fn generate_pdf_report(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
+#[get("/<project_id>/reports/pdf")]
+async fn generate_pdf_report(
+    project_access: ProjectAccess,
+    project_id: i32,
     state: &State<AppState>,
 ) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
-    let _user = session_user.into_inner();
-
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
+    let _user: User = project_access.into_user();
 
     // Get project-specific data for metrics
-    let (all_requirements, all_tests, all_categories) =
-        if let Some(project_id) = selected_project_id {
-            let requirements = state
-                .repo_read()
-                .get_requirements_by_project(project_id)
-                .unwrap_or_default();
-            let tests = state
-                .repo_read()
-                .get_tests_by_project(project_id)
-                .unwrap_or_default();
-            let categories = state
-                .repo_read()
-                .get_categories_by_project(project_id)
-                .unwrap_or_default();
-            (requirements, tests, categories)
-        } else {
-            // Default to the first project if no project is selected
-            let projects = state.repo_read().get_projects_all().unwrap_or_default();
-            if let Some(first_project) = projects.first() {
-                let requirements = state
-                    .repo_read()
-                    .get_requirements_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let tests = state
-                    .repo_read()
-                    .get_tests_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                let categories = state
-                    .repo_read()
-                    .get_categories_by_project(first_project.project_id)
-                    .unwrap_or_default();
-                (requirements, tests, categories)
-            } else {
-                // Fallback to all data if no projects exist
-                (
-                    state.repo_read().get_requirements_all().unwrap_or_default(),
-                    state.repo_read().get_tests_all().unwrap_or_default(),
-                    state.repo_read().get_categories_all().unwrap_or_default(),
-                )
-            }
-        };
+    let (all_requirements, all_tests, all_categories) = get_details(project_id, &state.repo_read());
 
     let all_users = state.repo_read().get_users_all().unwrap_or_default();
     let _all_statuses = state.repo_read().get_status_all().unwrap_or_default();
@@ -317,6 +235,16 @@ pub fn generate_pdf_report(
     }
 }
 
+
+pub fn routes() -> Vec<Route> {
+    routes![
+        show_reports,
+        generate_pdf_report,
+    ]
+}
+
+
+/*
 #[get("/test-pdf")]
 pub fn test_pdf_generation() -> Result<(rocket::http::ContentType, Vec<u8>), rocket::http::Status> {
     // Test data
@@ -368,3 +296,4 @@ pub fn test_pdf_generation() -> Result<(rocket::http::ContentType, Vec<u8>), roc
         }
     }
 }
+*/

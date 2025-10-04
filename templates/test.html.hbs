@@ -3,7 +3,7 @@
   <div class="card-body">
     <div class="requirement-header">
       <div>
-        <a href="/tests/{{test_id}}" class="requirement-id">{{test_reference}}</a>
+        <a href="/p/{{selected_project_id}}/tests/{{test_id}}" class="requirement-id">{{test_reference}}</a>
         <h3 class="requirement-title">{{test_name}}</h3>
       </div>
       <div class="requirement-actions">
@@ -33,7 +33,7 @@
         <span class="meta-label">Parent</span>
         <span class="meta-value">
           {{#if test_parent_id}}
-            <a href="/tests/{{test_parent_id}}">{{test_parent_title}}</a>
+            <a href="/p/{{selected_project_id}}/tests/{{test_parent_id}}">{{test_parent_title}}</a>
           {{else}}
             None
           {{/if}}

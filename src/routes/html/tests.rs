@@ -1,7 +1,7 @@
 use super::helpers::*;
 use super::prelude::*;
 
-#[delete("/<project_id>/delete_test/<test_id>")]
+#[delete("/<project_id>/tests/delete/<test_id>")]
 pub fn delete_test_route(
     project_access: ProjectAccess,
     project_id: i32,

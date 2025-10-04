@@ -7,11 +7,11 @@
   </div>
   <div class="card-footer">
     {{#if show_back_button}}
-      <a href="/users" class="btn btn-outline btn-sm">Back to Users</a>
+      <a href="/admin/users" class="btn btn-outline btn-sm">Back to User Management</a>
     {{/if}}
     {{#if show_details_button}}
-      <a href="/users/{{user_id}}" class="btn btn-outline btn-sm">View Details</a>
+      <a href="/user/show/{{user_id}}" class="btn btn-outline btn-sm">View Details</a>
     {{/if}}
-    <a href="/edit_user/{{user_id}}" class="btn btn-primary btn-sm">Edit User</a>
+    <a href="/user/edit/{{user_id}}" class="btn btn-primary btn-sm">Edit User</a>
   </div>
 </div>

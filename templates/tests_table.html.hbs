@@ -427,7 +427,7 @@ function addNewTest(formData) {
 }
 
 function editTest(id) {
-  window.location.href = `/edit_test/${id}`;
+  window.location.href = `/p/{{selected_project_id}}/tests/edit/${id}`;
 }
 
 function showNotification(message, type) {

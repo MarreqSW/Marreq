@@ -22,7 +22,7 @@ use super::helpers::{
 };
 
 #[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>")]
-pub fn show_requirements(
+async fn show_requirements(
     project_access: ProjectAccess,
     project_id: i32,
     cookies: &CookieJar<'_>,
@@ -69,7 +69,7 @@ pub fn show_requirements(
 }
 
 #[get("/<project_id>/requirements/show/<req_id>")]
-pub fn show_requirement_id(
+async fn show_requirement_id(
     project_access: ProjectAccess,
     project_id: i32,
     req_id: i32,
@@ -123,7 +123,7 @@ pub fn show_requirement_id(
 }
 
 #[get("/<project_id>/requirements/edit/<req_id>")]
-pub fn get_edit_requirement(
+async fn get_edit_requirement(
     project_access: ProjectAccess,
     project_id: i32,
     req_id: i32,
@@ -217,7 +217,7 @@ pub fn get_edit_requirement(
 }
 
 #[post("/<project_id>/requirements/edit/<req_id>", data = "<new_req>")]
-pub fn post_edit_requirement(
+async fn post_edit_requirement(
     project_access: ProjectAccess,
     project_id: i32,
     req_id: i32,
@@ -297,7 +297,7 @@ pub fn post_edit_requirement(
 }
 
 #[delete("/<project_id>/requirements/delete/<req_id>")]
-pub fn delete_requirement_route(
+async fn delete_requirement_route(
     project_access: ProjectAccess,
     project_id: i32,
     req_id: i32,
@@ -364,7 +364,7 @@ pub fn delete_requirement_route(
 }
 
 #[get("/<project_id>/requirements/new")]
-pub fn new_requirement(
+async fn new_requirement(
     project_access: ProjectAccess,
     project_id: i32,
     _cookies: &CookieJar<'_>, // not needed; keep underscored if you can't remove it yet
@@ -410,7 +410,7 @@ pub fn new_requirement(
 }
 
 #[post("/<project_id>/requirements/new", data = "<new_req>")]
-pub fn post_requirement(
+async fn post_requirement(
     project_access: ProjectAccess,
     project_id: i32,
     new_req: Form<NewRequirement>,
@@ -497,7 +497,7 @@ pub fn post_requirement(
 }
 
 #[get("/<project_id>/requirements/tree")]
-pub fn show_requirements_tree(
+async fn show_requirements_tree(
     project_access: ProjectAccess,
     project_id: i32,
     state: &State<AppState>,

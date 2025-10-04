@@ -3,7 +3,7 @@
   <div class="d-flex justify-content-between align-items-center">
     <h1>Requirements Table</h1>
     <div>
-      <a href="/requirements" class="btn btn-outline-secondary me-2">Card View</a>
+      <a href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}" class="btn btn-outline-secondary me-2">Card View</a>
       <a href="/requirements.xls" class="btn btn-success me-2">Export Excel</a>
       {{#if user.is_admin}}
       <a href="/import_excel" class="btn btn-warning me-2">Import Excel</a>
@@ -141,7 +141,7 @@
           {{#each requirements}}
           <tr data-requirement-id="{{req_id}}">
             <td>
-              <a href="/requirements/{{req_id}}" class="text-decoration-none fw-bold">REQ-{{req_id}}</a>
+              <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="text-decoration-none fw-bold">REQ-{{req_id}}</a>
             </td>
             <td>
               <span class="editable-field" data-field="req_title" data-id="{{req_id}}">{{req_title}}</span>
@@ -192,10 +192,10 @@
             </td>
             <td>
               <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-primary btn-sm" onclick="editRequirement({{req_id}})" title="Edit">
+                <button class="btn btn-outline-primary btn-sm" onclick="editRequirement({{selected_project_id}}, {{req_id}})" title="Edit">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn btn-outline-danger btn-sm" onclick="deleteRequirement({{req_id}}, '{{req_title}}')" title="Delete">
+                <button class="btn btn-outline-danger btn-sm" onclick="deleteRequirement({{project_id}}, {{req_id}}, '{{req_title}}')" title="Delete">
                   <i class="bi bi-trash"></i>
                 </button>
               </div>
@@ -518,8 +518,8 @@ function addNewRequirement(formData) {
   });
 }
 
-function editRequirement(id) {
-  window.location.href = `/edit_requirement/${id}`;
+function editRequirement(project_id, req_id) {
+  window.location.href = `/p/${project_id}/requirements/edit/${req_id}`;
 }
 
 function showNotification(message, type) {

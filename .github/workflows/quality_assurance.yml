@@ -72,7 +72,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Coverage gate
-        run: cargo cov --workspace --all-features --doctests --no-run --fail-under-lines 40
+        run: cargo cov --workspace --all-features --doctests --no-run --fail-under-lines 50
 
       - name: Upload coverage HTML
         if: always()

@@ -3,16 +3,16 @@
   <div class="card-body">
     <div class="requirement-header">
       <div>
-        <a href="/tests/{{test_id}}" class="requirement-id">{{test_reference}}</a>
+        <a href="/p/{{@root.selected_project_id}}/tests/show/{{test_id}}" class="requirement-id">{{test_reference}}</a>
         <h3 class="requirement-title">{{test_name}}</h3>
       </div>
       <div class="requirement-actions">
-        <a href="/edit_test/{{test_id}}" class="btn btn-outline btn-sm">Edit</a>
+        <a href="/p/{{@root.selected_project_id}}/tests/edit/{{test_id}}" class="btn btn-outline btn-sm">Edit</a>
         {{#if (or (eq test_status_id 1) (eq test_status_id 2))}}
-          <button onclick="deleteTest({{test_id}}, '{{test_name}}')" class="btn btn-danger btn-sm">Delete</button>
+          <button onclick="deleteTest({{@root.selected_project_id}}, {{test_id}}, '{{test_name}}')" class="btn btn-danger btn-sm">Delete</button>
         {{else}}
           {{#if ../user.is_admin}}
-            <button onclick="deleteTest({{test_id}}, '{{test_name}}')" class="btn btn-danger btn-sm">Delete</button>
+            <button onclick="deleteTest({{@root.selected_project_id}}, {{test_id}}, '{{test_name}}')" class="btn btn-danger btn-sm">Delete</button>
           {{/if}}
         {{/if}}
       </div>
@@ -33,7 +33,7 @@
         <span class="meta-label">Parent</span>
         <span class="meta-value">
           {{#if test_parent_id}}
-            <a href="/tests/{{test_parent_id}}">{{test_parent_title}}</a>
+            <a href="/p/{{@root.selected_project_id}}/tests/show/{{test_parent_id}}">{{test_parent_title}}</a>
           {{else}}
             None
           {{/if}}

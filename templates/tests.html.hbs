@@ -3,11 +3,11 @@
   <div class="d-flex justify-content-between align-items-center">
     <h1>Tests</h1>
     <div>
-      <a href="/tests.xls" class="btn btn-success me-2">Export Excel</a>
+      <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success me-2">Export Excel</a>
       {{#if user.is_admin}}
       <a href="/import_excel" class="btn btn-warning me-2">Import Excel</a>
       {{/if}}
-      <a href="/new_test" class="btn btn-primary">New Test</a>
+      <a href="/p/{{selected_project_id}}/tests/new" class="btn btn-primary">New Test</a>
     </div>
   </div>
 </div>
@@ -18,7 +18,7 @@
     <h5 class="mb-0">Filters</h5>
   </div>
   <div class="card-body">
-    <form method="GET" action="/tests" class="d-flex align-items-end gap-3">
+    <form method="GET" action="/p/{{selected_project_id}}/tests" class="d-flex align-items-end gap-3">
       <div class="flex-grow-1">
         <label for="status_filter" class="form-label">Status</label>
         <select class="form-select" id="status_filter" name="status_filter">
@@ -60,7 +60,7 @@
       </div>
       <div class="d-flex gap-2">
         <button type="submit" class="btn btn-primary">Apply Filters</button>
-        <a href="/tests" class="btn btn-secondary">Clear</a>
+        <a href="/p/{{selected_project_id}}/tests" class="btn btn-secondary">Clear</a>
       </div>
     </form>
   </div>

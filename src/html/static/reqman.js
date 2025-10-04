@@ -155,13 +155,18 @@
         }
     }
 
-    function deleteTest(testId, testName) {
+    function deleteTest(projectId, testId, testName) {
+        const resolvedProjectId = getActiveProjectId(projectId);
+        if (resolvedProjectId === null) {
+            alert('Unable to determine the current project. Please reload the page and try again.');
+            return;
+        }
         if (
             confirm(
                 `Are you sure you want to delete test "${testName}"? This action cannot be undone.`
             )
         ) {
-            fetch(`/delete_test/${testId}`, {
+            fetch(`/p/${resolvedProjectId}/tests/delete/${testId}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',

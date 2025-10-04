@@ -350,7 +350,7 @@ impl fmt::Display for Requirement {
             f,
             "
         <div class='requirement'>
-            <div class='ReqNum'>Num: <a href='http://localhost:8000/requirements/{}'>{}</a></div>
+            <div class='ReqNum'>Num: <a href='http://localhost:8000/p/{}/requirements/show/{}'>{}</a></div>
             <div class='ReqTitle'>Title: {}</div>
             <div class='ReqDesc'>Description: {}</div>
             <div class='ReqAuthor'>Author: {}</div>
@@ -358,6 +358,7 @@ impl fmt::Display for Requirement {
             <div class='ReqDate'>Date: {}</div>
             <div class='ReqParent'>Parent: {}</div>
         </div>",
+            self.project_id,
             self.req_id,
             self.req_id,
             self.req_title,

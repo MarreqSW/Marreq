@@ -115,11 +115,11 @@
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary">Update Requirement</button>
-          <a href="/requirements/{{requirements.req_id}}" class="btn btn-outline">Cancel</a>
-          <a href="/requirements" class="btn btn-outline">Back to Requirements</a>
+          <a href="/p/{{requirements.project_id}}/requirements/show/{{requirements.req_id}}" class="btn btn-outline">Cancel</a>
+          <a href="/p/{{requirements.project_id}}/requirements" class="btn btn-outline">Back to Requirements</a>
           
           <!-- Delete Button with Access Control -->
-          <button id="delete-btn" onclick="deleteRequirement({{requirements.req_id}}, '{{requirements.req_title}}')" class="btn btn-danger" style="display: none;">Delete Requirement</button>
+          <button id="delete-btn" onclick="deleteRequirement({{requirements.project_id}}, {{requirements.req_id}}, '{{requirements.req_title}}')" class="btn btn-danger" style="display: none;">Delete Requirement</button>
         </div>
       </form>
     </div>

@@ -48,6 +48,8 @@ pub fn build() -> Rocket<Build> {
         .mount("/p", crate::routes::html::requirements::routes())
         .mount("/p", crate::routes::html::tests::routes())
         .mount("/p", crate::routes::html::reports::routes())
+        .mount("/p", crate::routes::html::members::routes())
+        .mount("/user", crate::routes::html::user::routes())
         .mount("/api", crate::api::routes())
         .register(
             "/",

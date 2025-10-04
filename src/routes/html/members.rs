@@ -1,0 +1,509 @@
+use super::helpers::*;
+use super::prelude::*;
+use rocket::serde::json::Value;
+
+#[derive(FromForm)]
+pub struct ProjectMemberForm {
+    pub user_id: i32,
+    pub role: i32,
+}
+
+fn is_project_owner(state: &State<AppState>, project_id: i32, user_id: i32) -> bool {
+    if let Ok(members) = state.repo_read().get_members_by_project(project_id) {
+        members
+            .into_iter()
+            .any(|member| member.user_id == user_id && member.role == 1)
+    } else {
+        false
+    }
+}
+
+fn can_remove_member(
+    can_manage_members: bool,
+    owner_count: usize,
+    member: &ProjectMember,
+    current_user_id: i32,
+) -> bool {
+    if !can_manage_members {
+        return false;
+    }
+
+    let is_owner = member.role == 1;
+    let is_last_owner = is_owner && owner_count <= 1;
+    if is_last_owner {
+        return false;
+    }
+
+    if member.user_id == current_user_id && is_owner && owner_count <= 1 {
+        return false;
+    }
+
+    true
+}
+
+#[get("/<project_id>/members")]
+async fn show_project_members(
+    project_access: ProjectAccess,
+    project_id: i32,
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user = project_access.into_user();
+    cookies.add(Cookie::new("selected_project_id", project_id.to_string()));
+
+    let mut ctx = build_context_with_projects(state, user.clone(), cookies);
+
+    let repo = state.repo_read();
+    let project = match repo.get_project_by_id(project_id) {
+        Ok(project) => project,
+        Err(_) => return Err(Redirect::to(uri!(super::projects::show_projects))),
+    };
+
+    let memberships = repo.get_members_by_project(project_id).unwrap_or_default();
+    let users = repo.get_users_all().unwrap_or_default();
+    drop(repo);
+
+    let owner_count = memberships.iter().filter(|member| member.role == 1).count();
+    let can_manage_members = is_project_owner(state, project_id, user.user_id);
+
+    let user_lookup: HashMap<i32, &User> = users
+        .iter()
+        .map(|member| (member.user_id, member))
+        .collect();
+
+    let decorated_members: Vec<Value> = memberships
+        .iter()
+        .map(|membership| {
+            let (name, username, email, is_admin) = user_lookup
+                .get(&membership.user_id)
+                .map(|member| {
+                    (
+                        member.user_name.clone(),
+                        member.user_username.clone(),
+                        member.user_email.clone(),
+                        member.is_admin,
+                    )
+                })
+                .unwrap_or_else(|| {
+                    (
+                        format!("Unknown User #{}", membership.user_id),
+                        "unknown".to_string(),
+                        String::new(),
+                        false,
+                    )
+                });
+
+            json!({
+                "user_id": membership.user_id,
+                "name": name,
+                "username": username,
+                "email": email,
+                "role_id": membership.role,
+                "role_label": describe_project_role(membership.role),
+                "is_admin": is_admin,
+                "can_remove": can_remove_member(
+                    can_manage_members,
+                    owner_count,
+                    membership,
+                    user.user_id,
+                ),
+            })
+        })
+        .collect();
+
+    let member_count = decorated_members.len();
+
+    let member_ids: HashSet<i32> = memberships
+        .iter()
+        .map(|membership| membership.user_id)
+        .collect();
+
+    let available_users: Vec<Value> = if can_manage_members {
+        users
+            .iter()
+            .filter(|candidate| !member_ids.contains(&candidate.user_id))
+            .map(|candidate| {
+                json!({
+                    "user_id": candidate.user_id,
+                    "label": format!("{} (@{})", candidate.user_name, candidate.user_username),
+                })
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
+
+    let has_available_users = !available_users.is_empty();
+
+    let role_options = vec![
+        json!({ "id": 1, "label": describe_project_role(1) }),
+        json!({ "id": 2, "label": describe_project_role(2) }),
+        json!({ "id": 3, "label": describe_project_role(3) }),
+        json!({ "id": 4, "label": describe_project_role(4) }),
+    ];
+
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        ctx_obj.insert("project".to_string(), json!(project));
+        ctx_obj.insert("members".to_string(), json!(decorated_members));
+        ctx_obj.insert("can_manage_members".to_string(), json!(can_manage_members));
+        ctx_obj.insert("available_users".to_string(), json!(available_users));
+        ctx_obj.insert("role_options".to_string(), json!(role_options));
+        ctx_obj.insert("project_id".to_string(), json!(project_id));
+        ctx_obj.insert("current_user_id".to_string(), json!(user.user_id));
+        ctx_obj.insert("owner_count".to_string(), json!(owner_count));
+        ctx_obj.insert("member_count".to_string(), json!(member_count));
+        ctx_obj.insert(
+            "has_available_users".to_string(),
+            json!(has_available_users),
+        );
+        ctx_obj.insert("selected_project_id".to_string(), json!(project_id));
+    }
+
+    Ok(Template::render("members", ctx))
+}
+
+#[post("/<project_id>/members", data = "<form>")]
+async fn add_project_member(
+    project_access: ProjectAccess,
+    project_id: i32,
+    form: Form<ProjectMemberForm>,
+    state: &State<AppState>,
+) -> Redirect {
+    let user = project_access.into_user();
+
+    if !is_project_owner(state, project_id, user.user_id) {
+        return Redirect::to(uri!(show_project_members(project_id = project_id)));
+    }
+
+    let payload = form.into_inner();
+    let new_member = NewProjectMember {
+        project_id,
+        user_id: payload.user_id,
+        role: payload.role,
+    };
+
+    if let Err(error) = state.repo_write().add_project_member(&new_member) {
+        eprintln!("Error adding project member: {:?}", error);
+    }
+
+    Redirect::to(uri!(show_project_members(project_id = project_id)))
+}
+
+#[post("/<project_id>/members/<member_id>/remove")]
+async fn remove_project_member(
+    project_access: ProjectAccess,
+    project_id: i32,
+    member_id: i32,
+    state: &State<AppState>,
+) -> Redirect {
+    let user = project_access.into_user();
+
+    if !is_project_owner(state, project_id, user.user_id) {
+        return Redirect::to(uri!(show_project_members(project_id = project_id)));
+    }
+
+    let allow_removal = {
+        let repo = state.repo_read();
+        let members = repo.get_members_by_project(project_id).unwrap_or_default();
+        let owner_count = members.iter().filter(|member| member.role == 1).count();
+
+        !members
+            .iter()
+            .any(|member| member.user_id == member_id && member.role == 1 && owner_count <= 1)
+    };
+
+    if !allow_removal {
+        return Redirect::to(uri!(show_project_members(project_id = project_id)));
+    }
+
+    if let Err(error) = state
+        .repo_write()
+        .remove_project_member(project_id, member_id)
+    {
+        eprintln!("Error removing project member: {:?}", error);
+    }
+
+    Redirect::to(uri!(show_project_members(project_id = project_id)))
+}
+
+pub fn routes() -> Vec<Route> {
+    routes![
+        show_project_members,
+        add_project_member,
+        remove_project_member,
+    ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::models::{Project, ProjectMember, User};
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use chrono::{NaiveDate, NaiveDateTime};
+    use rocket::http::{ContentType, Cookie, Status as HttpStatus};
+    use rocket::local::asynchronous::{Client, LocalResponse};
+    use rocket_dyn_templates::Template;
+    use std::sync::{Arc, RwLock};
+
+    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const OWNER_ID: i32 = 1;
+    const MEMBER_ID: i32 = 2;
+    const CANDIDATE_ID: i32 = 3;
+    const PROJECT_ID: i32 = 1;
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn sample_project() -> Project {
+        Project {
+            project_id: PROJECT_ID,
+            project_name: "Lunar Lander".into(),
+            project_description: Some("Exploration program".into()),
+            project_creation_date: Some(timestamp()),
+            project_update_date: Some(timestamp()),
+            project_status: Some("Active".into()),
+            project_owner_id: Some(OWNER_ID),
+        }
+    }
+
+    fn owner_user() -> User {
+        let mut user = DieselRepoMock::make_user(OWNER_ID, "owner", "");
+        user.user_name = "Mission Owner".into();
+        user.user_username = "owner".into();
+        user
+    }
+
+    fn member_user() -> User {
+        let mut user = DieselRepoMock::make_user(MEMBER_ID, "member", "");
+        user.user_name = "Payload Engineer".into();
+        user.user_username = "member".into();
+        user
+    }
+
+    fn candidate_user() -> User {
+        let mut user = DieselRepoMock::make_user(CANDIDATE_ID, "newhire", "");
+        user.user_name = "Flight Specialist".into();
+        user.user_username = "newhire".into();
+        user
+    }
+
+    fn base_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(OWNER_ID, owner_user());
+        repo.users.insert(MEMBER_ID, member_user());
+        repo.users.insert(CANDIDATE_ID, candidate_user());
+        repo.projects.insert(PROJECT_ID, sample_project());
+        repo.project_members.push(ProjectMember {
+            project_id: PROJECT_ID,
+            user_id: OWNER_ID,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+        repo.project_members.push(ProjectMember {
+            project_id: PROJECT_ID,
+            user_id: MEMBER_ID,
+            role: 2,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+        repo
+    }
+
+    fn repo_with_single_owner() -> DieselRepoMock {
+        let mut repo = base_repo();
+        repo.project_members
+            .retain(|member| member.user_id != MEMBER_ID);
+        repo
+    }
+
+    fn managed_state(repo: DieselRepoMock) -> TestAppState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn test_client(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(managed_state(repo))
+            .attach(Template::fairing())
+            .mount(
+                "/p",
+                routes![
+                    show_project_members,
+                    add_project_member,
+                    remove_project_member
+                ],
+            );
+        Client::tracked(rocket).await.expect("rocket instance")
+    }
+
+    fn owner_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, OWNER_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    fn member_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, MEMBER_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    async fn get_as_owner<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(owner_cookie())
+            .dispatch()
+            .await
+    }
+
+    async fn get_as_member<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(member_cookie())
+            .dispatch()
+            .await
+    }
+
+    async fn post_form_as_owner<'c>(
+        client: &'c Client,
+        path: &'c str,
+        body: &'c str,
+    ) -> LocalResponse<'c> {
+        client
+            .post(path)
+            .header(ContentType::Form)
+            .private_cookie(owner_cookie())
+            .body(body)
+            .dispatch()
+            .await
+    }
+
+    async fn post_form_as_member<'c>(
+        client: &'c Client,
+        path: &'c str,
+        body: &'c str,
+    ) -> LocalResponse<'c> {
+        client
+            .post(path)
+            .header(ContentType::Form)
+            .private_cookie(member_cookie())
+            .body(body)
+            .dispatch()
+            .await
+    }
+
+    async fn post_remove_as_owner<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .post(path)
+            .header(ContentType::Form)
+            .private_cookie(owner_cookie())
+            .dispatch()
+            .await
+    }
+
+    #[rocket::async_test]
+    async fn show_project_members_displays_roster_for_owner() {
+        let client = test_client(base_repo()).await;
+        let response = get_as_owner(&client, "/p/1/members").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Project Members"));
+        assert!(body.contains("Mission Owner"));
+        assert!(body.contains("Payload Engineer"));
+        assert!(body.contains("Add a Member"));
+    }
+
+    #[rocket::async_test]
+    async fn show_project_members_hides_management_for_non_owner() {
+        let client = test_client(base_repo()).await;
+        let response = get_as_member(&client, "/p/1/members").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Project Members"));
+        assert!(body.contains("Only project owners can modify the membership list."));
+        assert!(!body.contains("Add a Member"));
+    }
+
+    #[rocket::async_test]
+    async fn add_project_member_as_owner_persists_membership() {
+        let client = test_client(base_repo()).await;
+        let response = post_form_as_owner(&client, "/p/1/members", "user_id=3&role=2").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let members = repo
+            .get_members_by_project(PROJECT_ID)
+            .expect("project members");
+        assert!(members.iter().any(|member| member.user_id == CANDIDATE_ID));
+    }
+
+    #[rocket::async_test]
+    async fn add_project_member_requires_owner_role() {
+        let client = test_client(base_repo()).await;
+        let response = post_form_as_member(&client, "/p/1/members", "user_id=3&role=2").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let members = repo
+            .get_members_by_project(PROJECT_ID)
+            .expect("project members");
+        assert_eq!(
+            members
+                .iter()
+                .filter(|member| member.project_id == PROJECT_ID)
+                .count(),
+            2
+        );
+        assert!(members.iter().all(|member| member.user_id != CANDIDATE_ID));
+    }
+
+    #[rocket::async_test]
+    async fn remove_project_member_removes_non_owner() {
+        let client = test_client(base_repo()).await;
+        let response = post_remove_as_owner(&client, "/p/1/members/2/remove").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let members = repo
+            .get_members_by_project(PROJECT_ID)
+            .expect("project members");
+        assert!(members.iter().all(|member| member.user_id != MEMBER_ID));
+    }
+
+    #[rocket::async_test]
+    async fn remove_project_member_prevents_last_owner_removal() {
+        let client = test_client(repo_with_single_owner()).await;
+        let response = post_remove_as_owner(&client, "/p/1/members/1/remove").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let members = repo
+            .get_members_by_project(PROJECT_ID)
+            .expect("project members");
+        assert!(members.iter().any(|member| member.user_id == OWNER_ID));
+        assert_eq!(members.len(), 1);
+    }
+}

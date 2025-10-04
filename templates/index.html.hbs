@@ -104,15 +104,21 @@
 
   <div class="card dashboard-card">
     <div class="card-header">
-      <h3>Users</h3>
+      <h3>Members</h3>
     </div>
     <div class="card-body">
       <div class="card-description">
-        <p>Manage user accounts and permissions</p>
+        <p>See who has access to your active project and manage participation.</p>
       </div>
-      <div class="card-actions">
-        <a href="/users" class="btn btn-primary">View Users</a>
-        <a href="/new_user" class="btn btn-outline">New User</a>
+      <div class="card-actions d-flex flex-wrap gap-2">
+        {{#if selected_project_id}}
+          <a href="/p/{{selected_project_id}}/members" class="btn btn-primary">View Members</a>
+        {{else}}
+          <span class="btn btn-outline disabled">Select a project to view members</span>
+        {{/if}}
+        {{#if user.is_admin}}
+          <a href="/admin/users" class="btn btn-outline">Manage Users</a>
+        {{/if}}
       </div>
     </div>
   </div>

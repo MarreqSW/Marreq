@@ -85,7 +85,7 @@ pub fn show_tests(
     Ok(Template::render("tests", ctx))
 }
 
-#[get("/<project_id>/tests/<test_id>")]
+#[get("/<project_id>/tests/show/<test_id>")]
 pub fn show_test_id(
     project_access: ProjectAccess,
     project_id: i32,
@@ -249,7 +249,7 @@ pub fn post_edit_test(
     Ok(Redirect::to(uri!("/p", show_test_id(project_id, f.test_id))))
 }
 
-#[post("/<project_id>/new_test", data = "<new_test>")]
+#[post("/<project_id>/tests/new", data = "<new_test>")]
 pub fn post_test(
     project_access: ProjectAccess,
     project_id: i32,

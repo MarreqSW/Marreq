@@ -116,7 +116,7 @@
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary">Create Requirement</button>
-          <a href="/requirements" class="btn btn-outline">Cancel</a>
+          <a href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}" class="btn btn-outline">Cancel</a>
         </div>
       </form>
     </div>

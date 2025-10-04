@@ -20,7 +20,7 @@
           Collapse All
         </button>
       </div>
-      <a href="/requirements" class="btn btn-secondary">
+      <a href="/p/{{selected_project_id}}/requirements" class="btn btn-secondary">
         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 11H1l8-8 8 8h-8v8z"></path>
         </svg>
@@ -57,7 +57,7 @@
                   <div class="requirement-card">
                     <div class="requirement-header">
                       <div class="requirement-id">
-                        <a href="/requirements/{{requirement.req_id}}" class="requirement-link">
+                        <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}" class="requirement-link">
                           REQ-{{requirement.req_id}}
                         </a>
                       </div>
@@ -92,7 +92,7 @@
                           <div class="requirement-card child-card">
                             <div class="requirement-header">
                               <div class="requirement-id">
-                                <a href="/requirements/{{requirement.req_id}}" class="requirement-link">
+                                <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}" class="requirement-link">
                                   REQ-{{requirement.req_id}}
                                 </a>
                               </div>
@@ -132,7 +132,7 @@
             </div>
             <h3>No Requirements Found</h3>
             <p>There are no requirements to display in the tree view.</p>
-            <a href="/new_requirement" class="btn btn-primary">Create First Requirement</a>
+            <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-primary">Create First Requirement</a>
           </div>
         {{/if}}
       </div>

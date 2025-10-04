@@ -14,12 +14,16 @@
         <p>View and manage all your software requirements</p>
       </div>
       <div class="card-actions">
-        <a href="/requirements" class="btn btn-primary">View Requirements</a>
+        <a href="/p/{{selected_project_id}}/requirements" class="btn btn-primary">View Requirements</a>
         <a href="/requirements.xls" class="btn btn-success">Export Excel</a>
         {{#if user.is_admin}}
         <a href="/import_excel" class="btn btn-warning">Import Excel</a>
         {{/if}}
-        <a href="/new_requirement" class="btn btn-outline">New Requirement</a>
+        {{#if selected_project_id}}
+          <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-outline">New Requirement</a>
+        {{else}}
+          <span class="btn btn-outline disabled" aria-disabled="true">New Requirement</span>
+        {{/if}}
       </div>
     </div>
   </div>

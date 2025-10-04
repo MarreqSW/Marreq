@@ -1,48 +1,6 @@
 use super::helpers::*;
 use super::prelude::*;
 
-#[delete("/<project_id>/tests/delete/<test_id>")]
-pub fn delete_test_route(
-    project_access: ProjectAccess,
-    project_id: i32,
-    test_id: i32,
-    state: &State<AppState>,
-) -> Result<Redirect, rocket::http::Status> {
-    use rocket::http::Status;
-
-    let user = project_access.into_user();
-
-    let mut conn = get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {e}");
-        Status::InternalServerError
-    })?;
-
-    let test = get_test_by_id_cached_safe(state, test_id).map_err(|_| Status::NotFound)?;
-
-    // allow only Draft(1) or Proposal(2) unless admin
-    if test.test_status > 2 && !user.is_admin {
-        return Err(Status::Forbidden);
-    }
-
-    let deleted = state
-        .repo_write()
-        .delete_test(test_id)
-        .map_err(|e| match e {
-            crate::repository::errors::RepoError::NotFound => Status::NotFound,
-            _ => Status::InternalServerError,
-        })?;
-
-    let log_ctx = LogCtx::new(user.user_id);
-    let _ = Logger::deleted(conn.as_mut(), &log_ctx, &deleted);
-
-    Ok(Redirect::to(uri!("/p", show_tests(
-        project_id,
-        None::<i32>,
-        None::<i32>,
-        None::<i32>
-    ))))
-}
-
 #[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>")]
 pub fn show_tests(
     project_access: ProjectAccess,
@@ -61,9 +19,8 @@ pub fn show_tests(
     let mut ctx = build_context_with_projects(state, user, cookies);
 
     // Fetch and process tests
-    let tests = repo
-        .get_tests_by_project(project_id)
-        .unwrap_or_default();
+    let tests = repo.get_tests_by_project(project_id).unwrap_or_default();
+
     let tests = decorate_tests(filter_tests(
         tests,
         status_filter,
@@ -74,8 +31,12 @@ pub fn show_tests(
 
     // Common data lookups
     ctx["statuses"] = json!(repo.get_status_all().unwrap_or_default());
-    ctx["verifications"] = json!(repo.get_verification_by_project(project_id).unwrap_or_default());
-    ctx["categories"] = json!(repo.get_categories_by_project(project_id).unwrap_or_default());
+    ctx["verifications"] = json!(repo
+        .get_verification_by_project(project_id)
+        .unwrap_or_default());
+    ctx["categories"] = json!(repo
+        .get_categories_by_project(project_id)
+        .unwrap_or_default());
 
     // Active filter values
     ctx["current_status_filter"] = json!(status_filter);
@@ -147,7 +108,69 @@ pub fn new_test(
     Ok(Template::render("new_test", ctx))
 }
 
-#[get("/<project_id>/edit_test/<test_id>")]
+#[post("/<project_id>/tests/new", data = "<new_test>")]
+pub fn post_test(
+    project_access: ProjectAccess,
+    project_id: i32,
+    new_test: Form<NewTestForm>,
+    state: &State<AppState>,
+) -> Result<Redirect, Redirect> {
+    let user = project_access.into_user();
+    let connection = &mut get_db_connection(state).map_err(|e| {
+        eprintln!("Database connection error: {}", e);
+        Redirect::to(uri!("/p", new_test(project_id)))
+    })?;
+    let my_new_test = NewTest {
+        test_id: None,
+        test_name: new_test.test_name.clone(),
+        test_description: new_test.test_description.clone(),
+        test_source: new_test.test_source.clone(),
+        test_status: new_test.test_status,
+        test_reference: format!("TEST-{}", chrono::Utc::now().timestamp()),
+        test_parent: new_test.test_parent,
+        project_id: new_test.project_id,
+    };
+    let test_id = state.repo_write().insert_test(&my_new_test).map_err(|e| {
+        eprintln!("Error inserting new test: {:?}", e);
+        Redirect::to(uri!(
+            "/p",
+            show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
+        ))
+    })?;
+
+    let test = state
+        .repo_read()
+        .get_test_by_id(test_id)
+        .expect("Error reading table Tests");
+
+    // Log the test creation
+    let log_ctx = LogCtx::new(user.user_id);
+    let _ = Logger::created(connection, &log_ctx, test_id, &test);
+
+    #[cfg(debug_assertions)]
+    println!("NewTestForm requirements: {:#?}", new_test.test_req);
+    for req in new_test.test_req.iter() {
+        let matrix_item = NewMatrix {
+            matrix_req_id: *req,
+            matrix_test_id: test_id,
+            project_id: new_test.project_id,
+        };
+        state
+            .repo_write()
+            .insert_new_matrix_item(&matrix_item)
+            .map_err(|e| {
+                eprintln!("Error inserting matrix item: {:?}", e);
+                Redirect::to(uri!(
+                    "/p",
+                    show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
+                ))
+            })?;
+    }
+
+    Ok(Redirect::to(uri!("/p", show_test_id(project_id, test_id))))
+}
+
+#[get("/<project_id>/tests/edit/<test_id>")]
 pub fn get_edit_test(
     project_access: ProjectAccess,
     project_id: i32,
@@ -197,9 +220,13 @@ pub fn post_edit_test(
     edit_test_form: Form<EditTestForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-
     let user = project_access.into_user();
-    let to_list = || Redirect::to(uri!("/p", show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)));
+    let to_list = || {
+        Redirect::to(uri!(
+            "/p",
+            show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
+        ))
+    };
     let to_edit = || Redirect::to(uri!("/p", get_edit_test(project_id, test_id)));
 
     let mut conn = get_db_connection(state).map_err(|e| {
@@ -246,63 +273,50 @@ pub fn post_edit_test(
             to_list()
         })?;
 
-    Ok(Redirect::to(uri!("/p", show_test_id(project_id, f.test_id))))
+    Ok(Redirect::to(uri!(
+        "/p",
+        show_test_id(project_id, f.test_id)
+    )))
 }
 
-#[post("/<project_id>/tests/new", data = "<new_test>")]
-pub fn post_test(
+#[delete("/<project_id>/tests/delete/<test_id>")]
+pub fn delete_test_route(
     project_access: ProjectAccess,
     project_id: i32,
-    new_test: Form<NewTestForm>,
+    test_id: i32,
     state: &State<AppState>,
-) -> Result<Redirect, Redirect> {
+) -> Result<Redirect, rocket::http::Status> {
+    use rocket::http::Status;
+
     let user = project_access.into_user();
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!("/p", new_test(project_id)))
-    })?;
-    let my_new_test = NewTest {
-        test_id: None,
-        test_name: new_test.test_name.clone(),
-        test_description: new_test.test_description.clone(),
-        test_source: new_test.test_source.clone(),
-        test_status: new_test.test_status,
-        test_reference: format!("TEST-{}", chrono::Utc::now().timestamp()),
-        test_parent: new_test.test_parent,
-        project_id: new_test.project_id,
-    };
-    let test_id = state.repo_write().insert_test(&my_new_test).map_err(|e| {
-        eprintln!("Error inserting new test: {:?}", e);
-        Redirect::to(uri!("/p", show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)))
+
+    let mut conn = get_db_connection(state).map_err(|e| {
+        eprintln!("Database connection error: {e}");
+        Status::InternalServerError
     })?;
 
-    let test = state
-        .repo_read()
-        .get_test_by_id(test_id)
-        .expect("Error reading table Tests");
+    let test = get_test_by_id_cached_safe(state, test_id).map_err(|_| Status::NotFound)?;
 
-    // Log the test creation
-    let log_ctx = LogCtx::new(user.user_id);
-    let _ = Logger::created(connection, &log_ctx, test_id, &test);
-
-    #[cfg(debug_assertions)]
-    println!("NewTestForm requirements: {:#?}", new_test.test_req);
-    for req in new_test.test_req.iter() {
-        let matrix_item = NewMatrix {
-            matrix_req_id: *req,
-            matrix_test_id: test_id,
-            project_id: new_test.project_id,
-        };
-        state
-            .repo_write()
-            .insert_new_matrix_item(&matrix_item)
-            .map_err(|e| {
-                eprintln!("Error inserting matrix item: {:?}", e);
-                Redirect::to(uri!("/p", show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)))
-            })?;
+    // allow only Draft(1) or Proposal(2) unless admin
+    if test.test_status > 2 && !user.is_admin {
+        return Err(Status::Forbidden);
     }
 
-    Ok(Redirect::to(uri!("/p", show_test_id(project_id, test_id))))
+    let deleted = state
+        .repo_write()
+        .delete_test(test_id)
+        .map_err(|e| match e {
+            crate::repository::errors::RepoError::NotFound => Status::NotFound,
+            _ => Status::InternalServerError,
+        })?;
+
+    let log_ctx = LogCtx::new(user.user_id);
+    let _ = Logger::deleted(conn.as_mut(), &log_ctx, &deleted);
+
+    Ok(Redirect::to(uri!(
+        "/p",
+        show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
+    )))
 }
 
 #[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
@@ -377,55 +391,72 @@ pub fn get_matrix(
         match sort_by.as_str() {
             "req_title" => {
                 all_reqs.sort_by(|a, b| a.req_title.cmp(&b.req_title));
-                if desc { all_reqs.reverse(); }
+                if desc {
+                    all_reqs.reverse();
+                }
             }
             "req_reference" => {
                 all_reqs.sort_by(|a, b| a.req_reference.cmp(&b.req_reference));
-                if desc { all_reqs.reverse(); }
+                if desc {
+                    all_reqs.reverse();
+                }
             }
             _ => {
                 all_reqs.sort_by_key(|r| r.req_id);
-                if desc { all_reqs.reverse(); }
+                if desc {
+                    all_reqs.reverse();
+                }
             }
         }
     }
 
     // Build matrix cells + counts.
     let mut total_links = 0;
-    let requirements_with_matrix: Vec<_> = all_reqs.iter().map(|req| {
-        let row: Vec<_> = all_tests.iter().map(|test| {
-            let linked = links.contains(&(req.req_id, test.test_id));
-            if linked { total_links += 1; }
-            json!({ "linked": linked, "test_status": test.test_status })
-        }).collect();
+    let requirements_with_matrix: Vec<_> = all_reqs
+        .iter()
+        .map(|req| {
+            let row: Vec<_> = all_tests
+                .iter()
+                .map(|test| {
+                    let linked = links.contains(&(req.req_id, test.test_id));
+                    if linked {
+                        total_links += 1;
+                    }
+                    json!({ "linked": linked, "test_status": test.test_status })
+                })
+                .collect();
 
-        json!({
-            "req_id": req.req_id,
-            "req_title": req.req_title,
-            "req_reference": req.req_reference,
-            "matrix": row
+            json!({
+                "req_id": req.req_id,
+                "req_title": req.req_title,
+                "req_reference": req.req_reference,
+                "matrix": row
+            })
         })
-    }).collect();
+        .collect();
 
     // Tests with human-readable status name.
-    let tests_with_status: Vec<_> = all_tests.iter().map(|t| {
-        json!({
-            "test_id": t.test_id,
-            "test_name": t.test_name,
-            "test_status": get_status_name_by_id_cached(state, t.test_status)
+    let tests_with_status: Vec<_> = all_tests
+        .iter()
+        .map(|t| {
+            json!({
+                "test_id": t.test_id,
+                "test_name": t.test_name,
+                "test_status": get_status_name_by_id_cached(state, t.test_status)
+            })
         })
-    }).collect();
+        .collect();
 
     let mut ctx = build_context_with_projects(state, user, cookies);
-    ctx["requirements"]         = json!(requirements_with_matrix);
-    ctx["tests"]                = json!(tests_with_status);
-    ctx["total_tests"]          = json!(all_tests.len() as i32);
-    ctx["total_requirements"]   = json!(all_reqs.len() as i32);
-    ctx["total_links"]          = json!(total_links);
-    ctx["current_sort_by"]      = json!(sort_by);
-    ctx["current_sort_order"]   = json!(if desc { "desc" } else { "asc" });
-    ctx["test_status_filter"]   = json!(test_status_filter);
-    ctx["statuses"]             = json!(state.repo_read().get_status_all().unwrap_or_default());
+    ctx["requirements"] = json!(requirements_with_matrix);
+    ctx["tests"] = json!(tests_with_status);
+    ctx["total_tests"] = json!(all_tests.len() as i32);
+    ctx["total_requirements"] = json!(all_reqs.len() as i32);
+    ctx["total_links"] = json!(total_links);
+    ctx["current_sort_by"] = json!(sort_by);
+    ctx["current_sort_order"] = json!(if desc { "desc" } else { "asc" });
+    ctx["test_status_filter"] = json!(test_status_filter);
+    ctx["statuses"] = json!(state.repo_read().get_status_all().unwrap_or_default());
 
     Ok(Template::render("matrix", ctx))
 }
@@ -502,7 +533,8 @@ pub async fn get_tests_xls(
     println!(
         "User [{} - id:{}] requested requirements export for project_id={}",
         user.user_username, user.user_id, project_id
-    );    let _file = excel::create_tests_workbook().expect("file can be created");
+    );
+    let _file = excel::create_tests_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/tests.xls");
     let res = NamedFile::open(&path_to_file)
         .await

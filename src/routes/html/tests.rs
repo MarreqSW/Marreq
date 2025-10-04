@@ -1,13 +1,14 @@
 use super::helpers::*;
 use super::prelude::*;
 
-#[delete("/delete_test/<test_id>")]
+#[delete("/<project_id>/delete_test/<test_id>")]
 pub fn delete_test_route(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     test_id: i32,
     state: &State<AppState>,
 ) -> Result<Redirect, rocket::http::Status> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
         rocket::http::Status::InternalServerError
@@ -34,7 +35,8 @@ pub fn delete_test_route(
             let _ = Logger::deleted(connection.as_mut(), &log_ctx, &test);
 
             // Redirect to tests list page
-            Ok(Redirect::to(uri!(show_tests(
+            Ok(Redirect::to(uri!("/p", show_tests(
+                project_id,
                 None::<i32>,
                 None::<i32>,
                 None::<i32>
@@ -49,16 +51,17 @@ pub fn delete_test_route(
     }
 }
 
-#[get("/tests?<status_filter>&<verification_filter>&<category_filter>")]
+#[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>")]
 pub fn show_tests(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     cookies: &CookieJar<'_>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
     let mut ctx = build_context_with_projects(state, user, cookies);
 
     // Get selected project ID
@@ -130,13 +133,14 @@ pub fn show_tests(
     Ok(Template::render("tests", ctx))
 }
 
-#[get("/tests/<test_id_param>")]
+#[get("/<project_id>/tests/<test_id_param>")]
 pub fn show_test_id(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     test_id_param: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
 
     // Use the safe function that returns a Result
     match get_test_by_id_cached_safe(state, test_id_param) {
@@ -177,13 +181,14 @@ pub fn show_test_id(
     }
 }
 
-#[get("/new_test")]
+#[get("/<project_id>/new_test")]
 pub fn new_test(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
     let status = state.repo_read().get_status_all().unwrap_or_default();
     let status_json = json!(status);
 
@@ -251,14 +256,15 @@ pub fn new_test(
     Ok(Template::render("new_test", ctx))
 }
 
-#[get("/edit_test/<test_id>")]
+#[get("/<project_id>/edit_test/<test_id>")]
 pub fn get_edit_test(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     test_id: i32,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
     let test = state
         .repo_read()
         .get_test_by_id(test_id)
@@ -364,17 +370,18 @@ pub fn get_edit_test(
     Ok(Template::render("edit_test_by_id", ctx))
 }
 
-#[post("/edit_test/<test_id>", data = "<edit_test_form>")]
+#[post("/<project_id>/edit_test/<test_id>", data = "<edit_test_form>")]
 pub fn post_edit_test(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     test_id: i32,
     edit_test_form: Form<EditTestForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(get_edit_test(test_id)))
+        Redirect::to(uri!("/p", get_edit_test(project_id, test_id)))
     })?;
 
     // Get the old values before updating
@@ -397,7 +404,7 @@ pub fn post_edit_test(
 
     state.repo_write().edit_test(&new_test).map_err(|e| {
         eprintln!("Error editing test: {:?}", e);
-        Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+        Redirect::to(uri!("/p", show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)))
     })?;
 
     let log_ctx = LogCtx::new(user.user_id);
@@ -417,22 +424,23 @@ pub fn post_edit_test(
         .update_test_requirement_links(edit_test_form.test_id, &edit_test_form.linked_requirements)
         .map_err(|e| {
             eprintln!("Error updating test requirement links: {:?}", e);
-            Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+            Redirect::to(uri!("/p", show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)))
         })?;
 
-    Ok(Redirect::to(uri!(show_test_id(edit_test_form.test_id))))
+    Ok(Redirect::to(uri!("/p", show_test_id(project_id, edit_test_form.test_id))))
 }
 
-#[post("/new_test", data = "<new_test>")]
+#[post("/<project_id>/new_test", data = "<new_test>")]
 pub fn post_test(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     new_test: Form<NewTestForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(new_test))
+        Redirect::to(uri!("/p", new_test(project_id)))
     })?;
     let my_new_test = NewTest {
         test_id: None,
@@ -446,7 +454,7 @@ pub fn post_test(
     };
     let test_id = state.repo_write().insert_test(&my_new_test).map_err(|e| {
         eprintln!("Error inserting new test: {:?}", e);
-        Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+        Redirect::to(uri!("/p", show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)))
     })?;
 
     let test = state
@@ -471,23 +479,24 @@ pub fn post_test(
             .insert_new_matrix_item(&matrix_item)
             .map_err(|e| {
                 eprintln!("Error inserting matrix item: {:?}", e);
-                Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+                Redirect::to(uri!("/p", show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)))
             })?;
     }
 
-    Ok(Redirect::to(uri!(show_test_id(test_id))))
+    Ok(Redirect::to(uri!("/p", show_test_id(project_id, test_id))))
 }
 
-#[get("/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
+#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
 pub fn get_matrix(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     cookies: &CookieJar<'_>,
     sort_by: Option<String>,
     sort_order: Option<String>,
     test_status_filter: Option<i32>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
     use crate::schema::matrix::dsl::*;
     use crate::schema::requirements::dsl::*;
     use crate::schema::tests::dsl::*;
@@ -692,12 +701,13 @@ pub fn get_matrix(
     Ok(Template::render("matrix", ctx))
 }
 
-#[get("/matrix.xls")]
+#[get("/<project_id>/matrix.xls")]
 pub async fn get_matrix_xls(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
     cookies: &CookieJar<'_>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = session_user.into_inner();
+    let _user = project_access.into_user();
 
     match excel::create_matrix_workbook(cookies) {
         Ok(_) => {
@@ -726,11 +736,12 @@ pub async fn get_matrix_xls(
     }
 }
 
-#[get("/requirements.xls")]
+#[get("/<project_id>/requirements.xls")]
 pub async fn get_requirements_xls(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = session_user.into_inner();
+    let _user = project_access.into_user();
     let _file = excel::create_requirements_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/requirements.xls");
     let res = NamedFile::open(&path_to_file)
@@ -749,11 +760,12 @@ pub async fn get_requirements_xls(
     }
 }
 
-#[get("/tests.xls")]
+#[get("/<project_id>/tests.xls")]
 pub async fn get_tests_xls(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
+    project_id: i32,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = session_user.into_inner();
+    let _user = project_access.into_user();
     let _file = excel::create_tests_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/tests.xls");
     let res = NamedFile::open(&path_to_file)

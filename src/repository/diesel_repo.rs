@@ -836,6 +836,7 @@ impl TestsRepository for DieselRepo {
                 test_name.eq(&new.test_name),
                 test_description.eq(&new.test_description),
                 test_source.eq(&new.test_source),
+                test_reference.eq(&new.test_reference),
                 test_status.eq(&new.test_status),
                 test_parent.eq(&new.test_parent),
             ))

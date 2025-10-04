@@ -15,7 +15,7 @@
       </div>
       <div class="card-actions">
         <a href="/p/{{selected_project_id}}/requirements" class="btn btn-primary">View Requirements</a>
-        <a href="/requirements.xls" class="btn btn-success">Export Excel</a>
+        <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success">Export Excel</a>
         {{#if user.is_admin}}
         <a href="/import_excel" class="btn btn-warning">Import Excel</a>
         {{/if}}
@@ -37,12 +37,12 @@
         <p>Manage test cases and verification methods</p>
       </div>
       <div class="card-actions">
-        <a href="/tests" class="btn btn-primary">View Tests</a>
-        <a href="/tests.xls" class="btn btn-success">Export Excel</a>
+        <a href="/p/{{selected_project_id}}/tests" class="btn btn-primary">View Tests</a>
+        <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success">Export Excel</a>
         {{#if user.is_admin}}
         <a href="/import_excel" class="btn btn-warning">Import Excel</a>
         {{/if}}
-        <a href="/new_test" class="btn btn-outline">New Test</a>
+        <a href="/p/{{selected_project_id}}/tests/new" class="btn btn-outline">New Test</a>
       </div>
     </div>
   </div>
@@ -56,8 +56,8 @@
         <p>Link requirements to tests and generate reports</p>
       </div>
       <div class="card-actions">
-        <a href="/matrix" class="btn btn-primary">View Matrix</a>
-        <a href="/matrix.xls" class="btn btn-success">Export Excel</a>
+        <a href="/p/{{selected_project_id}}/matrix" class="btn btn-primary">View Matrix</a>
+        <a href="/p/{{selected_project_id}}/matrix.xls" class="btn btn-success">Export Excel</a>
       </div>
     </div>
   </div>

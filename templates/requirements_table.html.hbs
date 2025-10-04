@@ -4,7 +4,7 @@
     <h1>Requirements Table</h1>
     <div>
       <a href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}" class="btn btn-outline-secondary me-2">Card View</a>
-      <a href="/requirements.xls" class="btn btn-success me-2">Export Excel</a>
+      <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success me-2">Export Excel</a>
       {{#if user.is_admin}}
       <a href="/import_excel" class="btn btn-warning me-2">Import Excel</a>
       {{/if}}
@@ -19,7 +19,7 @@
     <h5 class="mb-0">Filters</h5>
   </div>
   <div class="card-body">
-    <form method="GET" action="/requirements_table" class="d-flex align-items-end gap-3">
+    <form method="GET" action="/p/{{selected_project_id}}/requirements_table" class="d-flex align-items-end gap-3">
       <div class="flex-grow-1">
         <label for="status_filter" class="form-label">Status</label>
         <select class="form-select" id="status_filter" name="status_filter">

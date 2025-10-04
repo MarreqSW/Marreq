@@ -198,6 +198,41 @@ pub(crate) fn decorate_projects_for_listing(
     decorated
 }
 
+pub(crate) fn decorate_tests_cached(state: &AppState, tests: Vec<Test>) -> Vec<DecoratedTest> {
+    let repo = state.repo_read();
+
+    tests
+        .into_iter()
+        .map(|t| {
+            let status = repo
+                .get_test_status_by_id(t.test_status)
+                .map(|s| s.test_st_title)
+                .unwrap_or_else(|_| format!("Unknown Status ({})", t.test_status));
+
+            let parent_title = if t.test_parent != 0 {
+                repo.get_test_by_id(t.test_parent)
+                    .map(|p| p.test_name)
+                    .unwrap_or_default()
+            } else {
+                String::new()
+            };
+
+            DecoratedTest {
+                test_id: t.test_id,
+                test_name: t.test_name,
+                test_description: t.test_description,
+                test_source: t.test_source,
+                test_reference: t.test_reference,
+                test_status: status,
+                test_status_id: t.test_status,
+                test_parent_id: t.test_parent,
+                test_parent_title: parent_title,
+                project_id: t.project_id,
+            }
+        })
+        .collect()
+}
+
 pub(crate) fn describe_project_role(role: i32) -> &'static str {
     match role {
         1 => "Owner",

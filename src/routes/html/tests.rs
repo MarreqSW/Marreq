@@ -1,128 +1,42 @@
 use super::helpers::*;
 use super::prelude::*;
 
-#[delete("/delete_test/<test_id>")]
-pub fn delete_test_route(
-    session_user: SessionUser,
-    test_id: i32,
-    state: &State<AppState>,
-) -> Result<Redirect, rocket::http::Status> {
-    let user = session_user.into_inner();
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        rocket::http::Status::InternalServerError
-    })?;
-
-    // Get the test details before deleting
-    let test = match get_test_by_id_cached_safe(state, test_id) {
-        Ok(t) => t,
-        Err(_) => {
-            // Test not found
-            return Err(rocket::http::Status::NotFound);
-        }
-    };
-
-    // Check if user can delete this test
-    // Only allow deletion if status is Draft (1) or Proposal (2), or if user is admin
-    if test.test_status > 2 && !user.is_admin {
-        return Err(rocket::http::Status::Forbidden);
-    }
-
-    match state.repo_write().delete_test(test_id) {
-        Ok(test) => {
-            let log_ctx = LogCtx::new(user.user_id);
-            let _ = Logger::deleted(connection.as_mut(), &log_ctx, &test);
-
-            // Redirect to tests list page
-            Ok(Redirect::to(uri!(show_tests(
-                None::<i32>,
-                None::<i32>,
-                None::<i32>
-            ))))
-        }
-        Err(crate::repository::errors::RepoError::NotFound) => Err(rocket::http::Status::NotFound),
-        Err(_e) => {
-            #[cfg(debug_assertions)]
-            println!("Error deleting test: {:?}", _e);
-            Err(rocket::http::Status::InternalServerError)
-        }
-    }
-}
-
-#[get("/tests?<status_filter>&<verification_filter>&<category_filter>")]
-pub fn show_tests(
-    session_user: SessionUser,
+#[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>")]
+async fn show_tests(
+    project_access: ProjectAccess,
+    project_id: i32,
     cookies: &CookieJar<'_>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    use serde_json::json;
+
+    let user = project_access.into_user();
+    let repo = state.repo_read();
+
     let mut ctx = build_context_with_projects(state, user, cookies);
 
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
+    // Fetch and process tests
+    let tests = repo.get_tests_by_project(project_id).unwrap_or_default();
 
-    let tests = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_tests_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_tests_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_tests_all()
-        }
-    };
-
-    let tests_data = tests.unwrap_or_default();
-    // Apply filters
-    let filtered_tests = filter_tests(
-        tests_data,
-        status_filter,
-        verification_filter,
-        category_filter,
+    let tests = decorate_tests_cached(
+        state,
+        filter_tests(tests, status_filter, verification_filter, category_filter),
     );
-    let tests_decorate = decorate_tests(filtered_tests);
-    ctx["tests"] = json!(tests_decorate);
+    ctx["tests"] = json!(tests);
 
-    // Add filter data to context for the template
-    let statuses = state.repo_read().get_status_all().unwrap_or_default();
-    let verifications = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_verification_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_verification_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_verification_all()
-        }
-    };
+    // Common data lookups
+    ctx["statuses"] = json!(repo.get_test_status_all().unwrap_or_default());
+    ctx["verifications"] = json!(repo
+        .get_verification_by_project(project_id)
+        .unwrap_or_default());
+    ctx["categories"] = json!(repo
+        .get_categories_by_project(project_id)
+        .unwrap_or_default());
 
-    // Get categories filtered by selected project
-    let categories = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_categories_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_categories_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_categories_all()
-        }
-    };
-
-    ctx["statuses"] = json!(statuses);
-    ctx["verifications"] = json!(verifications.unwrap_or_default());
-    ctx["categories"] = json!(categories.unwrap_or_default());
+    // Active filter values
     ctx["current_status_filter"] = json!(status_filter);
     ctx["current_verification_filter"] = json!(verification_filter);
     ctx["current_category_filter"] = json!(category_filter);
@@ -130,323 +44,112 @@ pub fn show_tests(
     Ok(Template::render("tests", ctx))
 }
 
-#[get("/tests/<test_id_param>")]
-pub fn show_test_id(
-    session_user: SessionUser,
-    test_id_param: i32,
+#[get("/<project_id>/tests/show/<test_id>")]
+async fn show_test_id(
+    project_access: ProjectAccess,
+    project_id: i32,
+    test_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    use serde_json::json;
 
-    // Use the safe function that returns a Result
-    match get_test_by_id_cached_safe(state, test_id_param) {
-        Ok(test) => {
-            let test_decorate = decorate_tests(vec![test]);
+    let user = project_access.into_user();
 
-            // Get linked requirements for this test
-            let linked_requirements =
-                get_requirements_for_test_cached(state, test_id_param).unwrap_or_default();
-            let linked_requirements_json = json!(linked_requirements);
-
-            let decorated_test = &test_decorate[0];
-            let ctx = json!({
-                "test_id": decorated_test.test_id,
-                "test_name": decorated_test.test_name,
-                "test_description": decorated_test.test_description,
-                "test_source": decorated_test.test_source,
-                "test_status": decorated_test.test_status,
-                "test_parent_id": decorated_test.test_parent_id,
-                "test_parent_title": decorated_test.test_parent_title,
-                "linked_requirements": linked_requirements_json,
-                "user": user
-            });
-
-            Ok(Template::render("test_by_id", ctx))
-        }
-        Err(error_msg) => {
-            // Render error template instead of panicking
+    let test = match get_test_by_id_cached_safe(state, test_id) {
+        Ok(t) => t,
+        Err(details) => {
             let ctx = json!({
                 "title": "Test Not Found",
                 "message": "The test you're looking for could not be found.",
-                "details": error_msg,
+                "details": details,
                 "user": user
             });
+            return Ok(Template::render("error", ctx));
+        }
+    };
 
-            Ok(Template::render("error", ctx))
+    let decorated = decorate_tests_cached(state, vec![test]);
+    let test = &decorated[0];
+
+    let linked_requirements = get_requirements_for_test_cached(state, test_id).unwrap_or_default();
+
+    let mut ctx_map = serde_json::Map::new();
+    ctx_map.insert("project_id".into(), json!(project_id));
+    ctx_map.insert("selected_project_id".into(), json!(project_id));
+    ctx_map.insert("linked_requirements".into(), json!(linked_requirements));
+    ctx_map.insert("user".into(), json!(user));
+
+    if let Ok(serde_json::Value::Object(test_obj)) = serde_json::to_value(&test) {
+        for (key, value) in test_obj {
+            ctx_map.insert(key, value);
         }
     }
+
+    Ok(Template::render(
+        "test_by_id",
+        serde_json::Value::Object(ctx_map),
+    ))
 }
 
-#[get("/new_test")]
-pub fn new_test(
-    session_user: SessionUser,
+#[get("/<project_id>/tests/new")]
+async fn new_test(
+    project_access: ProjectAccess,
+    project_id: i32,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-    let status = state.repo_read().get_status_all().unwrap_or_default();
-    let status_json = json!(status);
+    use serde_json::json;
 
-    // Get selected project ID and filter categories accordingly
-    let selected_project_id = get_selected_project_id(cookies);
-    let categories = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_categories_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_categories_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_categories_all()
-        }
-    };
-    let categories_json = json!(categories.unwrap_or_default());
+    let user = project_access.into_user();
+    let repo = state.repo_read();
 
-    // Get parent tests filtered by project
-    let parents = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_tests_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_tests_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_tests_all()
-        }
-    };
-    let parents_json = json!(parents.unwrap_or_default());
-
-    let users = state.repo_read().get_users_all().unwrap_or_default();
-    let users_json = json!(users);
-
-    // Get requirements filtered by project
-    let requirements = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_requirements_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_requirements_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_requirements_all()
-        }
-    };
-    let requirements_json = json!(requirements.unwrap_or_default());
-
-    let ctx = json!({
-        "categories": categories_json,
-        "status": status_json,
-        "parents": parents_json,
-        "users": users_json,
-        "requirements": requirements_json,
-        "user": user
-    });
+    let mut ctx = build_context_with_projects(state, user, cookies);
+    ctx["categories"] = json!(repo
+        .get_categories_by_project(project_id)
+        .unwrap_or_default());
+    ctx["status"] = json!(repo.get_test_status_all().unwrap_or_default());
+    ctx["parents"] = json!(repo.get_tests_by_project(project_id).unwrap_or_default());
+    ctx["users"] = json!(repo.get_users_all().unwrap_or_default());
+    ctx["requirements"] = json!(repo
+        .get_requirements_by_project(project_id)
+        .unwrap_or_default());
+    ctx["project_id"] = json!(project_id);
+    ctx["selected_project_id"] = json!(project_id);
 
     Ok(Template::render("new_test", ctx))
 }
 
-#[get("/edit_test/<test_id>")]
-pub fn get_edit_test(
-    session_user: SessionUser,
-    test_id: i32,
-    cookies: &CookieJar<'_>,
-    state: &State<AppState>,
-) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-    let test = state
-        .repo_read()
-        .get_test_by_id(test_id)
-        .expect("Error reading table Tests");
-    let test_decorate = decorate_tests(vec![test]);
-    let test_decorate_json = json!(test_decorate[0]);
-
-    let status = state.repo_read().get_test_status_all().unwrap_or_default();
-    let status_json = json!(status);
-
-    // Get selected project ID and filter categories accordingly
-    let selected_project_id = get_selected_project_id(cookies);
-    let categories = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_categories_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_categories_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_categories_all()
-        }
-    };
-    let categories_json = json!(categories.unwrap_or_default());
-
-    // Get parent tests filtered by project
-    let parents = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_tests_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_tests_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_tests_all()
-        }
-    };
-    let parents_json = json!(parents.unwrap_or_default());
-
-    let users = state.repo_read().get_users_all().unwrap_or_default();
-    let users_json = json!(users);
-
-    // Get verification types filtered by project
-    let verification_types = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_verification_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_verification_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_verification_all()
-        }
-    };
-    let verification_json = json!(verification_types.unwrap_or_default());
-
-    // Get linked requirements for this test
-    let linked_requirements = get_requirements_for_test_cached(state, test_id).unwrap_or_default();
-    let linked_requirements_json = json!(linked_requirements);
-
-    // Create a simple array of linked requirement IDs for template checking
-    let linked_req_ids: Vec<i32> = linked_requirements.iter().map(|r| r.req_id).collect();
-    let linked_req_ids_json = json!(linked_req_ids);
-
-    // Get all requirements for the multi-select (filtered by project)
-    let all_requirements = if let Some(project_id) = selected_project_id {
-        state.repo_read().get_requirements_by_project(project_id)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            state
-                .repo_read()
-                .get_requirements_by_project(first_project.project_id)
-        } else {
-            state.repo_read().get_requirements_all()
-        }
-    };
-    let all_requirements_json = json!(all_requirements.unwrap_or_default());
-
-    let ctx = json!({
-        "tests": test_decorate_json,
-        "test_status_id": test_decorate[0].test_status_id,
-        "categories": categories_json,
-        "status": status_json,
-        "parent": parents_json,
-        "users": users_json,
-        "verification": verification_json,
-        "linked_requirements": linked_requirements_json,
-        "linked_req_ids": linked_req_ids_json,
-        "requirements": all_requirements_json,
-        "user": user
-    });
-
-    #[cfg(debug_assertions)]
-    println!("Tests: {:#}", ctx);
-    Ok(Template::render("edit_test_by_id", ctx))
-}
-
-#[post("/edit_test/<test_id>", data = "<edit_test_form>")]
-pub fn post_edit_test(
-    session_user: SessionUser,
-    test_id: i32,
-    edit_test_form: Form<EditTestForm>,
-    state: &State<AppState>,
-) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(get_edit_test(test_id)))
-    })?;
-
-    // Get the old values before updating
-    let old_test = state
-        .repo_read()
-        .get_test_by_id(test_id)
-        .expect("Error reading table Tests");
-
-    // First, update the test details
-    let new_test = NewTest {
-        test_id: Some(edit_test_form.test_id),
-        test_name: edit_test_form.test_name.clone(),
-        test_description: edit_test_form.test_description.clone(),
-        test_source: edit_test_form.test_source.clone(),
-        test_status: edit_test_form.test_status,
-        test_reference: old_test.test_reference.clone(),
-        test_parent: edit_test_form.test_parent,
-        project_id: edit_test_form.project_id,
-    };
-
-    state.repo_write().edit_test(&new_test).map_err(|e| {
-        eprintln!("Error editing test: {:?}", e);
-        Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
-    })?;
-
-    let log_ctx = LogCtx::new(user.user_id);
-    let _ = Logger::updated(
-        connection,
-        &log_ctx,
-        &old_test,
-        &state
-            .repo_read()
-            .get_test_by_id(test_id)
-            .expect("Error reading table Tests after update"),
-    );
-
-    // Then, update the requirement links
-    state
-        .repo_write()
-        .update_test_requirement_links(edit_test_form.test_id, &edit_test_form.linked_requirements)
-        .map_err(|e| {
-            eprintln!("Error updating test requirement links: {:?}", e);
-            Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
-        })?;
-
-    Ok(Redirect::to(uri!(show_test_id(edit_test_form.test_id))))
-}
-
-#[post("/new_test", data = "<new_test>")]
-pub fn post_test(
-    session_user: SessionUser,
+#[post("/<project_id>/tests/new", data = "<new_test>")]
+async fn post_test(
+    project_access: ProjectAccess,
+    project_id: i32,
     new_test: Form<NewTestForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user = session_user.into_inner();
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(new_test))
-    })?;
+    let user = project_access.into_user();
+    let mut connection = match get_db_connection(state) {
+        Ok(conn) => Some(conn),
+        Err(e) => {
+            eprintln!("Database connection error: {}", e);
+            None
+        }
+    };
     let my_new_test = NewTest {
         test_id: None,
         test_name: new_test.test_name.clone(),
         test_description: new_test.test_description.clone(),
         test_source: new_test.test_source.clone(),
         test_status: new_test.test_status,
-        test_reference: format!("TEST-{}", chrono::Utc::now().timestamp()),
+        test_reference: new_test.test_reference.clone(),
         test_parent: new_test.test_parent,
-        project_id: new_test.project_id,
+        project_id: project_id,
     };
     let test_id = state.repo_write().insert_test(&my_new_test).map_err(|e| {
         eprintln!("Error inserting new test: {:?}", e);
-        Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+        Redirect::to(uri!(
+            "/p",
+            show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
+        ))
     })?;
 
     let test = state
@@ -455,8 +158,10 @@ pub fn post_test(
         .expect("Error reading table Tests");
 
     // Log the test creation
-    let log_ctx = LogCtx::new(user.user_id);
-    let _ = Logger::created(connection, &log_ctx, test_id, &test);
+    if let Some(connection) = connection.as_mut() {
+        let log_ctx = LogCtx::new(user.user_id);
+        let _ = Logger::created(connection, &log_ctx, test_id, &test);
+    }
 
     #[cfg(debug_assertions)]
     println!("NewTestForm requirements: {:#?}", new_test.test_req);
@@ -471,266 +176,362 @@ pub fn post_test(
             .insert_new_matrix_item(&matrix_item)
             .map_err(|e| {
                 eprintln!("Error inserting matrix item: {:?}", e);
-                Redirect::to(uri!(show_tests(None::<i32>, None::<i32>, None::<i32>)))
+                Redirect::to(uri!(
+                    "/p",
+                    show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
+                ))
             })?;
     }
 
-    Ok(Redirect::to(uri!(show_test_id(test_id))))
+    Ok(Redirect::to(uri!("/p", show_test_id(project_id, test_id))))
 }
 
-#[get("/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
-pub fn get_matrix(
-    session_user: SessionUser,
+#[get("/<project_id>/tests/edit/<test_id>")]
+async fn get_edit_test(
+    project_access: ProjectAccess,
+    project_id: i32,
+    test_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    use serde_json::json;
+
+    let user = project_access.into_user();
+    let repo = state.repo_read();
+
+    let test = repo
+        .get_test_by_id(test_id)
+        .expect("Error reading table Tests");
+
+    let decorated = decorate_tests_cached(state, vec![test]);
+    let test0 = &decorated[0];
+
+    let linked_requirements = get_requirements_for_test_cached(state, test_id).unwrap_or_default();
+    let linked_req_ids: Vec<i32> = linked_requirements.iter().map(|r| r.req_id).collect();
+
+    let ctx = json!({
+        "tests": test0,
+        "test_status_id": test0.test_status_id,
+        "categories": repo.get_categories_by_project(project_id).unwrap_or_default(),
+        "status": repo.get_test_status_all().unwrap_or_default(),
+        "parent": repo.get_tests_by_project(project_id).unwrap_or_default(),
+        "users": repo.get_users_all().unwrap_or_default(),
+        "verification": repo.get_verification_by_project(project_id).unwrap_or_default(),
+        "linked_requirements": linked_requirements,
+        "linked_req_ids": linked_req_ids,
+        "requirements": repo.get_requirements_by_project(project_id).unwrap_or_default(),
+        "user": user
+    });
+
+    #[cfg(debug_assertions)]
+    println!("Tests: {:#}", ctx);
+
+    Ok(Template::render("edit_test_by_id", ctx))
+}
+
+#[post("/<project_id>/tests/edit/<test_id>", data = "<edit_test_form>")]
+async fn post_edit_test(
+    project_access: ProjectAccess,
+    project_id: i32,
+    test_id: i32,
+    edit_test_form: Form<EditTestForm>,
+    state: &State<AppState>,
+) -> Result<Redirect, Redirect> {
+    let user = project_access.into_user();
+    let to_list = || {
+        Redirect::to(uri!(
+            "/p",
+            show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
+        ))
+    };
+
+    let mut conn = match get_db_connection(state) {
+        Ok(conn) => Some(conn),
+        Err(e) => {
+            eprintln!("Database connection error: {e}");
+            None
+        }
+    };
+
+    let old_test = {
+        let repo = state.repo_read();
+        repo.get_test_by_id(test_id)
+            .expect("Error reading table Tests")
+    };
+
+    // Own the form to avoid cloning strings
+    let f = edit_test_form.into_inner();
+
+    let new_test = NewTest {
+        test_id: Some(f.test_id),
+        test_name: f.test_name,
+        test_description: f.test_description,
+        test_source: f.test_source,
+        test_status: f.test_status,
+        test_reference: f.test_reference,
+        test_parent: f.test_parent,
+        project_id: f.project_id,
+    };
+
+    state.repo_write().edit_test(&new_test).map_err(|e| {
+        eprintln!("Error editing test: {e:?}");
+        to_list()
+    })?;
+
+    let log_ctx = LogCtx::new(user.user_id);
+    let updated = state
+        .repo_read()
+        .get_test_by_id(test_id)
+        .expect("Error reading table Tests after update");
+    if let Some(conn) = conn.as_mut() {
+        let _ = Logger::updated(conn, &log_ctx, &old_test, &updated);
+    }
+
+    state
+        .repo_write()
+        .update_test_requirement_links(f.test_id, &f.linked_requirements)
+        .map_err(|e| {
+            eprintln!("Error updating test requirement links: {e:?}");
+            to_list()
+        })?;
+
+    Ok(Redirect::to(uri!(
+        "/p",
+        show_test_id(project_id, f.test_id)
+    )))
+}
+
+#[delete("/<project_id>/tests/delete/<test_id>")]
+async fn delete_test_route(
+    project_access: ProjectAccess,
+    project_id: i32,
+    test_id: i32,
+    state: &State<AppState>,
+) -> Result<Redirect, rocket::http::Status> {
+    use rocket::http::Status;
+
+    let user = project_access.into_user();
+
+    let mut conn = match get_db_connection(state) {
+        Ok(conn) => Some(conn),
+        Err(e) => {
+            eprintln!("Database connection error: {e}");
+            None
+        }
+    };
+
+    let test = get_test_by_id_cached_safe(state, test_id).map_err(|_| Status::NotFound)?;
+
+    // allow only Draft(1) or Proposal(2) unless admin
+    if test.test_status > 2 && !user.is_admin {
+        return Err(Status::Forbidden);
+    }
+
+    let deleted = state
+        .repo_write()
+        .delete_test(test_id)
+        .map_err(|e| match e {
+            crate::repository::errors::RepoError::NotFound => Status::NotFound,
+            _ => Status::InternalServerError,
+        })?;
+
+    if let Some(conn) = conn.as_mut() {
+        let log_ctx = LogCtx::new(user.user_id);
+        let _ = Logger::deleted(conn, &log_ctx, &deleted);
+    }
+
+    Ok(Redirect::to(uri!(
+        "/p",
+        show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
+    )))
+}
+
+#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
+async fn get_matrix(
+    project_access: ProjectAccess,
+    project_id: i32,
     cookies: &CookieJar<'_>,
     sort_by: Option<String>,
     sort_order: Option<String>,
     test_status_filter: Option<i32>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
-    use crate::schema::matrix::dsl::*;
-    use crate::schema::requirements::dsl::*;
-    use crate::schema::tests::dsl::*;
+    use crate::schema::*;
+    use diesel::prelude::*;
+    use serde_json::json;
+    use std::collections::HashSet;
 
-    let mut connection = match get_db_connection(state) {
-        Ok(conn) => conn,
-        Err(e) => {
-            eprintln!("Database connection error: {}", e);
-            return Err(Redirect::to(uri!(crate::routes::html::dashboard::index)));
-        }
-    };
+    let user = project_access.into_user();
 
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
+    // DB connection with a single redirect-on-error path.
+    let mut conn = get_db_connection(state).map_err(|e| {
+        eprintln!("Database connection error: {e}");
+        Redirect::to(uri!(crate::routes::html::dashboard::index))
+    })?;
 
-    let mut all_reqs = if let Some(selected_pid) = selected_project_id {
-        requirements
-            .filter(crate::schema::requirements::project_id.eq(selected_pid))
-            .load::<Requirement>(connection.as_mut())
-            .map_err(|e| {
-                eprintln!("Database connection error: {}", e);
-                "Error querying requirements from the database".to_string()
-            })
-            .expect("Error getting matrix table")
-    } else {
-        requirements
-            .load::<Requirement>(connection.as_mut())
-            .map_err(|e| {
-                eprintln!("Database connection error: {}", e);
-                "Error querying page views from the database".to_string()
-            })
-            .expect("Error getting matrix table")
-    };
+    // Load requirements & tests for the project in one go.
+    let mut all_reqs: Vec<Requirement> = requirements::dsl::requirements
+        .filter(requirements::project_id.eq(project_id))
+        .load(conn.as_mut())
+        .map_err(|e| {
+            eprintln!("DB error loading requirements: {e}");
+            Redirect::to(uri!(crate::routes::html::dashboard::index))
+        })?;
 
-    let mut all_tests = if let Some(selected_pid) = selected_project_id {
-        tests
-            .filter(crate::schema::tests::project_id.eq(selected_pid))
-            .load::<Test>(connection.as_mut())
-            .map_err(|e| {
-                eprintln!("Database connection error: {}", e);
-                "Error querying tests from the database".to_string()
-            })
-            .expect("Error getting tests")
-    } else {
-        tests
-            .load::<Test>(connection.as_mut())
-            .map_err(|e| {
-                eprintln!("Database connection error: {}", e);
-                "Error querying tests from the database".to_string()
-            })
-            .expect("Error getting tests")
-    };
+    let mut all_tests: Vec<Test> = tests::dsl::tests
+        .filter(tests::project_id.eq(project_id))
+        .load(conn.as_mut())
+        .map_err(|e| {
+            eprintln!("DB error loading tests: {e}");
+            Redirect::to(uri!(crate::routes::html::dashboard::index))
+        })?;
 
-    // Always sort tests by test_id (number)
-    all_tests.sort_by(|a, b| a.test_id.cmp(&b.test_id));
-
-    // Filter tests by status if filter is provided
-    if let Some(status_filter) = test_status_filter {
-        all_tests.retain(|test| test.test_status == status_filter);
+    // Always sort tests by id (ascending), then optionally filter by status.
+    all_tests.sort_by_key(|t| t.test_id);
+    if let Some(s) = test_status_filter {
+        all_tests.retain(|t| t.test_status == s);
     }
 
-    // Apply sorting
-    let sort_by = sort_by.unwrap_or_else(|| "req_id".to_string());
-    let sort_order = sort_order.unwrap_or_else(|| "asc".to_string());
+    // Preload all links once; check membership in O(1) later.
+    let links: HashSet<(i32, i32)> = matrix::dsl::matrix
+        .select((matrix::matrix_req_id, matrix::matrix_test_id))
+        .load::<(i32, i32)>(conn.as_mut())
+        .map_err(|e| {
+            eprintln!("DB error loading matrix links: {e}");
+            Redirect::to(uri!(crate::routes::html::dashboard::index))
+        })?
+        .into_iter()
+        .collect();
 
-    // Check if sorting by test column
-    if sort_by.starts_with("test_") {
-        // Extract test ID from sort_by (e.g., "test_1" -> test_id = 1)
-        if let Ok(target_test_id) = sort_by.trim_start_matches("test_").parse::<i32>() {
-            // Sort requirements based on their link status to the specified test
-            if sort_order == "desc" {
-                all_reqs.sort_by(|a, b| {
-                    let a_has_link: i64 = matrix
-                        .filter(matrix_req_id.eq(a.req_id))
-                        .filter(matrix_test_id.eq(target_test_id))
-                        .count()
-                        .get_result(connection.as_mut())
-                        .unwrap();
-                    let b_has_link: i64 = matrix
-                        .filter(matrix_req_id.eq(b.req_id))
-                        .filter(matrix_test_id.eq(target_test_id))
-                        .count()
-                        .get_result(connection.as_mut())
-                        .unwrap();
-                    b_has_link.cmp(&a_has_link)
-                });
-            } else {
-                all_reqs.sort_by(|a, b| {
-                    let a_has_link: i64 = matrix
-                        .filter(matrix_req_id.eq(a.req_id))
-                        .filter(matrix_test_id.eq(target_test_id))
-                        .count()
-                        .get_result(connection.as_mut())
-                        .unwrap();
-                    let b_has_link: i64 = matrix
-                        .filter(matrix_req_id.eq(b.req_id))
-                        .filter(matrix_test_id.eq(target_test_id))
-                        .count()
-                        .get_result(connection.as_mut())
-                        .unwrap();
-                    a_has_link.cmp(&b_has_link)
-                });
+    // Sort requirements.
+    let sort_by = sort_by.unwrap_or_else(|| "req_id".to_string());
+    let desc = sort_order.as_deref() == Some("desc");
+
+    if let Some(test_id_str) = sort_by.strip_prefix("test_") {
+        if let Ok(target_test_id) = test_id_str.parse::<i32>() {
+            all_reqs.sort_by_key(|r| links.contains(&(r.req_id, target_test_id)));
+            if desc {
+                all_reqs.reverse();
             }
         }
     } else {
-        // Sort requirements by requirement fields
         match sort_by.as_str() {
-            "req_id" => {
-                if sort_order == "desc" {
-                    all_reqs.sort_by(|a, b| b.req_id.cmp(&a.req_id));
-                } else {
-                    all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
-                }
-            }
             "req_title" => {
-                if sort_order == "desc" {
-                    all_reqs.sort_by(|a, b| b.req_title.cmp(&a.req_title));
-                } else {
-                    all_reqs.sort_by(|a, b| a.req_title.cmp(&b.req_title));
+                all_reqs.sort_by(|a, b| a.req_title.cmp(&b.req_title));
+                if desc {
+                    all_reqs.reverse();
                 }
             }
             "req_reference" => {
-                if sort_order == "desc" {
-                    all_reqs.sort_by(|a, b| b.req_reference.cmp(&a.req_reference));
-                } else {
-                    all_reqs.sort_by(|a, b| a.req_reference.cmp(&b.req_reference));
+                all_reqs.sort_by(|a, b| a.req_reference.cmp(&b.req_reference));
+                if desc {
+                    all_reqs.reverse();
                 }
             }
             _ => {
-                // Default sort by req_id ascending
-                all_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
+                all_reqs.sort_by_key(|r| r.req_id);
+                if desc {
+                    all_reqs.reverse();
+                }
             }
         }
     }
 
-    let total_tests = all_tests.len() as i32;
-    let total_requirements = all_reqs.len() as i32;
-
-    // Create matrix data structure
+    // Build matrix cells + counts.
     let mut total_links = 0;
-    let mut requirements_with_matrix = Vec::new();
+    let requirements_with_matrix: Vec<_> = all_reqs
+        .iter()
+        .map(|req| {
+            let row: Vec<_> = all_tests
+                .iter()
+                .map(|test| {
+                    let linked = links.contains(&(req.req_id, test.test_id));
+                    if linked {
+                        total_links += 1;
+                    }
+                    json!({ "linked": linked, "test_status": test.test_status })
+                })
+                .collect();
 
-    for req in &all_reqs {
-        let mut req_matrix = Vec::new();
+            json!({
+                "req_id": req.req_id,
+                "req_title": req.req_title,
+                "req_reference": req.req_reference,
+                "matrix": row
+            })
+        })
+        .collect();
 
-        for test in &all_tests {
-            let test_present: i64 = matrix
-                .filter(matrix_req_id.eq(req.req_id))
-                .filter(matrix_test_id.eq(test.test_id))
-                .count()
-                .get_result(connection.as_mut())
-                .unwrap();
-
-            if test_present > 0 {
-                req_matrix.push(json!({
-                    "linked": true,
-                    "test_status": test.test_status
-                }));
-                total_links += 1;
-            } else {
-                req_matrix.push(json!({
-                    "linked": false,
-                    "test_status": null
-                }));
-            }
-        }
-
-        requirements_with_matrix.push(json!({
-            "req_id": req.req_id,
-            "req_title": req.req_title,
-            "req_reference": req.req_reference,
-            "matrix": req_matrix
-        }));
-    }
-
-    // Prepare tests with status names
-    let mut tests_with_status = Vec::new();
-    for test in all_tests {
-        let test_status_name = get_status_name_by_id_cached(state, test.test_status);
-        tests_with_status.push(json!({
-            "test_id": test.test_id,
-            "test_name": test.test_name,
-            "test_status": test_status_name
-        }));
-    }
-
-    // Get all statuses for the filter dropdown
-    let all_statuses = state.repo_read().get_status_all().unwrap_or_default();
-    let statuses_json = json!(all_statuses);
+    // Tests with human-readable status name.
+    let tests_with_status: Vec<_> = all_tests
+        .iter()
+        .map(|t| {
+            json!({
+                "test_id": t.test_id,
+                "test_name": t.test_name,
+                "test_status": get_status_name_by_id_cached(state, t.test_status)
+            })
+        })
+        .collect();
 
     let mut ctx = build_context_with_projects(state, user, cookies);
     ctx["requirements"] = json!(requirements_with_matrix);
     ctx["tests"] = json!(tests_with_status);
-    ctx["total_tests"] = json!(total_tests);
-    ctx["total_requirements"] = json!(total_requirements);
+    ctx["total_tests"] = json!(all_tests.len() as i32);
+    ctx["total_requirements"] = json!(all_reqs.len() as i32);
     ctx["total_links"] = json!(total_links);
     ctx["current_sort_by"] = json!(sort_by);
-    ctx["current_sort_order"] = json!(sort_order);
+    ctx["current_sort_order"] = json!(if desc { "desc" } else { "asc" });
     ctx["test_status_filter"] = json!(test_status_filter);
-    ctx["statuses"] = json!(statuses_json);
+    ctx["statuses"] = json!(state.repo_read().get_status_all().unwrap_or_default());
 
     Ok(Template::render("matrix", ctx))
 }
 
-#[get("/matrix.xls")]
-pub async fn get_matrix_xls(
-    session_user: SessionUser,
+#[get("/<project_id>/matrix.xls")]
+async fn get_matrix_xls(
+    project_access: ProjectAccess,
+    project_id: i32,
     cookies: &CookieJar<'_>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = session_user.into_inner();
+    let user = project_access.into_user();
 
-    match excel::create_matrix_workbook(cookies) {
-        Ok(_) => {
-            let path_to_file = path::Path::new("target/matrix.xls");
-            let res = NamedFile::open(&path_to_file)
-                .await
-                .map_err(|e| NotFound(e.to_string()));
-            match res {
-                Ok(file) => {
-                    let content_type = ContentType::new(
-                        "application",
-                        "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    );
-                    Ok((content_type, file))
-                }
-                Err(error) => {
-                    eprintln!("Error opening matrix file: {:?}", error);
-                    Err(Redirect::to("/matrix"))
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!("Error creating matrix workbook: {:?}", e);
-            Err(Redirect::to("/matrix"))
-        }
-    }
+    // Log user and project info
+    println!(
+        "User [{} - id:{}] requested matrix export for project_id={}",
+        user.user_username, user.user_id, project_id
+    );
+
+    excel::create_matrix_workbook(cookies).map_err(|e| {
+        eprintln!("Error creating matrix workbook: {e:?}");
+        Redirect::to("/matrix")
+    })?;
+
+    let path = std::path::Path::new("target/matrix.xls");
+    let file = NamedFile::open(path).await.map_err(|e| {
+        eprintln!("Error opening matrix file: {e:?}");
+        Redirect::to("/matrix")
+    })?;
+
+    // Note: MIME here is for .xlsx; change if you truly emit legacy .xls files.
+    let ct = ContentType::new(
+        "application",
+        "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+
+    Ok((ct, file))
 }
 
-#[get("/requirements.xls")]
-pub async fn get_requirements_xls(
-    session_user: SessionUser,
+#[get("/<project_id>/requirements.xls")]
+async fn get_requirements_xls(
+    project_access: ProjectAccess,
+    project_id: i32,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = session_user.into_inner();
+    let user = project_access.into_user();
+    println!(
+        "User [{} - id:{}] requested requirements export for project_id={}",
+        user.user_username, user.user_id, project_id
+    );
+
     let _file = excel::create_requirements_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/requirements.xls");
     let res = NamedFile::open(&path_to_file)
@@ -749,11 +550,16 @@ pub async fn get_requirements_xls(
     }
 }
 
-#[get("/tests.xls")]
-pub async fn get_tests_xls(
-    session_user: SessionUser,
+#[get("/<project_id>/tests.xls")]
+async fn get_tests_xls(
+    project_access: ProjectAccess,
+    project_id: i32,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let _user = session_user.into_inner();
+    let user = project_access.into_user();
+    println!(
+        "User [{} - id:{}] requested requirements export for project_id={}",
+        user.user_username, user.user_id, project_id
+    );
     let _file = excel::create_tests_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/tests.xls");
     let res = NamedFile::open(&path_to_file)
@@ -786,4 +592,431 @@ pub fn routes() -> Vec<Route> {
         get_requirements_xls,
         get_tests_xls
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::models::{
+        Applicability, Category, Matrix, Project, ProjectMember, Requirement, Status, Test,
+        TestStatus, Verification,
+    };
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use chrono::{NaiveDate, NaiveDateTime};
+    use rocket::http::{ContentType, Cookie, Status as HttpStatus};
+    use rocket::local::asynchronous::{Client, LocalResponse};
+    use rocket_dyn_templates::Template;
+    use std::sync::{Arc, RwLock};
+
+    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
+    const USER_ID: i32 = 2;
+    const PRIMARY_PROJECT: i32 = 1;
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn sample_project(id: i32, name: &str) -> Project {
+        Project {
+            project_id: id,
+            project_name: name.to_string(),
+            project_description: Some(format!("{name} project")),
+            project_creation_date: Some(timestamp()),
+            project_update_date: Some(timestamp()),
+            project_status: Some("Active".to_string()),
+            project_owner_id: Some(ADMIN_ID),
+        }
+    }
+
+    fn sample_category(id: i32, title: &str) -> Category {
+        Category {
+            cat_id: id,
+            cat_title: title.to_string(),
+            cat_description: format!("{title} systems"),
+            cat_tag: title.to_ascii_uppercase(),
+            project_id: PRIMARY_PROJECT,
+        }
+    }
+
+    fn sample_status(id: i32, title: &str) -> Status {
+        Status {
+            st_id: id,
+            st_title: title.to_string(),
+            st_description: format!("{title} status"),
+            st_short_name: title.to_ascii_uppercase(),
+        }
+    }
+
+    fn sample_test_status(id: i32, title: &str) -> TestStatus {
+        TestStatus {
+            test_st_id: id,
+            test_st_title: title.to_string(),
+            test_st_description: format!("{title} status"),
+            test_st_short_name: title.to_ascii_uppercase(),
+        }
+    }
+
+    fn sample_applicability(id: i32, title: &str) -> Applicability {
+        Applicability {
+            app_id: id,
+            app_title: title.to_string(),
+            app_description: format!("{title} applicability"),
+            app_tag: title.to_ascii_uppercase(),
+            project_id: PRIMARY_PROJECT,
+        }
+    }
+
+    fn sample_verification(id: i32, title: &str) -> Verification {
+        Verification {
+            verification_id: id,
+            verification_name: title.to_string(),
+            verification_description: format!("{title} verification"),
+            project_id: PRIMARY_PROJECT,
+        }
+    }
+
+    fn sample_requirement(id: i32) -> Requirement {
+        Requirement {
+            req_id: id,
+            req_title: format!("Requirement {id}"),
+            req_description: "Test requirement".into(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: ADMIN_ID,
+            req_reviewer: ADMIN_ID,
+            req_link: String::new(),
+            req_reference: format!("REQ-SYS-{id}"),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: Some("For testing".into()),
+            project_id: PRIMARY_PROJECT,
+        }
+    }
+
+    fn sample_test(id: i32, status: i32, name: &str) -> Test {
+        Test {
+            test_id: id,
+            test_name: name.to_string(),
+            test_description: format!("{name} description"),
+            test_source: "Design Spec".into(),
+            test_status: status,
+            test_reference: format!("TEST-{id:03}"),
+            test_parent: 0,
+            project_id: PRIMARY_PROJECT,
+        }
+    }
+
+    fn base_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+
+        let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        admin.is_admin = true;
+        repo.users.insert(ADMIN_ID, admin);
+
+        let mut user = DieselRepoMock::make_user(USER_ID, "user", "");
+        user.is_admin = false;
+        repo.users.insert(USER_ID, user);
+
+        repo.projects
+            .insert(PRIMARY_PROJECT, sample_project(PRIMARY_PROJECT, "Orbiter"));
+
+        repo.project_members.push(ProjectMember {
+            project_id: PRIMARY_PROJECT,
+            user_id: ADMIN_ID,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+        repo.project_members.push(ProjectMember {
+            project_id: PRIMARY_PROJECT,
+            user_id: USER_ID,
+            role: 3,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        repo.statuses.insert(1, sample_status(1, "Planned"));
+        repo.test_statuses.insert(1, sample_test_status(1, "Draft"));
+        repo.test_statuses
+            .insert(2, sample_test_status(2, "Proposal"));
+        repo.test_statuses
+            .insert(3, sample_test_status(3, "Active"));
+
+        repo.categories.insert(1, sample_category(1, "Systems"));
+        repo.verifications
+            .insert(1, sample_verification(1, "Analysis"));
+        repo.applicability.insert(1, sample_applicability(1, "All"));
+        repo.requirements.insert(1, sample_requirement(1));
+
+        repo
+    }
+
+    fn repo_with_tests() -> DieselRepoMock {
+        let mut repo = base_repo();
+        repo.tests.insert(1, sample_test(1, 1, "Baseline Test"));
+        repo.matrices.push(Matrix {
+            matrix_req_id: 1,
+            matrix_test_id: 1,
+            matrix_creation_date: timestamp(),
+            project_id: PRIMARY_PROJECT,
+        });
+        repo
+    }
+
+    fn repo_with_active_test() -> DieselRepoMock {
+        let mut repo = base_repo();
+        repo.tests
+            .insert(1, sample_test(1, 3, "Qualification Test"));
+        repo
+    }
+
+    fn managed_state(repo: DieselRepoMock) -> TestAppState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn test_client(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(managed_state(repo))
+            .attach(Template::fairing())
+            .mount(
+                "/p",
+                routes![
+                    show_tests,
+                    show_test_id,
+                    new_test,
+                    post_test,
+                    get_edit_test,
+                    post_edit_test,
+                    delete_test_route,
+                    get_matrix
+                ],
+            );
+        Client::tracked(rocket).await.expect("rocket instance")
+    }
+
+    fn admin_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    fn user_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, USER_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await
+    }
+
+    async fn get_as_user<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(user_cookie())
+            .dispatch()
+            .await
+    }
+
+    async fn post_form<'c>(client: &'c Client, path: &'c str, body: &'c str) -> LocalResponse<'c> {
+        client
+            .post(path)
+            .header(ContentType::Form)
+            .private_cookie(admin_cookie())
+            .body(body)
+            .dispatch()
+            .await
+    }
+
+    async fn delete_path<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .delete(path)
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await
+    }
+
+    #[rocket::async_test]
+    async fn show_tests_lists_known_items() {
+        let client = test_client(repo_with_tests()).await;
+        let response = get(&client, "/p/1/tests").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("Baseline Test"));
+        assert!(body.contains("TEST-001"));
+    }
+
+    #[rocket::async_test]
+    async fn show_test_id_displays_details() {
+        let client = test_client(repo_with_tests()).await;
+        let response = get(&client, "/p/1/tests/show/1").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("Baseline Test"));
+        assert!(body.contains("description"));
+    }
+
+    #[rocket::async_test]
+    async fn show_test_id_returns_error_when_missing() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/p/1/tests/show/42").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("Test Not Found"));
+    }
+
+    #[rocket::async_test]
+    async fn new_test_form_renders() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/p/1/tests/new").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("New Test"));
+        assert!(body.contains("Create Test"));
+    }
+
+    #[rocket::async_test]
+    async fn post_test_creates_new_entry() {
+        let client = test_client(base_repo()).await;
+        let response = post_form(
+            &client,
+            "/p/1/tests/new",
+            concat!(
+                "test_name=Thermal+Check&test_reference=TEST-002&test_description=Thermal+validation&",
+                "test_source=Spec&test_status=1&test_parent=0&test_req=1&project_id=1"
+            ),
+        )
+        .await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/tests/show/1")
+        );
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let inner = repo.inner_repo();
+
+        let test = inner.tests.get(&1).expect("inserted test");
+        assert_eq!(test.test_name, "Thermal Check");
+        assert_eq!(test.test_status, 1);
+
+        let links: Vec<_> = inner
+            .matrices
+            .iter()
+            .filter(|m| m.matrix_test_id == 1)
+            .collect();
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].matrix_req_id, 1);
+    }
+
+    #[rocket::async_test]
+    async fn get_edit_test_renders_existing_data() {
+        let client = test_client(repo_with_tests()).await;
+        let response = get(&client, "/p/1/tests/edit/1").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("response body");
+        assert!(body.contains("Edit Test"));
+        assert!(body.contains("Baseline Test"));
+    }
+
+    #[rocket::async_test]
+    async fn post_edit_test_updates_entry() {
+        let client = test_client(repo_with_tests()).await;
+        let response = post_form(
+            &client,
+            "/p/1/tests/edit/1",
+            concat!(
+                "test_id=1&test_reference=TEST-001&test_name=Updated+Test&test_description=Updated+desc&",
+                "test_source=Updated&test_status=2&test_parent=0&linked_requirements=1&project_id=1"
+            ),
+        )
+        .await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/tests/show/1")
+        );
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let inner = repo.inner_repo();
+
+        let test = inner.tests.get(&1).expect("existing test");
+        assert_eq!(test.test_name, "Updated Test");
+        assert_eq!(test.test_status, 2);
+
+        let links: Vec<_> = inner
+            .matrices
+            .iter()
+            .filter(|m| m.matrix_test_id == 1)
+            .collect();
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].matrix_req_id, 1);
+    }
+
+    #[rocket::async_test]
+    async fn delete_test_route_removes_draft() {
+        let client = test_client(repo_with_tests()).await;
+        let response = delete_path(&client, "/p/1/tests/delete/1").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/p/1/tests"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        assert!(repo.inner_repo().tests.is_empty());
+    }
+
+    #[rocket::async_test]
+    async fn delete_test_route_forbids_non_admin_when_status_high() {
+        let client = test_client(repo_with_active_test()).await;
+        let response = client
+            .delete("/p/1/tests/delete/1")
+            .private_cookie(user_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), HttpStatus::Forbidden);
+    }
+
+    #[rocket::async_test]
+    async fn get_matrix_redirects_when_database_unavailable() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/p/1/matrix").await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+    }
+
+    #[rocket::async_test]
+    async fn show_tests_requires_membership_for_non_admin() {
+        let client = test_client(base_repo()).await;
+        let response = get_as_user(&client, "/p/1/tests").await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+    }
 }

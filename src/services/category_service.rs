@@ -1,162 +1,209 @@
 //! Category service for managing requirement categories business logic.
 
-use crate::errors::{ApiError, ApiResult};
-use crate::models::*;
-use crate::validation::validate_category;
-use crate::services::{BaseService, Service};
-use crate::repository::LookupRepository;
-use std::time::Duration;
+use crate::app::{AppState, DieselCachedRepo};
+use crate::logger::{LogCtx, Logger};
+use crate::models::{Category, NewCategory, User};
+use crate::repository::errors::RepoError;
+use crate::repository::{LookupRepository, PooledConnectionWrapper};
 
-pub struct CategoryService {
-    base: BaseService,
+pub struct CategoryService<'a> {
+    state: &'a AppState<DieselCachedRepo>,
 }
 
-impl CategoryService {
-    pub fn new() -> Self {
-        Self { base: BaseService::new() }
+impl<'a> CategoryService<'a> {
+    /// Create a new service instance bound to the provided application state.
+    pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
+        Self { state }
     }
-    
-    pub async fn get_all_categories(&self) -> ApiResult<Vec<Category>> {
-        let cache_key = self.base.cache_key_list("category", None);
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        let categories = self.base.repo()
-            .get_categories_all()
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        self.base.set_cache(&cache_key, categories.clone(), Duration::from_secs(300));
-        Ok(categories)
+
+    /// Retrieve all category entries.
+    pub fn list_all(&self) -> Result<Vec<Category>, RepoError> {
+        self.state.repo_read().get_categories_all()
     }
-    
-    pub async fn get_category_by_id(&self, id: i32) -> ApiResult<Category> {
-        let cache_key = self.base.cache_key("category", id);
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        let category = self.base.repo()
-            .get_category_by_id(id)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        self.base.set_cache(&cache_key, category.clone(), Duration::from_secs(600));
-        Ok(category)
+
+    /// Retrieve Category entries scoped to a project.
+    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Category>, RepoError> {
+        self.state.repo_read().get_categories_by_project(project_id)
     }
-    
-    pub async fn create_category(
-        &self,
-        mut new_category: NewCategory,
-        user_id: i32,
-    ) -> ApiResult<i32> {
-        validate_category(&new_category)?;
-        
-        crate::validation::sanitize_string(&mut new_category.cat_title);
-        crate::validation::sanitize_string(&mut new_category.cat_description);
-        crate::validation::sanitize_string(&mut new_category.cat_tag);
-        
-        let mut repo = crate::repository::DieselRepo::new();
-        let id = repo.insert_new_category(&new_category)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if let Ok(new_values) = crate::services::serialize_for_logging(&new_category) {
-            let _ = self.base.log_create(
-                user_id,
-                EntityType::Category,
-                id,
-                Some(new_category.project_id),
-                Some(new_values),
-                Some(format!("Created category: {}", new_category.cat_title)),
-            );
-        }
-        
-        self.base.invalidate_cache(&self.base.cache_key_list("category", None));
-        self.base.invalidate_cache(&self.base.cache_key_list("category", Some(new_category.project_id)));
-        crate::cache::invalidate_category_cache(id);
-        crate::cache::invalidate_project_cache(new_category.project_id);
-        
+
+    /// Retrieve a single Category by identifier.
+    pub fn get_by_id(&self, id: i32) -> Result<Category, RepoError> {
+        self.state.repo_read().get_category_by_id(id)
+    }
+
+    /// Create a new Category entry and log the action.
+    pub fn create(&self, user: &User, new_cat: NewCategory) -> Result<i32, RepoError> {
+        let id = {
+            let mut repo = self.state.repo_write();
+            repo.insert_new_category(&new_cat)?
+        };
+
+        self.log_created(user, id, &new_cat);
         Ok(id)
     }
-    
-    pub async fn update_category(
+
+    /// Update an existing Category entry and log the change.
+    pub fn update(
         &self,
+        user: &User,
         id: i32,
-        mut updated_category: NewCategory,
-        user_id: i32,
-    ) -> ApiResult<bool> {
-        let old_category = self.get_category_by_id(id).await?;
-        validate_category(&updated_category)?;
-        
-        crate::validation::sanitize_string(&mut updated_category.cat_title);
-        crate::validation::sanitize_string(&mut updated_category.cat_description);
-        crate::validation::sanitize_string(&mut updated_category.cat_tag);
-        
-        updated_category.cat_id = Some(id);
-        
-        let mut repo = crate::repository::DieselRepo::new();
-        let success = repo.edit_category(&updated_category)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if success {
-            if let (Ok(old_values), Ok(new_values)) = (
-                crate::services::serialize_for_logging(&old_category),
-                crate::services::serialize_for_logging(&updated_category),
-            ) {
-                let _ = self.base.log_update(
-                    user_id,
-                    EntityType::Category,
-                    id,
-                    Some(updated_category.project_id),
-                    Some(old_values),
-                    Some(new_values),
-                    Some(format!("Updated category: {}", updated_category.cat_title)),
-                );
+        mut updated_cat: NewCategory,
+    ) -> Result<Category, RepoError> {
+        let before = self.get_by_id(id)?;
+
+        updated_cat.cat_id = Some(id);
+
+        {
+            let mut repo = self.state.repo_write();
+            let updated = repo.edit_category(&updated_cat)?;
+            if !updated {
+                return Err(RepoError::NotFound);
             }
-            
-            self.base.invalidate_cache(&self.base.cache_key("category", id));
-            self.base.invalidate_cache(&self.base.cache_key_list("category", None));
-            self.base.invalidate_cache(&self.base.cache_key_list("category", Some(updated_category.project_id)));
-            crate::cache::invalidate_category_cache(id);
-            crate::cache::invalidate_project_cache(updated_category.project_id);
         }
-        
-        Ok(success)
+
+        let after = self.get_by_id(id)?;
+        self.log_updated(user, &before, &after);
+        Ok(after)
     }
-    
-    pub async fn delete_category(&self, id: i32, user_id: i32) -> ApiResult<bool> {
-        let old_category = self.get_category_by_id(id).await?;
-        
-        let mut repo = crate::repository::DieselRepo::new();
-        let success = repo.delete_category(id)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if success {
-            if let Ok(old_values) = crate::services::serialize_for_logging(&old_category) {
-                let _ = self.base.log_delete(
-                    user_id,
-                    EntityType::Category,
-                    id,
-                    Some(old_category.project_id),
-                    Some(old_values),
-                    Some(format!("Deleted category: {}", old_category.cat_title)),
+
+    /// Delete an Category entry and log the removal.
+    pub fn delete(&self, user: &User, id: i32) -> Result<Category, RepoError> {
+        let deleted = {
+            let mut repo = self.state.repo_write();
+            repo.delete_category(id)?
+        };
+
+        self.log_deleted(user, &deleted);
+        Ok(deleted)
+    }
+
+    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
+        self.state.repo_read().inner_repo().get_conn()
+    }
+
+    fn log_created(&self, user: &User, id: i32, entity: &NewCategory) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.user_id);
+            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!("Failed to log category creation {id}: {_err}");
+            }
+        }
+    }
+
+    fn log_updated(&self, user: &User, before: &Category, after: &Category) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.user_id);
+            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Failed to log category update {} -> {}: {_err}",
+                    before.cat_id, after.cat_id
                 );
             }
-            
-            self.base.invalidate_cache(&self.base.cache_key("category", id));
-            self.base.invalidate_cache(&self.base.cache_key_list("category", None));
-            self.base.invalidate_cache(&self.base.cache_key_list("category", Some(old_category.project_id)));
-            crate::cache::invalidate_category_cache(id);
-            crate::cache::invalidate_project_cache(old_category.project_id);
         }
-        
-        Ok(success)
+    }
+
+    fn log_deleted(&self, user: &User, entity: &Category) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.user_id);
+            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!("Failed to log category deletion {}: {_err}", entity.cat_id);
+            }
+        }
     }
 }
 
-impl Service for CategoryService {
-    fn repo(&self) -> &crate::repository::DieselRepo { self.base.repo() }
-    fn repo_mut(&mut self) -> &mut crate::repository::DieselRepo { self.base.repo_mut() }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use std::sync::{Arc, RwLock};
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn actor() -> User {
+        DieselRepoMock::make_user(1, "actor", "")
+    }
+
+    fn category(id: i32, title: &str, project_id: i32) -> Category {
+        Category {
+            cat_id: id,
+            cat_title: title.into(),
+            cat_description: "desc".into(),
+            cat_tag: "TAG".into(),
+            project_id,
+        }
+    }
+
+    #[test]
+    fn create_inserts_new_category() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let payload = NewCategory {
+            cat_id: None,
+            cat_title: "Primary".into(),
+            cat_description: "Main".into(),
+            cat_tag: "MAIN".into(),
+            project_id: 2,
+        };
+
+        let id = service.create(&actor(), payload).unwrap();
+        let stored = service.get_by_id(id).unwrap();
+        assert_eq!(stored.cat_title, "Primary");
+    }
+
+    #[test]
+    fn update_modifies_existing_category() {
+        let mut repo = DieselRepoMock::default();
+        repo.categories.insert(1, category(1, "Legacy", 1));
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let payload = NewCategory {
+            cat_id: None,
+            cat_title: "Updated".into(),
+            cat_description: "New description".into(),
+            cat_tag: "NEW".into(),
+            project_id: 5,
+        };
+
+        let updated = service.update(&actor(), 1, payload).unwrap();
+        assert_eq!(updated.cat_title, "Updated");
+        assert_eq!(updated.cat_description, "New description");
+        assert_eq!(updated.cat_tag, "NEW");
+        assert_eq!(updated.project_id, 5);
+    }
+
+    #[test]
+    fn delete_removes_category() {
+        let mut repo = DieselRepoMock::default();
+        repo.categories.insert(3, category(3, "Obsolete", 1));
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let removed = service.delete(&actor(), 3).unwrap();
+        assert_eq!(removed.cat_id, 3);
+        assert!(matches!(service.get_by_id(3), Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_by_project_filters_categories() {
+        let mut repo = DieselRepoMock::default();
+        repo.categories.insert(1, category(1, "A", 10));
+        repo.categories.insert(2, category(2, "B", 20));
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let cats = service.list_by_project(10).unwrap();
+        assert_eq!(cats.len(), 1);
+        assert_eq!(cats[0].cat_title, "A");
+    }
 }
-
-
-

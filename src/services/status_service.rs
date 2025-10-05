@@ -1,115 +1,153 @@
-//! Status service for managing status options business logic.
+//! Service exposing helpers for requirement and test statuses.
 
-use crate::errors::{ApiError, ApiResult};
-use crate::models::*;
-use crate::validation::{validate_requirement_status, validate_test_status};
-use crate::services::{BaseService, Service};
+use crate::app::{AppState, DieselCachedRepo};
+use crate::models::{NewStatus, RequirementStatus, Status, TestStatus};
+use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
-use std::time::Duration;
+use crate::validation::{sanitize_string, validate_requirement_status};
 
-pub struct StatusService {
-    base: BaseService,
+/// High level status operations backed by the shared [`AppState`].
+pub struct StatusService<'a> {
+    state: &'a AppState<DieselCachedRepo>,
 }
 
-impl StatusService {
-    pub fn new() -> Self {
-        Self { base: BaseService::new() }
-    }
-    
-    pub async fn get_all_requirement_status(&self) -> ApiResult<Vec<RequirementStatus>> {
-        let cache_key = self.base.cache_key_list("requirement_status", None);
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        let status = self.base.repo()
-            .get_requirement_status_all()
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        self.base.set_cache(&cache_key, status.clone(), Duration::from_secs(300));
-        Ok(status)
+impl<'a> StatusService<'a> {
+    /// Create a new service instance bound to the provided application state.
+    pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
+        Self { state }
     }
 
-    pub async fn get_all_test_status(&self) -> ApiResult<Vec<TestStatus>> {
-        let cache_key = self.base.cache_key_list("test_status", None);
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        let status = self.base.repo()
-            .get_test_status_all()
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        self.base.set_cache(&cache_key, status.clone(), Duration::from_secs(300));
-        Ok(status)
-    }
-    
-    pub async fn create_requirement_status(
-        &self,
-        mut new_status: NewRequirementStatus,
-        user_id: i32,
-    ) -> ApiResult<i32> {
-        validate_requirement_status(&new_status)?;
-        
-        crate::validation::sanitize_string(&mut new_status.req_st_title);
-        crate::validation::sanitize_string(&mut new_status.req_st_description);
-        
-        let mut repo = crate::repository::DieselRepo::new();
-        let id = repo.create_requirement_status(&new_status)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if let Ok(new_values) = crate::services::serialize_for_logging(&new_status) {
-            let _ = self.base.log_create(
-                user_id,
-                EntityType::Status,
-                id,
-                None, // Status doesn't have project_id
-                Some(new_values),
-                Some(format!("Created requirement status: {}", new_status.req_st_title)),
-            );
-        }
-        
-        self.base.invalidate_cache(&self.base.cache_key_list("requirement_status", None));
-        crate::cache::invalidate_status_cache(id);
-        
-        Ok(id)
+    /// Retrieve legacy status records (used by the old API representation).
+    pub fn list_legacy(&self) -> Result<Vec<Status>, RepoError> {
+        self.state.repo_read().get_status_all()
     }
 
-    pub async fn create_test_status(
-        &self,
-        mut new_status: NewTestStatus,
-        user_id: i32,
-    ) -> ApiResult<i32> {
-        validate_test_status(&new_status)?;
-        
-        crate::validation::sanitize_string(&mut new_status.test_st_title);
-        crate::validation::sanitize_string(&mut new_status.test_st_description);
-        
-        let mut repo = crate::repository::DieselRepo::new();
-        let id = repo.create_test_status(&new_status)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if let Ok(new_values) = crate::services::serialize_for_logging(&new_status) {
-            let _ = self.base.log_create(
-                user_id,
-                EntityType::Status,
-                id,
-                None, // Status doesn't have project_id
-                Some(new_values),
-                Some(format!("Created test status: {}", new_status.test_st_title)),
-            );
-        }
-        
-        self.base.invalidate_cache(&self.base.cache_key_list("test_status", None));
-        crate::cache::invalidate_status_cache(id);
-        
+    /// Retrieve requirement statuses.
+    pub fn list_requirement_statuses(&self) -> Result<Vec<RequirementStatus>, RepoError> {
+        self.state.repo_read().get_requirement_status_all()
+    }
+
+    /// Retrieve test statuses.
+    pub fn list_test_statuses(&self) -> Result<Vec<TestStatus>, RepoError> {
+        self.state.repo_read().get_test_status_all()
+    }
+
+    /// Retrieve a single requirement status by identifier.
+    pub fn get_requirement_status(&self, id: i32) -> Result<RequirementStatus, RepoError> {
+        self.state.repo_read().get_requirement_status_by_id(id)
+    }
+
+    /// Create a new requirement status entry.
+    pub fn create_requirement_status(&self, mut payload: NewStatus) -> Result<i32, RepoError> {
+        sanitize_string(&mut payload.req_st_title);
+        sanitize_string(&mut payload.req_st_description);
+        sanitize_string(&mut payload.req_st_short_name);
+
+        validate_requirement_status(&payload)
+            .map_err(|err| RepoError::BadInput(err.to_string()))?;
+
+        let id = {
+            let mut repo = self.state.repo_write();
+            repo.create_status(&payload)?
+        };
+
         Ok(id)
     }
 }
 
-impl Service for StatusService {
-    fn repo(&self) -> &crate::repository::DieselRepo { self.base.repo() }
-    fn repo_mut(&mut self) -> &mut crate::repository::DieselRepo { self.base.repo_mut() }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use std::sync::{Arc, RwLock};
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn populated_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+        repo.statuses.insert(
+            1,
+            Status {
+                st_id: 1,
+                st_title: "Legacy".into(),
+                st_description: "legacy".into(),
+                st_short_name: "LEG".into(),
+            },
+        );
+        repo.requirement_statuses.insert(
+            2,
+            RequirementStatus {
+                req_st_id: 2,
+                req_st_title: "Draft".into(),
+                req_st_description: "draft".into(),
+                req_st_short_name: "DRT".into(),
+            },
+        );
+        repo.test_statuses.insert(
+            3,
+            TestStatus {
+                test_st_id: 3,
+                test_st_title: "Ready".into(),
+                test_st_description: "ready".into(),
+                test_st_short_name: "RDY".into(),
+            },
+        );
+        repo
+    }
+
+    #[test]
+    fn list_methods_forward_to_repository() {
+        let repo = populated_repo();
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        assert_eq!(service.list_legacy().unwrap().len(), 1);
+        assert_eq!(service.list_requirement_statuses().unwrap().len(), 1);
+        assert_eq!(service.list_test_statuses().unwrap().len(), 1);
+        assert_eq!(
+            service.get_requirement_status(2).unwrap().req_st_title,
+            "Draft"
+        );
+    }
+
+    #[test]
+    fn create_requirement_status_trims_input() {
+        let repo = populated_repo();
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let payload = NewStatus {
+            req_st_title: "  Verified  ".into(),
+            req_st_description: "  Description  ".into(),
+            req_st_short_name: "  VFD  ".into(),
+        };
+
+        let id = service.create_requirement_status(payload).unwrap();
+
+        let repo_guard = state.repo_read();
+        let stored = repo_guard.inner_repo().statuses.get(&id).unwrap();
+        assert_eq!(stored.st_title, "Verified");
+        assert_eq!(stored.st_description, "Description");
+        assert_eq!(stored.st_short_name, "VFD");
+    }
+
+    #[test]
+    fn create_requirement_status_rejects_invalid_title() {
+        let repo = populated_repo();
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let payload = NewStatus {
+            req_st_title: " ".into(),
+            req_st_description: "Desc".into(),
+            req_st_short_name: "DRT".into(),
+        };
+
+        let err = service.create_requirement_status(payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
 }
-
-

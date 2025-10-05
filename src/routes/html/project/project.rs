@@ -172,8 +172,8 @@ mod tests {
     use super::*;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
-        client_with_routes, delete_with_session, get_with_session, post_form_with_session, timestamp,
-        TestAppState,
+        client_with_routes, delete_with_session, get_with_session, post_form_with_session,
+        timestamp, TestAppState,
     };
     use rocket::http::Status;
     use rocket::local::asynchronous::Client;
@@ -231,7 +231,12 @@ mod tests {
     async fn project_client(repo: DieselRepoMock) -> Client {
         client_with_routes(
             repo,
-            routes![show_project_id, get_edit_project, post_edit_project, delete_project_route],
+            routes![
+                show_project_id,
+                get_edit_project,
+                post_edit_project,
+                delete_project_route
+            ],
         )
         .await
     }
@@ -319,7 +324,10 @@ mod tests {
             .get_project_by_id(PRIMARY_PROJECT)
             .expect("project present");
         assert_eq!(project.project_name, "Orbiter II");
-        assert_eq!(project.project_description.as_deref(), Some("Updated mission plan"));
+        assert_eq!(
+            project.project_description.as_deref(),
+            Some("Updated mission plan")
+        );
         assert_eq!(project.project_status.as_deref(), Some("inactive"));
         assert_eq!(project.project_owner_id, Some(ADMIN_ID));
     }

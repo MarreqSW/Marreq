@@ -183,3 +183,123 @@ fn validate(payload: &NewApplicability) -> Result<(), RepoError> {
 fn bad_input(message: impl Into<String>) -> RepoError {
     RepoError::BadInput(message.into())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use std::sync::{Arc, RwLock};
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn actor() -> User {
+        DieselRepoMock::make_user(1, "actor", "")
+    }
+
+    fn sample_app(id: i32, title: &str) -> Applicability {
+        Applicability {
+            app_id: id,
+            app_title: title.into(),
+            app_description: "desc".into(),
+            app_tag: "TAG".into(),
+            project_id: 1,
+        }
+    }
+
+    #[test]
+    fn create_trims_payload_and_validates() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            app_id: None,
+            app_title: "  Applicable  ".into(),
+            app_description: "  Description  ".into(),
+            app_tag: "  PROD_1  ".into(),
+            project_id: 3,
+        };
+
+        let id = service.create(&actor(), payload).unwrap();
+        let stored = service.get_by_id(id).unwrap();
+
+        assert_eq!(stored.app_title, "Applicable");
+        assert_eq!(stored.app_description, "Description");
+        assert_eq!(stored.app_tag, "PROD_1");
+    }
+
+    #[test]
+    fn create_rejects_invalid_tag() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            app_id: None,
+            app_title: "Title".into(),
+            app_description: "Description".into(),
+            app_tag: "invalid tag".into(),
+            project_id: 1,
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn update_trims_and_updates_existing_entry() {
+        let mut repo = DieselRepoMock::default();
+        repo.applicability.insert(7, sample_app(7, "Legacy"));
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            app_id: None,
+            app_title: "  New Title  ".into(),
+            app_description: "  New Description  ".into(),
+            app_tag: "  NEW_TAG  ".into(),
+            project_id: 2,
+        };
+
+        let updated = service.update(&actor(), 7, payload).unwrap();
+        assert_eq!(updated.app_title, "New Title");
+        assert_eq!(updated.app_description, "New Description");
+        assert_eq!(updated.app_tag, "NEW_TAG");
+        assert_eq!(updated.project_id, 2);
+    }
+
+    #[test]
+    fn delete_removes_entry() {
+        let mut repo = DieselRepoMock::default();
+        repo.applicability.insert(3, sample_app(3, "Removable"));
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let removed = service.delete(&actor(), 3).unwrap();
+        assert_eq!(removed.app_id, 3);
+        assert!(matches!(service.get_by_id(3), Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_by_project_filters_entries() {
+        let mut repo = DieselRepoMock::default();
+        repo.applicability.insert(1, sample_app(1, "Alpha"));
+        repo.applicability.insert(
+            2,
+            Applicability {
+                project_id: 99,
+                ..sample_app(2, "Beta")
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let items = service.list_by_project(1).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].app_title, "Alpha");
+    }
+}

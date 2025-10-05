@@ -78,3 +78,80 @@ impl<'a> UserService<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use std::sync::{Arc, RwLock};
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn actor() -> User {
+        DieselRepoMock::make_user(99, "admin", "")
+    }
+
+    fn new_user_payload() -> NewUser {
+        NewUser {
+            user_id: None,
+            user_username: "  alice  ".into(),
+            user_name: "  Alice Example  ".into(),
+            user_email: "  alice@example.com  ".into(),
+            user_password: "secret".into(),
+            is_admin: false,
+        }
+    }
+
+    fn sample_user(id: i32, username: &str) -> User {
+        let mut user = DieselRepoMock::make_user(id, username, "hash");
+        user.user_name = "Existing".into();
+        user.user_email = "existing@example.com".into();
+        user
+    }
+
+    #[test]
+    fn create_sanitizes_strings_before_inserting() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let payload = new_user_payload();
+        let id = service.create(&actor(), payload).unwrap();
+
+        let stored = service.get_by_id(id).unwrap();
+        assert_eq!(stored.user_username, "alice");
+        assert_eq!(stored.user_name, "Alice Example");
+        assert_eq!(stored.user_email, "alice@example.com");
+    }
+
+    #[test]
+    fn delete_removes_user() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, sample_user(1, "bob"));
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let removed = service.delete(&actor(), 1).unwrap();
+        assert_eq!(removed.user_id, 1);
+        assert!(matches!(service.get_by_id(1), Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_all_returns_all_users() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, sample_user(1, "bob"));
+        repo.users.insert(2, sample_user(2, "carol"));
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let mut users = service.list_all().unwrap();
+        users.sort_by_key(|u| u.user_id);
+        assert_eq!(users.len(), 2);
+        assert_eq!(users[0].user_username, "bob");
+        assert_eq!(users[1].user_username, "carol");
+    }
+}

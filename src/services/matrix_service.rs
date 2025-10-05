@@ -88,3 +88,76 @@ impl<'a> MatrixService<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use chrono::{NaiveDate, NaiveDateTime};
+    use std::sync::{Arc, RwLock};
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2023, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn actor() -> User {
+        DieselRepoMock::make_user(1, "logger", "")
+    }
+
+    #[test]
+    fn list_all_propagates_connection_error() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let result = service.list_all();
+        assert!(matches!(result, Err(RepoError::Pool(_))));
+    }
+
+    #[test]
+    fn list_by_project_filters_results() {
+        let mut repo = DieselRepoMock::default();
+        repo.matrices.push(Matrix {
+            matrix_req_id: 1,
+            matrix_test_id: 10,
+            matrix_creation_date: timestamp(),
+            project_id: 7,
+        });
+        repo.matrices.push(Matrix {
+            matrix_req_id: 2,
+            matrix_test_id: 20,
+            matrix_creation_date: timestamp(),
+            project_id: 99,
+        });
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let results = service.list_by_project(7).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].matrix_test_id, 10);
+    }
+
+    #[test]
+    fn link_inserts_new_matrix_entry() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        service.link(&actor(), 5, 6, 42).unwrap();
+
+        let entries = service.list_by_project(42).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].matrix_req_id, 5);
+        assert_eq!(entries[0].matrix_test_id, 6);
+    }
+}

@@ -134,3 +134,143 @@ impl<'a> RequirementService<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use chrono::{NaiveDate, NaiveDateTime};
+    use std::sync::{Arc, RwLock};
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn actor() -> User {
+        DieselRepoMock::make_user(1, "actor", "")
+    }
+
+    fn requirement(id: i32, project_id: i32, reference: &str) -> Requirement {
+        Requirement {
+            req_id: id,
+            req_title: format!("Requirement {id}"),
+            req_description: "Existing description".into(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 1,
+            req_reviewer: 1,
+            req_link: "https://example.com".into(),
+            req_reference: reference.into(),
+            req_category: 1,
+            req_parent: 1,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: Some("because".into()),
+            project_id,
+        }
+    }
+
+    fn new_payload() -> NewRequirement {
+        NewRequirement {
+            req_id: None,
+            req_title: "  Title  ".into(),
+            req_description: "  Description  ".into(),
+            req_verification: 1,
+            req_author: 1,
+            req_link: "  https://example.com/path  ".into(),
+            req_category: 1,
+            req_current_status: 1,
+            req_parent: 1,
+            req_reference: "  REQ-123  ".into(),
+            req_reviewer: 1,
+            req_applicability: 1,
+            req_justification: Some("   ".into()),
+            project_id: 7,
+        }
+    }
+
+    #[test]
+    fn create_sanitizes_payload() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let payload = new_payload();
+        let id = service.create(&actor(), payload).unwrap();
+
+        let stored = service.get_by_id(id).unwrap();
+        assert_eq!(stored.req_title, "Title");
+        assert_eq!(stored.req_description, "Description");
+        assert_eq!(stored.req_reference, "REQ-123");
+        assert_eq!(stored.req_link, "https://example.com/path");
+        assert!(stored.req_justification.is_none());
+    }
+
+    #[test]
+    fn create_rejects_invalid_reference() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let mut payload = new_payload();
+        payload.req_reference = "invalid".into();
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn update_modifies_existing_requirement() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, requirement(1, 7, "REQ-001"));
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let mut payload = new_payload();
+        payload.req_title = "  Updated  ".into();
+        payload.req_description = "  New Description  ".into();
+        payload.req_reference = "  REQ-999  ".into();
+
+        let updated = service.update(&actor(), 1, payload).unwrap();
+        assert_eq!(updated.req_title, "Updated");
+        assert_eq!(updated.req_description, "New Description");
+        assert_eq!(updated.req_reference, "REQ-999");
+        assert_eq!(updated.req_link, "https://example.com/path");
+    }
+
+    #[test]
+    fn delete_removes_requirement() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(2, requirement(2, 7, "REQ-002"));
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let removed = service.delete(&actor(), 2).unwrap();
+        assert_eq!(removed.req_id, 2);
+        assert!(matches!(service.get_by_id(2), Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_by_project_filters_requirements() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, requirement(1, 7, "REQ-001"));
+        repo.requirements.insert(2, requirement(2, 99, "REQ-002"));
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let items = service.list_by_project(7).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].project_id, 7);
+    }
+}

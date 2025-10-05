@@ -114,3 +114,96 @@ impl<'a> CategoryService<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use std::sync::{Arc, RwLock};
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn actor() -> User {
+        DieselRepoMock::make_user(1, "actor", "")
+    }
+
+    fn category(id: i32, title: &str, project_id: i32) -> Category {
+        Category {
+            cat_id: id,
+            cat_title: title.into(),
+            cat_description: "desc".into(),
+            cat_tag: "TAG".into(),
+            project_id,
+        }
+    }
+
+    #[test]
+    fn create_inserts_new_category() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let payload = NewCategory {
+            cat_id: None,
+            cat_title: "Primary".into(),
+            cat_description: "Main".into(),
+            cat_tag: "MAIN".into(),
+            project_id: 2,
+        };
+
+        let id = service.create(&actor(), payload).unwrap();
+        let stored = service.get_by_id(id).unwrap();
+        assert_eq!(stored.cat_title, "Primary");
+    }
+
+    #[test]
+    fn update_modifies_existing_category() {
+        let mut repo = DieselRepoMock::default();
+        repo.categories.insert(1, category(1, "Legacy", 1));
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let payload = NewCategory {
+            cat_id: None,
+            cat_title: "Updated".into(),
+            cat_description: "New description".into(),
+            cat_tag: "NEW".into(),
+            project_id: 5,
+        };
+
+        let updated = service.update(&actor(), 1, payload).unwrap();
+        assert_eq!(updated.cat_title, "Updated");
+        assert_eq!(updated.cat_description, "New description");
+        assert_eq!(updated.cat_tag, "NEW");
+        assert_eq!(updated.project_id, 5);
+    }
+
+    #[test]
+    fn delete_removes_category() {
+        let mut repo = DieselRepoMock::default();
+        repo.categories.insert(3, category(3, "Obsolete", 1));
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let removed = service.delete(&actor(), 3).unwrap();
+        assert_eq!(removed.cat_id, 3);
+        assert!(matches!(service.get_by_id(3), Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_by_project_filters_categories() {
+        let mut repo = DieselRepoMock::default();
+        repo.categories.insert(1, category(1, "A", 10));
+        repo.categories.insert(2, category(2, "B", 20));
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let cats = service.list_by_project(10).unwrap();
+        assert_eq!(cats.len(), 1);
+        assert_eq!(cats[0].cat_title, "A");
+    }
+}

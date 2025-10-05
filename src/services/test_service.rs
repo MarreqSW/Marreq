@@ -131,3 +131,102 @@ impl<'a> TestService<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use std::sync::{Arc, RwLock};
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn actor() -> User {
+        DieselRepoMock::make_user(1, "actor", "")
+    }
+
+    fn test_case(id: i32, project_id: i32, reference: &str) -> Test {
+        Test {
+            test_id: id,
+            test_name: format!("Test {id}"),
+            test_description: "desc".into(),
+            test_source: "manual".into(),
+            test_status: 1,
+            test_reference: reference.into(),
+            test_parent: 1,
+            project_id,
+        }
+    }
+
+    fn new_payload(project_id: i32) -> NewTest {
+        NewTest {
+            test_id: None,
+            test_reference: "TEST-1".into(),
+            test_name: "Case".into(),
+            test_description: "Description".into(),
+            test_source: "manual".into(),
+            test_status: 1,
+            test_parent: 1,
+            project_id,
+        }
+    }
+
+    #[test]
+    fn create_inserts_test_entry() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        let payload = new_payload(3);
+        let id = service.create(&actor(), payload).unwrap();
+
+        let stored = service.get_by_id(id).unwrap();
+        assert_eq!(stored.test_name, "Case");
+        assert_eq!(stored.project_id, 3);
+    }
+
+    #[test]
+    fn update_modifies_existing_test() {
+        let mut repo = DieselRepoMock::default();
+        repo.tests.insert(1, test_case(1, 3, "TEST-1"));
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        let mut payload = new_payload(5);
+        payload.test_name = "Updated".into();
+        payload.test_description = "New".into();
+
+        let updated = service.update(&actor(), 1, payload).unwrap();
+        assert_eq!(updated.test_name, "Updated");
+        assert_eq!(updated.test_description, "New");
+        assert_eq!(updated.project_id, 5);
+    }
+
+    #[test]
+    fn delete_removes_test() {
+        let mut repo = DieselRepoMock::default();
+        repo.tests.insert(2, test_case(2, 4, "TEST-2"));
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        let removed = service.delete(&actor(), 2).unwrap();
+        assert_eq!(removed.test_id, 2);
+        assert!(matches!(service.get_by_id(2), Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_by_project_filters_tests() {
+        let mut repo = DieselRepoMock::default();
+        repo.tests.insert(1, test_case(1, 8, "TEST-1"));
+        repo.tests.insert(2, test_case(2, 9, "TEST-2"));
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        let items = service.list_by_project(8).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].test_reference, "TEST-1");
+    }
+}

@@ -138,3 +138,146 @@ impl<'a> ProjectService<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use chrono::{NaiveDate, NaiveDateTime};
+    use std::sync::{Arc, RwLock};
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn actor() -> User {
+        DieselRepoMock::make_user(7, "actor", "")
+    }
+
+    fn project(id: i32, name: &str) -> Project {
+        Project {
+            project_id: id,
+            project_name: name.into(),
+            project_description: Some("Existing description".into()),
+            project_creation_date: Some(timestamp()),
+            project_update_date: Some(timestamp()),
+            project_status: Some("open".into()),
+            project_owner_id: Some(1),
+        }
+    }
+
+    #[test]
+    fn create_trims_input_and_drops_blank_description() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let payload = NewProject {
+            project_name: "  Project Phoenix  ".into(),
+            project_description: Some("   ".into()),
+            project_status: "  active  ".into(),
+            project_owner_id: Some(1),
+        };
+
+        let id = service.create(&actor(), payload).unwrap();
+        let stored = service.get_by_id(id).unwrap();
+
+        assert_eq!(stored.project_name, "Project Phoenix");
+        assert_eq!(stored.project_description, None);
+        assert_eq!(stored.project_status.as_deref(), Some("  active  "));
+    }
+
+    #[test]
+    fn create_rejects_invalid_name() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let payload = NewProject {
+            project_name: " ".into(),
+            project_description: None,
+            project_status: "planned".into(),
+            project_owner_id: None,
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn update_trims_and_persists_changes() {
+        let mut repo = DieselRepoMock::default();
+        repo.projects.insert(1, project(1, "Legacy"));
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let payload = UpdateProject {
+            project_name: "  Modernized  ".into(),
+            project_description: Some("  Updated description  ".into()),
+            project_status: "  done  ".into(),
+            project_owner_id: Some(2),
+        };
+
+        let updated = service.update(&actor(), 1, payload).unwrap();
+        assert_eq!(updated.project_name, "Modernized");
+        assert_eq!(
+            updated.project_description.as_deref(),
+            Some("Updated description")
+        );
+        assert_eq!(updated.project_status.as_deref(), Some("  done  "));
+        assert_eq!(updated.project_owner_id, Some(2));
+    }
+
+    #[test]
+    fn update_returns_not_found_for_missing_project() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let payload = UpdateProject {
+            project_name: "Valid".into(),
+            project_description: Some("Desc".into()),
+            project_status: "active".into(),
+            project_owner_id: None,
+        };
+
+        let err = service.update(&actor(), 99, payload).unwrap_err();
+        assert!(matches!(err, RepoError::NotFound));
+    }
+
+    #[test]
+    fn delete_removes_project() {
+        let mut repo = DieselRepoMock::default();
+        repo.projects.insert(4, project(4, "To remove"));
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let deleted = service.delete(&actor(), 4).unwrap();
+        assert_eq!(deleted.project_id, 4);
+        assert!(matches!(service.get_by_id(4), Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_all_reads_all_projects() {
+        let mut repo = DieselRepoMock::default();
+        repo.projects.insert(1, project(1, "A"));
+        repo.projects.insert(2, project(2, "B"));
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let mut projects = service.list_all().unwrap();
+        projects.sort_by_key(|p| p.project_id);
+        assert_eq!(projects.len(), 2);
+        assert_eq!(projects[0].project_name, "A");
+        assert_eq!(projects[1].project_name, "B");
+    }
+}

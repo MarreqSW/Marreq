@@ -1,7 +1,6 @@
 use super::helpers::*;
 use super::prelude::*;
 use crate::services::project_service::ProjectService;
-use chrono::Utc;
 
 #[get("/<project_id>")]
 pub fn show_project_id(
@@ -26,9 +25,20 @@ pub fn show_project_id(
             return Err(Redirect::to(uri!("/projects")));
         }
     }
-    let project = project_service
-        .get_by_id(project_id)
-        .unwrap_or_else(|_| fallback_project());
+    let project = match project_service.get_by_id(project_id) {
+        Ok(project) => project,
+        Err(err) => {
+            #[cfg(debug_assertions)]
+            eprintln!("Failed to load project {project_id}: {err:?}");
+            let ctx = json!({
+                "title": "Project Not Found",
+                "message": "The project you're looking for could not be found.",
+                "details": err.to_string(),
+                "user": user.clone()
+            });
+            return Ok(Template::render("error", ctx));
+        }
+    };
 
     let members = state
         .repo_read()
@@ -85,9 +95,20 @@ pub fn show_project_id(
 pub fn get_edit_project(admin: AdminOnly, project_id: i32, state: &State<AppState>) -> Template {
     let user = admin.into_inner();
     let project_service = ProjectService::new(state.inner());
-    let project = project_service
-        .get_by_id(project_id)
-        .unwrap_or_else(|_| fallback_project());
+    let project = match project_service.get_by_id(project_id) {
+        Ok(project) => project,
+        Err(err) => {
+            #[cfg(debug_assertions)]
+            eprintln!("Failed to load project {project_id}: {err:?}");
+            let ctx = json!({
+                "title": "Project Not Found",
+                "message": "The project you're trying to edit could not be found.",
+                "details": err.to_string(),
+                "user": user
+            });
+            return Template::render("error", ctx);
+        }
+    };
     let users = state.repo_read().get_users_all().unwrap_or_default();
 
     let ctx = json!({
@@ -144,18 +165,6 @@ pub fn routes() -> Vec<Route> {
         post_edit_project,
         delete_project_route
     ]
-}
-
-fn fallback_project() -> Project {
-    Project {
-        project_id: 0,
-        project_name: "Unknown Project".to_string(),
-        project_description: Some("Unknown project".to_string()),
-        project_creation_date: Some(Utc::now().naive_utc()),
-        project_update_date: Some(Utc::now().naive_utc()),
-        project_status: Some("Unknown".to_string()),
-        project_owner_id: Some(0),
-    }
 }
 
 #[cfg(test)]
@@ -265,7 +274,7 @@ mod tests {
     }
 
     #[rocket::async_test]
-    async fn show_project_id_uses_fallback_when_missing() {
+    async fn show_project_id_renders_error_when_missing() {
         let mut repo = DieselRepoMock::default();
         let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
         admin.is_admin = true;
@@ -276,7 +285,7 @@ mod tests {
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
-        assert!(body.contains("Unknown Project"));
+        assert!(body.contains("Project Not Found"));
     }
 
     #[rocket::async_test]
@@ -327,7 +336,7 @@ mod tests {
         .await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/1/edit"));
+        assert_eq!(response.headers().get_one("Location"), Some("/1/edit"));
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");

@@ -46,7 +46,7 @@ pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError>
 
     // Validate reference format (should be like REQ-001, REQ-ABC-001, etc.)
     if !req.req_reference.trim().is_empty() {
-        let ref_regex = Regex::new(r"^[A-Z]{2,4}-[A-Z0-9]{3,6}$").unwrap();
+        let ref_regex = Regex::new(r"^[A-Z]{2,4}-[A-Z0-9]{1,6}$").unwrap();
         if !ref_regex.is_match(&req.req_reference) {
             return Err(ValidationError::InvalidFormat {
                 field: "req_reference".to_string(),
@@ -429,7 +429,7 @@ pub fn validate_project(project: &NewProject) -> Result<(), ValidationError> {
 }
 
 /// Validate a requirement status before creation
-pub fn validate_requirement_status(status: &NewRequirementStatus) -> Result<(), ValidationError> {
+pub fn validate_requirement_status(status: &NewStatus) -> Result<(), ValidationError> {
     // Validate status name
     if status.req_st_title.trim().is_empty() {
         return Err(ValidationError::Required {
@@ -463,7 +463,7 @@ pub fn validate_requirement_status(status: &NewRequirementStatus) -> Result<(), 
 }
 
 /// Validate a test status before creation
-pub fn validate_test_status(status: &NewTestStatus) -> Result<(), ValidationError> {
+pub fn validate_test_status(status: &TestStatus) -> Result<(), ValidationError> {
     // Validate status name
     if status.test_st_title.trim().is_empty() {
         return Err(ValidationError::Required {

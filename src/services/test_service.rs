@@ -3,268 +3,133 @@
 //! This service handles all test-related operations including CRUD operations,
 //! validation, caching, and audit logging.
 
-use crate::errors::{ApiError, ApiResult};
-use crate::models::*;
-use crate::validation::validate_test;
-use crate::services::{BaseService, Service};
+use crate::app::{AppState, DieselCachedRepo};
+use crate::logger::{LogCtx, Logger};
+use crate::models::{Test, NewTest, User};
+use crate::repository::errors::RepoError;
+use crate::repository::PooledConnectionWrapper;
 use crate::repository::TestsRepository;
-use std::time::Duration;
 
-/// Service for managing test cases
-pub struct TestService {
-    base: BaseService,
+/// Service wrapper that provides test operations backed by the shared AppState.
+pub struct TestService<'a> {
+    state: &'a AppState<DieselCachedRepo>,
 }
 
-impl TestService {
-    /// Create a new test service
-    pub fn new() -> Self {
-        Self {
-            base: BaseService::new(),
-        }
+impl<'a> TestService<'a> {
+    /// Create a new service instance bound to the provided test state.
+    pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
+        Self { state }
     }
-    
-    /// Get all tests
-    pub async fn get_all_tests(&self) -> ApiResult<Vec<Test>> {
-        let cache_key = self.base.cache_key_list("test", None);
-        
-        // Try to get from cache first
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        // Get from database
-        let tests = self.base.repo()
-            .get_tests_all()
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        // Cache the result
-        self.base.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
-        
-        Ok(tests)
+
+    /// Retrieve all Test entries.
+    pub fn list_all(&self) -> Result<Vec<Test>, RepoError> {
+        self.state.repo_read().get_tests_all()
     }
-    
-    /// Get tests by project
-    pub async fn get_tests_by_project(&self, project_id: i32) -> ApiResult<Vec<Test>> {
-        let cache_key = self.base.cache_key_list("test", Some(project_id));
-        
-        // Try to get from cache first
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        // Get from database
-        let tests = self.base.repo()
+
+    /// Retrieve Test entries scoped to a project.
+    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Test>, RepoError> {
+        self.state
+            .repo_read()
             .get_tests_by_project(project_id)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        // Cache the result
-        self.base.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
-        
-        Ok(tests)
     }
-    
-    /// Get a test by ID
-    pub async fn get_test_by_id(&self, id: i32) -> ApiResult<Test> {
-        let cache_key = self.base.cache_key("test", id);
-        
-        // Try to get from cache first
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        // Get from database
-        let test = self.base.repo()
-            .get_test_by_id(id)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        // Cache the result
-        self.base.set_cache(&cache_key, test.clone(), Duration::from_secs(600));
-        
-        Ok(test)
+
+    /// Retrieve a single Test by identifier.
+    pub fn get_by_id(&self, id: i32) -> Result<Test, RepoError> {
+        self.state.repo_read().get_test_by_id(id)
     }
-    
-    /// Create a new test
-    pub async fn create_test(
-        &self,
-        mut new_test: NewTest,
-        user_id: i32,
-    ) -> ApiResult<i32> {
-        // Validate input
-        validate_test(&new_test)?;
-        
-        // Sanitize input
-        crate::validation::sanitize_string(&mut new_test.test_name);
-        crate::validation::sanitize_string(&mut new_test.test_description);
-        crate::validation::sanitize_string(&mut new_test.test_source);
-        
-        // Insert into database
-        let mut repo = crate::repository::DieselRepo::new();
-        let id = repo.insert_test(&new_test)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        // Log the creation
-        if let Ok(new_values) = crate::services::serialize_for_logging(&new_test) {
-            let _ = self.base.log_create(
-                user_id,
-                EntityType::Test,
-                id,
-                Some(new_test.project_id),
-                Some(new_values),
-                Some(format!("Created test: {}", new_test.test_name)),
-            );
-        }
-        
-        // Invalidate relevant caches
-        self.base.invalidate_cache(&self.base.cache_key_list("test", None));
-        self.base.invalidate_cache(&self.base.cache_key_list("test", Some(new_test.project_id)));
-        crate::cache::invalidate_test_cache(id);
-        crate::cache::invalidate_project_cache(new_test.project_id);
-        
+
+    /// Get tests by status
+    pub async fn get_by_status(&self, _status_id: i32) -> Result<Vec<Test>, RepoError> {
+        todo!()
+    }
+
+    /// Get tests by parent (hierarchical structure)
+    pub async fn get_by_parent(&self, _parent_id: i32) -> Result<Vec<Test>, RepoError> {
+        todo!()
+    }
+
+    /// Create a new test entry and log the action.
+    pub fn create(&self, user: &User, new_test: NewTest) -> Result<i32, RepoError> {
+        let id = {
+            let mut repo = self.state.repo_write();
+            repo.insert_test(&new_test)?
+        };
+
+        self.log_created(user, id, &new_test);
         Ok(id)
     }
-    
-    /// Update an existing test
-    pub async fn update_test(
+
+    /// Update an existing test entry and log the change.
+    pub fn update(
         &self,
+        user: &User,
         id: i32,
         mut updated_test: NewTest,
-        user_id: i32,
-    ) -> ApiResult<bool> {
-        // Get existing test for logging
-        let old_test = self.get_test_by_id(id).await?;
-        
-        // Validate input
-        validate_test(&updated_test)?;
-        
-        // Sanitize input
-        crate::validation::sanitize_string(&mut updated_test.test_name);
-        crate::validation::sanitize_string(&mut updated_test.test_description);
-        crate::validation::sanitize_string(&mut updated_test.test_source);
-        
-        // Set the ID for update
+    ) -> Result<Test, RepoError> {
+        let before = self.get_by_id(id)?;
+
         updated_test.test_id = Some(id);
-        
-        // Update in database
-        let mut repo = crate::repository::DieselRepo::new();
-        let success = repo.edit_test(&updated_test)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if success {
-            // Log the update
-            if let (Ok(old_values), Ok(new_values)) = (
-                crate::services::serialize_for_logging(&old_test),
-                crate::services::serialize_for_logging(&updated_test),
-            ) {
-                let _ = self.base.log_update(
-                    user_id,
-                    EntityType::Test,
-                    id,
-                    Some(updated_test.project_id),
-                    Some(old_values),
-                    Some(new_values),
-                    Some(format!("Updated test: {}", updated_test.test_name)),
+        {
+            let mut repo = self.state.repo_write();
+            let updated = repo.edit_test(&updated_test)?;
+            if !updated {
+                return Err(RepoError::NotFound);
+            }
+        }
+
+        let after = self.get_by_id(id)?;
+        self.log_updated(user, &before, &after);
+        Ok(after)
+    }
+
+    /// Delete an test entry and log the removal.
+    pub fn delete(&self, user: &User, id: i32) -> Result<Test, RepoError> {
+        let deleted = {
+            let mut repo = self.state.repo_write();
+            repo.delete_test(id)?
+        };
+
+        self.log_deleted(user, &deleted);
+        Ok(deleted)
+    }
+
+    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
+        self.state.repo_read().inner_repo().get_conn()
+    }
+
+    fn log_created(&self, user: &User, id: i32, entity: &NewTest) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.user_id);
+            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!("Failed to log applicability creation {id}: {_err}");
+            }
+        }
+    }
+
+    fn log_updated(&self, user: &User, before: &Test, after: &Test) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.user_id);
+            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Failed to log applicability update {} -> {}: {_err}",
+                    before.test_id, after.test_id
                 );
             }
-            
-            // Invalidate relevant caches
-            self.base.invalidate_cache(&self.base.cache_key("test", id));
-            self.base.invalidate_cache(&self.base.cache_key_list("test", None));
-            self.base.invalidate_cache(&self.base.cache_key_list("test", Some(updated_test.project_id)));
-            crate::cache::invalidate_test_cache(id);
-            crate::cache::invalidate_project_cache(updated_test.project_id);
         }
-        
-        Ok(success)
     }
-    
-    /// Delete a test
-    pub async fn delete_test(
-        &self,
-        id: i32,
-        user_id: i32,
-    ) -> ApiResult<bool> {
-        // Get existing test for logging
-        let old_test = self.get_test_by_id(id).await?;
-        
-        // Delete from database
-        let mut repo = crate::repository::DieselRepo::new();
-        let success = repo.delete_test(id)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if success {
-            // Log the deletion
-            if let Ok(old_values) = crate::services::serialize_for_logging(&old_test) {
-                let _ = self.base.log_delete(
-                    user_id,
-                    EntityType::Test,
-                    id,
-                    Some(old_test.project_id),
-                    Some(old_values),
-                    Some(format!("Deleted test: {}", old_test.test_name)),
+
+    fn log_deleted(&self, user: &User, entity: &Test) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.user_id);
+            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Failed to log applicability deletion {}: {_err}",
+                    entity.test_id
                 );
             }
-            
-            // Invalidate relevant caches
-            self.base.invalidate_cache(&self.base.cache_key("test", id));
-            self.base.invalidate_cache(&self.base.cache_key_list("test", None));
-            self.base.invalidate_cache(&self.base.cache_key_list("test", Some(old_test.project_id)));
-            crate::cache::invalidate_test_cache(id);
-            crate::cache::invalidate_project_cache(old_test.project_id);
         }
-        
-        Ok(success)
-    }
-    
-    /// Get tests by status
-    pub async fn get_tests_by_status(&self, status_id: i32) -> ApiResult<Vec<Test>> {
-        let cache_key = format!("test:status:{}", status_id);
-        
-        // Try to get from cache first
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        // Get from database
-        let tests = self.base.repo()
-            .get_tests_by_status(status_id)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        // Cache the result
-        self.base.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
-        
-        Ok(tests)
-    }
-    
-    /// Get tests by parent (hierarchical structure)
-    pub async fn get_tests_by_parent(&self, parent_id: i32) -> ApiResult<Vec<Test>> {
-        let cache_key = format!("test:parent:{}", parent_id);
-        
-        // Try to get from cache first
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        // Get from database
-        let tests = self.base.repo()
-            .get_tests_by_parent(parent_id)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        // Cache the result
-        self.base.set_cache(&cache_key, tests.clone(), Duration::from_secs(300));
-        
-        Ok(tests)
     }
 }
-
-impl Service for TestService {
-    fn repo(&self) -> &crate::repository::DieselRepo {
-        self.base.repo()
-    }
-    
-    fn repo_mut(&mut self) -> &mut crate::repository::DieselRepo {
-        self.base.repo_mut()
-    }
-}
-
-
-

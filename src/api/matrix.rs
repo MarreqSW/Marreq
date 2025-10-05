@@ -1,22 +1,11 @@
-use diesel::prelude::*;
-
 use crate::api::prelude::*;
 use crate::models::Matrix;
+use crate::services::MatrixService;
 
 #[get("/matrix")]
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Matrix>>> {
-    use crate::schema::matrix::dsl::matrix;
-
-    let mut conn = state
-        .repo
-        .clone()
-        .async_read(|repo| repo.inner_repo().get_conn())
-        .await?;
-
-    let entries = matrix
-        .load::<Matrix>(conn.as_mut())
-        .map_err(|err| ApiError::Internal(format!("failed to load matrix: {err}")))?;
-
+    let service = MatrixService::new(state.inner());
+    let entries = service.list_all()?;
     Ok(Json(entries))
 }
 

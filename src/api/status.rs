@@ -1,13 +1,12 @@
 use crate::api::prelude::*;
 use crate::models::{NewStatus, RequirementStatus, Status as LegacyStatus};
-use crate::repository::LookupRepository;
+use crate::services::StatusService;
 
 #[get("/status")]
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<LegacyStatus>>> {
-    let statuses = state
-        .repo
-        .async_read(|repo| repo.get_requirement_status_all())
-        .await?
+    let service = StatusService::new(state.inner());
+    let statuses = service
+        .list_requirement_statuses()?
         .into_iter()
         .map(|status: RequirementStatus| LegacyStatus {
             st_id: status.req_st_id,
@@ -21,10 +20,8 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<LegacyStatus>>>
 
 #[get("/status/<id>")]
 pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Value>> {
-    let status = state
-        .repo
-        .async_read(move |repo| repo.get_requirement_status_by_id(id))
-        .await?;
+    let service = StatusService::new(state.inner());
+    let status = service.get_requirement_status(id)?;
 
     Ok(Json(json!({
         "id": status.req_st_id,
@@ -39,11 +36,8 @@ pub async fn create(
     state: &State<AppState>,
     payload: Json<NewStatus>,
 ) -> ApiResult<(Status, Value)> {
-    let status = payload.into_inner();
-    let id = state
-        .repo
-        .async_write(move |repo| repo.create_status(&status))
-        .await?;
+    let service = StatusService::new(state.inner());
+    let id = service.create_requirement_status(payload.into_inner())?;
 
     Ok((Status::Created, json!({ "status": "ok", "id": id })))
 }

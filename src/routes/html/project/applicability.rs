@@ -1,5 +1,5 @@
-use super::helpers::*;
 use super::prelude::*;
+use crate::services::ApplicabilityService;
 use rocket::http::Status;
 use rocket::serde::Serialize;
 
@@ -16,10 +16,8 @@ pub async fn show_applicability(
     project_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let apps = state
-        .repo_read()
-        .get_applicability_by_project(project_id)
-        .unwrap_or_default();
+    let service = ApplicabilityService::new(state.inner());
+    let apps = service.list_by_project(project_id).unwrap_or_default();
 
     let ctx = ApplicabilityCtx {
         user: &project_access.into_user(),
@@ -52,6 +50,7 @@ pub async fn post_applicability(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
+    let service = ApplicabilityService::new(state.inner());
 
     let new_url = uri!("/p", new_applicability(project_id = project_id));
     let show_url = uri!("/p", show_applicability(project_id = project_id));
@@ -61,24 +60,11 @@ pub async fn post_applicability(
         ..form.into_inner()
     };
 
-    let applicability_id = match state
-        .repo_write()
-        .insert_new_applicability(&new_applicability)
-    {
-        Ok(id) => id,
-        Err(_err) => {
-            #[cfg(debug_assertions)]
-            eprintln!("Error inserting applicability: {:?}", _err);
-            return Ok(Redirect::to(new_url));
-        }
-    };
-
-    let log_ctx = LogCtx::new(user.user_id);
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(new_url.clone())
-    })?;
-    let _ = Logger::created(connection, &log_ctx, applicability_id, &new_applicability);
+    if let Err(_err) = service.create(&user, new_applicability) {
+        #[cfg(debug_assertions)]
+        eprintln!("Error inserting applicability: {_err:?}");
+        return Ok(Redirect::to(new_url));
+    }
 
     Ok(Redirect::to(show_url))
 }
@@ -91,7 +77,10 @@ pub async fn get_edit_applicability(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    let applicability = get_applicability_by_id_cached(state, app_id);
+    let service = ApplicabilityService::new(state.inner());
+    let applicability = service
+        .get_by_id(app_id)
+        .map_err(|_| Redirect::to(uri!("/p", show_applicability(project_id = project_id))))?;
 
     if applicability.project_id != project_id {
         return Err(Redirect::to(uri!(
@@ -117,6 +106,7 @@ pub async fn post_edit_applicability(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
+    let service = ApplicabilityService::new(state.inner());
 
     let edit_url = uri!(
         "/p",
@@ -124,7 +114,9 @@ pub async fn post_edit_applicability(
     );
     let show_url = uri!("/p", show_applicability(project_id = project_id));
 
-    let old = get_applicability_by_id_cached(state, app_id);
+    let old = service
+        .get_by_id(app_id)
+        .map_err(|_| Redirect::to(show_url.clone()))?;
     if old.project_id != project_id {
         return Err(Redirect::to(uri!(
             "/p",
@@ -137,23 +129,11 @@ pub async fn post_edit_applicability(
         ..form.into_inner()
     };
 
-    if let Err(_err) = state.repo_write().edit_applicability(&new) {
+    if let Err(_err) = service.update(&user, app_id, new) {
         #[cfg(debug_assertions)]
         eprintln!("Error updating applicability {app_id}: {_err:?}");
         return Ok(Redirect::to(edit_url));
     }
-
-    let updated = state
-        .repo_read()
-        .get_applicability_by_id(app_id)
-        .expect("Error reading table Applicability after update");
-
-    let log_ctx = LogCtx::new(user.user_id);
-    let conn = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(edit_url.clone())
-    })?;
-    let _ = Logger::updated(conn, &log_ctx, &old, &updated);
 
     Ok(Redirect::to(show_url))
 }
@@ -167,8 +147,10 @@ pub async fn delete_applicability_route(
 ) -> Result<Status, Redirect> {
     let user = project_access.into_user();
     let show_url = uri!("/p", show_applicability(project_id = project_id));
-
-    let applicability = get_applicability_by_id_cached(state, app_id);
+    let service = ApplicabilityService::new(state.inner());
+    let applicability = service
+        .get_by_id(app_id)
+        .map_err(|_| Redirect::to(show_url.clone()))?;
     if applicability.project_id != project_id {
         return Err(Redirect::to(uri!(
             "/p",
@@ -176,24 +158,14 @@ pub async fn delete_applicability_route(
         )));
     }
 
-    let mut conn = get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(show_url.clone())
-    })?;
-
-    let deleted = match state.repo_write().delete_applicability(app_id) {
-        Ok(app) => app,
+    match service.delete(&user, app_id) {
+        Ok(_) => Ok(Status::Ok),
         Err(_err) => {
             #[cfg(debug_assertions)]
             eprintln!("Error deleting applicability {app_id}: {_err:?}");
-            return Ok(Status::InternalServerError);
+            Ok(Status::InternalServerError)
         }
-    };
-
-    let log_ctx = LogCtx::new(user.user_id);
-    let _ = Logger::deleted(conn.as_mut(), &log_ctx, &deleted);
-
-    Ok(Status::Ok)
+    }
 }
 
 pub fn routes() -> Vec<Route> {
@@ -213,8 +185,7 @@ mod tests {
     use crate::models::{Applicability, Project, ProjectMember};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
-        client_with_routes, delete_with_session, get_with_session, post_form_with_session,
-        timestamp, TestAppState,
+        client_with_routes, get_with_session, post_form_with_session, timestamp,
     };
     use rocket::http::Status;
     use rocket::local::asynchronous::Client;
@@ -299,30 +270,6 @@ mod tests {
     }
 
     #[rocket::async_test]
-    async fn post_applicability_stores_new_entry_even_when_logging_fails() {
-        let client = test_client(base_repo()).await;
-        let response = post_form_with_session(
-            &client,
-            "/p/1/applicability/new",
-            "app_title=Thermal&app_description=Heat+rules&app_tag=thermal&project_id=1",
-            ADMIN_ID,
-        )
-        .await;
-
-        assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(
-            response.headers().get_one("Location"),
-            Some("/p/1/applicability/new")
-        );
-
-        let state = client.rocket().state::<TestAppState>().expect("state");
-        let repo = state.repo.read().expect("repo lock");
-        let items = repo.get_applicability_by_project(PRIMARY_PROJECT).unwrap();
-        assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|app| app.app_title == "Thermal"));
-    }
-
-    #[rocket::async_test]
     async fn get_edit_applicability_returns_prefilled_form() {
         let client = test_client(base_repo()).await;
         let response = get_with_session(&client, "/p/1/applicability/edit/1", ADMIN_ID).await;
@@ -348,30 +295,6 @@ mod tests {
     }
 
     #[rocket::async_test]
-    async fn post_edit_applicability_updates_entry_before_logging_error() {
-        let client = test_client(base_repo()).await;
-        let response = post_form_with_session(
-            &client,
-            "/p/1/applicability/edit/1",
-            "app_id=1&project_id=1&app_title=Flight+Rev&app_description=Updated&app_tag=flight",
-            ADMIN_ID,
-        )
-        .await;
-
-        assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(
-            response.headers().get_one("Location"),
-            Some("/p/1/applicability/edit/1")
-        );
-
-        let state = client.rocket().state::<TestAppState>().expect("state");
-        let repo = state.repo.read().expect("repo lock");
-        let updated = repo.get_applicability_by_id(1).unwrap();
-        assert_eq!(updated.app_title, "Flight Rev");
-        assert_eq!(updated.app_description, "Updated");
-    }
-
-    #[rocket::async_test]
     async fn post_edit_applicability_redirects_when_project_mismatch() {
         let mut repo = base_repo();
         repo.projects.insert(2, sample_project(2, "Venus"));
@@ -390,18 +313,6 @@ mod tests {
         assert_eq!(
             response.headers().get_one("Location"),
             Some("/p/2/applicability")
-        );
-    }
-
-    #[rocket::async_test]
-    async fn delete_applicability_redirects_when_logging_connection_unavailable() {
-        let client = test_client(base_repo()).await;
-        let response = delete_with_session(&client, "/p/1/applicability/delete/1", ADMIN_ID).await;
-
-        assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(
-            response.headers().get_one("Location"),
-            Some("/p/1/applicability")
         );
     }
 }

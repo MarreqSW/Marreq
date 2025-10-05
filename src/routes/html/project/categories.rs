@@ -205,27 +205,17 @@ pub fn routes() -> Vec<Route> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
     use crate::models::{Category, Project, ProjectMember};
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use chrono::{NaiveDate, NaiveDateTime};
-    use rocket::http::{ContentType, Cookie, Status};
-    use rocket::local::asynchronous::{Client, LocalResponse};
-    use rocket_dyn_templates::Template;
-    use std::sync::{Arc, RwLock};
-
-    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::routes::html::project::test_helpers::{
+        client_with_routes, delete_with_session, get_with_session, post_form_with_session,
+        timestamp, TestAppState,
+    };
+    use rocket::http::Status;
+    use rocket::local::asynchronous::Client;
 
     const ADMIN_ID: i32 = 1;
     const PRIMARY_PROJECT: i32 = 1;
-
-    fn timestamp() -> NaiveDateTime {
-        NaiveDate::from_ymd_opt(2024, 1, 1)
-            .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap()
-    }
 
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
@@ -275,66 +265,25 @@ mod tests {
         repo
     }
 
-    fn managed_state(repo: DieselRepoMock) -> TestAppState {
-        AppState {
-            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
-        }
-    }
-
     async fn test_client(repo: DieselRepoMock) -> Client {
-        let rocket = rocket::build()
-            .manage(managed_state(repo))
-            .attach(Template::fairing())
-            .mount(
-                "/p",
-                routes![
-                    show_categories,
-                    new_category,
-                    post_category,
-                    get_edit_category,
-                    post_edit_category,
-                    delete_category_route
-                ],
-            );
-        Client::tracked(rocket).await.expect("client")
-    }
-
-    fn auth_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie
-    }
-
-    async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .get(path)
-            .private_cookie(auth_cookie())
-            .dispatch()
-            .await
-    }
-
-    async fn post_form<'c>(client: &'c Client, path: &'c str, body: &'c str) -> LocalResponse<'c> {
-        client
-            .post(path)
-            .header(ContentType::Form)
-            .private_cookie(auth_cookie())
-            .body(body)
-            .dispatch()
-            .await
-    }
-
-    async fn delete_path<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .delete(path)
-            .private_cookie(auth_cookie())
-            .dispatch()
-            .await
+        client_with_routes(
+            repo,
+            routes![
+                show_categories,
+                new_category,
+                post_category,
+                get_edit_category,
+                post_edit_category,
+                delete_category_route
+            ],
+        )
+        .await
     }
 
     #[rocket::async_test]
     async fn show_categories_lists_known_items() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/categories").await;
+        let response = get_with_session(&client, "/p/1/categories", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Categories"));
@@ -345,7 +294,7 @@ mod tests {
     #[rocket::async_test]
     async fn new_category_form_renders() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/categories/new").await;
+        let response = get_with_session(&client, "/p/1/categories/new", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("New Category"));
@@ -355,10 +304,11 @@ mod tests {
     #[rocket::async_test]
     async fn post_category_creates_new_entry() {
         let client = test_client(base_repo()).await;
-        let response = post_form(
+        let response = post_form_with_session(
             &client,
             "/p/1/categories/new",
             "cat_title=Avionics&cat_description=Avionics+systems&cat_tag=avionics&project_id=1",
+            ADMIN_ID,
         )
         .await;
 
@@ -380,7 +330,7 @@ mod tests {
     #[rocket::async_test]
     async fn get_edit_category_renders_existing_data() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/categories/edit/1").await;
+        let response = get_with_session(&client, "/p/1/categories/edit/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Edit Category"));
@@ -390,7 +340,7 @@ mod tests {
     #[rocket::async_test]
     async fn get_edit_category_redirects_on_project_mismatch() {
         let client = test_client(repo_with_secondary_category()).await;
-        let response = get(&client, "/p/1/categories/edit/2").await;
+        let response = get_with_session(&client, "/p/1/categories/edit/2", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
@@ -401,10 +351,11 @@ mod tests {
     #[rocket::async_test]
     async fn post_edit_category_updates_existing_entry() {
         let client = test_client(base_repo()).await;
-        let response = post_form(
+        let response = post_form_with_session(
             &client,
             "/p/1/categories/edit/1",
             "cat_id=1&project_id=1&cat_title=Systems+Rev&cat_description=Updated&cat_tag=systems",
+            ADMIN_ID,
         )
         .await;
 
@@ -424,10 +375,11 @@ mod tests {
     #[rocket::async_test]
     async fn post_edit_category_redirects_when_category_missing() {
         let client = test_client(base_repo()).await;
-        let response = post_form(
+        let response = post_form_with_session(
             &client,
             "/p/1/categories/edit/99",
             "cat_id=99&project_id=1&cat_title=Ghost&cat_description=None&cat_tag=ghost",
+            ADMIN_ID,
         )
         .await;
 
@@ -441,10 +393,11 @@ mod tests {
     #[rocket::async_test]
     async fn post_edit_category_redirects_when_project_mismatch() {
         let client = test_client(repo_with_secondary_category()).await;
-        let response = post_form(
+        let response = post_form_with_session(
             &client,
             "/p/1/categories/edit/2",
             "cat_id=2&project_id=1&cat_title=Surface&cat_description=Stay&cat_tag=surface",
+            ADMIN_ID,
         )
         .await;
 
@@ -463,7 +416,7 @@ mod tests {
     #[rocket::async_test]
     async fn delete_category_route_removes_category() {
         let client = test_client(base_repo()).await;
-        let response = delete_path(&client, "/p/1/categories/delete/1").await;
+        let response = delete_with_session(&client, "/p/1/categories/delete/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -477,7 +430,7 @@ mod tests {
     #[rocket::async_test]
     async fn delete_category_route_redirects_on_project_mismatch() {
         let client = test_client(repo_with_secondary_category()).await;
-        let response = delete_path(&client, "/p/1/categories/delete/2").await;
+        let response = delete_with_session(&client, "/p/1/categories/delete/2", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
@@ -492,7 +445,7 @@ mod tests {
     #[rocket::async_test]
     async fn delete_category_route_returns_not_found_for_missing() {
         let client = test_client(base_repo()).await;
-        let response = delete_path(&client, "/p/1/categories/delete/99").await;
+        let response = delete_with_session(&client, "/p/1/categories/delete/99", ADMIN_ID).await;
         assert_eq!(response.status(), Status::NotFound);
     }
 }

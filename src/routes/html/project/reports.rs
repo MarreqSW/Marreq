@@ -166,27 +166,16 @@ pub fn routes() -> Vec<Route> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
     use crate::models::{Category, Matrix, Project, ProjectMember, Requirement, Status, Test};
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use chrono::{NaiveDate, NaiveDateTime};
-    use rocket::http::{ContentType, Cookie, Status as HttpStatus};
-    use rocket::local::asynchronous::{Client, LocalResponse};
-    use rocket_dyn_templates::Template;
-    use std::sync::{Arc, RwLock};
-
-    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::routes::html::project::test_helpers::{
+        client_with_routes, get_with_session, timestamp,
+    };
+    use rocket::http::{ContentType, Status as HttpStatus};
+    use rocket::local::asynchronous::Client;
 
     const ADMIN_ID: i32 = 1;
     const PROJECT_ID: i32 = 1;
-
-    fn timestamp() -> NaiveDateTime {
-        NaiveDate::from_ymd_opt(2024, 1, 1)
-            .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap()
-    }
 
     fn sample_project() -> Project {
         Project {
@@ -284,38 +273,14 @@ mod tests {
         repo
     }
 
-    fn managed_state(repo: DieselRepoMock) -> TestAppState {
-        AppState {
-            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
-        }
-    }
-
     async fn test_client(repo: DieselRepoMock) -> Client {
-        let rocket = rocket::build()
-            .manage(managed_state(repo))
-            .attach(Template::fairing())
-            .mount("/p", routes![show_reports, generate_pdf_report]);
-        Client::tracked(rocket).await.expect("rocket client")
-    }
-
-    fn admin_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie
-    }
-
-    async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .get(path)
-            .private_cookie(admin_cookie())
-            .dispatch()
-            .await
+        client_with_routes(repo, routes![show_reports, generate_pdf_report]).await
     }
 
     #[rocket::async_test]
     async fn show_reports_renders_metrics() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/reports").await;
+        let response = get_with_session(&client, "/p/1/reports", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -329,7 +294,7 @@ mod tests {
     #[rocket::async_test]
     async fn generate_pdf_report_returns_pdf_or_fallback_html() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/reports/pdf").await;
+        let response = get_with_session(&client, "/p/1/reports/pdf", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let content_type = response.content_type().expect("content type to be set");

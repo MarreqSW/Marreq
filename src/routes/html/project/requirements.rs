@@ -11,7 +11,7 @@ use super::prelude::*;
 
 use crate::app::AppState;
 use crate::helper_functions::generate_requirement_reference;
-use crate::helper_functions::{decorate_requirements, filter_requirements};
+use crate::helper_functions::{decorators::decorate_requirements_with_repo, filter_requirements};
 use crate::logger::{LogCtx, Logger};
 use crate::models::*;
 use crate::repository::{LookupRepository, RequirementsRepository, UserRepository};
@@ -43,7 +43,7 @@ async fn show_requirements(
         .map(|reqs| {
             let filtered =
                 filter_requirements(reqs, status_filter, verification_filter, category_filter);
-            decorate_requirements(filtered)
+            decorate_requirements_with_repo(&*repo, filtered)
         })
         .unwrap_or_default();
     ctx["requirements"] = json!(decorated);
@@ -110,7 +110,10 @@ async fn show_requirement_id(
         return Err(Redirect::to(reqs_url));
     }
 
-    let reqs = decorate_requirements(vec![requirement]);
+    let reqs = {
+        let repo = state.repo_read();
+        decorate_requirements_with_repo(&*repo, vec![requirement])
+    };
     let linked_tests = get_linked_tests_for_requirement_cached(state, req_id).unwrap_or_default();
 
     let ctx = json!({
@@ -174,7 +177,8 @@ async fn get_edit_requirement(
     let req_parent_id = req.req_parent;
 
     // Decorate for the template (single-item vec)
-    let requirement_json = json!(decorate_requirements(vec![req]).remove(0));
+    let mut decorated = decorate_requirements_with_repo(&*repo, vec![req]);
+    let requirement_json = json!(decorated.remove(0));
 
     // Project-scoped lookups; default to empty on error
     let statuses = repo.get_status_all().unwrap_or_default();
@@ -576,59 +580,17 @@ pub fn routes() -> Vec<Route> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
     use crate::models::{Project, ProjectMember};
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use chrono::{NaiveDate, NaiveDateTime};
-    use rocket::http::{ContentType, Cookie, Status};
-    use rocket::local::asynchronous::{Client, LocalResponse};
-    use rocket_dyn_templates::Template;
-    use std::sync::{Arc, RwLock};
-
-    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::routes::html::project::test_helpers::{
+        client_with_routes, delete_with_session, get_with_session, post_form_with_session,
+        session_cookie, timestamp, TestAppState,
+    };
+    use rocket::http::Status;
+    use rocket::local::asynchronous::Client;
 
     const ADMIN_ID: i32 = 1;
     const PRIMARY_PROJECT: i32 = 1;
-
-    fn timestamp() -> NaiveDateTime {
-        NaiveDate::from_ymd_opt(2024, 1, 1)
-            .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap()
-    }
-
-    fn auth_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie
-    }
-
-    async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .get(path)
-            .private_cookie(auth_cookie())
-            .dispatch()
-            .await
-    }
-
-    async fn post_form<'c>(client: &'c Client, path: &'c str, body: &'c str) -> LocalResponse<'c> {
-        client
-            .post(path)
-            .header(ContentType::Form)
-            .private_cookie(auth_cookie())
-            .body(body)
-            .dispatch()
-            .await
-    }
-
-    async fn delete<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .delete(path)
-            .private_cookie(auth_cookie())
-            .dispatch()
-            .await
-    }
 
     fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
@@ -737,18 +699,8 @@ mod tests {
         }
     }
 
-    fn managed_state(repo: DieselRepoMock) -> TestAppState {
-        AppState {
-            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
-        }
-    }
-
     async fn test_client(repo: DieselRepoMock) -> Client {
-        let rocket = rocket::build()
-            .manage(managed_state(repo))
-            .attach(Template::fairing())
-            .mount("/p", routes());
-        Client::tracked(rocket).await.expect("valid rocket")
+        client_with_routes(repo, routes()).await
     }
 
     #[rocket::async_test]
@@ -757,7 +709,7 @@ mod tests {
         repo.requirements.insert(1, sample_requirement(1));
         let client = test_client(repo).await;
 
-        let response = get(&client, "/p/1/requirements").await;
+        let response = get_with_session(&client, "/p/1/requirements", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");
@@ -771,7 +723,7 @@ mod tests {
         repo.requirements.insert(1, sample_requirement(1));
         let client = test_client(repo).await;
 
-        let response = get(&client, "/p/1/requirements/show/1").await;
+        let response = get_with_session(&client, "/p/1/requirements/show/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");
@@ -787,7 +739,7 @@ mod tests {
         repo.requirements.insert(1, req);
         let client = test_client(repo).await;
 
-        let response = get(&client, "/p/1/requirements/show/1").await;
+        let response = get_with_session(&client, "/p/1/requirements/show/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
@@ -798,7 +750,7 @@ mod tests {
     #[rocket::async_test]
     async fn new_requirement_form_renders() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/requirements/new").await;
+        let response = get_with_session(&client, "/p/1/requirements/new", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");
@@ -809,13 +761,14 @@ mod tests {
     #[rocket::async_test]
     async fn post_requirement_creates_new_entry() {
         let client = test_client(base_repo()).await;
-        let response = post_form(
+        let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
             "req_title=Test&req_description=Description&req_verification=1&\
              req_current_status=1&req_author=1&req_reviewer=1&req_link=&\
              req_category=1&req_parent=0&req_applicability=1&req_reference=&\
              req_justification=Testing&project_id=1",
+            ADMIN_ID,
         )
         .await;
 
@@ -835,7 +788,7 @@ mod tests {
         repo.requirements.insert(1, sample_requirement(1));
         let client = test_client(repo).await;
 
-        let response = get(&client, "/p/1/requirements/edit/1").await;
+        let response = get_with_session(&client, "/p/1/requirements/edit/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");
@@ -850,13 +803,14 @@ mod tests {
         repo.requirements.insert(1, sample_requirement(1));
         let client = test_client(repo).await;
 
-        let response = post_form(
+        let response = post_form_with_session(
             &client,
             "/p/1/requirements/edit/1",
             "req_id=1&req_title=Updated&req_description=New+desc&req_verification=1&\
              req_current_status=1&req_author=1&req_reviewer=1&req_link=&\
              req_category=1&req_parent=0&req_applicability=1&\
              req_justification=Changed&project_id=1&req_reference=REQ-SYS-1",
+            ADMIN_ID,
         )
         .await;
 
@@ -873,7 +827,7 @@ mod tests {
         repo.requirements.insert(1, sample_requirement(1));
         let client = test_client(repo).await;
 
-        let response = delete(&client, "/p/1/requirements/delete/1").await;
+        let response = delete_with_session(&client, "/p/1/requirements/delete/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -901,7 +855,7 @@ mod tests {
         // Use non-admin cookie
         let response = client
             .delete("/p/1/requirements/delete/1")
-            .private_cookie(Cookie::new(SESSION_COOKIE, "2"))
+            .private_cookie(session_cookie(2))
             .dispatch()
             .await;
 
@@ -917,7 +871,7 @@ mod tests {
         repo.requirements.insert(2, child);
         let client = test_client(repo).await;
 
-        let response = get(&client, "/p/1/requirements/tree").await;
+        let response = get_with_session(&client, "/p/1/requirements/tree", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");

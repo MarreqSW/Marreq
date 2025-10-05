@@ -597,31 +597,21 @@ pub fn routes() -> Vec<Route> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
     use crate::models::{
         Applicability, Category, Matrix, Project, ProjectMember, Requirement, Status, Test,
         TestStatus, Verification,
     };
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use chrono::{NaiveDate, NaiveDateTime};
-    use rocket::http::{ContentType, Cookie, Status as HttpStatus};
-    use rocket::local::asynchronous::{Client, LocalResponse};
-    use rocket_dyn_templates::Template;
-    use std::sync::{Arc, RwLock};
-
-    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::routes::html::project::test_helpers::{
+        client_with_routes, delete_with_session, get_with_session, post_form_with_session,
+        timestamp, TestAppState,
+    };
+    use rocket::http::Status as HttpStatus;
+    use rocket::local::asynchronous::Client;
 
     const ADMIN_ID: i32 = 1;
     const USER_ID: i32 = 2;
     const PRIMARY_PROJECT: i32 = 1;
-
-    fn timestamp() -> NaiveDateTime {
-        NaiveDate::from_ymd_opt(2024, 1, 1)
-            .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap()
-    }
 
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
@@ -781,82 +771,27 @@ mod tests {
         repo
     }
 
-    fn managed_state(repo: DieselRepoMock) -> TestAppState {
-        AppState {
-            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
-        }
-    }
-
     async fn test_client(repo: DieselRepoMock) -> Client {
-        let rocket = rocket::build()
-            .manage(managed_state(repo))
-            .attach(Template::fairing())
-            .mount(
-                "/p",
-                routes![
-                    show_tests,
-                    show_test_id,
-                    new_test,
-                    post_test,
-                    get_edit_test,
-                    post_edit_test,
-                    delete_test_route,
-                    get_matrix
-                ],
-            );
-        Client::tracked(rocket).await.expect("rocket instance")
-    }
-
-    fn admin_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie
-    }
-
-    fn user_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, USER_ID.to_string());
-        cookie.set_path("/");
-        cookie
-    }
-
-    async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .get(path)
-            .private_cookie(admin_cookie())
-            .dispatch()
-            .await
-    }
-
-    async fn get_as_user<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .get(path)
-            .private_cookie(user_cookie())
-            .dispatch()
-            .await
-    }
-
-    async fn post_form<'c>(client: &'c Client, path: &'c str, body: &'c str) -> LocalResponse<'c> {
-        client
-            .post(path)
-            .header(ContentType::Form)
-            .private_cookie(admin_cookie())
-            .body(body)
-            .dispatch()
-            .await
-    }
-
-    async fn delete_path<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .delete(path)
-            .private_cookie(admin_cookie())
-            .dispatch()
-            .await
+        client_with_routes(
+            repo,
+            routes![
+                show_tests,
+                show_test_id,
+                new_test,
+                post_test,
+                get_edit_test,
+                post_edit_test,
+                delete_test_route,
+                get_matrix
+            ],
+        )
+        .await
     }
 
     #[rocket::async_test]
     async fn show_tests_lists_known_items() {
         let client = test_client(repo_with_tests()).await;
-        let response = get(&client, "/p/1/tests").await;
+        let response = get_with_session(&client, "/p/1/tests", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -867,7 +802,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_test_id_displays_details() {
         let client = test_client(repo_with_tests()).await;
-        let response = get(&client, "/p/1/tests/show/1").await;
+        let response = get_with_session(&client, "/p/1/tests/show/1", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -878,7 +813,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_test_id_returns_error_when_missing() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/tests/show/42").await;
+        let response = get_with_session(&client, "/p/1/tests/show/42", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -888,7 +823,7 @@ mod tests {
     #[rocket::async_test]
     async fn new_test_form_renders() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/tests/new").await;
+        let response = get_with_session(&client, "/p/1/tests/new", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -899,13 +834,14 @@ mod tests {
     #[rocket::async_test]
     async fn post_test_creates_new_entry() {
         let client = test_client(base_repo()).await;
-        let response = post_form(
+        let response = post_form_with_session(
             &client,
             "/p/1/tests/new",
             concat!(
                 "test_name=Thermal+Check&test_reference=TEST-002&test_description=Thermal+validation&",
                 "test_source=Spec&test_status=1&test_parent=0&test_req=1&project_id=1"
             ),
+            ADMIN_ID,
         )
         .await;
 
@@ -935,7 +871,7 @@ mod tests {
     #[rocket::async_test]
     async fn get_edit_test_renders_existing_data() {
         let client = test_client(repo_with_tests()).await;
-        let response = get(&client, "/p/1/tests/edit/1").await;
+        let response = get_with_session(&client, "/p/1/tests/edit/1", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -946,13 +882,14 @@ mod tests {
     #[rocket::async_test]
     async fn post_edit_test_updates_entry() {
         let client = test_client(repo_with_tests()).await;
-        let response = post_form(
+        let response = post_form_with_session(
             &client,
             "/p/1/tests/edit/1",
             concat!(
                 "test_id=1&test_reference=TEST-001&test_name=Updated+Test&test_description=Updated+desc&",
                 "test_source=Updated&test_status=2&test_parent=0&linked_requirements=1&project_id=1"
             ),
+            ADMIN_ID,
         )
         .await;
 
@@ -982,7 +919,7 @@ mod tests {
     #[rocket::async_test]
     async fn delete_test_route_removes_draft() {
         let client = test_client(repo_with_tests()).await;
-        let response = delete_path(&client, "/p/1/tests/delete/1").await;
+        let response = delete_with_session(&client, "/p/1/tests/delete/1", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
         assert_eq!(response.headers().get_one("Location"), Some("/p/1/tests"));
@@ -995,11 +932,7 @@ mod tests {
     #[rocket::async_test]
     async fn delete_test_route_forbids_non_admin_when_status_high() {
         let client = test_client(repo_with_active_test()).await;
-        let response = client
-            .delete("/p/1/tests/delete/1")
-            .private_cookie(user_cookie())
-            .dispatch()
-            .await;
+        let response = delete_with_session(&client, "/p/1/tests/delete/1", USER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Forbidden);
     }
@@ -1007,7 +940,7 @@ mod tests {
     #[rocket::async_test]
     async fn get_matrix_redirects_when_database_unavailable() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/matrix").await;
+        let response = get_with_session(&client, "/p/1/matrix", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
     }
@@ -1015,7 +948,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_tests_requires_membership_for_non_admin() {
         let client = test_client(base_repo()).await;
-        let response = get_as_user(&client, "/p/1/tests").await;
+        let response = get_with_session(&client, "/p/1/tests", USER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
     }

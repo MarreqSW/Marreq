@@ -1,237 +1,34 @@
-//! Base service trait and common functionality for all services.
+//! Common helpers shared across service modules.
 //!
-//! This module provides the foundation for all service implementations,
-//! including common patterns for database operations, caching, and error handling.
+//! The refactor towards lightweight service structs that operate on the
+//! [`AppState`](crate::app::AppState) removed the need for a large base service
+//! abstraction. A handful of utility functions are still reused by several
+//! services, so they live in this module.
 
-//use crate::errors::{ApiError, ApiResult};
-use crate::repository::DieselRepo;
-use crate::logger::{LogCtx, Logger};
-use std::time::Duration;
+use crate::errors::{ApiError, ApiResult};
+use crate::models::User;
 
-/// Base trait for all services
-pub trait Service {
-    /// Get the repository instance
-    fn repo(&self) -> &DieselRepo;
-    
-    /// Get a mutable repository instance
-    fn repo_mut(&mut self) -> &mut DieselRepo;
-}
-
-/// Cacheable service trait for services that support caching
-pub trait CacheableService<T> {
-    /// Get cached value by key
-    fn get_cached(&self, key: &str) -> Option<T>;
-    
-    /// Set cache value with TTL
-    fn set_cache(&self, key: &str, value: T, ttl: Duration);
-    
-    /// Invalidate cache entry
-    fn invalidate_cache(&self, key: &str);
-    
-    /// Generate cache key for entity
-    fn cache_key(&self, entity_type: &str, id: i32) -> String {
-        format!("{}:{}", entity_type, id)
-    }
-    
-    /// Generate cache key for list
-    fn cache_key_list(&self, entity_type: &str, project_id: Option<i32>) -> String {
-        match project_id {
-            Some(pid) => format!("{}:list:{}", entity_type, pid),
-            None => format!("{}:list:all", entity_type),
-        }
-    }
-}
-
-/// Base service implementation
-pub struct BaseService {
-    repo: DieselRepo,
-}
-
-impl BaseService {
-    /// Create a new base service
-    pub fn new() -> Self {
-        Self {
-            repo: DieselRepo::new(),
-        }
-    }
-    
-    /// Get database connection with proper error handling
-    pub fn get_connection(&self) -> ApiResult<crate::repository::PooledConnectionWrapper> {
-        self.repo.get_conn()
-            .map_err(|e| ApiError::Internal(format!("Database connection error: {}", e)))
-    }
-    
-    /// Log creation operation
-    pub fn log_create(
-        &self,
-        user_id: i32,
-        entity_type: crate::models::EntityType,
-        entity_id: i32,
-        project_id: Option<i32>,
-        new_values: Option<String>,
-        description: Option<String>,
-    ) -> ApiResult<()> {
-        let mut conn = self.get_connection()?;
-        let ctx = LogCtx::new(user_id);
-        Logger::log_create(
-            conn.as_mut(),
-            &ctx,
-            entity_type,
-            entity_id,
-            project_id,
-            new_values,
-            description,
-        )
-        .map_err(|e| ApiError::Internal(format!("Failed to log operation: {}", e)))
-    }
-
-    /// Log update operation
-    pub fn log_update(
-        &self,
-        user_id: i32,
-        entity_type: crate::models::EntityType,
-        entity_id: i32,
-        project_id: Option<i32>,
-        old_values: Option<String>,
-        new_values: Option<String>,
-        description: Option<String>,
-    ) -> ApiResult<()> {
-        let mut conn = self.get_connection()?;
-        let ctx = LogCtx::new(user_id);
-        Logger::log_update(
-            conn.as_mut(),
-            &ctx,
-            entity_type,
-            entity_id,
-            project_id,
-            old_values,
-            new_values,
-            description,
-        )
-        .map_err(|e| ApiError::Internal(format!("Failed to log operation: {}", e)))
-    }
-
-    /// Log deletion operation
-    pub fn log_delete(
-        &self,
-        user_id: i32,
-        entity_type: crate::models::EntityType,
-        entity_id: i32,
-        project_id: Option<i32>,
-        old_values: Option<String>,
-        description: Option<String>,
-    ) -> ApiResult<()> {
-        let mut conn = self.get_connection()?;
-        let ctx = LogCtx::new(user_id);
-        Logger::log_delete(
-            conn.as_mut(),
-            &ctx,
-            entity_type,
-            entity_id,
-            project_id,
-            old_values,
-            description,
-        )
-        .map_err(|e| ApiError::Internal(format!("Failed to log operation: {}", e)))
-    }
-}
-
-impl Service for BaseService {
-    fn repo(&self) -> &DieselRepo {
-        &self.repo
-    }
-    
-    fn repo_mut(&mut self) -> &mut DieselRepo {
-        &mut self.repo
-    }
-}
-
-/// Helper methods for cache operations
-impl BaseService {
-    /// Get cached value by key
-    pub fn get_cached<T>(&self, key: &str) -> Option<T> 
-    where 
-        T: serde::de::DeserializeOwned,
-    {
-        cache::get_cached_value(key)
-    }
-    
-    /// Set cache value with TTL
-    pub fn set_cache<T>(&self, key: &str, value: T, ttl: Duration) 
-    where 
-        T: serde::Serialize,
-    {
-        cache::set_cached_value(key, value, ttl);
-    }
-    
-    /// Invalidate cache entry
-    pub fn invalidate_cache(&self, key: &str) {
-        cache::invalidate_cache_key(key);
-    }
-    
-    /// Generate cache key for entity
-    pub fn cache_key(&self, entity_type: &str, id: i32) -> String {
-        format!("{}:{}", entity_type, id)
-    }
-    
-    /// Generate cache key for list
-    pub fn cache_key_list(&self, entity_type: &str, project_id: Option<i32>) -> String {
-        match project_id {
-            Some(pid) => format!("{}:list:{}", entity_type, pid),
-            None => format!("{}:list:all", entity_type),
-        }
-    }
-}
-
-/// Helper macro to implement CacheableService for service types
-#[macro_export]
-macro_rules! impl_cacheable_service {
-    ($service_type:ty, $data_type:ty) => {
-        impl CacheableService<$data_type> for $service_type {
-            fn get_cached(&self, key: &str) -> Option<$data_type> {
-                crate::cache::get_cached_value(key)
-            }
-            
-            fn set_cache(&self, key: &str, value: $data_type, ttl: Duration) {
-                crate::cache::set_cached_value(key, value, ttl);
-            }
-            
-            fn invalidate_cache(&self, key: &str) {
-                crate::cache::invalidate_cache_key(key);
-            }
-        }
-    };
-}
-
-/// Helper function to serialize data for logging
+/// Serialize a value into JSON so it can be stored in the audit log.
 pub fn serialize_for_logging<T>(data: &T) -> ApiResult<String>
 where
     T: serde::Serialize,
 {
-    serde_json::to_string(data)
-        .map_err(|e| ApiError::Serialization(e))
+    serde_json::to_string(data).map_err(ApiError::Serialization)
 }
 
-/// Helper function to check if user has permission for project
-pub fn check_project_permission(
-    user: &crate::models::User,
-    _project_id: i32,
-) -> ApiResult<()> {
-    // Admin users have access to all projects
+/// Ensure the provided user may access the requested project.
+pub fn check_project_permission(user: &User, _project_id: i32) -> ApiResult<()> {
     if user.is_admin {
         return Ok(());
     }
-    
-    // For now, all users have access to all projects
-    // This can be enhanced later with project-specific permissions
+
+    // Project level permissions are not implemented yet.  Non admin users are
+    // currently allowed to view all projects, which matches the behaviour prior
+    // to the service refactor.
     Ok(())
 }
 
-/// Helper function to validate entity ownership
-pub fn validate_entity_access(
-    user: &crate::models::User,
-    entity_project_id: i32,
-) -> ApiResult<()> {
+/// Validate that a user may access an entity belonging to `entity_project_id`.
+pub fn validate_entity_access(user: &User, entity_project_id: i32) -> ApiResult<()> {
     check_project_permission(user, entity_project_id)
 }
-

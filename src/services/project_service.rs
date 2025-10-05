@@ -1,159 +1,140 @@
-//! Project service for managing projects business logic.
+//! Service handling project level operations.
 
-use crate::errors::{ApiError, ApiResult};
-use crate::models::*;
-use crate::validation::validate_project;
-use crate::services::{BaseService, Service};
-use crate::repository::ProjectsRepository;
-use std::time::Duration;
+use crate::app::{AppState, DieselCachedRepo};
+use crate::logger::{LogCtx, Logger};
+use crate::models::{NewProject, Project, UpdateProject, User};
+use crate::repository::errors::RepoError;
+use crate::repository::{PooledConnectionWrapper, ProjectsRepository};
+use crate::validation::{sanitize_optional_string, sanitize_string, validate_project};
 
-pub struct ProjectService {
-    base: BaseService,
+/// High level project operations backed by the shared [`AppState`].
+pub struct ProjectService<'a> {
+    state: &'a AppState<DieselCachedRepo>,
 }
 
-impl ProjectService {
-    pub fn new() -> Self {
-        Self { base: BaseService::new() }
+impl<'a> ProjectService<'a> {
+    /// Create a new service instance bound to the provided application state.
+    pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
+        Self { state }
     }
-    
-    pub async fn get_all_projects(&self) -> ApiResult<Vec<Project>> {
-        let cache_key = self.base.cache_key_list("project", None);
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        let projects = self.base.repo()
-            .get_projects_all()
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        self.base.set_cache(&cache_key, projects.clone(), Duration::from_secs(300));
-        Ok(projects)
+
+    /// Retrieve all projects.
+    pub fn list_all(&self) -> Result<Vec<Project>, RepoError> {
+        self.state.repo_read().get_projects_all()
     }
-    
-    pub async fn get_project_by_id(&self, id: i32) -> ApiResult<Project> {
-        let cache_key = self.base.cache_key("project", id);
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        let project = self.base.repo()
-            .get_project_by_id(id)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        self.base.set_cache(&cache_key, project.clone(), Duration::from_secs(600));
-        Ok(project)
+
+    /// Retrieve a project by identifier.
+    pub fn get_by_id(&self, id: i32) -> Result<Project, RepoError> {
+        self.state.repo_read().get_project_by_id(id)
     }
-    
-    pub async fn create_project(
-        &self,
-        mut new_project: NewProject,
-        user_id: i32,
-    ) -> ApiResult<i32> {
-        validate_project(&new_project)?;
-        
-        crate::validation::sanitize_string(&mut new_project.project_name);
-        crate::validation::sanitize_optional_string(&mut new_project.project_description);
-        
-        let mut repo = crate::repository::DieselRepo::new();
-        let id = repo.insert_new_project(&new_project)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if let Ok(new_values) = crate::services::serialize_for_logging(&new_project) {
-            let _ = self.base.log_create(
-                user_id,
-                EntityType::Project,
-                id,
-                None, // Projects don't have a parent project
-                Some(new_values),
-                Some(format!("Created project: {}", new_project.project_name)),
-            );
+
+    /// Create a new project entry and log the action.
+    pub fn create(&self, actor: &User, mut payload: NewProject) -> Result<i32, RepoError> {
+        self.prepare_new_payload(&mut payload)?;
+
+        let id = {
+            let mut repo = self.state.repo_write();
+            repo.insert_new_project(&payload)?
+        };
+
+        if let Ok(project) = self.get_by_id(id) {
+            self.log_created(actor, id, &project);
         }
-        
-        self.base.invalidate_cache(&self.base.cache_key_list("project", None));
-        crate::cache::invalidate_project_cache(id);
-        
         Ok(id)
     }
-    
-    pub async fn update_project(
+
+    /// Update an existing project entry and log the change.
+    pub fn update(
         &self,
+        actor: &User,
         id: i32,
-        mut updated_project: NewProject,
-        user_id: i32,
-    ) -> ApiResult<bool> {
-        let old_project = self.get_project_by_id(id).await?;
-        validate_project(&updated_project)?;
-        
-        crate::validation::sanitize_string(&mut updated_project.project_name);
-        crate::validation::sanitize_optional_string(&mut updated_project.project_description);
-        
-        let update_data = crate::models::UpdateProject {
-            project_name: updated_project.project_name.clone(),
-            project_description: updated_project.project_description.clone(),
-            project_status: "active".to_string(), // Default status
-            project_owner_id: None, // Default owner
+        mut payload: UpdateProject,
+    ) -> Result<Project, RepoError> {
+        self.prepare_update_payload(&mut payload)?;
+
+        let before = self.get_by_id(id)?;
+
+        {
+            let mut repo = self.state.repo_write();
+            let updated = repo.edit_project(id, &payload)?;
+            if !updated {
+                return Err(RepoError::NotFound);
+            }
+        }
+
+        let after = self.get_by_id(id)?;
+        self.log_updated(actor, &before, &after);
+        Ok(after)
+    }
+
+    /// Delete a project entry and log the removal.
+    pub fn delete(&self, actor: &User, id: i32) -> Result<Project, RepoError> {
+        let removed = {
+            let mut repo = self.state.repo_write();
+            repo.delete_project(id)?
         };
-        
-        let mut repo = crate::repository::DieselRepo::new();
-        let success = repo.edit_project(id, &update_data)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if success {
-            if let (Ok(old_values), Ok(new_values)) = (
-                crate::services::serialize_for_logging(&old_project),
-                crate::services::serialize_for_logging(&updated_project),
-            ) {
-                let _ = self.base.log_update(
-                    user_id,
-                    EntityType::Project,
-                    id,
-                    None,
-                    Some(old_values),
-                    Some(new_values),
-                    Some(format!("Updated project: {}", updated_project.project_name)),
+
+        self.log_deleted(actor, &removed);
+        Ok(removed)
+    }
+
+    fn prepare_new_payload(&self, payload: &mut NewProject) -> Result<(), RepoError> {
+        sanitize_string(&mut payload.project_name);
+        sanitize_optional_string(&mut payload.project_description);
+
+        validate_project(payload).map_err(|err| RepoError::BadInput(err.to_string()))
+    }
+
+    fn prepare_update_payload(&self, payload: &mut UpdateProject) -> Result<(), RepoError> {
+        sanitize_string(&mut payload.project_name);
+        sanitize_optional_string(&mut payload.project_description);
+
+        let mut clone = NewProject {
+            project_name: payload.project_name.clone(),
+            project_description: payload.project_description.clone(),
+            project_status: payload.project_status.clone(),
+            project_owner_id: payload.project_owner_id,
+        };
+        self.prepare_new_payload(&mut clone)
+    }
+
+    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
+        self.state.repo_read().inner_repo().get_conn()
+    }
+
+    fn log_created(&self, actor: &User, id: i32, entity: &Project) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(actor.user_id);
+            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!("Failed to log project creation {id}: {_err}");
+            }
+        }
+    }
+
+    fn log_updated(&self, actor: &User, before: &Project, after: &Project) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(actor.user_id);
+            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Failed to log project update {} -> {}: {_err}",
+                    before.project_id, after.project_id
                 );
             }
-            
-            self.base.invalidate_cache(&self.base.cache_key("project", id));
-            self.base.invalidate_cache(&self.base.cache_key_list("project", None));
-            crate::cache::invalidate_project_cache(id);
         }
-        
-        Ok(success)
     }
-    
-    pub async fn delete_project(&self, id: i32, user_id: i32) -> ApiResult<bool> {
-        let old_project = self.get_project_by_id(id).await?;
-        
-        let mut repo = crate::repository::DieselRepo::new();
-        let success = repo.delete_project(id)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if success {
-            if let Ok(old_values) = crate::services::serialize_for_logging(&old_project) {
-                let _ = self.base.log_delete(
-                    user_id,
-                    EntityType::Project,
-                    id,
-                    None,
-                    Some(old_values),
-                    Some(format!("Deleted project: {}", old_project.project_name)),
+
+    fn log_deleted(&self, actor: &User, entity: &Project) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(actor.user_id);
+            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Failed to log project deletion {}: {_err}",
+                    entity.project_id
                 );
             }
-            
-            self.base.invalidate_cache(&self.base.cache_key("project", id));
-            self.base.invalidate_cache(&self.base.cache_key_list("project", None));
-            crate::cache::invalidate_project_cache(id);
         }
-        
-        Ok(success)
     }
 }
-
-impl Service for ProjectService {
-    fn repo(&self) -> &crate::repository::DieselRepo { self.base.repo() }
-    fn repo_mut(&mut self) -> &mut crate::repository::DieselRepo { self.base.repo_mut() }
-}
-
-
-

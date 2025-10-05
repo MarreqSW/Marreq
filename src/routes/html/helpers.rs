@@ -237,13 +237,6 @@ pub(crate) fn get_requirement_by_id_cached_safe(
         })
 }
 
-pub(crate) fn get_test_by_id_cached_safe(state: &AppState, id: i32) -> Result<Test, String> {
-    state.repo_read().get_test_by_id(id).map_err(|e| match e {
-        RepoError::NotFound => format!("Test with ID {} not found", id),
-        _ => e.to_string(),
-    })
-}
-
 pub(crate) fn get_category_by_id_cached(state: &AppState, id: i32) -> Category {
     state
         .repo_read()

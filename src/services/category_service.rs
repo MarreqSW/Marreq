@@ -23,9 +23,7 @@ impl<'a> CategoryService<'a> {
 
     /// Retrieve Category entries scoped to a project.
     pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Category>, RepoError> {
-        self.state
-            .repo_read()
-            .get_categories_by_project(project_id)
+        self.state.repo_read().get_categories_by_project(project_id)
     }
 
     /// Retrieve a single Category by identifier.
@@ -111,10 +109,7 @@ impl<'a> CategoryService<'a> {
             let ctx = LogCtx::new(user.user_id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log category deletion {}: {_err}",
-                    entity.cat_id
-                );
+                eprintln!("Failed to log category deletion {}: {_err}", entity.cat_id);
             }
         }
     }

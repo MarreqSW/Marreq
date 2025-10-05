@@ -1,5 +1,6 @@
 use super::helpers::*;
 use super::prelude::*;
+use crate::services::TestService;
 
 #[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>")]
 async fn show_tests(
@@ -14,12 +15,13 @@ async fn show_tests(
     use serde_json::json;
 
     let user = project_access.into_user();
+    let service = TestService::new(state.inner());
     let repo = state.repo_read();
 
     let mut ctx = build_context_with_projects(state, user, cookies);
 
     // Fetch and process tests
-    let tests = repo.get_tests_by_project(project_id).unwrap_or_default();
+    let tests = service.list_by_project(project_id).unwrap_or_default();
 
     let tests = decorate_tests_cached(
         state,
@@ -54,14 +56,15 @@ async fn show_test_id(
     use serde_json::json;
 
     let user = project_access.into_user();
+    let service = TestService::new(state.inner());
 
-    let test = match get_test_by_id_cached_safe(state, test_id) {
+    let test = match service.get_by_id(test_id) {
         Ok(t) => t,
         Err(details) => {
             let ctx = json!({
                 "title": "Test Not Found",
                 "message": "The test you're looking for could not be found.",
-                "details": details,
+                "details": details.to_string(),
                 "user": user
             });
             return Ok(Template::render("error", ctx));
@@ -127,13 +130,8 @@ async fn post_test(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
-    let mut connection = match get_db_connection(state) {
-        Ok(conn) => Some(conn),
-        Err(e) => {
-            eprintln!("Database connection error: {}", e);
-            None
-        }
-    };
+    let service = TestService::new(state.inner());
+
     let my_new_test = NewTest {
         test_id: None,
         test_name: new_test.test_name.clone(),
@@ -144,7 +142,8 @@ async fn post_test(
         test_parent: new_test.test_parent,
         project_id: project_id,
     };
-    let test_id = state.repo_write().insert_test(&my_new_test).map_err(|e| {
+
+    let test_id = service.create(&user, my_new_test).map_err(|e| {
         eprintln!("Error inserting new test: {:?}", e);
         Redirect::to(uri!(
             "/p",
@@ -152,17 +151,7 @@ async fn post_test(
         ))
     })?;
 
-    let test = state
-        .repo_read()
-        .get_test_by_id(test_id)
-        .expect("Error reading table Tests");
-
-    // Log the test creation
-    if let Some(connection) = connection.as_mut() {
-        let log_ctx = LogCtx::new(user.user_id);
-        let _ = Logger::created(connection, &log_ctx, test_id, &test);
-    }
-
+    // Link requirements
     #[cfg(debug_assertions)]
     println!("NewTestForm requirements: {:#?}", new_test.test_req);
     for req in new_test.test_req.iter() {
@@ -237,25 +226,12 @@ async fn post_edit_test(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
+    let service = TestService::new(state.inner());
     let to_list = || {
         Redirect::to(uri!(
             "/p",
             show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
         ))
-    };
-
-    let mut conn = match get_db_connection(state) {
-        Ok(conn) => Some(conn),
-        Err(e) => {
-            eprintln!("Database connection error: {e}");
-            None
-        }
-    };
-
-    let old_test = {
-        let repo = state.repo_read();
-        repo.get_test_by_id(test_id)
-            .expect("Error reading table Tests")
     };
 
     // Own the form to avoid cloning strings
@@ -272,19 +248,10 @@ async fn post_edit_test(
         project_id: f.project_id,
     };
 
-    state.repo_write().edit_test(&new_test).map_err(|e| {
+    service.update(&user, test_id, new_test).map_err(|e| {
         eprintln!("Error editing test: {e:?}");
         to_list()
     })?;
-
-    let log_ctx = LogCtx::new(user.user_id);
-    let updated = state
-        .repo_read()
-        .get_test_by_id(test_id)
-        .expect("Error reading table Tests after update");
-    if let Some(conn) = conn.as_mut() {
-        let _ = Logger::updated(conn, &log_ctx, &old_test, &updated);
-    }
 
     state
         .repo_write()
@@ -310,34 +277,19 @@ async fn delete_test_route(
     use rocket::http::Status;
 
     let user = project_access.into_user();
+    let service = TestService::new(state.inner());
 
-    let mut conn = match get_db_connection(state) {
-        Ok(conn) => Some(conn),
-        Err(e) => {
-            eprintln!("Database connection error: {e}");
-            None
-        }
-    };
-
-    let test = get_test_by_id_cached_safe(state, test_id).map_err(|_| Status::NotFound)?;
+    let test = service.get_by_id(test_id).map_err(|_| Status::NotFound)?;
 
     // allow only Draft(1) or Proposal(2) unless admin
     if test.test_status > 2 && !user.is_admin {
         return Err(Status::Forbidden);
     }
 
-    let deleted = state
-        .repo_write()
-        .delete_test(test_id)
-        .map_err(|e| match e {
-            crate::repository::errors::RepoError::NotFound => Status::NotFound,
-            _ => Status::InternalServerError,
-        })?;
-
-    if let Some(conn) = conn.as_mut() {
-        let log_ctx = LogCtx::new(user.user_id);
-        let _ = Logger::deleted(conn, &log_ctx, &deleted);
-    }
+    service.delete(&user, test_id).map_err(|e| match e {
+        crate::repository::errors::RepoError::NotFound => Status::NotFound,
+        _ => Status::InternalServerError,
+    })?;
 
     Ok(Redirect::to(uri!(
         "/p",

@@ -5,7 +5,7 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{Test, NewTest, User};
+use crate::models::{NewTest, Test, User};
 use crate::repository::errors::RepoError;
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::TestsRepository;
@@ -28,9 +28,7 @@ impl<'a> TestService<'a> {
 
     /// Retrieve Test entries scoped to a project.
     pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Test>, RepoError> {
-        self.state
-            .repo_read()
-            .get_tests_by_project(project_id)
+        self.state.repo_read().get_tests_by_project(project_id)
     }
 
     /// Retrieve a single Test by identifier.

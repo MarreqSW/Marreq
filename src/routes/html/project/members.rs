@@ -237,29 +237,18 @@ pub fn routes() -> Vec<Route> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
     use crate::models::{Project, ProjectMember, User};
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use chrono::{NaiveDate, NaiveDateTime};
-    use rocket::http::{ContentType, Cookie, Status as HttpStatus};
-    use rocket::local::asynchronous::{Client, LocalResponse};
-    use rocket_dyn_templates::Template;
-    use std::sync::{Arc, RwLock};
-
-    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::routes::html::project::test_helpers::{
+        client_with_routes, get_with_session, post_form_with_session, timestamp, TestAppState,
+    };
+    use rocket::http::Status as HttpStatus;
+    use rocket::local::asynchronous::Client;
 
     const OWNER_ID: i32 = 1;
     const MEMBER_ID: i32 = 2;
     const CANDIDATE_ID: i32 = 3;
     const PROJECT_ID: i32 = 1;
-
-    fn timestamp() -> NaiveDateTime {
-        NaiveDate::from_ymd_opt(2024, 1, 1)
-            .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap()
-    }
 
     fn sample_project() -> Project {
         Project {
@@ -324,96 +313,22 @@ mod tests {
         repo
     }
 
-    fn managed_state(repo: DieselRepoMock) -> TestAppState {
-        AppState {
-            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
-        }
-    }
-
     async fn test_client(repo: DieselRepoMock) -> Client {
-        let rocket = rocket::build()
-            .manage(managed_state(repo))
-            .attach(Template::fairing())
-            .mount(
-                "/p",
-                routes![
-                    show_project_members,
-                    add_project_member,
-                    remove_project_member
-                ],
-            );
-        Client::tracked(rocket).await.expect("rocket instance")
-    }
-
-    fn owner_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, OWNER_ID.to_string());
-        cookie.set_path("/");
-        cookie
-    }
-
-    fn member_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, MEMBER_ID.to_string());
-        cookie.set_path("/");
-        cookie
-    }
-
-    async fn get_as_owner<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .get(path)
-            .private_cookie(owner_cookie())
-            .dispatch()
-            .await
-    }
-
-    async fn get_as_member<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .get(path)
-            .private_cookie(member_cookie())
-            .dispatch()
-            .await
-    }
-
-    async fn post_form_as_owner<'c>(
-        client: &'c Client,
-        path: &'c str,
-        body: &'c str,
-    ) -> LocalResponse<'c> {
-        client
-            .post(path)
-            .header(ContentType::Form)
-            .private_cookie(owner_cookie())
-            .body(body)
-            .dispatch()
-            .await
-    }
-
-    async fn post_form_as_member<'c>(
-        client: &'c Client,
-        path: &'c str,
-        body: &'c str,
-    ) -> LocalResponse<'c> {
-        client
-            .post(path)
-            .header(ContentType::Form)
-            .private_cookie(member_cookie())
-            .body(body)
-            .dispatch()
-            .await
-    }
-
-    async fn post_remove_as_owner<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .post(path)
-            .header(ContentType::Form)
-            .private_cookie(owner_cookie())
-            .dispatch()
-            .await
+        client_with_routes(
+            repo,
+            routes![
+                show_project_members,
+                add_project_member,
+                remove_project_member
+            ],
+        )
+        .await
     }
 
     #[rocket::async_test]
     async fn show_project_members_displays_roster_for_owner() {
         let client = test_client(base_repo()).await;
-        let response = get_as_owner(&client, "/p/1/members").await;
+        let response = get_with_session(&client, "/p/1/members", OWNER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("body");
@@ -426,7 +341,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_project_members_hides_management_for_non_owner() {
         let client = test_client(base_repo()).await;
-        let response = get_as_member(&client, "/p/1/members").await;
+        let response = get_with_session(&client, "/p/1/members", MEMBER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("body");
@@ -438,7 +353,8 @@ mod tests {
     #[rocket::async_test]
     async fn add_project_member_as_owner_persists_membership() {
         let client = test_client(base_repo()).await;
-        let response = post_form_as_owner(&client, "/p/1/members", "user_id=3&role=2").await;
+        let response =
+            post_form_with_session(&client, "/p/1/members", "user_id=3&role=2", OWNER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
         assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
@@ -454,7 +370,8 @@ mod tests {
     #[rocket::async_test]
     async fn add_project_member_requires_owner_role() {
         let client = test_client(base_repo()).await;
-        let response = post_form_as_member(&client, "/p/1/members", "user_id=3&role=2").await;
+        let response =
+            post_form_with_session(&client, "/p/1/members", "user_id=3&role=2", MEMBER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
         assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
@@ -477,7 +394,7 @@ mod tests {
     #[rocket::async_test]
     async fn remove_project_member_removes_non_owner() {
         let client = test_client(base_repo()).await;
-        let response = post_remove_as_owner(&client, "/p/1/members/2/remove").await;
+        let response = post_form_with_session(&client, "/p/1/members/2/remove", "", OWNER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
         assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
@@ -493,7 +410,7 @@ mod tests {
     #[rocket::async_test]
     async fn remove_project_member_prevents_last_owner_removal() {
         let client = test_client(repo_with_single_owner()).await;
-        let response = post_remove_as_owner(&client, "/p/1/members/1/remove").await;
+        let response = post_form_with_session(&client, "/p/1/members/1/remove", "", OWNER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
         assert_eq!(response.headers().get_one("Location"), Some("/1/members"));

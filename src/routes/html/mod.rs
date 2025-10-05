@@ -2,12 +2,12 @@ pub mod cache;
 mod helpers;
 
 pub mod admin;
-pub mod project;
-pub mod projects;
 pub mod auth;
 pub mod dashboard;
 pub mod excel;
 pub mod logs;
+pub mod project;
+pub mod projects;
 pub mod tables;
 pub mod user;
 
@@ -42,8 +42,8 @@ pub(crate) mod prelude {
     pub(crate) use crate::logger::{LogCtx, Logger};
     pub(crate) use crate::models::*;
     pub(crate) use crate::repository::{
-        LookupRepository, ProjectMembersRepository, ProjectsRepository,
-        RequirementsRepository, TestsRepository, UserRepository,
+        LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
+        TestsRepository, UserRepository,
     };
 }
 

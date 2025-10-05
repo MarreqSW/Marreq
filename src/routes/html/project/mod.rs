@@ -3,6 +3,8 @@ mod categories;
 mod members;
 mod reports;
 mod requirements;
+#[cfg(test)]
+pub(crate) mod test_helpers;
 mod tests;
 
 use super::helpers;

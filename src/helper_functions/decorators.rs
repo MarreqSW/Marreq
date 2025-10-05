@@ -7,16 +7,37 @@ pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement
     decorate_requirements_impl(&repo, reqs)
 }
 
+/// Decorate requirements using an explicitly provided repository.
+pub fn decorate_requirements_with_repo<R: Repository>(
+    repo: &R,
+    reqs: Vec<Requirement>,
+) -> Vec<DecoratedRequirement> {
+    decorate_requirements_impl(repo, reqs)
+}
+
 /// Decorate tests using the default Diesel repository.
 pub fn decorate_tests(tests: Vec<Test>) -> Vec<DecoratedTest> {
     let repo = DieselRepo::new();
     decorate_tests_impl(&repo, tests)
 }
 
+/// Decorate tests using an explicitly provided repository.
+pub fn decorate_tests_with_repo<R: Repository>(repo: &R, tests: Vec<Test>) -> Vec<DecoratedTest> {
+    decorate_tests_impl(repo, tests)
+}
+
 /// Get linked tests for a requirement using the default Diesel repository.
 pub fn get_linked_tests_for_requirement(req_id: i32) -> Result<Vec<DecoratedTest>, RepoError> {
     let repo = DieselRepo::new();
     get_linked_tests_for_requirement_impl(&repo, req_id)
+}
+
+/// Retrieve linked tests using an explicitly provided repository.
+pub fn get_linked_tests_for_requirement_with_repo<R: Repository>(
+    repo: &R,
+    req_id: i32,
+) -> Result<Vec<DecoratedTest>, RepoError> {
+    get_linked_tests_for_requirement_impl(repo, req_id)
 }
 
 /// Decorate a list of requirements using the provided repository for lookups.

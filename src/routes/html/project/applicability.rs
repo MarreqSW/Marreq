@@ -210,27 +210,17 @@ pub fn routes() -> Vec<Route> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
     use crate::models::{Applicability, Project, ProjectMember};
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use chrono::{NaiveDate, NaiveDateTime};
-    use rocket::http::{ContentType, Cookie, Status};
-    use rocket::local::asynchronous::{Client, LocalResponse};
-    use rocket_dyn_templates::Template;
-    use std::sync::{Arc, RwLock};
-
-    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::routes::html::project::test_helpers::{
+        client_with_routes, delete_with_session, get_with_session, post_form_with_session,
+        timestamp, TestAppState,
+    };
+    use rocket::http::Status;
+    use rocket::local::asynchronous::Client;
 
     const ADMIN_ID: i32 = 1;
     const PRIMARY_PROJECT: i32 = 1;
-
-    fn timestamp() -> NaiveDateTime {
-        NaiveDate::from_ymd_opt(2024, 1, 1)
-            .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap()
-    }
 
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
@@ -273,58 +263,25 @@ mod tests {
         repo
     }
 
-    fn managed_state(repo: DieselRepoMock) -> TestAppState {
-        AppState {
-            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
-        }
-    }
-
     async fn test_client(repo: DieselRepoMock) -> Client {
-        let rocket = rocket::build()
-            .manage(managed_state(repo))
-            .attach(Template::fairing())
-            .mount(
-                "/p",
-                routes![
-                    show_applicability,
-                    new_applicability,
-                    post_applicability,
-                    get_edit_applicability,
-                    post_edit_applicability,
-                    delete_applicability_route
-                ],
-            );
-        Client::tracked(rocket).await.expect("client")
-    }
-
-    fn auth_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie
-    }
-
-    async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
-        client
-            .get(path)
-            .private_cookie(auth_cookie())
-            .dispatch()
-            .await
-    }
-
-    async fn post_form<'c>(client: &'c Client, path: &'c str, body: &'c str) -> LocalResponse<'c> {
-        client
-            .post(path)
-            .header(ContentType::Form)
-            .private_cookie(auth_cookie())
-            .body(body)
-            .dispatch()
-            .await
+        client_with_routes(
+            repo,
+            routes![
+                show_applicability,
+                new_applicability,
+                post_applicability,
+                get_edit_applicability,
+                post_edit_applicability,
+                delete_applicability_route
+            ],
+        )
+        .await
     }
 
     #[rocket::async_test]
     async fn show_applicability_renders_known_items() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/applicability").await;
+        let response = get_with_session(&client, "/p/1/applicability", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("APP-1"));
@@ -334,7 +291,7 @@ mod tests {
     #[rocket::async_test]
     async fn new_applicability_form_renders() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/applicability/new").await;
+        let response = get_with_session(&client, "/p/1/applicability/new", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("New Applicability"));
@@ -344,10 +301,11 @@ mod tests {
     #[rocket::async_test]
     async fn post_applicability_stores_new_entry_even_when_logging_fails() {
         let client = test_client(base_repo()).await;
-        let response = post_form(
+        let response = post_form_with_session(
             &client,
             "/p/1/applicability/new",
             "app_title=Thermal&app_description=Heat+rules&app_tag=thermal&project_id=1",
+            ADMIN_ID,
         )
         .await;
 
@@ -367,7 +325,7 @@ mod tests {
     #[rocket::async_test]
     async fn get_edit_applicability_returns_prefilled_form() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/p/1/applicability/edit/1").await;
+        let response = get_with_session(&client, "/p/1/applicability/edit/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Edit Applicability"));
@@ -381,7 +339,7 @@ mod tests {
         repo.applicability
             .insert(2, sample_applicability(2, 2, "Surface"));
         let client = test_client(repo).await;
-        let response = get(&client, "/p/1/applicability/edit/2").await;
+        let response = get_with_session(&client, "/p/1/applicability/edit/2", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
@@ -392,10 +350,11 @@ mod tests {
     #[rocket::async_test]
     async fn post_edit_applicability_updates_entry_before_logging_error() {
         let client = test_client(base_repo()).await;
-        let response = post_form(
+        let response = post_form_with_session(
             &client,
             "/p/1/applicability/edit/1",
             "app_id=1&project_id=1&app_title=Flight+Rev&app_description=Updated&app_tag=flight",
+            ADMIN_ID,
         )
         .await;
 
@@ -419,10 +378,11 @@ mod tests {
         repo.applicability
             .insert(2, sample_applicability(2, 2, "Surface"));
         let client = test_client(repo).await;
-        let response = post_form(
+        let response = post_form_with_session(
             &client,
             "/p/1/applicability/edit/2",
             "app_id=2&project_id=2&app_title=Surface&app_description=Planet&app_tag=surface",
+            ADMIN_ID,
         )
         .await;
 
@@ -436,11 +396,7 @@ mod tests {
     #[rocket::async_test]
     async fn delete_applicability_redirects_when_logging_connection_unavailable() {
         let client = test_client(base_repo()).await;
-        let response = client
-            .delete("/p/1/applicability/delete/1")
-            .private_cookie(auth_cookie())
-            .dispatch()
-            .await;
+        let response = delete_with_session(&client, "/p/1/applicability/delete/1", ADMIN_ID).await;
 
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(

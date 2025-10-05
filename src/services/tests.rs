@@ -1,12 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use crate::models::*;
     use crate::errors::ApiError;
+    use crate::models::*;
     use crate::services::{
-        base_service::Service,
-        BaseService, RequirementService, TestService, ProjectService, StatusService,
-        CategoryService, ApplicabilityService, UserService, MatrixService,
-        serialize_for_logging, check_project_permission, validate_entity_access
+        base_service::Service, check_project_permission, serialize_for_logging,
+        validate_entity_access, ApplicabilityService, BaseService, CategoryService, MatrixService,
+        ProjectService, RequirementService, StatusService, TestService, UserService,
     };
     use chrono::{NaiveDate, NaiveDateTime};
     use std::time::Duration;
@@ -75,7 +74,7 @@ mod tests {
         let service = BaseService::new();
         let key_all = service.cache_key_list("test", None);
         let key_project = service.cache_key_list("test", Some(1));
-        
+
         assert_eq!(key_all, "test:list:all");
         assert_eq!(key_project, "test:list:1");
     }
@@ -93,7 +92,7 @@ mod tests {
     fn test_check_project_permission_admin() {
         let mut user = create_test_user();
         user.is_admin = true;
-        
+
         let result = check_project_permission(&user, 1);
         assert!(result.is_ok());
     }
@@ -101,7 +100,7 @@ mod tests {
     #[test]
     fn test_check_project_permission_regular_user() {
         let user = create_test_user();
-        
+
         let result = check_project_permission(&user, 1);
         assert!(result.is_ok()); // Currently all users have access
     }
@@ -109,7 +108,7 @@ mod tests {
     #[test]
     fn test_validate_entity_access() {
         let user = create_test_user();
-        
+
         let result = validate_entity_access(&user, 1);
         assert!(result.is_ok());
     }
@@ -128,7 +127,7 @@ mod tests {
         // Test that the service can be created and has the expected structure
         let _repo = service.repo();
         assert!(true);
-        
+
         let mut service = RequirementService::new();
         let _repo = service.repo_mut();
         assert!(true);
@@ -147,7 +146,7 @@ mod tests {
         let service = TestService::new();
         let _repo = service.repo();
         assert!(true);
-        
+
         let mut service = TestService::new();
         let _repo = service.repo_mut();
         assert!(true);
@@ -166,7 +165,7 @@ mod tests {
         let service = ProjectService::new();
         let _repo = service.repo();
         assert!(true);
-        
+
         let mut service = ProjectService::new();
         let _repo = service.repo_mut();
         assert!(true);
@@ -185,7 +184,7 @@ mod tests {
         let service = StatusService::new();
         let _repo = service.repo();
         assert!(true);
-        
+
         let mut service = StatusService::new();
         let _repo = service.repo_mut();
         assert!(true);
@@ -204,7 +203,7 @@ mod tests {
         let service = CategoryService::new();
         let _repo = service.repo();
         assert!(true);
-        
+
         let mut service = CategoryService::new();
         let _repo = service.repo_mut();
         assert!(true);
@@ -223,7 +222,7 @@ mod tests {
         let service = ApplicabilityService::new();
         let _repo = service.repo();
         assert!(true);
-        
+
         let mut service = ApplicabilityService::new();
         let _repo = service.repo_mut();
         assert!(true);
@@ -242,7 +241,7 @@ mod tests {
         let service = UserService::new();
         let _repo = service.repo();
         assert!(true);
-        
+
         let mut service = UserService::new();
         let _repo = service.repo_mut();
         assert!(true);
@@ -261,7 +260,7 @@ mod tests {
         let service = MatrixService::new();
         let _repo = service.repo();
         assert!(true);
-        
+
         let mut service = MatrixService::new();
         let _repo = service.repo_mut();
         assert!(true);
@@ -286,15 +285,15 @@ mod tests {
     #[test]
     fn test_cache_key_generation() {
         let service = BaseService::new();
-        
+
         // Test entity cache key
         let entity_key = service.cache_key("requirement", 123);
         assert_eq!(entity_key, "requirement:123");
-        
+
         // Test list cache key without project
         let list_key_all = service.cache_key_list("requirement", None);
         assert_eq!(list_key_all, "requirement:list:all");
-        
+
         // Test list cache key with project
         let list_key_project = service.cache_key_list("requirement", Some(456));
         assert_eq!(list_key_project, "requirement:list:456");
@@ -306,7 +305,7 @@ mod tests {
         let service = RequirementService::new();
         let _repo = service.repo();
         assert!(true);
-        
+
         let mut service = RequirementService::new();
         let _repo = service.repo_mut();
         assert!(true);
@@ -316,14 +315,14 @@ mod tests {
     #[test]
     fn test_cache_integration() {
         let service = BaseService::new();
-        
+
         // Test cache key generation
         let key = service.cache_key("test", 1);
         assert_eq!(key, "test:1");
-        
+
         // Test cache invalidation (should not panic)
         service.invalidate_cache(&key);
-        
+
         // Test cache operations (these will fail in test environment but should not panic)
         let _: Option<String> = service.get_cached(&key);
         service.set_cache(&key, "test_value".to_string(), Duration::from_secs(60));
@@ -392,11 +391,11 @@ mod tests {
     fn test_service_error_handling() {
         // Test that services properly handle errors
         let service = BaseService::new();
-        
+
         // Test cache operations with invalid keys
         let invalid_key = "";
         service.invalidate_cache(invalid_key);
-        
+
         // Test that these operations don't panic
         let _: Option<String> = service.get_cached(invalid_key);
         service.set_cache(invalid_key, "test".to_string(), Duration::from_secs(60));
@@ -414,7 +413,7 @@ mod tests {
         let _applicability_service = ApplicabilityService::new();
         let _user_service = UserService::new();
         let _matrix_service = MatrixService::new();
-        
+
         // If we get here, all services initialized successfully
         assert!(true);
     }
@@ -424,7 +423,10 @@ mod tests {
     fn test_requirement_service_repository_access() {
         let service = RequirementService::new();
         let _repo = service.repo();
-        assert!(true, "RequirementService should have valid repository access");
+        assert!(
+            true,
+            "RequirementService should have valid repository access"
+        );
     }
 
     #[test]
@@ -459,7 +461,10 @@ mod tests {
     fn test_applicability_service_repository_access() {
         let service = ApplicabilityService::new();
         let _repo = service.repo();
-        assert!(true, "ApplicabilityService should have valid repository access");
+        assert!(
+            true,
+            "ApplicabilityService should have valid repository access"
+        );
     }
 
     #[test]
@@ -481,55 +486,79 @@ mod tests {
     fn test_requirement_service_mutable_repository_access() {
         let mut service = RequirementService::new();
         let _repo = service.repo_mut();
-        assert!(true, "RequirementService should have valid mutable repository access");
+        assert!(
+            true,
+            "RequirementService should have valid mutable repository access"
+        );
     }
 
     #[test]
     fn test_test_service_mutable_repository_access() {
         let mut service = TestService::new();
         let _repo = service.repo_mut();
-        assert!(true, "TestService should have valid mutable repository access");
+        assert!(
+            true,
+            "TestService should have valid mutable repository access"
+        );
     }
 
     #[test]
     fn test_project_service_mutable_repository_access() {
         let mut service = ProjectService::new();
         let _repo = service.repo_mut();
-        assert!(true, "ProjectService should have valid mutable repository access");
+        assert!(
+            true,
+            "ProjectService should have valid mutable repository access"
+        );
     }
 
     #[test]
     fn test_status_service_mutable_repository_access() {
         let mut service = StatusService::new();
         let _repo = service.repo_mut();
-        assert!(true, "StatusService should have valid mutable repository access");
+        assert!(
+            true,
+            "StatusService should have valid mutable repository access"
+        );
     }
 
     #[test]
     fn test_category_service_mutable_repository_access() {
         let mut service = CategoryService::new();
         let _repo = service.repo_mut();
-        assert!(true, "CategoryService should have valid mutable repository access");
+        assert!(
+            true,
+            "CategoryService should have valid mutable repository access"
+        );
     }
 
     #[test]
     fn test_applicability_service_mutable_repository_access() {
         let mut service = ApplicabilityService::new();
         let _repo = service.repo_mut();
-        assert!(true, "ApplicabilityService should have valid mutable repository access");
+        assert!(
+            true,
+            "ApplicabilityService should have valid mutable repository access"
+        );
     }
 
     #[test]
     fn test_user_service_mutable_repository_access() {
         let mut service = UserService::new();
         let _repo = service.repo_mut();
-        assert!(true, "UserService should have valid mutable repository access");
+        assert!(
+            true,
+            "UserService should have valid mutable repository access"
+        );
     }
 
     #[test]
     fn test_matrix_service_mutable_repository_access() {
         let mut service = MatrixService::new();
         let _repo = service.repo_mut();
-        assert!(true, "MatrixService should have valid mutable repository access");
+        assert!(
+            true,
+            "MatrixService should have valid mutable repository access"
+        );
     }
 }

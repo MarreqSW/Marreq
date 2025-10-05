@@ -10,9 +10,7 @@ use crate::helper_functions::{
     decorators::{decorate_tests_with_repo, get_linked_tests_for_requirement_with_repo},
     get_selected_project_id,
 };
-use crate::models::{
-    Applicability, Category, DecoratedTest, Project, ProjectMember, Requirement, Test, User,
-};
+use crate::models::{Category, DecoratedTest, Project, ProjectMember, Requirement, Test, User};
 use crate::repository::errors::RepoError;
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
@@ -255,19 +253,6 @@ pub(crate) fn get_category_by_id_cached(state: &AppState, id: i32) -> Category {
             cat_title: format!("Unknown Category ({})", id),
             cat_description: "Category not found".to_string(),
             cat_tag: "unknown".to_string(),
-            project_id: 1,
-        })
-}
-
-pub(crate) fn get_applicability_by_id_cached(state: &AppState, id: i32) -> Applicability {
-    state
-        .repo_read()
-        .get_applicability_by_id(id)
-        .unwrap_or_else(|_| Applicability {
-            app_id: id,
-            app_title: format!("Unknown Applicability ({})", id),
-            app_description: "Applicability not found".to_string(),
-            app_tag: "unknown".to_string(),
             project_id: 1,
         })
 }

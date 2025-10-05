@@ -3,10 +3,9 @@
 //! This module provides the foundation for all service implementations,
 //! including common patterns for database operations, caching, and error handling.
 
-use crate::errors::{ApiError, ApiResult};
+//use crate::errors::{ApiError, ApiResult};
 use crate::repository::DieselRepo;
 use crate::logger::{LogCtx, Logger};
-use crate::cache;
 use std::time::Duration;
 
 /// Base trait for all services

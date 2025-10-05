@@ -14,6 +14,7 @@ pub mod models;
 pub mod repository;
 pub mod routes;
 pub mod schema;
+pub mod services;
 
 #[rocket::main]
 async fn main() -> Result<(), rocket::Error> {

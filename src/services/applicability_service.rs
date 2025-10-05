@@ -1,162 +1,305 @@
-//! Applicability service for managing applicability options business logic.
+//! Applicability service centralizing CRUD logic and logging.
 
-use crate::errors::{ApiError, ApiResult};
-use crate::models::*;
-use crate::validation::validate_applicability;
-use crate::services::{BaseService, Service};
-use crate::repository::LookupRepository;
-use std::time::Duration;
+use crate::app::{AppState, DieselCachedRepo};
+use crate::logger::{LogCtx, Logger};
+use crate::models::{Applicability, NewApplicability, User};
+use crate::repository::errors::RepoError;
+use crate::repository::{LookupRepository, PooledConnectionWrapper};
+use lazy_static::lazy_static;
+use regex::Regex;
 
-pub struct ApplicabilityService {
-    base: BaseService,
+lazy_static! {
+    static ref TAG_REGEX: Regex =
+        Regex::new(r"^[A-Za-z0-9_]+$").expect("valid applicability tag regex");
 }
 
-impl ApplicabilityService {
-    pub fn new() -> Self {
-        Self { base: BaseService::new() }
+/// Service wrapper that provides applicability operations backed by the shared AppState.
+pub struct ApplicabilityService<'a> {
+    state: &'a AppState<DieselCachedRepo>,
+}
+
+impl<'a> ApplicabilityService<'a> {
+    /// Create a new service instance bound to the provided application state.
+    pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
+        Self { state }
     }
-    
-    pub async fn get_all_applicability(&self) -> ApiResult<Vec<Applicability>> {
-        let cache_key = self.base.cache_key_list("applicability", None);
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        let applicability = self.base.repo()
-            .get_applicability_all()
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        self.base.set_cache(&cache_key, applicability.clone(), Duration::from_secs(300));
-        Ok(applicability)
+
+    /// Retrieve all applicability entries.
+    pub fn list_all(&self) -> Result<Vec<Applicability>, RepoError> {
+        self.state.repo_read().get_applicability_all()
     }
-    
-    pub async fn get_applicability_by_id(&self, id: i32) -> ApiResult<Applicability> {
-        let cache_key = self.base.cache_key("applicability", id);
-        if let Some(cached) = self.base.get_cached(&cache_key) {
-            return Ok(cached);
-        }
-        
-        let applicability = self.base.repo()
-            .get_applicability_by_id(id)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        self.base.set_cache(&cache_key, applicability.clone(), Duration::from_secs(600));
-        Ok(applicability)
+
+    /// Retrieve applicability entries scoped to a project.
+    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Applicability>, RepoError> {
+        self.state
+            .repo_read()
+            .get_applicability_by_project(project_id)
     }
-    
-    pub async fn create_applicability(
-        &self,
-        mut new_applicability: NewApplicability,
-        user_id: i32,
-    ) -> ApiResult<i32> {
-        validate_applicability(&new_applicability)?;
-        
-        crate::validation::sanitize_string(&mut new_applicability.app_title);
-        crate::validation::sanitize_string(&mut new_applicability.app_description);
-        crate::validation::sanitize_string(&mut new_applicability.app_tag);
-        
-        let mut repo = crate::repository::DieselRepo::new();
-        let id = repo.insert_new_applicability(&new_applicability)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if let Ok(new_values) = crate::services::serialize_for_logging(&new_applicability) {
-            let _ = self.base.log_create(
-                user_id,
-                EntityType::Applicability,
-                id,
-                Some(new_applicability.project_id),
-                Some(new_values),
-                Some(format!("Created applicability: {}", new_applicability.app_title)),
-            );
-        }
-        
-        self.base.invalidate_cache(&self.base.cache_key_list("applicability", None));
-        self.base.invalidate_cache(&self.base.cache_key_list("applicability", Some(new_applicability.project_id)));
-        crate::cache::invalidate_applicability_cache(id);
-        crate::cache::invalidate_project_cache(new_applicability.project_id);
-        
+
+    /// Retrieve a single applicability by identifier.
+    pub fn get_by_id(&self, id: i32) -> Result<Applicability, RepoError> {
+        self.state.repo_read().get_applicability_by_id(id)
+    }
+
+    /// Create a new applicability entry and log the action.
+    pub fn create(&self, user: &User, mut new_app: NewApplicability) -> Result<i32, RepoError> {
+        self.prepare_payload(&mut new_app)?;
+
+        let id = {
+            let mut repo = self.state.repo_write();
+            repo.insert_new_applicability(&new_app)?
+        };
+
+        self.log_created(user, id, &new_app);
         Ok(id)
     }
-    
-    pub async fn update_applicability(
+
+    /// Update an existing applicability entry and log the change.
+    pub fn update(
         &self,
+        user: &User,
         id: i32,
-        mut updated_applicability: NewApplicability,
-        user_id: i32,
-    ) -> ApiResult<bool> {
-        let old_applicability = self.get_applicability_by_id(id).await?;
-        validate_applicability(&updated_applicability)?;
-        
-        crate::validation::sanitize_string(&mut updated_applicability.app_title);
-        crate::validation::sanitize_string(&mut updated_applicability.app_description);
-        crate::validation::sanitize_string(&mut updated_applicability.app_tag);
-        
-        updated_applicability.app_id = Some(id);
-        
-        let mut repo = crate::repository::DieselRepo::new();
-        let success = repo.edit_applicability(&updated_applicability)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if success {
-            if let (Ok(old_values), Ok(new_values)) = (
-                crate::services::serialize_for_logging(&old_applicability),
-                crate::services::serialize_for_logging(&updated_applicability),
-            ) {
-                let _ = self.base.log_update(
-                    user_id,
-                    EntityType::Applicability,
-                    id,
-                    Some(updated_applicability.project_id),
-                    Some(old_values),
-                    Some(new_values),
-                    Some(format!("Updated applicability: {}", updated_applicability.app_title)),
-                );
+        mut updated_app: NewApplicability,
+    ) -> Result<Applicability, RepoError> {
+        let before = self.get_by_id(id)?;
+
+        updated_app.app_id = Some(id);
+        self.prepare_payload(&mut updated_app)?;
+
+        {
+            let mut repo = self.state.repo_write();
+            let updated = repo.edit_applicability(&updated_app)?;
+            if !updated {
+                return Err(RepoError::NotFound);
             }
-            
-            self.base.invalidate_cache(&self.base.cache_key("applicability", id));
-            self.base.invalidate_cache(&self.base.cache_key_list("applicability", None));
-            self.base.invalidate_cache(&self.base.cache_key_list("applicability", Some(updated_applicability.project_id)));
-            crate::cache::invalidate_applicability_cache(id);
-            crate::cache::invalidate_project_cache(updated_applicability.project_id);
         }
-        
-        Ok(success)
+
+        let after = self.get_by_id(id)?;
+        self.log_updated(user, &before, &after);
+        Ok(after)
     }
-    
-    pub async fn delete_applicability(&self, id: i32, user_id: i32) -> ApiResult<bool> {
-        let old_applicability = self.get_applicability_by_id(id).await?;
-        
-        let mut repo = crate::repository::DieselRepo::new();
-        let success = repo.delete_applicability(id)
-            .map_err(|e| ApiError::Repository(e))?;
-        
-        if success {
-            if let Ok(old_values) = crate::services::serialize_for_logging(&old_applicability) {
-                let _ = self.base.log_delete(
-                    user_id,
-                    EntityType::Applicability,
-                    id,
-                    Some(old_applicability.project_id),
-                    Some(old_values),
-                    Some(format!("Deleted applicability: {}", old_applicability.app_title)),
+
+    /// Delete an applicability entry and log the removal.
+    pub fn delete(&self, user: &User, id: i32) -> Result<Applicability, RepoError> {
+        let deleted = {
+            let mut repo = self.state.repo_write();
+            repo.delete_applicability(id)?
+        };
+
+        self.log_deleted(user, &deleted);
+        Ok(deleted)
+    }
+
+    fn prepare_payload(&self, payload: &mut NewApplicability) -> Result<(), RepoError> {
+        sanitize(&mut payload.app_title);
+        sanitize(&mut payload.app_description);
+        sanitize(&mut payload.app_tag);
+
+        validate(payload)
+    }
+
+    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
+        self.state.repo_read().inner_repo().get_conn()
+    }
+
+    fn log_created(&self, user: &User, id: i32, entity: &NewApplicability) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.user_id);
+            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!("Failed to log applicability creation {id}: {_err}");
+            }
+        }
+    }
+
+    fn log_updated(&self, user: &User, before: &Applicability, after: &Applicability) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.user_id);
+            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Failed to log applicability update {} -> {}: {_err}",
+                    before.app_id, after.app_id
                 );
             }
-            
-            self.base.invalidate_cache(&self.base.cache_key("applicability", id));
-            self.base.invalidate_cache(&self.base.cache_key_list("applicability", None));
-            self.base.invalidate_cache(&self.base.cache_key_list("applicability", Some(old_applicability.project_id)));
-            crate::cache::invalidate_applicability_cache(id);
-            crate::cache::invalidate_project_cache(old_applicability.project_id);
         }
-        
-        Ok(success)
+    }
+
+    fn log_deleted(&self, user: &User, entity: &Applicability) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.user_id);
+            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Failed to log applicability deletion {}: {_err}",
+                    entity.app_id
+                );
+            }
+        }
     }
 }
 
-impl Service for ApplicabilityService {
-    fn repo(&self) -> &crate::repository::DieselRepo { self.base.repo() }
-    fn repo_mut(&mut self) -> &mut crate::repository::DieselRepo { self.base.repo_mut() }
+fn sanitize(value: &mut String) {
+    *value = value.trim().to_string();
 }
 
+fn validate(payload: &NewApplicability) -> Result<(), RepoError> {
+    if payload.app_title.is_empty() {
+        return Err(bad_input("app_title is required"));
+    }
+    if payload.app_title.len() > 100 {
+        return Err(bad_input("app_title must be at most 100 characters"));
+    }
+    if payload.app_title.len() < 2 {
+        return Err(bad_input("app_title must be at least 2 characters"));
+    }
 
+    if payload.app_description.is_empty() {
+        return Err(bad_input("app_description is required"));
+    }
+    if payload.app_description.len() > 500 {
+        return Err(bad_input("app_description must be at most 500 characters"));
+    }
 
+    if payload.app_tag.is_empty() {
+        return Err(bad_input("app_tag is required"));
+    }
+    if payload.app_tag.len() > 50 {
+        return Err(bad_input("app_tag must be at most 50 characters"));
+    }
+    if !TAG_REGEX.is_match(&payload.app_tag) {
+        return Err(bad_input(
+            "app_tag must only contain letters, numbers, or underscores",
+        ));
+    }
+
+    if payload.project_id <= 0 {
+        return Err(bad_input("project_id must be positive"));
+    }
+
+    Ok(())
+}
+
+fn bad_input(message: impl Into<String>) -> RepoError {
+    RepoError::BadInput(message.into())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use std::sync::{Arc, RwLock};
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn actor() -> User {
+        DieselRepoMock::make_user(1, "actor", "")
+    }
+
+    fn sample_app(id: i32, title: &str) -> Applicability {
+        Applicability {
+            app_id: id,
+            app_title: title.into(),
+            app_description: "desc".into(),
+            app_tag: "TAG".into(),
+            project_id: 1,
+        }
+    }
+
+    #[test]
+    fn create_trims_payload_and_validates() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            app_id: None,
+            app_title: "  Applicable  ".into(),
+            app_description: "  Description  ".into(),
+            app_tag: "  PROD_1  ".into(),
+            project_id: 3,
+        };
+
+        let id = service.create(&actor(), payload).unwrap();
+        let stored = service.get_by_id(id).unwrap();
+
+        assert_eq!(stored.app_title, "Applicable");
+        assert_eq!(stored.app_description, "Description");
+        assert_eq!(stored.app_tag, "PROD_1");
+    }
+
+    #[test]
+    fn create_rejects_invalid_tag() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            app_id: None,
+            app_title: "Title".into(),
+            app_description: "Description".into(),
+            app_tag: "invalid tag".into(),
+            project_id: 1,
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn update_trims_and_updates_existing_entry() {
+        let mut repo = DieselRepoMock::default();
+        repo.applicability.insert(7, sample_app(7, "Legacy"));
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            app_id: None,
+            app_title: "  New Title  ".into(),
+            app_description: "  New Description  ".into(),
+            app_tag: "  NEW_TAG  ".into(),
+            project_id: 2,
+        };
+
+        let updated = service.update(&actor(), 7, payload).unwrap();
+        assert_eq!(updated.app_title, "New Title");
+        assert_eq!(updated.app_description, "New Description");
+        assert_eq!(updated.app_tag, "NEW_TAG");
+        assert_eq!(updated.project_id, 2);
+    }
+
+    #[test]
+    fn delete_removes_entry() {
+        let mut repo = DieselRepoMock::default();
+        repo.applicability.insert(3, sample_app(3, "Removable"));
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let removed = service.delete(&actor(), 3).unwrap();
+        assert_eq!(removed.app_id, 3);
+        assert!(matches!(service.get_by_id(3), Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_by_project_filters_entries() {
+        let mut repo = DieselRepoMock::default();
+        repo.applicability.insert(1, sample_app(1, "Alpha"));
+        repo.applicability.insert(
+            2,
+            Applicability {
+                project_id: 99,
+                ..sample_app(2, "Beta")
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let items = service.list_by_project(1).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].app_title, "Alpha");
+    }
+}

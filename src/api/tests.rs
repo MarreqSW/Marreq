@@ -1,10 +1,9 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::logger::Logger;
 use crate::models::{NewTest, Test};
 use crate::repository::errors::RepoError;
-use crate::repository::TestsRepository;
+use crate::services::TestService;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -15,16 +14,15 @@ pub struct FieldUpdateRequest {
 
 #[get("/tests")]
 pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Test>>> {
-    let tests = state.repo.async_read(|repo| repo.get_tests_all()).await?;
+    let service = TestService::new(state.inner());
+    let tests = service.list_all()?;
     Ok(Json(tests))
 }
 
 #[get("/tests/<id>")]
 pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
-    let test = state
-        .repo
-        .async_read(move |repo| repo.get_test_by_id(id))
-        .await?;
+    let service = TestService::new(state.inner());
+    let test = service.get_by_id(id)?;
     Ok(Json(test))
 }
 
@@ -34,36 +32,16 @@ pub async fn create(
     state: &State<AppState>,
     payload: Json<NewTest>,
 ) -> ApiResult<Value> {
-    let test = payload.into_inner();
-    let log_ctx = user.log_ctx().clone();
-
-    let id = state
-        .repo
-        .async_write(move |repo| {
-            let id = repo.insert_test(&test)?;
-            if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                let _ = Logger::created(conn.as_mut(), &log_ctx, id, &test);
-            }
-            Ok::<_, RepoError>(id)
-        })
-        .await?;
+    let service = TestService::new(state.inner());
+    let id = service.create(user.user(), payload.into_inner())?;
 
     Ok(json!({ "status": "ok", "id": id }))
 }
 
 #[delete("/tests/<id>")]
 pub async fn delete(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Status> {
-    let log_ctx = user.log_ctx().clone();
-    state
-        .repo
-        .async_write(move |repo| {
-            let removed = repo.delete_test(id)?;
-            if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                let _ = Logger::deleted(conn.as_mut(), &log_ctx, &removed);
-            }
-            Ok::<_, RepoError>(())
-        })
-        .await?;
+    let service = TestService::new(state.inner());
+    service.delete(user.user(), id)?;
     Ok(Status::NoContent)
 }
 
@@ -75,54 +53,45 @@ pub async fn update_field(
     update: Json<FieldUpdateRequest>,
 ) -> ApiResult<Value> {
     let update = update.into_inner();
-    let log_ctx = user.log_ctx().clone();
+    let service = TestService::new(state.inner());
+    let mut test = service.get_by_id(id)?;
 
-    state
-        .repo
-        .async_write(move |repo| {
-            let mut test = repo.get_test_by_id(id)?;
-            let original = test.clone();
+    match update.field.as_str() {
+        "test_name" => test.test_name = update.value,
+        "test_description" => test.test_description = update.value,
+        "test_source" => test.test_source = update.value,
+        "test_status" => {
+            test.test_status = update
+                .value
+                .parse()
+                .map_err(|_| RepoError::BadInput("invalid status id".into()))?;
+        }
+        "test_reference" => test.test_reference = update.value,
+        "test_parent" => {
+            test.test_parent = update
+                .value
+                .parse()
+                .map_err(|_| RepoError::BadInput("invalid parent id".into()))?;
+        }
+        other => {
+            return Err(ApiError::from(RepoError::BadInput(format!(
+                "unsupported field '{other}'"
+            ))))
+        }
+    }
 
-            match update.field.as_str() {
-                "test_name" => test.test_name = update.value,
-                "test_description" => test.test_description = update.value,
-                "test_source" => test.test_source = update.value,
-                "test_status" => {
-                    test.test_status = update
-                        .value
-                        .parse()
-                        .map_err(|_| RepoError::BadInput("invalid status id".into()))?;
-                }
-                "test_reference" => test.test_reference = update.value,
-                "test_parent" => {
-                    test.test_parent = update
-                        .value
-                        .parse()
-                        .map_err(|_| RepoError::BadInput("invalid parent id".into()))?;
-                }
-                other => return Err(RepoError::BadInput(format!("unsupported field '{other}'"))),
-            }
+    let payload = NewTest {
+        test_id: Some(test.test_id),
+        test_reference: test.test_reference.clone(),
+        test_name: test.test_name.clone(),
+        test_description: test.test_description.clone(),
+        test_source: test.test_source.clone(),
+        test_status: test.test_status,
+        test_parent: test.test_parent,
+        project_id: test.project_id,
+    };
 
-            let payload = NewTest {
-                test_id: Some(test.test_id),
-                test_name: test.test_name.clone(),
-                test_description: test.test_description.clone(),
-                test_source: test.test_source.clone(),
-                test_status: test.test_status,
-                test_reference: test.test_reference.clone(),
-                test_parent: test.test_parent,
-                project_id: test.project_id,
-            };
-
-            repo.edit_test(&payload)?;
-
-            if let Ok(mut conn) = repo.inner_repo().get_conn() {
-                let _ = Logger::updated(conn.as_mut(), &log_ctx, &original, &test);
-            }
-
-            Ok::<_, RepoError>(())
-        })
-        .await?;
+    service.update(user.user(), id, payload)?;
 
     Ok(json!({
         "success": true,

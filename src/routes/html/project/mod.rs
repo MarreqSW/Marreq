@@ -26,7 +26,6 @@ pub(crate) mod prelude {
     pub(crate) use crate::auth::*;
     pub(crate) use crate::generators::*;
     pub(crate) use crate::helper_functions::*;
-    pub(crate) use crate::logger::{LogCtx, Logger};
     pub(crate) use crate::models::*;
     pub(crate) use crate::repository::{
         LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository,

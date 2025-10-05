@@ -17,6 +17,7 @@ use crate::repository::{
     LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
     TestsRepository, UserRepository,
 };
+use crate::services::project_service::ProjectService;
 
 /// Helper function to get a database connection with proper error handling
 pub(crate) fn get_db_connection(
@@ -276,18 +277,10 @@ pub(crate) fn get_requirements_for_test_cached(
         .map_err(|e| e.to_string())
 }
 
-pub(crate) fn get_project_by_id_cached(state: &AppState, project_id: i32) -> Project {
-    state
-        .repo_read()
-        .get_project_by_id(project_id)
-        .expect("Error loading project")
-}
-
 /// Get project by ID with safe fallback using the repository.
 pub(crate) fn get_project_by_id_pooled_safe(state: &State<AppState>, project_id: i32) -> Project {
-    state
-        .repo_read()
-        .get_project_by_id(project_id)
+    ProjectService::new(state.inner())
+        .get_by_id(project_id)
         .unwrap_or(Project {
             project_id: 0,
             project_name: "Unknown Project".to_string(),

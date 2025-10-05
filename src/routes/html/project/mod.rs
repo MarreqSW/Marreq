@@ -1,6 +1,7 @@
 mod applicability;
 mod categories;
 mod members;
+mod project;
 mod reports;
 mod requirements;
 #[cfg(test)]
@@ -43,5 +44,6 @@ pub fn routes() -> Vec<Route> {
     routes.extend(reports::routes());
     routes.extend(requirements::routes());
     routes.extend(tests::routes());
+    routes.extend(project::routes());
     routes
 }

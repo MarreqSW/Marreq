@@ -94,12 +94,13 @@ async fn show_test_id(
     ))
 }
 
-#[get("/<project_id>/tests/new")]
+#[get("/<project_id>/tests/new?<error>")]
 async fn new_test(
     project_access: ProjectAccess,
     project_id: i32,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
+    error: Option<String>,
 ) -> Result<Template, Redirect> {
     use serde_json::json;
 
@@ -118,6 +119,7 @@ async fn new_test(
         .unwrap_or_default());
     ctx["project_id"] = json!(project_id);
     ctx["selected_project_id"] = json!(project_id);
+    ctx["error"] = json!(error);
 
     Ok(Template::render("new_test", ctx))
 }
@@ -147,7 +149,10 @@ async fn post_test(
         eprintln!("Error inserting new test: {:?}", e);
         Redirect::to(uri!(
             "/p",
-            show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
+            new_test(
+                project_id = project_id,
+                error = Some("Failed to create test".to_string())
+            )
         ))
     })?;
 
@@ -167,7 +172,10 @@ async fn post_test(
                 eprintln!("Error inserting matrix item: {:?}", e);
                 Redirect::to(uri!(
                     "/p",
-                    show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
+                    new_test(
+                        project_id = project_id,
+                        error = Some("Failed to link requirements".to_string())
+                    )
                 ))
             })?;
     }

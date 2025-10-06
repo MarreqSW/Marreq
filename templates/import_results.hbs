@@ -14,10 +14,12 @@
                         <p><strong>Records imported:</strong> {{result.imported_count}}</p>
                     </div>
                     {{else}}
-                    <div class="alert alert-warning">
-                        <h5>⚠️ Import Completed with Errors</h5>
+                    <div class="alert alert-danger">
+                        <h5>❌ Import Failed</h5>
                         <p>{{result.message}}</p>
-                        <p><strong>Records imported:</strong> {{result.imported_count}}</p>
+                        {{#if result.imported_count}}
+                        <p><strong>Records processed before error:</strong> {{result.imported_count}}</p>
+                        {{/if}}
                     </div>
                     {{/if}}
                     
@@ -39,18 +41,27 @@
                         <ul>
                             <li>The Excel file was processed using the column mappings you specified</li>
                             <li>Data was imported into the currently selected project</li>
-                            <li>If any errors occurred during import, the entire operation was rolled back</li>
+                            {{#if result.success}}
+                            <li>All data was successfully imported</li>
                             <li>New categories, applicability options, and other references were created as needed</li>
+                            {{else}}
+                            <li>Import failed and no changes were made to the database</li>
+                            <li>Please check the error messages above and try again</li>
+                            {{/if}}
                         </ul>
                     </div>
                     
                     <div class="d-grid gap-2">
                         <a href="/" class="btn btn-primary">Go to Homepage</a>
+                        {{#if result.success}}
                         <a href="/import_excel" class="btn btn-secondary">Import Another File</a>
                         {{#if (eq result.import_type "requirements")}}
                         <a href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}" class="btn btn-outline-primary">View Requirements</a>
                         {{else}}
                         <a href="/p/{{selected_project_id}}/tests" class="btn btn-outline-primary">View Tests</a>
+                        {{/if}}
+                        {{else}}
+                        <a href="/import_excel" class="btn btn-outline-primary">Try Import Again</a>
                         {{/if}}
                     </div>
                 </div>
@@ -59,4 +70,4 @@
     </div>
 </div>
 {{/inline}}
-{{> layout}} 
+{{> layout}}

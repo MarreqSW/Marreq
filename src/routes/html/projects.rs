@@ -23,10 +23,10 @@ pub fn show_projects(
     Ok(Template::render("projects", ctx))
 }
 
-#[get("/new_project")]
-pub fn new_project(admin: AdminOnly, state: &State<AppState>) -> Template {
+#[get("/new_project?<error>")]
+pub fn new_project(admin: AdminOnly, state: &State<AppState>, error: Option<String>) -> Template {
     let user = admin.into_inner();
-    render_new_project_form(state, &user, default_new_project_form(), None)
+    render_new_project_form(state, &user, default_new_project_form(), error)
 }
 
 #[post("/new_project", data = "<new_project>")]
@@ -34,11 +34,10 @@ pub fn post_project(
     admin: AdminOnly,
     new_project: Form<NewProject>,
     state: &State<AppState>,
-) -> Result<Redirect, Template> {
+) -> Result<Redirect, Redirect> {
     let user = admin.into_inner();
     let project_service = ProjectService::new(state.inner());
     let submitted = new_project.into_inner();
-    let form_state = snapshot_new_project_form(&submitted);
 
     match project_service.create(&user, submitted) {
         Ok(_) => Ok(Redirect::to(uri!(show_projects))),
@@ -50,12 +49,7 @@ pub fn post_project(
                 _ => "Failed to create project. Please try again.".to_string(),
             };
 
-            Err(render_new_project_form(
-                state,
-                &user,
-                form_state,
-                Some(message),
-            ))
+            Err(Redirect::to(uri!(new_project(error = Some(message)))))
         }
     }
 }
@@ -88,17 +82,5 @@ fn default_new_project_form() -> Value {
         "project_description": "",
         "project_status": "active",
         "project_owner_id": null,
-    })
-}
-
-fn snapshot_new_project_form(project: &NewProject) -> Value {
-    json!({
-        "project_name": project.project_name.clone(),
-        "project_description": project
-            .project_description
-            .clone()
-            .unwrap_or_default(),
-        "project_status": project.project_status.clone(),
-        "project_owner_id": project.project_owner_id,
     })
 }

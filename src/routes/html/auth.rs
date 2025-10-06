@@ -1,45 +1,10 @@
 use super::prelude::*;
 
-fn render_login_error(err: AuthError) -> Template {
-    let (title, msg) = match err {
-        AuthError::InvalidCredentials => ("Login", "Invalid username or password".to_string()),
-        AuthError::Verify(_) => ("Login", "Password verification failed".to_string()),
-        AuthError::Db(e) => ("Error", format!("Database error: {e}")),
-        AuthError::Audit(_) => ("Login", "Logged in but failed to audit login".to_string()),
-        AuthError::NotLoggedIn => ("Login", "Not logged in".to_string()),
-        AuthError::InvalidSession => ("Login", "Invalid session".to_string()),
-        AuthError::Repo(_) => ("Login", "Internal server error".to_string()),
-    };
-
-    Template::render("login", json!({ "title": title, "error": msg }))
-}
-
-fn render_change_password_error(err: AuthError) -> Template {
-    let (title, msg) = match err {
-        AuthError::InvalidCredentials => {
-            ("Change Password", "Invalid current password".to_string())
-        }
-        AuthError::Verify(_) => (
-            "Change Password",
-            "Password verification failed".to_string(),
-        ),
-        AuthError::Db(e) => ("Error", format!("Database error: {e}")),
-        AuthError::NotLoggedIn => ("Change Password", "Not logged in".to_string()),
-        AuthError::InvalidSession => ("Change Password", "Invalid session".to_string()),
-        AuthError::Audit(_) => (
-            "Change Password",
-            "Failed to log password change".to_string(),
-        ),
-        AuthError::Repo(_) => ("Change Password", "Internal server error".to_string()),
-    };
-
-    Template::render("change_password", json!({ "title": title, "error": msg }))
-}
-
-#[get("/login")]
-pub fn login_page() -> Template {
+#[get("/login?<error>")]
+pub fn login_page(error: Option<String>) -> Template {
     let ctx = json!({
-        "title": "Login"
+        "title": "Login",
+        "error": error
     });
     Template::render("login", ctx)
 }
@@ -49,25 +14,41 @@ pub fn login(
     login_form: Form<LoginForm>,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
-) -> Result<Redirect, Template> {
+) -> Result<Redirect, Redirect> {
     let repo = state.repo_read();
-
     let form = login_form.into_inner();
 
     match login_user(&*repo, &form, cookies) {
         Ok(()) => Ok(Redirect::to(uri!(crate::routes::html::dashboard::index))),
-        Err(err) => Err(render_login_error(err)),
+        Err(err) => {
+            let error_msg = match err {
+                AuthError::InvalidCredentials => "Invalid username or password",
+                AuthError::Verify(_) => "Password verification failed",
+                AuthError::Db(_) => "Database error occurred",
+                AuthError::Audit(_) => "Login successful but failed to audit",
+                AuthError::NotLoggedIn => "Not logged in",
+                AuthError::InvalidSession => "Invalid session",
+                AuthError::Repo(_) => "Internal server error",
+            };
+            Err(Redirect::to(uri!(login_page(
+                error = Some(error_msg.to_string())
+            ))))
+        }
     }
 }
 
 #[get("/logout")]
 pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
     logout_user(cookies);
-    Redirect::to(uri!(login_page))
+    Redirect::to(uri!(login_page(error = Option::<String>::None)))
 }
 
-#[get("/change_password")]
-pub fn change_password_page(state: &State<AppState>) -> Template {
+#[get("/change_password?<error>&<success>")]
+pub fn change_password_page(
+    state: &State<AppState>,
+    error: Option<String>,
+    success: Option<String>,
+) -> Template {
     // Get projects for navigation
     let projects = state.repo_read().get_projects_all().unwrap_or_default();
     let selected_project_id: Option<i32> = None; // No project selected on change password page
@@ -75,7 +56,9 @@ pub fn change_password_page(state: &State<AppState>) -> Template {
     let ctx = json!({
         "title": "Change Password",
         "projects": projects,
-        "selected_project_id": selected_project_id
+        "selected_project_id": selected_project_id,
+        "error": error,
+        "success": success
     });
     Template::render("change_password", ctx)
 }
@@ -85,22 +68,20 @@ pub fn change_password(
     password_form: Form<ChangePasswordForm>,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
-) -> Result<Template, Template> {
+) -> Result<Redirect, Redirect> {
     // Validate passwords
     if password_form.new_password != password_form.confirm_password {
-        let ctx = json!({
-            "title": "Change Password",
-            "error": "New passwords do not match",
-        });
-        return Err(Template::render("change_password", ctx));
+        return Err(Redirect::to(uri!(change_password_page(
+            error = Some("New passwords do not match".to_string()),
+            success = Option::<String>::None
+        ))));
     }
 
     if password_form.new_password.len() < 8 {
-        let ctx = json!({
-            "title": "Change Password",
-            "error": "New password must be at least 8 characters long",
-        });
-        return Err(Template::render("change_password", ctx));
+        return Err(Redirect::to(uri!(change_password_page(
+            error = Some("New password must be at least 8 characters long".to_string()),
+            success = Option::<String>::None
+        ))));
     }
 
     let mut repo = state.repo_write();
@@ -111,14 +92,25 @@ pub fn change_password(
         &password_form.new_password,
         cookies,
     ) {
-        Ok(()) => {
-            let ctx = json!({
-                "title": "Change Password",
-                "success": "Password changed successfully",
-            });
-            Ok(Template::render("change_password", ctx))
+        Ok(()) => Ok(Redirect::to(uri!(change_password_page(
+            error = Option::<String>::None,
+            success = Some("Password changed successfully".to_string())
+        )))),
+        Err(err) => {
+            let error_msg = match err {
+                AuthError::InvalidCredentials => "Invalid current password",
+                AuthError::Verify(_) => "Password verification failed",
+                AuthError::Db(_) => "Database error occurred",
+                AuthError::NotLoggedIn => "Not logged in",
+                AuthError::InvalidSession => "Invalid session",
+                AuthError::Audit(_) => "Failed to log password change",
+                AuthError::Repo(_) => "Internal server error",
+            };
+            Err(Redirect::to(uri!(change_password_page(
+                error = Some(error_msg.to_string()),
+                success = Option::<String>::None
+            ))))
         }
-        Err(err) => Err(render_change_password_error(err)),
     }
 }
 

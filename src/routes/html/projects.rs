@@ -45,9 +45,9 @@ pub fn post_project(
 
     match project_service.create(&user, new_project.into_inner()) {
         Ok(_) => Ok(Redirect::to(uri!(show_projects))),
-        Err(err) => {
+        Err(_err) => {
             #[cfg(debug_assertions)]
-            eprintln!("Failed to create project: {err:?}");
+            eprintln!("Failed to create project: {_err:?}");
             Ok(Redirect::to(uri!(new_project)))
         }
     }

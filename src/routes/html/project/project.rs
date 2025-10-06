@@ -131,9 +131,9 @@ pub fn post_edit_project(
 
     match project_service.update(&user, project_id, project.into_inner()) {
         Ok(_) => Ok(Redirect::to(uri!("/projects"))),
-        Err(err) => {
+        Err(_err) => {
             #[cfg(debug_assertions)]
-            eprintln!("Failed to update project {project_id}: {err:?}");
+            eprintln!("Failed to update project {project_id}: {_err:?}");
             Ok(Redirect::to(uri!(get_edit_project(project_id))))
         }
     }
@@ -150,9 +150,9 @@ pub fn delete_project_route(
 
     match project_service.delete(&user, project_id) {
         Ok(_) => Ok(rocket::http::Status::Ok),
-        Err(err) => {
+        Err(_err) => {
             #[cfg(debug_assertions)]
-            eprintln!("Failed to delete project {project_id}: {err:?}");
+            eprintln!("Failed to delete project {project_id}: {_err:?}");
             Ok(rocket::http::Status::InternalServerError)
         }
     }

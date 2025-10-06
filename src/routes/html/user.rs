@@ -15,7 +15,10 @@ async fn profile(
     if let Some(ctx_obj) = ctx.as_object_mut() {
         ctx_obj.insert("user".to_string(), json!(user));
         ctx_obj.insert("title".to_string(), json!("My Profile"));
-        ctx_obj.insert("profile_updated".to_string(), json!(updated.unwrap_or(false)));
+        ctx_obj.insert(
+            "profile_updated".to_string(),
+            json!(updated.unwrap_or(false)),
+        );
     }
 
     Template::render("user_profile", ctx)
@@ -55,10 +58,7 @@ async fn post_edit_profile(
 
     let service = UserService::new(state.inner());
 
-    if service
-        .update_without_password(&actor, &user_data)
-        .is_ok()
-    {
+    if service.update_without_password(&actor, &user_data).is_ok() {
         Redirect::to(uri!(profile(updated = Some(true))))
     } else {
         Redirect::to(uri!(edit_profile(error = Some(true))))

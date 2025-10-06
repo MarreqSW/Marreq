@@ -13,13 +13,17 @@ pub type ApiResult<T> = Result<T, ApiError>;
 pub enum ApiError {
     BadRequest(String),
     NotFound(String),
+    Forbidden(String),
     Internal(String),
 }
 
 impl ApiError {
     pub fn message(&self) -> &str {
         match self {
-            ApiError::BadRequest(msg) | ApiError::NotFound(msg) | ApiError::Internal(msg) => msg,
+            ApiError::BadRequest(msg)
+            | ApiError::NotFound(msg)
+            | ApiError::Forbidden(msg)
+            | ApiError::Internal(msg) => msg,
         }
     }
 
@@ -27,6 +31,7 @@ impl ApiError {
         match self {
             ApiError::BadRequest(_) => Status::BadRequest,
             ApiError::NotFound(_) => Status::NotFound,
+            ApiError::Forbidden(_) => Status::Forbidden,
             ApiError::Internal(_) => Status::InternalServerError,
         }
     }
@@ -67,6 +72,7 @@ impl From<RepoError> for ApiError {
             },
             RepoError::Pool(err) => ApiError::Internal(format!("connection pool error: {}", err)),
             RepoError::BadInput(msg) => ApiError::BadRequest(msg),
+            RepoError::Unauthorized => ApiError::Forbidden("operation not permitted".into()),
         }
     }
 }

@@ -1,7 +1,7 @@
 use super::prelude::*;
 use crate::services::UserService;
 
-#[get("/show/<user_id>")]
+#[get("/<user_id>/show")]
 async fn show_user_id(
     admin: AdminOnly,
     user_id: i32,
@@ -28,7 +28,7 @@ async fn show_user_id(
     Ok(Template::render("user_by_id", ctx))
 }
 
-#[get("/edit/<user_id>")]
+#[get("/<user_id>/edit")]
 async fn edit_user(
     admin: AdminOnly,
     user_id: i32,
@@ -49,7 +49,7 @@ async fn edit_user(
     Ok(Template::render("edit_user_by_id", ctx))
 }
 
-#[post("/edit/<user_id>", data = "<user_form>")]
+#[post("/<user_id>/edit", data = "<user_form>")]
 async fn post_edit_user(
     admin: AdminOnly,
     user_id: i32,
@@ -186,7 +186,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_user_id_displays_profile_information() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/user/show/2").await;
+        let response = get(&client, "/user/2/show").await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
@@ -198,7 +198,7 @@ mod tests {
     #[rocket::async_test]
     async fn edit_user_form_renders_existing_values() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/user/edit/2").await;
+        let response = get(&client, "/user/2/edit").await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
@@ -212,13 +212,13 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form(
             &client,
-            "/user/edit/2",
+            "/user/2/edit",
             "user_id=2&user_name=Updated+Name&user_username=jane&user_email=jane%40example.com&is_admin=false",
         )
         .await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/edit/2"));
+        assert_eq!(response.headers().get_one("Location"), Some("/user/2/edit"));
     }
 
     #[rocket::async_test]

@@ -1,4 +1,3 @@
-
 <div class="card requirement-card mb-3">
   <div class="requirement-header">
     <div class="requirement-title">
@@ -10,8 +9,9 @@
       <a href="/admin/users" class="btn btn-outline btn-sm">Back to User Management</a>
     {{/if}}
     {{#if show_details_button}}
-      <a href="/user/show/{{user_id}}" class="btn btn-outline btn-sm">View Details</a>
+      <a href="/user/{{user_id}}/show" class="btn btn-outline btn-sm">View Details</a>
     {{/if}}
-    <a href="/user/edit/{{user_id}}" class="btn btn-primary btn-sm">Edit User</a>
+    <a href="/user/{{user_id}}/edit" class="btn btn-primary btn-sm">Edit User</a>
   </div>
+</div>
 </div>

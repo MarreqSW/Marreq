@@ -31,9 +31,11 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="project_owner_id" class="form-label">Project Owner</label>
-                            <select class="form-select" id="project_owner_id" name="project_owner_id">
-                                <option value="">No Owner</option>
+                            <label for="project_owner_id" class="form-label">Project Owner *</label>
+                            <select class="form-select" id="project_owner_id" name="project_owner_id" required>
+                                {{#unless project.project_owner_id}}
+                                    <option value="" disabled selected>Select an owner</option>
+                                {{/unless}}
                                 {{#each users}}
                                     <option value="{{user_id}}" {{#if (eq user_id ../project.project_owner_id)}}selected{{/if}}>
                                         {{user_name}} ({{user_username}})

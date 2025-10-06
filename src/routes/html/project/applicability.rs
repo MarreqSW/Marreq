@@ -28,16 +28,18 @@ pub async fn show_applicability(
     Ok(Template::render("applicability", &ctx))
 }
 
-#[get("/<project_id>/applicability/new")]
+#[get("/<project_id>/applicability/new?<error>")]
 pub async fn new_applicability(
     project_access: ProjectAccess,
     project_id: i32,
+    error: Option<String>,
 ) -> Result<Template, Redirect> {
-    let ctx = ApplicabilityCtx {
-        user: &project_access.into_user(),
-        selected_project_id: project_id,
-        applicability: None,
-    };
+    let ctx = json!({
+        "user": &project_access.into_user(),
+        "selected_project_id": project_id,
+        "applicability": Option::<Vec<Applicability>>::None,
+        "error": error
+    });
 
     Ok(Template::render("new_applicability", ctx))
 }
@@ -52,7 +54,13 @@ pub async fn post_applicability(
     let user = project_access.into_user();
     let service = ApplicabilityService::new(state.inner());
 
-    let new_url = uri!("/p", new_applicability(project_id = project_id));
+    let new_url = uri!(
+        "/p",
+        new_applicability(
+            project_id = project_id,
+            error = Some("Failed to create applicability".to_string())
+        )
+    );
     let show_url = uri!("/p", show_applicability(project_id = project_id));
 
     let new_applicability = NewApplicability {
@@ -69,12 +77,13 @@ pub async fn post_applicability(
     Ok(Redirect::to(show_url))
 }
 
-#[get("/<project_id>/applicability/edit/<app_id>")]
+#[get("/<project_id>/applicability/edit/<app_id>?<error>")]
 pub async fn get_edit_applicability(
     project_access: ProjectAccess,
     project_id: i32,
     app_id: i32,
     state: &State<AppState>,
+    error: Option<String>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
     let service = ApplicabilityService::new(state.inner());
@@ -92,7 +101,8 @@ pub async fn get_edit_applicability(
     let ctx = json!({
         "applicability": applicability,
         "user": user,
-        "selected_project_id": project_id
+        "selected_project_id": project_id,
+        "error": error
     });
     Ok(Template::render("edit_applicability", ctx))
 }
@@ -110,7 +120,11 @@ pub async fn post_edit_applicability(
 
     let edit_url = uri!(
         "/p",
-        get_edit_applicability(project_id = project_id, app_id = app_id)
+        get_edit_applicability(
+            project_id = project_id,
+            app_id = app_id,
+            error = Some("Failed to update applicability".to_string())
+        )
     );
     let show_url = uri!("/p", show_applicability(project_id = project_id));
 

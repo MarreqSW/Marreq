@@ -29,7 +29,7 @@ async fn edit_profile(
     session_user: SessionUser,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
-    error: Option<bool>,
+    error: Option<String>,
 ) -> Template {
     let user = session_user.into_inner();
     let mut ctx = build_context_with_projects(state, user.clone(), cookies);
@@ -37,8 +37,8 @@ async fn edit_profile(
     if let Some(ctx_obj) = ctx.as_object_mut() {
         ctx_obj.insert("user".to_string(), json!(user));
         ctx_obj.insert("title".to_string(), json!("Edit Profile"));
-        if error.unwrap_or(false) {
-            ctx_obj.insert("profile_error".to_string(), json!(true));
+        if let Some(error_msg) = error {
+            ctx_obj.insert("profile_error".to_string(), json!(error_msg));
         }
     }
 
@@ -61,7 +61,9 @@ async fn post_edit_profile(
     if service.update_without_password(&actor, &user_data).is_ok() {
         Redirect::to(uri!(profile(updated = Some(true))))
     } else {
-        Redirect::to(uri!(edit_profile(error = Some(true))))
+        Redirect::to(uri!(edit_profile(
+            error = Some("Failed to update profile".to_string())
+        )))
     }
 }
 
@@ -92,11 +94,12 @@ async fn show_user_id(
     Ok(Template::render("user_by_id", ctx))
 }
 
-#[get("/<user_id>/edit")]
+#[get("/<user_id>/edit?<error>")]
 async fn edit_user(
     admin: AdminOnly,
     user_id: i32,
     state: &State<AppState>,
+    error: Option<String>,
 ) -> Result<Template, Redirect> {
     let current_user = admin.into_inner();
     let service = UserService::new(state.inner());
@@ -107,7 +110,8 @@ async fn edit_user(
 
     let ctx = json!({
         "users": user,
-        "user": current_user
+        "user": current_user,
+        "error": error
     });
 
     Ok(Template::render("edit_user_by_id", ctx))
@@ -126,19 +130,27 @@ async fn post_edit_user(
 
     match service.update_without_password(&admin.into_inner(), &user_data) {
         Ok(_) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
-        Err(_) => Ok(Redirect::to(uri!(edit_user(user_id)))),
+        Err(_) => Ok(Redirect::to(uri!(edit_user(
+            user_id = user_id,
+            error = Some("Failed to update user".to_string())
+        )))),
     }
 }
 
-#[get("/new")]
-async fn new_user(admin: AdminOnly, state: &State<AppState>) -> Result<Template, Redirect> {
+#[get("/new?<error>")]
+async fn new_user(
+    admin: AdminOnly,
+    state: &State<AppState>,
+    error: Option<String>,
+) -> Result<Template, Redirect> {
     let user = admin.into_inner();
     let status = state.repo_read().get_status_all().unwrap_or_default();
     let status_json = json!(status);
 
     let ctx = json!({
         "status": status_json,
-        "user": user
+        "user": user,
+        "error": error
     });
     Ok(Template::render("new_user", ctx))
 }
@@ -157,10 +169,14 @@ async fn post_user(
             user_data.user_password = hashed_password;
             match service.create(&admin.into_inner(), user_data) {
                 Ok(user_id) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
-                Err(_) => Ok(Redirect::to(uri!(new_user))),
+                Err(_) => Ok(Redirect::to(uri!(new_user(
+                    error = Some("Failed to create user".to_string())
+                )))),
             }
         }
-        Err(_) => Ok(Redirect::to(uri!(new_user))),
+        Err(_) => Ok(Redirect::to(uri!(new_user(
+            error = Some("Password hashing failed".to_string())
+        )))),
     }
 }
 

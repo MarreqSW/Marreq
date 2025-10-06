@@ -60,7 +60,8 @@ impl<'a> UserService<'a> {
         actor: &User,
         payload: &UpdateUser,
     ) -> Result<bool, RepoError> {
-        let old = self.get_by_id(payload.user_id.unwrap_or_default())?;
+        let user_id = payload.user_id.ok_or(RepoError::NotFound)?;
+        let old = self.get_by_id(user_id)?;
 
         let updated = {
             let mut repo = self.state.repo_write();

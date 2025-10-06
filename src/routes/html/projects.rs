@@ -34,7 +34,7 @@ pub fn post_project(
     admin: AdminOnly,
     new_project: Form<NewProject>,
     state: &State<AppState>,
-) -> Result<Redirect, Template> {
+) -> Result<Redirect, Redirect> {
     let user = admin.into_inner();
     let project_service = ProjectService::new(state.inner());
     let submitted = new_project.into_inner();

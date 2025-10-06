@@ -2,7 +2,7 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{NewUser, User, UpdateUser};
+use crate::models::{NewUser, UpdateUser, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, UserRepository};
 use crate::validation::sanitize_string;
@@ -55,9 +55,13 @@ impl<'a> UserService<'a> {
     }
 
     /// Update a user's non-password fields and log the change.
-    pub fn update_without_password(&self, actor: &User, payload: &UpdateUser) -> Result<bool, RepoError> {
+    pub fn update_without_password(
+        &self,
+        actor: &User,
+        payload: &UpdateUser,
+    ) -> Result<bool, RepoError> {
         let old = self.get_by_id(payload.user_id.unwrap_or_default())?;
-        
+
         let updated = {
             let mut repo = self.state.repo_write();
             repo.update_user_without_password(payload)?
@@ -66,7 +70,9 @@ impl<'a> UserService<'a> {
         if updated {
             if let Ok(mut conn) = self.db_connection() {
                 let ctx = LogCtx::new(actor.user_id);
-                if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, &old, &self.get_by_id(old.user_id)?) {
+                if let Err(_err) =
+                    Logger::updated(conn.as_mut(), &ctx, &old, &self.get_by_id(old.user_id)?)
+                {
                     #[cfg(debug_assertions)]
                     eprintln!("Failed to log user update {}: {_err}", old.user_id);
                 }

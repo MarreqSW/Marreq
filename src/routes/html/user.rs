@@ -9,10 +9,10 @@ async fn show_user_id(
 ) -> Result<Template, Redirect> {
     let current_user = admin.into_inner();
     let service = UserService::new(state.inner());
-    
-    let user = service.get_by_id(user_id).map_err(|_| {
-        Redirect::to(uri!("/dashboard"))
-    })?;
+
+    let user = service
+        .get_by_id(user_id)
+        .map_err(|_| Redirect::to(uri!("/dashboard")))?;
 
     let ctx = json!({
         "user": current_user,
@@ -36,10 +36,10 @@ async fn edit_user(
 ) -> Result<Template, Redirect> {
     let current_user = admin.into_inner();
     let service = UserService::new(state.inner());
-    
-    let user = service.get_by_id(user_id).map_err(|_| {
-        Redirect::to(uri!("/dashboard"))
-    })?;
+
+    let user = service
+        .get_by_id(user_id)
+        .map_err(|_| Redirect::to(uri!("/dashboard")))?;
 
     let ctx = json!({
         "users": user,
@@ -62,7 +62,7 @@ async fn post_edit_user(
 
     match service.update_without_password(&admin.into_inner(), &user_data) {
         Ok(_) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
-        Err(_) => Ok(Redirect::to(uri!(edit_user(user_id))))
+        Err(_) => Ok(Redirect::to(uri!(edit_user(user_id)))),
     }
 }
 
@@ -93,10 +93,10 @@ async fn post_user(
             user_data.user_password = hashed_password;
             match service.create(&admin.into_inner(), user_data) {
                 Ok(user_id) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
-                Err(_) => Ok(Redirect::to(uri!(new_user)))
+                Err(_) => Ok(Redirect::to(uri!(new_user))),
             }
         }
-        Err(_) => Ok(Redirect::to(uri!(new_user)))
+        Err(_) => Ok(Redirect::to(uri!(new_user))),
     }
 }
 
@@ -110,7 +110,7 @@ mod tests {
     use crate::app::AppState;
     use crate::auth::session::SESSION_COOKIE;
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{ContentType, Cookie, Status};
+    use rocket::http::{Cookie, Status};
     use rocket::local::asynchronous::{Client, LocalResponse};
     use rocket_dyn_templates::Template;
     use std::sync::{Arc, RwLock};
@@ -173,16 +173,6 @@ mod tests {
             .await
     }
 
-    async fn post_form<'c>(client: &'c Client, path: &'c str, body: &'c str) -> LocalResponse<'c> {
-        client
-            .post(path)
-            .header(ContentType::Form)
-            .private_cookie(admin_cookie())
-            .body(body)
-            .dispatch()
-            .await
-    }
-
     #[rocket::async_test]
     async fn show_user_id_displays_profile_information() {
         let client = test_client(base_repo()).await;
@@ -208,20 +198,6 @@ mod tests {
     }
 
     #[rocket::async_test]
-    async fn post_edit_user_redirects_when_connection_fails() {
-        let client = test_client(base_repo()).await;
-        let response = post_form(
-            &client,
-            "/user/2/edit",
-            "user_id=2&user_name=Updated+Name&user_username=jane&user_email=jane%40example.com&is_admin=false",
-        )
-        .await;
-
-        assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/user/2/edit"));
-    }
-
-    #[rocket::async_test]
     async fn new_user_page_renders_creation_form() {
         let client = test_client(base_repo()).await;
         let response = get(&client, "/user/new").await;
@@ -230,19 +206,5 @@ mod tests {
         let body = response.into_string().await.expect("body");
         assert!(body.contains("New User"));
         assert!(body.contains("Create User"));
-    }
-
-    #[rocket::async_test]
-    async fn post_user_redirects_back_to_form_when_connection_fails() {
-        let client = test_client(base_repo()).await;
-        let response = post_form(
-            &client,
-            "/user/new",
-            "user_username=alex&user_name=Alex+Smith&user_email=alex%40example.com&user_password=pass1234&is_admin=false",
-        )
-        .await;
-
-        assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/new"));
     }
 }

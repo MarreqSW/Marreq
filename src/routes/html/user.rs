@@ -1,17 +1,85 @@
-use super::helpers::*;
+use super::helpers::build_context_with_projects;
 use super::prelude::*;
+use crate::services::UserService;
 
-#[get("/show/<user_id>")]
+#[get("/profile?<updated>")]
+async fn profile(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+    updated: Option<bool>,
+) -> Template {
+    let user = session_user.into_inner();
+    let mut ctx = build_context_with_projects(state, user.clone(), cookies);
+
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        ctx_obj.insert("user".to_string(), json!(user));
+        ctx_obj.insert("title".to_string(), json!("My Profile"));
+        ctx_obj.insert(
+            "profile_updated".to_string(),
+            json!(updated.unwrap_or(false)),
+        );
+    }
+
+    Template::render("user_profile", ctx)
+}
+
+#[get("/profile/edit?<error>")]
+async fn edit_profile(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+    error: Option<String>,
+) -> Template {
+    let user = session_user.into_inner();
+    let mut ctx = build_context_with_projects(state, user.clone(), cookies);
+
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        ctx_obj.insert("user".to_string(), json!(user));
+        ctx_obj.insert("title".to_string(), json!("Edit Profile"));
+        if let Some(error_msg) = error {
+            ctx_obj.insert("profile_error".to_string(), json!(error_msg));
+        }
+    }
+
+    Template::render("edit_profile", ctx)
+}
+
+#[post("/profile/edit", data = "<user_form>")]
+async fn post_edit_profile(
+    session_user: SessionUser,
+    user_form: Form<UpdateUser>,
+    state: &State<AppState>,
+) -> Redirect {
+    let actor = session_user.into_inner();
+    let mut user_data = user_form.into_inner();
+    user_data.user_id = Some(actor.user_id);
+    user_data.is_admin = actor.is_admin;
+
+    let service = UserService::new(state.inner());
+
+    if service.update_without_password(&actor, &user_data).is_ok() {
+        Redirect::to(uri!(profile(updated = Some(true))))
+    } else {
+        Redirect::to(uri!(edit_profile(
+            error = Some("Failed to update profile".to_string())
+        )))
+    }
+}
+
+#[get("/<user_id>/show")]
 async fn show_user_id(
     admin: AdminOnly,
     user_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let current_user = admin.into_inner();
-    let user = state
-        .repo_read()
-        .get_user_by_id(user_id)
-        .expect("Error reading table Users");
+    let service = UserService::new(state.inner());
+
+    let user = service
+        .get_by_id(user_id)
+        .map_err(|_| Redirect::to(uri!("/dashboard")))?;
+
     let ctx = json!({
         "user": current_user,
         "user_name": user.user_name,
@@ -26,81 +94,63 @@ async fn show_user_id(
     Ok(Template::render("user_by_id", ctx))
 }
 
-#[get("/edit/<user_id>")]
+#[get("/<user_id>/edit?<error>")]
 async fn edit_user(
     admin: AdminOnly,
     user_id: i32,
     state: &State<AppState>,
+    error: Option<String>,
 ) -> Result<Template, Redirect> {
     let current_user = admin.into_inner();
-    let user = state
-        .repo_read()
-        .get_user_by_id(user_id)
-        .expect("Error reading table Users");
-    #[cfg(debug_assertions)]
-    println!("USer: {:?}", user);
+    let service = UserService::new(state.inner());
+
+    let user = service
+        .get_by_id(user_id)
+        .map_err(|_| Redirect::to(uri!("/dashboard")))?;
+
     let ctx = json!({
         "users": user,
-        "user": current_user
+        "user": current_user,
+        "error": error
     });
-    #[cfg(debug_assertions)]
-    println!("edit user: {:?}", ctx);
+
     Ok(Template::render("edit_user_by_id", ctx))
 }
 
-#[post("/edit/<user_id>", data = "<user_form>")]
+#[post("/<user_id>/edit", data = "<user_form>")]
 async fn post_edit_user(
     admin: AdminOnly,
     user_id: i32,
     user_form: Form<UpdateUser>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let current_user = admin.into_inner();
-
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(edit_user(user_id)))
-    })?;
-
-    let old_user = state
-        .repo_read()
-        .get_user_by_id(user_id)
-        .expect("Error reading table Users");
-
     let mut user_data = user_form.into_inner();
     user_data.user_id = Some(user_id);
+    let service = UserService::new(state.inner());
 
-    match state.repo_write().update_user_without_password(&user_data) {
-        Ok(_) => {
-            let log_ctx = LogCtx::new(current_user.user_id);
-            let _ = Logger::updated(
-                connection,
-                &log_ctx,
-                &old_user,
-                &state
-                    .repo_read()
-                    .get_user_by_id(user_id)
-                    .expect("Error reading table Users after update"),
-            );
-            Ok(Redirect::to(uri!(show_user_id(user_id))))
-        }
-        Err(_e) => {
-            #[cfg(debug_assertions)]
-            println!("Error.*: {:?}", _e);
-            Ok(Redirect::to(uri!(edit_user(user_id))))
-        }
+    match service.update_without_password(&admin.into_inner(), &user_data) {
+        Ok(_) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
+        Err(_) => Ok(Redirect::to(uri!(edit_user(
+            user_id = user_id,
+            error = Some("Failed to update user".to_string())
+        )))),
     }
 }
 
-#[get("/new")]
-async fn new_user(admin: AdminOnly, state: &State<AppState>) -> Result<Template, Redirect> {
+#[get("/new?<error>")]
+async fn new_user(
+    admin: AdminOnly,
+    state: &State<AppState>,
+    error: Option<String>,
+) -> Result<Template, Redirect> {
     let user = admin.into_inner();
     let status = state.repo_read().get_status_all().unwrap_or_default();
     let status_json = json!(status);
 
     let ctx = json!({
         "status": status_json,
-        "user": user
+        "user": user,
+        "error": error
     });
     Ok(Template::render("new_user", ctx))
 }
@@ -111,42 +161,36 @@ async fn post_user(
     new_user: Form<NewUser>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(new_user))
-    })?;
+    let service = UserService::new(state.inner());
+    let mut user_data = new_user.into_inner();
 
-    let mut user_with_hashed_password = new_user.into_inner();
-    match hash_password(&user_with_hashed_password.user_password) {
+    match hash_password(&user_data.user_password) {
         Ok(hashed_password) => {
-            user_with_hashed_password.user_password = hashed_password;
-            let user_id = state
-                .repo_write()
-                .insert_user(&user_with_hashed_password)
-                .map_err(|e| {
-                    eprintln!("Error inserting new user: {:?}", e);
-                    Redirect::to(uri!(new_user))
-                })?;
-
-            let user = state
-                .repo_read()
-                .get_user_by_id(user_id)
-                .expect("Error reading table Users");
-            let log_ctx = LogCtx::new(admin.into_inner().user_id);
-            let _ = Logger::created(connection, &log_ctx, user_id, &user);
-
-            Ok(Redirect::to(uri!(show_user_id(user_id))))
+            user_data.user_password = hashed_password;
+            match service.create(&admin.into_inner(), user_data) {
+                Ok(user_id) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
+                Err(_) => Ok(Redirect::to(uri!(new_user(
+                    error = Some("Failed to create user".to_string())
+                )))),
+            }
         }
-        Err(_e) => {
-            #[cfg(debug_assertions)]
-            println!("Error.*: {:?}", _e);
-            Ok(Redirect::to(uri!(new_user)))
-        }
+        Err(_) => Ok(Redirect::to(uri!(new_user(
+            error = Some("Password hashing failed".to_string())
+        )))),
     }
 }
 
 pub fn routes() -> Vec<Route> {
-    routes![show_user_id, edit_user, post_edit_user, new_user, post_user]
+    routes![
+        profile,
+        edit_profile,
+        post_edit_profile,
+        show_user_id,
+        edit_user,
+        post_edit_user,
+        new_user,
+        post_user
+    ]
 }
 
 #[cfg(test)]
@@ -199,13 +243,28 @@ mod tests {
             .attach(Template::fairing())
             .mount(
                 "/user",
-                routes![show_user_id, edit_user, post_edit_user, new_user, post_user],
+                routes![
+                    profile,
+                    edit_profile,
+                    post_edit_profile,
+                    show_user_id,
+                    edit_user,
+                    post_edit_user,
+                    new_user,
+                    post_user
+                ],
             );
         Client::tracked(rocket).await.expect("client")
     }
 
     fn admin_cookie() -> Cookie<'static> {
         let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    fn user_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, USER_ID.to_string());
         cookie.set_path("/");
         cookie
     }
@@ -218,12 +277,10 @@ mod tests {
             .await
     }
 
-    async fn post_form<'c>(client: &'c Client, path: &'c str, body: &'c str) -> LocalResponse<'c> {
+    async fn get_as_standard_user<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
         client
-            .post(path)
-            .header(ContentType::Form)
-            .private_cookie(admin_cookie())
-            .body(body)
+            .get(path)
+            .private_cookie(user_cookie())
             .dispatch()
             .await
     }
@@ -231,7 +288,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_user_id_displays_profile_information() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/user/show/2").await;
+        let response = get(&client, "/user/2/show").await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
@@ -243,27 +300,13 @@ mod tests {
     #[rocket::async_test]
     async fn edit_user_form_renders_existing_values() {
         let client = test_client(base_repo()).await;
-        let response = get(&client, "/user/edit/2").await;
+        let response = get(&client, "/user/2/edit").await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Edit User"));
         assert!(body.contains("value=\"Jane Doe\""));
         assert!(body.contains("value=\"jane@example.com\""));
-    }
-
-    #[rocket::async_test]
-    async fn post_edit_user_redirects_when_connection_fails() {
-        let client = test_client(base_repo()).await;
-        let response = post_form(
-            &client,
-            "/user/edit/2",
-            "user_id=2&user_name=Updated+Name&user_username=jane&user_email=jane%40example.com&is_admin=false",
-        )
-        .await;
-
-        assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/edit/2"));
     }
 
     #[rocket::async_test]
@@ -278,16 +321,53 @@ mod tests {
     }
 
     #[rocket::async_test]
-    async fn post_user_redirects_back_to_form_when_connection_fails() {
+    async fn profile_page_displays_current_user_information() {
         let client = test_client(base_repo()).await;
-        let response = post_form(
-            &client,
-            "/user/new",
-            "user_username=alex&user_name=Alex+Smith&user_email=alex%40example.com&user_password=pass1234&is_admin=false",
-        )
-        .await;
+        let response = get_as_standard_user(&client, "/user/profile").await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("My Profile"));
+        assert!(body.contains("Jane Doe"));
+        assert!(body.contains("jane@example.com"));
+    }
+
+    #[rocket::async_test]
+    async fn edit_profile_form_prefills_user_details() {
+        let client = test_client(base_repo()).await;
+        let response = get_as_standard_user(&client, "/user/profile/edit").await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Edit Profile"));
+        assert!(body.contains("value=\"Jane Doe\""));
+        assert!(body.contains("value=\"jane@example.com\""));
+    }
+
+    #[rocket::async_test]
+    async fn edit_profile_updates_user_information() {
+        let client = test_client(base_repo()).await;
+        let response = client
+            .post("/user/profile/edit")
+            .header(ContentType::Form)
+            .body(
+                "user_name=Jane+Updated&user_username=jane_updated&user_email=jane_updated%40example.com&is_admin=false&user_id=2",
+            )
+            .private_cookie(user_cookie())
+            .dispatch()
+            .await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/new"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/profile?updated=true")
+        );
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo_read();
+        let updated = repo.get_user_by_id(USER_ID).expect("user");
+        assert_eq!(updated.user_name, "Jane Updated");
+        assert_eq!(updated.user_username, "jane_updated");
+        assert_eq!(updated.user_email, "jane_updated@example.com");
     }
 }

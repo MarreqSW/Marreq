@@ -50,9 +50,15 @@ impl<'a> ProjectService<'a> {
         id: i32,
         mut payload: UpdateProject,
     ) -> Result<Project, RepoError> {
-        self.prepare_update_payload(&mut payload)?;
-
         let before = self.get_by_id(id)?;
+
+        // Handle project_owner_id logic before validation
+        if payload.project_owner_id.is_none() {
+            // If no owner provided in payload, use existing owner or assign actor
+            payload.project_owner_id = before.project_owner_id.or(Some(actor.user_id));
+        }
+
+        self.prepare_update_payload(&mut payload)?;
 
         {
             let mut repo = self.state.repo_write();

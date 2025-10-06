@@ -255,6 +255,47 @@ mod tests {
     }
 
     #[test]
+    fn update_preserves_existing_owner_when_none_provided() {
+        let mut repo = DieselRepoMock::default();
+        repo.projects.insert(1, project(1, "Legacy"));
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let payload = UpdateProject {
+            project_name: "Legacy".into(),
+            project_description: Some("Still around".into()),
+            project_status: "active".into(),
+            project_owner_id: None,
+        };
+
+        let updated = service.update(&actor(), 1, payload).unwrap();
+        assert_eq!(updated.project_owner_id, Some(1));
+    }
+
+    #[test]
+    fn update_assigns_actor_when_owner_missing_from_existing_record() {
+        let mut repo = DieselRepoMock::default();
+        let mut orphaned = project(2, "Orphaned");
+        orphaned.project_owner_id = None;
+        repo.projects.insert(2, orphaned);
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let mut editor = actor();
+        editor.user_id = 314;
+
+        let payload = UpdateProject {
+            project_name: "Orphaned".into(),
+            project_description: Some("Needs owner".into()),
+            project_status: "active".into(),
+            project_owner_id: None,
+        };
+
+        let updated = service.update(&editor, 2, payload).unwrap();
+        assert_eq!(updated.project_owner_id, Some(314));
+    }
+
+    #[test]
     fn delete_removes_project() {
         let mut repo = DieselRepoMock::default();
         repo.projects.insert(4, project(4, "To remove"));

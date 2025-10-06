@@ -50,9 +50,15 @@ impl<'a> ProjectService<'a> {
         id: i32,
         mut payload: UpdateProject,
     ) -> Result<Project, RepoError> {
-        self.prepare_update_payload(&mut payload)?;
-
         let before = self.get_by_id(id)?;
+
+        // Handle project_owner_id logic before validation
+        if payload.project_owner_id.is_none() {
+            // If no owner provided in payload, use existing owner or assign actor
+            payload.project_owner_id = before.project_owner_id.or(Some(actor.user_id));
+        }
+
+        self.prepare_update_payload(&mut payload)?;
 
         {
             let mut repo = self.state.repo_write();
@@ -252,6 +258,47 @@ mod tests {
 
         let err = service.update(&actor(), 99, payload).unwrap_err();
         assert!(matches!(err, RepoError::NotFound));
+    }
+
+    #[test]
+    fn update_preserves_existing_owner_when_none_provided() {
+        let mut repo = DieselRepoMock::default();
+        repo.projects.insert(1, project(1, "Legacy"));
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let payload = UpdateProject {
+            project_name: "Legacy".into(),
+            project_description: Some("Still around".into()),
+            project_status: "active".into(),
+            project_owner_id: None,
+        };
+
+        let updated = service.update(&actor(), 1, payload).unwrap();
+        assert_eq!(updated.project_owner_id, Some(1));
+    }
+
+    #[test]
+    fn update_assigns_actor_when_owner_missing_from_existing_record() {
+        let mut repo = DieselRepoMock::default();
+        let mut orphaned = project(2, "Orphaned");
+        orphaned.project_owner_id = None;
+        repo.projects.insert(2, orphaned);
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let mut editor = actor();
+        editor.user_id = 314;
+
+        let payload = UpdateProject {
+            project_name: "Orphaned".into(),
+            project_description: Some("Needs owner".into()),
+            project_status: "active".into(),
+            project_owner_id: None,
+        };
+
+        let updated = service.update(&editor, 2, payload).unwrap();
+        assert_eq!(updated.project_owner_id, Some(314));
     }
 
     #[test]

@@ -1,5 +1,69 @@
+use super::helpers::build_context_with_projects;
 use super::prelude::*;
 use crate::services::UserService;
+
+#[get("/profile?<updated>")]
+async fn profile(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+    updated: Option<bool>,
+) -> Template {
+    let user = session_user.into_inner();
+    let mut ctx = build_context_with_projects(state, user.clone(), cookies);
+
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        ctx_obj.insert("user".to_string(), json!(user));
+        ctx_obj.insert("title".to_string(), json!("My Profile"));
+        ctx_obj.insert("profile_updated".to_string(), json!(updated.unwrap_or(false)));
+    }
+
+    Template::render("user_profile", ctx)
+}
+
+#[get("/profile/edit?<error>")]
+async fn edit_profile(
+    session_user: SessionUser,
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+    error: Option<bool>,
+) -> Template {
+    let user = session_user.into_inner();
+    let mut ctx = build_context_with_projects(state, user.clone(), cookies);
+
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        ctx_obj.insert("user".to_string(), json!(user));
+        ctx_obj.insert("title".to_string(), json!("Edit Profile"));
+        if error.unwrap_or(false) {
+            ctx_obj.insert("profile_error".to_string(), json!(true));
+        }
+    }
+
+    Template::render("edit_profile", ctx)
+}
+
+#[post("/profile/edit", data = "<user_form>")]
+async fn post_edit_profile(
+    session_user: SessionUser,
+    user_form: Form<UpdateUser>,
+    state: &State<AppState>,
+) -> Redirect {
+    let actor = session_user.into_inner();
+    let mut user_data = user_form.into_inner();
+    user_data.user_id = Some(actor.user_id);
+    user_data.is_admin = actor.is_admin;
+
+    let service = UserService::new(state.inner());
+
+    if service
+        .update_without_password(&actor, &user_data)
+        .is_ok()
+    {
+        Redirect::to(uri!(profile(updated = Some(true))))
+    } else {
+        Redirect::to(uri!(edit_profile(error = Some(true))))
+    }
+}
 
 #[get("/<user_id>/show")]
 async fn show_user_id(
@@ -101,7 +165,16 @@ async fn post_user(
 }
 
 pub fn routes() -> Vec<Route> {
-    routes![show_user_id, edit_user, post_edit_user, new_user, post_user]
+    routes![
+        profile,
+        edit_profile,
+        post_edit_profile,
+        show_user_id,
+        edit_user,
+        post_edit_user,
+        new_user,
+        post_user
+    ]
 }
 
 #[cfg(test)]
@@ -110,7 +183,7 @@ mod tests {
     use crate::app::AppState;
     use crate::auth::session::SESSION_COOKIE;
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{Cookie, Status};
+    use rocket::http::{ContentType, Cookie, Status};
     use rocket::local::asynchronous::{Client, LocalResponse};
     use rocket_dyn_templates::Template;
     use std::sync::{Arc, RwLock};
@@ -154,7 +227,16 @@ mod tests {
             .attach(Template::fairing())
             .mount(
                 "/user",
-                routes![show_user_id, edit_user, post_edit_user, new_user, post_user],
+                routes![
+                    profile,
+                    edit_profile,
+                    post_edit_profile,
+                    show_user_id,
+                    edit_user,
+                    post_edit_user,
+                    new_user,
+                    post_user
+                ],
             );
         Client::tracked(rocket).await.expect("client")
     }
@@ -165,10 +247,24 @@ mod tests {
         cookie
     }
 
+    fn user_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, USER_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
     async fn get<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
         client
             .get(path)
             .private_cookie(admin_cookie())
+            .dispatch()
+            .await
+    }
+
+    async fn get_as_standard_user<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(user_cookie())
             .dispatch()
             .await
     }
@@ -206,5 +302,56 @@ mod tests {
         let body = response.into_string().await.expect("body");
         assert!(body.contains("New User"));
         assert!(body.contains("Create User"));
+    }
+
+    #[rocket::async_test]
+    async fn profile_page_displays_current_user_information() {
+        let client = test_client(base_repo()).await;
+        let response = get_as_standard_user(&client, "/user/profile").await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("My Profile"));
+        assert!(body.contains("Jane Doe"));
+        assert!(body.contains("jane@example.com"));
+    }
+
+    #[rocket::async_test]
+    async fn edit_profile_form_prefills_user_details() {
+        let client = test_client(base_repo()).await;
+        let response = get_as_standard_user(&client, "/user/profile/edit").await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Edit Profile"));
+        assert!(body.contains("value=\"Jane Doe\""));
+        assert!(body.contains("value=\"jane@example.com\""));
+    }
+
+    #[rocket::async_test]
+    async fn edit_profile_updates_user_information() {
+        let client = test_client(base_repo()).await;
+        let response = client
+            .post("/user/profile/edit")
+            .header(ContentType::Form)
+            .body(
+                "user_name=Jane+Updated&user_username=jane_updated&user_email=jane_updated%40example.com&is_admin=false&user_id=2",
+            )
+            .private_cookie(user_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/profile?updated=true")
+        );
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo_read();
+        let updated = repo.get_user_by_id(USER_ID).expect("user");
+        assert_eq!(updated.user_name, "Jane Updated");
+        assert_eq!(updated.user_username, "jane_updated");
+        assert_eq!(updated.user_email, "jane_updated@example.com");
     }
 }

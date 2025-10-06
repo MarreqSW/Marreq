@@ -425,6 +425,12 @@ pub fn validate_project(project: &NewProject) -> Result<(), ValidationError> {
         }
     }
 
+    if project.project_owner_id.is_none() {
+        return Err(ValidationError::Required {
+            field: "project_owner_id".to_string(),
+        });
+    }
+
     Ok(())
 }
 

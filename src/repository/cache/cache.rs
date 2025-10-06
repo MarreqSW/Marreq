@@ -219,6 +219,8 @@ impl Cache {
         self.remove(&keys::Applicability::by_project(project_id));
         self.remove(&keys::Projects::by_id(project_id));
         self.remove(&keys::ProjectMembers::by_project(project_id));
+        self.remove(keys::PROJECTS_ALL);
+        self.remove(keys::PROJECTS_NAV);
     }
 
     /// Invalidate all user-related cache entries
@@ -376,6 +378,8 @@ mod tests {
         cache.set(&keys::Applicability::by_project(pid), "a".to_string());
         cache.set(&keys::Projects::by_id(pid), "p".to_string());
         cache.set(&keys::ProjectMembers::by_project(pid), "pm".to_string());
+        cache.set(keys::PROJECTS_ALL, "pa".to_string());
+        cache.set(keys::PROJECTS_NAV, "pn".to_string());
         cache.invalidate_project(pid);
         assert!(cache.get(&keys::Requirements::by_project(pid)).is_none());
         assert!(cache.get(&keys::Tests::by_project(pid)).is_none());
@@ -385,6 +389,8 @@ mod tests {
         assert!(cache.get(&keys::Applicability::by_project(pid)).is_none());
         assert!(cache.get(&keys::Projects::by_id(pid)).is_none());
         assert!(cache.get(&keys::ProjectMembers::by_project(pid)).is_none());
+        assert!(cache.get(keys::PROJECTS_ALL).is_none());
+        assert!(cache.get(keys::PROJECTS_NAV).is_none());
     }
 
     #[test]

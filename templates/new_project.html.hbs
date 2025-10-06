@@ -9,33 +9,39 @@
                     </h3>
                 </div>
                 <div class="card-body">
+                    {{#if error}}
+                        <div class="alert alert-danger" role="alert">
+                            {{error}}
+                        </div>
+                    {{/if}}
                     <form method="POST" action="/new_project">
                         <div class="mb-3">
                             <label for="project_name" class="form-label">Project Name *</label>
-                            <input type="text" class="form-control" id="project_name" name="project_name" required>
+                            <input type="text" class="form-control" id="project_name" name="project_name" value="{{form.project_name}}" required>
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="project_description" class="form-label">Description</label>
-                            <textarea class="form-control" id="project_description" name="project_description" rows="3"></textarea>
+                            <textarea class="form-control" id="project_description" name="project_description" rows="3">{{form.project_description}}</textarea>
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="project_status" class="form-label">Status</label>
                             <select class="form-select" id="project_status" name="project_status">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="completed">Completed</option>
-                                <option value="on-hold">On Hold</option>
+                                <option value="active" {{#if (eq form.project_status 'active')}}selected{{/if}}>Active</option>
+                                <option value="inactive" {{#if (eq form.project_status 'inactive')}}selected{{/if}}>Inactive</option>
+                                <option value="completed" {{#if (eq form.project_status 'completed')}}selected{{/if}}>Completed</option>
+                                <option value="on-hold" {{#if (eq form.project_status 'on-hold')}}selected{{/if}}>On Hold</option>
                             </select>
                         </div>
-                        
+
                         <div class="mb-3">
-                            <label for="project_owner_id" class="form-label">Project Owner</label>
-                            <select class="form-select" id="project_owner_id" name="project_owner_id">
-                                <option value="">No Owner</option>
+                            <label for="project_owner_id" class="form-label">Project Owner *</label>
+                            <select class="form-select" id="project_owner_id" name="project_owner_id" required>
                                 {{#each users}}
-                                    <option value="{{user_id}}">{{user_name}} ({{user_username}})</option>
+                                    <option value="{{user_id}}" {{#if (eq user_id ../user.user_id)}}selected{{/if}}>
+                                        {{user_name}} ({{user_username}})
+                                    </option>
                                 {{/each}}
                             </select>
                         </div>
@@ -72,4 +78,4 @@
 }
 </style>
 {{/inline}}
-{{> layout}} 
+{{> layout}}

@@ -367,12 +367,13 @@ async fn delete_requirement_route(
     Ok(Redirect::to(list_url))
 }
 
-#[get("/<project_id>/requirements/new")]
+#[get("/<project_id>/requirements/new?<error>")]
 async fn new_requirement(
     project_access: ProjectAccess,
     project_id: i32,
-    _cookies: &CookieJar<'_>, // not needed; keep underscored if you can't remove it yet
+    _cookies: &CookieJar<'_>,
     state: &State<AppState>,
+    error: Option<String>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
     let repo = state.repo_read();
@@ -407,7 +408,8 @@ async fn new_requirement(
         "req_justification": "",
         "req_reference": "",
         "req_link": "",
-        "user": user
+        "user": user,
+        "error": error
     });
 
     Ok(Template::render("new_requirement", ctx))
@@ -423,14 +425,11 @@ async fn post_requirement(
     let user_id = project_access.into_user().user_id;
 
     // Reuse these URLs
-    let new_url = uri!("/p", new_requirement(project_id));
-    let list_url = uri!(
+    let new_url = uri!(
         "/p",
-        show_requirements(
+        new_requirement(
             project_id = project_id,
-            status_filter = Option::<i32>::None,
-            verification_filter = Option::<i32>::None,
-            category_filter = Option::<i32>::None
+            error = Some("Invalid data provided".to_string())
         )
     );
 
@@ -440,7 +439,7 @@ async fn post_requirement(
 
     // --- Reference validation / generation ---
     if !req.req_reference.is_empty() {
-        // Validate against the category’s tag
+        // Validate against the category's tag
         let category = get_category_by_id_cached(state, req.req_category);
         let expected_prefix = format!("REQ-{}-", category.cat_tag);
         if !req.req_reference.starts_with(&expected_prefix) {
@@ -481,10 +480,16 @@ async fn post_requirement(
         .map_err(|_e| {
             #[cfg(debug_assertions)]
             eprintln!("insert_new_requirement failed: {:?}", _e);
-            Redirect::to(list_url.clone())
+            Redirect::to(uri!(
+                "/p",
+                new_requirement(
+                    project_id = project_id,
+                    error = Some("Failed to create requirement".to_string())
+                )
+            ))
         })?;
 
-    // --- Best-effort logging (don’t affect control flow) ---
+    // --- Best-effort logging (don't affect control flow) ---
     if let (Ok(mut conn), Ok(new_row)) = (
         get_db_connection(state),
         state.repo_read().get_requirement_by_id(req_id),

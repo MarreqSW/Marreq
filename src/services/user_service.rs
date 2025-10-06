@@ -61,6 +61,9 @@ impl<'a> UserService<'a> {
         payload: &UpdateUser,
     ) -> Result<bool, RepoError> {
         let user_id = payload.user_id.ok_or(RepoError::NotFound)?;
+        if !actor.is_admin && actor.user_id != user_id {
+            return Err(RepoError::Unauthorized);
+        }
         let old = self.get_by_id(user_id)?;
 
         let updated = {
@@ -182,5 +185,59 @@ mod tests {
         assert_eq!(users.len(), 2);
         assert_eq!(users[0].user_username, "bob");
         assert_eq!(users[1].user_username, "carol");
+    }
+
+    #[test]
+    fn non_admin_cannot_update_another_user() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, sample_user(1, "alice"));
+        repo.users.insert(2, sample_user(2, "carol"));
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let actor = sample_user(1, "alice");
+        let update = UpdateUser {
+            user_id: Some(2),
+            user_username: "carol".into(),
+            user_name: "Carol Updated".into(),
+            user_email: "carol.updated@example.com".into(),
+            is_admin: false,
+        };
+
+        let err = service
+            .update_without_password(&actor, &update)
+            .expect_err("non-admin should not update other users");
+
+        assert!(matches!(err, RepoError::Unauthorized));
+    }
+
+    #[test]
+    fn admin_can_update_other_users() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, sample_user(1, "alice"));
+        repo.users.insert(2, sample_user(2, "carol"));
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let mut admin = sample_user(1, "alice");
+        admin.is_admin = true;
+
+        let update = UpdateUser {
+            user_id: Some(2),
+            user_username: "carol".into(),
+            user_name: "Carol Updated".into(),
+            user_email: "carol.updated@example.com".into(),
+            is_admin: true,
+        };
+
+        let updated = service
+            .update_without_password(&admin, &update)
+            .expect("admin should update other users");
+        assert!(updated);
+
+        let stored = service.get_by_id(2).unwrap();
+        assert_eq!(stored.user_name, "Carol Updated");
+        assert_eq!(stored.user_email, "carol.updated@example.com");
+        assert!(stored.is_admin);
     }
 }

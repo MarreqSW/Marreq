@@ -11,4 +11,6 @@ pub enum RepoError {
     Pool(String),
     #[error("bad input: {0}")]
     BadInput(String),
+    #[error("unauthorized")]
+    Unauthorized,
 }

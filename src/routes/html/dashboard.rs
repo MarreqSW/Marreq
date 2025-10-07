@@ -1,6 +1,7 @@
-use super::helpers::{get_user_projects_and_selection, project_status_badge};
+use super::helpers::project_status_badge;
 use super::prelude::*;
-use crate::services::{RequirementService, StatusService, TestService};
+use crate::services::{RequirementService, StatusService, TestService, ProjectService};
+use rocket::http::Cookie;
 
 #[get("/")]
 pub fn index(
@@ -10,7 +11,17 @@ pub fn index(
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
 
-    let (projects, selected_project_id) = get_user_projects_and_selection(state, &user, cookies);
+    let projects = ProjectService::new(state.inner()).get_by_user_id(user.user_id).unwrap_or_default();
+
+    let mut selected_project_id = cookies
+        .get("selected_project_id")
+        .and_then(|cookie| cookie.value().parse::<i32>().ok());
+
+    // Auto-select first project if none selected and user has projects
+    if selected_project_id.is_none() && !projects.is_empty() {
+        selected_project_id = Some(projects[0].project_id);
+        cookies.add(Cookie::new("selected_project_id", projects[0].project_id.to_string()));
+    }
 
     let selected_project_name = selected_project_id
         .and_then(|project_id| {

@@ -266,10 +266,7 @@ mod tests {
         assert_eq!(inner.projects.len(), 1);
         let project = inner.projects.values().next().expect("project stored");
         assert_eq!(project.project_name, "New Initiative");
-        assert_eq!(
-            project.project_description.as_deref(),
-            Some("Launch prep")
-        );
+        assert_eq!(project.project_description.as_deref(), Some("Launch prep"));
         assert_eq!(project.project_status.as_deref(), Some("active"));
         assert_eq!(project.project_owner_id, Some(ADMIN_ID));
     }

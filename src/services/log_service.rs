@@ -162,3 +162,102 @@ impl<'a> LogService<'a> {
             .collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::repository::errors::RepoError;
+    use chrono::{NaiveDate, NaiveDateTime};
+    use std::sync::{Arc, RwLock};
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn sample_log(log_id: i32, user_id: i32) -> Log {
+        Log {
+            log_id,
+            user_id,
+            action_type: "CREATE".into(),
+            entity_type: "PROJECT".into(),
+            entity_id: Some(1),
+            project_id: Some(1),
+            old_values: None,
+            new_values: None,
+            description: Some("Created project".into()),
+            ip_address: Some("127.0.0.1".into()),
+            user_agent: Some("reqman-test".into()),
+            created_at: timestamp(),
+        }
+    }
+
+    #[test]
+    fn enrich_with_usernames_resolves_user_display_names() {
+        let user = DieselRepoMock::make_user(7, "alice", "");
+        let repo = DieselRepoMock::with_users([user]);
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let logs = vec![sample_log(1, 7)];
+        let enriched = service.enrich_with_usernames(logs).unwrap();
+
+        assert_eq!(enriched.len(), 1);
+        assert_eq!(enriched[0].log.log_id, 1);
+        assert_eq!(enriched[0].username, "alice");
+    }
+
+    #[test]
+    fn enrich_with_usernames_propagates_repo_errors() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let err = service
+            .enrich_with_usernames(vec![sample_log(2, 99)])
+            .expect_err("missing user should propagate error");
+
+        assert!(matches!(err, RepoError::NotFound));
+    }
+
+    #[test]
+    fn logs_to_json_produces_pretty_serialization() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let json = service
+            .logs_to_json(&[sample_log(3, 1)])
+            .expect("serialization should succeed");
+
+        assert!(json.contains("\n"));
+        assert!(json.contains("Created project"));
+    }
+
+    #[test]
+    fn recent_logs_returns_repo_error_when_no_connection() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let err = service
+            .recent_logs(5)
+            .expect_err("repo without connection should error");
+
+        match err {
+            LogServiceError::Repo(RepoError::Pool(message)) => {
+                assert!(message.contains("no database connection"));
+            }
+            other => panic!("unexpected error: {:?}", other),
+        }
+    }
+}

@@ -5,7 +5,9 @@
 
 pub mod applicability_service;
 pub mod base_service;
+pub mod cache_service;
 pub mod category_service;
+pub mod log_service;
 pub mod matrix_service;
 pub mod project_service;
 pub mod requirement_service;
@@ -18,7 +20,9 @@ mod tests;
 
 pub use applicability_service::*;
 pub use base_service::*;
+pub use cache_service::*;
 pub use category_service::*;
+pub use log_service::*;
 pub use matrix_service::*;
 pub use project_service::*;
 pub use requirement_service::*;

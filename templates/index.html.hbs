@@ -14,14 +14,19 @@
         <p>View and manage all your software requirements</p>
       </div>
       <div class="card-actions">
-        <a href="/p/{{selected_project_id}}/requirements" class="btn btn-primary">View Requirements</a>
-        <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success">Export Excel</a>
-        {{#if user.is_admin}}
-        <a href="/import_excel" class="btn btn-warning">Import Excel</a>
-        {{/if}}
         {{#if selected_project_id}}
+          <a href="/p/{{selected_project_id}}/requirements" class="btn btn-primary">View Requirements</a>
+          <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success">Export Excel</a>
+          {{#if user.is_admin}}
+          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
+          {{/if}}
           <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-outline">New Requirement</a>
         {{else}}
+          <span class="btn btn-primary disabled" aria-disabled="true">View Requirements</span>
+          <span class="btn btn-success disabled" aria-disabled="true">Export Excel</span>
+          {{#if user.is_admin}}
+          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
+          {{/if}}
           <span class="btn btn-outline disabled" aria-disabled="true">New Requirement</span>
         {{/if}}
       </div>
@@ -37,12 +42,21 @@
         <p>Manage test cases and verification methods</p>
       </div>
       <div class="card-actions">
-        <a href="/p/{{selected_project_id}}/tests" class="btn btn-primary">View Tests</a>
-        <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success">Export Excel</a>
-        {{#if user.is_admin}}
-        <a href="/import_excel" class="btn btn-warning">Import Excel</a>
+        {{#if selected_project_id}}
+          <a href="/p/{{selected_project_id}}/tests" class="btn btn-primary">View Tests</a>
+          <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success">Export Excel</a>
+          {{#if user.is_admin}}
+          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
+          {{/if}}
+          <a href="/p/{{selected_project_id}}/tests/new" class="btn btn-outline">New Test</a>
+        {{else}}
+          <span class="btn btn-primary disabled" aria-disabled="true">View Tests</span>
+          <span class="btn btn-success disabled" aria-disabled="true">Export Excel</span>
+          {{#if user.is_admin}}
+          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
+          {{/if}}
+          <span class="btn btn-outline disabled" aria-disabled="true">New Test</span>
         {{/if}}
-        <a href="/p/{{selected_project_id}}/tests/new" class="btn btn-outline">New Test</a>
       </div>
     </div>
   </div>

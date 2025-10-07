@@ -24,7 +24,6 @@ pub use cache::{
 };
 
 pub(crate) mod prelude {
-    pub(crate) use diesel::prelude::*;
     pub(crate) use rocket::form::Form;
     pub(crate) use rocket::fs::NamedFile;
     pub(crate) use rocket::http::{ContentType, CookieJar};
@@ -42,8 +41,7 @@ pub(crate) mod prelude {
     pub(crate) use crate::logger::{LogCtx, Logger};
     pub(crate) use crate::models::*;
     pub(crate) use crate::repository::{
-        LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
-        TestsRepository, UserRepository,
+        LookupRepository, ProjectMembersRepository, ProjectsRepository, UserRepository,
     };
 }
 

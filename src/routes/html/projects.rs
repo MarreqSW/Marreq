@@ -84,3 +84,219 @@ fn default_new_project_form() -> Value {
         "project_owner_id": null,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::models::ProjectMember;
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use chrono::{NaiveDate, NaiveDateTime};
+    use rocket::http::{ContentType, Cookie, Status};
+    use rocket::local::asynchronous::{Client, LocalResponse};
+    use rocket_dyn_templates::Template;
+    use std::sync::{Arc, RwLock};
+
+    type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
+    const USER_ID: i32 = 2;
+    const OWNER_ID: i32 = 3;
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(12, 0, 0)
+            .unwrap()
+    }
+
+    fn admin_user() -> User {
+        let mut user = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        user.is_admin = true;
+        user.user_name = "Admin User".into();
+        user.user_email = "admin@example.com".into();
+        user
+    }
+
+    fn standard_user() -> User {
+        let mut user = DieselRepoMock::make_user(USER_ID, "jane", "");
+        user.user_name = "Jane Doe".into();
+        user.user_email = "jane@example.com".into();
+        user
+    }
+
+    fn owner_user() -> User {
+        let mut user = DieselRepoMock::make_user(OWNER_ID, "owner", "");
+        user.user_name = "Mission Owner".into();
+        user.user_email = "owner@example.com".into();
+        user
+    }
+
+    fn project(id: i32, name: &str, owner_id: i32) -> Project {
+        Project {
+            project_id: id,
+            project_name: name.into(),
+            project_description: Some("Mission critical project".into()),
+            project_creation_date: Some(timestamp()),
+            project_update_date: Some(timestamp()),
+            project_status: Some("active".into()),
+            project_owner_id: Some(owner_id),
+        }
+    }
+
+    fn managed_state(repo: DieselRepoMock) -> TestAppState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn test_client(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(managed_state(repo))
+            .attach(Template::fairing())
+            .mount("/", routes![show_projects, new_project, post_project]);
+        Client::tracked(rocket).await.expect("client")
+    }
+
+    fn session_cookie(user_id: i32) -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
+        cookie.set_path("/");
+        cookie.set_http_only(true);
+        cookie
+    }
+
+    async fn get_with_session<'c>(
+        client: &'c Client,
+        path: &'c str,
+        user_id: i32,
+    ) -> LocalResponse<'c> {
+        client
+            .get(path)
+            .private_cookie(session_cookie(user_id))
+            .dispatch()
+            .await
+    }
+
+    async fn post_with_session<'c>(
+        client: &'c Client,
+        path: &'c str,
+        body: &'c str,
+        user_id: i32,
+    ) -> LocalResponse<'c> {
+        client
+            .post(path)
+            .header(ContentType::Form)
+            .body(body)
+            .private_cookie(session_cookie(user_id))
+            .dispatch()
+            .await
+    }
+
+    #[rocket::async_test]
+    async fn show_projects_lists_only_accessible_projects() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(USER_ID, standard_user());
+        let owner = owner_user();
+        let owner_id = owner.user_id;
+        repo.users.insert(owner_id, owner);
+
+        let accessible = project(7, "Mars Lander", owner_id);
+        let accessible_id = accessible.project_id;
+        let inaccessible = project(8, "Venus Rover", owner_id);
+        repo.projects.insert(accessible_id, accessible);
+        repo.projects.insert(inaccessible.project_id, inaccessible);
+
+        repo.project_members.push(ProjectMember {
+            project_id: accessible_id,
+            user_id: USER_ID,
+            role: 2,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        let client = test_client(repo).await;
+        let response = get_with_session(&client, "/projects", USER_ID).await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Mars Lander"));
+        assert!(!body.contains("Venus Rover"));
+        assert!(body.contains("Role: Manager"));
+        assert!(body.contains("Owner: Mission Owner"));
+    }
+
+    #[rocket::async_test]
+    async fn new_project_page_renders_admin_form() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(ADMIN_ID, admin_user());
+        repo.users.insert(USER_ID, standard_user());
+
+        let client = test_client(repo).await;
+        let response = get_with_session(&client, "/new_project", ADMIN_ID).await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Create New Project"));
+        assert!(body.contains("Project Owner *"));
+        assert!(body.contains("Admin User (admin)"));
+        assert!(body.contains("Jane Doe (jane)"));
+    }
+
+    #[rocket::async_test]
+    async fn post_project_creates_project_and_redirects() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(ADMIN_ID, admin_user());
+
+        let client = test_client(repo).await;
+        let response = post_with_session(
+            &client,
+            "/new_project",
+            "project_name=New+Initiative&project_description=Launch+prep&project_status=active&project_owner_id=1",
+            ADMIN_ID,
+        )
+        .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/projects"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo_guard = state.repo.read().expect("repo lock");
+        let inner = repo_guard.inner_repo();
+        assert_eq!(inner.projects.len(), 1);
+        let project = inner.projects.values().next().expect("project stored");
+        assert_eq!(project.project_name, "New Initiative");
+        assert_eq!(
+            project.project_description.as_deref(),
+            Some("Launch prep")
+        );
+        assert_eq!(project.project_status.as_deref(), Some("active"));
+        assert_eq!(project.project_owner_id, Some(ADMIN_ID));
+    }
+
+    #[rocket::async_test]
+    async fn post_project_redirects_back_on_validation_error() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(ADMIN_ID, admin_user());
+
+        let client = test_client(repo).await;
+        let response = post_with_session(
+            &client,
+            "/new_project",
+            "project_name=&project_description=&project_status=active&project_owner_id=",
+            ADMIN_ID,
+        )
+        .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/new_project?error=Field%20'project_name'%20is%20required")
+        );
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo_guard = state.repo.read().expect("repo lock");
+        let inner = repo_guard.inner_repo();
+        assert!(inner.projects.is_empty());
+    }
+}

@@ -31,6 +31,7 @@ pub fn index(
 
     let ctx = json!({
         "projects": decorated_projects,
+        "projects_count": decorated_projects.len(),
         "user": user,
         "selected_project_id": selected_project_id
     });

@@ -1,35 +1,24 @@
-use super::helpers::*;
 use super::prelude::*;
+use crate::services::LogService;
+use std::path::Path;
+
+const DEFAULT_EXPORT_LIMIT: i64 = 1000;
+const CLEANUP_DAYS: i64 = 90;
 
 #[get("/logs")]
 pub fn show_logs(admin: AdminOnly, state: &State<AppState>) -> Result<Template, Redirect> {
     let user = admin.into_inner();
+    let service = LogService::new(state.inner());
 
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error in show_logs: {}", e);
+    let logs = service.recent_logs(DEFAULT_EXPORT_LIMIT).map_err(|err| {
+        eprintln!("Failed to load logs: {err}");
         Redirect::to(uri!(crate::routes::html::admin::admin_dashboard))
     })?;
-    let logs = Logger::get_recent_logs(connection, 1000).unwrap_or_default();
-
-    // Enhance logs with user information
-    let mut enhanced_logs = Vec::new();
-    for log in logs {
-        let username = state
-            .repo_read()
-            .get_user_by_id(log.user_id)
-            .expect("Error reading table Users")
-            .user_username;
-        let mut log_json = serde_json::to_value(log).unwrap_or_default();
-        if let Some(log_obj) = log_json.as_object_mut() {
-            log_obj.insert("username".to_string(), serde_json::Value::String(username));
-        }
-        enhanced_logs.push(log_json);
-    }
 
     let ctx = json!({
         "user": user,
-        "logs": enhanced_logs,
-        "title": "System Logs"
+        "logs": logs,
+        "title": "System Logs",
     });
 
     Ok(Template::render("logs", ctx))
@@ -43,34 +32,21 @@ pub fn show_entity_logs(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = admin.into_inner();
+    let service = LogService::new(state.inner());
 
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error in show_entity_logs: {}", e);
-        Redirect::to(uri!(show_logs))
-    })?;
-    let logs = Logger::get_logs_for_entity(connection, &entity_type, entity_id).unwrap_or_default();
-
-    // Enhance logs with user information
-    let mut enhanced_logs = Vec::new();
-    for log in logs {
-        let username = state
-            .repo_read()
-            .get_user_by_id(log.user_id)
-            .expect("Error reading table Users")
-            .user_username;
-        let mut log_json = serde_json::to_value(log).unwrap_or_default();
-        if let Some(log_obj) = log_json.as_object_mut() {
-            log_obj.insert("username".to_string(), serde_json::Value::String(username));
-        }
-        enhanced_logs.push(log_json);
-    }
+    let logs = service
+        .entity_logs(&entity_type, entity_id)
+        .map_err(|err| {
+            eprintln!("Failed to load logs for {entity_type} {entity_id}: {err}");
+            Redirect::to(uri!(show_logs))
+        })?;
 
     let ctx = json!({
         "user": user,
-        "logs": enhanced_logs,
+        "logs": logs,
         "entity_type": entity_type,
         "entity_id": entity_id,
-        "title": format!("Logs for {} {}", entity_type, entity_id)
+        "title": format!("Logs for {} {}", entity_type, entity_id),
     });
 
     Ok(Template::render("entity_logs", ctx))
@@ -83,54 +59,44 @@ pub async fn export_logs(
     state: &State<AppState>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
     let user = admin.into_inner();
+    let service = LogService::new(state.inner());
 
-    let connection = &mut get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error in export_logs: {}", e);
+    let logs = service
+        .recent_logs_raw(DEFAULT_EXPORT_LIMIT)
+        .map_err(|err| {
+            eprintln!("Failed to fetch logs for export: {err}");
+            Redirect::to(uri!(show_logs))
+        })?;
+    let logs_json = service.logs_to_json(&logs).map_err(|err| {
+        eprintln!("Failed to serialize logs for export: {err}");
         Redirect::to(uri!(show_logs))
     })?;
-    let logs = Logger::get_recent_logs(connection, 1000).unwrap_or_default();
 
-    // Convert logs to JSON
-    let logs_json = serde_json::to_string_pretty(&logs).unwrap_or_default();
-
-    // Generate filename if not provided
     let filename = filename.unwrap_or_else(|| {
         let now = chrono::Utc::now();
         format!("reqman-logs_{}.json", now.format("%Y%m%d_%H%M%S"))
     });
+    let filename = ensure_json_extension(&filename);
 
-    // Ensure filename has .json extension
-    let filename = if filename.ends_with(".json") {
-        filename
-    } else {
-        format!("{}.json", filename)
-    };
-
-    // Create exports directory if it doesn't exist
     let export_dir = "exports";
-    if !std::path::Path::new(export_dir).exists() {
+    if !Path::new(export_dir).exists() {
         std::fs::create_dir(export_dir).map_err(|_| Redirect::to(uri!(show_logs)))?;
     }
 
     let export_path = format!("{}/{}", export_dir, filename);
-
-    // Write JSON to file
     std::fs::write(&export_path, logs_json).map_err(|_| Redirect::to(uri!(show_logs)))?;
 
-    // Log the successful export
-    let log_ctx = LogCtx::new(user.user_id);
-    let _ = Logger::log_export(
-        connection,
-        &log_ctx,
-        Some(format!("Exported logs to {}", filename)),
-    );
+    if let Err(err) =
+        service.log_export_action(user.user_id, Some(format!("Exported logs to {filename}")))
+    {
+        eprintln!("Failed to log export action: {err}");
+    }
 
-    Ok((
-        ContentType::JSON,
-        NamedFile::open(export_path)
-            .await
-            .map_err(|_| Redirect::to(uri!(show_logs)))?,
-    ))
+    let file = NamedFile::open(&export_path)
+        .await
+        .map_err(|_| Redirect::to(uri!(show_logs)))?;
+
+    Ok((ContentType::JSON, file))
 }
 
 #[get("/export_logs/<entity_type>/<entity_id>")]
@@ -140,18 +106,18 @@ pub fn export_entity_logs(
     entity_id: i32,
     state: &State<AppState>,
 ) -> Result<(rocket::http::ContentType, String), Redirect> {
-    let mut connection = match get_db_connection(state) {
-        Ok(conn) => conn,
-        Err(e) => {
-            eprintln!("Database connection error: {}", e);
-            return Err(Redirect::to(uri!(show_logs)));
-        }
-    };
-    let logs = Logger::get_logs_for_entity(connection.as_mut(), &entity_type, entity_id)
-        .unwrap_or_default();
+    let service = LogService::new(state.inner());
 
-    // Convert logs to JSON
-    let logs_json = serde_json::to_string_pretty(&logs).unwrap_or_default();
+    let logs = service
+        .entity_logs_raw(&entity_type, entity_id)
+        .map_err(|err| {
+            eprintln!("Failed to fetch logs for entity export {entity_type} {entity_id}: {err}");
+            Redirect::to(uri!(show_logs))
+        })?;
+    let logs_json = service.logs_to_json(&logs).map_err(|err| {
+        eprintln!("Failed to serialize entity logs for export: {err}");
+        Redirect::to(uri!(show_logs))
+    })?;
 
     let content_type = rocket::http::ContentType::new("application", "json");
     Ok((content_type, logs_json))
@@ -160,76 +126,42 @@ pub fn export_entity_logs(
 #[post("/cleanup_logs")]
 pub fn cleanup_logs(admin: AdminOnly, state: &State<AppState>) -> Result<Redirect, Redirect> {
     let user = admin.into_inner();
+    let service = LogService::new(state.inner());
 
-    let mut connection = match get_db_connection(state) {
-        Ok(conn) => conn,
-        Err(e) => {
-            eprintln!("Database connection error: {}", e);
-            return Err(Redirect::to(uri!(show_logs)));
-        }
-    };
-
-    // Clean up logs older than 90 days
-    match Logger::cleanup_old_logs(connection.as_mut(), 90) {
-        Ok(deleted_count) => {
-            // Log the cleanup action
-            let log_ctx = LogCtx::new(user.user_id);
-            let _ = Logger::log_custom(
-                connection.as_mut(),
-                &log_ctx,
-                crate::models::ActionType::StatusChange,
-                crate::models::EntityType::User,
-                None,
-                None,
-                None,
-                None,
-                Some(format!("Cleaned up {} old log entries", deleted_count)),
-            );
-        }
-        Err(_) => {
-            // Log the failed cleanup action
-            let log_ctx = LogCtx::new(user.user_id);
-            let _ = Logger::log_custom(
-                connection.as_mut(),
-                &log_ctx,
-                crate::models::ActionType::StatusChange,
-                crate::models::EntityType::User,
-                None,
-                None,
-                None,
-                None,
-                Some("Failed to clean up old log entries".to_string()),
-            );
+    match service.cleanup_old_logs(user.user_id, CLEANUP_DAYS) {
+        Ok(_) => Ok(Redirect::to(uri!(show_logs))),
+        Err(err) => {
+            eprintln!("Failed to clean up old logs: {err}");
+            Err(Redirect::to(uri!(show_logs)))
         }
     }
-
-    Ok(Redirect::to(uri!(show_logs)))
 }
 
 #[get("/log_analytics")]
 pub fn log_analytics(admin: AdminOnly, state: &State<AppState>) -> Result<Template, Redirect> {
     let user = admin.into_inner();
+    let service = LogService::new(state.inner());
 
-    let mut connection = match get_db_connection(state) {
-        Ok(conn) => conn,
-        Err(e) => {
-            eprintln!("Database connection error: {}", e);
-            return Err(Redirect::to(uri!(show_logs)));
-        }
-    };
-
-    // Get basic statistics
-    let last_7_days = Logger::get_log_count(connection.as_mut(), 7).unwrap_or(0);
-    let last_30_days = Logger::get_log_count(connection.as_mut(), 30).unwrap_or(0);
-    let last_90_days = Logger::get_log_count(connection.as_mut(), 90).unwrap_or(0);
+    let analytics = service.analytics().map_err(|err| {
+        eprintln!("Failed to load log analytics: {err}");
+        Redirect::to(uri!(show_logs))
+    })?;
 
     let ctx = json!({
         "user": user,
-        "last_7_days": last_7_days,
-        "last_30_days": last_30_days,
-        "last_90_days": last_90_days,
-        "title": "Log Analytics"
+        "last_7_days": analytics.last_7_days,
+        "last_30_days": analytics.last_30_days,
+        "last_90_days": analytics.last_90_days,
+        "title": "Log Analytics",
     });
 
     Ok(Template::render("log_analytics", ctx))
+}
+
+fn ensure_json_extension(name: &str) -> String {
+    if name.ends_with(".json") {
+        name.to_owned()
+    } else {
+        format!("{name}.json")
+    }
 }

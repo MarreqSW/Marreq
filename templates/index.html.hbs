@@ -1,141 +1,132 @@
 {{#*inline "page"}}
-
-<div class="text-center mb-5">
-  <h2>{{selected_project_name}}</h2>
-</div>
-
-<div class="dashboard-grid">
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Requirements <span class="badge bg-primary">{{requirements_count}}</span></h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>View and manage all your software requirements</p>
-      </div>
-      <div class="card-actions">
-        {{#if selected_project_id}}
-          <a href="/p/{{selected_project_id}}/requirements" class="btn btn-primary">View Requirements</a>
-          <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success">Export Excel</a>
-          {{#if user.is_admin}}
-          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
-          {{/if}}
-          <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-outline">New Requirement</a>
-        {{else}}
-          <span class="btn btn-primary disabled" aria-disabled="true">View Requirements</span>
-          <span class="btn btn-success disabled" aria-disabled="true">Export Excel</span>
-          {{#if user.is_admin}}
-          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
-          {{/if}}
-          <span class="btn btn-outline disabled" aria-disabled="true">New Requirement</span>
-        {{/if}}
-      </div>
-    </div>
-  </div>
-
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Tests <span class="badge bg-primary">{{tests_count}}</span></h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>Manage test cases and verification methods</p>
-      </div>
-      <div class="card-actions">
-        {{#if selected_project_id}}
-          <a href="/p/{{selected_project_id}}/tests" class="btn btn-primary">View Tests</a>
-          <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success">Export Excel</a>
-          {{#if user.is_admin}}
-          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
-          {{/if}}
-          <a href="/p/{{selected_project_id}}/tests/new" class="btn btn-outline">New Test</a>
-        {{else}}
-          <span class="btn btn-primary disabled" aria-disabled="true">View Tests</span>
-          <span class="btn btn-success disabled" aria-disabled="true">Export Excel</span>
-          {{#if user.is_admin}}
-          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
-          {{/if}}
-          <span class="btn btn-outline disabled" aria-disabled="true">New Test</span>
-        {{/if}}
-      </div>
-    </div>
-  </div>
-
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Traceability Matrix</h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>Link requirements to tests and generate reports</p>
-      </div>
-      <div class="card-actions">
-        <a href="/p/{{selected_project_id}}/matrix" class="btn btn-primary">View Matrix</a>
-        <a href="/p/{{selected_project_id}}/matrix.xls" class="btn btn-success">Export Excel</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Categories</h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>Organize requirements with categories</p>
-      </div>
-      <div class="card-actions">
-        {{#if selected_project_id}}
-          <a href="/p/{{selected_project_id}}/categories" class="btn btn-primary">View Categories</a>
-          <a href="/p/{{selected_project_id}}/categories/new" class="btn btn-outline">New Category</a>
-        {{else}}
-          <span class="btn btn-primary disabled" aria-disabled="true">View Categories</span>
-          <span class="btn btn-outline disabled" aria-disabled="true">New Category</span>
-        {{/if}}
-      </div>
-    </div>
-  </div>
-
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Applicability</h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>Define which products/systems requirements apply to</p>
-      </div>
-      <div class="card-actions">
-        {{#if selected_project_id}}
-          <a href="/p/{{selected_project_id}}/applicability" class="btn btn-primary">View Applicability</a>
-          <a href="/p/{{selected_project_id}}/applicability/new" class="btn btn-outline">New Applicability</a>
-        {{else}}
-          <span class="btn btn-primary disabled" aria-disabled="true">View Applicability</span>
-          <span class="btn btn-outline disabled" aria-disabled="true">New Applicability</span>
-        {{/if}}
-      </div>
-    </div>
-  </div>
-
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Members</h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>See who has access to your active project and manage participation.</p>
-      </div>
-      <div class="card-actions d-flex flex-wrap gap-2">
-        {{#if selected_project_id}}
-          <a href="/p/{{selected_project_id}}/members" class="btn btn-primary">View Members</a>
-        {{else}}
-          <span class="btn btn-outline disabled">Select a project to view members</span>
-        {{/if}}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Projects</h1>
         {{#if user.is_admin}}
-          <a href="/admin/users" class="btn btn-outline">Manage Users</a>
+        <a href="/new_project" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Project
+        </a>
         {{/if}}
-      </div>
     </div>
-  </div>
+
+    {{#if projects}}
+        <div class="row">
+            {{#each projects}}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 project-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">{{project_name}}</h5>
+                                <span class="badge {{project_status_badge}}">
+                                    {{project_status}}
+                                </span>
+                            </div>
+
+                            {{#if project_description}}
+                                <p class="card-text text-muted">{{project_description}}</p>
+                            {{/if}}
+
+                            <div class="project-meta">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar"></i> Created: {{project_creation_date}}
+                                </small>
+                                {{#if project_owner_name}}
+                                    <br><small class="text-muted">
+                                        <i class="fas fa-user"></i> Owner: {{project_owner_name}}
+                                    </small>
+                                {{else if project_owner_id}}
+                                    <br><small class="text-muted">
+                                        <i class="fas fa-user"></i> Owner: {{project_owner_id}}
+                                    </small>
+                                {{/if}}
+                                {{#if role_label}}
+                                    <br><small class="text-muted">
+                                        <i class="fas fa-id-badge"></i> Role: {{role_label}}
+                                    </small>
+                                {{/if}}
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer bg-transparent">
+                            <div class="btn-group w-100" role="group">
+                                <a href="/p/{{project_id}}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                {{#if ../user.is_admin}}
+                                <a href="/p/{{project_id}}/edit" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <button class="btn btn-outline-danger btn-sm" onclick="deleteProject({{project_id}})">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                                {{/if}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {{/each}}
+        </div>
+    {{else}}
+        <div class="text-center py-5">
+            <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+            <h3 class="text-muted">No Projects Found</h3>
+            <p class="text-muted">Get started by creating your first project.</p>
+            {{#if user.is_admin}}
+            <a href="/new_project" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create Project
+            </a>
+            {{else}}
+            <p class="text-muted">Contact an administrator to create a new project.</p>
+            {{/if}}
+        </div>
+    {{/if}}
 </div>
+
+<script>
+function deleteProject(projectId) {
+    if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
+        fetch(`/p/${projectId}/delete`, {
+            method: 'DELETE',
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Error deleting project');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting project');
+        });
+    }
+}
+</script>
+
+<style>
+.project-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #e9ecef;
+}
+
+.project-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.project-meta {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.card-footer {
+    border-top: 1px solid #e9ecef;
+}
+
+.btn-group .btn {
+    flex: 1;
+}
+</style>
 {{/inline}}
-{{> layout}}
+{{> layout}} 

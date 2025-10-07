@@ -82,7 +82,7 @@ pub fn show_project_id(
         "user_project_count": user_project_count
     });
 
-    Ok(Template::render("index", ctx))
+    Ok(Template::render("project", ctx))
 }
 
 #[get("/<project_id>/edit")]

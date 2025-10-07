@@ -2,19 +2,6 @@
   <div class="nav-container">
     <div class="nav-left">
       <a href="/" class="nav-brand" aria-label="ReqMan home">ReqMan</a>
-
-      {{#if projects}}
-      <div class="nav-project-selector">
-        <label for="project-selector" class="nav-project-label">Project</label>
-        <select id="project-selector" class="form-select" onchange="changeProject(this.value)">
-          {{#each projects}}
-            <option value="{{project_id}}" {{#if (eq project_id ../selected_project_id)}}selected{{/if}}>
-              {{project_name}}
-            </option>
-          {{/each}}
-        </select>
-      </div>
-      {{/if}}
     </div>
 
     <div class="nav-right">

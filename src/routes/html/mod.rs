@@ -41,8 +41,7 @@ pub(crate) mod prelude {
     pub(crate) use crate::logger::{LogCtx, Logger};
     pub(crate) use crate::models::*;
     pub(crate) use crate::repository::{
-        LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
-        TestsRepository, UserRepository,
+        LookupRepository, ProjectMembersRepository, ProjectsRepository, UserRepository,
     };
 }
 

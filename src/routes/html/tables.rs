@@ -1,5 +1,8 @@
 use super::helpers::*;
 use super::prelude::*;
+use crate::services::{
+    CategoryService, ProjectService, RequirementService, StatusService, TestService, UserService,
+};
 
 #[get("/requirements_table?<sort_by>&<sort_order>&<status_filter>&<verification_filter>&<category_filter>")]
 pub fn show_requirements_table(
@@ -16,14 +19,13 @@ pub fn show_requirements_table(
     let _connection =
         get_db_connection(state).map_err(|_| rocket::http::Status::InternalServerError)?;
 
-    // Get all requirements
-    let requirements = state
-        .repo_read()
-        .get_requirements_all()
+    // Get all requirements via the service layer
+    let requirement_service = RequirementService::new(state.inner());
+    let mut filtered_requirements = requirement_service
+        .list_all()
         .map_err(|_| rocket::http::Status::InternalServerError)?;
 
     // Apply filters
-    let mut filtered_requirements = requirements;
     if let Some(status_id) = status_filter {
         filtered_requirements.retain(|r| r.req_current_status == status_id);
     }
@@ -60,18 +62,22 @@ pub fn show_requirements_table(
     // Decorate requirements
     let decorated_requirements = decorate_requirements(filtered_requirements);
 
-    // Get lookup data for dropdowns
-    let users = state.repo_read().get_users_all().unwrap_or_default();
-    let categories = state.repo_read().get_categories_all().unwrap_or_default();
-    let statuses = state
-        .repo_read()
-        .get_requirement_status_all()
+    // Get lookup data for dropdowns using dedicated services
+    let user_service = UserService::new(state.inner());
+    let category_service = CategoryService::new(state.inner());
+    let status_service = StatusService::new(state.inner());
+    let project_service = ProjectService::new(state.inner());
+
+    let users = user_service.list_all().unwrap_or_default();
+    let categories = category_service.list_all().unwrap_or_default();
+    let statuses = status_service
+        .list_requirement_statuses()
         .unwrap_or_default();
     let verifications = state.repo_read().get_verification_all().unwrap_or_default();
 
     let mut ctx = json!({
         "user": user.0,
-        "projects": state.repo_read().get_projects_all().unwrap_or_default(),
+        "projects": project_service.list_all().unwrap_or_default(),
         "selected_project_id": 1
     });
     ctx["requirements"] = json!(decorated_requirements);
@@ -106,14 +112,13 @@ pub fn show_tests_table(
     let _connection =
         get_db_connection(state).map_err(|_| rocket::http::Status::InternalServerError)?;
 
-    // Get all tests
-    let tests = state
-        .repo_read()
-        .get_tests_all()
+    // Get all tests via the service layer
+    let test_service = TestService::new(state.inner());
+    let mut filtered_tests = test_service
+        .list_all()
         .map_err(|_| rocket::http::Status::InternalServerError)?;
 
     // Apply filters
-    let mut filtered_tests = tests;
     if let Some(status_id) = status_filter {
         filtered_tests.retain(|t| t.test_status == status_id);
     }
@@ -145,15 +150,20 @@ pub fn show_tests_table(
     // Decorate tests
     let decorated_tests = decorate_tests(filtered_tests);
 
-    // Get lookup data for dropdowns
-    let users = state.repo_read().get_users_all().unwrap_or_default();
-    let categories = state.repo_read().get_categories_all().unwrap_or_default();
-    let statuses = state.repo_read().get_test_status_all().unwrap_or_default();
+    // Get lookup data for dropdowns using dedicated services
+    let user_service = UserService::new(state.inner());
+    let category_service = CategoryService::new(state.inner());
+    let status_service = StatusService::new(state.inner());
+    let project_service = ProjectService::new(state.inner());
+
+    let users = user_service.list_all().unwrap_or_default();
+    let categories = category_service.list_all().unwrap_or_default();
+    let statuses = status_service.list_test_statuses().unwrap_or_default();
     let verifications = state.repo_read().get_verification_all().unwrap_or_default();
 
     let mut ctx = json!({
         "user": user.0,
-        "projects": state.repo_read().get_projects_all().unwrap_or_default(),
+        "projects": project_service.list_all().unwrap_or_default(),
         "selected_project_id": 1
     });
     ctx["tests"] = json!(decorated_tests);

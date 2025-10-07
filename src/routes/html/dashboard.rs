@@ -1,5 +1,6 @@
-use super::helpers::{get_db_connection, get_user_projects_and_selection, project_status_badge};
+use super::helpers::{get_user_projects_and_selection, project_status_badge};
 use super::prelude::*;
+use crate::services::{RequirementService, StatusService, TestService};
 
 #[get("/")]
 pub fn index(
@@ -20,11 +21,13 @@ pub fn index(
         })
         .unwrap_or_else(|| "Requirements Manager".to_string());
 
+    let requirement_service = RequirementService::new(state.inner());
+    let test_service = TestService::new(state.inner());
+
     let requirements_count = selected_project_id
         .map(|project_id| {
-            state
-                .repo_read()
-                .get_requirements_by_project(project_id)
+            requirement_service
+                .list_by_project(project_id)
                 .map(|reqs| reqs.len())
                 .unwrap_or(0)
         })
@@ -32,9 +35,8 @@ pub fn index(
 
     let tests_count = selected_project_id
         .map(|project_id| {
-            state
-                .repo_read()
-                .get_tests_by_project(project_id)
+            test_service
+                .list_by_project(project_id)
                 .map(|tests| tests.len())
                 .unwrap_or(0)
         })
@@ -94,18 +96,10 @@ pub fn index(
 
 #[get("/status")]
 pub fn show_status(state: &State<AppState>) -> content::RawHtml<String> {
-    use crate::schema::requirement_status::dsl::*;
-
     let mut out_str = print_header();
-    let mut connection = match get_db_connection(state) {
-        Ok(conn) => conn,
-        Err(e) => {
-            eprintln!("Database connection error: {}", e);
-            return content::RawHtml("Error: Database connection failed".to_string());
-        }
-    };
+    let status_service = StatusService::new(state.inner());
 
-    let all_status = match requirement_status.load::<RequirementStatus>(connection.as_mut()) {
+    let all_status = match status_service.list_requirement_statuses() {
         Ok(status_list) => status_list,
         Err(e) => {
             eprintln!("Database query error: {}", e);

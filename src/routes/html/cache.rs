@@ -1,10 +1,10 @@
 use crate::app::AppState;
 use crate::auth::AdminOnly;
+use crate::services::CacheService;
 use rocket::response::Redirect;
 use rocket::serde::json::json;
 use rocket::State;
 use rocket_dyn_templates::Template;
-use crate::services::CacheService;
 
 /// Show cache statistics page
 #[get("/admin/cache")]

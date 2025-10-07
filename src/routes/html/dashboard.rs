@@ -231,10 +231,8 @@ mod tests {
             }
         }
 
-        repo.requirements
-            .insert(1, requirement(1, 7, created));
-        repo.requirements
-            .insert(2, requirement(2, 7, created));
+        repo.requirements.insert(1, requirement(1, 7, created));
+        repo.requirements.insert(2, requirement(2, 7, created));
         repo.tests.insert(1, test_case(1, 7));
 
         repo.requirement_statuses.insert(

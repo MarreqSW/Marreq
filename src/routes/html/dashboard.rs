@@ -35,7 +35,7 @@ pub fn index(
         "selected_project_id": selected_project_id
     });
 
-    Ok(Template::render("projects", ctx))
+    Ok(Template::render("index", ctx))
 }
 
 #[get("/status")]

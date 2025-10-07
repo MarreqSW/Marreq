@@ -32,7 +32,6 @@ pub(crate) mod prelude {
     pub(crate) use rocket::Route;
     pub(crate) use rocket::State;
     pub(crate) use rocket_dyn_templates::Template;
-    pub(crate) use std::collections::HashMap;
 
     pub(crate) use crate::app::AppState;
     pub(crate) use crate::auth::*;
@@ -41,7 +40,7 @@ pub(crate) mod prelude {
     pub(crate) use crate::logger::{LogCtx, Logger};
     pub(crate) use crate::models::*;
     pub(crate) use crate::repository::{
-        LookupRepository, ProjectMembersRepository, ProjectsRepository, UserRepository,
+        LookupRepository, ProjectsRepository, UserRepository,
     };
 }
 

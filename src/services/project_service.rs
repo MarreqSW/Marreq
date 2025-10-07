@@ -4,7 +4,7 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
 use crate::models::{NewProject, Project, UpdateProject, User};
 use crate::repository::errors::RepoError;
-use crate::repository::{PooledConnectionWrapper, ProjectsRepository};
+use crate::repository::{PooledConnectionWrapper, ProjectMembersRepository, ProjectsRepository};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_project};
 
 /// High level project operations backed by the shared [`AppState`].
@@ -26,6 +26,30 @@ impl<'a> ProjectService<'a> {
     /// Retrieve a project by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<Project, RepoError> {
         self.state.repo_read().get_project_by_id(id)
+    }
+
+    /// Retrieve all projects that the specified user is a member of.
+    pub fn get_by_user_id(&self, user_id: i32) -> Result<Vec<Project>, RepoError> {
+        let repo = self.state.repo_read();
+        let memberships = repo.get_projects_for_user(user_id)?;
+
+        let mut projects = Vec::with_capacity(memberships.len());
+
+        for membership in memberships {
+            match repo.get_project_by_id(membership.project_id) {
+                Ok(project) => projects.push(project),
+                Err(RepoError::NotFound) => continue,
+                Err(err) => return Err(err),
+            }
+        }
+
+        projects.sort_by(|a, b| {
+            a.project_name
+                .to_lowercase()
+                .cmp(&b.project_name.to_lowercase())
+        });
+
+        Ok(projects)
     }
 
     /// Create a new project entry and log the action.
@@ -148,6 +172,7 @@ impl<'a> ProjectService<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::ProjectMember;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -299,6 +324,53 @@ mod tests {
 
         let updated = service.update(&editor, 2, payload).unwrap();
         assert_eq!(updated.project_owner_id, Some(314));
+    }
+
+    #[test]
+    fn get_by_user_id_returns_sorted_membership_projects() {
+        let mut repo = DieselRepoMock::default();
+        repo.projects.insert(1, project(1, "Beta Initiative"));
+        repo.projects.insert(2, project(2, "Alpha Mission"));
+        repo.projects.insert(3, project(3, "Gamma Plan"));
+
+        let now = timestamp();
+        repo.project_members.push(ProjectMember {
+            project_id: 1,
+            user_id: 42,
+            role: 1,
+            created_at: now,
+            updated_at: now,
+        });
+        repo.project_members.push(ProjectMember {
+            project_id: 2,
+            user_id: 42,
+            role: 2,
+            created_at: now,
+            updated_at: now,
+        });
+        repo.project_members.push(ProjectMember {
+            project_id: 3,
+            user_id: 7,
+            role: 1,
+            created_at: now,
+            updated_at: now,
+        });
+        repo.project_members.push(ProjectMember {
+            project_id: 99,
+            user_id: 42,
+            role: 1,
+            created_at: now,
+            updated_at: now,
+        });
+
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let projects = service.get_by_user_id(42).unwrap();
+
+        assert_eq!(projects.len(), 2);
+        assert_eq!(projects[0].project_name, "Alpha Mission");
+        assert_eq!(projects[1].project_name, "Beta Initiative");
     }
 
     #[test]

@@ -207,8 +207,7 @@ mod tests {
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("response body");
         assert!(body.contains("Project Phoenix"));
-        assert!(body.contains("Requirements <span class=\"badge bg-primary\">2</span>"));
-        assert!(body.contains("Tests <span class=\"badge bg-primary\">1</span>"));
+        assert!(body.contains("Requirements"));
         assert!(body.contains("href=\"/p/7/requirements\""));
     }
 

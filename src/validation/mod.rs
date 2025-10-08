@@ -47,7 +47,7 @@ pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError>
     // Validate reference format (should be like REQ-001, REQ-ABC-001, etc.)
     if !req.req_reference.trim().is_empty() {
         let ref_regex = Regex::new(r"^[A-Z]{2,4}(?:-[A-Z0-9]{1,6})+$").unwrap();
-            if !ref_regex.is_match(&req.req_reference) {
+        if !ref_regex.is_match(&req.req_reference) {
             return Err(ValidationError::InvalidFormat {
                 field: "req_reference".to_string(),
                 message: "Reference should be in format like REQ-001 or REQ-ABC-001".to_string(),

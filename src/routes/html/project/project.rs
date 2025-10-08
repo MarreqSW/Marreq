@@ -50,6 +50,7 @@ pub fn show_project_id(
 
     Ok(Template::render("project", ctx))
 }
+
 #[get("/<project_id>/edit")]
 pub fn get_edit_project(admin: AdminOnly, project_id: i32, state: &State<AppState>) -> Template {
     let user = admin.into_inner();
@@ -131,11 +132,11 @@ mod tests {
     use super::*;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
-        client_with_routes, delete_with_session, get_with_session, post_form_with_session,
-        timestamp, TestAppState,
+        delete_with_session, get_with_session, post_form_with_session, timestamp, TestAppState,
     };
     use rocket::http::Status;
     use rocket::local::asynchronous::Client;
+    use rocket::Request;
 
     const ADMIN_ID: i32 = 1;
     const MEMBER_ID: i32 = 2;
@@ -188,16 +189,28 @@ mod tests {
     }
 
     async fn project_client(repo: DieselRepoMock) -> Client {
-        client_with_routes(
-            repo,
-            routes![
-                show_project_id,
-                get_edit_project,
-                post_edit_project,
-                delete_project_route
-            ],
-        )
-        .await
+        let rocket = rocket::build()
+            .manage(crate::routes::html::project::test_helpers::managed_state(
+                repo,
+            ))
+            .attach(Template::fairing())
+            .mount(
+                "/p",
+                routes![
+                    show_project_id,
+                    get_edit_project,
+                    post_edit_project,
+                    delete_project_route
+                ],
+            )
+            .register("/", catchers![forbidden_catcher]);
+
+        Client::tracked(rocket).await.expect("client")
+    }
+
+    #[catch(403)]
+    fn forbidden_catcher(_req: &Request) -> Redirect {
+        Redirect::to(uri!("/projects"))
     }
 
     #[rocket::async_test]

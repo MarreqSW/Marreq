@@ -8,21 +8,15 @@
   {{/if}}
   <div class="reqman-project-card__meta">
     <div class="reqman-project-card__meta-item">
-      <i class="fas fa-user" aria-hidden="true"></i>
+      <i class="fas fa-id-badge" aria-hidden="true"></i>
       <span>
-        {{#if project_owner_name}}
-          {{project_owner_name}}
+        {{#if role_label}}
+          Your role: {{role_label}}
         {{else}}
-          Owner: {{project_owner_id}}
+          Your role: Member
         {{/if}}
       </span>
     </div>
-    {{#if role_label}}
-    <div class="reqman-project-card__meta-item">
-      <i class="fas fa-id-badge" aria-hidden="true"></i>
-      <span>{{role_label}}</span>
-    </div>
-    {{/if}}
   </div>
   <div class="reqman-project-card__actions">
     <a href="/p/{{project_id}}" class="reqman-btn reqman-btn--primary">

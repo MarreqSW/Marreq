@@ -1,15 +1,27 @@
 {{#*inline "page"}}
+{{!-- Set flag to hide navigation --}}
 <div class="reqman-portal">
   <!-- Left Navigation Sidebar -->
   <aside class="reqman-sidebar" id="mainSidebar">
     <div class="reqman-sidebar__header">
       <a href="/" class="reqman-sidebar__brand">
-        <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-        <span>ReqMan</span>
+        <span class="reqman-sidebar__brand-text">ReqMan</span>
       </a>
-      <button type="button" class="reqman-sidebar__toggle" id="sidebarToggle" aria-label="Toggle sidebar">
-        <i class="fas fa-chevron-left"></i>
-      </button>
+      <div class="reqman-sidebar__header-actions">
+        <button
+          id="theme-toggle"
+          class="theme-toggle"
+          type="button"
+          aria-label="Toggle dark mode"
+          aria-pressed="false"
+          title="Toggle dark mode">
+          <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">☀</span>
+          <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">🌙</span>
+        </button>
+        <button type="button" class="reqman-sidebar__toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+      </div>
     </div>
 
     <nav class="reqman-sidebar__nav" aria-label="Main navigation">
@@ -51,26 +63,6 @@
             </a>
           </li>
           {{/if}}
-          {{#if selected_project_id}}
-          <li>
-            <a href="/p/{{selected_project_id}}/requirements" class="reqman-nav-link">
-              <i class="fas fa-clipboard-check"></i>
-              <span>Requirements</span>
-            </a>
-          </li>
-          <li>
-            <a href="/p/{{selected_project_id}}/tests" class="reqman-nav-link">
-              <i class="fas fa-vial"></i>
-              <span>Tests</span>
-            </a>
-          </li>
-          <li>
-            <a href="/p/{{selected_project_id}}/matrix" class="reqman-nav-link">
-              <i class="fas fa-table"></i>
-              <span>Traceability</span>
-            </a>
-          </li>
-          {{/if}}
         </ul>
       </div>
 
@@ -92,14 +84,6 @@
               <span class="reqman-badge reqman-badge--soon">Soon</span>
             </a>
           </li>
-          {{#if selected_project_id}}
-          <li>
-            <a href="/p/{{selected_project_id}}/reports" class="reqman-nav-link">
-              <i class="fas fa-file-alt"></i>
-              <span>Reports</span>
-            </a>
-          </li>
-          {{/if}}
         </ul>
       </div>
 
@@ -118,12 +102,6 @@
             <a href="/admin/users" class="reqman-nav-link">
               <i class="fas fa-users-cog"></i>
               <span>User Management</span>
-            </a>
-          </li>
-          <li>
-            <a href="/import_excel" class="reqman-nav-link">
-              <i class="fas fa-file-import"></i>
-              <span>Import Excel</span>
             </a>
           </li>
           <li>
@@ -147,6 +125,19 @@
             {{#if user.user_name}}{{user.user_name}}{{else}}{{user.user_username}}{{/if}}
           </div>
           <div class="reqman-user-info__email">{{user.user_email}}</div>
+        </div>
+        <div class="reqman-user-info__actions">
+          <div class="dropdown">
+            <button class="reqman-user-menu-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="User menu">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="/user/profile"><i class="fas fa-user me-2"></i>My Profile</a></li>
+              <li><a class="dropdown-item" href="/change_password"><i class="fas fa-key me-2"></i>Change Password</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
@@ -202,44 +193,28 @@
         </div>
       </div>
 
-      <div class="reqman-metric-card">
-        <div class="reqman-metric-card__icon reqman-metric-card__icon--info">
-          <i class="fas fa-network-wired"></i>
-        </div>
-        <div class="reqman-metric-card__content">
-          <div class="reqman-metric-card__value">—</div>
-          <div class="reqman-metric-card__label">Coverage</div>
-        </div>
-      </div>
     </div>
 
     <!-- Quick Actions -->
     <section class="reqman-section">
       <h2 class="reqman-section__title">Quick Actions</h2>
       <div class="reqman-quick-actions">
-        {{#if selected_project_id}}
-        <a href="/p/{{selected_project_id}}/requirements/new" class="reqman-action-card">
-          <i class="fas fa-plus-circle"></i>
-          <span>New Requirement</span>
+        <a href="/projects" class="reqman-action-card reqman-action-card--primary">
+          <i class="fas fa-folder-tree"></i>
+          <span>Browse Projects</span>
         </a>
-        <a href="/p/{{selected_project_id}}/tests/new" class="reqman-action-card">
-          <i class="fas fa-flask"></i>
-          <span>New Test</span>
-        </a>
-        <a href="/p/{{selected_project_id}}/matrix" class="reqman-action-card">
-          <i class="fas fa-table"></i>
-          <span>View Matrix</span>
-        </a>
-        {{else}}
-        <div class="reqman-action-card reqman-action-card--disabled">
-          <i class="fas fa-info-circle"></i>
-          <span>Select a project to access quick actions</span>
-        </div>
-        {{/if}}
         {{#if user.is_admin}}
-        <a href="/new_project" class="reqman-action-card reqman-action-card--primary">
+        <a href="/new_project" class="reqman-action-card">
           <i class="fas fa-folder-plus"></i>
           <span>Create Project</span>
+        </a>
+        <a href="#review-verifications" class="reqman-action-card reqman-nav-link--disabled" title="Coming soon">
+          <i class="fas fa-code-branch"></i>
+          <span>Failing Tests</span>
+        </a>
+        <a href="/admin" class="reqman-action-card">
+          <i class="fas fa-shield-alt"></i>
+          <span>Admin Panel</span>
         </a>
         {{/if}}
       </div>
@@ -371,23 +346,6 @@
   if (projectCountEl && projectCards.length > 0) {
     projectCountEl.textContent = projectCards.length;
   }
-
-  // Load metrics if project selected
-  const selectedProjectId = {{#if selected_project_id}}{{selected_project_id}}{{else}}null{{/if}};
-  if (selectedProjectId) {
-    // Mock API call - replace with actual endpoint
-    fetch(`/api/projects/${selectedProjectId}/metrics`)
-      .then(res => res.json())
-      .then(data => {
-        const reqCard = document.querySelector('[data-metric-requirements] .reqman-metric-card__value');
-        const testCard = document.querySelector('[data-metric-tests] .reqman-metric-card__value');
-        if (reqCard && data.requirements !== undefined) reqCard.textContent = data.requirements;
-        if (testCard && data.tests !== undefined) testCard.textContent = data.tests;
-      })
-      .catch(() => {
-        // Silently fail - metrics will show placeholder
-      });
-  }
 })();
 </script>
 
@@ -442,25 +400,60 @@
 }
 
 .reqman-sidebar__brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--spacing-sm);
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--primary-color, #3b82f6);
+  color: var(--text-primary);
   text-decoration: none;
-  transition: opacity var(--transition-base);
+  letter-spacing: -0.01em;
+  padding: calc(var(--space-1, 0.25rem) + 2px) var(--space-2, 0.5rem);
+  border-radius: var(--radius-md);
+  transition: color 0.2s ease;
 }
 
-.reqman-sidebar__brand:hover {
-  opacity: 0.8;
+.reqman-sidebar__brand::before {
+  content: 'R';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-md);
+  background: var(--primary-color, #3b82f6);
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
-.reqman-sidebar__brand i {
-  font-size: 1.5rem;
+.reqman-sidebar__brand:hover,
+.reqman-sidebar__brand:focus-visible {
+  color: var(--primary-color, #3b82f6);
 }
 
-.reqman-sidebar--collapsed .reqman-sidebar__brand span {
+.reqman-sidebar__brand:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.45);
+  outline-offset: 4px;
+}
+
+.reqman-sidebar--collapsed .reqman-sidebar__brand-text {
+  display: none;
+}
+
+.reqman-sidebar__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.reqman-sidebar__header-actions .theme-toggle {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.reqman-sidebar--collapsed .reqman-sidebar__header-actions .theme-toggle {
   display: none;
 }
 
@@ -472,6 +465,11 @@
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: all var(--transition-base);
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .reqman-sidebar__toggle:hover {
@@ -575,6 +573,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  position: relative;
 }
 
 .reqman-user-info__avatar {
@@ -604,6 +603,35 @@
 }
 
 .reqman-sidebar--collapsed .reqman-user-info__details {
+  display: none;
+}
+
+.reqman-user-info__actions {
+  margin-left: auto;
+}
+
+.reqman-user-menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary, #64748b);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.reqman-user-menu-toggle:hover {
+  background: var(--surface-muted, #f1f5f9);
+  border-color: var(--primary-color, #3b82f6);
+  color: var(--primary-color, #3b82f6);
+}
+
+.reqman-sidebar--collapsed .reqman-user-info__actions {
   display: none;
 }
 

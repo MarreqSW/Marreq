@@ -69,7 +69,7 @@ A comprehensive web-based requirements and test management system built with Rus
 + [ ] Parsers for tests
   + [ ] Doxygen documentation
   + [ ] ...
-+ [X] Multiples projects
++ [X] Multiple projects
 + [X] Optimize DB access
   + [X] Reduce SQL queries
   + [X] DB pool

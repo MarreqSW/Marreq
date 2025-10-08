@@ -95,7 +95,7 @@
       <div class="nav-actions">
         <div class="nav-item-theme">
           <button
-            id="theme-toggle"
+            data-theme-toggle
             class="theme-toggle"
             type="button"
             aria-label="Toggle dark mode"
@@ -142,47 +142,3 @@
     </div>
   </div>
 </nav>
-
-<script>
-function changeProject(projectId) {
-    if (!projectId) {
-        return;
-    }
-
-    // Persist selection for pages that still rely on cookies.
-    document.cookie = `selected_project_id=${projectId}; path=/; max-age=86400`;
-
-    const path = window.location.pathname;
-    const segments = path.split('/').filter(Boolean);
-
-    if (segments[0] === 'p' && segments.length >= 2) {
-        segments[1] = projectId;
-        const newPath = `/${segments.join('/')}`;
-        const suffix = window.location.search + window.location.hash;
-        window.location.assign(`${newPath}${suffix}`);
-    } else {
-        window.location.reload();
-    }
-}
-
-// Set default project if none selected and no cookie exists
-document.addEventListener('DOMContentLoaded', function() {
-    const projectSelector = document.getElementById('project-selector');
-    if (projectSelector) {
-        // Check if we already have a project selected in cookie
-        const cookies = document.cookie.split(';');
-        const hasProjectCookie = cookies.some(cookie => 
-            cookie.trim().startsWith('selected_project_id=')
-        );
-        
-        // If no project is selected and no cookie exists, select the first project
-        if (!hasProjectCookie) {
-            const firstOption = projectSelector.querySelector('option[value]');
-            if (firstOption) {
-                projectSelector.value = firstOption.value;
-                changeProject(firstOption.value);
-            }
-        }
-    }
-});
-</script>

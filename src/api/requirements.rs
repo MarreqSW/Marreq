@@ -252,6 +252,32 @@ mod tests {
     }
 
     #[rocket::async_test]
+    async fn patch_without_fields_returns_bad_request() {
+        let client = client_with_repo(DieselRepoMock::default()).await;
+        let create_response = client
+            .post("/api/requirements")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(sample_requirement("Original").to_string())
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let response = client
+            .patch(format!("/api/requirements/{id}"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(json!({}).to_string())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::BadRequest);
+        let payload: Value = response.into_json().await.unwrap();
+        assert_eq!(payload.get("message"), Some(&Value::from("no fields provided")));
+    }
+
+    #[rocket::async_test]
     async fn delete_removes_requirement() {
         let client = client_with_repo(DieselRepoMock::default()).await;
         let create_response = client

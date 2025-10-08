@@ -20,7 +20,7 @@ Reusable fragments live in `templates/partials/` and are referenced from pages w
 
 ## Static Assets
 
-All CSS lives in `src/html/static/reqman.css`. The file imports shared design tokens and modules, followed by page-specific rules that were previously inline. The single JavaScript entry point is `src/html/static/reqman.js`, which now:
+The main stylesheet entry point is `src/html/static/reqman.css`, which stitches together modular partials from the `src/html/static/css/` directory (tokens, utilities, navigation, tables, page-level bundles, etc.). Each partial owns a cohesive slice of the design system, keeping changes isolated while still loading as a single bundle in production. The single JavaScript entry point is `src/html/static/reqman.js`, which now:
 
 - Handles theme toggling, sidebar state, and project selection.
 - Provides table sorting, inline-editing, and modal helpers for requirements/tests.

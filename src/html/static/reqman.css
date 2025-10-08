@@ -289,6 +289,11 @@
   transition: all var(--transition-base);
 }
 
+.reqman-user-menu-toggle__icon {
+  width: 1em;
+  height: 1em;
+}
+
 .reqman-user-menu-toggle:hover {
   background: var(--surface-muted, #f1f5f9);
   border-color: var(--primary-color, #3b82f6);

@@ -274,7 +274,10 @@ mod tests {
 
         assert_eq!(response.status(), Status::BadRequest);
         let payload: Value = response.into_json().await.unwrap();
-        assert_eq!(payload.get("message"), Some(&Value::from("no fields provided")));
+        assert_eq!(
+            payload.get("message"),
+            Some(&Value::from("no fields provided"))
+        );
     }
 
     #[rocket::async_test]

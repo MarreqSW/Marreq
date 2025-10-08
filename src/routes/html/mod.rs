@@ -39,9 +39,7 @@ pub(crate) mod prelude {
     pub(crate) use crate::html::*;
     pub(crate) use crate::logger::{LogCtx, Logger};
     pub(crate) use crate::models::*;
-    pub(crate) use crate::repository::{
-        LookupRepository, ProjectsRepository, UserRepository,
-    };
+    pub(crate) use crate::repository::{LookupRepository, ProjectsRepository, UserRepository};
 }
 
 use rocket::Route;

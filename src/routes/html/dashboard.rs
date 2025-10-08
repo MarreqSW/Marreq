@@ -1,7 +1,7 @@
+use super::helpers::decorate_projects_for_listing;
 use super::prelude::*;
 use crate::services::{ProjectService, StatusService};
 use rocket::http::Cookie;
-use super::helpers::decorate_projects_for_listing;
 
 #[get("/")]
 pub fn index(
@@ -9,7 +9,6 @@ pub fn index(
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-
     let user = session_user.into_inner();
     let projects = ProjectService::new(state.inner())
         .get_by_user_id(user.user_id)

@@ -1,31 +1,71 @@
-<article class="reqman-project-card">
-  <div class="reqman-project-card__header">
-    <h3>{{project_name}}</h3>
-    <span class="reqman-badge reqman-badge--{{project_status_badge}}">{{project_status}}</span>
-  </div>
-  {{#if project_description}}
-  <p class="reqman-project-card__description">{{project_description}}</p>
-  {{/if}}
-  <div class="reqman-project-card__meta">
-    <div class="reqman-project-card__meta-item">
-      <i class="fas fa-id-badge" aria-hidden="true"></i>
-      <span>
-        {{#if role_label}}
-          Your role: {{role_label}}
-        {{else}}
-          Your role: Member
-        {{/if}}
+<article class="reqman-project-card reqman-project-card--{{project_status_badge}}">
+  <div class="reqman-project-card__status-bar" aria-hidden="true"></div>
+  <div class="reqman-project-card__content">
+    <div class="reqman-project-card__header">
+      <div class="reqman-project-card__title-group">
+        <span class="reqman-project-card__icon" aria-hidden="true">
+          {{project_initial}}
+        </span>
+        <div class="reqman-project-card__titles">
+          <h3>{{project_name}}</h3>
+          {{#if project_owner_name}}
+            <p class="reqman-project-card__owner">Owned by {{project_owner_name}}</p>
+          {{/if}}
+        </div>
+      </div>
+      <span class="reqman-project-card__status reqman-badge reqman-badge--{{project_status_badge}}">
+        {{project_status}}
       </span>
     </div>
-  </div>
-  <div class="reqman-project-card__actions">
-    <a href="/p/{{project_id}}" class="reqman-btn reqman-btn--primary">
-      <i class="fas fa-eye" aria-hidden="true"></i>
-      Open
-    </a>
-    <a href="/p/{{project_id}}/requirements" class="reqman-btn reqman-btn--outline">
-      <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-      Requirements
-    </a>
+    {{#if project_description}}
+      <p class="reqman-project-card__description">{{project_description}}</p>
+    {{/if}}
+    <div class="reqman-project-card__meta">
+      <div class="reqman-project-card__meta-item">
+        <i class="fas fa-id-badge" aria-hidden="true"></i>
+        <span>
+          {{#if role_label}}
+            Your role: {{role_label}}
+          {{else}}
+            Your role: Member
+          {{/if}}
+        </span>
+      </div>
+      {{#if project_update_date}}
+        <div class="reqman-project-card__meta-item">
+          <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
+          <span>Updated {{project_update_date}}</span>
+        </div>
+      {{else}}
+        {{#if project_creation_date}}
+          <div class="reqman-project-card__meta-item">
+            <i class="fas fa-calendar-plus" aria-hidden="true"></i>
+            <span>Created {{project_creation_date}}</span>
+          </div>
+        {{/if}}
+      {{/if}}
+      {{#if requirements_count}}
+        <div class="reqman-project-card__meta-item">
+          <i class="fas fa-file-alt" aria-hidden="true"></i>
+          <span>{{requirements_count}} requirements</span>
+        </div>
+      {{/if}}
+      {{#if tests_count}}
+        <div class="reqman-project-card__meta-item">
+          <i class="fas fa-vial" aria-hidden="true"></i>
+          <span>{{tests_count}} tests</span>
+        </div>
+      {{/if}}
+    </div>
+    <div class="reqman-project-card__actions">
+      <a href="/p/{{project_id}}" class="reqman-btn reqman-btn--primary">
+        <i class="fas fa-eye" aria-hidden="true"></i>
+        Open
+      </a>
+      <a href="/p/{{project_id}}/requirements" class="reqman-btn reqman-btn--outline">
+        <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+        Requirements
+      </a>
+    </div>
   </div>
 </article>

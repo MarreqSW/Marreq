@@ -1,24 +1,30 @@
-use super::helpers::*;
 use super::prelude::*;
 use crate::services::{ProjectService, RequirementService, TestService};
 
 #[get("/<project_id>")]
 pub fn show_project_id(
-    session_user: SessionUser,
+    project_access: ProjectAccess,
     project_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
 
-    let projects = ProjectService::new(state.inner())
-        .get_by_user_id(user.user_id)
-        .unwrap_or_default();
+    // Get the specific project
+    let project_service = ProjectService::new(state.inner());
+    let selected_project = match project_service.get_by_id(project_id) {
+        Ok(proj) => proj,
+        Err(_) => {
+            let ctx = json!({
+                "title": "Project Not Found",
+                "message": "The project you're looking for could not be found.",
+                "details": format!("Project ID {} does not exist", project_id),
+                "user": user
+            });
+            return Ok(Template::render("error", ctx));
+        }
+    };
 
-    let selected_project_name = projects
-        .iter()
-        .find(|project| project.project_id == project_id)
-        .map(|project| project.project_name.clone())
-        .unwrap_or_else(|| "Requirements Manager".to_string());
+    let selected_project_name = selected_project.project_name.clone();
 
     let requirement_service = RequirementService::new(state.inner());
     let test_service = TestService::new(state.inner());
@@ -33,58 +39,17 @@ pub fn show_project_id(
         .map(|tests| tests.len())
         .unwrap_or(0);
 
-    let user_memberships = state
-        .repo_read()
-        .get_projects_for_user(user.user_id)
-        .unwrap_or_default();
-
-    let membership_map: HashMap<i32, ProjectMember> = user_memberships
-        .into_iter()
-        .map(|membership| (membership.project_id, membership))
-        .collect();
-
-    let user_projects: Vec<_> = projects
-        .iter()
-        .filter_map(|project| {
-            membership_map.get(&project.project_id).map(|membership| {
-                let project_status_label = project
-                    .project_status
-                    .clone()
-                    .unwrap_or_else(|| "Unknown".to_string());
-                let status_class = project_status_badge(&project_status_label).to_string();
-                let role_label = super::helpers::describe_project_role(membership.role).to_string();
-                let role_id = membership.role;
-
-                json!({
-                    "selected_project_id": project.project_id,
-                    "project_name": project.project_name.clone(),
-                    "project_description": project.project_description.clone(),
-                    "project_status": project_status_label,
-                    "status_class": status_class,
-                    "role_label": role_label,
-                    "role_id": role_id,
-                })
-            })
-        })
-        .collect();
-
-    let user_project_count = user_projects.len();
-
     let ctx = json!({
         "user": user,
-        "projects": projects,
         "selected_project_id": project_id,
         "title": "Main",
         "selected_project_name": selected_project_name,
         "requirements_count": requirements_count,
         "tests_count": tests_count,
-        "user_projects": user_projects,
-        "user_project_count": user_project_count
     });
 
     Ok(Template::render("project", ctx))
 }
-
 #[get("/<project_id>/edit")]
 pub fn get_edit_project(admin: AdminOnly, project_id: i32, state: &State<AppState>) -> Template {
     let user = admin.into_inner();

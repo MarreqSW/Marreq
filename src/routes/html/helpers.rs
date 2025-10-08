@@ -131,6 +131,16 @@ pub(crate) fn decorate_projects_for_listing(
             continue;
         }
 
+        let requirements_count = repo
+            .get_requirements_by_project(project.project_id)
+            .map(|reqs| reqs.len())
+            .unwrap_or(0);
+
+        let tests_count = repo
+            .get_tests_by_project(project.project_id)
+            .map(|tests| tests.len())
+            .unwrap_or(0);
+
         let role_label = membership_by_project
             .get(&project.project_id)
             .map(|membership| describe_project_role(membership.role).to_string())
@@ -179,7 +189,9 @@ pub(crate) fn decorate_projects_for_listing(
             "project_owner_id": project.project_owner_id,
             "project_owner_name": owner_name,
             "role_label": role_label,
-            "role_id": role_id
+            "role_id": role_id,
+            "requirements_count": requirements_count,
+            "tests_count": tests_count
         }));
     }
 

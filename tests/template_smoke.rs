@@ -13,15 +13,30 @@ fn register_partials(hb: &mut Handlebars) {
         ("layout", "templates/layout.html.hbs"),
         ("partials/header", "templates/partials/header.html.hbs"),
         ("partials/sidebar", "templates/partials/sidebar.html.hbs"),
-        ("partials/user_menu", "templates/partials/user_menu.html.hbs"),
+        (
+            "partials/user_menu",
+            "templates/partials/user_menu.html.hbs",
+        ),
         ("partials/nav", "templates/partials/nav.html.hbs"),
-        ("partials/project_card", "templates/partials/project_card.html.hbs"),
-        ("partials/quick_action_card", "templates/partials/quick_action_card.html.hbs"),
-        ("partials/metrics_card", "templates/partials/metrics_card.html.hbs"),
-        ("partials/filters_form", "templates/partials/filters_form.html.hbs"),
+        (
+            "partials/project_card",
+            "templates/partials/project_card.html.hbs",
+        ),
+        (
+            "partials/quick_action_card",
+            "templates/partials/quick_action_card.html.hbs",
+        ),
+        (
+            "partials/metrics_card",
+            "templates/partials/metrics_card.html.hbs",
+        ),
+        (
+            "partials/filters_form",
+            "templates/partials/filters_form.html.hbs",
+        ),
         ("partials/modals", "templates/partials/modals.html.hbs"),
         ("footer", "templates/footer.html.hbs"),
-        ("requirement", "templates/requirement.html.hbs")
+        ("requirement", "templates/requirement.html.hbs"),
     ];
 
     for (name, path) in entries {
@@ -35,10 +50,13 @@ fn register_templates(hb: &mut Handlebars) {
     let entries = [
         ("index", "templates/index.html.hbs"),
         ("requirements", "templates/requirements.html.hbs"),
-        ("requirements_table", "templates/requirements_table.html.hbs"),
+        (
+            "requirements_table",
+            "templates/requirements_table.html.hbs",
+        ),
         ("tests_table", "templates/tests_table.html.hbs"),
         ("projects", "templates/projects.html.hbs"),
-        ("project", "templates/project.html.hbs")
+        ("project", "templates/project.html.hbs"),
     ];
 
     for (name, path) in entries {
@@ -61,7 +79,9 @@ fn sample_user() -> serde_json::Value {
 #[test]
 fn render_core_templates() {
     let mut handlebars = Handlebars::new();
-    handlebars.render_template("{{#if cond}}yes{{else}}no{{/if}}", &json!({"cond": true})).expect("basic if helper");
+    handlebars
+        .render_template("{{#if cond}}yes{{else}}no{{/if}}", &json!({"cond": true}))
+        .expect("basic if helper");
     handlebars.register_helper("eq", Box::new(eq_helper));
     handlebars.register_helper("ne", Box::new(ne_helper));
     register_partials(&mut handlebars);

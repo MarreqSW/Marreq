@@ -29,9 +29,11 @@
 </head>
 
 <body>
+  {{#unless hide_nav}}
   {{#if user}}
   {{> nav}}
   {{/if}}
+  {{/unless}}
   <main class="main-content">
     {{~> page}}
   </main>

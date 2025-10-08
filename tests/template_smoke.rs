@@ -94,6 +94,7 @@ fn render_core_templates() {
         "project_description": "Sample project for smoke tests",
         "project_status": "Active",
         "project_status_badge": "active",
+        "project_initial": "D",
         "project_owner_id": 1,
         "project_owner_name": "Alice Example",
         "role_label": "Owner"

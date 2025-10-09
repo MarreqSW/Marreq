@@ -1,141 +1,75 @@
 {{#*inline "page"}}
+<div class="reqman-portal">
+  {{> partials/sidebar user=user}}
 
-<div class="text-center mb-5">
-  <h2>{{selected_project_name}}</h2>
-</div>
+  <main class="reqman-main" id="mainContent">
+    {{> partials/header user=user}}
 
-<div class="dashboard-grid">
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Requirements <span class="badge bg-primary">{{requirements_count}}</span></h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>View and manage all your software requirements</p>
-      </div>
-      <div class="card-actions">
-        {{#if selected_project_id}}
-          <a href="/p/{{selected_project_id}}/requirements" class="btn btn-primary">View Requirements</a>
-          <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success">Export Excel</a>
-          {{#if user.is_admin}}
-          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
-          {{/if}}
-          <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-outline">New Requirement</a>
-        {{else}}
-          <span class="btn btn-primary disabled" aria-disabled="true">View Requirements</span>
-          <span class="btn btn-success disabled" aria-disabled="true">Export Excel</span>
-          {{#if user.is_admin}}
-          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
-          {{/if}}
-          <span class="btn btn-outline disabled" aria-disabled="true">New Requirement</span>
-        {{/if}}
-      </div>
-    </div>
-  </div>
-
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Tests <span class="badge bg-primary">{{tests_count}}</span></h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>Manage test cases and verification methods</p>
-      </div>
-      <div class="card-actions">
-        {{#if selected_project_id}}
-          <a href="/p/{{selected_project_id}}/tests" class="btn btn-primary">View Tests</a>
-          <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success">Export Excel</a>
-          {{#if user.is_admin}}
-          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
-          {{/if}}
-          <a href="/p/{{selected_project_id}}/tests/new" class="btn btn-outline">New Test</a>
-        {{else}}
-          <span class="btn btn-primary disabled" aria-disabled="true">View Tests</span>
-          <span class="btn btn-success disabled" aria-disabled="true">Export Excel</span>
-          {{#if user.is_admin}}
-          <a href="/import_excel" class="btn btn-warning">Import Excel</a>
-          {{/if}}
-          <span class="btn btn-outline disabled" aria-disabled="true">New Test</span>
-        {{/if}}
-      </div>
-    </div>
-  </div>
-
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Traceability Matrix</h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>Link requirements to tests and generate reports</p>
-      </div>
-      <div class="card-actions">
-        <a href="/p/{{selected_project_id}}/matrix" class="btn btn-primary">View Matrix</a>
-        <a href="/p/{{selected_project_id}}/matrix.xls" class="btn btn-success">Export Excel</a>
-      </div>
-    </div>
-  </div>
-
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Categories</h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>Organize requirements with categories</p>
-      </div>
-      <div class="card-actions">
-        {{#if selected_project_id}}
-          <a href="/p/{{selected_project_id}}/categories" class="btn btn-primary">View Categories</a>
-          <a href="/p/{{selected_project_id}}/categories/new" class="btn btn-outline">New Category</a>
-        {{else}}
-          <span class="btn btn-primary disabled" aria-disabled="true">View Categories</span>
-          <span class="btn btn-outline disabled" aria-disabled="true">New Category</span>
-        {{/if}}
-      </div>
-    </div>
-  </div>
-
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Applicability</h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>Define which products/systems requirements apply to</p>
-      </div>
-      <div class="card-actions">
-        {{#if selected_project_id}}
-          <a href="/p/{{selected_project_id}}/applicability" class="btn btn-primary">View Applicability</a>
-          <a href="/p/{{selected_project_id}}/applicability/new" class="btn btn-outline">New Applicability</a>
-        {{else}}
-          <span class="btn btn-primary disabled" aria-disabled="true">View Applicability</span>
-          <span class="btn btn-outline disabled" aria-disabled="true">New Applicability</span>
-        {{/if}}
-      </div>
-    </div>
-  </div>
-
-  <div class="card dashboard-card">
-    <div class="card-header">
-      <h3>Members</h3>
-    </div>
-    <div class="card-body">
-      <div class="card-description">
-        <p>See who has access to your active project and manage participation.</p>
-      </div>
-      <div class="card-actions d-flex flex-wrap gap-2">
-        {{#if selected_project_id}}
-          <a href="/p/{{selected_project_id}}/members" class="btn btn-primary">View Members</a>
-        {{else}}
-          <span class="btn btn-outline disabled">Select a project to view members</span>
-        {{/if}}
+    <section class="reqman-section">
+      <h2 class="reqman-section__title">Quick Actions</h2>
+      <div class="reqman-quick-actions">
+        {{> partials/quick_action_card
+            href="/projects"
+            icon="fas fa-folder-tree"
+            label="Browse Projects"
+            modifier="reqman-action-card--primary"}}
         {{#if user.is_admin}}
-          <a href="/admin/users" class="btn btn-outline">Manage Users</a>
+          {{> partials/quick_action_card
+              href="/new_project"
+              icon="fas fa-folder-plus"
+              label="Create Project"}}
+          {{> partials/quick_action_card
+              icon="fas fa-code-branch"
+              label="Failing Tests"
+              disabled=true
+              title="Coming soon"}}
+          {{> partials/quick_action_card
+              href="/admin"
+              icon="fas fa-shield-alt"
+              label="Admin Panel"}}
         {{/if}}
       </div>
-    </div>
-  </div>
+    </section>
+
+    <section class="reqman-section">
+      <div class="reqman-section__header">
+        <h2 class="reqman-section__title">Your Projects</h2>
+        <a href="/projects" class="reqman-link-arrow">
+          View all
+          <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </a>
+      </div>
+
+      {{#if projects}}
+        <div class="reqman-projects-grid">
+          {{#each projects}}
+            {{> partials/project_card user=../user}}
+          {{/each}}
+        </div>
+      {{else}}
+        <div class="reqman-empty-state">
+          <i class="fas fa-folder-open" aria-hidden="true"></i>
+          <h3>No Projects Yet</h3>
+          <p>Create your first project to start managing requirements and tests</p>
+          {{#if user.is_admin}}
+          <a href="/new_project" class="reqman-btn reqman-btn--primary">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            Create Project
+          </a>
+          {{/if}}
+        </div>
+      {{/if}}
+    </section>
+
+    <section class="reqman-section">
+      <h2 class="reqman-section__title">Recent Activity</h2>
+      <div class="reqman-placeholder-feature">
+        <i class="fas fa-clock" aria-hidden="true"></i>
+        <h3>Activity Feed Coming Soon</h3>
+        <p>Track project updates, requirement changes, and team activities in real-time</p>
+      </div>
+    </section>
+  </main>
 </div>
 {{/inline}}
 {{> layout}}

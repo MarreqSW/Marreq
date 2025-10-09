@@ -34,10 +34,12 @@
                                     <br><small class="text-muted">
                                         <i class="fas fa-user"></i> Owner: {{project_owner_name}}
                                     </small>
-                                {{else if project_owner_id}}
+                                {{else}}
+                                    {{#if project_owner_id}}
                                     <br><small class="text-muted">
                                         <i class="fas fa-user"></i> Owner: {{project_owner_id}}
                                     </small>
+                                    {{/if}}
                                 {{/if}}
                                 {{#if role_label}}
                                     <br><small class="text-muted">
@@ -56,7 +58,7 @@
                                 <a href="/p/{{project_id}}/edit" class="btn btn-outline-secondary btn-sm">
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
-                                <button class="btn btn-outline-danger btn-sm" onclick="deleteProject({{project_id}})">
+                                <button class="btn btn-outline-danger btn-sm js-delete-project" type="button" data-project-id="{{project_id}}" data-project-name="{{project_name}}">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                                 {{/if}}
@@ -82,51 +84,6 @@
     {{/if}}
 </div>
 
-<script>
-function deleteProject(projectId) {
-    if (confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-        fetch(`/p/${projectId}/delete`, {
-            method: 'DELETE',
-        })
-        .then(response => {
-            if (response.ok) {
-                window.location.reload();
-            } else {
-                alert('Error deleting project');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting project');
-        });
-    }
-}
-</script>
 
-<style>
-.project-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: 1px solid #e9ecef;
-}
-
-.project-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-
-.project-meta {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e9ecef;
-}
-
-.card-footer {
-    border-top: 1px solid #e9ecef;
-}
-
-.btn-group .btn {
-    flex: 1;
-}
-</style>
 {{/inline}}
 {{> layout}} 

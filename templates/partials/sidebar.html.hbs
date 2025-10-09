@@ -1,0 +1,115 @@
+<aside class="reqman-sidebar" id="mainSidebar">
+  <div class="reqman-sidebar__header">
+    <a href="/" class="reqman-sidebar__brand">
+      <span class="reqman-sidebar__brand-text">ReqMan</span>
+    </a>
+    <div class="reqman-sidebar__header-actions">
+      <button
+        data-theme-toggle
+        class="theme-toggle"
+        type="button"
+        aria-label="Toggle dark mode"
+        aria-pressed="false"
+        title="Toggle dark mode">
+        <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">☀</span>
+        <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">🌙</span>
+      </button>
+      <button
+        type="button"
+        class="reqman-sidebar__toggle"
+        id="sidebarToggle"
+        aria-label="Toggle sidebar">
+        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+      </button>
+    </div>
+  </div>
+
+  <nav class="reqman-sidebar__nav" aria-label="Main navigation">
+    <div class="reqman-nav-section">
+      <h3 class="reqman-nav-section__title">Overview</h3>
+      <ul class="reqman-nav-list">
+        <li>
+          <a href="/" class="reqman-nav-link reqman-nav-link--active" aria-current="page">
+            <i class="fas fa-chart-line" aria-hidden="true"></i>
+            <span>Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a href="#activity" class="reqman-nav-link reqman-nav-link--disabled" title="Coming soon">
+            <i class="fas fa-stream" aria-hidden="true"></i>
+            <span>Activity Feed</span>
+            <span class="reqman-badge reqman-badge--soon">Soon</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="reqman-nav-section">
+      <h3 class="reqman-nav-section__title">Projects</h3>
+      <ul class="reqman-nav-list">
+        <li>
+          <a href="/projects" class="reqman-nav-link">
+            <i class="fas fa-folder-tree" aria-hidden="true"></i>
+            <span>All Projects</span>
+          </a>
+        </li>
+        {{#if user.is_admin}}
+        <li>
+          <a href="/new_project" class="reqman-nav-link">
+            <i class="fas fa-plus-circle" aria-hidden="true"></i>
+            <span>Create Project</span>
+          </a>
+        </li>
+        {{/if}}
+      </ul>
+    </div>
+
+    <div class="reqman-nav-section">
+      <h3 class="reqman-nav-section__title">Workflows</h3>
+      <ul class="reqman-nav-list">
+        <li>
+          <a href="#change-requests" class="reqman-nav-link reqman-nav-link--disabled" title="Coming soon">
+            <i class="fas fa-code-branch" aria-hidden="true"></i>
+            <span>Change Requests</span>
+            <span class="reqman-badge reqman-badge--soon">Soon</span>
+          </a>
+        </li>
+        <li>
+          <a href="#reviews" class="reqman-nav-link reqman-nav-link--disabled" title="Coming soon">
+            <i class="fas fa-user-check" aria-hidden="true"></i>
+            <span>Reviews</span>
+            <span class="reqman-badge reqman-badge--soon">Soon</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    {{#if user.is_admin}}
+    <div class="reqman-nav-section">
+      <h3 class="reqman-nav-section__title">Administration</h3>
+      <ul class="reqman-nav-list">
+        <li>
+          <a href="/admin" class="reqman-nav-link">
+            <i class="fas fa-shield-alt" aria-hidden="true"></i>
+            <span>Admin Panel</span>
+          </a>
+        </li>
+        <li>
+          <a href="/admin/users" class="reqman-nav-link">
+            <i class="fas fa-users-cog" aria-hidden="true"></i>
+            <span>User Management</span>
+          </a>
+        </li>
+        <li>
+          <a href="/logs" class="reqman-nav-link">
+            <i class="fas fa-list-alt" aria-hidden="true"></i>
+            <span>System Logs</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+    {{/if}}
+  </nav>
+
+  {{> partials/user_menu}}
+</aside>

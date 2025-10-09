@@ -1,94 +1,54 @@
-use super::helpers::*;
 use super::prelude::*;
-use crate::services::project_service::ProjectService;
+use crate::services::{ProjectService, RequirementService, TestService};
 
 #[get("/<project_id>")]
 pub fn show_project_id(
-    session_user: SessionUser,
-    cookies: &CookieJar<'_>,
+    project_access: ProjectAccess,
     project_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let user = session_user.into_inner();
+    let user = project_access.into_user();
+
+    // Get the specific project
     let project_service = ProjectService::new(state.inner());
-    if !user.is_admin {
-        let memberships = state
-            .repo_read()
-            .get_projects_for_user(user.user_id)
-            .unwrap_or_default();
-
-        let has_access = memberships
-            .iter()
-            .any(|membership| membership.project_id == project_id);
-
-        if !has_access {
-            return Err(Redirect::to(uri!("/projects")));
-        }
-    }
-    let project = match project_service.get_by_id(project_id) {
-        Ok(project) => project,
-        Err(err) => {
-            #[cfg(debug_assertions)]
-            eprintln!("Failed to load project {project_id}: {err:?}");
+    let selected_project = match project_service.get_by_id(project_id) {
+        Ok(proj) => proj,
+        Err(_) => {
             let ctx = json!({
                 "title": "Project Not Found",
                 "message": "The project you're looking for could not be found.",
-                "details": err.to_string(),
-                "user": user.clone()
+                "details": format!("Project ID {} does not exist", project_id),
+                "user": user
             });
             return Ok(Template::render("error", ctx));
         }
     };
 
-    let members = state
-        .repo_read()
-        .get_members_by_project(project_id)
-        .unwrap_or_default();
+    let selected_project_name = selected_project.project_name.clone();
 
-    let user_map: HashMap<i32, User> = state
-        .repo_read()
-        .get_users_all()
-        .unwrap_or_default()
-        .into_iter()
-        .map(|u| (u.user_id, u))
-        .collect();
+    let requirement_service = RequirementService::new(state.inner());
+    let test_service = TestService::new(state.inner());
 
-    let decorated_members: Vec<_> = members
-        .into_iter()
-        .map(|membership| {
-            let role_label = describe_project_role(membership.role).to_string();
-            if let Some(user) = user_map.get(&membership.user_id) {
-                json!({
-                    "user_id": user.user_id,
-                    "user_name": user.user_name,
-                    "user_username": user.user_username,
-                    "user_email": user.user_email,
-                    "role_label": role_label,
-                    "role_id": membership.role,
-                    "is_admin": user.is_admin
-                })
-            } else {
-                json!({
-                    "user_id": membership.user_id,
-                    "user_name": format!("Unknown User #{}", membership.user_id),
-                    "user_username": "unknown",
-                    "user_email": "",
-                    "role_label": role_label,
-                    "role_id": membership.role,
-                    "is_admin": false
-                })
-            }
-        })
-        .collect();
+    let requirements_count = requirement_service
+        .list_by_project(project_id)
+        .map(|reqs| reqs.len())
+        .unwrap_or(0);
 
-    let mut ctx = build_context_with_projects(state, user.clone(), cookies);
-    if let Some(ctx_obj) = ctx.as_object_mut() {
-        ctx_obj.insert("project".to_string(), json!(project));
-        ctx_obj.insert("members".to_string(), json!(decorated_members));
-        ctx_obj.insert("user".to_string(), json!(user));
-    }
+    let tests_count = test_service
+        .list_by_project(project_id)
+        .map(|tests| tests.len())
+        .unwrap_or(0);
 
-    Ok(Template::render("project_detail", ctx))
+    let ctx = json!({
+        "user": user,
+        "selected_project_id": project_id,
+        "title": "Main",
+        "selected_project_name": selected_project_name,
+        "requirements_count": requirements_count,
+        "tests_count": tests_count,
+    });
+
+    Ok(Template::render("project", ctx))
 }
 
 #[get("/<project_id>/edit")]
@@ -172,11 +132,11 @@ mod tests {
     use super::*;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
-        client_with_routes, delete_with_session, get_with_session, post_form_with_session,
-        timestamp, TestAppState,
+        delete_with_session, get_with_session, post_form_with_session, timestamp, TestAppState,
     };
     use rocket::http::Status;
     use rocket::local::asynchronous::Client;
+    use rocket::Request;
 
     const ADMIN_ID: i32 = 1;
     const MEMBER_ID: i32 = 2;
@@ -229,16 +189,28 @@ mod tests {
     }
 
     async fn project_client(repo: DieselRepoMock) -> Client {
-        client_with_routes(
-            repo,
-            routes![
-                show_project_id,
-                get_edit_project,
-                post_edit_project,
-                delete_project_route
-            ],
-        )
-        .await
+        let rocket = rocket::build()
+            .manage(crate::routes::html::project::test_helpers::managed_state(
+                repo,
+            ))
+            .attach(Template::fairing())
+            .mount(
+                "/p",
+                routes![
+                    show_project_id,
+                    get_edit_project,
+                    post_edit_project,
+                    delete_project_route
+                ],
+            )
+            .register("/", catchers![forbidden_catcher]);
+
+        Client::tracked(rocket).await.expect("client")
+    }
+
+    #[catch(403)]
+    fn forbidden_catcher(_req: &Request) -> Redirect {
+        Redirect::to(uri!("/projects"))
     }
 
     #[rocket::async_test]

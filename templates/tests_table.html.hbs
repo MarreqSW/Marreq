@@ -75,43 +75,43 @@
         <thead class="table-light">
           <tr>
             <th class="sortable" data-sort="test_id" style="width: 8%;">
-              <a href="#" onclick="sortTable('test_id', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_id">
                 ID
                 <span class="sort-indicator">↕</span>
               </a>
             </th>
             <th class="sortable" data-sort="test_name" style="width: 20%;">
-              <a href="#" onclick="sortTable('test_name', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_name">
                 Name
                 <span class="sort-indicator">↕</span>
               </a>
             </th>
             <th class="sortable" data-sort="test_reference" style="width: 12%;">
-              <a href="#" onclick="sortTable('test_reference', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_reference">
                 Reference
                 <span class="sort-indicator">↕</span>
               </a>
             </th>
             <th class="sortable" data-sort="test_description" style="width: 25%;">
-              <a href="#" onclick="sortTable('test_description', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_description">
                 Description
                 <span class="sort-indicator">↕</span>
               </a>
             </th>
             <th class="sortable" data-sort="test_status" style="width: 10%;">
-              <a href="#" onclick="sortTable('test_status', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_status">
                 Status
                 <span class="sort-indicator">↕</span>
               </a>
             </th>
             <th class="sortable" data-sort="test_source" style="width: 10%;">
-              <a href="#" onclick="sortTable('test_source', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_source">
                 Source
                 <span class="sort-indicator">↕</span>
               </a>
             </th>
             <th class="sortable" data-sort="test_parent" style="width: 10%;">
-              <a href="#" onclick="sortTable('test_parent', 'asc'); return false;" class="text-decoration-none d-flex align-items-center justify-content-between">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_parent">
                 Parent
                 <span class="sort-indicator">↕</span>
               </a>
@@ -156,10 +156,10 @@
             </td>
             <td>
               <div class="btn-group btn-group-sm">
-                <button class="btn btn-outline-primary btn-sm" onclick="editTest({{test_id}})" title="Edit">
+                <a class="btn btn-outline-primary btn-sm" href="/p/{{../selected_project_id}}/tests/edit/{{test_id}}" title="Edit">
                   <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn btn-outline-danger btn-sm" onclick="deleteTest({{../selected_project_id}}, {{test_id}}, '{{test_name}}')" title="Delete">
+                </a>
+                <button class="btn btn-outline-danger btn-sm js-delete-test" type="button" data-project-id="{{../selected_project_id}}" data-test-id="{{test_id}}" data-test-name="{{test_name}}" title="Delete">
                   <i class="bi bi-trash"></i>
                 </button>
               </div>
@@ -172,30 +172,7 @@
   </div>
 </div>
 
-<!-- Add New Test Modal -->
-<div class="modal fade" id="addTestModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Add New Test</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="addTestForm">
-        <div class="modal-body">
-          <div class="row">
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="new_test_name" class="form-label">Name *</label>
-                <input type="text" class="form-control" id="new_test_name" name="test_name" required>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="mb-3">
-                <label for="new_test_reference" class="form-label">Reference</label>
-                <input type="text" class="form-control" id="new_test_reference" name="test_reference">
-              </div>
-            </div>
-          </div>
+{{> partials/modals render_test_modal=true}}
           <div class="mb-3">
             <label for="new_test_description" class="form-label">Description *</label>
             <textarea class="form-control" id="new_test_description" name="test_description" rows="3" required></textarea>
@@ -237,215 +214,5 @@
   </div>
 </div>
 
-<script>
-// Table sorting functionality
-let currentSortColumn = null;
-let currentSortOrder = 'asc';
-
-function sortTable(column, order) {
-  const table = document.getElementById('testsTable');
-  const tbody = table.querySelector('tbody');
-  const rows = Array.from(tbody.querySelectorAll('tr'));
-  
-  // Toggle order if clicking the same column
-  if (currentSortColumn === column) {
-    currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
-  } else {
-    currentSortColumn = column;
-    currentSortOrder = order;
-  }
-  
-  rows.sort((a, b) => {
-    const aVal = getCellValue(a, column);
-    const bVal = getCellValue(b, column);
-    
-    if (aVal < bVal) return currentSortOrder === 'asc' ? -1 : 1;
-    if (aVal > bVal) return currentSortOrder === 'asc' ? 1 : -1;
-    return 0;
-  });
-  
-  // Clear tbody and re-append sorted rows
-  tbody.innerHTML = '';
-  rows.forEach(row => tbody.appendChild(row));
-  
-  // Update sort indicators
-  updateSortIndicators(column, currentSortOrder);
-}
-
-function getCellValue(row, column) {
-  const cellIndex = getColumnIndex(column);
-  const cell = row.cells[cellIndex];
-  
-  if (!cell) return '';
-  
-  // Handle different cell types
-  const input = cell.querySelector('input');
-  const select = cell.querySelector('select');
-  const span = cell.querySelector('span');
-  
-  if (input) return input.value;
-  if (select) return select.options[select.selectedIndex].text;
-  if (span) return span.textContent;
-  
-  return cell.textContent || cell.innerText;
-}
-
-function getColumnIndex(column) {
-  const columnMap = {
-    'test_id': 0,
-    'test_name': 1,
-    'test_reference': 2,
-    'test_description': 3,
-    'test_status': 4,
-    'test_source': 5,
-    'test_parent': 6
-  };
-  return columnMap[column] || 0;
-}
-
-function updateSortIndicators(activeColumn, order) {
-  // Reset all indicators
-  document.querySelectorAll('.sort-indicator').forEach(indicator => {
-    indicator.textContent = '↕';
-  });
-  
-  // Set active indicator
-  const activeIndicator = document.querySelector(`[data-sort="${activeColumn}"] .sort-indicator`);
-  if (activeIndicator) {
-    activeIndicator.textContent = order === 'asc' ? '↑' : '↓';
-  }
-}
-
-// Inline editing functionality
-document.addEventListener('DOMContentLoaded', function() {
-  // Handle editable fields
-  const editableFields = document.querySelectorAll('.editable-field');
-  editableFields.forEach(field => {
-    field.addEventListener('click', function() {
-      const currentValue = this.textContent;
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = currentValue;
-      input.className = 'form-control form-control-sm';
-      
-      this.innerHTML = '';
-      this.appendChild(input);
-      input.focus();
-      input.select();
-      
-      const saveEdit = () => {
-        const newValue = input.value;
-        this.textContent = newValue;
-        updateTest(this.dataset.id, this.dataset.field, newValue);
-      };
-      
-      const cancelEdit = () => {
-        this.textContent = currentValue;
-      };
-      
-      input.addEventListener('blur', saveEdit);
-      input.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-          saveEdit();
-        } else if (e.key === 'Escape') {
-          cancelEdit();
-        }
-      });
-    });
-  });
-  
-  // Handle editable selects
-  const editableSelects = document.querySelectorAll('.editable-select');
-  editableSelects.forEach(select => {
-    select.addEventListener('change', function() {
-      updateTest(this.dataset.id, this.dataset.field, this.value);
-    });
-  });
-  
-  // Add new test button
-  document.getElementById('addNewTest').addEventListener('click', function() {
-    const modal = new bootstrap.Modal(document.getElementById('addTestModal'));
-    modal.show();
-  });
-  
-  // Add new test form
-  document.getElementById('addTestForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    addNewTest(formData);
-  });
-});
-
-function updateTest(id, field, value) {
-  fetch(`/api/v1/tests/${id}/field`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      field: field,
-      value: value
-    })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      showNotification('Test updated successfully', 'success');
-    } else {
-      showNotification('Error updating test: ' + data.message, 'error');
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    showNotification('Error updating test', 'error');
-  });
-}
-
-function addNewTest(formData) {
-  const data = Object.fromEntries(formData);
-  
-  fetch('/api/v1/tests', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data)
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      showNotification('Test added successfully', 'success');
-      location.reload();
-    } else {
-      showNotification('Error adding test: ' + data.message, 'error');
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    showNotification('Error adding test', 'error');
-  });
-}
-
-function editTest(id) {
-  window.location.href = `/p/{{selected_project_id}}/tests/edit/${id}`;
-}
-
-function showNotification(message, type) {
-  // Simple notification - you can enhance this with a proper notification system
-  const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
-  const notification = document.createElement('div');
-  notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
-  notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999;';
-  notification.innerHTML = `
-    ${message}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  `;
-  document.body.appendChild(notification);
-  
-  setTimeout(() => {
-    notification.remove();
-  }, 3000);
-}
-</script>
 {{/inline}}
 {{> layout}}

@@ -1,0 +1,49 @@
+<div class="flex-grow-1">
+  <label for="{{status_field_name}}" class="form-label">{{status_label}}</label>
+  <select class="form-select" id="{{status_field_name}}" name="{{status_field_name}}">
+    <option value="">{{status_default_label}}</option>
+    {{#if status_options}}
+      {{#each status_options}}
+        {{#if ../status_value_key}}
+          <option
+            value="{{lookup this ../status_value_key}}"
+            {{#if (eq (lookup this ../status_value_key) ../status_selected)}}selected{{/if}}>
+            {{lookup this ../status_label_key}}
+          </option>
+        {{/if}}
+      {{/each}}
+    {{/if}}
+  </select>
+</div>
+
+<div class="flex-grow-1">
+  <label for="{{verification_field_name}}" class="form-label">{{verification_label}}</label>
+  <select class="form-select" id="{{verification_field_name}}" name="{{verification_field_name}}">
+    <option value="">{{verification_default_label}}</option>
+    {{#if verification_options}}
+      {{#each verification_options}}
+        <option
+          value="{{lookup this ../verification_value_key}}"
+          {{#if (eq (lookup this ../verification_value_key) ../verification_selected)}}selected{{/if}}>
+          {{lookup this ../verification_label_key}}
+        </option>
+      {{/each}}
+    {{/if}}
+  </select>
+</div>
+
+<div class="flex-grow-1">
+  <label for="{{category_field_name}}" class="form-label">{{category_label}}</label>
+  <select class="form-select" id="{{category_field_name}}" name="{{category_field_name}}">
+    <option value="">{{category_default_label}}</option>
+    {{#if category_options}}
+      {{#each category_options}}
+        <option
+          value="{{lookup this ../category_value_key}}"
+          {{#if (eq (lookup this ../category_value_key) ../category_selected)}}selected{{/if}}>
+          {{lookup this ../category_label_key}}
+        </option>
+      {{/each}}
+    {{/if}}
+  </select>
+</div>

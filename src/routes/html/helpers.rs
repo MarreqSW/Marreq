@@ -131,6 +131,16 @@ pub(crate) fn decorate_projects_for_listing(
             continue;
         }
 
+        let requirements_count = repo
+            .get_requirements_by_project(project.project_id)
+            .map(|reqs| reqs.len())
+            .unwrap_or(0);
+
+        let tests_count = repo
+            .get_tests_by_project(project.project_id)
+            .map(|tests| tests.len())
+            .unwrap_or(0);
+
         let role_label = membership_by_project
             .get(&project.project_id)
             .map(|membership| describe_project_role(membership.role).to_string())
@@ -162,6 +172,12 @@ pub(crate) fn decorate_projects_for_listing(
             .map(|status| status.to_ascii_lowercase())
             .unwrap_or_else(|| "unknown".to_string());
         let status_badge = project_status_badge(status_display.as_str());
+        let project_initial = project
+            .project_name
+            .chars()
+            .find(|c| c.is_alphanumeric())
+            .map(|c| c.to_uppercase().collect::<String>())
+            .unwrap_or_else(|| "#".to_string());
 
         decorated.push(json!({
             "project_id": project.project_id,
@@ -179,7 +195,10 @@ pub(crate) fn decorate_projects_for_listing(
             "project_owner_id": project.project_owner_id,
             "project_owner_name": owner_name,
             "role_label": role_label,
-            "role_id": role_id
+            "role_id": role_id,
+            "requirements_count": requirements_count,
+            "tests_count": tests_count,
+            "project_initial": project_initial
         }));
     }
 

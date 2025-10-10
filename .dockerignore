@@ -1,0 +1,60 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+doc/
+docs/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Rust build artifacts
+target/
+
+# Logs
+*.log
+server.log
+server_detailed.log
+
+# Temporary files
+*.tmp
+*.temp
+cookies.txt
+output.json
+requirement.json
+test_output.html
+
+# Database files
+*.db
+*.sqlite
+
+# Excel parser (separate project)
+excel_parser/
+
+# ReqIF documentation
+ReqIF/
+
+# Test files
+tests/
+test_*.sh
+
+# Scripts
+*.sh
+!setup_database.sh
+
+# Data files
+populate_*.sql
+init_*.sql
+clear_database.sh
+
+# Cache
+.owl/

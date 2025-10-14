@@ -1,30 +1,25 @@
-<div class="card requirement-card">
-  <div class="card-body">
-    <div class="requirement-header">
-      <div>
-        <span class="requirement-id">CAT-{{cat_id}}</span>
-        <h3 class="requirement-title">{{cat_title}}</h3>
-      </div>
-      <div class="requirement-actions">
-        <a href="/p/{{@root.selected_project_id}}/categories/edit/{{cat_id}}" class="btn btn-outline btn-sm">Edit</a>
-        <button onclick="deleteCategory({{cat_id}})" class="btn btn-danger btn-sm">Delete</button>
-      </div>
+<article class="category-row" data-category-row data-search-text="{{cat_title}} {{cat_tag}} {{cat_description}} {{cat_id}}">
+  <div class="category-row__main">
+    <div class="category-row__headline">
+      <span class="category-tag" aria-label="Category tag {{cat_tag}}">{{cat_tag}}</span>
+      <h3 class="category-row__title">{{cat_title}}</h3>
     </div>
-    
-    <p class="requirement-description">{{cat_description}}</p>
-    
-    <div class="requirement-meta">
-      <div class="meta-item">
-        <span class="meta-label">Tag</span>
-        <span class="meta-value tag">{{cat_tag}}</span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-label">ID</span>
-        <span class="meta-value">{{cat_id}}</span>
-      </div>
+    {{#if cat_description}}
+      <p class="category-row__description">{{cat_description}}</p>
+    {{/if}}
+  </div>
+  <div class="category-row__meta">
+    <span class="category-row__id" title="Category ID">#{{cat_id}}</span>
+    <div class="category-row__actions">
+      <a
+        href="/p/{{@root.selected_project_id}}/requirements?category_filter={{cat_id}}"
+        class="btn btn-secondary btn-sm"
+      >View Requirements</a>
+      <a href="/p/{{@root.selected_project_id}}/categories/edit/{{cat_id}}" class="btn btn-outline btn-sm">Edit</a>
+      <button onclick="deleteCategory({{cat_id}})" class="btn btn-danger btn-sm" type="button">Delete</button>
     </div>
   </div>
-</div>
+</article>
 
 <script>
 function deleteCategory(categoryId) {

@@ -11,6 +11,10 @@
   <div class="category-row__meta">
     <span class="category-row__id" title="Category ID">#{{cat_id}}</span>
     <div class="category-row__actions">
+      <a
+        href="/p/{{@root.selected_project_id}}/requirements?category_filter={{cat_id}}"
+        class="btn btn-secondary btn-sm"
+      >View Requirements</a>
       <a href="/p/{{@root.selected_project_id}}/categories/edit/{{cat_id}}" class="btn btn-outline btn-sm">Edit</a>
       <button onclick="deleteCategory({{cat_id}})" class="btn btn-danger btn-sm" type="button">Delete</button>
     </div>

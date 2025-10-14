@@ -264,8 +264,8 @@ mod tests {
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Categories"));
-        assert!(body.contains("CAT-1"));
         assert!(body.contains("Systems"));
+        assert!(body.contains("Description for Systems"));
     }
 
     #[rocket::async_test]

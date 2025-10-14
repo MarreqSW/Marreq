@@ -990,12 +990,14 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-xs, 0.5rem);
+    flex-wrap: wrap;
 }
 
 .category-row__actions .btn {
     padding: 0.25rem 0.65rem;
     font-size: 0.75rem;
     line-height: 1.2;
+    white-space: nowrap;
 }
 
 .category-empty {

@@ -2,7 +2,7 @@ name: ReqMan CI
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
@@ -17,7 +17,6 @@ jobs:
   qa-pipeline:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    if: github.event.pull_request.draft == false
 
     services:
       postgres:

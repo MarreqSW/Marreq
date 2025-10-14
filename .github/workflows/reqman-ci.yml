@@ -16,22 +16,45 @@ concurrency:
 jobs:
   qa-pipeline:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event.pull_request.draft == false
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: rust
+          POSTGRES_PASSWORD: rust
+          POSTGRES_DB: reqman
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U rust -d reqman"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+
     env:
-      DATABASE_URL: postgres://rust:rust@127.0.0.1:5432/reqman
+      DATABASE_URL: postgres://rust:rust@localhost:5432/reqman
+
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libclang-dev
+      - name: System deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libclang-dev postgresql-client pkg-config
 
-      - name: Start database
-        run: docker compose up -d db
-
-      - name: Set up Rust (nightly + llvm-tools + rustfmt)
+      - name: Set up Rust (stable + llvm-tools + rustfmt)
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: 1.81.0
           components: rustfmt, llvm-tools-preview
+
+      - name: Cache cargo/target
+        uses: swatinem/rust-cache@v2
+        with:
+          shared-key: rust-${{ runner.os }}-stable-llvm-cov
+          save-if: ${{ github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
 
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -41,6 +64,15 @@ jobs:
         with:
           tool: cargo-llvm-cov
 
+      - name: Wait for Postgres
+        run: |
+          for i in {1..60}; do
+            if pg_isready -h localhost -p 5432 -U rust; then exit 0; fi
+            sleep 1
+          done
+          echo "Postgres not ready" >&2
+          exit 1
+
       - name: Initialize database
         run: ./setup_database.sh
 
@@ -48,10 +80,10 @@ jobs:
         run: cargo cov --workspace --all-features --doctests --no-report
 
       - name: Coverage (Cobertura XML)
-        run: cargo cov report --cobertura --output-path coverage.xml
+        run: cargo cov report --cobertura --output-path coverage.xml --ignore-filename-regex '(.cargo|/tests/fixtures/)'
 
       - name: Coverage (HTML)
-        run: cargo cov report --html --output-dir coverage_html
+        run: cargo cov report --html --output-dir coverage_html --ignore-filename-regex '(.cargo|/tests/fixtures/)'
 
       - name: Build coverage summary (Markdown)
         uses: irongut/CodeCoverageSummary@v1.3.0
@@ -70,12 +102,14 @@ jobs:
         with:
           message-path: code-coverage-results.md
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+          message-id: coverage-summary
+          allow-repeats: false
 
       - name: Coverage gate
         run: cargo cov --workspace --all-features --doctests --no-run --fail-under-lines 70
 
       - name: Upload coverage HTML
-        if: always()
+        if: always() && hashFiles('coverage_html/**') != ''
         uses: actions/upload-artifact@v4
         with:
           name: coverage-html

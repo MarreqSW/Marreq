@@ -1,3 +1,7 @@
+{{!--
+  Depends on: css/pages/categories.css, js/pages/categories.js
+  Dynamic classes: category-row[hidden]
+--}}
 {{#*inline "page"}}
 <section class="category-page">
   <div class="category-page__header">
@@ -25,45 +29,5 @@
   </div>
   <p class="category-empty" id="category-empty-filter" hidden>No categories match your search.</p>
 </section>
-
-<script>
-(function() {
-  const searchInput = document.getElementById('category-search-input');
-  const list = document.getElementById('category-list');
-  const rows = Array.from(list ? list.querySelectorAll('[data-category-row]') : []);
-  const emptyInitial = document.getElementById('category-empty-state');
-  const emptyFiltered = document.getElementById('category-empty-filter');
-
-  if (!searchInput || !rows.length) {
-    return;
-  }
-
-  function filterRows(value) {
-    const query = value.trim().toLowerCase();
-    let visibleCount = 0;
-
-    rows.forEach((row) => {
-      const haystack = row.dataset.searchText || row.textContent || '';
-      const match = haystack.toLowerCase().includes(query);
-      row.hidden = !match;
-      if (match) {
-        visibleCount += 1;
-      }
-    });
-
-    if (emptyInitial) {
-      emptyInitial.hidden = true;
-    }
-
-    if (emptyFiltered) {
-      emptyFiltered.hidden = visibleCount !== 0;
-    }
-  }
-
-  searchInput.addEventListener('input', (event) => {
-    filterRows(event.target.value);
-  });
-})();
-</script>
 {{/inline}}
-{{> layout}}
+{{> layout page_id="categories"}}

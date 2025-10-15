@@ -45,6 +45,19 @@
   --space-5: 1.25rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
+  --spacing-xs: var(--space-2);
+  --spacing-sm: var(--space-3);
+  --spacing-md: var(--space-4);
+  --spacing-lg: var(--space-6);
+  --spacing-xl: var(--space-8);
+  --sidebar-width: 280px;
+  --sidebar-collapsed-width: 70px;
+  --header-height: 60px;
+  --transition-base: 0.2s ease;
+  --transition-fast: 120ms ease-in-out;
+  --primary-surface: #eff6ff;
+  --surface-subtle: rgba(148, 163, 184, 0.08);
+  --text-tertiary: #94a3b8;
 
   /* Radius */
   --radius-sm: 0.25rem;

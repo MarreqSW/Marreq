@@ -8,12 +8,15 @@
       </div>
       <div class="requirement-actions">
         <a href="/p/{{@root.selected_project_id}}/tests/edit/{{test_id}}" class="btn btn-outline btn-sm">Edit</a>
-        {{#if (or (eq test_status_id 1) (eq test_status_id 2))}}
-          <button onclick="deleteTest({{@root.selected_project_id}}, {{test_id}}, '{{test_name}}')" class="btn btn-danger btn-sm">Delete</button>
-        {{else}}
-          {{#if ../user.is_admin}}
-            <button onclick="deleteTest({{@root.selected_project_id}}, {{test_id}}, '{{test_name}}')" class="btn btn-danger btn-sm">Delete</button>
-          {{/if}}
+        {{#if (or (eq test_status_id 1) (eq test_status_id 2) ../user.is_admin)}}
+          <button
+            class="btn btn-danger btn-sm"
+            type="button"
+            data-action="delete-test"
+            data-project-id="{{@root.selected_project_id}}"
+            data-test-id="{{test_id}}"
+            data-test-name="{{test_name}}"
+          >Delete</button>
         {{/if}}
       </div>
     </div>
@@ -56,3 +59,7 @@
     {{/if}}
   </div>
 </div>
+{{!--
+  Depends on: css/50-components/cards.css, js/app.js (delete-test)
+  Dynamic classes: status-{{test_status}}
+--}}

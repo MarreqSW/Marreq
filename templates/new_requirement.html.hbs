@@ -1,3 +1,6 @@
+{{!--
+  Depends on: css/50-components/forms.css, js/pages/requirementForm.js
+--}}
 {{#*inline "page"}}
 <div class="mb-4">
   <h1>New Requirement</h1>
@@ -10,7 +13,7 @@
       <h3>Requirement Details</h3>
     </div>
     <div class="card-body">
-      <form method="post">
+      <form method="post" data-requirement-form data-allow-soft-mismatch="false">
         <div class="grid grid-2">
           <div class="form-group">
             <label for="req_title" class="form-label">Title</label>
@@ -57,7 +60,7 @@
             <label for="req_category" class="form-label">Category</label>
             <select name="req_category" id="req_category" class="form-control" required>
               {{#each categories }}
-                <option value="{{cat_id}}">{{cat_title}}</option>
+                <option value="{{cat_id}}" data-tag="{{cat_tag}}">{{cat_title}}</option>
               {{/each}}
             </select>
           </div>
@@ -115,7 +118,7 @@
         <input type="hidden" id="project_id" name="project_id" value="{{#if selected_project_id}}{{selected_project_id}}{{else}}1{{/if}}">
 
         <div class="mt-4">
-          <button type="submit" class="btn btn-primary">Create Requirement</button>
+          <button type="submit" class="btn btn-primary" data-role="submit-requirement">Create Requirement</button>
           <a href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}" class="btn btn-outline">Cancel</a>
         </div>
       </form>
@@ -123,72 +126,5 @@
   </div>
 </section>
 
-<script>
-// Category data for validation
-const categoryData = [
-  {{#each categories}}
-    { id: {{cat_id}}, tag: "{{cat_tag}}" },
-  {{/each}}
-];
-
-// Reference validation function
-function validateReference() {
-  const referenceInput = document.getElementById('req_reference');
-  const categorySelect = document.getElementById('req_category');
-  const errorDiv = document.getElementById('reference-error');
-  const submitButton = document.querySelector('button[type="submit"]');
-  
-  const reference = referenceInput.value.trim();
-  const categoryId = parseInt(categorySelect.value);
-  
-  // Clear previous error
-  errorDiv.style.display = 'none';
-  errorDiv.textContent = '';
-  submitButton.disabled = false;
-  
-  // If reference is empty, it's valid (will be auto-generated)
-  if (reference === '') {
-    return true;
-  }
-  
-  // Find the selected category
-  const selectedCategory = categoryData.find(cat => cat.id === categoryId);
-  if (!selectedCategory) {
-    return true; // Can't validate without category
-  }
-  
-  // Check if reference starts with the correct prefix
-  const expectedPrefix = `REQ-${selectedCategory.tag}-`;
-  if (!reference.startsWith(expectedPrefix)) {
-    errorDiv.textContent = `Reference must start with "${expectedPrefix}" for the selected category.`;
-    errorDiv.style.display = 'block';
-    submitButton.disabled = true;
-    return false;
-  }
-  
-  // Check if reference follows the correct format (REQ-TAG-NUMBER)
-  const referencePattern = new RegExp(`^REQ-${selectedCategory.tag}-\\d+$`);
-  if (!referencePattern.test(reference)) {
-    errorDiv.textContent = `Reference must follow the format "REQ-${selectedCategory.tag}-NUMBER" (e.g., REQ-${selectedCategory.tag}-1).`;
-    errorDiv.style.display = 'block';
-    submitButton.disabled = true;
-    return false;
-  }
-  
-  return true;
-}
-
-// Add event listeners
-document.addEventListener('DOMContentLoaded', function() {
-  const referenceInput = document.getElementById('req_reference');
-  const categorySelect = document.getElementById('req_category');
-  
-  referenceInput.addEventListener('input', validateReference);
-  categorySelect.addEventListener('change', validateReference);
-  
-  // Initial validation
-  validateReference();
-});
-</script>
 {{/inline}}
-{{> layout}}
+{{> layout page_id="requirement-form"}}

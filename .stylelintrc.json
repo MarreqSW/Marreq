@@ -1,14 +1,42 @@
 {
-  "extends": "stylelint-config-standard",
+  "extends": ["stylelint-config-standard"],
+  "plugins": ["stylelint-order"],
   "rules": {
     "selector-class-pattern": [
-      "^(u|c|reqman|js)-[a-z0-9]+(?:__[a-z0-9]+)?(?:--[a-z0-9]+)?$",
+      "^(?:reqman|c|o|u|is|has|status|js)-[a-z0-9]+(?:-[a-z0-9]+)*(?:__(?:[a-z0-9]+(?:-[a-z0-9]+)*))?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$",
       {
         "resolveNestedSelectors": true,
-        "message": "Expected class selectors to follow BEM-style naming (block__element--modifier) with u-, c-, reqman-, or js- prefixes."
+        "message": "Use kebab-case with optional BEM, prefixed by reqman-|c-|o-|u-|is-|has-|status-|js-."
       }
     ],
+    "selector-max-specificity": "0,3,0",
+    "selector-max-id": 0,
+    "selector-no-qualifying-type": true,
+
     "declaration-no-important": true,
-    "selector-max-specificity": "0,3,0"
-  }
+    "order/properties-alphabetical-order": true,
+    "max-nesting-depth": 3,
+
+    "no-duplicate-selectors": true,
+    "color-hex-length": "short",
+    "alpha-value-notation": "number",
+    "value-keyword-case": "lower",
+    "length-zero-no-unit": true,
+    "font-weight-notation": "numeric",
+    "selector-max-compound-selectors": 4,
+    "selector-max-universal": 0,
+    "shorthand-property-no-redundant-values": true,
+    "declaration-block-no-redundant-longhand-properties": true,
+
+    "color-named": "never",
+
+    "no-descending-specificity": null,
+    "property-no-vendor-prefix": null,
+    "media-feature-range-notation": null,
+    "comment-empty-line-before": null,
+    "declaration-empty-line-before": null,
+    "property-no-deprecated": null,
+    "declaration-property-value-keyword-no-deprecated": null
+  },
+  "ignoreFiles": ["**/_graveyard.css"]
 }

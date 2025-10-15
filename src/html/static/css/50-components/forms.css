@@ -215,7 +215,7 @@ select[multiple] option:hover {
 @media (max-width: 768px) {
   .filter-section form {
     flex-direction: column;
-    gap: var(--space-4) !important;
+    gap: var(--space-4);
   }
 
   .filter-section .flex-grow-1 {

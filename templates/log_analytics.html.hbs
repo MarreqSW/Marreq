@@ -1,3 +1,6 @@
+{{!--
+  Depends on: css/50-components/tables.css, js/pages/logAnalytics.js
+--}}
 {{#*inline "page"}}
 <div class="container mt-4">
     <div class="row">
@@ -51,9 +54,9 @@
                                 <div class="col-md-6">
                                     <h6>Recent Activity Trends</h6>
                                     <ul class="list-unstyled">
-                                        <li><strong>7-day average:</strong> <span class="average-7" data-value="{{last_7_days}}" data-divisor="7">{{last_7_days}}</span> entries/day</li>
-                                        <li><strong>30-day average:</strong> <span class="average-30" data-value="{{last_30_days}}" data-divisor="30">{{last_30_days}}</span> entries/day</li>
-                                        <li><strong>90-day average:</strong> <span class="average-90" data-value="{{last_90_days}}" data-divisor="90">{{last_90_days}}</span> entries/day</li>
+                                        <li><strong>7-day average:</strong> <span class="average-7" data-average="7" data-value="{{last_7_days}}" data-divisor="7">{{last_7_days}}</span> entries/day</li>
+                                        <li><strong>30-day average:</strong> <span class="average-30" data-average="30" data-value="{{last_30_days}}" data-divisor="30">{{last_30_days}}</span> entries/day</li>
+                                        <li><strong>90-day average:</strong> <span class="average-90" data-average="90" data-value="{{last_90_days}}" data-divisor="90">{{last_90_days}}</span> entries/day</li>
                                     </ul>
                                 </div>
                                 <div class="col-md-6">
@@ -78,7 +81,7 @@
                         </div>
                         <div class="card-body">
                             <form method="post" action="/cleanup_logs" class="d-inline">
-                                <button type="submit" class="btn btn-warning" onclick="return confirm('Are you sure you want to clean up logs older than 90 days? This action cannot be undone.')">
+                                <button type="submit" class="btn btn-warning" data-confirm="Are you sure you want to clean up logs older than 90 days? This action cannot be undone.">
                                     <i class="fas fa-broom"></i> Clean Up Old Logs
                                 </button>
                             </form>
@@ -93,25 +96,6 @@
     </div>
 </div>
 
-<script>
-// Helper function to divide numbers (for averages)
-function divide(a, b) {
-    return Math.round((a / b) * 100) / 100;
-}
-
-// Apply division to all elements with average classes
-document.addEventListener('DOMContentLoaded', function() {
-    const averageElements = document.querySelectorAll('.average-7, .average-30, .average-90');
-    averageElements.forEach(element => {
-        const value = parseInt(element.getAttribute('data-value'));
-        const divisor = parseInt(element.getAttribute('data-divisor'));
-        if (!isNaN(value) && !isNaN(divisor) && divisor > 0) {
-            const result = divide(value, divisor);
-            element.textContent = result;
-        }
-    });
-});
-</script>
 {{/inline}}
 
-{{> layout}} 
+{{> layout page_id="log-analytics"}}

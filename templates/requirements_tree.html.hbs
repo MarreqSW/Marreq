@@ -1,3 +1,7 @@
+{{!--
+  Depends on: css/50-components/tree.css, js/pages/requirementsTree.js
+  Dynamic classes: status-{{requirement.req_current_status}}
+--}}
 {{#*inline "page"}}
 <div class="mb-4">
   <div class="d-flex justify-content-between align-items-center">
@@ -7,13 +11,13 @@
     </div>
     <div class="d-flex gap-3 align-items-center">
       <div class="tree-controls">
-        <button class="btn btn-outline-primary btn-sm" onclick="expandAll()">
+        <button class="btn btn-outline-primary btn-sm" type="button" data-tree-expand-all>
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="9,18 15,12 9,6"></polyline>
           </svg>
           Expand All
         </button>
-        <button class="btn btn-outline-primary btn-sm" onclick="collapseAll()">
+        <button class="btn btn-outline-primary btn-sm" type="button" data-tree-collapse-all>
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15,18 9,12 15,6"></polyline>
           </svg>
@@ -45,15 +49,15 @@
             {{#each tree_data}}
               <div class="tree-node" data-node-id="{{requirement.req_id}}">
                 <div class="node-content">
-                  <div class="node-toggle" onclick="toggleNode({{requirement.req_id}})">
+                  <button class="node-toggle" type="button" data-tree-toggle="{{requirement.req_id}}">
                     {{#if children}}
                       <svg class="toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="9,18 15,12 9,6"></polyline>
                       </svg>
                     {{else}}
-                      <div class="toggle-placeholder"></div>
+                      <span class="toggle-placeholder"></span>
                     {{/if}}
-                  </div>
+                  </button>
                   <div class="requirement-card">
                     <div class="requirement-header">
                       <div class="requirement-id">
@@ -82,7 +86,7 @@
                   </div>
                 </div>
                 {{#if children}}
-                  <div class="node-children" id="children-{{requirement.req_id}}">
+                  <div class="node-children" id="children-{{requirement.req_id}}" data-tree-branch="{{requirement.req_id}}" hidden>
                     {{#each children}}
                       <div class="tree-node child-node" data-node-id="{{requirement.req_id}}">
                         <div class="node-content">
@@ -140,56 +144,5 @@
   </div>
 </section>
 
-<script>
-  // Tree view functionality
-  function toggleNode(nodeId) {
-    const childrenContainer = document.getElementById(`children-${nodeId}`);
-    const toggleIcon = event.currentTarget.querySelector('.toggle-icon');
-    
-    if (childrenContainer) {
-      const isExpanded = childrenContainer.style.display !== 'none';
-      
-      if (isExpanded) {
-        childrenContainer.style.display = 'none';
-        toggleIcon.style.transform = 'rotate(0deg)';
-      } else {
-        childrenContainer.style.display = 'block';
-        toggleIcon.style.transform = 'rotate(90deg)';
-      }
-    }
-  }
-  
-  function expandAll() {
-    const childrenContainers = document.querySelectorAll('.node-children');
-    const toggleIcons = document.querySelectorAll('.toggle-icon');
-    
-    childrenContainers.forEach(container => {
-      container.style.display = 'block';
-    });
-    
-    toggleIcons.forEach(icon => {
-      icon.style.transform = 'rotate(90deg)';
-    });
-  }
-  
-  function collapseAll() {
-    const childrenContainers = document.querySelectorAll('.node-children');
-    const toggleIcons = document.querySelectorAll('.toggle-icon');
-    
-    childrenContainers.forEach(container => {
-      container.style.display = 'none';
-    });
-    
-    toggleIcons.forEach(icon => {
-      icon.style.transform = 'rotate(0deg)';
-    });
-  }
-  
-  // Initialize tree state
-  document.addEventListener('DOMContentLoaded', function() {
-    // Start with all nodes collapsed
-    collapseAll();
-  });
-</script>
 {{/inline}}
-{{> layout}} 
+{{> layout page_id="requirements-tree"}}

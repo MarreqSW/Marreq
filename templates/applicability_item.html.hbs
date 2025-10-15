@@ -1,3 +1,7 @@
+{{!--
+  Depends on: css/50-components/cards.css, js/app.js (delete handler)
+  Dynamic classes: requirement-card
+--}}
 <div class="card requirement-card">
   <div class="card-body">
     <div class="requirement-header">
@@ -7,7 +11,13 @@
       </div>
       <div class="requirement-actions">
         <a href="/p/{{project_id}}/applicability/edit/{{app_id}}" class="btn btn-outline btn-sm">Edit</a>
-        <button onclick="deleteApplicability({{project_id}}, {{app_id}})" class="btn btn-danger btn-sm">Delete</button>
+        <button
+          class="btn btn-danger btn-sm"
+          type="button"
+          data-action="delete-applicability"
+          data-project-id="{{project_id}}"
+          data-applicability-id="{{app_id}}"
+        >Delete</button>
       </div>
     </div>
     
@@ -25,24 +35,3 @@
     </div>
   </div>
 </div>
-
-<script>
-function deleteApplicability(projectId, applicabilityId) {
-  if (confirm('Are you sure you want to delete this applicability? This action cannot be undone.')) {
-    fetch(`/p/${projectId}/applicability/delete/${applicabilityId}`, {
-      method: 'DELETE',
-    })
-    .then(response => {
-      if (response.ok) {
-        window.location.reload();
-      } else {
-        alert('Error deleting applicability');
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Error deleting applicability');
-    });
-  }
-}
-</script> 

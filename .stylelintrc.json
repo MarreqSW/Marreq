@@ -1,0 +1,14 @@
+{
+  "extends": "stylelint-config-standard",
+  "rules": {
+    "selector-class-pattern": [
+      "^(u|c|reqman|js)-[a-z0-9]+(?:__[a-z0-9]+)?(?:--[a-z0-9]+)?$",
+      {
+        "resolveNestedSelectors": true,
+        "message": "Expected class selectors to follow BEM-style naming (block__element--modifier) with u-, c-, reqman-, or js- prefixes."
+      }
+    ],
+    "declaration-no-important": true,
+    "selector-max-specificity": "0,3,0"
+  }
+}

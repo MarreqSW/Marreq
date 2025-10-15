@@ -1,3 +1,4 @@
+{{!-- Depends on: css/index.css, js/app.js --}}
 {{#*inline "page"}}
 <div class="container mt-4">
     <div class="row g-4">
@@ -43,7 +44,7 @@
                                             <td class="text-end">
                                                 {{#if can_remove}}
                                                     <form method="post" action="/p/{{../project_id}}/members/{{user_id}}/remove" class="d-inline">
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this member from the project?');">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Remove this member from the project?">
                                                             <i class="fas fa-user-minus me-1"></i>Remove
                                                         </button>
                                                     </form>
@@ -133,4 +134,4 @@
 </div>
 {{/inline}}
 
-{{> layout}}
+{{> layout page_id="members"}}

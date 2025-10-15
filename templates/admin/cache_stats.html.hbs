@@ -1,4 +1,7 @@
 {{#extend "layout"}}
+{{!--
+  Depends on: js/pages/adminCacheStats.js
+--}}
 {{#content "title"}}Cache Statistics{{/content}}
 
 {{#content "content"}}
@@ -73,7 +76,7 @@
                     <hr>
                     
                     <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary" onclick="refreshStats()">
+                        <button class="btn btn-outline-primary" type="button" data-action="refresh-stats">
                             <i class="fas fa-sync-alt"></i> Refresh Statistics
                         </button>
                     </div>
@@ -205,15 +208,5 @@
     </div>
 </div>
 
-<script>
-function refreshStats() {
-    location.reload();
-}
-
-// Auto-refresh every 30 seconds
-setTimeout(function() {
-    refreshStats();
-}, 30000);
-</script>
 {{/content}}
 {{/extend}}

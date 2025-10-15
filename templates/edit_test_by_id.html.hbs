@@ -1,3 +1,6 @@
+{{!--
+  Depends on: css/50-components/forms.css
+--}}
 {{#*inline "page"}}
 <div class="mb-4">
   <h1>Edit Test</h1>
@@ -37,7 +40,7 @@
             <label for="test_status" class="form-label">Status</label>
             <select name="test_status" id="test_status" class="form-control" required>
               {{#each status }}
-                <option value="{{test_st_id}}">{{test_st_title}}</option>
+                <option value="{{test_st_id}}" {{#if (eq test_st_id ../tests.test_status_id)}}selected{{/if}}>{{test_st_title}}</option>
               {{/each}}
             </select>
           </div>
@@ -47,9 +50,9 @@
           <div class="form-group">
             <label for="test_parent" class="form-label">Parent Test</label>
             <select name="test_parent" id="test_parent" class="form-control">
-              <option value="0">None</option>
+              <option value="0" {{#if (eq ../tests.test_parent_id 0)}}selected{{/if}}>None</option>
               {{#each parent }}
-                <option value="{{test_id}}">{{test_name}}</option>
+                <option value="{{test_id}}" {{#if (eq test_id ../tests.test_parent_id)}}selected{{/if}}>{{test_name}}</option>
               {{/each}}
             </select>
           </div>
@@ -63,44 +66,11 @@
           <label for="linked_requirements" class="form-label">Linked Requirements</label>
           <select name="linked_requirements" id="linked_requirements" class="form-control" multiple size="8">
             {{#each requirements}}
-              <option value="{{req_id}}">REQ-{{req_id}}: {{req_title}}</option>
+              <option value="{{req_id}}" {{#each ../linked_req_ids}}{{#if (eq this ../req_id)}}selected{{/if}}{{/each}}>REQ-{{req_id}}: {{req_title}}</option>
             {{/each}}
           </select>
           <small class="form-text">Hold Ctrl (or Cmd on Mac) to select multiple requirements</small>
         </div>
-        
-        <script>
-          // Test data for setting selected values
-          const testData = {
-            test_status: {{tests.test_status_id}},
-            test_parent: {{tests.test_parent_id}}
-          };
-
-          // Pre-select currently linked requirements and set dropdown values
-          document.addEventListener('DOMContentLoaded', function() {
-            // Set status dropdown
-            const statusSelect = document.getElementById('test_status');
-            if (statusSelect) {
-              statusSelect.value = testData.test_status;
-            }
-            
-            // Set parent dropdown
-            const parentSelect = document.getElementById('test_parent');
-            if (parentSelect) {
-              parentSelect.value = testData.test_parent;
-            }
-            
-            // Pre-select currently linked requirements
-            const linkedReqIds = {{#each linked_req_ids}}[{{this}}]{{/each}};
-            const select = document.getElementById('linked_requirements');
-            
-            Array.from(select.options).forEach(option => {
-              if (linkedReqIds.includes(parseInt(option.value))) {
-                option.selected = true;
-              }
-            });
-          });
-        </script>
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary">Update Test</button>
@@ -112,4 +82,4 @@
   </div>
 </section>
 {{/inline}}
-{{> layout}}
+{{> layout page_id="test-form"}}

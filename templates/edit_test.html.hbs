@@ -1,3 +1,6 @@
+{{!--
+  Depends on: css/50-components/forms.css
+--}}
 {{#*inline "page"}}
 <div class="mb-4">
   <h1>Edit Test</h1>
@@ -63,25 +66,11 @@
           <label for="linked_requirements" class="form-label">Linked Requirements</label>
           <select name="linked_requirements" id="linked_requirements" class="form-control" multiple size="8">
             {{#each requirements}}
-              <option value="{{req_id}}">REQ-{{req_id}}: {{req_title}}</option>
+              <option value="{{req_id}}" {{#each ../linked_req_ids}}{{#if (eq this ../req_id)}}selected{{/if}}{{/each}}>REQ-{{req_id}}: {{req_title}}</option>
             {{/each}}
           </select>
           <small class="form-text">Hold Ctrl (or Cmd on Mac) to select multiple requirements</small>
         </div>
-        
-        <script>
-          // Pre-select currently linked requirements
-          document.addEventListener('DOMContentLoaded', function() {
-            const linkedReqIds = {{#each linked_req_ids}}[{{this}}]{{/each}};
-            const select = document.getElementById('linked_requirements');
-            
-            Array.from(select.options).forEach(option => {
-              if (linkedReqIds.includes(parseInt(option.value))) {
-                option.selected = true;
-              }
-            });
-          });
-        </script>
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary">Update Test</button>
@@ -93,6 +82,4 @@
   </div>
 </section>
 {{/inline}}
-{{> layout}}
-
-
+{{> layout page_id="test-form"}}

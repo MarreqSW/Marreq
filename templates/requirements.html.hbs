@@ -1,3 +1,7 @@
+{{!--
+  Depends on: css/50-components/cards.css, js/pages/requirements.js
+  Dynamic classes: status-{{req_current_status}}
+--}}
 {{#*inline "page"}}
 <div class="mb-4">
   <div class="d-flex justify-content-between align-items-center">
@@ -56,4 +60,4 @@
   {{/each}}
 </section>
 {{/inline}}
-{{> layout}}
+{{> layout page_id="requirements"}}

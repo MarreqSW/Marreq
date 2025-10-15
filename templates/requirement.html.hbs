@@ -12,12 +12,15 @@
       </div>
       <div class="requirement-actions">
         <a href="/p/{{project_id}}/requirements/edit/{{req_id}}" class="btn btn-outline btn-sm">Edit</a>
-        {{#if (or (eq req_current_status_id 1) (eq req_current_status_id 2))}}
-          <button onclick="deleteRequirement({{project_id}}, {{req_id}}, '{{req_title}}')" class="btn btn-danger btn-sm">Delete</button>
-        {{else}}
-          {{#if ../user.is_admin}}
-            <button onclick="deleteRequirement({{project_id}}, {{req_id}}, '{{req_title}}')" class="btn btn-danger btn-sm">Delete</button>
-          {{/if}}
+        {{#if (or (eq req_current_status_id 1) (eq req_current_status_id 2) ../user.is_admin)}}
+          <button
+            class="btn btn-danger btn-sm"
+            type="button"
+            data-action="delete-requirement"
+            data-project-id="{{project_id}}"
+            data-requirement-id="{{req_id}}"
+            data-requirement-title="{{req_title}}"
+          >Delete</button>
         {{/if}}
       </div>
     </div>
@@ -111,4 +114,7 @@
   </div>
   {{/if}}
 </div>
-
+{{!--
+  Depends on: css/50-components/cards.css, js/app.js (delete-requirement)
+  Dynamic classes: status-{{req_current_status}}
+--}}

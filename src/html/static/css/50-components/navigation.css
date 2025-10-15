@@ -443,6 +443,6 @@
   .nav-project-selector,
   .theme-toggle,
   .nav-user-toggle {
-    transition: none !important;
+    transition: none;
   }
 }

@@ -1,3 +1,7 @@
+{{!--
+  Depends on: css/50-components/tables.css, js/pages/tests.js
+  Dynamic classes: sort-indicator, editable-field/select
+--}}
 {{#*inline "page"}}
 <div class="mb-4">
   <div class="d-flex justify-content-between align-items-center">
@@ -14,15 +18,15 @@
 </div>
 
 <!-- Filters Section -->
-<div class="card mb-4">
-  <div class="card-header">
+<div class="card mb-4 c-card">
+  <div class="card-header c-card__header">
     <h5 class="mb-0">Filters</h5>
   </div>
-  <div class="card-body">
+  <div class="card-body c-card__body">
     <form method="GET" action="/tests_table" class="d-flex align-items-end gap-3">
       <div class="flex-grow-1">
-        <label for="status_filter" class="form-label">Status</label>
-        <select class="form-select" id="status_filter" name="status_filter">
+        <label for="status_filter" class="form-label c-form-label">Status</label>
+        <select class="form-select c-form-select c-form-control c-form-control--select" id="status_filter" name="status_filter">
           <option value="">All Statuses</option>
           {{#if statuses}}
             {{#each statuses}}
@@ -34,8 +38,8 @@
         </select>
       </div>
       <div class="flex-grow-1">
-        <label for="verification_filter" class="form-label">Verification Mode</label>
-        <select class="form-select" id="verification_filter" name="verification_filter">
+        <label for="verification_filter" class="form-label c-form-label">Verification Mode</label>
+        <select class="form-select c-form-select c-form-control c-form-control--select" id="verification_filter" name="verification_filter">
           <option value="">All Verification Modes</option>
           {{#if verifications}}
             {{#each verifications}}
@@ -47,8 +51,8 @@
         </select>
       </div>
       <div class="flex-grow-1">
-        <label for="category_filter" class="form-label">Category</label>
-        <select class="form-select" id="category_filter" name="category_filter">
+        <label for="category_filter" class="form-label c-form-label">Category</label>
+        <select class="form-select c-form-select c-form-control c-form-control--select" id="category_filter" name="category_filter">
           <option value="">All Categories</option>
           {{#if categories}}
             {{#each categories}}
@@ -68,52 +72,52 @@
 </div>
 
 <!-- Tests Table -->
-<div class="card">
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover mb-0" id="testsTable">
-        <thead class="table-light">
+<div class="card c-card">
+  <div class="card-body p-0 c-card__body">
+    <div class="table-responsive c-table-responsive">
+      <table class="table table-hover mb-0 c-table c-table--hover" id="testsTable">
+        <thead class="table-light c-table__head">
           <tr>
-            <th class="sortable" data-sort="test_id" style="width: 8%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_id">
+            <th class="sortable c-table-sortable" data-sort="test_id" style="width: 8%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="test_id">
                 ID
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="test_name" style="width: 20%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_name">
+            <th class="sortable c-table-sortable" data-sort="test_name" style="width: 20%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="test_name">
                 Name
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="test_reference" style="width: 12%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_reference">
+            <th class="sortable c-table-sortable" data-sort="test_reference" style="width: 12%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="test_reference">
                 Reference
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="test_description" style="width: 25%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_description">
+            <th class="sortable c-table-sortable" data-sort="test_description" style="width: 25%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="test_description">
                 Description
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="test_status" style="width: 10%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_status">
+            <th class="sortable c-table-sortable" data-sort="test_status" style="width: 10%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="test_status">
                 Status
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="test_source" style="width: 10%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_source">
+            <th class="sortable c-table-sortable" data-sort="test_source" style="width: 10%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="test_source">
                 Source
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="test_parent" style="width: 10%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="test_parent">
+            <th class="sortable c-table-sortable" data-sort="test_parent" style="width: 10%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="test_parent">
                 Parent
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
             <th style="width: 8%;">Actions</th>
@@ -126,26 +130,26 @@
                 <a href="/p/{{../selected_project_id}}/tests/show/{{test_id}}" class="text-decoration-none fw-bold">TEST-{{test_id}}</a>
               </td>
             <td>
-              <span class="editable-field" data-field="test_name" data-id="{{test_id}}">{{test_name}}</span>
+              <span class="editable-field c-table-editable__field" data-field="test_name" data-id="{{test_id}}">{{test_name}}</span>
             </td>
             <td>
               <span class="text-muted">{{test_reference}}</span>
             </td>
             <td>
-              <span class="editable-field" data-field="test_description" data-id="{{test_id}}">{{test_description}}</span>
+              <span class="editable-field c-table-editable__field" data-field="test_description" data-id="{{test_id}}">{{test_description}}</span>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="test_status" data-id="{{test_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select c-table-editable__select" data-field="test_status" data-id="{{test_id}}">
                 {{#each ../statuses}}
                   <option value="{{test_st_id}}" {{#if (eq test_st_id ../test_status_id)}}selected{{/if}}>{{test_st_title}}</option>
                 {{/each}}
               </select>
             </td>
             <td>
-              <span class="editable-field" data-field="test_source" data-id="{{test_id}}">{{test_source}}</span>
+              <span class="editable-field c-table-editable__field" data-field="test_source" data-id="{{test_id}}">{{test_source}}</span>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="test_parent" data-id="{{test_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select c-table-editable__select" data-field="test_parent" data-id="{{test_id}}">
                 <option value="0">None</option>
                 {{#each ../tests}}
                   {{#if (ne test_id ../test_id)}}
@@ -159,7 +163,15 @@
                 <a class="btn btn-outline-primary btn-sm" href="/p/{{../selected_project_id}}/tests/edit/{{test_id}}" title="Edit">
                   <i class="bi bi-pencil"></i>
                 </a>
-                <button class="btn btn-outline-danger btn-sm js-delete-test" type="button" data-project-id="{{../selected_project_id}}" data-test-id="{{test_id}}" data-test-name="{{test_name}}" title="Delete">
+                <button
+                  class="btn btn-outline-danger btn-sm"
+                  type="button"
+                  data-action="delete-test"
+                  data-project-id="{{../selected_project_id}}"
+                  data-test-id="{{test_id}}"
+                  data-test-name="{{test_name}}"
+                  title="Delete"
+                >
                   <i class="bi bi-trash"></i>
                 </button>
               </div>
@@ -174,14 +186,14 @@
 
 {{> partials/modals render_test_modal=true}}
           <div class="mb-3">
-            <label for="new_test_description" class="form-label">Description *</label>
-            <textarea class="form-control" id="new_test_description" name="test_description" rows="3" required></textarea>
+            <label for="new_test_description" class="form-label c-form-label">Description *</label>
+            <textarea class="form-control c-form-control c-form-control--textarea" id="new_test_description" name="test_description" rows="3" required></textarea>
           </div>
           <div class="row">
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_test_status" class="form-label">Status</label>
-                <select class="form-select" id="new_test_status" name="test_status">
+                <label for="new_test_status" class="form-label c-form-label">Status</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_test_status" name="test_status">
                   {{#each statuses}}
                     <option value="{{test_st_id}}">{{test_st_title}}</option>
                   {{/each}}
@@ -190,14 +202,14 @@
             </div>
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_test_source" class="form-label">Source</label>
-                <input type="text" class="form-control" id="new_test_source" name="test_source">
+                <label for="new_test_source" class="form-label c-form-label">Source</label>
+                <input type="text" class="form-control c-form-control" id="new_test_source" name="test_source">
               </div>
             </div>
           </div>
           <div class="mb-3">
-            <label for="new_test_parent" class="form-label">Parent Test</label>
-            <select class="form-select" id="new_test_parent" name="test_parent">
+            <label for="new_test_parent" class="form-label c-form-label">Parent Test</label>
+            <select class="form-select c-form-select c-form-control c-form-control--select" id="new_test_parent" name="test_parent">
               <option value="0">None</option>
               {{#each tests}}
                 <option value="{{test_id}}">{{test_name}}</option>
@@ -215,4 +227,4 @@
 </div>
 
 {{/inline}}
-{{> layout}}
+{{> layout page_id="tests"}}

@@ -1,5 +1,6 @@
-<div class="card dashboard-card">
-  <div class="card-header">
+{{!-- Depends on: css/50-components/dashboard.css --}}
+<div class="card c-dashboard-card c-card">
+  <div class="card-header c-card__header">
     <h3>
       {{title}}
       {{#if badge}}
@@ -9,7 +10,7 @@
       {{/if}}
     </h3>
   </div>
-  <div class="card-body">
+  <div class="card-body c-card__body">
     {{> @partial-block}}
   </div>
 </div>

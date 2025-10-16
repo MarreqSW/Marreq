@@ -1,3 +1,4 @@
+{{!-- Depends on: css/50-components/dashboard.css, js/modules/sidebar.js --}}
 <aside class="reqman-sidebar" id="mainSidebar">
   <div class="reqman-sidebar__header">
     <a href="/" class="reqman-sidebar__brand">
@@ -6,13 +7,13 @@
     <div class="reqman-sidebar__header-actions">
       <button
         data-theme-toggle
-        class="theme-toggle"
+        class="theme-toggle c-theme-toggle"
         type="button"
         aria-label="Toggle dark mode"
         aria-pressed="false"
         title="Toggle dark mode">
-        <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">☀</span>
-        <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">🌙</span>
+        <span class="theme-toggle-icon theme-toggle-icon-sun c-theme-toggle__icon c-theme-toggle__icon--sun" aria-hidden="true">☀</span>
+        <span class="theme-toggle-icon theme-toggle-icon-moon c-theme-toggle__icon c-theme-toggle__icon--moon" aria-hidden="true">🌙</span>
       </button>
       <button
         type="button"
@@ -31,13 +32,13 @@
         <li>
           <a href="/" class="reqman-nav-link reqman-nav-link--active" aria-current="page">
             <i class="fas fa-chart-line" aria-hidden="true"></i>
-            <span>Dashboard</span>
+            <span class="reqman-nav-link__label">Dashboard</span>
           </a>
         </li>
         <li>
           <a href="#activity" class="reqman-nav-link reqman-nav-link--disabled" title="Coming soon">
             <i class="fas fa-stream" aria-hidden="true"></i>
-            <span>Activity Feed</span>
+            <span class="reqman-nav-link__label">Activity Feed</span>
             <span class="reqman-badge reqman-badge--soon">Soon</span>
           </a>
         </li>
@@ -50,14 +51,14 @@
         <li>
           <a href="/projects" class="reqman-nav-link">
             <i class="fas fa-folder-tree" aria-hidden="true"></i>
-            <span>All Projects</span>
+            <span class="reqman-nav-link__label">All Projects</span>
           </a>
         </li>
         {{#if user.is_admin}}
         <li>
           <a href="/new_project" class="reqman-nav-link">
             <i class="fas fa-plus-circle" aria-hidden="true"></i>
-            <span>Create Project</span>
+            <span class="reqman-nav-link__label">Create Project</span>
           </a>
         </li>
         {{/if}}
@@ -70,14 +71,14 @@
         <li>
           <a href="#change-requests" class="reqman-nav-link reqman-nav-link--disabled" title="Coming soon">
             <i class="fas fa-code-branch" aria-hidden="true"></i>
-            <span>Change Requests</span>
+            <span class="reqman-nav-link__label">Change Requests</span>
             <span class="reqman-badge reqman-badge--soon">Soon</span>
           </a>
         </li>
         <li>
           <a href="#reviews" class="reqman-nav-link reqman-nav-link--disabled" title="Coming soon">
             <i class="fas fa-user-check" aria-hidden="true"></i>
-            <span>Reviews</span>
+            <span class="reqman-nav-link__label">Reviews</span>
             <span class="reqman-badge reqman-badge--soon">Soon</span>
           </a>
         </li>
@@ -91,19 +92,19 @@
         <li>
           <a href="/admin" class="reqman-nav-link">
             <i class="fas fa-shield-alt" aria-hidden="true"></i>
-            <span>Admin Panel</span>
+            <span class="reqman-nav-link__label">Admin Panel</span>
           </a>
         </li>
         <li>
           <a href="/admin/users" class="reqman-nav-link">
             <i class="fas fa-users-cog" aria-hidden="true"></i>
-            <span>User Management</span>
+            <span class="reqman-nav-link__label">User Management</span>
           </a>
         </li>
         <li>
           <a href="/logs" class="reqman-nav-link">
             <i class="fas fa-list-alt" aria-hidden="true"></i>
-            <span>System Logs</span>
+            <span class="reqman-nav-link__label">System Logs</span>
           </a>
         </li>
       </ul>

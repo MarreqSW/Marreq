@@ -1,16 +1,18 @@
 /* Forms */
-.form-group {
+.c-form-group {
   margin-bottom: var(--space-6);
 }
 
-.form-label {
+.c-form-label {
   color: var(--text-primary);
   display: block;
   font-weight: 500;
   margin-bottom: var(--space-2);
 }
 
-.form-control {
+.c-form-control,
+.c-form-select,
+.c-filter-select {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -20,41 +22,61 @@
   width: 100%;
 }
 
-.form-control:focus {
+.c-form-control:focus,
+.c-form-select:focus,
+.c-filter-select:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
   outline: none;
 }
 
-.form-control:invalid {
+.c-form-control:invalid,
+.c-form-select:invalid,
+.c-filter-select:invalid {
   border-color: var(--error-color);
 }
 
-textarea.form-control {
+.c-form-control--textarea {
   min-height: 100px;
   resize: vertical;
 }
 
-select.form-control {
+.c-form-control--select,
+.c-form-select,
+.c-filter-select {
   cursor: pointer;
 }
 
-select.form-control[multiple] {
-  min-height: 120px;
+.c-form-control--multiple,
+.c-form-select--multiple {
+  min-height: 200px;
 }
 
-select.form-control[multiple] option {
+.c-form-control--multiple option,
+.c-form-select--multiple option {
   border-bottom: 1px solid var(--border-color);
   padding: var(--space-2);
 }
 
-select.form-control[multiple] option:checked {
+.c-form-control--multiple option:checked,
+.c-form-select--multiple option:checked {
   background-color: var(--primary-color);
-  color: #fff;
+  color: var(--text-inverse, #fff);
+}
+
+.c-form-control--multiple option:hover,
+.c-form-select--multiple option:hover {
+  background-color: var(--background-color);
+}
+
+.c-form-control--sm,
+.c-form-select--sm {
+  font-size: 0.875rem;
+  padding: var(--space-2) var(--space-3);
 }
 
 /* Enhanced Matrix Filter Styles */
-.filter-card {
+.c-filter-card {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -63,19 +85,19 @@ select.form-control[multiple] option:checked {
   padding: var(--space-4);
 }
 
-.filter-form {
+.c-filter-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.filter-group {
+.c-filter-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.filter-label {
+.c-filter-label {
   align-items: center;
   color: var(--text-primary);
   display: flex;
@@ -85,106 +107,74 @@ select.form-control[multiple] option:checked {
   margin: 0;
 }
 
-.filter-icon {
+.c-filter-icon {
   color: var(--primary-color);
   height: 16px;
   width: 16px;
 }
 
-.filter-select {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font-size: 0.875rem;
-  min-width: 200px;
-  padding: var(--space-2) var(--space-3);
-  transition: all 0.2s ease;
-}
-
-.filter-select:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
-  outline: none;
-}
-
-.filter-select:hover {
+.c-filter-select:hover {
   border-color: var(--primary-light);
 }
 
-.filter-actions {
+.c-filter-actions {
   align-items: center;
   display: flex;
   gap: var(--space-2);
 }
 
 /* Form actions */
-.form-actions {
+.c-form-actions {
   display: flex;
   gap: var(--space-4);
   margin-top: var(--space-6);
 }
 
-.form-actions .btn {
+.c-form-actions__action {
+  align-items: center;
+  display: inline-flex;
   flex: 1;
+  gap: var(--space-1);
 }
 
-/* Multi-select styling */
-select[multiple] {
-  min-height: 200px;
-}
-
-select[multiple] option {
-  border-bottom: 1px solid var(--border-color);
-  padding: var(--space-2);
-}
-
-select[multiple] option:checked {
-  background-color: var(--primary-color);
-  color: #fff;
-}
-
-select[multiple] option:hover {
-  background-color: var(--background-color);
-}
-
-.form-text {
+.c-form-text {
   color: var(--text-secondary);
   font-size: 0.875rem;
   margin-top: var(--space-1);
 }
 
 /* Filter Section Styles */
-.filter-section {
+.c-filter-section {
   background-color: var(--surface-color);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   margin-bottom: var(--space-6);
 }
 
-.filter-section .card-header {
+.c-filter-section .c-card__header {
   background-color: var(--background-color);
   border-bottom: 1px solid var(--border-color);
   padding: var(--space-4) var(--space-6);
 }
 
-.filter-section .card-header h5 {
+.c-filter-section .c-card__header h5 {
   color: var(--text-primary);
   font-weight: 600;
   margin: 0;
 }
 
-.filter-section .card-body {
+.c-filter-section .c-card__body {
   padding: var(--space-6);
 }
 
-.filter-section .form-label {
+.c-filter-section .c-form-label {
   color: var(--text-primary);
   font-weight: 500;
   margin-bottom: var(--space-2);
 }
 
-.filter-section .form-select {
+.c-filter-section .c-form-select,
+.c-filter-section .c-filter-select {
   border: 1px solid var(--border-color);
   border-radius: 0.375rem;
   font-size: 0.875rem;
@@ -192,37 +182,9 @@ select[multiple] option:hover {
   transition: all 0.2s ease;
 }
 
-.filter-section .form-select:focus {
+.c-filter-section .c-form-select:focus,
+.c-filter-section .c-filter-select:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
   outline: none;
-}
-
-.filter-section .form-select:hover {
-  border-color: var(--primary-light);
-}
-
-.filter-section .btn {
-  font-size: 0.875rem;
-  padding: var(--space-2) var(--space-4);
-}
-
-.filter-section .gap-2 {
-  gap: var(--space-2);
-}
-
-/* Responsive adjustments for filters */
-@media (max-width: 768px) {
-  .filter-section form {
-    flex-direction: column;
-    gap: var(--space-4);
-  }
-
-  .filter-section .flex-grow-1 {
-    width: 100%;
-  }
-
-  .filter-section .d-flex.gap-2 {
-    justify-content: center;
-  }
 }

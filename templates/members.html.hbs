@@ -94,8 +94,8 @@
                     {{#if has_available_users}}
                         <form method="post" action="/p/{{project_id}}/members" class="vstack gap-3">
                             <div>
-                                <label for="member-user" class="form-label">User</label>
-                                <select id="member-user" name="user_id" class="form-select" required>
+                                <label for="member-user" class="form-label c-form-label">User</label>
+                                <select id="member-user" name="user_id" class="form-select c-form-select c-form-control c-form-control--select" required>
                                     <option value="" disabled selected>Select a user</option>
                                     {{#each available_users}}
                                         <option value="{{user_id}}">{{label}}</option>
@@ -103,8 +103,8 @@
                                 </select>
                             </div>
                             <div>
-                                <label for="member-role" class="form-label">Role</label>
-                                <select id="member-role" name="role" class="form-select" required>
+                                <label for="member-role" class="form-label c-form-label">Role</label>
+                                <select id="member-role" name="role" class="form-select c-form-select c-form-control c-form-control--select" required>
                                     {{#each role_options}}
                                         <option value="{{id}}">{{label}}</option>
                                     {{/each}}

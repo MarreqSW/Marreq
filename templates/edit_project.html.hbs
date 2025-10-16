@@ -12,18 +12,18 @@
                 <div class="card-body c-card__body">
                     <form method="POST" action="/p/{{project.project_id}}/edit">
                         <div class="mb-3">
-                            <label for="project_name" class="form-label">Project Name *</label>
-                            <input type="text" class="form-control" id="project_name" name="project_name" value="{{project.project_name}}" required>
+                            <label for="project_name" class="form-label c-form-label">Project Name *</label>
+                            <input type="text" class="form-control c-form-control" id="project_name" name="project_name" value="{{project.project_name}}" required>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="project_description" class="form-label">Description</label>
-                            <textarea class="form-control" id="project_description" name="project_description" rows="3">{{project.project_description}}</textarea>
+                            <label for="project_description" class="form-label c-form-label">Description</label>
+                            <textarea class="form-control c-form-control c-form-control--textarea" id="project_description" name="project_description" rows="3">{{project.project_description}}</textarea>
                         </div>
                         
                         <div class="mb-3">
-                            <label for="project_status" class="form-label">Status</label>
-                            <select class="form-select" id="project_status" name="project_status">
+                            <label for="project_status" class="form-label c-form-label">Status</label>
+                            <select class="form-select c-form-select c-form-control c-form-control--select" id="project_status" name="project_status">
                                 <option value="active" {{#if (eq project.project_status 'active')}}selected{{/if}}>Active</option>
                                 <option value="inactive" {{#if (eq project.project_status 'inactive')}}selected{{/if}}>Inactive</option>
                                 <option value="completed" {{#if (eq project.project_status 'completed')}}selected{{/if}}>Completed</option>
@@ -32,8 +32,8 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="project_owner_id" class="form-label">Project Owner *</label>
-                            <select class="form-select" id="project_owner_id" name="project_owner_id" required>
+                            <label for="project_owner_id" class="form-label c-form-label">Project Owner *</label>
+                            <select class="form-select c-form-select c-form-control c-form-control--select" id="project_owner_id" name="project_owner_id" required>
                                 {{#unless project.project_owner_id}}
                                     <option value="" disabled selected>Select an owner</option>
                                 {{/unless}}

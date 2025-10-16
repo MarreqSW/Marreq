@@ -138,35 +138,35 @@
               <span class="text-muted">{{req_reference}}</span>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="req_category" data-id="{{req_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select" data-field="req_category" data-id="{{req_id}}">
                 {{#each ../categories}}
                   <option value="{{cat_id}}" {{#if (eq cat_id ../req_category_id)}}selected{{/if}}>{{cat_title}}</option>
                 {{/each}}
               </select>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="req_current_status" data-id="{{req_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select" data-field="req_current_status" data-id="{{req_id}}">
                 {{#each ../statuses}}
                   <option value="{{req_st_id}}" {{#if (eq req_st_id ../req_current_status_id)}}selected{{/if}}>{{req_st_title}}</option>
                 {{/each}}
               </select>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="req_verification" data-id="{{req_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select" data-field="req_verification" data-id="{{req_id}}">
                 {{#each ../verifications}}
                   <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification_id)}}selected{{/if}}>{{verification_name}}</option>
                 {{/each}}
               </select>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="req_author" data-id="{{req_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select" data-field="req_author" data-id="{{req_id}}">
                 {{#each ../users}}
                   <option value="{{user_id}}" {{#if (eq user_id ../req_author_id)}}selected{{/if}}>{{user_name}}</option>
                 {{/each}}
               </select>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="req_reviewer" data-id="{{req_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select" data-field="req_reviewer" data-id="{{req_id}}">
                 {{#each ../users}}
                   <option value="{{user_id}}" {{#if (eq user_id ../req_reviewer_id)}}selected{{/if}}>{{user_name}}</option>
                 {{/each}}
@@ -176,7 +176,7 @@
               <span class="text-muted small">{{req_creation_date}}</span>
             </td>
             <td>
-              <input type="date" class="form-control form-control-sm editable-date" data-field="req_deadline_date" data-id="{{req_id}}" value="{{req_deadline_date}}">
+              <input type="date" class="form-control form-control-sm editable-date c-form-control c-form-control--sm" data-field="req_deadline_date" data-id="{{req_id}}" value="{{req_deadline_date}}">
             </td>
             <td>
               <div class="btn-group btn-group-sm">
@@ -207,14 +207,14 @@
 
 {{> partials/modals render_requirement_modal=true}}
           <div class="mb-3">
-            <label for="new_req_description" class="form-label">Description *</label>
-            <textarea class="form-control" id="new_req_description" name="req_description" rows="3" required></textarea>
+            <label for="new_req_description" class="form-label c-form-label">Description *</label>
+            <textarea class="form-control c-form-control c-form-control--textarea" id="new_req_description" name="req_description" rows="3" required></textarea>
           </div>
           <div class="row">
             <div class="col-md-4">
               <div class="mb-3">
-                <label for="new_req_category" class="form-label">Category</label>
-                <select class="form-select" id="new_req_category" name="req_category">
+                <label for="new_req_category" class="form-label c-form-label">Category</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_category" name="req_category">
                   {{#each categories}}
                     <option value="{{cat_id}}">{{cat_title}}</option>
                   {{/each}}
@@ -223,8 +223,8 @@
             </div>
             <div class="col-md-4">
               <div class="mb-3">
-                <label for="new_req_status" class="form-label">Status</label>
-                <select class="form-select" id="new_req_status" name="req_current_status">
+                <label for="new_req_status" class="form-label c-form-label">Status</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_status" name="req_current_status">
                   {{#each statuses}}
                     <option value="{{req_st_id}}">{{req_st_title}}</option>
                   {{/each}}
@@ -233,8 +233,8 @@
             </div>
             <div class="col-md-4">
               <div class="mb-3">
-                <label for="new_req_verification" class="form-label">Verification</label>
-                <select class="form-select" id="new_req_verification" name="req_verification">
+                <label for="new_req_verification" class="form-label c-form-label">Verification</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_verification" name="req_verification">
                   {{#each verifications}}
                     <option value="{{verification_id}}">{{verification_name}}</option>
                   {{/each}}
@@ -245,8 +245,8 @@
           <div class="row">
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_req_author" class="form-label">Author</label>
-                <select class="form-select" id="new_req_author" name="req_author">
+                <label for="new_req_author" class="form-label c-form-label">Author</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_author" name="req_author">
                   {{#each users}}
                     <option value="{{user_id}}">{{user_name}}</option>
                   {{/each}}
@@ -255,8 +255,8 @@
             </div>
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_req_reviewer" class="form-label">Reviewer</label>
-                <select class="form-select" id="new_req_reviewer" name="req_reviewer">
+                <label for="new_req_reviewer" class="form-label c-form-label">Reviewer</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_reviewer" name="req_reviewer">
                   {{#each users}}
                     <option value="{{user_id}}">{{user_name}}</option>
                   {{/each}}

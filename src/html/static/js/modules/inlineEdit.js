@@ -16,7 +16,7 @@ export function enableInlineTextEditing(container, selector, onCommit) {
 
       const input = document.createElement('input');
       input.type = 'text';
-      input.className = 'form-control form-control-sm';
+      input.className = 'form-control form-control-sm c-form-control c-form-control--sm';
       input.value = original;
 
       element.textContent = '';
@@ -66,4 +66,3 @@ export function enableInlineChangeHandling(container, selector, onChange) {
     });
   });
 }
-

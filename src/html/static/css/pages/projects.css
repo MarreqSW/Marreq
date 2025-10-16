@@ -1,18 +1,18 @@
 /* Projects page */
 .project-card {
-    transition: transform 0.2s, box-shadow 0.2s;
     border: 1px solid #e9ecef;
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .project-card:hover {
+    box-shadow: 0 4px 8px rgb(0 0 0 / 0.1);
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
 .project-meta {
+    border-top: 1px solid #e9ecef;
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid #e9ecef;
 }
 
 .card-footer {
@@ -26,8 +26,8 @@
 
 /* New Project styles */
 .card {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
 }
 
 .card-header {
@@ -43,8 +43,8 @@
 
 /* Edit Project styles */
 .card {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
 }
 
 .card-header {
@@ -60,8 +60,8 @@
 
 /* Project Detail styles */
 .card {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     border: 1px solid var(--border-color);
+    box-shadow: 0 2px 4px rgb(0 0 0 / 0.1);
 }
 
 .card-header {
@@ -71,8 +71,8 @@
 }
 
 .list-unstyled li {
-    padding: 0.25rem 0;
     border-bottom: 1px solid var(--border-color);
+    padding: 0.25rem 0;
 }
 
 .list-unstyled li:last-child {
@@ -80,9 +80,9 @@
 }
 
 .member-item {
+    border-color: var(--border-color);
     border-left: none;
     border-right: none;
-    border-color: var(--border-color);
 }
 
 .member-item:first-child {

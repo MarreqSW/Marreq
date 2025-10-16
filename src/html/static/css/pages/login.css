@@ -1,50 +1,50 @@
 /* Login Page Styles */
 
 .login-container {
-  min-height: 100vh;
-  display: flex;
   align-items: center;
-  justify-content: center;
   background: linear-gradient(135deg, var(--login-gradient-start) 0%, var(--login-gradient-end) 100%);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
   padding: 1rem;
   position: relative;
 }
 
 .login-container > p {
-  position: fixed;
   bottom: 0;
-  left: 0;
-  width: 100%;
-  text-align: center;
-  padding: 10px 0;
+  color: #fff;
   font-size: 0.875rem;
-  color: #ffffff;
+  left: 0;
+  padding: 10px 0;
+  position: fixed;
+  text-align: center;
+  width: 100%;
 }
 
 .login-card {
   background: var(--surface-color);
   border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px rgb(0 0 0 / 0.1);
+  max-width: 400px;
   padding: 2.5rem;
   width: 100%;
-  max-width: 400px;
 }
 
 .login-theme-toggle {
   position: absolute;
-  top: 1.5rem;
   right: 1.5rem;
+  top: 1.5rem;
 }
 
 .login-header {
-  text-align: center;
   margin-bottom: 2rem;
+  text-align: center;
 }
 
 .login-header h1 {
   color: var(--text-primary);
-  margin-bottom: 0.5rem;
   font-size: 1.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .login-header p {
@@ -61,38 +61,38 @@
 }
 
 .login-form .form-label {
-  display: block;
-  margin-bottom: 0.5rem;
   color: var(--text-primary);
+  display: block;
   font-weight: 500;
+  margin-bottom: 0.5rem;
 }
 
 .login-form .form-control {
-  width: 100%;
-  padding: 0.75rem;
   border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
+  padding: 0.75rem;
   transition: border-color 0.2s ease;
+  width: 100%;
 }
 
 .login-form .form-control:focus {
-  outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+  outline: none;
 }
 
 .btn-block {
-  width: 100%;
-  padding: 0.75rem;
   font-size: 1rem;
   font-weight: 500;
+  padding: 0.75rem;
+  width: 100%;
 }
 
 .login-footer {
-  text-align: center;
-  padding-top: 1.5rem;
   border-top: 1px solid var(--border-color);
+  padding-top: 1.5rem;
+  text-align: center;
 }
 
 .login-footer p {

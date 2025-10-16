@@ -1,12 +1,12 @@
 /* Cards */
 .card {
   background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-color);
+  color: var(--text-primary);
   overflow: hidden;
   transition: all 0.2s ease;
-  color: var(--text-primary);
 }
 
 .card:hover {
@@ -15,9 +15,9 @@
 }
 
 .card-header {
-  padding: var(--space-6);
-  border-bottom: 1px solid var(--border-color);
   background-color: var(--surface-muted);
+  border-bottom: 1px solid var(--border-color);
+  padding: var(--space-6);
 }
 
 .card-body {
@@ -30,32 +30,32 @@
 }
 
 .card-footer {
-  padding: var(--space-4) var(--space-6);
-  border-top: 1px solid var(--border-color);
   background-color: var(--surface-muted);
+  border-top: 1px solid var(--border-color);
+  padding: var(--space-4) var(--space-6);
 }
 
 /* Requirement Cards */
 .requirement-id {
   background-color: var(--primary-color);
-  color: #fff;
-  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-xl);
+  color: #fff;
   font-size: 0.875rem;
   font-weight: 600;
+  padding: var(--space-1) var(--space-3);
   text-decoration: none;
 }
 
 .requirement-reference-tag {
   background-color: var(--primary-color);
-  color: #fff;
-  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-xl);
+  color: #fff;
+  display: inline-block;
   font-size: 0.875rem;
   font-weight: 600;
-  text-decoration: none;
-  display: inline-block;
   margin-bottom: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  text-decoration: none;
 }
 
 .meta-value {
@@ -66,12 +66,12 @@
 /* Tag styling for better visibility */
 .meta-value.tag {
   background-color: #2563eb;
-  color: #fff;
-  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
+  color: #fff;
+  display: inline-block;
   font-size: 0.75rem;
   font-weight: 600;
-  display: inline-block;
+  padding: var(--space-1) var(--space-2);
 }
 
 .requirement-actions {
@@ -82,14 +82,14 @@
 
 /* Status Badges */
 .status-badge {
-  display: inline-flex;
   align-items: center;
-  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-xl);
+  display: inline-flex;
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.05em;
+  padding: var(--space-1) var(--space-3);
+  text-transform: uppercase;
 }
 
 .status-draft {
@@ -114,8 +114,8 @@
 
 .status-warning {
   background-color: #fffbeb;
-  color: #d97706;
   border: 1px solid #fed7aa;
+  color: #d97706;
 }
 
 @media (max-width: 768px) {

@@ -1,21 +1,21 @@
 .reqman-portal {
+  background: var(--background-color, #f5f7fa);
   display: flex;
   min-height: 100vh;
-  background: var(--background-color, #f5f7fa);
 }
 
 /* Sidebar Styles */
 .reqman-sidebar {
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: var(--sidebar-width);
-  background: var(--surface-color, #ffffff);
+  background: var(--surface-color, #fff);
   border-right: 1px solid var(--border-color, #e2e8f0);
+  bottom: 0;
   display: flex;
   flex-direction: column;
+  left: 0;
+  position: fixed;
+  top: 0;
   transition: width var(--transition-base), transform var(--transition-base);
+  width: var(--sidebar-width);
   z-index: 100;
 }
 
@@ -24,41 +24,41 @@
 }
 
 .reqman-sidebar__header {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-lg);
   border-bottom: 1px solid var(--border-color, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
   min-height: var(--header-height);
+  padding: var(--spacing-lg);
 }
 
 .reqman-sidebar__brand {
-  display: inline-flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  display: inline-flex;
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text-primary);
-  text-decoration: none;
+  gap: var(--spacing-sm);
   letter-spacing: -0.01em;
   padding: calc(var(--space-1, 0.25rem) + 2px) var(--space-2, 0.5rem);
-  border-radius: var(--radius-md);
+  text-decoration: none;
   transition: color 0.2s ease;
 }
 
 .reqman-sidebar__brand::before {
+  align-items: center;
+  background: var(--primary-color, #3b82f6);
+  border-radius: var(--radius-md);
+  color: white;
   content: 'R';
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: var(--radius-md);
-  background: var(--primary-color, #3b82f6);
-  color: white;
+  flex-shrink: 0;
   font-size: 1rem;
   font-weight: 700;
-  flex-shrink: 0;
+  height: 1.75rem;
+  justify-content: center;
+  width: 1.75rem;
 }
 
 .reqman-sidebar__brand:hover,
@@ -67,7 +67,7 @@
 }
 
 .reqman-sidebar__brand:focus-visible {
-  outline: 2px solid rgba(37, 99, 235, 0.45);
+  outline: 2px solid rgb(37 99 235 / 0.45);
   outline-offset: 4px;
 }
 
@@ -76,14 +76,14 @@
 }
 
 .reqman-sidebar__header-actions {
-  display: flex;
   align-items: center;
+  display: flex;
   gap: var(--spacing-xs);
 }
 
 .reqman-sidebar__header-actions .theme-toggle {
-  width: 2.25rem;
   height: 2.25rem;
+  width: 2.25rem;
 }
 
 .reqman-sidebar--collapsed .reqman-sidebar__header-actions .theme-toggle {
@@ -91,18 +91,18 @@
 }
 
 .reqman-sidebar__toggle {
-  padding: var(--spacing-xs);
+  align-items: center;
   background: transparent;
   border: none;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary, #64748b);
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  display: inline-flex;
+  height: 2.25rem;
+  justify-content: center;
+  padding: var(--spacing-xs);
   transition: all var(--transition-base);
   width: 2.25rem;
-  height: 2.25rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .reqman-sidebar__toggle:hover {
@@ -125,13 +125,13 @@
 }
 
 .reqman-nav-section__title {
+  color: var(--text-secondary, #64748b);
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-secondary, #64748b);
-  padding: 0 var(--spacing-sm);
   margin-bottom: var(--spacing-sm);
+  padding: 0 var(--spacing-sm);
+  text-transform: uppercase;
 }
 
 .reqman-sidebar--collapsed .reqman-nav-section__title {
@@ -145,21 +145,21 @@
 }
 
 .reqman-nav-link {
-  display: flex;
   align-items: center;
+  border-radius: var(--radius-md);
+  color: var(--text-primary, #1e293b);
+  display: flex;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-md);
-  color: var(--text-primary, #1e293b);
-  text-decoration: none;
-  border-radius: var(--radius-md);
-  transition: all var(--transition-base);
   position: relative;
+  text-decoration: none;
+  transition: all var(--transition-base);
 }
 
 .reqman-nav-link i {
-  width: 20px;
-  text-align: center;
   font-size: 1.1rem;
+  text-align: center;
+  width: 20px;
 }
 
 .reqman-nav-link:hover {
@@ -173,8 +173,8 @@
 }
 
 .reqman-nav-link--disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
   pointer-events: none;
 }
 
@@ -183,13 +183,13 @@
 }
 
 .reqman-badge {
-  display: inline-flex;
   align-items: center;
-  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  display: inline-flex;
   font-size: 0.75rem;
   font-weight: 600;
-  border-radius: 9999px;
   margin-left: auto;
+  padding: 0.125rem 0.5rem;
 }
 
 .reqman-badge--soon {
@@ -198,36 +198,36 @@
 }
 
 .reqman-badge--bg-success {
-  background: rgba(34, 197, 94, 0.16);
+  background: rgb(34 197 94 / 0.16);
   color: #15803d;
 }
 
 .reqman-badge--bg-warning {
-  background: rgba(234, 179, 8, 0.18);
+  background: rgb(234 179 8 / 0.18);
   color: #92400e;
 }
 
 .reqman-badge--bg-secondary {
-  background: rgba(148, 163, 184, 0.18);
+  background: rgb(148 163 184 / 0.18);
   color: #334155;
 }
 
 .reqman-sidebar__footer {
-  padding: var(--spacing-md);
   border-top: 1px solid var(--border-color, #e2e8f0);
+  padding: var(--spacing-md);
 }
 
 .reqman-user-info {
-  display: flex;
   align-items: center;
+  display: flex;
   gap: var(--spacing-sm);
   position: relative;
 }
 
 .reqman-user-info__avatar {
-  font-size: 2rem;
   color: var(--primary-color, #3b82f6);
   flex-shrink: 0;
+  font-size: 2rem;
 }
 
 .reqman-user-info__details {
@@ -235,19 +235,19 @@
 }
 
 .reqman-user-info__name {
-  font-weight: 600;
   font-size: 0.875rem;
-  white-space: nowrap;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reqman-user-info__email {
-  font-size: 0.75rem;
   color: var(--text-secondary, #64748b);
-  white-space: nowrap;
+  font-size: 0.75rem;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reqman-sidebar--collapsed .reqman-user-info__details {
@@ -259,23 +259,23 @@
 }
 
 .reqman-user-menu-toggle {
-  display: flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
   background: transparent;
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-md);
   color: var(--text-secondary, #64748b);
   cursor: pointer;
+  display: flex;
+  height: 32px;
+  justify-content: center;
+  padding: 0;
   transition: all var(--transition-base);
+  width: 32px;
 }
 
 .reqman-user-menu-toggle__icon {
-  width: 1em;
   height: 1em;
+  width: 1em;
 }
 
 .reqman-user-menu-toggle:hover {
@@ -301,26 +301,26 @@
 }
 
 .reqman-main__header {
-  display: flex;
   align-items: center;
+  display: flex;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-xl);
 }
 
 .reqman-mobile-toggle {
-  display: none;
-  padding: var(--spacing-sm);
-  background: var(--surface-color, #ffffff);
+  background: var(--surface-color, #fff);
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-md);
   cursor: pointer;
+  display: none;
+  padding: var(--spacing-sm);
 }
 
 .reqman-main__title h1 {
+  color: var(--text-primary, #1e293b);
   font-size: 2rem;
   font-weight: 700;
   margin: 0 0 var(--spacing-xs) 0;
-  color: var(--text-primary, #1e293b);
 }
 
 .reqman-main__subtitle {
@@ -331,28 +331,28 @@
 /* Metrics Cards */
 .reqman-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--spacing-lg);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   margin-bottom: var(--spacing-xl);
 }
 
 .reqman-metric-card {
-  background: var(--surface-color, #ffffff);
+  align-items: center;
+  background: var(--surface-color, #fff);
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
   display: flex;
-  align-items: center;
   gap: var(--spacing-md);
+  padding: var(--spacing-lg);
 }
 
 .reqman-metric-card__icon {
-  width: 48px;
-  height: 48px;
   border-radius: var(--radius-md);
   display: grid;
-  place-items: center;
   font-size: 1.5rem;
+  height: 48px;
+  place-items: center;
+  width: 48px;
 }
 
 .reqman-metric-card__icon--primary {
@@ -376,14 +376,14 @@
 }
 
 .reqman-metric-card__value {
+  color: var(--text-primary, #1e293b);
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--text-primary, #1e293b);
 }
 
 .reqman-metric-card__label {
-  font-size: 0.875rem;
   color: var(--text-secondary, #64748b);
+  font-size: 0.875rem;
 }
 
 /* Sections */
@@ -392,26 +392,26 @@
 }
 
 .reqman-section__header {
-  display: flex;
   align-items: center;
+  display: flex;
   justify-content: space-between;
   margin-bottom: var(--spacing-lg);
 }
 
 .reqman-section__title {
+  color: var(--text-primary, #1e293b);
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0 0 var(--spacing-lg) 0;
-  color: var(--text-primary, #1e293b);
 }
 
 .reqman-link-arrow {
-  display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
   color: var(--primary-color, #3b82f6);
-  text-decoration: none;
+  display: flex;
   font-weight: 600;
+  gap: var(--spacing-xs);
+  text-decoration: none;
 }
 
 .reqman-link-arrow:hover {
@@ -421,40 +421,40 @@
 /* Quick Actions */
 .reqman-quick-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 .reqman-action-card {
-  background: var(--surface-color, #ffffff);
+  align-items: center;
+  background: var(--surface-color, #fff);
   border: 2px dashed var(--border-color, #e2e8f0);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  color: var(--text-primary, #1e293b);
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
   text-align: center;
   text-decoration: none;
-  color: var(--text-primary, #1e293b);
   transition: all var(--transition-base);
 }
 
 .reqman-action-card:hover {
-  border-color: var(--primary-color, #3b82f6);
   background: #eff6ff;
+  border-color: var(--primary-color, #3b82f6);
   transform: translateY(-2px);
 }
 
 .reqman-action-card--primary {
   background: var(--primary-color, #3b82f6);
-  color: white;
   border-style: solid;
+  color: white;
 }
 
 .reqman-action-card--disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
   pointer-events: none;
 }
 
@@ -465,73 +465,73 @@
 /* Projects Grid */
 .reqman-projects-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: var(--spacing-lg);
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
 }
 
 .reqman-project-card {
-  background: var(--surface-color, #ffffff);
+  background: var(--surface-color, #fff);
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-lg);
-  padding: 0;
-  transition: all var(--transition-base);
-  position: relative;
-  overflow: hidden;
   display: flex;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+  transition: all var(--transition-base);
 }
 
 .reqman-project-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
   transform: translateY(-2px);
 }
 
 .reqman-project-card__status-bar {
+  background: var(--primary-color, #3b82f6);
+  height: 4px;
+  left: 0;
+  pointer-events: none;
   position: absolute;
   top: 0;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: var(--primary-color, #3b82f6);
   transition: background var(--transition-fast, 120ms ease-in-out);
-  pointer-events: none;
+  width: 100%;
 }
 
 .reqman-project-card__content {
-  padding: var(--spacing-lg);
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   gap: var(--spacing-md);
+  padding: var(--spacing-lg);
 }
 
 .reqman-project-card__header {
-  display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  display: flex;
   gap: var(--spacing-sm);
+  justify-content: space-between;
 }
 
 .reqman-project-card__title-group {
-  display: flex;
   align-items: flex-start;
+  display: flex;
   gap: var(--spacing-md);
 }
 
 .reqman-project-card__icon {
-  display: inline-flex;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
   align-items: center;
-  justify-content: center;
   background: var(--primary-surface, #eff6ff);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgb(59 130 246 / 0.15);
   color: var(--primary-color, #3b82f6);
+  display: inline-flex;
   flex-shrink: 0;
   font-size: 1.1rem;
-  box-shadow: inset 0 0 0 2px rgba(59, 130, 246, 0.15);
   font-weight: 700;
-  text-transform: uppercase;
+  height: 42px;
+  justify-content: center;
   letter-spacing: 0.02em;
+  text-transform: uppercase;
+  width: 42px;
 }
 
 .reqman-project-card__titles {
@@ -541,15 +541,15 @@
 }
 
 .reqman-project-card__header h3 {
-  margin: 0;
   font-size: 1.125rem;
   font-weight: 600;
+  margin: 0;
 }
 
 .reqman-project-card__owner {
-  margin: 0;
-  font-size: 0.8rem;
   color: var(--text-tertiary, #94a3b8);
+  font-size: 0.8rem;
+  margin: 0;
 }
 
 .reqman-project-card__status {
@@ -558,9 +558,9 @@
 
 .reqman-project-card__description {
   color: var(--text-secondary, #64748b);
-  margin: 0;
   font-size: 0.875rem;
   line-height: 1.5;
+  margin: 0;
 }
 
 .reqman-project-card__meta {
@@ -570,22 +570,22 @@
 }
 
 .reqman-project-card__meta-item {
-  display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  font-size: 0.875rem;
-  color: var(--text-secondary, #64748b);
-  padding: 0.35rem 0.75rem;
   background: var(--surface-muted, #f8fafc);
   border-radius: var(--radius-md);
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+  box-shadow: inset 0 0 0 1px rgb(148 163 184 / 0.2);
+  color: var(--text-secondary, #64748b);
+  display: flex;
+  font-size: 0.875rem;
+  gap: var(--spacing-xs);
+  padding: 0.35rem 0.75rem;
 }
 
 .reqman-project-card__actions {
   display: flex;
   flex-wrap: wrap;
-  margin-top: auto;
   gap: var(--spacing-sm);
+  margin-top: auto;
 }
 
 .reqman-project-card__actions .reqman-btn {
@@ -606,35 +606,35 @@
 }
 
 .reqman-project-card--bg-success .reqman-project-card__icon {
-  background: rgba(34, 197, 94, 0.1);
+  background: rgb(34 197 94 / 0.1);
+  box-shadow: inset 0 0 0 2px rgb(34 197 94 / 0.2);
   color: #15803d;
-  box-shadow: inset 0 0 0 2px rgba(34, 197, 94, 0.2);
 }
 
 .reqman-project-card--bg-warning .reqman-project-card__icon {
-  background: rgba(234, 179, 8, 0.12);
+  background: rgb(234 179 8 / 0.12);
+  box-shadow: inset 0 0 0 2px rgb(234 179 8 / 0.24);
   color: #B45309;
-  box-shadow: inset 0 0 0 2px rgba(234, 179, 8, 0.24);
 }
 
 .reqman-project-card--bg-secondary .reqman-project-card__icon {
-  background: rgba(100, 116, 139, 0.12);
+  background: rgb(100 116 139 / 0.12);
+  box-shadow: inset 0 0 0 2px rgb(100 116 139 / 0.2);
   color: #475569;
-  box-shadow: inset 0 0 0 2px rgba(100, 116, 139, 0.2);
 }
 
 .reqman-btn {
-  display: inline-flex;
   align-items: center;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.875rem;
+  font-weight: 600;
   gap: var(--spacing-xs);
   padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-md);
-  font-weight: 600;
   text-decoration: none;
   transition: all var(--transition-base);
-  border: none;
-  cursor: pointer;
-  font-size: 0.875rem;
 }
 
 .reqman-btn--primary {
@@ -658,7 +658,7 @@
 
 /* Empty State */
 .reqman-empty-state {
-  background: var(--surface-color, #ffffff);
+  background: var(--surface-color, #fff);
   border: 2px dashed var(--border-color, #e2e8f0);
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
@@ -666,8 +666,8 @@
 }
 
 .reqman-empty-state i {
-  font-size: 3rem;
   color: var(--text-secondary, #64748b);
+  font-size: 3rem;
   margin-bottom: var(--spacing-md);
 }
 
@@ -682,7 +682,7 @@
 
 /* Placeholder Feature */
 .reqman-placeholder-feature {
-  background: var(--surface-color, #ffffff);
+  background: var(--surface-color, #fff);
   border: 2px dashed var(--border-color, #e2e8f0);
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
@@ -690,8 +690,8 @@
 }
 
 .reqman-placeholder-feature i {
-  font-size: 2.5rem;
   color: var(--primary-color, #3b82f6);
+  font-size: 2.5rem;
   margin-bottom: var(--spacing-md);
 }
 

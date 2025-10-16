@@ -75,23 +75,23 @@
     </div>
     <div class="card-body p-0 c-card__body">
       <!-- Top scroll indicator - positioned outside table container -->
-      <div class="scroll-indicator" id="scrollIndicator">
+      <div class="scroll-indicator c-table-scroll-indicator" id="scrollIndicator">
         <div class="scroll-track">
-          <div class="scroll-thumb" id="scrollThumb"></div>
+          <div class="scroll-thumb c-table-scroll-thumb" id="scrollThumb"></div>
         </div>
       </div>
-      <div class="table-container">
-        <table class="table" id="matrixTable">
+      <div class="table-container c-table-container">
+        <table class="table c-table" id="matrixTable">
           <thead>
             <tr>
-              <th class="sortable" data-sort="req_id">
+              <th class="sortable c-table-sortable" data-sort="req_id">
                 <a
                   href="/matrix?sort_by=req_id&sort_order={{#if (eq current_sort_by "req_id")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}"
                   class="text-decoration-none d-flex align-items-center justify-content-between"
                   data-matrix-sort-link
                 >
                   Req ID
-                  <span class="sort-indicator">
+                  <span class="sort-indicator c-table-sort-indicator">
                     {{#if (eq current_sort_by "req_id")}}
                       {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
                     {{else}}
@@ -100,14 +100,14 @@
                   </span>
                 </a>
               </th>
-              <th class="sortable" data-sort="req_title">
+              <th class="sortable c-table-sortable" data-sort="req_title">
                 <a
                   href="/matrix?sort_by=req_title&sort_order={{#if (eq current_sort_by "req_title")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}"
                   class="text-decoration-none d-flex align-items-center justify-content-between"
                   data-matrix-sort-link
                 >
                   Title
-                  <span class="sort-indicator">
+                  <span class="sort-indicator c-table-sort-indicator">
                     {{#if (eq current_sort_by "req_title")}}
                       {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
                     {{else}}
@@ -116,14 +116,14 @@
                   </span>
                 </a>
               </th>
-              <th class="sortable" data-sort="req_reference">
+              <th class="sortable c-table-sortable" data-sort="req_reference">
                 <a
                   href="/matrix?sort_by=req_reference&sort_order={{#if (eq current_sort_by "req_reference")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}"
                   class="text-decoration-none d-flex align-items-center justify-content-between"
                   data-matrix-sort-link
                 >
                   Reference
-                  <span class="sort-indicator">
+                  <span class="sort-indicator c-table-sort-indicator">
                     {{#if (eq current_sort_by "req_reference")}}
                       {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
                     {{else}}
@@ -133,7 +133,7 @@
                 </a>
               </th>
               {{#each tests}}
-                <th class="text-center sortable" data-sort="test_{{test_id}}">
+                <th class="text-center sortable c-table-sortable u-text-center" data-sort="test_{{test_id}}">
                   <a
                     href="/matrix?sort_by=test_{{test_id}}&sort_order={{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}"
                     class="text-decoration-none d-flex flex-column align-items-center"
@@ -141,9 +141,9 @@
                   >
                     <div class="d-flex align-items-center justify-content-between w-100">
                       <span>Test #{{test_id}}</span>
-                      <span class="sort-indicator" data-test-indicator="{{test_id}}">↕</span>
+                      <span class="sort-indicator c-table-sort-indicator" data-test-indicator="{{test_id}}">↕</span>
                     </div>
-                    <div class="text-xs text-secondary">{{test_status}}</div>
+                    <div class="text-xs text-secondary u-text-xs">{{test_status}}</div>
                   </a>
                 </th>
               {{/each}}
@@ -162,7 +162,7 @@
                   <span class="text-secondary">{{req_reference}}</span>
                 </td>
                 {{#each matrix}}
-                  <td class="text-center">
+                  <td class="text-center u-text-center">
                     {{#if this.linked}}
                       {{#if (eq this.test_status 7)}}
                         <span class="status-badge status-approved">✓</span>
@@ -191,15 +191,15 @@
       </div>
       <div class="card-body c-card__body">
         <div class="grid grid-3">
-          <div class="text-center">
+          <div class="text-center u-text-center">
             <div class="text-2xl font-bold text-primary">{{total_requirements}}</div>
             <div class="text-secondary">Total Requirements</div>
           </div>
-          <div class="text-center">
+          <div class="text-center u-text-center">
             <div class="text-2xl font-bold text-primary">{{total_tests}}</div>
             <div class="text-secondary">Total Tests</div>
           </div>
-          <div class="text-center">
+          <div class="text-center u-text-center">
             <div class="text-2xl font-bold text-primary">{{total_links}}</div>
             <div class="text-secondary">Total Links</div>
           </div>

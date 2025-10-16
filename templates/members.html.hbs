@@ -13,9 +13,9 @@
                 </div>
                 <div class="card-body p-0 c-card__body">
                     {{#if members.0}}
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
+                        <div class="table-responsive c-table-responsive">
+                            <table class="table table-hover align-middle mb-0 c-table c-table--hover">
+                                <thead class="table-light c-table__head">
                                     <tr>
                                         <th scope="col">Member</th>
                                         <th scope="col">Role</th>
@@ -59,7 +59,7 @@
                             </table>
                         </div>
                     {{else}}
-                        <div class="p-4 text-center text-muted">
+                        <div class="p-4 text-center text-muted u-text-center">
                             <i class="fas fa-users fa-2x mb-3"></i>
                             <p class="mb-0">This project does not have any members yet.</p>
                         </div>

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use rocket::form::Form;
 use rocket::http::CookieJar;
 use rocket::response::Redirect;
-use rocket::serde::json::json;
+use rocket::serde::json::{json, serde_json};
 use rocket::State;
 use rocket_dyn_templates::Template;
 
@@ -18,7 +18,8 @@ use crate::repository::{LookupRepository, RequirementsRepository, UserRepository
 
 use super::helpers::{
     build_context_with_projects, get_category_by_id_cached, get_db_connection,
-    get_linked_tests_for_requirement_cached, get_requirement_by_id_cached_safe,
+    get_linked_tests_for_requirement_cached, get_project_by_id_pooled_safe,
+    get_requirement_by_id_cached_safe,
 };
 
 #[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>")]
@@ -37,6 +38,8 @@ async fn show_requirements(
     // Repo handle once; reuse
     let repo = state.repo_read();
 
+    let selected_project = get_project_by_id_pooled_safe(state, project_id);
+
     // Load → filter → decorate in one go; default to empty on error
     let decorated = repo
         .get_requirements_by_project(project_id)
@@ -46,7 +49,25 @@ async fn show_requirements(
             decorate_requirements_with_repo(&*repo, filtered)
         })
         .unwrap_or_default();
-    ctx["requirements"] = json!(decorated);
+
+    let total_requirements = decorated.len();
+    let mut status_totals: HashMap<String, usize> = HashMap::new();
+
+    for requirement in &decorated {
+        let key = requirement.req_current_status.trim().to_ascii_lowercase();
+        *status_totals.entry(key).or_default() += 1;
+    }
+
+    let draft_count = *status_totals.get("draft").unwrap_or(&0);
+    let accepted_count = *status_totals.get("accepted").unwrap_or(&0);
+    let rejected_count = *status_totals.get("rejected").unwrap_or(&0);
+
+    let coverage_ratio = if total_requirements > 0 {
+        accepted_count as f64 / total_requirements as f64
+    } else {
+        0.0
+    };
+    let coverage_percent = (coverage_ratio * 100.0).round() as i32;
 
     // Static lists; all default to empty on error
     let statuses = repo.get_status_all().unwrap_or_default();
@@ -57,6 +78,72 @@ async fn show_requirements(
         .get_categories_by_project(project_id)
         .unwrap_or_default();
 
+    let status_lookup: HashMap<i32, String> = statuses
+        .iter()
+        .map(|s| (s.st_id, s.st_title.clone()))
+        .collect();
+    let verification_lookup: HashMap<i32, String> = verifications
+        .iter()
+        .map(|v| (v.verification_id, v.verification_name.clone()))
+        .collect();
+    let category_lookup: HashMap<i32, String> = categories
+        .iter()
+        .map(|c| (c.cat_id, c.cat_title.clone()))
+        .collect();
+
+    let status_label = status_filter.and_then(|id| status_lookup.get(&id).cloned());
+    let verification_label =
+        verification_filter.and_then(|id| verification_lookup.get(&id).cloned());
+    let category_label = category_filter.and_then(|id| category_lookup.get(&id).cloned());
+
+    let mut active_filters = Vec::new();
+    if let Some(label) = status_label.clone() {
+        active_filters.push(json!({
+            "key": "status_filter",
+            "label": format!("Status: {label}")
+        }));
+    }
+    if let Some(label) = verification_label.clone() {
+        active_filters.push(json!({
+            "key": "verification_filter",
+            "label": format!("Verification: {label}")
+        }));
+    }
+    if let Some(label) = category_label.clone() {
+        active_filters.push(json!({
+            "key": "category_filter",
+            "label": format!("Category: {label}")
+        }));
+    }
+
+    let status_definitions: Vec<_> = statuses
+        .iter()
+        .map(|status| {
+            json!({
+                "id": status.st_id,
+                "title": status.st_title,
+                "description": status.st_description,
+                "short_name": status.st_short_name,
+            })
+        })
+        .collect();
+    let status_definitions_json =
+        serde_json::to_string(&status_definitions).unwrap_or_else(|_| "[]".to_string());
+
+    ctx["requirements"] = json!(decorated);
+    ctx["has_requirements"] = json!(total_requirements > 0);
+    ctx["requirement_metrics"] = json!({
+        "total": total_requirements,
+        "draft": draft_count,
+        "accepted": accepted_count,
+        "rejected": rejected_count,
+        "coverage": {
+            "verified": accepted_count,
+            "total": total_requirements,
+            "percent": coverage_percent
+        }
+    });
+
     // Filters for template state
     ctx["statuses"] = json!(statuses);
     ctx["verifications"] = json!(verifications);
@@ -64,6 +151,20 @@ async fn show_requirements(
     ctx["current_status_filter"] = json!(status_filter);
     ctx["current_verification_filter"] = json!(verification_filter);
     ctx["current_category_filter"] = json!(category_filter);
+    ctx["status_filter_label"] = json!(status_label);
+    ctx["verification_filter_label"] = json!(verification_label);
+    ctx["category_filter_label"] = json!(category_label);
+    ctx["active_filters"] = json!(active_filters);
+    ctx["status_definitions"] = json!(status_definitions);
+    ctx["status_definitions_raw"] = json!(status_definitions_json);
+    ctx["has_active_filters"] = json!(!active_filters.is_empty());
+    ctx["selected_project_name"] = json!(selected_project.project_name.clone());
+    ctx["project"] = json!({
+        "id": selected_project.project_id,
+        "name": selected_project.project_name,
+        "status": selected_project.project_status,
+        "description": selected_project.project_description,
+    });
 
     Ok(Template::render("requirements", ctx))
 }

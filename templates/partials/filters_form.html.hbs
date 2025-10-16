@@ -1,7 +1,7 @@
 {{!-- Depends on: css/50-components/forms.css --}}
 <div class="flex-grow-1">
-  <label for="{{status_field_name}}" class="form-label">{{status_label}}</label>
-  <select class="form-select" id="{{status_field_name}}" name="{{status_field_name}}">
+  <label for="{{status_field_name}}" class="form-label c-form-label">{{status_label}}</label>
+  <select class="form-select c-form-select c-form-control c-form-control--select" id="{{status_field_name}}" name="{{status_field_name}}">
     <option value="">{{status_default_label}}</option>
     {{#if status_options}}
       {{#each status_options}}
@@ -18,8 +18,8 @@
 </div>
 
 <div class="flex-grow-1">
-  <label for="{{verification_field_name}}" class="form-label">{{verification_label}}</label>
-  <select class="form-select" id="{{verification_field_name}}" name="{{verification_field_name}}">
+  <label for="{{verification_field_name}}" class="form-label c-form-label">{{verification_label}}</label>
+  <select class="form-select c-form-select c-form-control c-form-control--select" id="{{verification_field_name}}" name="{{verification_field_name}}">
     <option value="">{{verification_default_label}}</option>
     {{#if verification_options}}
       {{#each verification_options}}
@@ -34,8 +34,8 @@
 </div>
 
 <div class="flex-grow-1">
-  <label for="{{category_field_name}}" class="form-label">{{category_label}}</label>
-  <select class="form-select" id="{{category_field_name}}" name="{{category_field_name}}">
+  <label for="{{category_field_name}}" class="form-label c-form-label">{{category_label}}</label>
+  <select class="form-select c-form-select c-form-control c-form-control--select" id="{{category_field_name}}" name="{{category_field_name}}">
     <option value="">{{category_default_label}}</option>
     {{#if category_options}}
       {{#each category_options}}

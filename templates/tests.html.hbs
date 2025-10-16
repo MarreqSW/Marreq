@@ -24,8 +24,8 @@
   <div class="card-body c-card__body">
     <form method="GET" action="/p/{{selected_project_id}}/tests" class="d-flex align-items-end gap-3">
       <div class="flex-grow-1">
-        <label for="status_filter" class="form-label">Status</label>
-        <select class="form-select" id="status_filter" name="status_filter">
+        <label for="status_filter" class="form-label c-form-label">Status</label>
+        <select class="form-select c-form-select c-form-control c-form-control--select" id="status_filter" name="status_filter">
           <option value="">All Statuses</option>
           {{#if statuses}}
             {{#each statuses}}
@@ -37,8 +37,8 @@
         </select>
       </div>
       <div class="flex-grow-1">
-        <label for="verification_filter" class="form-label">Verification Mode</label>
-        <select class="form-select" id="verification_filter" name="verification_filter">
+        <label for="verification_filter" class="form-label c-form-label">Verification Mode</label>
+        <select class="form-select c-form-select c-form-control c-form-control--select" id="verification_filter" name="verification_filter">
           <option value="">All Verification Modes</option>
           {{#if verifications}}
             {{#each verifications}}
@@ -50,8 +50,8 @@
         </select>
       </div>
       <div class="flex-grow-1">
-        <label for="category_filter" class="form-label">Category</label>
-        <select class="form-select" id="category_filter" name="category_filter">
+        <label for="category_filter" class="form-label c-form-label">Category</label>
+        <select class="form-select c-form-select c-form-control c-form-control--select" id="category_filter" name="category_filter">
           <option value="">All Categories</option>
           {{#if categories}}
             {{#each categories}}

@@ -10,23 +10,23 @@
       <p class="text-secondary">Requirements to Tests mapping</p>
     </div>
     <div class="d-flex gap-3 align-items-center">
-      <div class="filter-card">
-        <form method="get" class="filter-form">
-          <div class="filter-group">
-            <label for="test_status_filter" class="filter-label">
-              <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <div class="filter-card c-filter-card">
+        <form method="get" class="filter-form c-filter-form">
+          <div class="filter-group c-filter-group">
+            <label for="test_status_filter" class="filter-label c-filter-label">
+              <svg class="filter-icon c-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
               </svg>
               Test Status
             </label>
-            <select name="test_status_filter" id="test_status_filter" class="filter-select">
+            <select name="test_status_filter" id="test_status_filter" class="filter-select c-filter-select c-form-control c-form-control--select">
               <option value="">All Statuses</option>
               {{#each statuses}}
                 <option value="{{test_st_id}}" {{#if (eq ../test_status_filter test_st_id)}}selected{{/if}}>{{test_st_title}}</option>
               {{/each}}
             </select>
           </div>
-          <div class="filter-actions">
+          <div class="filter-actions c-filter-actions">
             <button type="submit" class="btn-filter">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"></circle>

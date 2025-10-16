@@ -12,26 +12,26 @@
           <div class="row">
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_req_title" class="form-label">Title *</label>
-                <input type="text" class="form-control" id="new_req_title" name="req_title" required>
+                <label for="new_req_title" class="form-label c-form-label">Title *</label>
+                <input type="text" class="form-control c-form-control" id="new_req_title" name="req_title" required>
               </div>
             </div>
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_req_reference" class="form-label">Reference</label>
-                <input type="text" class="form-control" id="new_req_reference" name="req_reference">
+                <label for="new_req_reference" class="form-label c-form-label">Reference</label>
+                <input type="text" class="form-control c-form-control" id="new_req_reference" name="req_reference">
               </div>
             </div>
           </div>
           <div class="mb-3">
-            <label for="new_req_description" class="form-label">Description *</label>
-            <textarea class="form-control" id="new_req_description" name="req_description" rows="3" required></textarea>
+            <label for="new_req_description" class="form-label c-form-label">Description *</label>
+            <textarea class="form-control c-form-control c-form-control--textarea" id="new_req_description" name="req_description" rows="3" required></textarea>
           </div>
           <div class="row">
             <div class="col-md-4">
               <div class="mb-3">
-                <label for="new_req_category" class="form-label">Category</label>
-                <select class="form-select" id="new_req_category" name="req_category">
+                <label for="new_req_category" class="form-label c-form-label">Category</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_category" name="req_category">
                   {{#each categories}}
                     <option value="{{cat_id}}">{{cat_title}}</option>
                   {{/each}}
@@ -40,8 +40,8 @@
             </div>
             <div class="col-md-4">
               <div class="mb-3">
-                <label for="new_req_status" class="form-label">Status</label>
-                <select class="form-select" id="new_req_status" name="req_current_status">
+                <label for="new_req_status" class="form-label c-form-label">Status</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_status" name="req_current_status">
                   {{#each statuses}}
                     <option value="{{req_st_id}}">{{req_st_title}}</option>
                   {{/each}}
@@ -50,8 +50,8 @@
             </div>
             <div class="col-md-4">
               <div class="mb-3">
-                <label for="new_req_verification" class="form-label">Verification</label>
-                <select class="form-select" id="new_req_verification" name="req_verification">
+                <label for="new_req_verification" class="form-label c-form-label">Verification</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_verification" name="req_verification">
                   {{#each verifications}}
                     <option value="{{verification_id}}">{{verification_name}}</option>
                   {{/each}}
@@ -62,8 +62,8 @@
           <div class="row">
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_req_author" class="form-label">Author</label>
-                <select class="form-select" id="new_req_author" name="req_author">
+                <label for="new_req_author" class="form-label c-form-label">Author</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_author" name="req_author">
                   {{#each users}}
                     <option value="{{user_id}}">{{user_name}}</option>
                   {{/each}}
@@ -72,8 +72,8 @@
             </div>
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_req_reviewer" class="form-label">Reviewer</label>
-                <select class="form-select" id="new_req_reviewer" name="req_reviewer">
+                <label for="new_req_reviewer" class="form-label c-form-label">Reviewer</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_reviewer" name="req_reviewer">
                   {{#each users}}
                     <option value="{{user_id}}">{{user_name}}</option>
                   {{/each}}
@@ -105,26 +105,26 @@
           <div class="row">
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_test_name" class="form-label">Name *</label>
-                <input type="text" class="form-control" id="new_test_name" name="test_name" required>
+                <label for="new_test_name" class="form-label c-form-label">Name *</label>
+                <input type="text" class="form-control c-form-control" id="new_test_name" name="test_name" required>
               </div>
             </div>
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_test_reference" class="form-label">Reference</label>
-                <input type="text" class="form-control" id="new_test_reference" name="test_reference">
+                <label for="new_test_reference" class="form-label c-form-label">Reference</label>
+                <input type="text" class="form-control c-form-control" id="new_test_reference" name="test_reference">
               </div>
             </div>
           </div>
           <div class="mb-3">
-            <label for="new_test_description" class="form-label">Description *</label>
-            <textarea class="form-control" id="new_test_description" name="test_description" rows="3" required></textarea>
+            <label for="new_test_description" class="form-label c-form-label">Description *</label>
+            <textarea class="form-control c-form-control c-form-control--textarea" id="new_test_description" name="test_description" rows="3" required></textarea>
           </div>
           <div class="row">
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_test_status" class="form-label">Status</label>
-                <select class="form-select" id="new_test_status" name="test_status">
+                <label for="new_test_status" class="form-label c-form-label">Status</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_test_status" name="test_status">
                   {{#each statuses}}
                     <option value="{{#if test_st_id}}{{test_st_id}}{{else}}{{req_st_id}}{{/if}}">
                       {{#if test_st_title}}{{test_st_title}}{{else}}{{req_st_title}}{{/if}}
@@ -135,14 +135,14 @@
             </div>
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_test_source" class="form-label">Source</label>
-                <input type="text" class="form-control" id="new_test_source" name="test_source">
+                <label for="new_test_source" class="form-label c-form-label">Source</label>
+                <input type="text" class="form-control c-form-control" id="new_test_source" name="test_source">
               </div>
             </div>
           </div>
           <div class="mb-3">
-            <label for="new_test_parent" class="form-label">Parent Test</label>
-            <select class="form-select" id="new_test_parent" name="test_parent">
+            <label for="new_test_parent" class="form-label c-form-label">Parent Test</label>
+            <select class="form-select c-form-select c-form-control c-form-control--select" id="new_test_parent" name="test_parent">
               <option value="0">None</option>
               {{#each tests}}
                 <option value="{{test_id}}">{{test_name}}</option>

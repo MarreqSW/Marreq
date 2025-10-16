@@ -1,119 +1,98 @@
 /* Utility Styles */
 
 /* Lists */
-.list {
+.u-list {
   list-style: none;
 }
 
-.list-item {
+.u-list__item {
   border-bottom: 1px solid var(--border-color);
   padding: 1rem;
   transition: background-color 0.2s ease;
 }
 
-.list-item:hover {
+.u-list__item:hover {
   background-color: var(--surface-muted);
 }
 
-.list-item:last-child {
+.u-list__item:last-child {
   border-bottom: none;
 }
 
 /* Grid Layout */
-.grid {
+.o-grid {
   display: grid;
   gap: 1.5rem;
 }
 
-.grid-2 {
+.o-grid--two {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
-.grid-3 {
+.o-grid--three {
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 }
 
-.grid-4 {
+.o-grid--four {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 /* Text Utilities */
-.text-center {
+.u-text-center,
+[class~="text-center"] {
   text-align: center;
 }
 
-.text-right {
+.u-text-right,
+[class~="text-right"],
+[class~="text-end"] {
   text-align: right;
 }
 
-.text-secondary {
+.u-text-secondary,
+[class~="text-secondary"] {
   color: var(--text-secondary);
 }
 
-.text-muted {
+.u-text-muted,
+[class~="text-muted"] {
   color: var(--text-secondary);
 }
 
-.text-primary {
+.u-text-primary,
+[class~="text-primary"] {
   color: var(--primary-color);
 }
 
-.text-xs {
+.u-text-xs,
+[class~="text-xs"] {
   font-size: 0.75rem;
 }
 
-.text-2xl {
+.u-text-2xl,
+[class~="text-2xl"] {
   font-size: 1.5rem;
 }
 
-.font-bold {
+.u-font-bold,
+[class~="font-bold"],
+[class~="fw-bold"] {
   font-weight: 700;
 }
 
-.font-medium {
+.u-font-medium,
+[class~="font-medium"],
+[class~="fw-medium"],
+[class~="fw-semibold"] {
   font-weight: 500;
 }
 
-.text-decoration-none {
+.u-text-decoration-none,
+[class~="text-decoration-none"] {
   text-decoration: none;
 }
 
 small {
   color: var(--text-secondary);
   font-size: 0.875rem;
-}
-
-/* Spacing Utilities */
-.mb-0 { margin-bottom: 0; }
-.mb-1 { margin-bottom: 0.25rem; }
-.mb-2 { margin-bottom: 0.5rem; }
-.mb-3 { margin-bottom: 1rem; }
-.mb-4 { margin-bottom: 1.5rem; }
-.mb-5 { margin-bottom: 2rem; }
-
-.mt-0 { margin-top: 0; }
-.mt-1 { margin-top: 0.25rem; }
-.mt-2 { margin-top: 0.5rem; }
-.mt-3 { margin-top: 1rem; }
-.mt-4 { margin-top: 1.5rem; }
-.mt-5 { margin-top: 2rem; }
-
-.p-0 { padding: 0; }
-.p-1 { padding: 0.25rem; }
-.p-2 { padding: 0.5rem; }
-.p-3 { padding: 1rem; }
-.p-4 { padding: 1.5rem; }
-.p-5 { padding: 2rem; }
-
-/* Flex Utilities */
-.d-flex {
-  display: flex;
-}
-
-.justify-content-between {
-  justify-content: space-between;
-}
-
-.align-items-center {
-  align-items: center;
 }

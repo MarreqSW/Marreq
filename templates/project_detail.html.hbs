@@ -20,11 +20,11 @@
                     <div class="row mt-4">
                         <div class="col-md-6">
                             <h5>Project Information</h5>
-                            <ul class="list-unstyled">
-                                                <li><strong>Created:</strong> {{project.project_creation_date}}</li>
-                <li><strong>Last Updated:</strong> {{project.project_update_date}}</li>
+                            <ul class="list-unstyled c-project-info-list">
+                                <li class="c-project-info-list__item"><strong>Created:</strong> {{project.project_creation_date}}</li>
+                                <li class="c-project-info-list__item"><strong>Last Updated:</strong> {{project.project_update_date}}</li>
                                 {{#if project.project_owner_id}}
-                                    <li><strong>Owner:</strong> {{project.project_owner_id}}</li>
+                                    <li class="c-project-info-list__item"><strong>Owner:</strong> {{project.project_owner_id}}</li>
                                 {{/if}}
                             </ul>
                         </div>
@@ -77,14 +77,14 @@
                     {{#if members.0}}
                         <ul class="list-group list-group-flush mb-0">
                             {{#each members}}
-                                <li class="list-group-item member-item">
+                                <li class="list-group-item c-project-member-list__item">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
                                             <strong>{{user_name}}</strong>
                                             <div class="text-muted small">@{{user_username}}</div>
                                         </div>
                                         <div class="text-end">
-                                            <span class="badge bg-primary member-role">{{role_label}}</span>
+                                            <span class="badge bg-primary c-project-member-list__role">{{role_label}}</span>
                                             {{#if is_admin}}
                                                 <span class="badge bg-dark ms-1">Admin</span>
                                             {{/if}}

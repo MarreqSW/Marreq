@@ -115,11 +115,11 @@
           <h3>Requirements by Status</h3>
         </div>
         <div class="card-body c-card__body">
-          <div class="status-list">
+          <div class="c-report-status-list">
             {{#each requirements_by_status}}
-              <div class="status-item">
-                <span class="status-name">{{@key}}</span>
-                <span class="status-count">{{this}}</span>
+              <div class="c-report-status-item">
+                <span class="c-report-status-name">{{@key}}</span>
+                <span class="c-report-status-count">{{this}}</span>
               </div>
             {{/each}}
           </div>
@@ -134,11 +134,11 @@
           <h3>Tests by Status</h3>
         </div>
         <div class="card-body c-card__body">
-          <div class="status-list">
+          <div class="c-report-status-list">
             {{#each tests_by_status}}
-              <div class="status-item">
-                <span class="status-name">{{@key}}</span>
-                <span class="status-count">{{this}}</span>
+              <div class="c-report-status-item">
+                <span class="c-report-status-name">{{@key}}</span>
+                <span class="c-report-status-count">{{this}}</span>
               </div>
             {{/each}}
           </div>

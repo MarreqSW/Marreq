@@ -36,6 +36,14 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+      - name: Set up Node.js (for stylelint)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Stylelint CSS files
+        run: npx stylelint "src/html/static/**/*.css" --config .stylelintrc.json
+
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
         with:

@@ -62,7 +62,7 @@
   overflow: hidden;
 }
 
-.c-dashboard-card__actions [class~='btn'] {
+.c-dashboard-card__action {
   height: var(--btn-h);
   width: 100%;
 }

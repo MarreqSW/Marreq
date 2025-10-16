@@ -9,10 +9,10 @@
 
 /* ---------- 2x3 Grid ---------- */
 .dashboard-grid {
+  align-items: stretch;
   display: grid;
   gap: var(--space-4);
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  align-items: stretch;
 }
 
 @media (min-width: 992px) {
@@ -41,24 +41,24 @@
 
 .dashboard-card .card-body {
   display: grid;
-  grid-template-rows: var(--desc-h) var(--actions-h);
   gap: var(--space-3);
+  grid-template-rows: var(--desc-h) var(--actions-h);
 }
 
 .dashboard-card .card-description {
-  overflow: hidden;
+  -webkit-box-orient: vertical;
   display: -webkit-box;
   -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .dashboard-card .card-description p { margin: 0; }
 
 .dashboard-card .card-actions {
-  display: grid;
-  grid-auto-rows: var(--btn-h);
-  gap: var(--btn-gap);
   align-content: start;
+  display: grid;
+  gap: var(--btn-gap);
+  grid-auto-rows: var(--btn-h);
   overflow: hidden;
 }
 

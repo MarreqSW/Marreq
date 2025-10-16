@@ -1,4 +1,8 @@
 //! Service providing requirement related operations.
+//!
+//! The service is intentionally lightweight and wraps repository calls with
+//! validation and logging so that route handlers can remain focused on HTTP
+//! concerns.
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
@@ -20,38 +24,36 @@ impl<'a> RequirementService<'a> {
 
     /// Retrieve all requirements.
     pub fn list_all(&self) -> Result<Vec<Requirement>, RepoError> {
-        self.state.repo_read().get_requirements_all()
+        self.repo_read().get_requirements_all()
     }
 
     /// Retrieve requirements scoped to a project.
     pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        self.state
-            .repo_read()
-            .get_requirements_by_project(project_id)
+        self.repo_read().get_requirements_by_project(project_id)
     }
 
     /// Retrieve a single requirement by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
-        self.state.repo_read().get_requirement_by_id(id)
+        self.repo_read().get_requirement_by_id(id)
     }
 
     /// Create a new requirement entry and log the action.
-    pub fn create(&self, user: &User, mut payload: NewRequirement) -> Result<i32, RepoError> {
+    pub fn create(&self, actor: &User, mut payload: NewRequirement) -> Result<i32, RepoError> {
         self.prepare_payload(&mut payload)?;
 
         let id = {
-            let mut repo = self.state.repo_write();
+            let mut repo = self.repo_write();
             repo.insert_new_requirement(&payload)?
         };
 
-        self.log_created(user, id, &payload);
+        self.log_created(actor, id, &payload);
         Ok(id)
     }
 
     /// Update an existing requirement entry and log the change.
     pub fn update(
         &self,
-        user: &User,
+        actor: &User,
         id: i32,
         mut payload: NewRequirement,
     ) -> Result<Requirement, RepoError> {
@@ -61,7 +63,7 @@ impl<'a> RequirementService<'a> {
         let before = self.get_by_id(id)?;
 
         {
-            let mut repo = self.state.repo_write();
+            let mut repo = self.repo_write();
             let updated = repo.edit_requirement(&payload)?;
             if !updated {
                 return Err(RepoError::NotFound);
@@ -69,19 +71,27 @@ impl<'a> RequirementService<'a> {
         }
 
         let after = self.get_by_id(id)?;
-        self.log_updated(user, &before, &after);
+        self.log_updated(actor, &before, &after);
         Ok(after)
     }
 
     /// Delete an requirement entry and log the removal.
-    pub fn delete(&self, user: &User, id: i32) -> Result<Requirement, RepoError> {
+    pub fn delete(&self, actor: &User, id: i32) -> Result<Requirement, RepoError> {
         let removed = {
-            let mut repo = self.state.repo_write();
+            let mut repo = self.repo_write();
             repo.delete_requirement(id)?
         };
 
-        self.log_deleted(user, &removed);
+        self.log_deleted(actor, &removed);
         Ok(removed)
+    }
+
+    fn repo_read(&self) -> std::sync::RwLockReadGuard<'_, DieselCachedRepo> {
+        self.state.repo.read().expect("repo lock poisoned")
+    }
+
+    fn repo_write(&self) -> std::sync::RwLockWriteGuard<'_, DieselCachedRepo> {
+        self.state.repo.write().expect("repo lock poisoned")
     }
 
     fn prepare_payload(&self, payload: &mut NewRequirement) -> Result<(), RepoError> {
@@ -98,9 +108,9 @@ impl<'a> RequirementService<'a> {
         self.state.repo_read().inner_repo().get_conn()
     }
 
-    fn log_created(&self, user: &User, id: i32, entity: &NewRequirement) {
+    fn log_created(&self, actor: &User, id: i32, entity: &NewRequirement) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(actor.user_id);
             if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!("Failed to log requirement creation {id}: {_err}");
@@ -108,9 +118,9 @@ impl<'a> RequirementService<'a> {
         }
     }
 
-    fn log_updated(&self, user: &User, before: &Requirement, after: &Requirement) {
+    fn log_updated(&self, actor: &User, before: &Requirement, after: &Requirement) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(actor.user_id);
             if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
                 #[cfg(debug_assertions)]
                 eprintln!(
@@ -121,9 +131,9 @@ impl<'a> RequirementService<'a> {
         }
     }
 
-    fn log_deleted(&self, user: &User, entity: &Requirement) {
+    fn log_deleted(&self, actor: &User, entity: &Requirement) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(actor.user_id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!(

@@ -74,10 +74,10 @@
                             {{#each columns}}
                             <div class="row mb-3">
                                 <div class="col-md-4">
-                                    <label class="form-label">Excel Column: <strong>{{name}}</strong></label>
+                                    <label class="form-label c-form-label">Excel Column: <strong>{{name}}</strong></label>
                                 </div>
                                 <div class="col-md-6">
-                                    <select class="form-select mapping-select" data-excel-column="{{name}}">
+                                    <select class="form-select mapping-select c-form-select c-form-control c-form-control--select" data-excel-column="{{name}}">
                                         <option value="">-- Skip this column --</option>
                                         {{#each ../available_fields}}
                                         <option value="{{this}}">{{this}}</option>

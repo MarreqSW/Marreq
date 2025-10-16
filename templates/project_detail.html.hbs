@@ -3,8 +3,8 @@
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="mb-0">{{project.project_name}}</h3>
                         <span class="badge {{#if (eq project.project_status 'active')}}bg-success{{else}}bg-secondary{{/if}} fs-6">
@@ -12,9 +12,9 @@
                         </span>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     {{#if project.project_description}}
-                        <p class="card-text">{{project.project_description}}</p>
+                        <p class="card-text c-card__text">{{project.project_description}}</p>
                     {{/if}}
                     
                     <div class="row mt-4">
@@ -30,7 +30,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="card-footer">
+                <div class="card-footer c-card__footer">
                     <div class="btn-group" role="group">
                         <a href="/p/{{project.project_id}}/edit" class="btn btn-outline-primary">
                             <i class="fas fa-edit"></i> Edit Project
@@ -44,11 +44,11 @@
         </div>
         
         <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h5 class="mb-0">Quick Actions</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <div class="d-grid gap-2">
                         <a href="/p/{{project.project_id}}/requirements" class="btn btn-outline-primary">
                             <i class="fas fa-list"></i> View Requirements
@@ -69,11 +69,11 @@
                 </div>
             </div>
 
-            <div class="card mt-4">
-                <div class="card-header">
+            <div class="card mt-4 c-card">
+                <div class="card-header c-card__header">
                     <h5 class="mb-0">Project Members</h5>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body p-0 c-card__body">
                     {{#if members.0}}
                         <ul class="list-group list-group-flush mb-0">
                             {{#each members}}

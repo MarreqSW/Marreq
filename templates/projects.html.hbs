@@ -14,8 +14,8 @@
         <div class="row">
             {{#each projects}}
                 <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card h-100 project-card">
-                        <div class="card-body">
+                    <div class="card h-100 project-card c-card">
+                        <div class="card-body c-card__body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <h5 class="card-title mb-0">{{project_name}}</h5>
                                 <span class="badge {{project_status_badge}}">
@@ -24,7 +24,7 @@
                             </div>
 
                             {{#if project_description}}
-                                <p class="card-text text-muted">{{project_description}}</p>
+                                <p class="card-text text-muted c-card__text">{{project_description}}</p>
                             {{/if}}
 
                             <div class="project-meta">
@@ -50,7 +50,7 @@
                             </div>
                         </div>
                         
-                        <div class="card-footer bg-transparent">
+                        <div class="card-footer bg-transparent c-card__footer">
                             <div class="btn-group w-100" role="group">
                                 <a href="/p/{{project_id}}" class="btn btn-outline-primary btn-sm">
                                     <i class="fas fa-eye"></i> View

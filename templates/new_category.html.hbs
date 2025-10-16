@@ -5,7 +5,7 @@
   <p class="text-secondary">Create a new category for organizing requirements</p>
   
   {{#unless selected_project_id}}
-  <div class="alert alert-info">
+  <div class="alert alert-info c-alert">
     <strong>Project Selection Required:</strong> Please select a project from the dropdown in the navigation bar above before creating a category.
     <br><br>
     <strong>Available Projects:</strong>
@@ -19,11 +19,11 @@
 </div>
 
 <section id="Categories">
-  <div class="card">
-    <div class="card-header">
+  <div class="card c-card">
+    <div class="card-header c-card__header">
       <h3>Category Details</h3>
     </div>
-    <div class="card-body">
+    <div class="card-body c-card__body">
       <form method="post">
         <div class="form-group">
           <label for="cat_title" class="form-label">Category Title</label>
@@ -44,7 +44,7 @@
         {{#if selected_project_id}}
         <input type="hidden" name="project_id" value="{{selected_project_id}}">
         {{else}}
-        <div class="alert alert-warning">
+        <div class="alert alert-warning c-alert">
           <strong>Warning:</strong> No project selected. Please select a project from the dropdown above before creating a category.
         </div>
         {{/if}}

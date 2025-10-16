@@ -20,13 +20,13 @@
     <div class="login-container">
       <button
         data-theme-toggle
-        class="theme-toggle login-theme-toggle"
+        class="theme-toggle login-theme-toggle c-theme-toggle"
         type="button"
         aria-label="Toggle dark mode"
         aria-pressed="false"
         title="Toggle dark mode">
-        <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">☀</span>
-        <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">🌙</span>
+        <span class="theme-toggle-icon theme-toggle-icon-sun c-theme-toggle__icon c-theme-toggle__icon--sun" aria-hidden="true">☀</span>
+        <span class="theme-toggle-icon theme-toggle-icon-moon c-theme-toggle__icon c-theme-toggle__icon--moon" aria-hidden="true">🌙</span>
       </button>
       <div class="login-card">
         <header class="login-header">
@@ -46,7 +46,7 @@
           </div>
 
           {{#if error}}
-          <div class="alert alert-danger">{{error}}</div>
+          <div class="alert alert-danger c-alert">{{error}}</div>
           {{/if}}
 
           <button type="submit" class="btn btn-primary w-100">Sign In</button>

@@ -19,7 +19,7 @@
   border-top: 1px solid var(--border-color);
 }
 
-.c-project-card__actions [class~='btn'] {
+.c-project-card__action {
   flex: 1;
 }
 

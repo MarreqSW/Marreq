@@ -10,9 +10,9 @@
                     <p>Upload an Excel file to import requirements or tests into the current project.</p>
                     <form action="/import_excel/upload" method="post" enctype="multipart/form-data">
                         <div class="mb-3">
-                            <label for="excel_file" class="form-label">Select Excel File</label>
-                            <input type="file" class="form-control" id="excel_file" name="file" accept=".xlsx,.xls" required>
-                            <div class="form-text">Supported formats: .xlsx, .xls</div>
+                            <label for="excel_file" class="form-label c-form-label">Select Excel File</label>
+                            <input type="file" class="form-control c-form-control" id="excel_file" name="file" accept=".xlsx,.xls" required>
+                            <div class="form-text c-form-text">Supported formats: .xlsx, .xls</div>
                         </div>
                         <button type="submit" class="btn btn-primary">Upload and Map Columns</button>
                     </form>

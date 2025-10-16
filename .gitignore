@@ -55,3 +55,7 @@ test_output.html
 # Backup files
 *.bak
 *.backup
+
+# nodejs
+package-lock.json
+node_modules

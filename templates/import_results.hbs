@@ -2,19 +2,19 @@
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h3>Import Results</h3>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     {{#if result.success}}
-                    <div class="alert alert-success">
+                    <div class="alert alert-success c-alert c-alert--success">
                         <h5>✅ Import Successful!</h5>
                         <p>{{result.message}}</p>
                         <p><strong>Records imported:</strong> {{result.imported_count}}</p>
                     </div>
                     {{else}}
-                    <div class="alert alert-danger">
+                    <div class="alert alert-danger c-alert">
                         <h5>❌ Import Failed</h5>
                         <p>{{result.message}}</p>
                         {{#if result.imported_count}}
@@ -26,7 +26,7 @@
                     {{#if result.errors}}
                     <div class="mt-4">
                         <h5>Errors:</h5>
-                        <div class="alert alert-danger">
+                        <div class="alert alert-danger c-alert">
                             <ul class="mb-0">
                                 {{#each result.errors}}
                                 <li>{{this}}</li>

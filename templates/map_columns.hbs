@@ -1,13 +1,16 @@
+{{!--
+  Depends on: css/50-components/forms.css, js/pages/mapColumns.js
+--}}
 {{#*inline "page"}}
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-10 offset-md-1">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h3>Map Excel Columns to Database Fields</h3>
                     <p class="mb-0">Import Type: <strong>{{import_type}}</strong> | Records to Import: <strong>{{data_count}}</strong></p>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <form id="mappingForm" action="/import_excel/process" method="post">
                         <input type="hidden" name="import_type" value="{{import_type}}">
                         <input type="hidden" name="temp_file" value="{{temp_file}}">
@@ -16,8 +19,8 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <h5>Excel Columns</h5>
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
+                                <div class="table-responsive c-table-responsive">
+                                    <table class="table table-sm c-table c-table--sm">
                                         <thead>
                                             <tr>
                                                 <th>Column</th>
@@ -38,8 +41,8 @@
                             
                             <div class="col-md-6">
                                 <h5>Database Fields</h5>
-                                <div class="table-responsive">
-                                    <table class="table table-sm">
+                                <div class="table-responsive c-table-responsive">
+                                    <table class="table table-sm c-table c-table--sm">
                                         <thead>
                                             <tr>
                                                 <th>Field</th>
@@ -62,7 +65,7 @@
                         <hr>
                         
                         <h5>Column Mappings</h5>
-                        <div class="alert alert-warning">
+                        <div class="alert alert-warning c-alert">
                             <strong>Important:</strong> Map Excel columns to the appropriate database fields. 
                             Unmapped columns will be ignored. Required fields should be mapped for successful import.
                         </div>
@@ -71,10 +74,10 @@
                             {{#each columns}}
                             <div class="row mb-3">
                                 <div class="col-md-4">
-                                    <label class="form-label">Excel Column: <strong>{{name}}</strong></label>
+                                    <label class="form-label c-form-label">Excel Column: <strong>{{name}}</strong></label>
                                 </div>
                                 <div class="col-md-6">
-                                    <select class="form-select mapping-select" data-excel-column="{{name}}">
+                                    <select class="form-select mapping-select c-form-select c-form-control c-form-control--select" data-excel-column="{{name}}">
                                         <option value="">-- Skip this column --</option>
                                         {{#each ../available_fields}}
                                         <option value="{{this}}">{{this}}</option>
@@ -99,34 +102,5 @@
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('mappingForm');
-    const mappingsInput = document.getElementById('columnMappings');
-    
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Collect mappings
-        const mappings = [];
-        const selects = document.querySelectorAll('.mapping-select');
-        
-        selects.forEach(select => {
-            if (select.value) {
-                mappings.push({
-                    excel_column: select.dataset.excelColumn,
-                    target_field: select.value
-                });
-            }
-        });
-        
-        // Set the mappings JSON
-        mappingsInput.value = JSON.stringify(mappings);
-        
-        // Submit the form
-        form.submit();
-    });
-});
-</script>
 {{/inline}}
-{{> layout}} 
+{{> layout page_id="map-columns"}}

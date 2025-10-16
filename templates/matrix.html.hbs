@@ -1,3 +1,7 @@
+{{!--
+  Depends on: css/50-components/tables.css, js/pages/matrix.js
+  Dynamic classes: sort indicators updated by JS
+--}}
 {{#*inline "page"}}
 <div class="mb-4">
   <div class="d-flex justify-content-between align-items-center">
@@ -6,23 +10,23 @@
       <p class="text-secondary">Requirements to Tests mapping</p>
     </div>
     <div class="d-flex gap-3 align-items-center">
-      <div class="filter-card">
-        <form method="get" class="filter-form">
-          <div class="filter-group">
-            <label for="test_status_filter" class="filter-label">
-              <svg class="filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <div class="filter-card c-filter-card">
+        <form method="get" class="filter-form c-filter-form">
+          <div class="filter-group c-filter-group">
+            <label for="test_status_filter" class="filter-label c-filter-label">
+              <svg class="filter-icon c-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
               </svg>
               Test Status
             </label>
-            <select name="test_status_filter" id="test_status_filter" class="filter-select">
+            <select name="test_status_filter" id="test_status_filter" class="filter-select c-filter-select c-form-control c-form-control--select">
               <option value="">All Statuses</option>
               {{#each statuses}}
                 <option value="{{test_st_id}}" {{#if (eq ../test_status_filter test_st_id)}}selected{{/if}}>{{test_st_title}}</option>
               {{/each}}
             </select>
           </div>
-          <div class="filter-actions">
+          <div class="filter-actions c-filter-actions">
             <button type="submit" class="btn-filter">
               <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"></circle>
@@ -56,29 +60,38 @@
   </div>
 </div>
 
-<section id="Matrix">
-  <div class="card">
-    <div class="card-header">
+<section
+  id="matrix-root"
+  data-sort-by="{{current_sort_by}}"
+  data-sort-order="{{current_sort_order}}"
+  data-status-filter="{{test_status_filter}}"
+>
+  <div class="card c-card">
+    <div class="card-header c-card__header">
       <div class="d-flex justify-content-between align-items-center">
         <h3>Matrix Overview</h3>
         <span class="text-secondary">Total Tests: {{total_tests}}</span>
       </div>
     </div>
-    <div class="card-body p-0">
+    <div class="card-body p-0 c-card__body">
       <!-- Top scroll indicator - positioned outside table container -->
-      <div class="scroll-indicator" id="scrollIndicator">
+      <div class="scroll-indicator c-table-scroll-indicator" id="scrollIndicator">
         <div class="scroll-track">
-          <div class="scroll-thumb" id="scrollThumb"></div>
+          <div class="scroll-thumb c-table-scroll-thumb" id="scrollThumb"></div>
         </div>
       </div>
-      <div class="table-container">
-        <table class="table" id="matrixTable">
+      <div class="table-container c-table-container">
+        <table class="table c-table" id="matrixTable">
           <thead>
             <tr>
-              <th class="sortable" data-sort="req_id">
-                <a href="/matrix?sort_by=req_id&sort_order={{#if (eq current_sort_by "req_id")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}" class="text-decoration-none d-flex align-items-center justify-content-between">
+              <th class="sortable c-table-sortable" data-sort="req_id">
+                <a
+                  href="/matrix?sort_by=req_id&sort_order={{#if (eq current_sort_by "req_id")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}"
+                  class="text-decoration-none d-flex align-items-center justify-content-between"
+                  data-matrix-sort-link
+                >
                   Req ID
-                  <span class="sort-indicator">
+                  <span class="sort-indicator c-table-sort-indicator">
                     {{#if (eq current_sort_by "req_id")}}
                       {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
                     {{else}}
@@ -87,10 +100,14 @@
                   </span>
                 </a>
               </th>
-              <th class="sortable" data-sort="req_title">
-                <a href="/matrix?sort_by=req_title&sort_order={{#if (eq current_sort_by "req_title")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}" class="text-decoration-none d-flex align-items-center justify-content-between">
+              <th class="sortable c-table-sortable" data-sort="req_title">
+                <a
+                  href="/matrix?sort_by=req_title&sort_order={{#if (eq current_sort_by "req_title")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}"
+                  class="text-decoration-none d-flex align-items-center justify-content-between"
+                  data-matrix-sort-link
+                >
                   Title
-                  <span class="sort-indicator">
+                  <span class="sort-indicator c-table-sort-indicator">
                     {{#if (eq current_sort_by "req_title")}}
                       {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
                     {{else}}
@@ -99,10 +116,14 @@
                   </span>
                 </a>
               </th>
-              <th class="sortable" data-sort="req_reference">
-                <a href="/matrix?sort_by=req_reference&sort_order={{#if (eq current_sort_by "req_reference")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}" class="text-decoration-none d-flex align-items-center justify-content-between">
+              <th class="sortable c-table-sortable" data-sort="req_reference">
+                <a
+                  href="/matrix?sort_by=req_reference&sort_order={{#if (eq current_sort_by "req_reference")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}"
+                  class="text-decoration-none d-flex align-items-center justify-content-between"
+                  data-matrix-sort-link
+                >
                   Reference
-                  <span class="sort-indicator">
+                  <span class="sort-indicator c-table-sort-indicator">
                     {{#if (eq current_sort_by "req_reference")}}
                       {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
                     {{else}}
@@ -112,13 +133,17 @@
                 </a>
               </th>
               {{#each tests}}
-                <th class="text-center sortable" data-sort="test_{{test_id}}">
-                  <a href="/matrix?sort_by=test_{{test_id}}&sort_order={{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}" class="text-decoration-none d-flex flex-column align-items-center">
+                <th class="text-center sortable c-table-sortable u-text-center" data-sort="test_{{test_id}}">
+                  <a
+                    href="/matrix?sort_by=test_{{test_id}}&sort_order={{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}"
+                    class="text-decoration-none d-flex flex-column align-items-center"
+                    data-matrix-sort-link
+                  >
                     <div class="d-flex align-items-center justify-content-between w-100">
                       <span>Test #{{test_id}}</span>
-                      <span class="sort-indicator" data-test-id="{{test_id}}">↕</span>
+                      <span class="sort-indicator c-table-sort-indicator" data-test-indicator="{{test_id}}">↕</span>
                     </div>
-                    <div class="text-xs text-secondary">{{test_status}}</div>
+                    <div class="text-xs text-secondary u-text-xs u-text-secondary">{{test_status}}</div>
                   </a>
                 </th>
               {{/each}}
@@ -128,16 +153,16 @@
             {{#each requirements}}
               <tr>
                 <td>
-                  <a href="/p/{{@root.selected_project_id}}/requirements/show/{{req_id}}" class="requirement-id">REQ-{{req_id}}</a>
+                  <a href="/p/{{@root.selected_project_id}}/requirements/show/{{req_id}}" class="requirement-id c-requirement-card__id">REQ-{{req_id}}</a>
                 </td>
                 <td>
-                  <div class="font-medium">{{req_title}}</div>
+                  <div class="font-medium u-font-medium">{{req_title}}</div>
                 </td>
                 <td>
                   <span class="text-secondary">{{req_reference}}</span>
                 </td>
                 {{#each matrix}}
-                  <td class="text-center">
+                  <td class="text-center u-text-center">
                     {{#if this.linked}}
                       {{#if (eq this.test_status 7)}}
                         <span class="status-badge status-approved">✓</span>
@@ -160,22 +185,22 @@
   </div>
 
   <div class="mt-4">
-    <div class="card">
-      <div class="card-header">
+    <div class="card c-card">
+      <div class="card-header c-card__header">
         <h3>Matrix Statistics</h3>
       </div>
-      <div class="card-body">
-        <div class="grid grid-3">
-          <div class="text-center">
-            <div class="text-2xl font-bold text-primary">{{total_requirements}}</div>
+      <div class="card-body c-card__body">
+        <div class="o-grid o-grid--three">
+          <div class="text-center u-text-center">
+            <div class="text-2xl font-bold text-primary u-text-2xl u-font-bold u-text-primary">{{total_requirements}}</div>
             <div class="text-secondary">Total Requirements</div>
           </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-primary">{{total_tests}}</div>
+          <div class="text-center u-text-center">
+            <div class="text-2xl font-bold text-primary u-text-2xl u-font-bold u-text-primary">{{total_tests}}</div>
             <div class="text-secondary">Total Tests</div>
           </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-primary">{{total_links}}</div>
+          <div class="text-center u-text-center">
+            <div class="text-2xl font-bold text-primary u-text-2xl u-font-bold u-text-primary">{{total_links}}</div>
             <div class="text-secondary">Total Links</div>
           </div>
         </div>
@@ -184,143 +209,5 @@
   </div>
 </section>
 
-<script>
-  // Update sort indicators for test columns and handle filter
-  document.addEventListener('DOMContentLoaded', function() {
-    const currentSortBy = '{{current_sort_by}}';
-    const currentSortOrder = '{{current_sort_order}}';
-    const currentFilter = '{{test_status_filter}}';
-    
-    // Update test column sort indicators
-    const testIndicators = document.querySelectorAll('.sort-indicator[data-test-id]');
-    testIndicators.forEach(indicator => {
-      const testId = indicator.getAttribute('data-test-id');
-      const testSortKey = 'test_' + testId;
-      
-      if (currentSortBy === testSortKey) {
-        indicator.textContent = currentSortOrder === 'asc' ? '↑' : '↓';
-      } else {
-        indicator.textContent = '↕';
-      }
-    });
-
-    // Update all sort links to preserve the current filter
-    const sortLinks = document.querySelectorAll('a[href*="/matrix?sort_by="]');
-    sortLinks.forEach(link => {
-      if (currentFilter) {
-        const url = new URL(link.href);
-        url.searchParams.set('test_status_filter', currentFilter);
-        link.href = url.toString();
-      }
-    });
-
-    // Auto-submit form when filter changes
-    document.getElementById('test_status_filter').addEventListener('change', function() {
-      this.form.submit();
-    });
-
-    // Setup custom scroll indicator with improved handling
-    const tableContainer = document.querySelector('.table-container');
-    const scrollIndicator = document.getElementById('scrollIndicator');
-    const scrollThumb = document.getElementById('scrollThumb');
-    const matrixTable = document.getElementById('matrixTable');
-
-    if (tableContainer && scrollIndicator && scrollThumb && matrixTable) {
-      let maxScroll = 0;
-      let thumbMaxLeft = 0;
-      let isDragging = false;
-      let startX, startLeft;
-      
-      // Function to update scroll indicator
-      function updateScrollIndicator() {
-        const tableWidth = matrixTable.scrollWidth;
-        const containerWidth = tableContainer.clientWidth;
-        
-
-        
-        if (tableWidth > containerWidth) {
-          // Show the scroll indicator
-          scrollIndicator.style.display = 'block';
-          
-          // Calculate thumb width and position
-          maxScroll = tableWidth - containerWidth;
-          const thumbWidth = Math.max(30, (containerWidth / tableWidth) * containerWidth);
-          thumbMaxLeft = containerWidth - thumbWidth - 8; // Account for padding
-          
-
-          
-          scrollThumb.style.width = thumbWidth + 'px';
-          
-          // Update thumb position when table scrolls
-          const updateThumbPosition = () => {
-            if (maxScroll > 0) {
-              const scrollPercent = Math.min(1, Math.max(0, tableContainer.scrollLeft / maxScroll));
-              const thumbLeft = scrollPercent * thumbMaxLeft;
-              scrollThumb.style.left = thumbLeft + 'px';
-
-            }
-          };
-          
-          // Initial position
-          updateThumbPosition();
-          
-          // Remove existing scroll listener to prevent duplicates
-          tableContainer.removeEventListener('scroll', updateThumbPosition);
-          // Update on scroll
-          tableContainer.addEventListener('scroll', updateThumbPosition);
-          
-          // Handle thumb dragging
-          scrollThumb.addEventListener('mousedown', function(e) {
-            isDragging = true;
-            startX = e.clientX;
-            startLeft = parseFloat(scrollThumb.style.left) || 0;
-            e.preventDefault();
-            e.stopPropagation();
-          });
-          
-          document.addEventListener('mousemove', function(e) {
-            if (!isDragging) return;
-            
-            const deltaX = e.clientX - startX;
-            const newLeft = Math.max(0, Math.min(thumbMaxLeft, startLeft + deltaX));
-            scrollThumb.style.left = newLeft + 'px';
-            
-            const scrollPercent = newLeft / thumbMaxLeft;
-            tableContainer.scrollLeft = scrollPercent * maxScroll;
-          });
-          
-          document.addEventListener('mouseup', function() {
-            isDragging = false;
-          });
-          
-          // Handle track clicking
-          scrollIndicator.addEventListener('click', function(e) {
-            if (e.target === scrollThumb || isDragging) return;
-            
-            const rect = scrollIndicator.getBoundingClientRect();
-            const clickX = e.clientX - rect.left - 4; // Account for margin
-            const trackWidth = rect.width - 8; // Account for margins
-            const clickPercent = Math.max(0, Math.min(1, clickX / trackWidth));
-            
-            tableContainer.scrollLeft = clickPercent * maxScroll;
-          });
-        } else {
-          scrollIndicator.style.display = 'none';
-        }
-      }
-      
-      // Initial setup with a small delay to ensure rendering
-      setTimeout(updateScrollIndicator, 100);
-      
-      // Update on window resize
-      window.addEventListener('resize', updateScrollIndicator);
-      
-      // Also update when the table content changes
-      const observer = new MutationObserver(updateScrollIndicator);
-      observer.observe(matrixTable, { childList: true, subtree: true });
-    }
-
-  });
-</script>
 {{/inline}}
-{{> layout}} 
+{{> layout page_id="matrix"}}

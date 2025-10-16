@@ -1,141 +1,142 @@
-<nav class="navbar">
-  <div class="nav-container">
-    <div class="nav-left">
-      <a href="/" class="nav-brand" aria-label="ReqMan home">ReqMan</a>
+{{!-- Depends on: css/50-components/navigation.css --}}
+<nav class="navbar c-navbar">
+  <div class="nav-container c-navbar__container">
+    <div class="nav-left c-navbar__left">
+      <a href="/" class="nav-brand c-navbar__brand" aria-label="ReqMan home">ReqMan</a>
     </div>
 
-    <div class="nav-right">
-      <ul class="nav-menu">
-        <li><a href="/" class="nav-link">Home</a></li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+    <div class="nav-right c-navbar__right">
+      <ul class="nav-menu c-navbar__menu">
+        <li class="c-navbar__item"><a href="/" class="nav-link c-navbar__link">Home</a></li>
+        <li class="nav-item dropdown c-navbar__item">
+          <a class="nav-link dropdown-toggle c-navbar__link c-navbar__link--toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Projects
           </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/projects">All Projects</a></li>
+          <ul class="dropdown-menu c-navbar__dropdown-menu">
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/projects">All Projects</a></li>
             {{#if user.is_admin}}
-            <li><a class="dropdown-item" href="/new_project">New Project</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/new_project">New Project</a></li>
             {{/if}}
           </ul>
         </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <li class="nav-item dropdown c-navbar__item">
+          <a class="nav-link dropdown-toggle c-navbar__link c-navbar__link--toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Requirements
           </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}">Card View</a></li>
-            <li><a class="dropdown-item" href="/requirements_table">Table View</a></li>
-            <li><a class="dropdown-item" href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements/tree{{else}}/requirements/tree{{/if}}">Tree View</a></li>
+          <ul class="dropdown-menu c-navbar__dropdown-menu">
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}">Card View</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/requirements_table">Table View</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements/tree{{else}}/requirements/tree{{/if}}">Tree View</a></li>
           </ul>
         </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <li class="nav-item dropdown c-navbar__item">
+          <a class="nav-link dropdown-toggle c-navbar__link c-navbar__link--toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Tests
           </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/p/{{selected_project_id}}/tests">Card View</a></li>
-            <li><a class="dropdown-item" href="/tests_table">Table View</a></li>
+          <ul class="dropdown-menu c-navbar__dropdown-menu">
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/tests">Card View</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/tests_table">Table View</a></li>
           </ul>
         </li>
-        <li><a href="/p/{{selected_project_id}}/reports" class="nav-link">Reports</a></li>
+        <li class="c-navbar__item"><a href="/p/{{selected_project_id}}/reports" class="nav-link c-navbar__link">Reports</a></li>
         {{#if selected_project_id}}
-        <li><a href="/p/{{selected_project_id}}/members" class="nav-link">Members</a></li>
+        <li class="c-navbar__item"><a href="/p/{{selected_project_id}}/members" class="nav-link c-navbar__link">Members</a></li>
         {{/if}}
         {{#if user.is_admin}}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <li class="nav-item dropdown c-navbar__item">
+          <a class="nav-link dropdown-toggle c-navbar__link c-navbar__link--toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Quick Actions
           </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/new_project">New Project</a></li>
+          <ul class="dropdown-menu c-navbar__dropdown-menu">
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/new_project">New Project</a></li>
             <li>
               {{#if selected_project_id}}
-                <a class="dropdown-item" href="/p/{{selected_project_id}}/requirements/new">New Requirement</a>
+                <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/requirements/new">New Requirement</a>
               {{else}}
-                <span class="dropdown-item disabled" aria-disabled="true">New Requirement</span>
+                <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New Requirement</span>
               {{/if}}
             </li>
-            <li><a class="dropdown-item" href="/p/{{selected_project_id}}/tests/new">New Test</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/tests/new">New Test</a></li>
             <li>
               {{#if selected_project_id}}
-                <a class="dropdown-item" href="/p/{{selected_project_id}}/categories/new">New Category</a>
+                <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/categories/new">New Category</a>
               {{else}}
-                <span class="dropdown-item disabled" aria-disabled="true">New Category</span>
+                <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New Category</span>
               {{/if}}
             </li>
             <li>
               {{#if selected_project_id}}
-                <a class="dropdown-item" href="/p/{{selected_project_id}}/applicability/new">New Applicability</a>
+                <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/applicability/new">New Applicability</a>
               {{else}}
-                <span class="dropdown-item disabled" aria-disabled="true">New Applicability</span>
+                <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New Applicability</span>
               {{/if}}
             </li>
-            <li><a class="dropdown-item" href="/user/new">New User</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/import_excel">Import Excel</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/user/new">New User</a></li>
+            <li><hr class="dropdown-divider c-navbar__dropdown-divider"></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/import_excel">Import Excel</a></li>
           </ul>
         </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <li class="nav-item dropdown c-navbar__item">
+          <a class="nav-link dropdown-toggle c-navbar__link c-navbar__link--toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Admin
           </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/admin">Dashboard</a></li>
-            <li><a class="dropdown-item" href="/admin/users">User Management</a></li>
-            <li><a class="dropdown-item" href="/admin/backup">Database Backup</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/import_excel">Import Excel</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/logs">System Logs</a></li>
-            <li><a class="dropdown-item" href="/log_analytics">Log Analytics</a></li>
+          <ul class="dropdown-menu c-navbar__dropdown-menu">
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/admin">Dashboard</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/admin/users">User Management</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/admin/backup">Database Backup</a></li>
+            <li><hr class="dropdown-divider c-navbar__dropdown-divider"></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/import_excel">Import Excel</a></li>
+            <li><hr class="dropdown-divider c-navbar__dropdown-divider"></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/logs">System Logs</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/log_analytics">Log Analytics</a></li>
           </ul>
         </li>
         {{/if}}
       </ul>
-      <div class="nav-actions">
-        <div class="nav-item-theme">
+      <div class="nav-actions c-navbar__actions">
+        <div class="nav-item-theme c-navbar__theme">
           <button
             data-theme-toggle
-            class="theme-toggle"
+            class="theme-toggle c-theme-toggle"
             type="button"
             aria-label="Toggle dark mode"
             aria-pressed="false"
             title="Toggle dark mode">
-            <span class="theme-toggle-icon theme-toggle-icon-sun" aria-hidden="true">☀</span>
-            <span class="theme-toggle-icon theme-toggle-icon-moon" aria-hidden="true">🌙</span>
+            <span class="theme-toggle-icon theme-toggle-icon-sun c-theme-toggle__icon c-theme-toggle__icon--sun" aria-hidden="true">☀</span>
+            <span class="theme-toggle-icon theme-toggle-icon-moon c-theme-toggle__icon c-theme-toggle__icon--moon" aria-hidden="true">🌙</span>
           </button>
         </div>
-        <div class="nav-item-user dropdown">
+        <div class="nav-item-user dropdown c-navbar__user">
           <a
-            class="nav-link dropdown-toggle nav-user-toggle"
+            class="nav-link dropdown-toggle nav-user-toggle c-navbar__link c-navbar__link--toggle c-navbar__user-toggle"
             href="#"
             id="user-menu-toggle"
             role="button"
             data-bs-toggle="dropdown"
             aria-expanded="false">
             {{#if user.user_name}}
-              <span class="nav-user-label">{{user.user_name}}</span>
+              <span class="nav-user-label c-navbar__user-label">{{user.user_name}}</span>
             {{else}}
-              <span class="nav-user-label">{{user.user_username}}</span>
+              <span class="nav-user-label c-navbar__user-label">{{user.user_username}}</span>
             {{/if}}
           </a>
-          <ul class="dropdown-menu dropdown-menu-end nav-user-menu" aria-labelledby="user-menu-toggle">
+          <ul class="dropdown-menu dropdown-menu-end nav-user-menu c-navbar__user-menu c-navbar__dropdown-menu" aria-labelledby="user-menu-toggle">
             <li>
-              <h6 class="dropdown-header nav-user-header">
+              <h6 class="dropdown-header nav-user-header c-navbar__user-header">
                 {{#if user.user_name}}
-                  <span class="nav-user-name">{{user.user_name}}</span>
+                  <span class="nav-user-name c-navbar__user-name">{{user.user_name}}</span>
                 {{else}}
-                  <span class="nav-user-name">{{user.user_username}}</span>
+                  <span class="nav-user-name c-navbar__user-name">{{user.user_username}}</span>
                 {{/if}}
                 {{#if user.user_username}}
-                  <span class="nav-user-username">@{{user.user_username}}</span>
+                  <span class="nav-user-username c-navbar__user-username">@{{user.user_username}}</span>
                 {{/if}}
               </h6>
             </li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="/user/profile">My Profile</a></li>
-            <li><a class="dropdown-item" href="/change_password">Change Password</a></li>
-            <li><a class="dropdown-item nav-user-logout" href="/logout">Logout</a></li>
+            <li><hr class="dropdown-divider c-navbar__dropdown-divider"></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/user/profile">My Profile</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/change_password">Change Password</a></li>
+            <li><a class="dropdown-item nav-user-logout c-navbar__dropdown-item c-navbar__user-logout" href="/logout">Logout</a></li>
           </ul>
         </div>
       </div>

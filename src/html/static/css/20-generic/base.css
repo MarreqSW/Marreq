@@ -1,21 +1,34 @@
 /* Reset and Base Styles */
-* {
-  margin: 0;
-  padding: 0;
+[class],
+[class]::before,
+[class]::after {
   box-sizing: border-box;
 }
 
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure {
+  margin: 0;
+  padding: 0;
+}
+
 body {
-  font-family: var(--font-sans);
   background-color: var(--background-color);
   color: var(--text-primary);
-  line-height: 1.6;
-  font-size: 16px;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
   margin: 0;
+  min-height: 100vh;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 main {
@@ -24,35 +37,35 @@ main {
 }
 
 /* Main Content - Fluid Layout */
-.main-content {
-  width: min(1200px, calc(100% - 2 * var(--space-8)));
-  padding: var(--space-6) var(--space-4);
+.o-main-content {
   margin: var(--space-6) auto;
+  padding: var(--space-6) var(--space-4);
+  width: min(1200px, calc(100% - 2 * var(--space-8)));
 }
 
 /* Responsive padding for different screen sizes */
 @media (min-width: 576px) {
-  .main-content {
+  .o-main-content {
     padding: var(--space-8) var(--space-6);
   }
 }
 
 @media (min-width: 768px) {
-  .main-content {
+  .o-main-content {
     padding: var(--space-8) var(--space-8);
   }
 }
 
 @media (min-width: 1200px) {
-  .main-content {
+  .o-main-content {
     padding: var(--space-8) var(--space-12);
   }
 }
 
 /* Legacy container class for backward compatibility */
-.container {
-  max-width: 1200px;
+[class~='container'] {
   margin: 0 auto;
+  max-width: 1200px;
   padding: var(--space-8);
 }
 
@@ -89,39 +102,39 @@ h3 {
 }
 
 /* Fluid Layout Utilities */
-.fluid-container {
-  width: 100%;
-  max-width: none;
+.o-fluid-container {
   margin: 0;
+  max-width: none;
   padding: 0;
+  width: 100%;
 }
 
-.fluid-row {
-  width: 100%;
+.o-fluid-row {
   display: flex;
   flex-wrap: wrap;
   margin: 0;
+  width: 100%;
 }
 
-.fluid-col {
+.o-fluid-col {
   flex: 1;
   min-width: 0;
   padding: 0;
 }
 
 /* Ensure all content uses full width */
-.page-content {
-  width: 100%;
+.o-page-content {
   max-width: none;
+  width: 100%;
 }
 
 /* Responsive Layout */
 @media (max-width: 768px) {
-  .container {
+  [class~='container'] {
     padding: 1rem;
   }
   
-  .main-content {
+  .o-main-content {
     padding: var(--space-4) var(--space-2);
   }
 }

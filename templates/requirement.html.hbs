@@ -1,23 +1,26 @@
 
-<div class="card requirement-card">
-  <div class="card-body">
+<div class="card requirement-card c-card c-requirement-card">
+  <div class="card-body c-card__body">
     <div class="requirement-header">
       <div>
         {{#if req_reference}}
-          <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="requirement-reference-tag">{{req_reference}}</a>
+          <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="requirement-reference-tag c-requirement-card__reference-tag">{{req_reference}}</a>
         {{else}}
-          <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="requirement-id">REQ-{{req_id}}</a>
+          <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="requirement-id c-requirement-card__id">REQ-{{req_id}}</a>
         {{/if}}
-        <h3 class="requirement-title">{{req_title}}</h3>
+        <h3 class="requirement-title c-linked-requirements__title">{{req_title}}</h3>
       </div>
-      <div class="requirement-actions">
+      <div class="requirement-actions c-requirement-card__actions">
         <a href="/p/{{project_id}}/requirements/edit/{{req_id}}" class="btn btn-outline btn-sm">Edit</a>
-        {{#if (or (eq req_current_status_id 1) (eq req_current_status_id 2))}}
-          <button onclick="deleteRequirement({{project_id}}, {{req_id}}, '{{req_title}}')" class="btn btn-danger btn-sm">Delete</button>
-        {{else}}
-          {{#if ../user.is_admin}}
-            <button onclick="deleteRequirement({{project_id}}, {{req_id}}, '{{req_title}}')" class="btn btn-danger btn-sm">Delete</button>
-          {{/if}}
+        {{#if (or (eq req_current_status_id 1) (eq req_current_status_id 2) ../user.is_admin)}}
+          <button
+            class="btn btn-danger btn-sm"
+            type="button"
+            data-action="delete-requirement"
+            data-project-id="{{project_id}}"
+            data-requirement-id="{{req_id}}"
+            data-requirement-title="{{req_title}}"
+          >Delete</button>
         {{/if}}
       </div>
     </div>
@@ -27,35 +30,35 @@
     <div class="requirement-meta">
       <div class="meta-item">
         <span class="meta-label">Author</span>
-        <span class="meta-value">{{req_author}}</span>
+        <span class="meta-value c-requirement-card__meta-value">{{req_author}}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Reviewer</span>
-        <span class="meta-value">{{req_reviewer}}</span>
+        <span class="meta-value c-requirement-card__meta-value">{{req_reviewer}}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Category</span>
-        <span class="meta-value">{{req_category}}</span>
+        <span class="meta-value c-requirement-card__meta-value">{{req_category}}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Applicability</span>
-        <span class="meta-value">{{req_applicability}}</span>
+        <span class="meta-value c-requirement-card__meta-value">{{req_applicability}}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Status</span>
-        <span class="status-badge status-{{req_current_status}}">{{req_current_status}}</span>
+        <span class="status-badge status-{{req_current_status}}" data-status="{{req_current_status}}">{{req_current_status}}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Verification</span>
-        <span class="meta-value">{{req_verification}}</span>
+        <span class="meta-value c-requirement-card__meta-value">{{req_verification}}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Reference</span>
-        <span class="meta-value">{{req_reference}}</span>
+        <span class="meta-value c-requirement-card__meta-value">{{req_reference}}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Parent</span>
-        <span class="meta-value">
+        <span class="meta-value c-requirement-card__meta-value">
           {{#if req_parent_id}}
             <a href="/p/{{project_id}}/requirements/show/{{req_parent_id}}">{{req_parent_title}}</a>
           {{else}}
@@ -65,19 +68,19 @@
       </div>
       <div class="meta-item">
         <span class="meta-label">Created</span>
-        <span class="meta-value">{{req_creation_date}}</span>
+        <span class="meta-value c-requirement-card__meta-value">{{req_creation_date}}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Updated</span>
-        <span class="meta-value">{{req_update_date}}</span>
+        <span class="meta-value c-requirement-card__meta-value">{{req_update_date}}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Deadline</span>
-        <span class="meta-value">{{req_deadline_date}}</span>
+        <span class="meta-value c-requirement-card__meta-value">{{req_deadline_date}}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">Link</span>
-        <span class="meta-value">
+        <span class="meta-value c-requirement-card__meta-value">
           {{#if req_link}}
             <a href="{{req_link}}" target="_blank" rel="noopener">View</a>
           {{else}}
@@ -88,22 +91,22 @@
       {{#if req_justification}}
       <div class="meta-item">
         <span class="meta-label">Justification</span>
-        <span class="meta-value">{{req_justification}}</span>
+        <span class="meta-value c-requirement-card__meta-value">{{req_justification}}</span>
       </div>
       {{/if}}
     </div>
   </div>
 
   {{#if linked_tests}}
-  <div class="linked-tests-section">
+  <div class="linked-tests-section c-linked-tests">
     <h4>Linked Tests</h4>
-    <div class="linked-tests-list">
+    <div class="linked-tests-list c-linked-tests__list">
       {{#each linked_tests}}
-      <div class="linked-test-item">
-        <div class="test-info">
-          <span class="test-id">TEST-{{test_id}}</span>
-          <a href="/p/{{selected_project_id}}/tests/show/{{test_id}}" class="test-name-link">{{test_name}}</a>
-          <span class="test-status status-badge status-{{test_status}}">{{test_status}}</span>
+      <div class="linked-test-item c-linked-tests__item">
+        <div class="test-info c-test-info">
+          <span class="test-id c-test-info__id">TEST-{{test_id}}</span>
+          <a href="/p/{{selected_project_id}}/tests/show/{{test_id}}" class="test-name-link c-test-info__name-link">{{test_name}}</a>
+          <span class="test-status status-badge status-{{test_status}} c-test-info__status" data-status="{{test_status}}">{{test_status}}</span>
         </div>
       </div>
       {{/each}}
@@ -111,4 +114,7 @@
   </div>
   {{/if}}
 </div>
-
+{{!--
+  Depends on: css/50-components/cards.css, js/app.js (delete-requirement)
+  Dynamic classes: status-{{req_current_status}}
+--}}

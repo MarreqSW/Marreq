@@ -1,20 +1,19 @@
 /* Tables */
 .table-container {
   background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  border: 1px solid var(--border-color);
-  position: relative;
   display: block;
-  overflow-x: auto;
-  width: 100%;
   max-width: 100%;
-  scrollbar-width: thin;
-  scrollbar-color: var(--primary-color) var(--surface-muted);
-  scroll-behavior: smooth;
-  overflow-y: hidden;
   min-height: 0;
+  overflow: hidden;
+  overflow: auto hidden;
+  position: relative;
+  scroll-behavior: smooth;
+  scrollbar-color: var(--primary-color) var(--surface-muted);
+  scrollbar-width: thin;
+  width: 100%;
 }
 
 .table-container::-webkit-scrollbar {
@@ -36,16 +35,16 @@
 }
 
 .table {
-  width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
   min-width: 100%;
+  table-layout: fixed;
+  width: 100%;
 }
 
 .table-container .table {
-  width: 100%;
-  table-layout: auto;
   min-width: 100%;
+  table-layout: auto;
+  width: 100%;
 }
 
 /* Ensure full width for table cards */
@@ -59,17 +58,17 @@
 
 .table th {
   background-color: var(--surface-muted);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-weight: 600;
   padding: var(--space-4);
   text-align: left;
-  font-weight: 600;
-  color: var(--text-primary);
-  border-bottom: 1px solid var(--border-color);
 }
 
 .table td {
-  padding: var(--space-4);
   border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
+  padding: var(--space-4);
 }
 
 .table tr:hover {
@@ -83,9 +82,9 @@
 /* Matrix specific styles */
 .table th.text-center,
 .table td.text-center {
-  text-align: center;
-  min-width: 80px;
   max-width: 80px;
+  min-width: 80px;
+  text-align: center;
   width: 80px;
 }
 
@@ -95,71 +94,71 @@
 
 .table th:first-child,
 .table td:first-child {
-  position: sticky;
-  left: 0;
   background-color: var(--surface-color);
-  z-index: 10;
   border-right: 2px solid var(--border-color);
-  min-width: 80px;
+  left: 0;
   max-width: 80px;
+  min-width: 80px;
+  position: sticky;
+  z-index: 10;
 }
 
 .table th:nth-child(2),
 .table td:nth-child(2) {
-  position: sticky;
-  left: 80px;
   background-color: var(--surface-color);
-  z-index: 10;
   border-right: 2px solid var(--border-color);
-  min-width: 200px;
+  left: 80px;
   max-width: 200px;
+  min-width: 200px;
+  position: sticky;
+  z-index: 10;
 }
 
 .table th:nth-child(3),
 .table td:nth-child(3) {
-  position: sticky;
-  left: 280px;
   background-color: var(--surface-color);
-  z-index: 10;
   border-right: 2px solid var(--border-color);
-  min-width: 150px;
+  left: 280px;
   max-width: 150px;
+  min-width: 150px;
+  position: sticky;
+  z-index: 10;
 }
 
 /* Top scroll indicator - improved positioning and styling */
 .scroll-track {
-  width: calc(100% - 8px);
-  height: 6px;
-  position: absolute;
-  top: 3px;
-  left: 4px;
   background-color: var(--surface-hover);
   border-radius: 3px;
   cursor: pointer;
+  height: 6px;
+  left: 4px;
+  position: absolute;
+  top: 3px;
   user-select: none;
+  width: calc(100% - 8px);
 }
 
 .scroll-thumb {
-  height: 100%;
   background-color: var(--primary-color);
   border-radius: 3px;
-  position: absolute;
-  top: 0;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
+  cursor: pointer;
+  height: 100%;
   left: 0;
   min-width: 30px;
-  cursor: pointer;
+  position: absolute;
+  top: 0;
   transition: background-color 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .scroll-thumb:hover {
   background-color: var(--primary-dark);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.15);
 }
 
 .scroll-thumb:active {
   background-color: var(--primary-dark);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
 }
 
 /* Sortable table columns */
@@ -169,13 +168,13 @@
 }
 
 .sortable a {
-  color: var(--text-primary);
-  text-decoration: none;
-  display: flex;
   align-items: center;
+  color: var(--text-primary);
+  display: flex;
   justify-content: space-between;
-  width: 100%;
   padding: 0.5rem 0;
+  text-decoration: none;
+  width: 100%;
 }
 
 .sortable a:hover {
@@ -183,21 +182,21 @@
 }
 
 .sort-indicator {
+  color: var(--text-secondary);
   font-size: 0.75rem;
   margin-left: 0.5rem;
   opacity: 0.7;
-  color: var(--text-secondary);
 }
 
 .sortable a:hover .sort-indicator {
-  opacity: 1;
   color: var(--primary-color);
+  opacity: 1;
 }
 
 /* Test column sorting styles */
 .sortable a.d-flex.flex-column {
-  min-height: 60px;
   justify-content: space-between;
+  min-height: 60px;
 }
 
 .sortable a.d-flex.flex-column .d-flex.align-items-center.justify-content-between {
@@ -209,13 +208,13 @@
 }
 /* Editable Table View Styles */
 .editable-field {
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-sm);
-  transition: all 0.2s ease;
   border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
   display: inline-block;
   min-width: 100px;
+  padding: 0.25rem 0.5rem;
+  transition: all 0.2s ease;
 }
 
 .editable-field:hover {
@@ -230,12 +229,12 @@
 }
 
 .editable-select {
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
-  background-color: var(--surface-color);
   color: var(--text-primary);
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
   transition: all 0.2s ease;
 }
 
@@ -245,18 +244,18 @@
 }
 
 .editable-select:focus {
-  outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px var(--primary-color);
+  outline: none;
 }
 
 .editable-date {
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
-  background-color: var(--surface-color);
   color: var(--text-primary);
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
   transition: all 0.2s ease;
 }
 
@@ -266,51 +265,51 @@
 }
 
 .editable-date:focus {
-  outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px var(--primary-color);
+  outline: none;
 }
 
 /* Table view specific styles */
 .table-view-container {
   background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
-  border: 1px solid var(--border-color);
 }
 
 .table-view-header {
-  padding: var(--space-6);
-  border-bottom: 1px solid var(--border-color);
   background-color: var(--surface-muted);
+  border-bottom: 1px solid var(--border-color);
+  padding: var(--space-6);
 }
 
 .table-view-title {
+  color: var(--text-primary);
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--text-primary);
   margin: 0;
 }
 
 .table-view-actions {
+  align-items: center;
   display: flex;
   gap: var(--space-3);
-  align-items: center;
   margin-top: var(--space-4);
 }
 
 .table-view-filters {
   background-color: var(--surface-color);
-  padding: var(--space-6);
   border-bottom: 1px solid var(--border-color);
+  padding: var(--space-6);
 }
 
 .filter-form {
-  display: flex;
-  gap: var(--space-4);
   align-items: end;
+  display: flex;
   flex-wrap: wrap;
+  gap: var(--space-4);
 }
 
 .filter-group {
@@ -319,22 +318,22 @@
 }
 
 .filter-label {
-  display: block;
-  font-weight: 500;
   color: var(--text-primary);
-  margin-bottom: var(--space-2);
+  display: block;
   font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: var(--space-2);
 }
 
 .filter-select {
-  width: 100%;
-  padding: var(--space-3);
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background-color: var(--surface-color);
   color: var(--text-primary);
   font-size: 0.875rem;
+  padding: var(--space-3);
   transition: all 0.2s ease;
+  width: 100%;
 }
 
 .filter-select:hover {
@@ -342,24 +341,24 @@
 }
 
 .filter-select:focus {
-  outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px var(--primary-color);
+  outline: none;
 }
 
 /* Notification styles */
 .notification {
-  position: fixed;
-  top: var(--space-6);
-  right: var(--space-6);
-  padding: var(--space-4) var(--space-6);
   border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
   color: var(--surface-color);
   font-weight: 500;
-  z-index: 1000;
+  padding: var(--space-4) var(--space-6);
+  position: fixed;
+  right: var(--space-6);
+  top: var(--space-6);
   transform: translateX(100%);
   transition: transform 0.3s ease;
-  box-shadow: var(--shadow-lg);
+  z-index: 1000;
 }
 
 .notification.show {
@@ -380,8 +379,8 @@
 
 /* Modal styles for add new functionality */
 .modal-content {
-  border-radius: var(--radius-lg);
   border: none;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
 
@@ -392,9 +391,9 @@
 }
 
 .modal-title {
+  color: var(--text-primary);
   font-size: 1.25rem;
   font-weight: 600;
-  color: var(--text-primary);
   margin: 0;
 }
 
@@ -410,21 +409,21 @@
 
 /* Form styles in modals */
 .form-label {
-  font-weight: 500;
   color: var(--text-primary);
-  margin-bottom: var(--space-2);
   font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: var(--space-2);
 }
 
 .form-control {
-  width: 100%;
-  padding: var(--space-3);
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background-color: var(--surface-color);
   color: var(--text-primary);
   font-size: 0.875rem;
+  padding: var(--space-3);
   transition: all 0.2s ease;
+  width: 100%;
 }
 
 .form-control:hover {
@@ -432,20 +431,20 @@
 }
 
 .form-control:focus {
-  outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px var(--primary-color);
+  outline: none;
 }
 
 .form-select {
-  width: 100%;
-  padding: var(--space-3);
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  background-color: var(--surface-color);
   color: var(--text-primary);
   font-size: 0.875rem;
+  padding: var(--space-3);
   transition: all 0.2s ease;
+  width: 100%;
 }
 
 .form-select:hover {
@@ -453,31 +452,31 @@
 }
 
 .form-select:focus {
-  outline: none;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px var(--primary-color);
+  outline: none;
 }
 
 /* Button styles */
 .btn {
-  display: inline-flex;
   align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 0.875rem;
+  font-weight: 500;
+  gap: var(--space-2);
   justify-content: center;
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  font-size: 0.875rem;
   text-decoration: none;
-  border: 1px solid transparent;
-  cursor: pointer;
   transition: all 0.2s ease;
-  gap: var(--space-2);
 }
 
 .btn-primary {
   background-color: var(--primary-color);
-  color: var(--surface-color);
   border-color: var(--primary-color);
+  color: var(--surface-color);
 }
 
 .btn-primary:hover {
@@ -488,8 +487,8 @@
 
 .btn-secondary {
   background-color: var(--secondary-color);
-  color: var(--surface-color);
   border-color: var(--secondary-color);
+  color: var(--surface-color);
 }
 
 .btn-secondary:hover {
@@ -500,8 +499,8 @@
 
 .btn-outline-secondary {
   background-color: transparent;
-  color: var(--secondary-color);
   border-color: var(--secondary-color);
+  color: var(--secondary-color);
 }
 
 .btn-outline-secondary:hover {
@@ -511,8 +510,8 @@
 
 .btn-success {
   background-color: var(--success-color);
-  color: var(--surface-color);
   border-color: var(--success-color);
+  color: var(--surface-color);
 }
 
 .btn-success:hover {
@@ -523,8 +522,8 @@
 
 .btn-warning {
   background-color: var(--warning-color);
-  color: var(--surface-color);
   border-color: var(--warning-color);
+  color: var(--surface-color);
 }
 
 .btn-warning:hover {
@@ -536,8 +535,8 @@
 /* Responsive design */
 @media (max-width: 768px) {
   .table-view-actions {
-    flex-direction: column;
     align-items: stretch;
+    flex-direction: column;
   }
   
   .filter-form {
@@ -549,8 +548,8 @@
   }
   
   .notification {
-    right: var(--space-4);
     left: var(--space-4);
+    right: var(--space-4);
     transform: translateY(-100%);
   }
   

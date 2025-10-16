@@ -52,14 +52,14 @@
                         
                         <div class="card-footer bg-transparent c-card__footer c-project-card__footer">
                             <div class="btn-group w-100 c-project-card__actions" role="group">
-                                <a href="/p/{{project_id}}" class="btn btn-outline-primary btn-sm">
+                                <a href="/p/{{project_id}}" class="btn btn-outline-primary btn-sm c-project-card__action">
                                     <i class="fas fa-eye"></i> View
                                 </a>
                                 {{#if ../user.is_admin}}
-                                <a href="/p/{{project_id}}/edit" class="btn btn-outline-secondary btn-sm">
+                                <a href="/p/{{project_id}}/edit" class="btn btn-outline-secondary btn-sm c-project-card__action">
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
-                                <button class="btn btn-outline-danger btn-sm js-delete-project" type="button" data-project-id="{{project_id}}" data-project-name="{{project_name}}">
+                                <button class="btn btn-outline-danger btn-sm js-delete-project c-project-card__action" type="button" data-project-id="{{project_id}}" data-project-name="{{project_name}}">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                                 {{/if}}

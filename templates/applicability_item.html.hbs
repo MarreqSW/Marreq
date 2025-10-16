@@ -1,13 +1,23 @@
-<div class="card requirement-card">
-  <div class="card-body">
+{{!--
+  Depends on: css/50-components/cards.css, js/app.js (delete handler)
+  Dynamic classes: requirement-card
+--}}
+<div class="card requirement-card c-card c-requirement-card">
+  <div class="card-body c-card__body">
     <div class="requirement-header">
       <div>
-        <span class="requirement-id">APP-{{app_id}}</span>
-        <h3 class="requirement-title">{{app_title}}</h3>
+        <span class="requirement-id c-requirement-card__id">APP-{{app_id}}</span>
+        <h3 class="requirement-title c-linked-requirements__title">{{app_title}}</h3>
       </div>
-      <div class="requirement-actions">
+      <div class="requirement-actions c-requirement-card__actions">
         <a href="/p/{{project_id}}/applicability/edit/{{app_id}}" class="btn btn-outline btn-sm">Edit</a>
-        <button onclick="deleteApplicability({{project_id}}, {{app_id}})" class="btn btn-danger btn-sm">Delete</button>
+        <button
+          class="btn btn-danger btn-sm"
+          type="button"
+          data-action="delete-applicability"
+          data-project-id="{{project_id}}"
+          data-applicability-id="{{app_id}}"
+        >Delete</button>
       </div>
     </div>
     
@@ -16,33 +26,12 @@
     <div class="requirement-meta">
       <div class="meta-item">
         <span class="meta-label">Tag</span>
-        <span class="meta-value tag">{{app_tag}}</span>
+        <span class="meta-value tag c-requirement-card__meta-value c-requirement-card__meta-value--tag">{{app_tag}}</span>
       </div>
       <div class="meta-item">
         <span class="meta-label">ID</span>
-        <span class="meta-value">{{app_id}}</span>
+        <span class="meta-value c-requirement-card__meta-value">{{app_id}}</span>
       </div>
     </div>
   </div>
 </div>
-
-<script>
-function deleteApplicability(projectId, applicabilityId) {
-  if (confirm('Are you sure you want to delete this applicability? This action cannot be undone.')) {
-    fetch(`/p/${projectId}/applicability/delete/${applicabilityId}`, {
-      method: 'DELETE',
-    })
-    .then(response => {
-      if (response.ok) {
-        window.location.reload();
-      } else {
-        alert('Error deleting applicability');
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Error deleting applicability');
-    });
-  }
-}
-</script> 

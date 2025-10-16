@@ -1,148 +1,148 @@
 /* Buttons */
-.btn {
-  display: inline-flex;
+[class~='btn'] {
   align-items: center;
-  justify-content: center;
-  padding: var(--space-3) var(--space-6);
   border: none;
   border-radius: var(--radius-md);
-  font-weight: 500;
-  text-decoration: none;
   cursor: pointer;
-  transition: all 0.2s ease;
+  display: inline-flex;
   font-size: 0.875rem;
+  font-weight: 500;
   gap: var(--space-2);
+  justify-content: center;
+  padding: var(--space-3) var(--space-6);
+  text-decoration: none;
+  transition: all 0.2s ease;
 }
 
-.btn-primary {
+[class~='btn-primary'] {
   background-color: var(--primary-color);
   color: #fff;
 }
 
-.btn-primary:hover {
+[class~='btn-primary']:hover {
   background-color: var(--primary-dark);
-  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
-.btn-secondary {
+[class~='btn-secondary'] {
   background-color: var(--secondary-color);
   color: #fff;
 }
 
-.btn-secondary:hover {
+[class~='btn-secondary']:hover {
   background-color: #475569;
 }
 
-.btn-success {
+[class~='btn-success'] {
+  align-items: center;
   background-color: var(--success-color);
+  border-radius: 0.625rem;
+  box-shadow: var(--shadow-sm);
   color: #fff;
   display: flex;
-  align-items: center;
+  font-weight: 600;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-5);
-  border-radius: 0.625rem;
-  font-weight: 600;
-  box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
 }
 
-.btn-success:hover {
+[class~='btn-success']:hover {
   background-color: #059669;
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
-.btn-warning {
+[class~='btn-warning'] {
   background-color: var(--warning-color);
   color: #fff;
 }
 
-.btn-warning:hover {
+[class~='btn-warning']:hover {
   background-color: #d97706;
 }
 
-.btn-danger {
+[class~='btn-danger'] {
   background-color: var(--error-color);
   color: #fff;
 }
 
-.btn-danger:hover {
+[class~='btn-danger']:hover {
   background-color: #dc2626;
 }
 
-.btn-outline {
+[class~='btn-outline'] {
   background-color: transparent;
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
 }
 
-.btn-outline:hover {
+[class~='btn-outline']:hover {
   background-color: var(--surface-muted);
   border-color: var(--primary-color);
   color: var(--primary-color);
 }
 
-.btn-sm {
-  padding: var(--space-2) var(--space-4);
+[class~='btn-sm'] {
   font-size: 0.75rem;
+  padding: var(--space-2) var(--space-4);
 }
 
-.btn-lg {
-  padding: var(--space-4) var(--space-8);
+[class~='btn-lg'] {
   font-size: 1rem;
+  padding: var(--space-4) var(--space-8);
 }
 
 /* Filter Buttons */
-.btn-filter,
-.btn-clear {
-  display: flex;
+[class~='btn-filter'],
+[class~='btn-clear'] {
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
   border: none;
   border-radius: var(--radius-md);
+  cursor: pointer;
+  display: flex;
   font-size: 0.875rem;
   font-weight: 500;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  gap: var(--space-2);
   justify-content: center;
   min-width: 80px;
+  padding: var(--space-2) var(--space-4);
+  text-decoration: none;
+  transition: all 0.2s ease;
 }
 
-.btn-filter {
+[class~='btn-filter'] {
   background-color: var(--primary-color);
   color: #fff;
 }
 
-.btn-filter:hover {
+[class~='btn-filter']:hover {
   background-color: var(--primary-dark);
-  transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
-.btn-clear {
+[class~='btn-clear'] {
   background-color: var(--surface-muted);
-  color: var(--text-secondary);
   border: 1px solid var(--border-color);
+  color: var(--text-secondary);
 }
 
-.btn-clear:hover {
+[class~='btn-clear']:hover {
   background-color: var(--surface-hover);
+  box-shadow: var(--shadow-sm);
   color: var(--text-primary);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
 }
 
-.btn-icon {
-  width: 16px;
-  height: 16px;
+[class~='btn-icon'] {
   flex-shrink: 0;
+  height: 16px;
+  width: 16px;
 }
 
 @media (max-width: 768px) {
-  .btn {
+  [class~='btn'] {
     width: 100%;
   }
 }

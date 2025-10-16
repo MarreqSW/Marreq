@@ -1,0 +1,30 @@
+{
+  "name": "reqman",
+  "version": "1.0.0",
+  "description": "A comprehensive web-based requirements and test management system built with Rust, Rocket, and PostgreSQL. This software provides a complete solution for managing hierarchical requirements, tests, traceability matrices, and generating reports.",
+  "main": "index.js",
+  "directories": {
+    "doc": "doc",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariusmm/ReqMan.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mariusmm/ReqMan/issues"
+  },
+  "homepage": "https://github.com/mariusmm/ReqMan#readme",
+  "devDependencies": {
+    "stylelint": "^16.25.0",
+    "stylelint-config-clean-order": "^7.0.0",
+    "stylelint-config-standard": "^39.0.1",
+    "stylelint-order": "^7.0.0"
+  }
+}

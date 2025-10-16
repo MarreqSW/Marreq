@@ -1,3 +1,7 @@
+{{!--
+  Depends on: css/50-components/tree.css, js/pages/requirementsTree.js
+  Dynamic classes: status-{{requirement.req_current_status}}
+--}}
 {{#*inline "page"}}
 <div class="mb-4">
   <div class="d-flex justify-content-between align-items-center">
@@ -6,14 +10,14 @@
       <p class="text-secondary">Hierarchical view of all requirements</p>
     </div>
     <div class="d-flex gap-3 align-items-center">
-      <div class="tree-controls">
-        <button class="btn btn-outline-primary btn-sm" onclick="expandAll()">
+      <div class="c-tree__controls">
+        <button class="btn btn-outline-primary btn-sm c-tree__control-button" type="button" data-tree-expand-all>
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="9,18 15,12 9,6"></polyline>
           </svg>
           Expand All
         </button>
-        <button class="btn btn-outline-primary btn-sm" onclick="collapseAll()">
+        <button class="btn btn-outline-primary btn-sm c-tree__control-button" type="button" data-tree-collapse-all>
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15,18 9,12 15,6"></polyline>
           </svg>
@@ -31,87 +35,87 @@
 </div>
 
 <section id="RequirementsTree">
-  <div class="card">
-    <div class="card-header">
+  <div class="card c-card">
+    <div class="card-header c-card__header">
       <div class="d-flex justify-content-between align-items-center">
         <h3>Requirements Hierarchy</h3>
         <span class="text-secondary">Total Requirements: {{total_requirements}}</span>
       </div>
     </div>
-    <div class="card-body">
-      <div class="tree-container">
+    <div class="card-body c-card__body">
+      <div class="c-tree">
         {{#if tree_data}}
-          <div class="tree-root">
+          <div class="c-tree__root">
             {{#each tree_data}}
-              <div class="tree-node" data-node-id="{{requirement.req_id}}">
-                <div class="node-content">
-                  <div class="node-toggle" onclick="toggleNode({{requirement.req_id}})">
+              <div class="c-tree__node" data-node-id="{{requirement.req_id}}">
+                <div class="c-tree__node-content">
+                  <button class="c-tree__toggle" type="button" data-tree-toggle="{{requirement.req_id}}">
                     {{#if children}}
-                      <svg class="toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg class="c-tree__toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="9,18 15,12 9,6"></polyline>
                       </svg>
                     {{else}}
-                      <div class="toggle-placeholder"></div>
+                      <span class="c-tree__toggle-placeholder"></span>
                     {{/if}}
-                  </div>
-                  <div class="requirement-card">
-                    <div class="requirement-header">
-                      <div class="requirement-id">
-                        <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}" class="requirement-link">
+                  </button>
+                  <div class="c-tree__requirement-card c-requirement-card">
+                    <div class="c-tree__requirement-header">
+                      <div class="requirement-id c-requirement-card__id">
+                        <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}" class="c-tree__requirement-link c-linked-requirements__link">
                           REQ-{{requirement.req_id}}
                         </a>
                       </div>
                       <div class="requirement-status">
-                        <span class="status-badge status-{{requirement.req_current_status}}">
+                        <span class="status-badge status-{{requirement.req_current_status}}" data-status="{{requirement.req_current_status}}">
                           {{requirement.req_current_status}}
                         </span>
                       </div>
                     </div>
-                    <div class="requirement-title">{{requirement.req_title}}</div>
-                    <div class="requirement-description">{{requirement.req_description}}</div>
-                    <div class="requirement-meta">
-                      <div class="meta-item">
-                        <span class="meta-label">Category:</span>
-                        <span class="meta-value">{{requirement.req_category}}</span>
+                    <div class="c-tree__requirement-title c-linked-requirements__title">{{requirement.req_title}}</div>
+                    <div class="c-tree__requirement-description">{{requirement.req_description}}</div>
+                    <div class="c-tree__requirement-meta">
+                      <div class="c-tree__meta-item">
+                        <span class="c-tree__meta-label">Category:</span>
+                        <span class="meta-value c-requirement-card__meta-value">{{requirement.req_category}}</span>
                       </div>
-                      <div class="meta-item">
-                        <span class="meta-label">Reference:</span>
-                        <span class="meta-value">{{requirement.req_reference}}</span>
+                      <div class="c-tree__meta-item">
+                        <span class="c-tree__meta-label">Reference:</span>
+                        <span class="meta-value c-requirement-card__meta-value">{{requirement.req_reference}}</span>
                       </div>
                     </div>
                   </div>
                 </div>
                 {{#if children}}
-                  <div class="node-children" id="children-{{requirement.req_id}}">
+                  <div class="c-tree__children" id="children-{{requirement.req_id}}" data-tree-branch="{{requirement.req_id}}" hidden>
                     {{#each children}}
-                      <div class="tree-node child-node" data-node-id="{{requirement.req_id}}">
-                        <div class="node-content">
-                          <div class="node-toggle">
-                            <div class="toggle-placeholder"></div>
+                      <div class="c-tree__node c-tree__child-node" data-node-id="{{requirement.req_id}}">
+                        <div class="c-tree__node-content">
+                          <div class="c-tree__toggle">
+                            <div class="c-tree__toggle-placeholder"></div>
                           </div>
-                          <div class="requirement-card child-card">
-                            <div class="requirement-header">
-                              <div class="requirement-id">
-                                <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}" class="requirement-link">
+                          <div class="c-tree__requirement-card c-tree__child-card c-requirement-card">
+                            <div class="c-tree__requirement-header">
+                              <div class="requirement-id c-requirement-card__id">
+                                <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}" class="c-tree__requirement-link c-linked-requirements__link">
                                   REQ-{{requirement.req_id}}
                                 </a>
                               </div>
                               <div class="requirement-status">
-                                <span class="status-badge status-{{requirement.req_current_status}}">
+                                <span class="status-badge status-{{requirement.req_current_status}}" data-status="{{requirement.req_current_status}}">
                                   {{requirement.req_current_status}}
                                 </span>
                               </div>
                             </div>
-                            <div class="requirement-title">{{requirement.req_title}}</div>
-                            <div class="requirement-description">{{requirement.req_description}}</div>
-                            <div class="requirement-meta">
-                              <div class="meta-item">
-                                <span class="meta-label">Category:</span>
-                                <span class="meta-value">{{requirement.req_category}}</span>
+                            <div class="c-tree__requirement-title c-linked-requirements__title">{{requirement.req_title}}</div>
+                            <div class="c-tree__requirement-description">{{requirement.req_description}}</div>
+                            <div class="c-tree__requirement-meta">
+                              <div class="c-tree__meta-item">
+                                <span class="c-tree__meta-label">Category:</span>
+                                <span class="meta-value c-requirement-card__meta-value">{{requirement.req_category}}</span>
                               </div>
-                              <div class="meta-item">
-                                <span class="meta-label">Reference:</span>
-                                <span class="meta-value">{{requirement.req_reference}}</span>
+                              <div class="c-tree__meta-item">
+                                <span class="c-tree__meta-label">Reference:</span>
+                                <span class="meta-value c-requirement-card__meta-value">{{requirement.req_reference}}</span>
                               </div>
                             </div>
                           </div>
@@ -124,8 +128,8 @@
             {{/each}}
           </div>
         {{else}}
-          <div class="empty-state">
-            <div class="empty-icon">
+          <div class="c-tree__empty-state">
+            <div class="c-tree__empty-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M9 11H1l8-8 8 8h-8v8z"></path>
               </svg>
@@ -140,56 +144,5 @@
   </div>
 </section>
 
-<script>
-  // Tree view functionality
-  function toggleNode(nodeId) {
-    const childrenContainer = document.getElementById(`children-${nodeId}`);
-    const toggleIcon = event.currentTarget.querySelector('.toggle-icon');
-    
-    if (childrenContainer) {
-      const isExpanded = childrenContainer.style.display !== 'none';
-      
-      if (isExpanded) {
-        childrenContainer.style.display = 'none';
-        toggleIcon.style.transform = 'rotate(0deg)';
-      } else {
-        childrenContainer.style.display = 'block';
-        toggleIcon.style.transform = 'rotate(90deg)';
-      }
-    }
-  }
-  
-  function expandAll() {
-    const childrenContainers = document.querySelectorAll('.node-children');
-    const toggleIcons = document.querySelectorAll('.toggle-icon');
-    
-    childrenContainers.forEach(container => {
-      container.style.display = 'block';
-    });
-    
-    toggleIcons.forEach(icon => {
-      icon.style.transform = 'rotate(90deg)';
-    });
-  }
-  
-  function collapseAll() {
-    const childrenContainers = document.querySelectorAll('.node-children');
-    const toggleIcons = document.querySelectorAll('.toggle-icon');
-    
-    childrenContainers.forEach(container => {
-      container.style.display = 'none';
-    });
-    
-    toggleIcons.forEach(icon => {
-      icon.style.transform = 'rotate(0deg)';
-    });
-  }
-  
-  // Initialize tree state
-  document.addEventListener('DOMContentLoaded', function() {
-    // Start with all nodes collapsed
-    collapseAll();
-  });
-</script>
 {{/inline}}
-{{> layout}} 
+{{> layout page_id="requirements-tree"}}

@@ -1,4 +1,7 @@
 {{#extend "layout"}}
+{{!--
+  Depends on: js/pages/adminCacheHealth.js
+--}}
 {{#content "title"}}Cache Health - ReqMan{{/content}}
 
 {{#content "content"}}
@@ -12,11 +15,11 @@
 
     <div class="row">
         <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h5 class="card-title mb-0">Cache Status</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <div class="row">
                         <div class="col-6">
                             <strong>Overall Status:</strong>
@@ -76,11 +79,11 @@
         </div>
 
         <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h5 class="card-title mb-0">Cache Actions</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <div class="d-grid gap-2">
                         <a href="/admin/cache/stats" class="btn btn-primary">
                             <i class="fas fa-chart-bar"></i> View Statistics
@@ -94,7 +97,7 @@
                         <a href="/admin/cache/clear" class="btn btn-danger">
                             <i class="fas fa-trash"></i> Clear All Cache
                         </a>
-                        <button class="btn btn-info" onclick="refreshHealthData()">
+                        <button class="btn btn-info" type="button" data-action="refresh-health">
                             <i class="fas fa-sync-alt"></i> Refresh Health Data
                         </button>
                     </div>
@@ -106,8 +109,8 @@
     <!-- Real-time Performance Monitoring -->
     <div class="row mt-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h5 class="card-title mb-0">
                         Real-time Performance Monitoring
                         <div class="float-end">
@@ -115,28 +118,28 @@
                         </div>
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <div class="row">
                         <div class="col-md-3">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h4 class="text-success" id="hit-rate">--</h4>
                                 <small class="text-muted">Hit Rate (%)</small>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h4 class="text-info" id="total-requests">--</h4>
                                 <small class="text-muted">Total Requests</small>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h4 class="text-primary" id="avg-access-time">--</h4>
                                 <small class="text-muted">Avg Access Time (ms)</small>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h4 class="text-warning" id="memory-usage">--</h4>
                                 <small class="text-muted">Memory Usage (MB)</small>
                             </div>
@@ -159,11 +162,11 @@
 
     <div class="row mt-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h5 class="card-title mb-0">Cache Health Details</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <div class="row">
                         <div class="col-md-6">
                             <h6>Health Indicators</h6>
@@ -201,58 +204,5 @@
     </div>
 </div>
 
-<script>
-let healthUpdateInterval;
-
-function refreshHealthData() {
-    fetch('/api/v1/cache/performance')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('hit-rate').textContent = data.hit_rate_percentage;
-            document.getElementById('total-requests').textContent = data.total_requests;
-            document.getElementById('avg-access-time').textContent = data.average_access_time_ms;
-            document.getElementById('memory-usage').textContent = data.memory_usage_mb;
-            
-            const efficiency = data.cache_efficiency;
-            document.getElementById('efficiency-bar').style.width = efficiency + '%';
-            document.getElementById('efficiency-text').textContent = efficiency + '%';
-            
-            // Update connection status
-            document.getElementById('connection-status').textContent = 'Connected';
-            document.getElementById('connection-status').className = 'badge bg-success';
-        })
-        .catch(error => {
-            console.error('Failed to fetch health data:', error);
-            document.getElementById('connection-status').textContent = 'Disconnected';
-            document.getElementById('connection-status').className = 'badge bg-danger';
-        });
-}
-
-function startHealthMonitoring() {
-    // Initial load
-    refreshHealthData();
-    
-    // Update every 10 seconds
-    healthUpdateInterval = setInterval(refreshHealthData, 10000);
-}
-
-function stopHealthMonitoring() {
-    if (healthUpdateInterval) {
-        clearInterval(healthUpdateInterval);
-    }
-}
-
-// Start monitoring when page loads
-document.addEventListener('DOMContentLoaded', startHealthMonitoring);
-
-// Stop monitoring when page is hidden
-document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-        stopHealthMonitoring();
-    } else {
-        startHealthMonitoring();
-    }
-});
-</script>
 {{/content}}
 {{/extend}}

@@ -35,14 +35,14 @@
 </div>
 
 <section id="RequirementsTree">
-  <div class="card">
-    <div class="card-header">
+  <div class="card c-card">
+    <div class="card-header c-card__header">
       <div class="d-flex justify-content-between align-items-center">
         <h3>Requirements Hierarchy</h3>
         <span class="text-secondary">Total Requirements: {{total_requirements}}</span>
       </div>
     </div>
-    <div class="card-body">
+    <div class="card-body c-card__body">
       <div class="tree-container">
         {{#if tree_data}}
           <div class="tree-root">
@@ -58,29 +58,29 @@
                       <span class="toggle-placeholder"></span>
                     {{/if}}
                   </button>
-                  <div class="requirement-card">
+                  <div class="requirement-card c-requirement-card">
                     <div class="requirement-header">
-                      <div class="requirement-id">
-                        <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}" class="requirement-link">
+                      <div class="requirement-id c-requirement-card__id">
+                        <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}" class="requirement-link c-linked-requirements__link">
                           REQ-{{requirement.req_id}}
                         </a>
                       </div>
                       <div class="requirement-status">
-                        <span class="status-badge status-{{requirement.req_current_status}}">
+                        <span class="status-badge status-{{requirement.req_current_status}}" data-status="{{requirement.req_current_status}}">
                           {{requirement.req_current_status}}
                         </span>
                       </div>
                     </div>
-                    <div class="requirement-title">{{requirement.req_title}}</div>
+                    <div class="requirement-title c-linked-requirements__title">{{requirement.req_title}}</div>
                     <div class="requirement-description">{{requirement.req_description}}</div>
                     <div class="requirement-meta">
                       <div class="meta-item">
                         <span class="meta-label">Category:</span>
-                        <span class="meta-value">{{requirement.req_category}}</span>
+                        <span class="meta-value c-requirement-card__meta-value">{{requirement.req_category}}</span>
                       </div>
                       <div class="meta-item">
                         <span class="meta-label">Reference:</span>
-                        <span class="meta-value">{{requirement.req_reference}}</span>
+                        <span class="meta-value c-requirement-card__meta-value">{{requirement.req_reference}}</span>
                       </div>
                     </div>
                   </div>
@@ -93,29 +93,29 @@
                           <div class="node-toggle">
                             <div class="toggle-placeholder"></div>
                           </div>
-                          <div class="requirement-card child-card">
+                          <div class="requirement-card child-card c-requirement-card">
                             <div class="requirement-header">
-                              <div class="requirement-id">
-                                <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}" class="requirement-link">
+                              <div class="requirement-id c-requirement-card__id">
+                                <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}" class="requirement-link c-linked-requirements__link">
                                   REQ-{{requirement.req_id}}
                                 </a>
                               </div>
                               <div class="requirement-status">
-                                <span class="status-badge status-{{requirement.req_current_status}}">
+                                <span class="status-badge status-{{requirement.req_current_status}}" data-status="{{requirement.req_current_status}}">
                                   {{requirement.req_current_status}}
                                 </span>
                               </div>
                             </div>
-                            <div class="requirement-title">{{requirement.req_title}}</div>
+                            <div class="requirement-title c-linked-requirements__title">{{requirement.req_title}}</div>
                             <div class="requirement-description">{{requirement.req_description}}</div>
                             <div class="requirement-meta">
                               <div class="meta-item">
                                 <span class="meta-label">Category:</span>
-                                <span class="meta-value">{{requirement.req_category}}</span>
+                                <span class="meta-value c-requirement-card__meta-value">{{requirement.req_category}}</span>
                               </div>
                               <div class="meta-item">
                                 <span class="meta-label">Reference:</span>
-                                <span class="meta-value">{{requirement.req_reference}}</span>
+                                <span class="meta-value c-requirement-card__meta-value">{{requirement.req_reference}}</span>
                               </div>
                             </div>
                           </div>

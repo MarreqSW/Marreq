@@ -1,6 +1,19 @@
 /* Reset and Base Styles */
-* {
+[class],
+[class]::before,
+[class]::after {
   box-sizing: border-box;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure {
   margin: 0;
   padding: 0;
 }
@@ -24,7 +37,7 @@ main {
 }
 
 /* Main Content - Fluid Layout */
-.main-content {
+.o-main-content {
   margin: var(--space-6) auto;
   padding: var(--space-6) var(--space-4);
   width: min(1200px, calc(100% - 2 * var(--space-8)));
@@ -32,25 +45,25 @@ main {
 
 /* Responsive padding for different screen sizes */
 @media (min-width: 576px) {
-  .main-content {
+  .o-main-content {
     padding: var(--space-8) var(--space-6);
   }
 }
 
 @media (min-width: 768px) {
-  .main-content {
+  .o-main-content {
     padding: var(--space-8) var(--space-8);
   }
 }
 
 @media (min-width: 1200px) {
-  .main-content {
+  .o-main-content {
     padding: var(--space-8) var(--space-12);
   }
 }
 
 /* Legacy container class for backward compatibility */
-.container {
+[class~='container'] {
   margin: 0 auto;
   max-width: 1200px;
   padding: var(--space-8);
@@ -89,39 +102,39 @@ h3 {
 }
 
 /* Fluid Layout Utilities */
-.fluid-container {
+.o-fluid-container {
   margin: 0;
   max-width: none;
   padding: 0;
   width: 100%;
 }
 
-.fluid-row {
+.o-fluid-row {
   display: flex;
   flex-wrap: wrap;
   margin: 0;
   width: 100%;
 }
 
-.fluid-col {
+.o-fluid-col {
   flex: 1;
   min-width: 0;
   padding: 0;
 }
 
 /* Ensure all content uses full width */
-.page-content {
+.o-page-content {
   max-width: none;
   width: 100%;
 }
 
 /* Responsive Layout */
 @media (max-width: 768px) {
-  .container {
+  [class~='container'] {
     padding: 1rem;
   }
   
-  .main-content {
+  .o-main-content {
     padding: var(--space-4) var(--space-2);
   }
 }

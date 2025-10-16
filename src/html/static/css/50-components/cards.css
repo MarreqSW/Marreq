@@ -1,5 +1,5 @@
 /* Cards */
-.card {
+.c-card {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -9,34 +9,34 @@
   transition: all 0.2s ease;
 }
 
-.card:hover {
+.c-card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
-.card-header {
+.c-card__header {
   background-color: var(--surface-muted);
   border-bottom: 1px solid var(--border-color);
   padding: var(--space-6);
 }
 
-.card-body {
+.c-card__body {
   padding: var(--space-6);
 }
 
-.card-subtitle,
-.card-text {
+.c-card__subtitle,
+.c-card__text {
   color: var(--text-secondary);
 }
 
-.card-footer {
+.c-card__footer {
   background-color: var(--surface-muted);
   border-top: 1px solid var(--border-color);
   padding: var(--space-4) var(--space-6);
 }
 
 /* Requirement Cards */
-.requirement-id {
+.c-requirement-card__id {
   background-color: var(--primary-color);
   border-radius: var(--radius-xl);
   color: #fff;
@@ -46,7 +46,7 @@
   text-decoration: none;
 }
 
-.requirement-reference-tag {
+.c-requirement-card__reference-tag {
   background-color: var(--primary-color);
   border-radius: var(--radius-xl);
   color: #fff;
@@ -58,13 +58,13 @@
   text-decoration: none;
 }
 
-.meta-value {
+.c-requirement-card__meta-value {
   color: var(--text-primary);
   font-weight: 500;
 }
 
 /* Tag styling for better visibility */
-.meta-value.tag {
+.c-requirement-card__meta-value--tag {
   background-color: #2563eb;
   border-radius: var(--radius-sm);
   color: #fff;
@@ -74,14 +74,14 @@
   padding: var(--space-1) var(--space-2);
 }
 
-.requirement-actions {
+.c-requirement-card__actions {
   display: flex;
   gap: var(--space-2);
   margin-top: var(--space-4);
 }
 
 /* Status Badges */
-.status-badge {
+[class~='status-badge'] {
   align-items: center;
   border-radius: var(--radius-xl);
   display: inline-flex;
@@ -92,34 +92,34 @@
   text-transform: uppercase;
 }
 
-.status-draft {
+[class~='status-draft'] {
   background-color: #f1f5f9;
   color: #64748b;
 }
 
-.status-review {
+[class~='status-review'] {
   background-color: #fef3c7;
   color: #d97706;
 }
 
-.status-approved {
+[class~='status-approved'] {
   background-color: #d1fae5;
   color: #059669;
 }
 
-.status-rejected {
+[class~='status-rejected'] {
   background-color: #fee2e2;
   color: #dc2626;
 }
 
-.status-warning {
+[class~='status-warning'] {
   background-color: #fffbeb;
   border: 1px solid #fed7aa;
   color: #d97706;
 }
 
 @media (max-width: 768px) {
-  .requirement-actions {
+  .c-requirement-card__actions {
     flex-direction: column;
   }
 }

@@ -3,15 +3,15 @@
 <div class="container mt-4">
     <div class="row g-4">
         <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card shadow-sm c-card">
+                <div class="card-header d-flex justify-content-between align-items-center c-card__header">
                     <div>
                         <h1 class="h4 mb-0">Project Members</h1>
                         <p class="text-muted mb-0">{{project.project_name}}</p>
                     </div>
                     <span class="badge bg-primary bg-gradient">{{member_count}} Members</span>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body p-0 c-card__body">
                     {{#if members.0}}
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
@@ -69,11 +69,11 @@
         </div>
 
         <div class="col-lg-4">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
+            <div class="card shadow-sm mb-4 c-card">
+                <div class="card-header c-card__header">
                     <h2 class="h6 mb-0">Membership Rules</h2>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <p class="text-muted small mb-2">
                         Owners control who participates in a project. The project must always have at least one owner.
                     </p>
@@ -86,11 +86,11 @@
             </div>
 
             {{#if can_manage_members}}
-            <div class="card shadow-sm">
-                <div class="card-header">
+            <div class="card shadow-sm c-card">
+                <div class="card-header c-card__header">
                     <h2 class="h6 mb-0">Add a Member</h2>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     {{#if has_available_users}}
                         <form method="post" action="/p/{{project_id}}/members" class="vstack gap-3">
                             <div>
@@ -120,11 +120,11 @@
                 </div>
             </div>
             {{else}}
-            <div class="card shadow-sm">
-                <div class="card-header">
+            <div class="card shadow-sm c-card">
+                <div class="card-header c-card__header">
                     <h2 class="h6 mb-0">Access</h2>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <p class="text-muted small mb-0">Only project owners can modify the membership list. Contact an owner if changes are required.</p>
                 </div>
             </div>

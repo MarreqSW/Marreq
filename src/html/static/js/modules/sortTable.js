@@ -21,7 +21,7 @@ export function initTableSort(table, columnMap, options = {}) {
   const state = { column: null, order: 'asc' };
 
   table.addEventListener('click', (event) => {
-    const trigger = event.target.closest('.sort-trigger');
+    const trigger = event.target.closest('.c-table-sort-trigger');
     if (!trigger || !table.contains(trigger)) {
       return;
     }
@@ -60,12 +60,12 @@ export function initTableSort(table, columnMap, options = {}) {
 }
 
 export function updateSortIndicators(table, activeKey, order) {
-  table.querySelectorAll('.sort-trigger .sort-indicator').forEach((indicator) => {
+  table.querySelectorAll('.c-table-sort-trigger .c-table-sort-indicator').forEach((indicator) => {
     indicator.textContent = '↕';
   });
 
   const activeIndicator = table.querySelector(
-    `.sort-trigger[data-sort-key="${activeKey}"] .sort-indicator`,
+    `.c-table-sort-trigger[data-sort-key="${activeKey}"] .c-table-sort-indicator`,
   );
   if (activeIndicator) {
     activeIndicator.textContent = order === 'asc' ? '↑' : '↓';

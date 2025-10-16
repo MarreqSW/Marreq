@@ -1,6 +1,6 @@
 /* Login Page Styles */
 
-.login-container {
+.reqman-login {
   align-items: center;
   background: linear-gradient(135deg, var(--login-gradient-start) 0%, var(--login-gradient-end) 100%);
   display: flex;
@@ -10,7 +10,7 @@
   position: relative;
 }
 
-.login-container > p {
+.reqman-login > p {
   bottom: 0;
   color: #fff;
   font-size: 0.875rem;
@@ -21,7 +21,7 @@
   width: 100%;
 }
 
-.login-card {
+.reqman-login__card {
   background: var(--surface-color);
   border-radius: 12px;
   box-shadow: 0 20px 40px rgb(0 0 0 / 0.1);
@@ -30,44 +30,40 @@
   width: 100%;
 }
 
-.login-theme-toggle {
+.reqman-login__theme-toggle {
   position: absolute;
   right: 1.5rem;
   top: 1.5rem;
 }
 
-.login-header {
+.reqman-login__header {
   margin-bottom: 2rem;
   text-align: center;
 }
 
-.login-header h1 {
+.reqman-login__header h1 {
   color: var(--text-primary);
   font-size: 1.75rem;
   margin-bottom: 0.5rem;
 }
 
-.login-header p {
+.reqman-login__header p {
   color: var(--text-secondary);
   margin: 0;
 }
 
-.login-form {
+.reqman-login__form {
   margin-bottom: 1.5rem;
 }
 
-.login-form .form-group {
-  margin-bottom: 1.5rem;
-}
-
-.login-form .form-label {
+.reqman-login__form .c-form-label {
   color: var(--text-primary);
   display: block;
   font-weight: 500;
   margin-bottom: 0.5rem;
 }
 
-.login-form .form-control {
+.reqman-login__form .c-form-control {
   border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
@@ -76,26 +72,19 @@
   width: 100%;
 }
 
-.login-form .form-control:focus {
+.reqman-login__form .c-form-control:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
   outline: none;
 }
 
-.btn-block {
-  font-size: 1rem;
-  font-weight: 500;
-  padding: 0.75rem;
-  width: 100%;
-}
-
-.login-footer {
+.reqman-login__footer {
   border-top: 1px solid var(--border-color);
   padding-top: 1.5rem;
   text-align: center;
 }
 
-.login-footer p {
+.reqman-login__footer p {
   color: var(--text-secondary);
   font-size: 0.875rem;
   margin: 0;

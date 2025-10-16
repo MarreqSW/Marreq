@@ -1,29 +1,29 @@
 /* Category list page */
-.category-page {
+.reqman-category-page {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-md, 1rem);
 }
 
-.category-page__header {
+.reqman-category-page__header {
     align-items: center;
     display: flex;
     gap: var(--spacing-sm, 0.75rem);
     justify-content: space-between;
 }
 
-.category-page__title {
+.reqman-category-page__title {
     font-size: 1.5rem;
     font-weight: 600;
     margin: 0;
 }
 
-.category-page__toolbar {
+.reqman-category-page__toolbar {
     align-items: center;
     display: flex;
 }
 
-.category-page__search {
+.reqman-category-page__search {
     background: var(--surface-muted, #f1f5f9);
     border: 1px solid var(--border-color, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
@@ -33,19 +33,19 @@
     width: 100%;
 }
 
-.category-page__search:focus {
+.reqman-category-page__search:focus {
     outline: 2px solid rgb(59 130 246 / 0.35);
     outline-offset: 2px;
 }
 
-.category-list {
+.reqman-category-list {
     background: var(--surface-subtle, rgb(148 163 184 / 0.08));
     border: 1px solid var(--border-color, #e2e8f0);
     border-radius: var(--radius-md, 0.5rem);
     overflow: hidden;
 }
 
-.category-row {
+.reqman-category-row {
     align-items: flex-start;
     background: var(--surface-color, #fff);
     display: flex;
@@ -55,27 +55,27 @@
     transition: background var(--transition-base, 0.2s ease), border-color var(--transition-base, 0.2s ease);
 }
 
-.category-row + .category-row {
+.reqman-category-row + .reqman-category-row {
     border-top: 1px solid var(--border-color, #e2e8f0);
 }
 
-.category-row:hover {
+.reqman-category-row:hover {
     background: var(--surface-muted, #f1f5f9);
 }
 
-.category-row__main {
+.reqman-category-row__main {
     flex: 1 1 60%;
     min-width: 0;
 }
 
-.category-row__headline {
+.reqman-category-row__headline {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-sm, 0.75rem);
 }
 
-.category-tag {
+.reqman-category-tag {
     align-items: center;
     background: linear-gradient(135deg, var(--primary-color, #3b82f6), #2563eb);
     border: 1px solid rgb(37 99 235 / 0.65);
@@ -89,48 +89,48 @@
     text-transform: uppercase;
 }
 
-.category-row__title {
+.reqman-category-row__title {
     color: var(--text-primary, #1e293b);
     font-size: 1rem;
     font-weight: 600;
     margin: 0;
 }
 
-.category-row__description {
+.reqman-category-row__description {
     color: var(--text-secondary, #64748b);
     font-size: 0.875rem;
     margin: 0.35rem 0 0;
 }
 
-.category-row__meta {
+.reqman-category-row__meta {
     align-items: center;
     display: flex;
     flex-shrink: 0;
     gap: var(--spacing-md, 1rem);
 }
 
-.category-row__id {
+.reqman-category-row__id {
     color: var(--text-secondary, #64748b);
     font-size: 0.75rem;
     font-weight: 500;
     letter-spacing: 0.03em;
 }
 
-.category-row__actions {
+.reqman-category-row__actions {
     align-items: center;
     display: flex;
     flex-wrap: wrap;
     gap: var(--spacing-xs, 0.5rem);
 }
 
-.category-row__actions .btn {
+.reqman-category-row__action-btn {
     font-size: 0.75rem;
     line-height: 1.2;
     padding: 0.25rem 0.65rem;
     white-space: nowrap;
 }
 
-.category-empty {
+.reqman-category-empty {
     background: var(--surface-muted, #f1f5f9);
     border-radius: var(--radius-md, 0.5rem);
     color: var(--text-secondary, #64748b);
@@ -138,7 +138,7 @@
     padding: var(--spacing-sm, 0.75rem) var(--spacing-md, 1rem);
 }
 
-.sr-only {
+.u-sr-only {
     border: 0;
     clip: rect(0, 0, 0, 0);
     height: 1px;
@@ -150,25 +150,25 @@
 }
 
 @media (max-width: 768px) {
-    .category-page__header {
+    .reqman-category-page__header {
         align-items: flex-start;
         flex-direction: column;
     }
 
-    .category-page__toolbar {
+    .reqman-category-page__toolbar {
         width: 100%;
     }
 
-    .category-page__search {
+    .reqman-category-page__search {
         max-width: 100%;
     }
 
-    .category-row {
+    .reqman-category-row {
         align-items: flex-start;
         flex-direction: column;
     }
 
-    .category-row__meta {
+    .reqman-category-row__meta {
         justify-content: space-between;
         width: 100%;
     }

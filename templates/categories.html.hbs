@@ -1,33 +1,33 @@
 {{!--
   Depends on: css/pages/categories.css, js/pages/categories.js
-  Dynamic classes: category-row[hidden]
+  Dynamic classes: reqman-category-row[hidden]
 --}}
 {{#*inline "page"}}
-<section class="category-page">
-  <div class="category-page__header">
-    <h1 class="category-page__title">Categories</h1>
+<section class="reqman-category-page">
+  <div class="reqman-category-page__header">
+    <h1 class="reqman-category-page__title">Categories</h1>
     <a href="/p/{{selected_project_id}}/categories/new" class="btn btn-primary">New Category</a>
   </div>
 
-  <div class="category-page__toolbar">
-    <label for="category-search-input" class="sr-only">Search categories</label>
+  <div class="reqman-category-page__toolbar">
+    <label for="category-search-input" class="u-sr-only">Search categories</label>
     <input
       id="category-search-input"
       type="search"
-      class="form-control category-page__search"
+      class="form-control reqman-category-page__search"
       placeholder="Search categories by title, tag, or description"
       autocomplete="off"
     >
   </div>
 
-  <div class="category-list" id="category-list">
+  <div class="reqman-category-list" id="category-list">
     {{#each categories}}
       {{> category}}
     {{else}}
-      <p class="category-empty" id="category-empty-state">No categories yet.</p>
+      <p class="reqman-category-empty" id="category-empty-state">No categories yet.</p>
     {{/each}}
   </div>
-  <p class="category-empty" id="category-empty-filter" hidden>No categories match your search.</p>
+  <p class="reqman-category-empty" id="category-empty-filter" hidden>No categories match your search.</p>
 </section>
 {{/inline}}
 {{> layout page_id="categories"}}

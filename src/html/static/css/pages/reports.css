@@ -1,13 +1,13 @@
 /* Reports & Analytics Page */
 
-.metrics-grid {
+.o-report-metrics-grid {
   display: grid;
   gap: 20px;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   margin: 20px 0;
 }
 
-.metric-card {
+.c-report-metric-card {
   align-items: center;
   background: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -19,12 +19,12 @@
   transition: all 0.2s ease;
 }
 
-.metric-card:hover {
+.c-report-metric-card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
-.metric-icon {
+.c-report-metric-card__icon {
   align-items: center;
   background: var(--primary-color);
   border-radius: 12px;
@@ -36,16 +36,16 @@
   width: 48px;
 }
 
-.metric-icon svg {
+.c-report-metric-card__icon svg {
   height: 24px;
   width: 24px;
 }
 
-.metric-content {
+.c-report-metric-card__content {
   flex: 1;
 }
 
-.metric-value {
+.c-report-metric-card__value {
   color: var(--text-primary);
   font-size: 2rem;
   font-weight: 700;
@@ -53,41 +53,41 @@
   margin-bottom: 4px;
 }
 
-.metric-label {
+.c-report-metric-card__label {
   color: var(--text-secondary);
   font-size: 0.9rem;
   font-weight: 500;
 }
 
-.coverage-section {
+.o-report-coverage {
   margin: 20px 0;
 }
 
-.coverage-stats {
+.o-report-coverage-stats {
   display: flex;
   flex-direction: column;
   gap: 12px;
   margin-bottom: 20px;
 }
 
-.coverage-stat {
+.c-report-coverage-stat {
   align-items: center;
   display: flex;
   justify-content: space-between;
   padding: 12px 0;
 }
 
-.stat-label {
+.c-report-coverage-stat__label {
   color: var(--text-primary);
   font-weight: 600;
 }
 
-.stat-value {
+.c-report-coverage-stat__value {
   color: var(--primary-color);
   font-weight: 700;
 }
 
-.coverage-bar {
+.c-report-coverage-bar {
   background: var(--background-color);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -96,7 +96,7 @@
   overflow: hidden;
 }
 
-.coverage-fill {
+.c-report-coverage-bar__fill {
   background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
   border-radius: 12px;
   height: 100%;
@@ -133,13 +133,13 @@
   padding: 4px 12px;
 }
 
-.category-grid {
+.o-report-category-grid {
   display: grid;
   gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
-.category-item {
+.c-report-category-card {
   background: var(--background-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -148,30 +148,30 @@
   transition: all 0.2s ease;
 }
 
-.category-item:hover {
+.c-report-category-card:hover {
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
 }
 
-.category-name {
+.c-report-category-card__name {
   color: var(--text-primary);
   font-weight: 600;
   margin-bottom: 8px;
 }
 
-.category-count {
+.c-report-category-card__count {
   color: var(--primary-color);
   font-size: 1.5rem;
   font-weight: 700;
 }
 
-.stats-grid {
+.o-report-stats-grid {
   display: grid;
   gap: 20px;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
-.stat-item {
+.c-report-stat-card {
   align-items: center;
   background: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -183,12 +183,12 @@
   transition: all 0.2s ease;
 }
 
-.stat-item:hover {
+.c-report-stat-card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
-.stat-icon {
+.c-report-stat-card__icon {
   align-items: center;
   background: var(--background-color);
   border-radius: 8px;
@@ -200,16 +200,16 @@
   width: 40px;
 }
 
-.stat-icon svg {
+.c-report-stat-card__icon svg {
   height: 20px;
   width: 20px;
 }
 
-.stat-content {
+.c-report-stat-card__content {
   flex: 1;
 }
 
-.stat-value {
+.c-report-stat-card__value {
   color: var(--text-primary);
   font-size: 1.5rem;
   font-weight: 700;
@@ -217,7 +217,7 @@
   margin-bottom: 4px;
 }
 
-.stat-label {
+.c-report-stat-card__label {
   color: var(--text-secondary);
   font-size: 0.85rem;
   font-weight: 500;
@@ -225,39 +225,39 @@
 
 /* Responsive adjustments for reports */
 @media (max-width: 768px) {
-  .metrics-grid {
+  .o-report-metrics-grid {
     gap: 16px;
     grid-template-columns: 1fr;
   }
 
-  .metric-card {
+  .c-report-metric-card {
     padding: 16px;
   }
 
-  .metric-icon {
+  .c-report-metric-card__icon {
     height: 40px;
     width: 40px;
   }
 
-  .metric-icon svg {
+  .c-report-metric-card__icon svg {
     height: 20px;
     width: 20px;
   }
 
-  .metric-value {
+  .c-report-metric-card__value {
     font-size: 1.5rem;
   }
 
-  .category-grid {
+  .o-report-category-grid {
     grid-template-columns: 1fr;
   }
 
-  .stats-grid {
+  .o-report-stats-grid {
     gap: 16px;
     grid-template-columns: 1fr;
   }
 
-  .coverage-stat {
+  .c-report-coverage-stat {
     align-items: flex-start;
     flex-direction: column;
     gap: 4px;

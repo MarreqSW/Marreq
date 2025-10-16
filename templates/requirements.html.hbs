@@ -1,63 +1,354 @@
 {{!--
-  Depends on: css/50-components/cards.css, js/pages/requirements.js
-  Dynamic classes: status-{{req_current_status}}
+  Depends on: css/pages/requirements.css, js/pages/requirements.js
+  Dynamic classes: requirements-status-badge--{variant}
 --}}
 {{#*inline "page"}}
-<div class="mb-4">
-  <div class="d-flex justify-content-between align-items-center">
-    <h1>Requirements</h1>
-    <div>
-      <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success">Export Excel</a>
-      {{#if user.is_admin}}
-      <a href="/import_excel" class="btn btn-warning">Import Excel</a>
+<div class="requirements-page">
+  <header class="requirements-header">
+    <div class="requirements-header__meta">
+      <nav class="requirements-breadcrumb" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/projects" class="requirements-breadcrumb__link">Projects</a></li>
+          {{#if project.id}}
+          <li>
+            <a href="/p/{{project.id}}" class="requirements-breadcrumb__link">{{project.name}}</a>
+          </li>
+          {{/if}}
+          <li aria-current="page" class="requirements-breadcrumb__current">Requirements</li>
+        </ol>
+      </nav>
+      <div>
+        <h1 class="requirements-header__title">
+          {{#if project.name}}
+            {{project.name}}
+            <span class="requirements-header__title-accent">requirements</span>
+          {{else}}
+            Requirements
+          {{/if}}
+        </h1>
+        <p class="requirements-header__subtitle">
+          Instant insight into scope, status, and verification progress.
+        </p>
+      </div>
+    </div>
+    <div class="requirements-header__actions">
+      <div class="requirements-header__secondary">
+        {{#if selected_project_id}}
+        <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-outline-secondary btn-sm">
+          Export
+        </a>
+        {{#if user.is_admin}}
+        <a href="/import_excel" class="btn btn-outline-secondary btn-sm">
+          Import
+        </a>
+        {{/if}}
+        {{else}}
+        <button type="button" class="btn btn-outline-secondary btn-sm" disabled aria-disabled="true">
+          Export
+        </button>
+        {{#if user.is_admin}}
+        <button type="button" class="btn btn-outline-secondary btn-sm" disabled aria-disabled="true">
+          Import
+        </button>
+        {{/if}}
+        {{/if}}
+      </div>
+      {{#if selected_project_id}}
+        <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-primary requirements-header__primary" id="newRequirementButton">
+          New Requirement
+        </a>
+      {{else}}
+        <button type="button" class="btn btn-primary requirements-header__primary" id="newRequirementButton" disabled aria-disabled="true">
+          New Requirement
+        </button>
       {{/if}}
+    </div>
+  </header>
+
+  <section class="requirements-metrics" aria-label="Requirement health">
+    <article class="requirements-metric-card requirements-metric-card--total">
+      <span class="requirements-metric-card__label">Total</span>
+      <span class="requirements-metric-card__value">{{requirement_metrics.total}}</span>
+      <span class="requirements-metric-card__hint">Tracked items</span>
+    </article>
+    <article class="requirements-metric-card requirements-metric-card--draft">
+      <span class="requirements-metric-card__label">Draft</span>
+      <span class="requirements-metric-card__value">{{requirement_metrics.draft}}</span>
+      <span class="requirements-metric-card__badge">Needs polish</span>
+    </article>
+    <article class="requirements-metric-card requirements-metric-card--accepted">
+      <span class="requirements-metric-card__label">Accepted</span>
+      <span class="requirements-metric-card__value">{{requirement_metrics.accepted}}</span>
+      <span class="requirements-metric-card__badge">Ready to build</span>
+    </article>
+    <article class="requirements-metric-card requirements-metric-card--rejected">
+      <span class="requirements-metric-card__label">Rejected</span>
+      <span class="requirements-metric-card__value">{{requirement_metrics.rejected}}</span>
+      <span class="requirements-metric-card__badge">Out of scope</span>
+    </article>
+    <article class="requirements-metric-card requirements-metric-card--coverage">
+      <div class="requirements-metric-card__header">
+        <span class="requirements-metric-card__label">Coverage</span>
+        <span class="requirements-metric-card__value">{{requirement_metrics.coverage.percent}}%</span>
+      </div>
+      <div class="requirements-metric-card__progress">
+        <div
+          class="requirements-metric-card__progress-bar"
+          style="width: {{requirement_metrics.coverage.percent}}%;"
+          aria-valuenow="{{requirement_metrics.coverage.percent}}"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          role="progressbar">
+        </div>
+      </div>
+      <span class="requirements-metric-card__hint">
+        {{requirement_metrics.coverage.verified}} verified of {{requirement_metrics.coverage.total}}
+      </span>
+    </article>
+  </section>
+
+  <section class="requirements-controls c-card" aria-label="Filters">
+    <div class="requirements-controls__inner">
+      <form
+        method="GET"
+        action="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}"
+        class="requirements-filter-bar"
+        id="requirementsFilterForm">
+        <div class="requirements-filter-bar__search">
+          <label for="requirementsSearch" class="visually-hidden">Search requirements</label>
+          <input type="search"
+            id="requirementsSearch"
+            class="requirements-filter-bar__search-input"
+            name="search"
+            placeholder="Filter by title, key, or text…"
+            autocomplete="off" />
+          <span class="requirements-filter-bar__shortcut" aria-hidden="true">/</span>
+        </div>
+        <div class="requirements-filter-bar__selects">
+          <label for="statusFilter" class="visually-hidden">Filter by status</label>
+          <select
+            id="statusFilter"
+            name="status_filter"
+            class="requirements-filter-bar__select"
+            data-filter-control="status">
+            <option value="">Status · All</option>
+            {{#each statuses}}
+              <option value="{{st_id}}" {{#if (eq st_id ../current_status_filter)}}selected{{/if}}>
+                {{st_title}}
+              </option>
+            {{/each}}
+          </select>
+
+          <label for="verificationFilter" class="visually-hidden">Filter by verification mode</label>
+          <select
+            id="verificationFilter"
+            name="verification_filter"
+            class="requirements-filter-bar__select"
+            data-filter-control="verification">
+            <option value="">Verification · All</option>
+            {{#each verifications}}
+              <option value="{{verification_id}}" {{#if (eq verification_id ../current_verification_filter)}}selected{{/if}}>
+                {{verification_name}}
+              </option>
+            {{/each}}
+          </select>
+
+          <label for="categoryFilter" class="visually-hidden">Filter by category</label>
+          <select
+            id="categoryFilter"
+            name="category_filter"
+            class="requirements-filter-bar__select"
+            data-filter-control="category">
+            <option value="">Category · All</option>
+            {{#each categories}}
+              <option value="{{cat_id}}" {{#if (eq cat_id ../current_category_filter)}}selected{{/if}}>
+                {{cat_title}}
+              </option>
+            {{/each}}
+          </select>
+        </div>
+
+        <div class="requirements-filter-bar__actions">
+          <button type="button" class="requirements-filter-bar__clear" data-action="clear-filters">
+            Clear filters
+          </button>
+          <button type="submit" class="requirements-filter-bar__submit">
+            Apply
+          </button>
+        </div>
+      </form>
+
+      {{#if has_active_filters}}
+      <div class="requirements-filter-chips" aria-live="polite">
+        {{#each active_filters}}
+          <button
+            type="button"
+            class="requirements-filter-chip"
+            data-filter-key="{{key}}"
+            data-action="remove-filter">
+            {{label}}
+            <span aria-hidden="true">×</span>
+            <span class="visually-hidden">Clear {{label}}</span>
+          </button>
+        {{/each}}
+      </div>
+      {{/if}}
+    </div>
+  </section>
+
+  <section class="requirements-table-section" aria-live="polite">
+    {{#if has_requirements}}
+    <div class="requirements-table__wrapper">
+      <table class="requirements-table" id="requirementsTable">
+        <thead>
+          <tr>
+            <th scope="col" data-sort-key="key" class="is-sortable">Key</th>
+            <th scope="col" data-sort-key="title" class="is-sortable">Title</th>
+            <th scope="col" data-sort-key="status" class="is-sortable">Status</th>
+            <th scope="col" data-sort-key="verification" class="is-sortable">Verification</th>
+            <th scope="col" data-sort-key="updated" class="is-sortable">Modified</th>
+            <th scope="col" data-sort-key="author" class="is-sortable">Author</th>
+            <th scope="col" class="requirements-table__actions-head">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each requirements}}
+          <tr
+            class="requirements-row"
+            data-requirement-id="{{req_id}}"
+            data-status-id="{{req_current_status_id}}"
+            data-status-label="{{req_current_status}}">
+            <td class="requirements-row__cell requirements-row__cell--key">
+              <div class="requirements-key">
+                <span class="requirements-key__value">
+                  {{#if req_reference}}{{req_reference}}{{else}}REQ-{{req_id}}{{/if}}
+                </span>
+                <button
+                  type="button"
+                  class="requirements-key__toggle"
+                  data-action="toggle-row-details"
+                  aria-expanded="false"
+                  aria-controls="requirement-details-{{req_id}}">
+                  <span class="visually-hidden">Toggle details for {{req_title}}</span>
+                </button>
+              </div>
+            </td>
+            <td class="requirements-row__cell requirements-row__cell--title">
+              <a
+                href="/p/{{project_id}}/requirements/show/{{req_id}}"
+                class="requirements-title"
+                title="{{req_title}}">
+                {{req_title}}
+              </a>
+              {{#if req_reference}}
+              <span class="requirements-title__reference">({{req_reference}})</span>
+              {{/if}}
+            </td>
+            <td class="requirements-row__cell requirements-row__cell--status">
+              <span
+                class="requirements-status-badge"
+                data-status-id="{{req_current_status_id}}"
+                data-status="{{req_current_status}}">
+                {{req_current_status}}
+              </span>
+            </td>
+            <td class="requirements-row__cell requirements-row__cell--verification">
+              <span class="requirements-cell-muted">{{req_verification}}</span>
+            </td>
+            <td class="requirements-row__cell requirements-row__cell--updated">
+              <time>{{req_update_date}}</time>
+            </td>
+            <td class="requirements-row__cell requirements-row__cell--author">
+              {{#if req_author}}
+                {{req_author}}
+              {{else}}
+                <span class="requirements-cell-muted">—</span>
+              {{/if}}
+            </td>
+            <td class="requirements-row__cell requirements-row__cell--actions">
+              <div class="requirements-row__actions">
+                <a href="/p/{{project_id}}/requirements/edit/{{req_id}}" class="requirements-row__action requirements-row__action--link">Edit</a>
+                <button
+                  type="button"
+                  class="requirements-row__action"
+                  data-action="duplicate-requirement"
+                  data-requirement-id="{{req_id}}">
+                  Duplicate
+                </button>
+                <button
+                  type="button"
+                  class="requirements-row__action requirements-row__action--menu"
+                  data-action="open-row-menu"
+                  aria-haspopup="true"
+                  aria-expanded="false">
+                  ⋯
+                  <span class="visually-hidden">More for {{req_title}}</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <tr
+            id="requirement-details-{{req_id}}"
+            class="requirements-row__details"
+            data-details-for="{{req_id}}"
+            hidden>
+            <td colspan="7">
+              <dl class="requirements-details-grid">
+                <div>
+                  <dt>Category</dt>
+                  <dd>{{req_category}}</dd>
+                </div>
+                <div>
+                  <dt>Applicability</dt>
+                  <dd>{{req_applicability}}</dd>
+                </div>
+                <div>
+                  <dt>Reviewer</dt>
+                  <dd>{{#if req_reviewer}}{{req_reviewer}}{{else}}—{{/if}}</dd>
+                </div>
+                <div>
+                  <dt>Updated</dt>
+                  <dd>{{req_update_date}}</dd>
+                </div>
+                <div>
+                  <dt>Author</dt>
+                  <dd>{{#if req_author}}{{req_author}}{{else}}—{{/if}}</dd>
+                </div>
+                <div>
+                  <dt>Parent</dt>
+                  <dd>
+                    {{#if req_parent_id}}
+                      <a href="/p/{{project_id}}/requirements/show/{{req_parent_id}}">{{req_parent_title}}</a>
+                    {{else}}
+                      —
+                    {{/if}}
+                  </dd>
+                </div>
+              </dl>
+            </td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    </div>
+    <nav class="requirements-pagination" aria-label="Requirements pagination">
+      <button type="button" class="requirements-pagination__button is-disabled" disabled aria-disabled="true">Prev</button>
+      <span class="requirements-pagination__status">All {{requirement_metrics.total}} requirements</span>
+      <button type="button" class="requirements-pagination__button is-disabled" disabled aria-disabled="true">Next</button>
+    </nav>
+    {{else}}
+    <div class="requirements-empty-state">
+      <div class="requirements-empty-state__illustration" aria-hidden="true">📄</div>
+      <h2>No requirements yet</h2>
+      <p>Let’s add your first one and start shaping this project.</p>
       <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-primary">New Requirement</a>
     </div>
-  </div>
+    {{/if}}
+  </section>
 </div>
 
-<!-- Filters Section -->
-<div class="card mb-4 c-card">
-  <div class="card-header c-card__header">
-    <h5 class="mb-0">Filters</h5>
-  </div>
-  <div class="card-body c-card__body">
-    <form method="GET" action="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}" class="d-flex align-items-end gap-3 filters-form">
-      {{> partials/filters_form
-          status_field_name="status_filter"
-          status_label="Status"
-          status_default_label="All Statuses"
-          status_options=statuses
-          status_value_key="req_st_id"
-          status_label_key="req_st_title"
-          status_selected=current_status_filter
-          verification_field_name="verification_filter"
-          verification_label="Verification Mode"
-          verification_default_label="All Verification Modes"
-          verification_options=verifications
-          verification_value_key="verification_id"
-          verification_label_key="verification_name"
-          verification_selected=current_verification_filter
-          category_field_name="category_filter"
-          category_label="Category"
-          category_default_label="All Categories"
-          category_options=categories
-          category_value_key="cat_id"
-          category_label_key="cat_title"
-          category_selected=current_category_filter
-      }}
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Apply Filters</button>
-        <a href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}" class="btn btn-secondary">Clear</a>
-      </div>
-    </form>
-  </div>
-</div>
-
-<section id="Requirements">
-  {{#each requirements }}
-    {{> requirement}}
-  {{/each}}
-</section>
+<script type="application/json" id="requirementsStatusDefinitions">
+{{{status_definitions_raw}}}
+</script>
 {{/inline}}
 {{> layout page_id="requirements"}}

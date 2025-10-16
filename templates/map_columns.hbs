@@ -5,12 +5,12 @@
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-10 offset-md-1">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h3>Map Excel Columns to Database Fields</h3>
                     <p class="mb-0">Import Type: <strong>{{import_type}}</strong> | Records to Import: <strong>{{data_count}}</strong></p>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <form id="mappingForm" action="/import_excel/process" method="post">
                         <input type="hidden" name="import_type" value="{{import_type}}">
                         <input type="hidden" name="temp_file" value="{{temp_file}}">
@@ -65,7 +65,7 @@
                         <hr>
                         
                         <h5>Column Mappings</h5>
-                        <div class="alert alert-warning">
+                        <div class="alert alert-warning c-alert">
                             <strong>Important:</strong> Map Excel columns to the appropriate database fields. 
                             Unmapped columns will be ignored. Required fields should be mapped for successful import.
                         </div>

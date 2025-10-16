@@ -23,11 +23,11 @@
 
 <section id="Reports">
   <!-- Executive Summary -->
-  <div class="card mb-4">
-    <div class="card-header">
+  <div class="card mb-4 c-card">
+    <div class="card-header c-card__header">
       <h3>Executive Summary</h3>
     </div>
-    <div class="card-body">
+    <div class="card-body c-card__body">
       <div class="o-report-metrics-grid">
         <div class="c-report-metric-card">
           <div class="c-report-metric-card__icon">
@@ -84,11 +84,11 @@
   </div>
 
   <!-- Coverage Analysis -->
-  <div class="card mb-4">
-    <div class="card-header">
+  <div class="card mb-4 c-card">
+    <div class="card-header c-card__header">
       <h3>Coverage Analysis</h3>
     </div>
-    <div class="card-body">
+    <div class="card-body c-card__body">
       <div class="o-report-coverage">
         <div class="o-report-coverage-stats">
           <div class="c-report-coverage-stat">
@@ -110,11 +110,11 @@
   <div class="row">
     <!-- Requirements by Status -->
     <div class="col-md-6">
-      <div class="card mb-4">
-        <div class="card-header">
+      <div class="card mb-4 c-card">
+        <div class="card-header c-card__header">
           <h3>Requirements by Status</h3>
         </div>
-        <div class="card-body">
+        <div class="card-body c-card__body">
           <div class="status-list">
             {{#each requirements_by_status}}
               <div class="status-item">
@@ -129,11 +129,11 @@
 
     <!-- Tests by Status -->
     <div class="col-md-6">
-      <div class="card mb-4">
-        <div class="card-header">
+      <div class="card mb-4 c-card">
+        <div class="card-header c-card__header">
           <h3>Tests by Status</h3>
         </div>
-        <div class="card-body">
+        <div class="card-body c-card__body">
           <div class="status-list">
             {{#each tests_by_status}}
               <div class="status-item">
@@ -148,11 +148,11 @@
   </div>
 
   <!-- Requirements by Category -->
-  <div class="card mb-4">
-    <div class="card-header">
+  <div class="card mb-4 c-card">
+    <div class="card-header c-card__header">
       <h3>Requirements by Category</h3>
     </div>
-    <div class="card-body">
+    <div class="card-body c-card__body">
       <div class="o-report-category-grid">
         {{#each requirements_by_category}}
           <div class="c-report-category-card">
@@ -165,11 +165,11 @@
   </div>
 
   <!-- Project Statistics -->
-  <div class="card mb-4">
-    <div class="card-header">
+  <div class="card mb-4 c-card">
+    <div class="card-header c-card__header">
       <h3>Project Statistics</h3>
     </div>
-    <div class="card-body">
+    <div class="card-body c-card__body">
       <div class="o-report-stats-grid">
         <div class="c-report-stat-card">
           <div class="c-report-stat-card__icon">

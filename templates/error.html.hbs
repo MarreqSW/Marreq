@@ -4,14 +4,14 @@
 <div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card border-danger">
-                <div class="card-header bg-danger text-white">
+            <div class="card border-danger c-card">
+                <div class="card-header bg-danger text-white c-card__header">
                     <h4 class="mb-0">
                         <i class="fas fa-exclamation-triangle"></i>
                         {{#if title}}{{title}}{{else}}Error{{/if}}
                     </h4>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <div class="text-center mb-4">
                         <i class="fas fa-exclamation-circle text-danger" style="font-size: 4rem;"></i>
                     </div>
@@ -19,7 +19,7 @@
                     <h5 class="card-title text-center mb-3">{{#if message}}{{message}}{{else}}An error occurred while processing your request.{{/if}}</h5>
                     
                     {{#if details}}
-                    <div class="alert alert-info">
+                    <div class="alert alert-info c-alert">
                         <strong>Details:</strong> {{details}}
                     </div>
                     {{/if}}

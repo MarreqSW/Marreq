@@ -15,29 +15,29 @@
 
             <div class="row">
                 <div class="col-md-4">
-                    <div class="card text-center">
-                        <div class="card-body">
+                    <div class="card text-center c-card">
+                        <div class="card-body c-card__body">
                             <h5 class="card-title">Last 7 Days</h5>
                             <h2 class="text-primary">{{last_7_days}}</h2>
-                            <p class="card-text">Log entries</p>
+                            <p class="card-text c-card__text">Log entries</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card text-center">
-                        <div class="card-body">
+                    <div class="card text-center c-card">
+                        <div class="card-body c-card__body">
                             <h5 class="card-title">Last 30 Days</h5>
                             <h2 class="text-success">{{last_30_days}}</h2>
-                            <p class="card-text">Log entries</p>
+                            <p class="card-text c-card__text">Log entries</p>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card text-center">
-                        <div class="card-body">
+                    <div class="card text-center c-card">
+                        <div class="card-body c-card__body">
                             <h5 class="card-title">Last 90 Days</h5>
                             <h2 class="text-info">{{last_90_days}}</h2>
-                            <p class="card-text">Log entries</p>
+                            <p class="card-text c-card__text">Log entries</p>
                         </div>
                     </div>
                 </div>
@@ -45,11 +45,11 @@
 
             <div class="row mt-4">
                 <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
+                    <div class="card c-card">
+                        <div class="card-header c-card__header">
                             <h5 class="mb-0">System Activity Overview</h5>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body c-card__body">
                             <div class="row">
                                 <div class="col-md-6">
                                     <h6>Recent Activity Trends</h6>
@@ -61,7 +61,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <h6>System Health</h6>
-                                    <div class="alert alert-info">
+                                    <div class="alert alert-info c-alert">
                                         <strong>Log Retention:</strong> 90 days<br>
                                         <strong>Storage:</strong> Active monitoring<br>
                                         <strong>Status:</strong> Healthy
@@ -75,11 +75,11 @@
 
             <div class="row mt-4">
                 <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
+                    <div class="card c-card">
+                        <div class="card-header c-card__header">
                             <h5 class="mb-0">Maintenance Actions</h5>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body c-card__body">
                             <form method="post" action="/cleanup_logs" class="d-inline">
                                 <button type="submit" class="btn btn-warning" data-confirm="Are you sure you want to clean up logs older than 90 days? This action cannot be undone.">
                                     <i class="fas fa-broom"></i> Clean Up Old Logs

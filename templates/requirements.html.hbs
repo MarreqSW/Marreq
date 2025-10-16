@@ -1,3 +1,7 @@
+{{!--
+  Depends on: css/50-components/cards.css, js/pages/requirements.js
+  Dynamic classes: status-{{req_current_status}}
+--}}
 {{#*inline "page"}}
 <div class="mb-4">
   <div class="d-flex justify-content-between align-items-center">
@@ -13,11 +17,11 @@
 </div>
 
 <!-- Filters Section -->
-<div class="card mb-4">
-  <div class="card-header">
+<div class="card mb-4 c-card">
+  <div class="card-header c-card__header">
     <h5 class="mb-0">Filters</h5>
   </div>
-  <div class="card-body">
+  <div class="card-body c-card__body">
     <form method="GET" action="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}" class="d-flex align-items-end gap-3 filters-form">
       {{> partials/filters_form
           status_field_name="status_filter"
@@ -56,4 +60,4 @@
   {{/each}}
 </section>
 {{/inline}}
-{{> layout}}
+{{> layout page_id="requirements"}}

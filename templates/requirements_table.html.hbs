@@ -1,3 +1,7 @@
+{{!--
+  Depends on: css/50-components/tables.css, js/pages/requirements.js
+  Dynamic classes: sort-indicator, editable-field/select toggled by JS
+--}}
 {{#*inline "page"}}
 <div class="mb-4">
   <div class="d-flex justify-content-between align-items-center">
@@ -14,11 +18,11 @@
 </div>
 
 <!-- Filters Section -->
-<div class="card mb-4">
-  <div class="card-header">
+<div class="card mb-4 c-card">
+  <div class="card-header c-card__header">
     <h5 class="mb-0">Filters</h5>
   </div>
-  <div class="card-body">
+  <div class="card-body c-card__body">
     <form method="GET" action="/p/{{selected_project_id}}/requirements_table" class="d-flex align-items-end gap-3 filters-form">
       {{> partials/filters_form
           status_field_name="status_filter"
@@ -52,70 +56,70 @@
 </div>
 
 <!-- Requirements Table -->
-<div class="card">
-  <div class="card-body p-0">
-    <div class="table-responsive">
-      <table class="table table-hover mb-0" id="requirementsTable">
-        <thead class="table-light">
+<div class="card c-card">
+  <div class="card-body p-0 c-card__body">
+    <div class="table-responsive c-table-responsive">
+      <table class="table table-hover mb-0 c-table c-table--hover" id="requirementsTable">
+        <thead class="table-light c-table__head">
           <tr>
-            <th class="sortable" data-sort="req_id" style="width: 8%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="req_id">
+            <th class="sortable c-table-sortable" data-sort="req_id" style="width: 8%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="req_id">
                 ID
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="req_title" style="width: 20%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="req_title">
+            <th class="sortable c-table-sortable" data-sort="req_title" style="width: 20%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="req_title">
                 Title
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="req_reference" style="width: 12%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="req_reference">
+            <th class="sortable c-table-sortable" data-sort="req_reference" style="width: 12%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="req_reference">
                 Reference
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="req_category" style="width: 10%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="req_category">
+            <th class="sortable c-table-sortable" data-sort="req_category" style="width: 10%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="req_category">
                 Category
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="req_current_status" style="width: 10%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="req_current_status">
+            <th class="sortable c-table-sortable" data-sort="req_current_status" style="width: 10%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="req_current_status">
                 Status
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="req_verification" style="width: 10%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="req_verification">
+            <th class="sortable c-table-sortable" data-sort="req_verification" style="width: 10%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="req_verification">
                 Verification
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="req_author" style="width: 8%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="req_author">
+            <th class="sortable c-table-sortable" data-sort="req_author" style="width: 8%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="req_author">
                 Author
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="req_reviewer" style="width: 8%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="req_reviewer">
+            <th class="sortable c-table-sortable" data-sort="req_reviewer" style="width: 8%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="req_reviewer">
                 Reviewer
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="req_creation_date" style="width: 10%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="req_creation_date">
+            <th class="sortable c-table-sortable" data-sort="req_creation_date" style="width: 10%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="req_creation_date">
                 Creation Date
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
-            <th class="sortable" data-sort="req_deadline_date" style="width: 10%;">
-              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger" data-sort-key="req_deadline_date">
+            <th class="sortable c-table-sortable" data-sort="req_deadline_date" style="width: 10%;">
+              <a href="#" class="text-decoration-none d-flex align-items-center justify-content-between sort-trigger c-table-sort-trigger" data-sort-key="req_deadline_date">
                 Deadline
-                <span class="sort-indicator">↕</span>
+                <span class="sort-indicator c-table-sort-indicator">↕</span>
               </a>
             </th>
             <th style="width: 8%;">Actions</th>
@@ -128,41 +132,41 @@
               <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="text-decoration-none fw-bold">REQ-{{req_id}}</a>
             </td>
             <td>
-              <span class="editable-field" data-field="req_title" data-id="{{req_id}}">{{req_title}}</span>
+              <span class="editable-field c-table-editable__field" data-field="req_title" data-id="{{req_id}}">{{req_title}}</span>
             </td>
             <td>
               <span class="text-muted">{{req_reference}}</span>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="req_category" data-id="{{req_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select c-table-editable__select" data-field="req_category" data-id="{{req_id}}">
                 {{#each ../categories}}
                   <option value="{{cat_id}}" {{#if (eq cat_id ../req_category_id)}}selected{{/if}}>{{cat_title}}</option>
                 {{/each}}
               </select>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="req_current_status" data-id="{{req_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select c-table-editable__select" data-field="req_current_status" data-id="{{req_id}}">
                 {{#each ../statuses}}
                   <option value="{{req_st_id}}" {{#if (eq req_st_id ../req_current_status_id)}}selected{{/if}}>{{req_st_title}}</option>
                 {{/each}}
               </select>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="req_verification" data-id="{{req_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select c-table-editable__select" data-field="req_verification" data-id="{{req_id}}">
                 {{#each ../verifications}}
                   <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification_id)}}selected{{/if}}>{{verification_name}}</option>
                 {{/each}}
               </select>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="req_author" data-id="{{req_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select c-table-editable__select" data-field="req_author" data-id="{{req_id}}">
                 {{#each ../users}}
                   <option value="{{user_id}}" {{#if (eq user_id ../req_author_id)}}selected{{/if}}>{{user_name}}</option>
                 {{/each}}
               </select>
             </td>
             <td>
-              <select class="form-select form-select-sm editable-select" data-field="req_reviewer" data-id="{{req_id}}">
+              <select class="form-select form-select-sm editable-select c-form-select c-form-control c-form-select--sm c-form-control--sm c-form-control--select c-table-editable__select" data-field="req_reviewer" data-id="{{req_id}}">
                 {{#each ../users}}
                   <option value="{{user_id}}" {{#if (eq user_id ../req_reviewer_id)}}selected{{/if}}>{{user_name}}</option>
                 {{/each}}
@@ -172,7 +176,7 @@
               <span class="text-muted small">{{req_creation_date}}</span>
             </td>
             <td>
-              <input type="date" class="form-control form-control-sm editable-date" data-field="req_deadline_date" data-id="{{req_id}}" value="{{req_deadline_date}}">
+              <input type="date" class="form-control form-control-sm editable-date c-form-control c-form-control--sm c-table-editable__date" data-field="req_deadline_date" data-id="{{req_id}}" value="{{req_deadline_date}}">
             </td>
             <td>
               <div class="btn-group btn-group-sm">
@@ -203,14 +207,14 @@
 
 {{> partials/modals render_requirement_modal=true}}
           <div class="mb-3">
-            <label for="new_req_description" class="form-label">Description *</label>
-            <textarea class="form-control" id="new_req_description" name="req_description" rows="3" required></textarea>
+            <label for="new_req_description" class="form-label c-form-label">Description *</label>
+            <textarea class="form-control c-form-control c-form-control--textarea" id="new_req_description" name="req_description" rows="3" required></textarea>
           </div>
           <div class="row">
             <div class="col-md-4">
               <div class="mb-3">
-                <label for="new_req_category" class="form-label">Category</label>
-                <select class="form-select" id="new_req_category" name="req_category">
+                <label for="new_req_category" class="form-label c-form-label">Category</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_category" name="req_category">
                   {{#each categories}}
                     <option value="{{cat_id}}">{{cat_title}}</option>
                   {{/each}}
@@ -219,8 +223,8 @@
             </div>
             <div class="col-md-4">
               <div class="mb-3">
-                <label for="new_req_status" class="form-label">Status</label>
-                <select class="form-select" id="new_req_status" name="req_current_status">
+                <label for="new_req_status" class="form-label c-form-label">Status</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_status" name="req_current_status">
                   {{#each statuses}}
                     <option value="{{req_st_id}}">{{req_st_title}}</option>
                   {{/each}}
@@ -229,8 +233,8 @@
             </div>
             <div class="col-md-4">
               <div class="mb-3">
-                <label for="new_req_verification" class="form-label">Verification</label>
-                <select class="form-select" id="new_req_verification" name="req_verification">
+                <label for="new_req_verification" class="form-label c-form-label">Verification</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_verification" name="req_verification">
                   {{#each verifications}}
                     <option value="{{verification_id}}">{{verification_name}}</option>
                   {{/each}}
@@ -241,8 +245,8 @@
           <div class="row">
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_req_author" class="form-label">Author</label>
-                <select class="form-select" id="new_req_author" name="req_author">
+                <label for="new_req_author" class="form-label c-form-label">Author</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_author" name="req_author">
                   {{#each users}}
                     <option value="{{user_id}}">{{user_name}}</option>
                   {{/each}}
@@ -251,8 +255,8 @@
             </div>
             <div class="col-md-6">
               <div class="mb-3">
-                <label for="new_req_reviewer" class="form-label">Reviewer</label>
-                <select class="form-select" id="new_req_reviewer" name="req_reviewer">
+                <label for="new_req_reviewer" class="form-label c-form-label">Reviewer</label>
+                <select class="form-select c-form-select c-form-control c-form-control--select" id="new_req_reviewer" name="req_reviewer">
                   {{#each users}}
                     <option value="{{user_id}}">{{user_name}}</option>
                   {{/each}}
@@ -271,4 +275,4 @@
 </div>
 
 {{/inline}}
-{{> layout}}
+{{> layout page_id="requirements"}}

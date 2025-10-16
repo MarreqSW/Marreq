@@ -1,4 +1,7 @@
 {{#extend "layout"}}
+{{!--
+  Depends on: js/pages/adminCacheStats.js
+--}}
 {{#content "title"}}Cache Statistics{{/content}}
 
 {{#content "content"}}
@@ -6,7 +9,7 @@
     <h1>Cache Statistics</h1>
     
     {{#if message}}
-    <div class="alert alert-info alert-dismissible fade show" role="alert">
+    <div class="alert alert-info alert-dismissible fade show c-alert" role="alert">
         {{message}}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
@@ -14,20 +17,20 @@
     
     <div class="row">
         <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h5 class="card-title mb-0">Cache Overview</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <div class="row">
                         <div class="col-6">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h3 class="text-primary">{{stats.total_entries}}</h3>
                                 <small class="text-muted">Total Entries</small>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h3 class="text-success">{{stats.active_entries}}</h3>
                                 <small class="text-muted">Active Entries</small>
                             </div>
@@ -35,13 +38,13 @@
                     </div>
                     <div class="row mt-3">
                         <div class="col-6">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h3 class="text-warning">{{stats.expired_entries}}</h3>
                                 <small class="text-muted">Expired Entries</small>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h3 class="text-info">{{cleaned_entries}}</h3>
                                 <small class="text-muted">Just Cleaned</small>
                             </div>
@@ -52,11 +55,11 @@
         </div>
         
         <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h5 class="card-title mb-0">Cache Actions</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <form method="POST" action="/admin/cache/cleanup" class="d-inline">
                         <button type="submit" class="btn btn-warning me-2">
                             <i class="fas fa-broom"></i> Cleanup Expired
@@ -73,7 +76,7 @@
                     <hr>
                     
                     <div class="d-grid gap-2">
-                        <button class="btn btn-outline-primary" onclick="refreshStats()">
+                        <button class="btn btn-outline-primary" type="button" data-action="refresh-stats">
                             <i class="fas fa-sync-alt"></i> Refresh Statistics
                         </button>
                     </div>
@@ -85,32 +88,32 @@
     <!-- Performance Metrics Section -->
     <div class="row mt-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h5 class="card-title mb-0">Performance Metrics</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <div class="row">
                         <div class="col-md-3">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h4 class="text-success">{{performance.hit_rate_percentage}}%</h4>
                                 <small class="text-muted">Hit Rate</small>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h4 class="text-info">{{performance.total_requests}}</h4>
                                 <small class="text-muted">Total Requests</small>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h4 class="text-primary">{{performance.average_access_time_ms}}ms</h4>
                                 <small class="text-muted">Avg Access Time</small>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h4 class="text-warning">{{performance.memory_usage_mb}}MB</h4>
                                 <small class="text-muted">Memory Usage</small>
                             </div>
@@ -118,13 +121,13 @@
                     </div>
                     <div class="row mt-3">
                         <div class="col-md-6">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h5 class="text-secondary">{{performance.cache_efficiency}}%</h5>
                                 <small class="text-muted">Cache Efficiency</small>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="text-center">
+                            <div class="text-center u-text-center">
                                 <h5 class="text-secondary">{{performance.expired_entries_percentage}}%</h5>
                                 <small class="text-muted">Expired Entries %</small>
                             </div>
@@ -139,8 +142,8 @@
     {{#if recommendations.recommendations}}
     <div class="row mt-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h5 class="card-title mb-0">
                         Optimization Recommendations
                         <span class="badge bg-{{#if (eq recommendations.priority "high")}}danger{{else if (eq recommendations.priority "medium")}}warning{{else}}success{{/if}} float-end">
@@ -148,7 +151,7 @@
                         </span>
                     </h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <ul class="list-group list-group-flush">
                         {{#each recommendations.recommendations}}
                         <li class="list-group-item">
@@ -168,11 +171,11 @@
     
     <div class="row mt-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h5 class="card-title mb-0">Cache Information</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     <div class="row">
                         <div class="col-md-6">
                             <h6>Cache Types</h6>
@@ -205,15 +208,5 @@
     </div>
 </div>
 
-<script>
-function refreshStats() {
-    location.reload();
-}
-
-// Auto-refresh every 30 seconds
-setTimeout(function() {
-    refreshStats();
-}, 30000);
-</script>
 {{/content}}
 {{/extend}}

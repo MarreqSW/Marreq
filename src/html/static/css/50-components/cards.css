@@ -1,125 +1,125 @@
 /* Cards */
-.card {
+.c-card {
   background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-color);
+  color: var(--text-primary);
   overflow: hidden;
   transition: all 0.2s ease;
-  color: var(--text-primary);
 }
 
-.card:hover {
+.c-card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
-.card-header {
-  padding: var(--space-6);
-  border-bottom: 1px solid var(--border-color);
+.c-card__header {
   background-color: var(--surface-muted);
-}
-
-.card-body {
+  border-bottom: 1px solid var(--border-color);
   padding: var(--space-6);
 }
 
-.card-subtitle,
-.card-text {
+.c-card__body {
+  padding: var(--space-6);
+}
+
+.c-card__subtitle,
+.c-card__text {
   color: var(--text-secondary);
 }
 
-.card-footer {
-  padding: var(--space-4) var(--space-6);
-  border-top: 1px solid var(--border-color);
+.c-card__footer {
   background-color: var(--surface-muted);
+  border-top: 1px solid var(--border-color);
+  padding: var(--space-4) var(--space-6);
 }
 
 /* Requirement Cards */
-.requirement-id {
+.c-requirement-card__id {
   background-color: var(--primary-color);
-  color: #fff;
-  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-xl);
+  color: #fff;
   font-size: 0.875rem;
   font-weight: 600;
+  padding: var(--space-1) var(--space-3);
   text-decoration: none;
 }
 
-.requirement-reference-tag {
+.c-requirement-card__reference-tag {
   background-color: var(--primary-color);
-  color: #fff;
-  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-xl);
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
+  color: #fff;
   display: inline-block;
+  font-size: 0.875rem;
+  font-weight: 600;
   margin-bottom: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  text-decoration: none;
 }
 
-.meta-value {
+.c-requirement-card__meta-value {
   color: var(--text-primary);
   font-weight: 500;
 }
 
 /* Tag styling for better visibility */
-.meta-value.tag {
-  background-color: #2563eb !important;
-  color: #fff !important;
-  padding: var(--space-1) var(--space-2);
+.c-requirement-card__meta-value--tag {
+  background-color: #2563eb;
   border-radius: var(--radius-sm);
+  color: #fff;
+  display: inline-block;
   font-size: 0.75rem;
   font-weight: 600;
-  display: inline-block;
+  padding: var(--space-1) var(--space-2);
 }
 
-.requirement-actions {
+.c-requirement-card__actions {
   display: flex;
   gap: var(--space-2);
   margin-top: var(--space-4);
 }
 
 /* Status Badges */
-.status-badge {
-  display: inline-flex;
+[class~='status-badge'] {
   align-items: center;
-  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-xl);
+  display: inline-flex;
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
   letter-spacing: 0.05em;
+  padding: var(--space-1) var(--space-3);
+  text-transform: uppercase;
 }
 
-.status-draft {
+[class~='status-draft'] {
   background-color: #f1f5f9;
   color: #64748b;
 }
 
-.status-review {
+[class~='status-review'] {
   background-color: #fef3c7;
   color: #d97706;
 }
 
-.status-approved {
+[class~='status-approved'] {
   background-color: #d1fae5;
   color: #059669;
 }
 
-.status-rejected {
+[class~='status-rejected'] {
   background-color: #fee2e2;
   color: #dc2626;
 }
 
-.status-warning {
+[class~='status-warning'] {
   background-color: #fffbeb;
-  color: #d97706;
   border: 1px solid #fed7aa;
+  color: #d97706;
 }
 
 @media (max-width: 768px) {
-  .requirement-actions {
+  .c-requirement-card__actions {
     flex-direction: column;
   }
 }

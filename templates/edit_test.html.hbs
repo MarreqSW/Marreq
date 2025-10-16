@@ -1,3 +1,6 @@
+{{!--
+  Depends on: css/50-components/forms.css
+--}}
 {{#*inline "page"}}
 <div class="mb-4">
   <h1>Edit Test</h1>
@@ -5,37 +8,37 @@
 </div>
 
 <section id="Tests">
-  <div class="card">
-    <div class="card-header">
+  <div class="card c-card">
+    <div class="card-header c-card__header">
       <h3>Test Details</h3>
     </div>
-    <div class="card-body">
+    <div class="card-body c-card__body">
       <form method="post">
-        <div class="form-group">
-          <label for="test_name" class="form-label">Test Name</label>
-          <input type="text" name="test_name" id="test_name" value="{{tests.test_name}}" class="form-control" required>
+        <div class="form-group c-form-group">
+          <label for="test_name" class="form-label c-form-label">Test Name</label>
+          <input type="text" name="test_name" id="test_name" value="{{tests.test_name}}" class="form-control c-form-control" required>
         </div>
 
-        <div class="form-group">
-          <label for="test_reference" class="form-label">Test Reference</label>
-          <input type="text" name="test_reference" id="test_reference" value="{{tests.test_reference}}" class="form-control" required>
+        <div class="form-group c-form-group">
+          <label for="test_reference" class="form-label c-form-label">Test Reference</label>
+          <input type="text" name="test_reference" id="test_reference" value="{{tests.test_reference}}" class="form-control c-form-control" required>
           <small class="text-secondary">Must follow format TEST-NUMBER (e.g., TEST-1, TEST-2)</small>
         </div>
 
-        <div class="form-group">
-          <label for="test_description" class="form-label">Description</label>
-          <textarea name="test_description" id="test_description" class="form-control" rows="4" required>{{tests.test_description}}</textarea>
+        <div class="form-group c-form-group">
+          <label for="test_description" class="form-label c-form-label">Description</label>
+          <textarea name="test_description" id="test_description" class="form-control c-form-control c-form-control--textarea" rows="4" required>{{tests.test_description}}</textarea>
         </div>
 
-        <div class="grid grid-2">
-          <div class="form-group">
-            <label for="test_source" class="form-label">Source</label>
-            <input type="text" id="test_source" name="test_source" value="{{tests.test_source}}" class="form-control">
+        <div class="o-grid o-grid--two">
+          <div class="form-group c-form-group">
+            <label for="test_source" class="form-label c-form-label">Source</label>
+            <input type="text" id="test_source" name="test_source" value="{{tests.test_source}}" class="form-control c-form-control">
           </div>
 
-          <div class="form-group">
-            <label for="test_status" class="form-label">Status</label>
-            <select name="test_status" id="test_status" class="form-control" required>
+          <div class="form-group c-form-group">
+            <label for="test_status" class="form-label c-form-label">Status</label>
+            <select name="test_status" id="test_status" class="form-control c-form-control c-form-control--select" required>
               {{#each status }}
                 <option value="{{test_st_id}}" {{#if (eq test_st_id ../tests.test_status_id)}}selected{{/if}}>{{test_st_title}}</option>
               {{/each}}
@@ -43,10 +46,10 @@
           </div>
         </div>
 
-        <div class="grid grid-2">
-          <div class="form-group">
-            <label for="test_parent" class="form-label">Parent Test</label>
-            <select name="test_parent" id="test_parent" class="form-control">
+        <div class="o-grid o-grid--two">
+          <div class="form-group c-form-group">
+            <label for="test_parent" class="form-label c-form-label">Parent Test</label>
+            <select name="test_parent" id="test_parent" class="form-control c-form-control c-form-control--select">
               <option value="0" {{#if (eq ../tests.test_parent_id 0)}}selected{{/if}}>None</option>
               {{#each parent }}
                 <option value="{{test_id}}" {{#if (eq test_id ../tests.test_parent_id)}}selected{{/if}}>{{test_name}}</option>
@@ -59,29 +62,15 @@
         <input type="hidden" id="test_id" name="test_id" value="{{tests.test_id}}">
         <input type="hidden" id="project_id" name="project_id" value="{{tests.project_id}}">
 
-        <div class="form-group mt-4">
-          <label for="linked_requirements" class="form-label">Linked Requirements</label>
-          <select name="linked_requirements" id="linked_requirements" class="form-control" multiple size="8">
+        <div class="form-group mt-4 c-form-group">
+          <label for="linked_requirements" class="form-label c-form-label">Linked Requirements</label>
+          <select name="linked_requirements" id="linked_requirements" class="form-control c-form-control c-form-control--select c-form-control--multiple" multiple size="8">
             {{#each requirements}}
-              <option value="{{req_id}}">REQ-{{req_id}}: {{req_title}}</option>
+              <option value="{{req_id}}" {{#each ../linked_req_ids}}{{#if (eq this ../req_id)}}selected{{/if}}{{/each}}>REQ-{{req_id}}: {{req_title}}</option>
             {{/each}}
           </select>
-          <small class="form-text">Hold Ctrl (or Cmd on Mac) to select multiple requirements</small>
+          <small class="form-text c-form-text">Hold Ctrl (or Cmd on Mac) to select multiple requirements</small>
         </div>
-        
-        <script>
-          // Pre-select currently linked requirements
-          document.addEventListener('DOMContentLoaded', function() {
-            const linkedReqIds = {{#each linked_req_ids}}[{{this}}]{{/each}};
-            const select = document.getElementById('linked_requirements');
-            
-            Array.from(select.options).forEach(option => {
-              if (linkedReqIds.includes(parseInt(option.value))) {
-                option.selected = true;
-              }
-            });
-          });
-        </script>
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary">Update Test</button>
@@ -93,6 +82,4 @@
   </div>
 </section>
 {{/inline}}
-{{> layout}}
-
-
+{{> layout page_id="test-form"}}

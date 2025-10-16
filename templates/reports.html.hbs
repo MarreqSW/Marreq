@@ -1,3 +1,4 @@
+{{!-- Depends on: css/index.css, js/app.js --}}
 {{#*inline "page"}}
 <div class="mb-4">
   <div class="d-flex justify-content-between align-items-center">
@@ -22,60 +23,60 @@
 
 <section id="Reports">
   <!-- Executive Summary -->
-  <div class="card mb-4">
-    <div class="card-header">
+  <div class="card mb-4 c-card">
+    <div class="card-header c-card__header">
       <h3>Executive Summary</h3>
     </div>
-    <div class="card-body">
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-icon">
+    <div class="card-body c-card__body">
+      <div class="o-report-metrics-grid">
+        <div class="c-report-metric-card">
+          <div class="c-report-metric-card__icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 11H1l8-8 8 8h-8v8z"></path>
             </svg>
           </div>
-          <div class="metric-content">
-            <div class="metric-value">{{metrics.total_requirements}}</div>
-            <div class="metric-label">Total Requirements</div>
+          <div class="c-report-metric-card__content">
+            <div class="c-report-metric-card__value">{{metrics.total_requirements}}</div>
+            <div class="c-report-metric-card__label">Total Requirements</div>
           </div>
         </div>
         
-        <div class="metric-card">
-          <div class="metric-icon">
+        <div class="c-report-metric-card">
+          <div class="c-report-metric-card__icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 12l2 2 4-4"></path>
               <path d="M21 12c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2z"></path>
               <path d="M3 12c1 0 2-1 2-2s-1-2-2-2-2 1-2 2 1 2 2 2z"></path>
             </svg>
           </div>
-          <div class="metric-content">
-            <div class="metric-value">{{metrics.total_tests}}</div>
-            <div class="metric-label">Total Tests</div>
+          <div class="c-report-metric-card__content">
+            <div class="c-report-metric-card__value">{{metrics.total_tests}}</div>
+            <div class="c-report-metric-card__label">Total Tests</div>
           </div>
         </div>
         
-        <div class="metric-card">
-          <div class="metric-icon">
+        <div class="c-report-metric-card">
+          <div class="c-report-metric-card__icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
               <polyline points="22,4 12,14.01 9,11.01"></polyline>
             </svg>
           </div>
-          <div class="metric-content">
-            <div class="metric-value">{{metrics.coverage_percentage}}%</div>
-            <div class="metric-label">Coverage</div>
+          <div class="c-report-metric-card__content">
+            <div class="c-report-metric-card__value">{{metrics.coverage_percentage}}%</div>
+            <div class="c-report-metric-card__label">Coverage</div>
           </div>
         </div>
         
-        <div class="metric-card">
-          <div class="metric-icon">
+        <div class="c-report-metric-card">
+          <div class="c-report-metric-card__icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
             </svg>
           </div>
-          <div class="metric-content">
-            <div class="metric-value">{{metrics.avg_tests_per_requirement}}</div>
-            <div class="metric-label">Avg Tests/Req</div>
+          <div class="c-report-metric-card__content">
+            <div class="c-report-metric-card__value">{{metrics.avg_tests_per_requirement}}</div>
+            <div class="c-report-metric-card__label">Avg Tests/Req</div>
           </div>
         </div>
       </div>
@@ -83,24 +84,24 @@
   </div>
 
   <!-- Coverage Analysis -->
-  <div class="card mb-4">
-    <div class="card-header">
+  <div class="card mb-4 c-card">
+    <div class="card-header c-card__header">
       <h3>Coverage Analysis</h3>
     </div>
-    <div class="card-body">
-      <div class="coverage-section">
-        <div class="coverage-stats">
-          <div class="coverage-stat">
-            <span class="stat-label">Covered Requirements:</span>
-            <span class="stat-value">{{metrics.covered_requirements}} out of {{metrics.total_requirements}} ({{metrics.coverage_percentage}}%)</span>
+    <div class="card-body c-card__body">
+      <div class="o-report-coverage">
+        <div class="o-report-coverage-stats">
+          <div class="c-report-coverage-stat">
+            <span class="c-report-coverage-stat__label">Covered Requirements:</span>
+            <span class="c-report-coverage-stat__value">{{metrics.covered_requirements}} out of {{metrics.total_requirements}} ({{metrics.coverage_percentage}}%)</span>
           </div>
-          <div class="coverage-stat">
-            <span class="stat-label">Total Test Links:</span>
-            <span class="stat-value">{{metrics.total_links}}</span>
+          <div class="c-report-coverage-stat">
+            <span class="c-report-coverage-stat__label">Total Test Links:</span>
+            <span class="c-report-coverage-stat__value">{{metrics.total_links}}</span>
           </div>
         </div>
-        <div class="coverage-bar">
-          <div class="coverage-fill" style="width: {{metrics.coverage_percentage}}%"></div>
+        <div class="c-report-coverage-bar">
+          <div class="c-report-coverage-bar__fill" style="width: {{metrics.coverage_percentage}}%"></div>
         </div>
       </div>
     </div>
@@ -109,16 +110,16 @@
   <div class="row">
     <!-- Requirements by Status -->
     <div class="col-md-6">
-      <div class="card mb-4">
-        <div class="card-header">
+      <div class="card mb-4 c-card">
+        <div class="card-header c-card__header">
           <h3>Requirements by Status</h3>
         </div>
-        <div class="card-body">
-          <div class="status-list">
+        <div class="card-body c-card__body">
+          <div class="c-report-status-list">
             {{#each requirements_by_status}}
-              <div class="status-item">
-                <span class="status-name">{{@key}}</span>
-                <span class="status-count">{{this}}</span>
+              <div class="c-report-status-item">
+                <span class="c-report-status-name">{{@key}}</span>
+                <span class="c-report-status-count">{{this}}</span>
               </div>
             {{/each}}
           </div>
@@ -128,16 +129,16 @@
 
     <!-- Tests by Status -->
     <div class="col-md-6">
-      <div class="card mb-4">
-        <div class="card-header">
+      <div class="card mb-4 c-card">
+        <div class="card-header c-card__header">
           <h3>Tests by Status</h3>
         </div>
-        <div class="card-body">
-          <div class="status-list">
+        <div class="card-body c-card__body">
+          <div class="c-report-status-list">
             {{#each tests_by_status}}
-              <div class="status-item">
-                <span class="status-name">{{@key}}</span>
-                <span class="status-count">{{this}}</span>
+              <div class="c-report-status-item">
+                <span class="c-report-status-name">{{@key}}</span>
+                <span class="c-report-status-count">{{this}}</span>
               </div>
             {{/each}}
           </div>
@@ -147,16 +148,16 @@
   </div>
 
   <!-- Requirements by Category -->
-  <div class="card mb-4">
-    <div class="card-header">
+  <div class="card mb-4 c-card">
+    <div class="card-header c-card__header">
       <h3>Requirements by Category</h3>
     </div>
-    <div class="card-body">
-      <div class="category-grid">
+    <div class="card-body c-card__body">
+      <div class="o-report-category-grid">
         {{#each requirements_by_category}}
-          <div class="category-item">
-            <div class="category-name">{{@key}}</div>
-            <div class="category-count">{{this}}</div>
+          <div class="c-report-category-card">
+            <div class="c-report-category-card__name">{{@key}}</div>
+            <div class="c-report-category-card__count">{{this}}</div>
           </div>
         {{/each}}
       </div>
@@ -164,39 +165,39 @@
   </div>
 
   <!-- Project Statistics -->
-  <div class="card mb-4">
-    <div class="card-header">
+  <div class="card mb-4 c-card">
+    <div class="card-header c-card__header">
       <h3>Project Statistics</h3>
     </div>
-    <div class="card-body">
-      <div class="stats-grid">
-        <div class="stat-item">
-          <div class="stat-icon">
+    <div class="card-body c-card__body">
+      <div class="o-report-stats-grid">
+        <div class="c-report-stat-card">
+          <div class="c-report-stat-card__icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M3 3h18v18H3zM21 9H3M21 15H3M12 3v18"></path>
             </svg>
           </div>
-          <div class="stat-content">
-            <div class="stat-value">{{metrics.total_categories}}</div>
-            <div class="stat-label">Categories</div>
+          <div class="c-report-stat-card__content">
+            <div class="c-report-stat-card__value">{{metrics.total_categories}}</div>
+            <div class="c-report-stat-card__label">Categories</div>
           </div>
         </div>
         
-        <div class="stat-item">
-          <div class="stat-icon">
+        <div class="c-report-stat-card">
+          <div class="c-report-stat-card__icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
           </div>
-          <div class="stat-content">
-            <div class="stat-value">{{metrics.total_users}}</div>
-            <div class="stat-label">Users</div>
+          <div class="c-report-stat-card__content">
+            <div class="c-report-stat-card__value">{{metrics.total_users}}</div>
+            <div class="c-report-stat-card__label">Users</div>
           </div>
         </div>
         
-        <div class="stat-item">
-          <div class="stat-icon">
+        <div class="c-report-stat-card">
+          <div class="c-report-stat-card__icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
               <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -204,23 +205,23 @@
               <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
           </div>
-          <div class="stat-content">
-            <div class="stat-value">{{metrics.recent_requirements}}</div>
-            <div class="stat-label">Recent Requirements (30d)</div>
+          <div class="c-report-stat-card__content">
+            <div class="c-report-stat-card__value">{{metrics.recent_requirements}}</div>
+            <div class="c-report-stat-card__label">Recent Requirements (30d)</div>
           </div>
         </div>
         
-        <div class="stat-item">
-          <div class="stat-icon">
+        <div class="c-report-stat-card">
+          <div class="c-report-stat-card__icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 12l2 2 4-4"></path>
               <path d="M21 12c-1 0-2-1-2-2s1-2 2-2 2 1 2 2-1 2-2 2z"></path>
               <path d="M3 12c1 0 2-1 2-2s-1-2-2-2-2 1-2 2 1 2 2 2z"></path>
             </svg>
           </div>
-          <div class="stat-content">
-            <div class="stat-value">{{metrics.recent_tests}}</div>
-            <div class="stat-label">Recent Tests (30d)</div>
+          <div class="c-report-stat-card__content">
+            <div class="c-report-stat-card__value">{{metrics.recent_tests}}</div>
+            <div class="c-report-stat-card__label">Recent Tests (30d)</div>
           </div>
         </div>
       </div>
@@ -228,4 +229,4 @@
   </div>
 </section>
 {{/inline}}
-{{> layout}} 
+{{> layout page_id="reports"}} 

@@ -1,3 +1,7 @@
+{{!--
+  Depends on: css/50-components/tables.css, js/pages/entityLogs.js
+  Dynamic classes: badge bg-*
+--}}
 {{#*inline "page"}}
 <div class="container mt-4">
     <div class="row">
@@ -13,14 +17,14 @@
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
+            <div class="card c-card">
+                <div class="card-header c-card__header">
                     <h5 class="mb-0">Activity History</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body c-card__body">
                     {{#if logs}}
-                        <div class="table-responsive">
-                            <table class="table table-striped">
+                        <div class="table-responsive c-table-responsive">
+                            <table class="table table-striped c-table c-table--striped">
                                 <thead>
                                     <tr>
                                         <th>Timestamp</th>
@@ -34,10 +38,10 @@
                                 <tbody>
                                     {{#each logs}}
                                     <tr>
-                                        <td class="datetime-cell" data-datetime="{{created_at}}">{{created_at}}</td>
+                                        <td class="datetime-cell" data-timestamp="{{created_at}}">{{created_at}}</td>
                                         <td>{{username}}</td>
                                         <td>
-                                            <span class="badge action-badge" data-action="{{action_type}}">
+                                            <span class="badge action-badge" data-action-type="{{action_type}}">
                                                 {{action_type}}
                                             </span>
                                         </td>
@@ -47,8 +51,13 @@
                                         </td>
                                         <td>
                                             {{#if old_values}}
-                                                <button class="btn btn-sm btn-outline-info" 
-                                                        onclick="showChanges('{{log_id}}', '{{old_values}}', '{{new_values}}')">
+                                                <button
+                                                    class="btn btn-sm btn-outline-info"
+                                                    type="button"
+                                                    data-action="show-changes"
+                                                    data-old-values="{{old_values}}"
+                                                    data-new-values="{{new_values}}"
+                                                >
                                                     View Changes
                                                 </button>
                                             {{/if}}
@@ -59,7 +68,7 @@
                             </table>
                         </div>
                     {{else}}
-                        <div class="text-center text-muted">
+                        <div class="text-center text-muted u-text-center">
                             <p>No logs found for this entity.</p>
                         </div>
                     {{/if}}
@@ -93,188 +102,6 @@
     </div>
 </div>
 
-<script>
-// Helper function to format datetime
-function format_datetime(datetime_str) {
-    const date = new Date(datetime_str);
-    return date.toLocaleString();
-}
-
-// Helper function to get action color
-function get_action_color(action_type) {
-    switch(action_type) {
-        case 'CREATE': return 'success';
-        case 'UPDATE': return 'primary';
-        case 'DELETE': return 'danger';
-        case 'LOGIN': return 'info';
-        case 'LOGOUT': return 'secondary';
-        case 'EXPORT': return 'warning';
-        case 'IMPORT': return 'warning';
-        case 'STATUS_CHANGE': return 'info';
-        default: return 'secondary';
-    }
-}
-
-// Show changes in modal
-function showChanges(logId, oldValues, newValues) {
-    let oldContent = 'No old values';
-    let newContent = 'No new values';
-    
-    if (oldValues && oldValues !== 'null') {
-        try {
-            oldContent = JSON.stringify(JSON.parse(oldValues), null, 2);
-        } catch (e) {
-            oldContent = oldValues;
-        }
-    }
-    
-    if (newValues && newValues !== 'null') {
-        try {
-            newContent = JSON.stringify(JSON.parse(newValues), null, 2);
-        } catch (e) {
-            newContent = newValues;
-        }
-    }
-    
-    // Generate diff highlighting
-    const diffHtml = generateDiffHighlight(oldContent, newContent);
-    
-    document.getElementById('changesContent').innerHTML = `
-        <div class="row">
-            <div class="col-6">
-                <h6>Old Values</h6>
-                <div class="bg-light p-2 rounded" style="max-height: 400px; overflow-y: auto; font-family: monospace; white-space: pre-wrap;">${diffHtml.old}</div>
-            </div>
-            <div class="col-6">
-                <h6>New Values</h6>
-                <div class="bg-light p-2 rounded" style="max-height: 400px; overflow-y: auto; font-family: monospace: white-space: pre-wrap;">${diffHtml.new}</div>
-            </div>
-        </div>
-    `;
-    
-    const modal = new bootstrap.Modal(document.getElementById('changesModal'));
-    modal.show();
-}
-
-// Generate diff highlighting between old and new values
-function generateDiffHighlight(oldText, newText) {
-    // Try to parse as JSON for better field-level diffing
-    try {
-        const oldObj = JSON.parse(oldText);
-        const newObj = JSON.parse(newText);
-        return generateJsonDiff(oldObj, newObj);
-    } catch (e) {
-        // Fall back to line-by-line comparison for non-JSON content
-        return generateLineDiff(oldText, newText);
-    }
-}
-
-// Generate diff for JSON objects
-function generateJsonDiff(oldObj, newObj) {
-    const allKeys = new Set([...Object.keys(oldObj), ...Object.keys(newObj)]);
-    const oldLines = [];
-    const newLines = [];
-    
-    // Add opening brace
-    oldLines.push('{');
-    newLines.push('{');
-    
-    for (const key of allKeys) {
-        const oldValue = oldObj[key];
-        const newValue = newObj[key];
-        
-        if (oldValue === newValue) {
-            // Same value - no highlighting
-            const line = `  "${key}": ${JSON.stringify(oldValue)}`;
-            oldLines.push(`<span class="text-muted">${escapeHtml(line)}</span>`);
-            newLines.push(`<span class="text-muted">${escapeHtml(line)}</span>`);
-        } else {
-            // Different values - highlight changes
-            if (oldValue !== undefined) {
-                const oldLine = `  "${key}": ${JSON.stringify(oldValue)}`;
-                oldLines.push(`<span class="text-danger bg-danger bg-opacity-10">${escapeHtml(oldLine)}</span>`);
-            }
-            if (newValue !== undefined) {
-                const newLine = `  "${key}": ${JSON.stringify(newValue)}`;
-                newLines.push(`<span class="text-success bg-success bg-opacity-10">${escapeHtml(newLine)}</span>`);
-            }
-        }
-    }
-    
-    // Add closing brace
-    oldLines.push('}');
-    newLines.push('}');
-    
-    return {
-        old: oldLines.join('\n'),
-        new: newLines.join('\n')
-    };
-}
-
-// Generate line-by-line diff for non-JSON content
-function generateLineDiff(oldText, newText) {
-    const oldLines = oldText.split('\n');
-    const newLines = newText.split('\n');
-    
-    const oldHighlighted = [];
-    const newHighlighted = [];
-    
-    // Simple line-by-line comparison
-    const maxLines = Math.max(oldLines.length, newLines.length);
-    
-    for (let i = 0; i < maxLines; i++) {
-        const oldLine = oldLines[i] || '';
-        const newLine = newLines[i] || '';
-        
-        if (oldLine === newLine) {
-            // Same line - no highlighting
-            oldHighlighted.push(`<span class="text-muted">${escapeHtml(oldLine)}</span>`);
-            newHighlighted.push(`<span class="text-muted">${escapeHtml(newLine)}</span>`);
-        } else {
-            // Different lines - highlight changes
-            if (oldLine) {
-                oldHighlighted.push(`<span class="text-danger bg-danger bg-opacity-10">${escapeHtml(oldLine)}</span>`);
-            }
-            if (newLine) {
-                newHighlighted.push(`<span class="text-success bg-success bg-opacity-10">${escapeHtml(newLine)}</span>`);
-            }
-        }
-    }
-    
-    return {
-        old: oldHighlighted.join('\n'),
-        new: newHighlighted.join('\n')
-    };
-}
-
-// Escape HTML to prevent XSS
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Apply formatting to all rows
-document.addEventListener('DOMContentLoaded', function() {
-    // Format datetime cells
-    const datetimeCells = document.querySelectorAll('.datetime-cell');
-    datetimeCells.forEach(cell => {
-        const datetime = cell.getAttribute('data-datetime');
-        if (datetime) {
-            cell.textContent = format_datetime(datetime);
-        }
-    });
-
-    // Apply action color formatting
-    const actionBadges = document.querySelectorAll('.action-badge');
-    actionBadges.forEach(badge => {
-        const actionType = badge.getAttribute('data-action');
-        if (actionType) {
-            badge.className = `badge bg-${get_action_color(actionType)}`;
-        }
-    });
-});
-</script>
 {{/inline}}
 
-{{> layout}} 
+{{> layout page_id="entity-logs"}}

@@ -1,10 +1,11 @@
-<div class="card requirement-card mb-3">
+{{!-- Depends on: css/index.css, js/app.js --}}
+<div class="card requirement-card mb-3 c-card c-requirement-card">
   <div class="requirement-header">
-    <div class="requirement-title">
+    <div class="requirement-title c-linked-requirements__title">
       <h3 class="mb-0">{{user_name}}</h3>
     </div>
   </div>
-  <div class="card-footer">
+  <div class="card-footer c-card__footer">
     {{#if show_back_button}}
       <a href="/admin/users" class="btn btn-outline btn-sm">Back to User Management</a>
     {{/if}}

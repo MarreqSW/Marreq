@@ -1,25 +1,25 @@
 /* Requirements Tree View Styles */
-.tree-container {
+.c-tree {
   padding: var(--space-5) 0;
 }
 
-.tree-root {
+.c-tree__root {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
 }
 
-.tree-node {
+.c-tree__node {
   position: relative;
 }
 
-.node-content {
+.c-tree__node-content {
   align-items: flex-start;
   display: flex;
   gap: var(--space-3);
 }
 
-.node-toggle {
+.c-tree__toggle {
   align-items: center;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -32,23 +32,23 @@
   width: 24px;
 }
 
-.node-toggle:hover {
+.c-tree__toggle:hover {
   background-color: var(--background-color);
 }
 
-.toggle-icon {
+.c-tree__toggle-icon {
   color: var(--text-secondary);
   height: 16px;
   transition: transform 0.2s ease;
   width: 16px;
 }
 
-.toggle-placeholder {
+.c-tree__toggle-placeholder {
   height: 16px;
   width: 16px;
 }
 
-.node-children {
+.c-tree__children {
   border-left: 2px solid var(--border-color);
   display: none;
   margin-left: 36px;
@@ -56,21 +56,21 @@
   padding-left: var(--space-5);
 }
 
-.child-node {
+.c-tree__child-node {
   margin-bottom: var(--space-4);
 }
 
-.child-card {
+.c-tree__child-card {
   background-color: #fafbfc;
   border-left: 3px solid var(--primary-color);
 }
 
-.tree-controls {
+.c-tree__controls {
   display: flex;
   gap: var(--space-2);
 }
 
-.tree-controls .btn {
+.c-tree__controls [class~='btn'] {
   align-items: center;
   display: flex;
   font-size: 0.875rem;
@@ -78,7 +78,7 @@
   padding: var(--space-2) var(--space-3);
 }
 
-.requirement-card {
+.c-tree__requirement-card {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -90,29 +90,29 @@
   transition: all 0.2s ease;
 }
 
-.requirement-card:hover {
+.c-tree__requirement-card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
-.requirement-header {
+.c-tree__requirement-header {
   align-items: center;
   display: flex;
   justify-content: space-between;
   margin-bottom: var(--space-3);
 }
 
-.requirement-link {
+.c-tree__requirement-link {
   color: inherit;
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
-.requirement-link:hover {
+.c-tree__requirement-link:hover {
   color: var(--primary-dark);
 }
 
-.requirement-title {
+.c-tree__requirement-title {
   color: var(--text-primary);
   font-size: 1.1rem;
   font-weight: 600;
@@ -120,7 +120,7 @@
   margin-bottom: var(--space-2);
 }
 
-.requirement-description {
+.c-tree__requirement-description {
   -webkit-box-orient: vertical;
   color: var(--text-secondary);
   display: -webkit-box;
@@ -130,66 +130,66 @@
   overflow: hidden;
 }
 
-.requirement-meta {
+.c-tree__requirement-meta {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
 
-.meta-item {
+.c-tree__meta-item {
   align-items: center;
   display: flex;
   font-size: 0.875rem;
   gap: var(--space-1);
 }
 
-.meta-label {
+.c-tree__meta-label {
   color: var(--text-secondary);
   font-weight: 500;
 }
 
-.empty-state {
+.c-tree__empty-state {
   color: var(--text-secondary);
   padding: 60px 20px;
   text-align: center;
 }
 
-.empty-icon {
+.c-tree__empty-icon {
   color: var(--border-color);
   height: 64px;
   margin: 0 auto 20px;
   width: 64px;
 }
 
-.empty-state h3 {
+.c-tree__empty-state h3 {
   color: var(--text-primary);
   margin-bottom: 12px;
 }
 
-.empty-state p {
+.c-tree__empty-state p {
   font-size: 1.1rem;
   margin-bottom: var(--space-6);
 }
 
 /* Responsive adjustments for tree view */
 @media (max-width: 768px) {
-  .node-content {
+  .c-tree__node-content {
     flex-direction: column;
     gap: var(--space-2);
   }
 
-  .node-toggle {
+  .c-tree__toggle {
     align-self: flex-start;
     margin-top: 0;
   }
 
-  .node-children {
+  .c-tree__children {
     margin-left: var(--space-5);
     padding-left: var(--space-3);
   }
 
-  .requirement-meta {
+  .c-tree__requirement-meta {
     flex-direction: column;
     gap: var(--space-2);
   }

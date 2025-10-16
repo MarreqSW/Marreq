@@ -58,14 +58,14 @@ function toggleBranch(nodeId, root) {
   branch.hidden = !isHidden;
   branch.style.display = isHidden ? 'block' : 'none';
 
-  const icon = root.querySelector(`[data-tree-toggle="${nodeId}"] .toggle-icon`);
+  const icon = root.querySelector(`[data-tree-toggle="${nodeId}"] .c-tree__toggle-icon`);
   if (icon) {
     icon.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
   }
 }
 
 function rotateIcons(root, degrees) {
-  root.querySelectorAll('.toggle-icon').forEach((icon) => {
+  root.querySelectorAll('.c-tree__toggle-icon').forEach((icon) => {
     icon.style.transform = `rotate(${degrees}deg)`;
   });
 }

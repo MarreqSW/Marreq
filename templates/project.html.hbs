@@ -5,16 +5,16 @@
   <h2>{{selected_project_name}}</h2>
 </div>
 
-<div class="dashboard-grid">
-  <div class="card dashboard-card c-card">
+<div class="o-dashboard-grid">
+  <div class="card c-dashboard-card c-card">
     <div class="card-header c-card__header">
       <h3>Requirements <span class="badge bg-primary">{{requirements_count}}</span></h3>
     </div>
     <div class="card-body c-card__body">
-      <div class="card-description">
+      <div class="c-dashboard-card__description">
         <p>View and manage all your software requirements</p>
       </div>
-      <div class="card-actions">
+      <div class="c-dashboard-card__actions">
         {{#if selected_project_id}}
           <a href="/p/{{selected_project_id}}/requirements" class="btn btn-primary">View Requirements</a>
           <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success">Export Excel</a>
@@ -35,10 +35,10 @@
   </div>
 
   {{#> partials/metrics_card title="Tests" badge=tests_count badge_class="bg-primary"}}
-    <div class="card-description">
+    <div class="c-dashboard-card__description">
       <p>Manage test cases and verification methods</p>
     </div>
-    <div class="card-actions">
+    <div class="c-dashboard-card__actions">
       {{#if selected_project_id}}
         <a href="/p/{{selected_project_id}}/tests" class="btn btn-primary">View Tests</a>
         <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success">Export Excel</a>
@@ -58,20 +58,20 @@
   {{/partials/metrics_card}}
 
   {{#> partials/metrics_card title="Traceability Matrix"}}
-    <div class="card-description">
+    <div class="c-dashboard-card__description">
       <p>Link requirements to tests and generate reports</p>
     </div>
-    <div class="card-actions">
+    <div class="c-dashboard-card__actions">
       <a href="/p/{{selected_project_id}}/matrix" class="btn btn-primary">View Matrix</a>
       <a href="/p/{{selected_project_id}}/matrix.xls" class="btn btn-success">Export Excel</a>
     </div>
   {{/partials/metrics_card}}
 
   {{#> partials/metrics_card title="Categories"}}
-    <div class="card-description">
+    <div class="c-dashboard-card__description">
       <p>Organize requirements with categories</p>
     </div>
-    <div class="card-actions">
+    <div class="c-dashboard-card__actions">
       {{#if selected_project_id}}
         <a href="/p/{{selected_project_id}}/categories" class="btn btn-primary">View Categories</a>
         <a href="/p/{{selected_project_id}}/categories/new" class="btn btn-outline">New Category</a>
@@ -83,10 +83,10 @@
   {{/partials/metrics_card}}
 
   {{#> partials/metrics_card title="Applicability"}}
-    <div class="card-description">
+    <div class="c-dashboard-card__description">
       <p>Define which products/systems requirements apply to</p>
     </div>
-    <div class="card-actions">
+    <div class="c-dashboard-card__actions">
       {{#if selected_project_id}}
         <a href="/p/{{selected_project_id}}/applicability" class="btn btn-primary">View Applicability</a>
         <a href="/p/{{selected_project_id}}/applicability/new" class="btn btn-outline">New Applicability</a>
@@ -98,10 +98,10 @@
   {{/partials/metrics_card}}
 
   {{#> partials/metrics_card title="Project Members"}}
-    <div class="card-description">
+    <div class="c-dashboard-card__description">
       <p>See who has access to your active project and manage participation.</p>
     </div>
-    <div class="card-actions d-flex flex-wrap gap-2">
+    <div class="c-dashboard-card__actions d-flex flex-wrap gap-2">
       {{#if selected_project_id}}
         <a href="/p/{{selected_project_id}}/members" class="btn btn-primary">View Members</a>
       {{else}}

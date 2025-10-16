@@ -12,12 +12,12 @@ use super::prelude::*;
 use crate::app::AppState;
 use crate::helper_functions::generate_requirement_reference;
 use crate::helper_functions::{decorators::decorate_requirements_with_repo, filter_requirements};
-use crate::logger::{LogCtx, Logger};
 use crate::models::*;
-use crate::repository::{LookupRepository, RequirementsRepository, UserRepository};
+use crate::repository::{LookupRepository, UserRepository};
+use crate::services::RequirementService;
 
 use super::helpers::{
-    build_context_with_projects, get_category_by_id_cached, get_db_connection,
+    build_context_with_projects, get_category_by_id_cached,
     get_linked_tests_for_requirement_cached, get_project_by_id_pooled_safe,
     get_requirement_by_id_cached_safe,
 };
@@ -35,20 +35,29 @@ async fn show_requirements(
     let user = project_access.into_user();
     let mut ctx = build_context_with_projects(state, user, cookies);
 
-    // Repo handle once; reuse
-    let repo = state.repo_read();
-
     let selected_project = get_project_by_id_pooled_safe(state, project_id);
 
-    // Load → filter → decorate in one go; default to empty on error
-    let decorated = repo
-        .get_requirements_by_project(project_id)
-        .map(|reqs| {
-            let filtered =
-                filter_requirements(reqs, status_filter, verification_filter, category_filter);
-            decorate_requirements_with_repo(&*repo, filtered)
-        })
-        .unwrap_or_default();
+    let service = RequirementService::new(state.inner());
+    let requirements = match service.list_by_project(project_id) {
+        Ok(reqs) => reqs,
+        Err(err) => {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "Failed to load requirements for project {}: {:?}",
+                project_id, err
+            );
+            Vec::new()
+        }
+    };
+    let filtered = filter_requirements(
+        requirements,
+        status_filter,
+        verification_filter,
+        category_filter,
+    );
+
+    let repo = state.repo_read();
+    let decorated = decorate_requirements_with_repo(&*repo, filtered);
 
     let total_requirements = decorated.len();
     let mut status_totals: HashMap<String, usize> = HashMap::new();
@@ -234,7 +243,6 @@ async fn get_edit_requirement(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    let repo = state.repo_read();
 
     let req = match get_requirement_by_id_cached_safe(state, req_id) {
         Ok(r) => r,
@@ -277,6 +285,19 @@ async fn get_edit_requirement(
     let req_verification_id = req.req_verification;
     let req_parent_id = req.req_parent;
 
+    let parents = match RequirementService::new(state.inner()).list_by_project(project_id) {
+        Ok(reqs) => reqs,
+        Err(err) => {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "Failed to load parent requirements for project {}: {:?}",
+                project_id, err
+            );
+            Vec::new()
+        }
+    };
+
+    let repo = state.repo_read();
     // Decorate for the template (single-item vec)
     let mut decorated = decorate_requirements_with_repo(&*repo, vec![req]);
     let requirement_json = json!(decorated.remove(0));
@@ -285,9 +306,6 @@ async fn get_edit_requirement(
     let statuses = repo.get_status_all().unwrap_or_default();
     let categories = repo
         .get_categories_by_project(project_id)
-        .unwrap_or_default();
-    let parents = repo
-        .get_requirements_by_project(project_id)
         .unwrap_or_default();
     let users = repo.get_users_all().unwrap_or_default();
     let verifications = repo
@@ -329,7 +347,7 @@ async fn post_edit_requirement(
     new_req: Form<NewRequirement>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user_id = project_access.into_user().user_id;
+    let user = project_access.into_user();
 
     let edit_url = uri!("/p", get_edit_requirement(project_id, req_id));
     let list_url = uri!(
@@ -379,22 +397,20 @@ async fn post_edit_requirement(
         return Err(Redirect::to(url));
     }
 
-    state
-        .repo_write()
-        .edit_requirement(&requirement_data)
-        .map_err(|_e| {
+    let service = RequirementService::new(state.inner());
+    match service.update(&user, req_id, requirement_data) {
+        Ok(_) => {}
+        Err(crate::repository::errors::RepoError::NotFound) => return Err(Redirect::to(list_url)),
+        Err(crate::repository::errors::RepoError::BadInput(_)) => {
+            return Err(Redirect::to(edit_url))
+        }
+        Err(err) => {
             #[cfg(debug_assertions)]
             eprintln!(
                 "Error editing requirement {} in project {}: {:?}",
-                req_id, project_id, _e
+                req_id, project_id, err
             );
-            Redirect::to(list_url.clone())
-        })?;
-
-    if let Ok(mut conn) = get_db_connection(state) {
-        if let Ok(new_row) = state.repo_read().get_requirement_by_id(req_id) {
-            let log_ctx = LogCtx::new(user_id);
-            let _ = Logger::updated(&mut conn, &log_ctx, &old, &new_row);
+            return Err(Redirect::to(list_url));
         }
     }
 
@@ -409,7 +425,6 @@ async fn delete_requirement_route(
     state: &State<AppState>,
 ) -> Result<Redirect, rocket::http::Status> {
     let user = project_access.into_user();
-    let user_id = user.user_id;
     let list_url = uri!(
         "/p",
         show_requirements(
@@ -446,25 +461,20 @@ async fn delete_requirement_route(
     }
 
     // 4) Delete
-    let deleted = match state.repo_write().delete_requirement(req_id) {
-        Ok(d) => d,
+    let service = RequirementService::new(state.inner());
+    match service.delete(&user, req_id) {
+        Ok(_) => {}
         Err(crate::repository::errors::RepoError::NotFound) => {
             return Err(rocket::http::Status::NotFound)
         }
-        Err(_e) => {
+        Err(err) => {
             #[cfg(debug_assertions)]
-            eprintln!("delete_requirement({}) failed: {:?}", req_id, _e);
+            eprintln!("delete_requirement({}) failed: {:?}", req_id, err);
             return Err(rocket::http::Status::InternalServerError);
         }
-    };
-
-    // 5) Best-effort logging (don’t affect result)
-    if let Ok(mut conn) = get_db_connection(state) {
-        let log_ctx = LogCtx::new(user_id);
-        let _ = Logger::deleted(conn.as_mut(), &log_ctx, &deleted);
     }
 
-    // 6) Redirect to this project’s requirements
+    // 5) Redirect to this project’s requirements
     Ok(Redirect::to(list_url))
 }
 
@@ -477,15 +487,24 @@ async fn new_requirement(
     error: Option<String>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    let repo = state.repo_read();
 
+    let parents = match RequirementService::new(state.inner()).list_by_project(project_id) {
+        Ok(reqs) => reqs,
+        Err(err) => {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "Failed to load parent requirements for project {}: {:?}",
+                project_id, err
+            );
+            Vec::new()
+        }
+    };
+
+    let repo = state.repo_read();
     // Project-scoped lookups; default to empty on error
     let statuses = repo.get_status_all().unwrap_or_default();
     let categories = repo
         .get_categories_by_project(project_id)
-        .unwrap_or_default();
-    let parents = repo
-        .get_requirements_by_project(project_id)
         .unwrap_or_default();
     let users = repo.get_users_all().unwrap_or_default();
     let verifications = repo
@@ -523,7 +542,7 @@ async fn post_requirement(
     new_req: Form<NewRequirement>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user_id = project_access.into_user().user_id;
+    let user = project_access.into_user();
 
     // Reuse these URLs
     let new_url = uri!(
@@ -563,8 +582,12 @@ async fn post_requirement(
         }
     } else {
         // Generate when missing
-        match generate_requirement_reference(&*state.repo_write(), req.req_category, req.project_id)
-        {
+        let generated = {
+            let repo = state.repo_read();
+            generate_requirement_reference(&*repo, req.req_category, req.project_id)
+        };
+
+        match generated {
             Ok(reference) => req.req_reference = reference,
             Err(_e) => {
                 #[cfg(debug_assertions)]
@@ -574,30 +597,27 @@ async fn post_requirement(
         }
     }
 
-    // --- Insert ---
-    let req_id = state
-        .repo_write()
-        .insert_new_requirement(&req)
-        .map_err(|_e| {
-            #[cfg(debug_assertions)]
-            eprintln!("insert_new_requirement failed: {:?}", _e);
-            Redirect::to(uri!(
-                "/p",
-                new_requirement(
-                    project_id = project_id,
-                    error = Some("Failed to create requirement".to_string())
-                )
-            ))
-        })?;
+    let failure_url = uri!(
+        "/p",
+        new_requirement(
+            project_id = project_id,
+            error = Some("Failed to create requirement".to_string())
+        )
+    );
 
-    // --- Best-effort logging (don't affect control flow) ---
-    if let (Ok(mut conn), Ok(new_row)) = (
-        get_db_connection(state),
-        state.repo_read().get_requirement_by_id(req_id),
-    ) {
-        let log_ctx = LogCtx::new(user_id);
-        let _ = Logger::created(&mut conn, &log_ctx, req_id, &new_row);
-    }
+    // --- Insert ---
+    let service = RequirementService::new(state.inner());
+    let req_id = match service.create(&user, req) {
+        Ok(id) => id,
+        Err(crate::repository::errors::RepoError::BadInput(_)) => {
+            return Err(Redirect::to(new_url))
+        }
+        Err(err) => {
+            #[cfg(debug_assertions)]
+            eprintln!("service create requirement failed: {:?}", err);
+            return Err(Redirect::to(failure_url));
+        }
+    };
 
     // --- Success: show the new requirement ---
     Ok(Redirect::to(uri!(
@@ -613,12 +633,19 @@ async fn show_requirements_tree(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    let repo = state.repo_read();
 
     // Only this project's requirements
-    let reqs = repo
-        .get_requirements_by_project(project_id)
-        .unwrap_or_default();
+    let reqs = match RequirementService::new(state.inner()).list_by_project(project_id) {
+        Ok(reqs) => reqs,
+        Err(err) => {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "Failed to load requirements for tree view (project {}): {:?}",
+                project_id, err
+            );
+            Vec::new()
+        }
+    };
 
     // Index children by parent_id; collect roots
     let mut children: HashMap<i32, Vec<&Requirement>> = HashMap::new();

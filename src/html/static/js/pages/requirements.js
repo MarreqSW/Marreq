@@ -75,7 +75,7 @@ function statusVariant(statusLabel) {
 }
 
 function decorateStatusBadges() {
-  const badges = document.querySelectorAll('.requirements-status-badge');
+  const badges = document.querySelectorAll('.reqman-requirements-status-badge');
   badges.forEach((badge) => {
     const label = badge.dataset.status || badge.textContent;
     const definition = state.statusMap.get(normalize(label));
@@ -86,7 +86,7 @@ function decorateStatusBadges() {
     }
 
     const variant = statusVariant(label);
-    badge.classList.add(`requirements-status-badge--${variant}`);
+    badge.classList.add(`reqman-requirements-status-badge--${variant}`);
   });
 }
 
@@ -126,22 +126,22 @@ function textFrom(root, selector) {
 
 function collectRows(table) {
   const entries = [];
-  table.querySelectorAll('.requirements-row').forEach((row) => {
+  table.querySelectorAll('.reqman-requirements-row').forEach((row) => {
     const requirementId = row.dataset.requirementId;
     const detail = table.querySelector(
-      `.requirements-row__details[data-details-for="${requirementId}"]`,
+      `.reqman-requirements-row__details[data-details-for="${requirementId}"]`,
     );
 
-    const keyText = textFrom(row, '.requirements-key__value');
-    const titleText = textFrom(row, '.requirements-title');
+    const keyText = textFrom(row, '.reqman-requirements-key__value');
+    const titleText = textFrom(row, '.reqman-requirements-title');
     const statusText = (row.dataset.statusLabel || '').trim();
-    const verificationText = textFrom(row, '.requirements-row__cell--verification');
-    const updatedNode = row.querySelector('.requirements-row__cell--updated time');
+    const verificationText = textFrom(row, '.reqman-requirements-row__cell--verification');
+    const updatedNode = row.querySelector('.reqman-requirements-row__cell--updated time');
     const updatedDisplay = updatedNode ? updatedNode.textContent.trim() : '';
     const updatedValue = parseDateValue(
       (updatedNode && updatedNode.getAttribute('datetime')) || updatedDisplay,
     );
-    const authorText = textFrom(row, '.requirements-row__cell--author');
+    const authorText = textFrom(row, '.reqman-requirements-row__cell--author');
     const detailText = detail ? detail.textContent.trim() : '';
 
     const searchText = [
@@ -181,13 +181,13 @@ function ensureNoResultsBanner() {
     return state.noResultsBanner;
   }
 
-  const host = document.querySelector('.requirements-table-section');
+  const host = document.querySelector('.reqman-requirements-table-section');
   if (!host) {
     return null;
   }
 
   const banner = document.createElement('div');
-  banner.className = 'requirements-search-empty';
+  banner.className = 'reqman-requirements-search-empty';
   banner.hidden = true;
   banner.innerHTML = `
     <strong>No matches.</strong>
@@ -224,8 +224,8 @@ function applySearch(term = '') {
     if (matches) {
       visibleCount += 1;
       if (!wasVisible) {
-        entry.row.classList.add('requirements-row--enter');
-        requestAnimationFrame(() => entry.row.classList.remove('requirements-row--enter'));
+        entry.row.classList.add('reqman-requirements-row--enter');
+        requestAnimationFrame(() => entry.row.classList.remove('reqman-requirements-row--enter'));
       }
     }
   });
@@ -266,10 +266,17 @@ function initSearch(input) {
 
 function updateSortIndicators(table, activeKey, order) {
   table.querySelectorAll('th[data-sort-key]').forEach((th) => {
+    const indicator = th.querySelector('.reqman-requirements-table__sort-indicator');
     if (th.dataset.sortKey === activeKey) {
-      th.setAttribute('data-sort-order', order);
+      if (indicator) {
+        indicator.textContent = order === 'asc' ? '↑' : '↓';
+      }
+      th.setAttribute('aria-sort', order === 'asc' ? 'ascending' : 'descending');
     } else {
-      th.removeAttribute('data-sort-order');
+      if (indicator) {
+        indicator.textContent = '↕';
+      }
+      th.removeAttribute('aria-sort');
     }
   });
 }
@@ -312,7 +319,7 @@ function initSorting(table) {
 }
 
 function toggleRowDetails(button) {
-  const row = button.closest('.requirements-row');
+  const row = button.closest('.reqman-requirements-row');
   const targetId = button.getAttribute('aria-controls');
   const expanded = button.getAttribute('aria-expanded') === 'true';
   const nextState = !expanded;

@@ -82,6 +82,7 @@ pub trait LookupRepository {
 
     fn create_status(&mut self, new: &NewStatus) -> Result<i32, RepoError>;
 
+    fn insert_new_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError>;
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError>;
     fn edit_category(&mut self, new: &NewCategory) -> Result<bool, RepoError>;
     fn delete_category(&mut self, id: i32) -> Result<Category, RepoError>;

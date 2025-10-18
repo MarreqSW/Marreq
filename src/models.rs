@@ -194,6 +194,18 @@ pub struct Verification {
     pub project_id: i32,
 }
 
+#[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm, Clone)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = verification)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(primary_key(verification_id))]
+pub struct NewVerification {
+    pub verification_id: Option<i32>,
+    pub verification_name: String,
+    pub verification_description: String,
+    pub project_id: i32,
+}
+
 /// Link between a requirement and a test in the traceability matrix.
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]

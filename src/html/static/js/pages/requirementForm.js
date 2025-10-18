@@ -1,4 +1,5 @@
 import { initRequirementReferenceValidation } from '../modules/referenceValidator.js';
+import { showNotification } from '../modules/notifications.js';
 
 function collectCategories(select) {
   return Array.from(select.options)
@@ -19,16 +20,87 @@ function initReferenceValidation(form) {
     return;
   }
 
-  const categories = collectCategories(categorySelect);
   const allowSoftMismatch = form.getAttribute('data-allow-soft-mismatch') === 'true';
+  const collect = () => collectCategories(categorySelect);
 
   initRequirementReferenceValidation({
     referenceSelector: referenceInput,
     categorySelector: categorySelect,
     errorSelector: errorEl,
     submitSelector: submitButton,
-    categories,
+    collect,
     allowSoftMismatch,
+  });
+}
+
+function initComboboxes(form) {
+  const wrappers = Array.from(form.querySelectorAll('[data-component="combo"]'));
+
+  wrappers.forEach((wrapper) => {
+    const select = wrapper.querySelector('[data-role="combo-source"]');
+    const comboUi = wrapper.querySelector('[data-role="combo-ui"]');
+    const input = comboUi?.querySelector('input');
+
+    if (!select || !comboUi || !input) {
+      return;
+    }
+
+    const labelForValue = (value) => {
+      const option = Array.from(select.options).find((opt) => opt.value === String(value));
+      return option ? option.textContent.trim() : '';
+    };
+
+    const resolveOption = (label) => {
+      const normalised = label.toLowerCase();
+      const options = Array.from(select.options).map((opt) => ({
+        label: opt.textContent.trim(),
+        value: opt.value,
+      }));
+
+      return (
+        options.find((opt) => opt.label.toLowerCase() === normalised) ||
+        options.find((opt) => opt.label.toLowerCase().startsWith(normalised)) ||
+        null
+      );
+    };
+
+    function commitInput() {
+      const label = input.value.trim();
+
+      if (!label) {
+        const defaultOption = select.querySelector('option[value=""]');
+        if (defaultOption) {
+          select.value = '';
+        }
+        input.value = labelForValue(select.value);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
+      }
+
+      const match = resolveOption(label);
+      if (match) {
+        select.value = match.value;
+        input.value = match.label;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
+      }
+
+      // No match: revert to the current selection label
+      input.value = labelForValue(select.value) || label;
+    }
+
+    wrapper.classList.add('is-enhanced');
+    comboUi.hidden = false;
+
+    select.addEventListener('change', () => {
+      input.value = labelForValue(select.value);
+    });
+
+    input.addEventListener('change', commitInput);
+    input.addEventListener('blur', commitInput);
+
+    // Prefill input with the current selection
+    input.value = labelForValue(select.value);
   });
 }
 
@@ -97,6 +169,189 @@ function initStatusControls(form) {
       statusLabel.textContent = selectedOption.textContent.trim();
     }
   });
+}
+
+function initInlineCreation(form) {
+  const projectId = form.dataset.projectId;
+  if (!projectId || !window.bootstrap) {
+    return;
+  }
+
+  const config = {
+    category: {
+      label: 'Category',
+      trigger: form.querySelector('[data-role="combo-new"][data-entity="category"]'),
+      modal: document.querySelector('#categoryModal'),
+      form: document.querySelector('#inlineCategoryForm'),
+      endpoint: `/p/${projectId}/requirements/inline/category`,
+      serialize: (fd) => ({
+        title: (fd.get('cat_title') || '').toString().trim(),
+        description: (fd.get('cat_description') || '').toString().trim(),
+        tag: (fd.get('cat_tag') || '').toString().trim(),
+      }),
+      apply: (data) => {
+        const select = form.querySelector('#req_category');
+        const datalist = form.querySelector('#req_category_options');
+        const input = form.querySelector('#req_category_search');
+        if (!select || !datalist) {
+          return;
+        }
+
+        const option = document.createElement('option');
+        option.value = String(data.id);
+        if (data.tag) {
+          option.dataset.tag = data.tag;
+        }
+        option.textContent = data.label;
+        select.append(option);
+        select.value = String(data.id);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+
+        const listOption = document.createElement('option');
+        listOption.value = data.label;
+        listOption.dataset.id = String(data.id);
+        if (data.tag) {
+          listOption.dataset.tag = data.tag;
+        }
+        datalist.append(listOption);
+        if (input) {
+          input.value = data.label;
+        }
+        const reference = form.querySelector('#req_reference');
+        reference?.dispatchEvent(new Event('input', { bubbles: true }));
+      },
+    },
+    applicability: {
+      label: 'Applicability',
+      trigger: form.querySelector('[data-role="combo-new"][data-entity="applicability"]'),
+      modal: document.querySelector('#applicabilityModal'),
+      form: document.querySelector('#inlineApplicabilityForm'),
+      endpoint: `/p/${projectId}/requirements/inline/applicability`,
+      serialize: (fd) => ({
+        title: (fd.get('app_title') || '').toString().trim(),
+        description: (fd.get('app_description') || '').toString().trim(),
+        tag: (fd.get('app_tag') || '').toString().trim(),
+      }),
+      apply: (data) => {
+        const select = form.querySelector('#req_applicability');
+        const datalist = form.querySelector('#req_applicability_options');
+        const input = form.querySelector('#req_applicability_search');
+        if (!select || !datalist) {
+          return;
+        }
+
+        const option = document.createElement('option');
+        option.value = String(data.id);
+        option.textContent = data.label;
+        select.append(option);
+        select.value = String(data.id);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+
+        const listOption = document.createElement('option');
+        listOption.value = data.label;
+        listOption.dataset.id = String(data.id);
+        datalist.append(listOption);
+        if (input) {
+          input.value = data.label;
+        }
+      },
+    },
+    verification: {
+      label: 'Verification method',
+      trigger: form.querySelector('[data-role="combo-new"][data-entity="verification"]'),
+      modal: document.querySelector('#verificationModal'),
+      form: document.querySelector('#inlineVerificationForm'),
+      endpoint: `/p/${projectId}/requirements/inline/verification`,
+      serialize: (fd) => ({
+        name: (fd.get('verification_name') || '').toString().trim(),
+        description: (fd.get('verification_description') || '').toString().trim(),
+      }),
+      apply: (data) => {
+        const select = form.querySelector('#req_verification');
+        const datalist = form.querySelector('#req_verification_options');
+        const input = form.querySelector('#req_verification_search');
+        if (!select || !datalist) {
+          return;
+        }
+
+        const option = document.createElement('option');
+        option.value = String(data.id);
+        option.textContent = data.label;
+        select.append(option);
+        select.value = String(data.id);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+
+        const listOption = document.createElement('option');
+        listOption.value = data.label;
+        listOption.dataset.id = String(data.id);
+        datalist.append(listOption);
+        if (input) {
+          input.value = data.label;
+        }
+      },
+    },
+  };
+
+  Object.values(config).forEach((entry) => {
+    const { trigger, modal, form: modalForm } = entry;
+    if (!trigger) {
+      return;
+    }
+
+    if (!modal || !modalForm) {
+      return;
+    }
+
+    const bootstrapModal = new window.bootstrap.Modal(modal);
+
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      modalForm.reset();
+      bootstrapModal.show();
+    });
+
+    modalForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const formData = new FormData(modalForm);
+      const submitButton = modalForm.querySelector('button[type="submit"]');
+      submitInline(entry, entry.serialize(formData), {
+        submitButton,
+        onSuccess: () => {
+          bootstrapModal.hide();
+          modalForm.reset();
+        },
+      });
+    });
+  });
+
+  async function submitInline(entry, payload, options = {}) {
+    const submitButton = options.submitButton;
+    try {
+      submitButton?.setAttribute('disabled', 'disabled');
+      const response = await fetch(entry.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`${entry.label} creation failed (${response.status})`);
+      }
+
+      const data = await response.json();
+      entry.apply(data);
+      if (typeof options.onSuccess === 'function') {
+        options.onSuccess();
+      }
+      showNotification(`${entry.label} created`, 'success', { duration: 3500 });
+    } catch (error) {
+      showNotification(error.message || `Unable to create ${entry.label.toLowerCase()}`, 'error');
+    } finally {
+      submitButton?.removeAttribute('disabled');
+    }
+  }
 }
 
 function initSaveMenu(form) {
@@ -582,13 +837,173 @@ function initLinkedRequirements(form) {
   }
 }
 
+function initSuccessToast(form) {
+  const message = form.dataset.flashSuccess;
+  if (!message) {
+    return;
+  }
+
+  showNotification(message, 'success', { duration: 3500 });
+  delete form.dataset.flashSuccess;
+}
+
 function formatTime(date) {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function initAutosave(form) {
+function shouldPersistField(field) {
+  if (!field || !field.name) {
+    return false;
+  }
+  if (field.disabled) {
+    return false;
+  }
+  if (field.type === 'hidden') {
+    return false;
+  }
+  if (['req_author', 'project_id', 'req_author_email', 'req_id', 'intent'].includes(field.name)) {
+    return false;
+  }
+  if (field.matches('[data-ignore-autosave]')) {
+    return false;
+  }
+  return true;
+}
+
+function serializeFields(fields) {
+  const snapshot = {};
+  fields.forEach((field) => {
+    if (field.type === 'checkbox' || field.type === 'radio') {
+      snapshot[field.name] = field.checked;
+    } else {
+      snapshot[field.name] = field.value;
+    }
+  });
+  return snapshot;
+}
+
+function applySnapshot(form, fields, snapshot) {
+  fields.forEach((field) => {
+    if (!(field.name in snapshot)) {
+      return;
+    }
+    const value = snapshot[field.name];
+    if (field.type === 'checkbox' || field.type === 'radio') {
+      field.checked = Boolean(value);
+      return;
+    }
+    const current = field.value?.trim?.() ?? field.value;
+    if (field.tagName === 'SELECT') {
+      field.value = String(value);
+      field.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
+    }
+    if (!current) {
+      field.value = value;
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+}
+
+function initCreateAutosave(form) {
+  const projectId = form.dataset.projectId;
   const autosaveText = form.querySelector('[data-role="autosave-text"]');
-  const unsavedIndicator = form.querySelector('[data-unsaved-indicator]');
+  const indicator =
+    form.querySelector('[data-role="autosave-indicator"]') ||
+    form.querySelector('[data-unsaved-indicator]');
+
+  if (!projectId || !autosaveText) {
+    return;
+  }
+
+  const storageKey = `reqman:newRequirement:${projectId}`;
+  const fields = Array.from(form.elements).filter(shouldPersistField);
+  let restoring = false;
+  let saveTimer = null;
+
+  function writeSnapshot() {
+    const payload = {
+      savedAt: Date.now(),
+      values: serializeFields(fields),
+    };
+    window.localStorage.setItem(storageKey, JSON.stringify(payload));
+    indicator?.setAttribute('hidden', '');
+    autosaveText.textContent = `Draft saved locally · ${formatTime(new Date(payload.savedAt))}`;
+  }
+
+  function scheduleSave() {
+    window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(writeSnapshot, 400);
+  }
+
+  function markDirty() {
+    if (restoring) {
+      return;
+    }
+    indicator?.removeAttribute('hidden');
+    autosaveText.textContent = 'Saving draft…';
+    scheduleSave();
+  }
+
+  function restoreSnapshot() {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) {
+      autosaveText.textContent = 'Draft not saved';
+      return;
+    }
+
+    try {
+      const snapshot = JSON.parse(raw);
+      if (snapshot?.values) {
+        restoring = true;
+        applySnapshot(form, fields, snapshot.values);
+        restoring = false;
+        autosaveText.textContent = snapshot.savedAt
+          ? `Draft restored · ${formatTime(new Date(snapshot.savedAt))}`
+          : 'Draft restored';
+        showNotification('Restored unsaved draft for this project', 'info', {
+          duration: 4000,
+        });
+      } else {
+        autosaveText.textContent = 'Draft not saved';
+      }
+    } catch (error) {
+      console.error('Failed to restore draft', error);
+      autosaveText.textContent = 'Draft not saved';
+    }
+  }
+
+  restoreSnapshot();
+
+  form.addEventListener('input', markDirty);
+  form.addEventListener('change', markDirty);
+
+  window.addEventListener('beforeunload', () => {
+    if (indicator && indicator.hasAttribute('hidden')) {
+      return;
+    }
+    window.clearTimeout(saveTimer);
+    writeSnapshot();
+  });
+
+  form.addEventListener('submit', () => {
+    window.clearTimeout(saveTimer);
+    window.localStorage.removeItem(storageKey);
+    indicator?.setAttribute('hidden', '');
+    autosaveText.textContent = 'Saving…';
+  });
+
+  const cancel = form.querySelector('[data-role="cancel-create"]');
+  cancel?.addEventListener('click', () => {
+    window.localStorage.removeItem(storageKey);
+  });
+}
+
+function initEditorAutosave(form) {
+  const autosaveText = form.querySelector('[data-role="autosave-text"]');
+  const indicator =
+    form.querySelector('[data-unsaved-indicator]') ||
+    form.querySelector('[data-role="autosave-indicator"]');
   const intervalField = form.querySelector('[data-role="autosave-interval"]');
 
   if (!autosaveText) {
@@ -601,10 +1016,8 @@ function initAutosave(form) {
 
   function markUnsaved() {
     dirty = true;
-    if (autosaveText) {
-      autosaveText.textContent = 'Unsaved changes';
-    }
-    unsavedIndicator?.removeAttribute('hidden');
+    autosaveText.textContent = 'Unsaved changes';
+    indicator?.removeAttribute('hidden');
     scheduleAutosave();
   }
 
@@ -623,7 +1036,7 @@ function initAutosave(form) {
     autosaveText.textContent = 'Saving…';
     window.setTimeout(() => {
       dirty = false;
-      unsavedIndicator?.setAttribute('hidden', '');
+      indicator?.setAttribute('hidden', '');
       autosaveText.textContent = `Saved ✓ ${formatTime(new Date())}`;
     }, 600);
   }
@@ -637,13 +1050,28 @@ function initAutosave(form) {
   });
 }
 
+function initAutosave(form) {
+  if (form.classList.contains('create-form')) {
+    initCreateAutosave(form);
+  } else {
+    initEditorAutosave(form);
+  }
+}
+
 export function init() {
   const form = document.querySelector('[data-requirement-form]');
   if (!form) {
     return;
   }
 
+  const isCreateForm = form.classList.contains('create-form');
+
+  initComboboxes(form);
   initReferenceValidation(form);
+  if (isCreateForm) {
+    initInlineCreation(form);
+    initSuccessToast(form);
+  }
   initStatusControls(form);
   initSaveMenu(form);
   initRichText(form);

@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
-use rocket::form::Form;
+use rocket::form::{Form, FromForm};
 use rocket::http::{Cookie, CookieJar};
 use rocket::response::Redirect;
-use rocket::serde::json::{json, serde_json};
+use rocket::serde::json::{json, serde_json, Json};
+use rocket::serde::Deserialize;
 use rocket::State;
 use rocket_dyn_templates::Template;
 
@@ -12,10 +13,132 @@ use super::prelude::*;
 use crate::app::AppState;
 use crate::helper_functions::{decorate_tests_with_repo, generate_requirement_reference};
 use crate::models::*;
+use crate::repository::errors::RepoError;
 use crate::services::{
     ApplicabilityService, CategoryService, LogService, ProjectService, RequirementService,
-    StatusService, UserService,
+    StatusService, UserService, VerificationService,
 };
+
+#[derive(FromForm)]
+struct RequirementCreateForm {
+    #[field(name = uncased("intent"))]
+    intent: Option<String>,
+    #[field(name = uncased("req_id"))]
+    req_id: Option<i32>,
+    #[field(name = uncased("req_title"))]
+    req_title: String,
+    #[field(name = uncased("req_description"))]
+    req_description: String,
+    #[field(name = uncased("req_verification"))]
+    req_verification: i32,
+    #[field(name = uncased("req_author"))]
+    req_author: i32,
+    #[field(name = uncased("req_link"))]
+    req_link: String,
+    #[field(name = uncased("req_category"))]
+    req_category: i32,
+    #[field(name = uncased("req_current_status"))]
+    req_current_status: i32,
+    #[field(name = uncased("req_parent"))]
+    req_parent: i32,
+    #[field(name = uncased("req_reference"))]
+    req_reference: String,
+    #[field(name = uncased("req_reviewer"))]
+    req_reviewer: i32,
+    #[field(name = uncased("req_applicability"))]
+    req_applicability: i32,
+    #[field(name = uncased("req_justification"))]
+    req_justification: Option<String>,
+    #[field(name = uncased("project_id"))]
+    project_id: i32,
+    #[field(name = uncased("req_purpose"))]
+    req_purpose: Option<String>,
+}
+
+impl RequirementCreateForm {
+    fn into_payload(self) -> (NewRequirement, Option<String>) {
+        let RequirementCreateForm {
+            intent,
+            req_id,
+            req_description,
+            req_purpose,
+            req_verification,
+            req_author,
+            req_link,
+            req_category,
+            req_current_status,
+            req_parent,
+            req_reference,
+            req_reviewer,
+            req_applicability,
+            req_justification,
+            project_id,
+            req_title,
+        } = self;
+
+        let mut composed_description = req_description.trim().to_string();
+        if let Some(purpose_raw) = req_purpose {
+            let purpose = purpose_raw.trim();
+            if !purpose.is_empty() {
+                if composed_description.is_empty() {
+                    composed_description = purpose.to_string();
+                } else {
+                    composed_description = format!("{purpose}\n\n{composed_description}");
+                }
+            }
+        }
+
+        let requirement = NewRequirement {
+            req_id,
+            req_title,
+            req_description: composed_description,
+            req_verification,
+            req_author,
+            req_link,
+            req_category,
+            req_current_status,
+            req_parent,
+            req_reference,
+            req_reviewer,
+            req_applicability,
+            req_justification,
+            project_id,
+        };
+
+        (requirement, intent)
+    }
+}
+
+fn map_repo_error(err: RepoError) -> rocket::http::Status {
+    match err {
+        RepoError::BadInput(_) => rocket::http::Status::BadRequest,
+        RepoError::NotFound => rocket::http::Status::NotFound,
+        _ => rocket::http::Status::InternalServerError,
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct InlineCategoryPayload {
+    title: String,
+    description: String,
+    tag: String,
+}
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct InlineApplicabilityPayload {
+    title: String,
+    description: String,
+    tag: String,
+}
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct InlineVerificationPayload {
+    name: String,
+    description: String,
+}
 
 #[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>")]
 async fn show_requirements(
@@ -847,15 +970,37 @@ async fn delete_requirement_route(
     Ok(Redirect::to(list_url))
 }
 
-#[get("/<project_id>/requirements/new?<error>")]
+#[get("/<project_id>/requirements/new?<error>&<created>")]
 async fn new_requirement(
     project_access: ProjectAccess,
     project_id: i32,
     _cookies: &CookieJar<'_>,
     state: &State<AppState>,
     error: Option<String>,
+    created: Option<String>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
+
+    let project_service = ProjectService::new(state.inner());
+    let project = match project_service.get_by_id(project_id) {
+        Ok(project) => project,
+        Err(_) => {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "Failed to load project context for new requirement page: project_id={}",
+                project_id
+            );
+            return Err(Redirect::to(uri!(
+                "/p",
+                show_requirements(
+                    project_id = project_id,
+                    status_filter = Option::<i32>::None,
+                    verification_filter = Option::<i32>::None,
+                    category_filter = Option::<i32>::None
+                )
+            )));
+        }
+    };
 
     let parents = match RequirementService::new(state.inner()).list_by_project(project_id) {
         Ok(reqs) => reqs,
@@ -870,7 +1015,9 @@ async fn new_requirement(
     };
 
     let status_service = StatusService::new(state.inner());
-    let statuses = status_service.list_legacy().unwrap_or_default();
+    let statuses = status_service
+        .list_requirement_statuses()
+        .unwrap_or_default();
 
     let category_service = CategoryService::new(state.inner());
     let categories = category_service
@@ -891,6 +1038,19 @@ async fn new_requirement(
         .list_by_project(project_id)
         .unwrap_or_default();
 
+    let created_flash = created.and_then(|flag| {
+        if flag == "1" || flag.eq_ignore_ascii_case("true") {
+            Some("Requirement created successfully.".to_string())
+        } else {
+            None
+        }
+    });
+
+    let created_timestamp = chrono::Utc::now()
+        .naive_utc()
+        .format("%Y-%m-%d")
+        .to_string();
+
     let ctx = json!({
         "categories": categories,
         "status": statuses,
@@ -899,14 +1059,27 @@ async fn new_requirement(
         "verification": verifications,
         "applicability": applicability,
         "project_id": project_id,
+        "project": {
+            "id": project.project_id,
+            "name": project.project_name,
+        },
+        "selected_project_id": project_id,
         // empty defaults for the form
         "req_title": "",
         "req_description": "",
         "req_justification": "",
         "req_reference": "",
         "req_link": "",
+        "req_purpose": "",
+        "req_current_status": statuses
+            .iter()
+            .find(|st| st.req_st_title.eq_ignore_ascii_case("Draft"))
+            .map(|st| st.req_st_id)
+            .unwrap_or_else(|| statuses.first().map(|st| st.req_st_id).unwrap_or_default()),
+        "created_timestamp": created_timestamp,
         "user": user,
-        "error": error
+        "error": error,
+        "flash_success": created_flash,
     });
 
     Ok(Template::render("new_requirement", ctx))
@@ -916,7 +1089,7 @@ async fn new_requirement(
 async fn post_requirement(
     project_access: ProjectAccess,
     project_id: i32,
-    new_req: Form<NewRequirement>,
+    new_req: Form<RequirementCreateForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
@@ -926,12 +1099,13 @@ async fn post_requirement(
         "/p",
         new_requirement(
             project_id = project_id,
-            error = Some("Invalid data provided".to_string())
+            error = Some("Invalid data provided".to_string()),
+            created = Option::<String>::None
         )
     );
 
     // Take ownership and enforce project_id from the route
-    let mut req = new_req.into_inner();
+    let (mut req, intent) = new_req.into_inner().into_payload();
     req.project_id = project_id;
 
     // --- Reference validation / generation ---
@@ -978,7 +1152,8 @@ async fn post_requirement(
         "/p",
         new_requirement(
             project_id = project_id,
-            error = Some("Failed to create requirement".to_string())
+            error = Some("Failed to create requirement".to_string()),
+            created = Option::<String>::None
         )
     );
 
@@ -995,6 +1170,17 @@ async fn post_requirement(
             return Err(Redirect::to(failure_url));
         }
     };
+
+    if matches!(intent.as_deref(), Some("add_another")) {
+        return Ok(Redirect::to(uri!(
+            "/p",
+            new_requirement(
+                project_id = project_id,
+                error = Option::<String>::None,
+                created = Some("1".to_string())
+            )
+        )));
+    }
 
     // --- Success: show the new requirement ---
     Ok(Redirect::to(uri!(
@@ -1074,6 +1260,111 @@ async fn show_requirements_tree(
     Ok(Template::render("requirements_tree", ctx))
 }
 
+#[post(
+    "/<project_id>/requirements/inline/category",
+    format = "json",
+    data = "<payload>"
+)]
+async fn create_category_inline(
+    project_access: ProjectAccess,
+    project_id: i32,
+    payload: Json<InlineCategoryPayload>,
+    state: &State<AppState>,
+) -> Result<Json<serde_json::Value>, rocket::http::Status> {
+    let user = project_access.into_user();
+    let data = payload.into_inner();
+
+    let category_service = CategoryService::new(state.inner());
+    let new_category = NewCategory {
+        cat_id: None,
+        cat_title: data.title,
+        cat_description: data.description,
+        cat_tag: data.tag,
+        project_id,
+    };
+
+    let id = category_service
+        .create(&user, new_category)
+        .map_err(map_repo_error)?;
+    let stored = category_service.get_by_id(id).map_err(map_repo_error)?;
+
+    Ok(Json(json!({
+        "id": stored.cat_id,
+        "label": stored.cat_title,
+        "tag": stored.cat_tag,
+    })))
+}
+
+#[post(
+    "/<project_id>/requirements/inline/applicability",
+    format = "json",
+    data = "<payload>"
+)]
+async fn create_applicability_inline(
+    project_access: ProjectAccess,
+    project_id: i32,
+    payload: Json<InlineApplicabilityPayload>,
+    state: &State<AppState>,
+) -> Result<Json<serde_json::Value>, rocket::http::Status> {
+    let user = project_access.into_user();
+    let data = payload.into_inner();
+
+    let applicability_service = ApplicabilityService::new(state.inner());
+    let new_applicability = NewApplicability {
+        app_id: None,
+        app_title: data.title,
+        app_description: data.description,
+        app_tag: data.tag,
+        project_id,
+    };
+
+    let id = applicability_service
+        .create(&user, new_applicability)
+        .map_err(map_repo_error)?;
+    let stored = applicability_service
+        .get_by_id(id)
+        .map_err(map_repo_error)?;
+
+    Ok(Json(json!({
+        "id": stored.app_id,
+        "label": stored.app_title,
+        "tag": stored.app_tag,
+    })))
+}
+
+#[post(
+    "/<project_id>/requirements/inline/verification",
+    format = "json",
+    data = "<payload>"
+)]
+async fn create_verification_inline(
+    _project_access: ProjectAccess,
+    project_id: i32,
+    payload: Json<InlineVerificationPayload>,
+    state: &State<AppState>,
+) -> Result<Json<serde_json::Value>, rocket::http::Status> {
+    let data = payload.into_inner();
+
+    let verification_service = VerificationService::new(state.inner());
+    let new_verification = NewVerification {
+        verification_id: None,
+        verification_name: data.name,
+        verification_description: data.description,
+        project_id,
+    };
+
+    let id = verification_service
+        .create(new_verification)
+        .map_err(map_repo_error)?;
+    let stored = verification_service.get_by_id(id).map_err(map_repo_error)?;
+
+    Ok(Json(json!({
+        "id": stored.verification_id,
+        "label": stored.verification_name,
+        "description": stored.verification_description,
+    })))
+}
+
 fn get_category_or_placeholder(state: &State<AppState>, category_id: i32) -> Category {
     CategoryService::new(state.inner())
         .get_by_id(category_id)
@@ -1095,7 +1386,10 @@ pub fn routes() -> Vec<Route> {
         delete_requirement_route,
         new_requirement,
         post_requirement,
-        show_requirements_tree
+        show_requirements_tree,
+        create_category_inline,
+        create_applicability_inline,
+        create_verification_inline
     ]
 }
 
@@ -1108,8 +1402,9 @@ mod tests {
         client_with_routes, delete_with_session, get_with_session, post_form_with_session,
         session_cookie, timestamp, TestAppState,
     };
-    use rocket::http::{Cookie, Status};
+    use rocket::http::{ContentType, Cookie, Status};
     use rocket::local::asynchronous::Client;
+    use rocket::serde::json::{serde_json, Value as JsonValue};
 
     const ADMIN_ID: i32 = 1;
     const PRIMARY_PROJECT: i32 = 1;
@@ -1410,7 +1705,7 @@ mod tests {
 
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("New Requirement"));
-        assert!(body.contains("Create Requirement"));
+        assert!(body.contains("Save &amp; Add Another"));
     }
 
     #[rocket::async_test]
@@ -1435,6 +1730,79 @@ mod tests {
             .unwrap();
         assert_eq!(reqs.len(), 1);
         assert!(reqs[0].req_reference.starts_with("REQ-SYS-"));
+    }
+
+    #[rocket::async_test]
+    async fn post_requirement_add_another_redirects_to_form() {
+        let client = test_client(base_repo()).await;
+        let response = post_form_with_session(
+            &client,
+            "/p/1/requirements/new",
+            "req_title=Next+Requirement&req_description=Body&req_verification=1&\
+             req_current_status=1&req_author=1&req_reviewer=1&req_link=&\
+             req_category=1&req_parent=0&req_applicability=1&req_reference=&\
+             req_justification=&project_id=1&intent=add_another",
+            ADMIN_ID,
+        )
+        .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/requirements/new?created=1")
+        );
+    }
+
+    #[rocket::async_test]
+    async fn inline_category_creation_returns_json() {
+        let client = test_client(base_repo()).await;
+        let response = client
+            .post("/p/1/requirements/inline/category")
+            .header(ContentType::JSON)
+            .private_cookie(session_cookie(ADMIN_ID))
+            .body(r#"{"title":"Telemetry","description":"Data channel","tag":"TEL"}"#)
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("inline response");
+        let value: JsonValue = serde_json::from_str(&body).expect("json");
+        assert_eq!(value["label"], "Telemetry");
+        assert!(value["id"].as_i64().is_some());
+    }
+
+    #[rocket::async_test]
+    async fn inline_applicability_creation_returns_json() {
+        let client = test_client(base_repo()).await;
+        let response = client
+            .post("/p/1/requirements/inline/applicability")
+            .header(ContentType::JSON)
+            .private_cookie(session_cookie(ADMIN_ID))
+            .body(r#"{"title":"Mission","description":"Applies to mission","tag":"MIS"}"#)
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("inline response");
+        let value: JsonValue = serde_json::from_str(&body).expect("json");
+        assert_eq!(value["label"], "Mission");
+    }
+
+    #[rocket::async_test]
+    async fn inline_verification_creation_returns_json() {
+        let client = test_client(base_repo()).await;
+        let response = client
+            .post("/p/1/requirements/inline/verification")
+            .header(ContentType::JSON)
+            .private_cookie(session_cookie(ADMIN_ID))
+            .body(r#"{"name":"Inspection","description":"Visual inspection"}"#)
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("inline response");
+        let value: JsonValue = serde_json::from_str(&body).expect("json");
+        assert_eq!(value["label"], "Inspection");
     }
 
     #[rocket::async_test]

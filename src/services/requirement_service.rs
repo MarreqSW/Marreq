@@ -6,9 +6,9 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{NewRequirement, Requirement, User};
+use crate::models::{NewRequirement, Requirement, User, Test};
 use crate::repository::errors::RepoError;
-use crate::repository::{PooledConnectionWrapper, RequirementsRepository};
+use crate::repository::{PooledConnectionWrapper, RequirementsRepository, TestsRepository};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
 use crate::helper_functions::filter_requirements;
 
@@ -48,10 +48,13 @@ impl<'a> RequirementService<'a> {
         ))
     }
 
-
     /// Retrieve a single requirement by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
         self.repo_read().get_requirement_by_id(id)
+    }
+
+    pub fn get_linked_tests(&self, id: i32) -> Result<Vec<Test>, RepoError> {
+        self.repo_read().get_tests_for_requirement(id)
     }
 
     /// Create a new requirement entry and log the action.

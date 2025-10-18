@@ -7,7 +7,7 @@ use rocket::State;
 
 use crate::app::AppState;
 use crate::helper_functions::{
-    decorators::{decorate_tests_with_repo, get_linked_tests_for_requirement_with_repo},
+    decorators::decorate_tests_with_repo,
     get_selected_project_id,
 };
 use crate::models::{Category, DecoratedTest, Project, ProjectMember, Requirement, Test, User};
@@ -276,14 +276,6 @@ pub(crate) fn get_status_name_by_id_cached(state: &AppState, id: i32) -> String 
         .get_status_by_id(id)
         .map(|s| s.st_title)
         .unwrap_or_else(|_| "[Status Not Found]".to_string())
-}
-
-pub(crate) fn get_linked_tests_for_requirement_cached(
-    state: &AppState,
-    req_id: i32,
-) -> Result<Vec<DecoratedTest>, String> {
-    let repo = state.repo_read();
-    get_linked_tests_for_requirement_with_repo(&*repo, req_id).map_err(|e| e.to_string())
 }
 
 pub(crate) fn get_requirements_for_test_cached(

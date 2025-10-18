@@ -555,6 +555,14 @@ impl LookupRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
+    fn insert_new_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
+        let mut conn = self.get_conn()?;
+        let result = diesel::insert_into(schema::verification::table)
+            .values(new)
+            .get_result::<Verification>(conn.as_mut())?;
+        Ok(result.verification_id)
+    }
+
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError> {
         use schema::categories::dsl::*;
         let mut conn = self.get_conn()?;

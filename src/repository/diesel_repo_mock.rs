@@ -276,6 +276,20 @@ impl LookupRepository for DieselRepoMock {
             .collect())
     }
 
+    fn insert_new_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
+        let id = new
+            .verification_id
+            .unwrap_or_else(|| self.verifications.keys().max().map(|i| i + 1).unwrap_or(1));
+        let verification = Verification {
+            verification_id: id,
+            verification_name: new.verification_name.clone(),
+            verification_description: new.verification_description.clone(),
+            project_id: new.project_id,
+        };
+        self.verifications.insert(id, verification);
+        Ok(id)
+    }
+
     fn insert_new_category(&mut self, _new: &NewCategory) -> Result<i32, RepoError> {
         let id = _new
             .cat_id

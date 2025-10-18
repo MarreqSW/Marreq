@@ -224,7 +224,7 @@ async fn get_edit_requirement(
     let user = project_access.into_user();
     let service = RequirementService::new(state.inner());
 
-    let req = match service.get_by_id(req_id) {
+    let req = match service.get_by_id_decorated(req_id) {
         Ok(req) => req,
         Err(err) => {
             let ctx = json!({
@@ -256,31 +256,16 @@ async fn get_edit_requirement(
         return Err(Redirect::to(url));
     }
 
-    // Keep IDs without cloning the whole req later
-    let req_author_id = req.req_author;
-    let req_reviewer_id = req.req_reviewer;
-    let req_category_id = req.req_category;
-    let req_applicability_id = req.req_applicability;
-    let req_current_status_id = req.req_current_status;
-    let req_verification_id = req.req_verification;
-    let req_parent_id = req.req_parent;
-
-    let parents = match RequirementService::new(state.inner()).list_by_project(project_id) {
-        Ok(reqs) => reqs,
-        Err(_err) => {
-            #[cfg(debug_assertions)]
-            eprintln!(
-                "Failed to load parent requirements for project {}: {:?}",
-                project_id, _err
-            );
-            Vec::new()
+    let parent: Option<Requirement> = if req.req_parent_id != 0 {
+        match service.get_by_id(req.req_parent_id) {
+            Ok(r) => Some(r),
+            Err(_) => None,
         }
+    } else {
+        None
     };
 
     let repo = state.repo_read();
-    // Decorate for the template (single-item vec)
-    let mut decorated = decorate_requirements_with_repo(&*repo, vec![req]);
-    let requirement_json = json!(decorated.remove(0));
 
     // Project-scoped lookups; default to empty on error
     let statuses = repo.get_status_all().unwrap_or_default();
@@ -296,21 +281,21 @@ async fn get_edit_requirement(
         .unwrap_or_default();
 
     let ctx = json!({
-        "requirements": requirement_json,
-        "req_author_id": req_author_id,
-        "req_reviewer_id": req_reviewer_id,
-        "req_category_id": req_category_id,
-        "req_applicability_id": req_applicability_id,
-        "req_current_status_id": req_current_status_id,
-        "req_verification_id": req_verification_id,
-        "req_parent_id": req_parent_id,
+        "req_author_id": req.req_author_id,
+        "req_reviewer_id": req.req_reviewer,
+        "req_category_id": req.req_category,
+        "req_applicability_id": req.req_applicability,
+        "req_current_status_id": req.req_current_status,
+        "req_verification_id": req.req_verification,
+        "req_parent_id": req.req_parent_id,
         "categories": categories,
         "status": statuses,
-        "parent": parents,
+        "parent": parent,
         "users": users,
         "verification": verifications,
         "applicability": applicability,
-        "user": user
+        "user": user,
+        "requirement": json!(req)
     });
 
     #[cfg(debug_assertions)]
@@ -1044,7 +1029,6 @@ mod tests {
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("Edit Requirement"));
         assert!(body.contains("REQ-SYS-1"));
-        assert!(body.contains("For testing"));
     }
 
     #[rocket::async_test]

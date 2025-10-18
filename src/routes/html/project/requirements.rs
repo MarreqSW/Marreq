@@ -222,14 +222,15 @@ async fn get_edit_requirement(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
+    let service = RequirementService::new(state.inner());
 
-    let req = match get_requirement_by_id_cached_safe(state, req_id) {
-        Ok(r) => r,
-        Err(error_msg) => {
+    let req = match service.get_by_id(req_id) {
+        Ok(req) => req,
+        Err(err) => {
             let ctx = json!({
-                "title": "Requirement Not Found",
-                "message": "The requirement you're trying to edit could not be found.",
-                "details": error_msg,
+                "title": "Error Loading Requirement",
+                "message": "An error occurred while loading the requirement.",
+                "details": format!("{:?}", err),
                 "user": user
             });
             return Ok(Template::render("error", ctx));
@@ -270,7 +271,7 @@ async fn get_edit_requirement(
             #[cfg(debug_assertions)]
             eprintln!(
                 "Failed to load parent requirements for project {}: {:?}",
-                project_id, err
+                project_id, _err
             );
             Vec::new()
         }
@@ -387,7 +388,7 @@ async fn post_edit_requirement(
             #[cfg(debug_assertions)]
             eprintln!(
                 "Error editing requirement {} in project {}: {:?}",
-                req_id, project_id, err
+                req_id, project_id, _err
             );
             return Err(Redirect::to(list_url));
         }
@@ -448,7 +449,7 @@ async fn delete_requirement_route(
         }
         Err(_err) => {
             #[cfg(debug_assertions)]
-            eprintln!("delete_requirement({}) failed: {:?}", req_id, err);
+            eprintln!("delete_requirement({}) failed: {:?}", req_id, _err);
             return Err(rocket::http::Status::InternalServerError);
         }
     }
@@ -473,7 +474,7 @@ async fn new_requirement(
             #[cfg(debug_assertions)]
             eprintln!(
                 "Failed to load parent requirements for project {}: {:?}",
-                project_id, err
+                project_id, _err
             );
             Vec::new()
         }
@@ -593,7 +594,7 @@ async fn post_requirement(
         }
         Err(_err) => {
             #[cfg(debug_assertions)]
-            eprintln!("service create requirement failed: {:?}", err);
+            eprintln!("service create requirement failed: {:?}", _err);
             return Err(Redirect::to(failure_url));
         }
     };
@@ -620,7 +621,7 @@ async fn show_requirements_tree(
             #[cfg(debug_assertions)]
             eprintln!(
                 "Failed to load requirements for tree view (project {}): {:?}",
-                project_id, err
+                project_id, _err
             );
             Vec::new()
         }

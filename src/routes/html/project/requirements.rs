@@ -633,6 +633,45 @@ async fn get_edit_requirement(
         None
     };
 
+    let project_service = ProjectService::new(state.inner());
+    let project = project_service.get_by_id(project_id).ok();
+
+    let log_service = LogService::new(state.inner());
+    let history_entries = log_service
+        .entity_logs(&EntityType::Requirement.to_string(), req_id)
+        .unwrap_or_default();
+
+    let version_counter = history_entries.len().saturating_add(1);
+    let version_label = format!("v1.{}", version_counter.saturating_sub(1));
+    let last_editor_name = history_entries
+        .first()
+        .map(|entry| entry.username.clone())
+        .filter(|name| !name.is_empty())
+        .or_else(|| {
+            if !req.req_reviewer.trim().is_empty() {
+                Some(req.req_reviewer.clone())
+            } else if !req.req_author.trim().is_empty() {
+                Some(req.req_author.clone())
+            } else {
+                None
+            }
+        })
+        .unwrap_or_else(|| "Unknown author".to_string());
+
+    let linked_candidates = service
+        .list_by_project(project_id)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|candidate| candidate.req_id != req_id)
+        .map(|candidate| {
+            json!({
+                "id": candidate.req_id,
+                "title": candidate.req_title,
+                "reference": candidate.req_reference,
+            })
+        })
+        .collect::<Vec<_>>();
+
     // Project-scoped lookups; default to empty on error
     let status_service = StatusService::new(state.inner());
     let statuses = status_service.list_legacy().unwrap_or_default();
@@ -656,13 +695,19 @@ async fn get_edit_requirement(
         .list_by_project(project_id)
         .unwrap_or_default();
 
+    let display_reference = if req.req_reference.trim().is_empty() {
+        format!("RM-{:03}", req.req_id)
+    } else {
+        req.req_reference.clone()
+    };
+
     let ctx = json!({
         "req_author_id": req.req_author_id,
-        "req_reviewer_id": req.req_reviewer,
-        "req_category_id": req.req_category,
-        "req_applicability_id": req.req_applicability,
-        "req_current_status_id": req.req_current_status,
-        "req_verification_id": req.req_verification,
+        "req_reviewer_id": req.req_reviewer_id,
+        "req_category_id": req.req_category_id,
+        "req_applicability_id": req.req_applicability_id,
+        "req_current_status_id": req.req_current_status_id,
+        "req_verification_id": req.req_verification_id,
         "req_parent_id": req.req_parent_id,
         "categories": categories,
         "status": statuses,
@@ -671,7 +716,26 @@ async fn get_edit_requirement(
         "verification": verifications,
         "applicability": applicability,
         "user": user,
-        "requirement": json!(req)
+        "requirement": json!(req),
+        "display_reference": display_reference,
+        "project": project.map(|p| {
+            json!({
+                "id": p.project_id,
+                "name": p.project_name,
+                "status": p.project_status,
+                "description": p.project_description,
+            })
+        }),
+        "version": {
+            "label": version_label,
+            "last_editor": last_editor_name,
+            "updated_at": req.req_update_date,
+        },
+        "linked_requirement_options": linked_candidates,
+        "autosave": {
+            "enabled": true,
+            "interval_ms": 30_000
+        }
     });
 
     #[cfg(debug_assertions)]

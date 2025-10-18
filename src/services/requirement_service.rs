@@ -10,6 +10,7 @@ use crate::models::{NewRequirement, Requirement, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, RequirementsRepository};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
+use crate::helper_functions::filter_requirements;
 
 /// High level operations for requirements backed by the shared [`AppState`].
 pub struct RequirementService<'a> {
@@ -31,6 +32,22 @@ impl<'a> RequirementService<'a> {
     pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError> {
         self.repo_read().get_requirements_by_project(project_id)
     }
+
+    pub fn list_by_project_filtered(&self,
+        project_id: i32,
+        status_filter: Option<i32>,
+        verification_filter: Option<i32>,
+        category_filter: Option<i32>)
+    -> Result<Vec<Requirement>, RepoError> {
+        let requirements = self.list_by_project(project_id)?;
+        Ok(filter_requirements(
+            requirements,
+            status_filter,
+            verification_filter,
+            category_filter,
+        ))
+    }
+
 
     /// Retrieve a single requirement by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<Requirement, RepoError> {

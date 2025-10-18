@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use rocket::form::Form;
-use rocket::http::CookieJar;
+use rocket::http::{Cookie, CookieJar};
 use rocket::response::Redirect;
 use rocket::serde::json::{json, serde_json};
 use rocket::State;
@@ -14,12 +14,11 @@ use crate::helper_functions::generate_requirement_reference;
 use crate::helper_functions::{decorators::decorate_requirements_with_repo, filter_requirements};
 use crate::models::*;
 use crate::repository::{LookupRepository, UserRepository};
-use crate::services::RequirementService;
+use crate::services::{ProjectService, RequirementService};
 
 use super::helpers::{
     build_context_with_projects, get_category_by_id_cached,
-    get_linked_tests_for_requirement_cached, get_project_by_id_pooled_safe,
-    get_requirement_by_id_cached_safe,
+    get_linked_tests_for_requirement_cached, get_requirement_by_id_cached_safe,
 };
 
 #[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>")]
@@ -35,20 +34,18 @@ async fn show_requirements(
     let user = project_access.into_user();
     let mut ctx = build_context_with_projects(state, user, cookies);
 
-    let selected_project = get_project_by_id_pooled_safe(state, project_id);
+    let selected_project = ProjectService::new(state.inner())
+        .get_by_id(project_id)
+        .unwrap();
 
-    let service = RequirementService::new(state.inner());
-    let requirements = match service.list_by_project(project_id) {
-        Ok(reqs) => reqs,
-        Err(err) => {
-            #[cfg(debug_assertions)]
-            eprintln!(
-                "Failed to load requirements for project {}: {:?}",
-                project_id, err
-            );
-            Vec::new()
-        }
-    };
+    cookies.add(Cookie::new(
+        "selected_project_id",
+        project_id.to_string(),
+    ));
+    ctx["selected_project_id"] = json!(project_id);
+
+    let requirements = RequirementService::new(state.inner()).list_by_project(project_id).unwrap_or_default();
+    //let requirements = RequirementService::new(state.inner()).list_by_project_filtered(project_id, status_filter, verification_filter, category_filter).unwrap_or_default();
     let filtered = filter_requirements(
         requirements,
         status_filter,
@@ -719,7 +716,7 @@ mod tests {
         client_with_routes, delete_with_session, get_with_session, post_form_with_session,
         session_cookie, timestamp, TestAppState,
     };
-    use rocket::http::Status;
+    use rocket::http::{Cookie, Status};
     use rocket::local::asynchronous::Client;
 
     const ADMIN_ID: i32 = 1;
@@ -848,6 +845,143 @@ mod tests {
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("REQ-SYS-1"));
         assert!(body.contains("Requirement 1"));
+    }
+
+    #[rocket::async_test]
+    async fn show_requirements_respects_status_filter() {
+        let mut repo = base_repo();
+        let mut req1 = sample_requirement(1);
+        req1.req_current_status = 1;
+        repo.requirements.insert(1, req1);
+
+        let mut req2 = sample_requirement(2);
+        req2.req_current_status = 2;
+        req2.req_reference = "REQ-SYS-2".into();
+        repo.requirements.insert(2, req2);
+
+        let client = test_client(repo).await;
+
+        let response = get_with_session(
+            &client,
+            "/p/1/requirements?status_filter=1",
+            ADMIN_ID,
+        )
+        .await;
+        assert_eq!(response.status(), Status::Ok);
+
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("Requirement 1"));
+        assert!(!body.contains("Requirement 2"));
+    }
+
+    #[rocket::async_test]
+    async fn show_requirements_respects_filter_with_empty_values() {
+        let mut repo = base_repo();
+        let mut req1 = sample_requirement(1);
+        req1.req_current_status = 1;
+        repo.requirements.insert(1, req1);
+
+        let mut req2 = sample_requirement(2);
+        req2.req_current_status = 2;
+        req2.req_reference = "REQ-SYS-2".into();
+        repo.requirements.insert(2, req2);
+
+        let client = test_client(repo).await;
+
+        let response = get_with_session(
+            &client,
+            "/p/1/requirements?status_filter=1&verification_filter=&category_filter=",
+            ADMIN_ID,
+        )
+        .await;
+        assert_eq!(response.status(), Status::Ok);
+
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("Requirement 1"));
+        assert!(!body.contains("Requirement 2"));
+    }
+
+    #[rocket::async_test]
+    async fn show_requirements_ignores_search_query_when_filtering() {
+        let mut repo = base_repo();
+        let mut req1 = sample_requirement(1);
+        req1.req_current_status = 1;
+        repo.requirements.insert(1, req1);
+
+        let mut req2 = sample_requirement(2);
+        req2.req_current_status = 2;
+        req2.req_reference = "REQ-SYS-2".into();
+        repo.requirements.insert(2, req2);
+
+        let client = test_client(repo).await;
+
+        let response = get_with_session(
+            &client,
+            "/p/1/requirements?status_filter=1&verification_filter=&category_filter=&search=",
+            ADMIN_ID,
+        )
+        .await;
+        assert_eq!(response.status(), Status::Ok);
+
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("Requirement 1"));
+        assert!(!body.contains("Requirement 2"));
+    }
+
+    #[rocket::async_test]
+    async fn show_requirements_uses_route_project_for_selected_id() {
+        let mut repo = base_repo();
+
+        // Add a second project so that the cookie can point to a different project than the route.
+        repo.projects.insert(
+            2,
+            Project {
+                project_id: 2,
+                project_name: "Other Project".into(),
+                project_description: Some("Alt".into()),
+                project_creation_date: Some(timestamp()),
+                project_update_date: Some(timestamp()),
+                project_status: Some("Active".into()),
+                project_owner_id: Some(ADMIN_ID),
+            },
+        );
+
+        repo.project_members.push(ProjectMember {
+            project_id: 2,
+            user_id: ADMIN_ID,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        let client = test_client(repo).await;
+
+        let response = client
+            .get("/p/2/requirements")
+            .cookie(Cookie::new("selected_project_id", "1"))
+            .private_cookie(session_cookie(ADMIN_ID))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+
+        let body = response.into_string().await.expect("valid response");
+        assert!(
+            body.contains("action=\"/p/2/requirements\""),
+            "filter form must target the route project"
+        );
+        assert!(
+            !body.contains("action=\"/p/1/requirements\""),
+            "filter form must not target cookie project"
+        );
+        assert!(
+            body.contains("/p/2/requirements/new"),
+            "primary action must use the route project"
+        );
+        assert!(
+            !body.contains("/p/1/requirements/new"),
+            "primary action must not use cookie project"
+        );
     }
 
     #[rocket::async_test]

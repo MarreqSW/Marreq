@@ -11,7 +11,7 @@ use super::prelude::*;
 
 use crate::app::AppState;
 use crate::helper_functions::generate_requirement_reference;
-use crate::helper_functions::{decorators::decorate_requirements_with_repo, filter_requirements};
+use crate::helper_functions::decorators::decorate_requirements_with_repo;
 use crate::models::*;
 use crate::repository::{LookupRepository, UserRepository};
 use crate::services::{ProjectService, RequirementService};
@@ -44,14 +44,7 @@ async fn show_requirements(
     ));
     ctx["selected_project_id"] = json!(project_id);
 
-    let requirements = RequirementService::new(state.inner()).list_by_project(project_id).unwrap_or_default();
-    //let requirements = RequirementService::new(state.inner()).list_by_project_filtered(project_id, status_filter, verification_filter, category_filter).unwrap_or_default();
-    let filtered = filter_requirements(
-        requirements,
-        status_filter,
-        verification_filter,
-        category_filter,
-    );
+    let filtered = RequirementService::new(state.inner()).list_by_project_filtered(project_id, status_filter, verification_filter, category_filter).unwrap_or_default();
 
     let repo = state.repo_read();
     let decorated = decorate_requirements_with_repo(&*repo, filtered);

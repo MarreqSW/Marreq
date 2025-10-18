@@ -10,15 +10,12 @@ use rocket_dyn_templates::Template;
 use super::prelude::*;
 
 use crate::app::AppState;
-use crate::helper_functions::generate_requirement_reference;
-use crate::helper_functions::decorators::decorate_requirements_with_repo;
+use crate::helper_functions::{generate_requirement_reference};
 use crate::models::*;
-use crate::repository::{LookupRepository, UserRepository};
-use crate::services::{ProjectService, RequirementService};
-
-use super::helpers::{
-    build_context_with_projects, get_category_by_id_cached,
-    get_requirement_by_id_cached_safe,
+use crate::repository::LookupRepository;
+use crate::services::{
+    ApplicabilityService, CategoryService, RequirementService, StatusService,
+    UserService, ProjectService
 };
 
 #[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>")]
@@ -32,22 +29,29 @@ async fn show_requirements(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    let mut ctx = build_context_with_projects(state, user, cookies);
 
-    let selected_project = ProjectService::new(state.inner())
-        .get_by_id(project_id)
-        .unwrap();
+    let project_service = ProjectService::new(state.inner());
+    let selected_project = project_service.get_by_id(project_id).unwrap();
 
     cookies.add(Cookie::new(
         "selected_project_id",
         project_id.to_string(),
     ));
-    ctx["selected_project_id"] = json!(project_id);
 
-    let filtered = RequirementService::new(state.inner()).list_by_project_filtered(project_id, status_filter, verification_filter, category_filter).unwrap_or_default();
+    let requirement_service = RequirementService::new(state.inner());
+    let filtered = requirement_service
+        .list_by_project_filtered(
+            project_id,
+            status_filter,
+            verification_filter,
+            category_filter,
+        )
+        .unwrap_or_default();
 
-    let repo = state.repo_read();
-    let decorated = decorate_requirements_with_repo(&*repo, filtered);
+    let decorated = {
+        let repo = state.repo_read();
+        decorate_requirements_with_repo(&*repo, filtered)
+    };
 
     let total_requirements = decorated.len();
     let mut status_totals: HashMap<String, usize> = HashMap::new();
@@ -69,13 +73,19 @@ async fn show_requirements(
     let coverage_percent = (coverage_ratio * 100.0).round() as i32;
 
     // Static lists; all default to empty on error
-    let statuses = repo.get_status_all().unwrap_or_default();
-    let verifications = repo
-        .get_verification_by_project(project_id)
+    let status_service = StatusService::new(state.inner());
+    let statuses = status_service.list_legacy().unwrap_or_default();
+
+    let category_service = CategoryService::new(state.inner());
+    let categories = category_service
+        .list_by_project(project_id)
         .unwrap_or_default();
-    let categories = repo
-        .get_categories_by_project(project_id)
-        .unwrap_or_default();
+
+    let verifications = {
+        let repo = state.repo_read();
+        repo.get_verification_by_project(project_id)
+            .unwrap_or_default()
+    };
 
     let status_lookup: HashMap<i32, String> = statuses
         .iter()
@@ -115,31 +125,35 @@ async fn show_requirements(
         }));
     }
 
-    ctx["requirements"] = json!(decorated);
-    ctx["requirement_metrics"] = json!({
-        "total": total_requirements,
-        "draft": draft_count,
-        "accepted": accepted_count,
-        "rejected": rejected_count,
-        "coverage": {
-            "verified": accepted_count,
-            "percent": coverage_percent
-        }
-    });
+    let ctx = json!({
+        "requirements": json!(decorated),
+        "requirement_metrics": json!({
+            "total": total_requirements,
+            "draft": draft_count,
+            "accepted": accepted_count,
+            "rejected": rejected_count,
+            "coverage": {
+                "verified": accepted_count,
+                "percent": coverage_percent
+            }
+        }),
+       "selected_project_id": json!(project_id),
 
-    // Filters for template state
-    ctx["statuses"] = json!(statuses);
-    ctx["verifications"] = json!(verifications);
-    ctx["categories"] = json!(categories);
-    ctx["current_status_filter"] = json!(status_filter);
-    ctx["current_verification_filter"] = json!(verification_filter);
-    ctx["current_category_filter"] = json!(category_filter);
-    ctx["active_filters"] = json!(active_filters);
-    ctx["project"] = json!({
-        "id": selected_project.project_id,
-        "name": selected_project.project_name,
-        "status": selected_project.project_status,
-        "description": selected_project.project_description,
+        // Filters for template state
+        "statuses": json!(statuses),
+        "verifications": json!(verifications),
+        "categories": json!(categories),
+        "current_status_filter": json!(status_filter),
+        "current_verification_filter": json!(verification_filter),
+        "current_category_filter": json!(category_filter),
+        "active_filters": json!(active_filters),
+        "project": json!({
+            "id": selected_project.project_id,
+            "name": selected_project.project_name,
+            "status": selected_project.project_status,
+            "description": selected_project.project_description,
+        }),
+        "user": user,
     });
 
     Ok(Template::render("requirements", ctx))
@@ -265,19 +279,27 @@ async fn get_edit_requirement(
         None
     };
 
-    let repo = state.repo_read();
-
     // Project-scoped lookups; default to empty on error
-    let statuses = repo.get_status_all().unwrap_or_default();
-    let categories = repo
-        .get_categories_by_project(project_id)
+    let status_service = StatusService::new(state.inner());
+    let statuses = status_service.list_legacy().unwrap_or_default();
+
+    let category_service = CategoryService::new(state.inner());
+    let categories = category_service
+        .list_by_project(project_id)
         .unwrap_or_default();
-    let users = repo.get_users_all().unwrap_or_default();
-    let verifications = repo
-        .get_verification_by_project(project_id)
-        .unwrap_or_default();
-    let applicability = repo
-        .get_applicability_by_project(project_id)
+
+    let user_service = UserService::new(state.inner());
+    let users = user_service.list_all().unwrap_or_default();
+
+    let verifications = {
+        let repo = state.repo_read();
+        repo.get_verification_by_project(project_id)
+            .unwrap_or_default()
+    };
+
+    let applicability_service = ApplicabilityService::new(state.inner());
+    let applicability = applicability_service
+        .list_by_project(project_id)
         .unwrap_or_default();
 
     let ctx = json!({
@@ -365,7 +387,7 @@ async fn delete_requirement_route(
     );
 
     // 1) Load requirement or 404
-    let req = match get_requirement_by_id_cached_safe(state, req_id) {
+    let req = match  RequirementService::new(state.inner()).get_by_id(req_id) {
         Ok(r) => r,
         Err(_) => return Err(rocket::http::Status::NotFound),
     };
@@ -429,18 +451,26 @@ async fn new_requirement(
         }
     };
 
-    let repo = state.repo_read();
-    // Project-scoped lookups; default to empty on error
-    let statuses = repo.get_status_all().unwrap_or_default();
-    let categories = repo
-        .get_categories_by_project(project_id)
+    let status_service = StatusService::new(state.inner());
+    let statuses = status_service.list_legacy().unwrap_or_default();
+
+    let category_service = CategoryService::new(state.inner());
+    let categories = category_service
+        .list_by_project(project_id)
         .unwrap_or_default();
-    let users = repo.get_users_all().unwrap_or_default();
-    let verifications = repo
-        .get_verification_by_project(project_id)
-        .unwrap_or_default();
-    let applicability = repo
-        .get_applicability_by_project(project_id)
+
+    let user_service = UserService::new(state.inner());
+    let users = user_service.list_all().unwrap_or_default();
+
+    let verifications = {
+        let repo = state.repo_read();
+        repo.get_verification_by_project(project_id)
+            .unwrap_or_default()
+    };
+
+    let applicability_service = ApplicabilityService::new(state.inner());
+    let applicability = applicability_service
+        .list_by_project(project_id)
         .unwrap_or_default();
 
     let ctx = json!({
@@ -489,7 +519,7 @@ async fn post_requirement(
     // --- Reference validation / generation ---
     if !req.req_reference.is_empty() {
         // Validate against the category's tag
-        let category = get_category_by_id_cached(state, req.req_category);
+        let category = get_category_or_placeholder(state, req.req_category);
         let expected_prefix = format!("REQ-{}-", category.cat_tag);
         if !req.req_reference.starts_with(&expected_prefix) {
             return Err(Redirect::to(new_url));
@@ -624,6 +654,19 @@ async fn show_requirements_tree(
     });
 
     Ok(Template::render("requirements_tree", ctx))
+}
+
+
+fn get_category_or_placeholder(state: &State<AppState>, category_id: i32) -> Category {
+    CategoryService::new(state.inner())
+        .get_by_id(category_id)
+        .unwrap_or_else(|_| Category {
+            cat_id: category_id,
+            cat_title: format!("Unknown Category ({})", category_id),
+            cat_description: "Category not found".to_string(),
+            cat_tag: "unknown".to_string(),
+            project_id: 1,
+        })
 }
 
 pub fn routes() -> Vec<Route> {

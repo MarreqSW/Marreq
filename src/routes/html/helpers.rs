@@ -1,3 +1,5 @@
+// This module is deprecated and will be removed in future versions.
+
 use std::collections::HashMap;
 
 use chrono::Utc;
@@ -6,12 +8,8 @@ use rocket::serde::json::{json, Value};
 use rocket::State;
 
 use crate::app::AppState;
-use crate::helper_functions::{
-    decorators::decorate_tests_with_repo,
-    get_selected_project_id,
-};
+use crate::helper_functions::{decorators::decorate_tests_with_repo, get_selected_project_id};
 use crate::models::{Category, DecoratedTest, Project, ProjectMember, Requirement, Test, User};
-use crate::repository::errors::RepoError;
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
     LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
@@ -242,19 +240,6 @@ pub(crate) fn project_status_badge(status: &str) -> &'static str {
         "on hold" | "paused" | "maintenance" => "bg-warning",
         _ => "bg-secondary",
     }
-}
-
-pub(crate) fn get_requirement_by_id_cached_safe(
-    state: &AppState,
-    id: i32,
-) -> Result<Requirement, String> {
-    state
-        .repo_read()
-        .get_requirement_by_id(id)
-        .map_err(|e| match e {
-            RepoError::NotFound => format!("Requirement with ID {} not found", id),
-            _ => e.to_string(),
-        })
 }
 
 pub(crate) fn get_category_by_id_cached(state: &AppState, id: i32) -> Category {

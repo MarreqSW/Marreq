@@ -6,7 +6,7 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{NewRequirement, Requirement, User, Test};
+use crate::models::{NewRequirement, Requirement, DecoratedRequirement, User, Test};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, RequirementsRepository, TestsRepository};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
@@ -51,6 +51,80 @@ impl<'a> RequirementService<'a> {
     /// Retrieve a single requirement by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
         self.repo_read().get_requirement_by_id(id)
+    }
+
+    /// Retrieve a single requirement by identifier.
+    pub fn get_by_id_decorated(&self, id: i32) -> Result<DecoratedRequirement, RepoError> {
+        use crate::repository::{LookupRepository, UserRepository};
+        let req = self.get_by_id(id)?;
+
+        let verification = self.repo_read()
+            .get_verification_by_id(req.req_verification)
+            .map(|v| v.verification_name)
+            .unwrap_or_else(|_| format!("Unknown Verification ({})", req.req_verification));
+
+        let status = self.repo_read()
+            .get_requirement_status_by_id(req.req_current_status)
+            .map(|s| s.req_st_title)
+            .unwrap_or_else(|_| format!("Unknown Status ({})", req.req_current_status));
+
+        let author = self.repo_read().get_user_by_id(req.req_author)
+            .map(|u| u.user_name)
+            .unwrap_or_default();
+
+        let reviewer = if req.req_reviewer != 0 {
+            self.repo_read().get_user_by_id(req.req_reviewer)
+                .map(|u| u.user_name)
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
+
+        let category = self.repo_read()
+            .get_category_by_id(req.req_category)
+            .map(|c| c.cat_title)
+            .unwrap_or_else(|_| format!("Unknown Category ({})", req.req_category));
+
+        let applicability = self.repo_read()
+            .get_applicability_by_id(req.req_applicability)
+            .map(|a| a.app_title)
+            .unwrap_or_else(|_| format!("Unknown Applicability ({})", req.req_applicability));
+
+        let parent_title = if req.req_parent != 0 {
+            match self.repo_read().get_requirement_by_id(req.req_parent) {
+                Ok(parent_req) => parent_req.req_title,
+                Err(_) => "[Deleted Parent]".to_string(),
+            }
+        } else {
+            String::new()
+        };
+
+        Ok(DecoratedRequirement {
+            req_id: req.req_id,
+            req_title: req.req_title,
+            req_verification: verification,
+            req_verification_id: req.req_verification,
+            req_description: req.req_description,
+            req_current_status: status,
+            req_current_status_id: req.req_current_status,
+            req_author: author,
+            req_author_id: req.req_author,
+            req_reviewer: reviewer,
+            req_reviewer_id: req.req_reviewer,
+            req_link: req.req_link,
+            req_reference: req.req_reference,
+            req_category: category,
+            req_category_id: req.req_category,
+            req_applicability: applicability,
+            req_applicability_id: req.req_applicability,
+            req_parent_id: req.req_parent,
+            req_parent_title: parent_title,
+            req_creation_date: req.req_creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+            req_update_date: req.req_update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+            req_deadline_date: req.req_deadline_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+            req_justification: req.req_justification,
+            project_id: req.project_id,
+        })
     }
 
     pub fn get_linked_tests(&self, id: i32) -> Result<Vec<Test>, RepoError> {

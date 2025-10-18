@@ -14,6 +14,7 @@ pub mod requirement_service;
 pub mod status_service;
 pub mod test_service;
 pub mod user_service;
+pub mod verification_service;
 
 #[cfg(test)]
 mod tests;
@@ -29,3 +30,4 @@ pub use requirement_service::*;
 pub use status_service::*;
 pub use test_service::*;
 pub use user_service::*;
+pub use verification_service::*;

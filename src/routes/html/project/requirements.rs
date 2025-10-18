@@ -326,44 +326,8 @@ async fn post_edit_requirement(
     );
     let show_url = uri!("/p", show_requirement_id(project_id, req_id));
 
-    let requirement_data = new_req.into_inner();
-
-    if !requirement_data.req_reference.is_empty() {
-        let general_pattern = regex::Regex::new(r"^REQ-[A-Z]+-\d+$").unwrap();
-        if !general_pattern.is_match(&requirement_data.req_reference) {
-            return Err(Redirect::to(edit_url));
-        }
-
-        let category = get_category_by_id_cached(state, requirement_data.req_category);
-        let expected_prefix = format!("REQ-{}-", category.cat_tag);
-        if !requirement_data.req_reference.starts_with(&expected_prefix) {
-            eprintln!(
-                "Warning: reference '{}' doesn't match category tag '{}' (req_id={})",
-                requirement_data.req_reference, category.cat_tag, req_id
-            );
-        }
-    }
-
-    let old = match get_requirement_by_id_cached_safe(state, req_id) {
-        Ok(req) => req,
-        Err(_) => return Err(Redirect::to(list_url)),
-    };
-
-    if old.project_id != project_id {
-        let url = uri!(
-            "/p",
-            show_requirements(
-                project_id = old.project_id,
-                status_filter = Option::<i32>::None,
-                verification_filter = Option::<i32>::None,
-                category_filter = Option::<i32>::None
-            )
-        );
-        return Err(Redirect::to(url));
-    }
-
     let service = RequirementService::new(state.inner());
-    match service.update(&user, req_id, requirement_data) {
+    match service.update(&user, req_id, new_req.into_inner()) {
         Ok(_) => {}
         Err(crate::repository::errors::RepoError::NotFound) => return Err(Redirect::to(list_url)),
         Err(crate::repository::errors::RepoError::BadInput(_)) => {

@@ -10,12 +10,11 @@ use rocket_dyn_templates::Template;
 use super::prelude::*;
 
 use crate::app::AppState;
-use crate::helper_functions::{generate_requirement_reference};
+use crate::helper_functions::generate_requirement_reference;
 use crate::models::*;
-use crate::repository::LookupRepository;
 use crate::services::{
-    ApplicabilityService, CategoryService, RequirementService, StatusService,
-    UserService, ProjectService
+    ApplicabilityService, CategoryService, ProjectService, RequirementService, StatusService,
+    UserService,
 };
 
 #[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>")]
@@ -33,10 +32,7 @@ async fn show_requirements(
     let project_service = ProjectService::new(state.inner());
     let selected_project = project_service.get_by_id(project_id).unwrap();
 
-    cookies.add(Cookie::new(
-        "selected_project_id",
-        project_id.to_string(),
-    ));
+    cookies.add(Cookie::new("selected_project_id", project_id.to_string()));
 
     let requirement_service = RequirementService::new(state.inner());
     let filtered = requirement_service
@@ -387,7 +383,7 @@ async fn delete_requirement_route(
     );
 
     // 1) Load requirement or 404
-    let req = match  RequirementService::new(state.inner()).get_by_id(req_id) {
+    let req = match RequirementService::new(state.inner()).get_by_id(req_id) {
         Ok(r) => r,
         Err(_) => return Err(rocket::http::Status::NotFound),
     };
@@ -656,7 +652,6 @@ async fn show_requirements_tree(
     Ok(Template::render("requirements_tree", ctx))
 }
 
-
 fn get_category_or_placeholder(state: &State<AppState>, category_id: i32) -> Category {
     CategoryService::new(state.inner())
         .get_by_id(category_id)
@@ -836,12 +831,8 @@ mod tests {
 
         let client = test_client(repo).await;
 
-        let response = get_with_session(
-            &client,
-            "/p/1/requirements?status_filter=1",
-            ADMIN_ID,
-        )
-        .await;
+        let response =
+            get_with_session(&client, "/p/1/requirements?status_filter=1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");

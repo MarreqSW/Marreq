@@ -130,7 +130,6 @@ async fn show_requirements(
         serde_json::to_string(&status_definitions).unwrap_or_else(|_| "[]".to_string());
 
     ctx["requirements"] = json!(decorated);
-    ctx["has_requirements"] = json!(total_requirements > 0);
     ctx["requirement_metrics"] = json!({
         "total": total_requirements,
         "draft": draft_count,
@@ -150,14 +149,9 @@ async fn show_requirements(
     ctx["current_status_filter"] = json!(status_filter);
     ctx["current_verification_filter"] = json!(verification_filter);
     ctx["current_category_filter"] = json!(category_filter);
-    ctx["status_filter_label"] = json!(status_label);
-    ctx["verification_filter_label"] = json!(verification_label);
-    ctx["category_filter_label"] = json!(category_label);
     ctx["active_filters"] = json!(active_filters);
-    ctx["status_definitions"] = json!(status_definitions);
     ctx["status_definitions_raw"] = json!(status_definitions_json);
     ctx["has_active_filters"] = json!(!active_filters.is_empty());
-    ctx["selected_project_name"] = json!(selected_project.project_name.clone());
     ctx["project"] = json!({
         "id": selected_project.project_id,
         "name": selected_project.project_name,

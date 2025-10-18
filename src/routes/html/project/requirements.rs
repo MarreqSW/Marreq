@@ -115,20 +115,6 @@ async fn show_requirements(
         }));
     }
 
-    let status_definitions: Vec<_> = statuses
-        .iter()
-        .map(|status| {
-            json!({
-                "id": status.st_id,
-                "title": status.st_title,
-                "description": status.st_description,
-                "short_name": status.st_short_name,
-            })
-        })
-        .collect();
-    let status_definitions_json =
-        serde_json::to_string(&status_definitions).unwrap_or_else(|_| "[]".to_string());
-
     ctx["requirements"] = json!(decorated);
     ctx["requirement_metrics"] = json!({
         "total": total_requirements,
@@ -150,8 +136,6 @@ async fn show_requirements(
     ctx["current_verification_filter"] = json!(verification_filter);
     ctx["current_category_filter"] = json!(category_filter);
     ctx["active_filters"] = json!(active_filters);
-    ctx["status_definitions_raw"] = json!(status_definitions_json);
-    ctx["has_active_filters"] = json!(!active_filters.is_empty());
     ctx["project"] = json!({
         "id": selected_project.project_id,
         "name": selected_project.project_name,

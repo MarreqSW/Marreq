@@ -178,7 +178,7 @@
         </div>
       </form>
 
-      {{#if has_active_filters}}
+      {{#if active_filters}}
       <div class="reqman-requirements-filter-chips" aria-live="polite">
         {{#each active_filters}}
           <button
@@ -365,8 +365,5 @@
   </section>
 </div>
 
-<script type="application/json" id="requirementsStatusDefinitions">
-{{{status_definitions_raw}}}
-</script>
 {{/inline}}
 {{> layout page_id="requirements"}}

@@ -18,7 +18,7 @@ use crate::services::{ProjectService, RequirementService};
 
 use super::helpers::{
     build_context_with_projects, get_category_by_id_cached,
-    get_linked_tests_for_requirement_cached, get_requirement_by_id_cached_safe,
+    get_requirement_by_id_cached_safe,
 };
 
 #[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>")]
@@ -123,7 +123,6 @@ async fn show_requirements(
         "rejected": rejected_count,
         "coverage": {
             "verified": accepted_count,
-            "total": total_requirements,
             "percent": coverage_percent
         }
     });
@@ -155,13 +154,24 @@ async fn show_requirement_id(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
-    let requirement = match get_requirement_by_id_cached_safe(state, req_id) {
+    let service = RequirementService::new(state.inner());
+
+    let requirement = match service.get_by_id(req_id) {
         Ok(req) => req,
-        Err(error_msg) => {
+        Err(crate::repository::errors::RepoError::NotFound) => {
             let ctx = json!({
                 "title": "Requirement Not Found",
                 "message": "The requirement you're looking for could not be found.",
-                "details": error_msg,
+                "details": "The specified requirement does not exist.",
+                "user": user
+            });
+            return Ok(Template::render("error", ctx));
+        }
+        Err(err) => {
+            let ctx = json!({
+                "title": "Error Loading Requirement",
+                "message": "An error occurred while loading the requirement.",
+                "details": format!("{:?}", err),
                 "user": user
             });
             return Ok(Template::render("error", ctx));
@@ -192,7 +202,8 @@ async fn show_requirement_id(
         let repo = state.repo_read();
         decorate_requirements_with_repo(&*repo, vec![requirement])
     };
-    let linked_tests = get_linked_tests_for_requirement_cached(state, req_id).unwrap_or_default();
+
+    let linked_tests = service.get_linked_tests(req_id).unwrap_or_default();
 
     let ctx = json!({
         "requirements": reqs,
@@ -255,7 +266,7 @@ async fn get_edit_requirement(
 
     let parents = match RequirementService::new(state.inner()).list_by_project(project_id) {
         Ok(reqs) => reqs,
-        Err(err) => {
+        Err(_err) => {
             #[cfg(debug_assertions)]
             eprintln!(
                 "Failed to load parent requirements for project {}: {:?}",
@@ -372,7 +383,7 @@ async fn post_edit_requirement(
         Err(crate::repository::errors::RepoError::BadInput(_)) => {
             return Err(Redirect::to(edit_url))
         }
-        Err(err) => {
+        Err(_err) => {
             #[cfg(debug_assertions)]
             eprintln!(
                 "Error editing requirement {} in project {}: {:?}",
@@ -435,7 +446,7 @@ async fn delete_requirement_route(
         Err(crate::repository::errors::RepoError::NotFound) => {
             return Err(rocket::http::Status::NotFound)
         }
-        Err(err) => {
+        Err(_err) => {
             #[cfg(debug_assertions)]
             eprintln!("delete_requirement({}) failed: {:?}", req_id, err);
             return Err(rocket::http::Status::InternalServerError);
@@ -458,7 +469,7 @@ async fn new_requirement(
 
     let parents = match RequirementService::new(state.inner()).list_by_project(project_id) {
         Ok(reqs) => reqs,
-        Err(err) => {
+        Err(_err) => {
             #[cfg(debug_assertions)]
             eprintln!(
                 "Failed to load parent requirements for project {}: {:?}",
@@ -580,7 +591,7 @@ async fn post_requirement(
         Err(crate::repository::errors::RepoError::BadInput(_)) => {
             return Err(Redirect::to(new_url))
         }
-        Err(err) => {
+        Err(_err) => {
             #[cfg(debug_assertions)]
             eprintln!("service create requirement failed: {:?}", err);
             return Err(Redirect::to(failure_url));
@@ -605,7 +616,7 @@ async fn show_requirements_tree(
     // Only this project's requirements
     let reqs = match RequirementService::new(state.inner()).list_by_project(project_id) {
         Ok(reqs) => reqs,
-        Err(err) => {
+        Err(_err) => {
             #[cfg(debug_assertions)]
             eprintln!(
                 "Failed to load requirements for tree view (project {}): {:?}",

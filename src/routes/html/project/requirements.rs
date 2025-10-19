@@ -147,8 +147,7 @@ async fn show_requirements(
     let user = project_access.into_user();
 
     let selected_project = ProjectService::new(state.inner())
-        .get_by_id(project_id)
-        .unwrap();
+        .get_by_id(project_id)?;
 
     let requirements = DecoratedRequirementService::new(state.inner())
         .list_by_project_filtered(
@@ -156,8 +155,7 @@ async fn show_requirements(
             status_filter,
             verification_filter,
             category_filter,
-        )
-        .unwrap_or_default();
+        )?;
 
     let metrics = RequirementAnalyticsService::new(state.inner())
         .metrics(
@@ -165,20 +163,16 @@ async fn show_requirements(
             status_filter,
             verification_filter,
             category_filter,
-        )
-        .unwrap_or_default();
+        )?;
 
     let statuses = StatusService::new(state.inner())
-        .list_legacy()
-        .unwrap_or_default();
+        .list_legacy()?;
 
     let categories = CategoryService::new(state.inner())
-        .list_by_project(project_id)
-        .unwrap_or_default();
+        .list_by_project(project_id)?;
 
     let verifications = VerificationService::new(state.inner())
-        .list_by_project(project_id)
-        .unwrap_or_default();
+        .list_by_project(project_id)?;
 
     let ctx = json!({
         "requirements": json!(requirements),
@@ -192,9 +186,6 @@ async fn show_requirements(
                 "percent": metrics.coverage_percent
             }
         }),
-       "selected_project_id": json!(project_id),
-
-        // Filters for template state
         "statuses": json!(statuses),
         "verifications": json!(verifications),
         "categories": json!(categories),
@@ -205,7 +196,7 @@ async fn show_requirements(
             "id": selected_project.project_id,
             "name": selected_project.project_name,
         }),
-        "user": user,
+        "is_admin": user.is_admin,
     });
 
     Ok(Template::render("requirements", ctx))

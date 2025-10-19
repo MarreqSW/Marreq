@@ -17,8 +17,7 @@ use crate::repository::errors::RepoError;
 use crate::services::{
     ApplicabilityService, CategoryService, DecoratedRequirementService, DecoratedTestService,
     LogService, ProjectService, RequirementAnalyticsService, RequirementService, StatusService,
-    UserService,
-    VerificationService,
+    UserService, VerificationService,
 };
 
 #[derive(FromForm)]
@@ -219,15 +218,12 @@ async fn show_requirement_id(
 
     // Relationship lookups
     let parent_requirement = if requirement.req_parent_id != 0 {
-        Some(decorated_requirement_service.get_by_id(
-            requirement.req_parent_id,
-        )?)
+        Some(decorated_requirement_service.get_by_id(requirement.req_parent_id)?)
     } else {
         None
     };
 
-    let child_requirements =
-        decorated_requirement_service.get_by_parent_id(requirement.req_id)?;
+    let child_requirements = decorated_requirement_service.get_by_parent_id(requirement.req_id)?;
 
     // Linked verification artefacts
     let linked_tests = decorated_test_service
@@ -295,8 +291,8 @@ async fn show_requirement_id(
         }
     });
 
-    let requirement_data_json = serde_json::to_string(&canonical_data)
-        .unwrap_or_else(|_| "{}".to_string());
+    let requirement_data_json =
+        serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string());
 
     let ctx = json!({
         "user": user,
@@ -574,7 +570,7 @@ async fn delete_requirement_route(
     Ok(Redirect::to(list_url))
 }
 
-#[get("/<project_id>/requirements/new?<error>&<created>")]
+#[get("/<project_id>/requirements/new?<error>&<created>&<parent>&<template>")]
 async fn new_requirement(
     project_access: ProjectAccess,
     project_id: i32,
@@ -582,6 +578,8 @@ async fn new_requirement(
     state: &State<AppState>,
     error: Option<String>,
     created: Option<String>,
+    parent: Option<i32>,
+    template: Option<i32>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
@@ -606,7 +604,9 @@ async fn new_requirement(
         }
     };
 
-    let parents = match RequirementService::new(state.inner()).list_by_project(project_id) {
+    let requirement_service = RequirementService::new(state.inner());
+
+    let parents = match requirement_service.list_by_project(project_id) {
         Ok(reqs) => reqs,
         Err(_err) => {
             #[cfg(debug_assertions)]
@@ -617,6 +617,16 @@ async fn new_requirement(
             Vec::new()
         }
     };
+
+    let validated_parent = parent.and_then(|id| {
+        parents
+            .iter()
+            .find(|req| req.req_id == id)
+            .map(|req| req.req_id)
+    });
+
+    let template_requirement =
+        template.and_then(|id| parents.iter().find(|req| req.req_id == id).cloned());
 
     let status_service = StatusService::new(state.inner());
     let statuses = status_service
@@ -641,6 +651,109 @@ async fn new_requirement(
     let applicability = applicability_service
         .list_by_project(project_id)
         .unwrap_or_default();
+
+    let default_status_id = statuses
+        .iter()
+        .find(|st| st.req_st_title.eq_ignore_ascii_case("Draft"))
+        .map(|st| st.req_st_id)
+        .unwrap_or_else(|| statuses.first().map(|st| st.req_st_id).unwrap_or_default());
+    let default_category_id = categories.first().map(|cat| cat.cat_id).unwrap_or_default();
+    let default_applicability_id = applicability
+        .first()
+        .map(|app| app.app_id)
+        .unwrap_or_default();
+    let default_verification_id = verifications
+        .first()
+        .map(|ver| ver.verification_id)
+        .unwrap_or_default();
+    let default_reviewer_id = users.first().map(|user| user.user_id).unwrap_or_default();
+
+    let mut req_title = String::new();
+    let mut req_description = String::new();
+    let mut req_justification = String::new();
+    let mut req_reference = String::new();
+    let mut req_link = String::new();
+    let mut req_purpose = String::new();
+    let mut req_category_value = default_category_id;
+    let mut req_applicability_value = default_applicability_id;
+    let mut req_verification_value = default_verification_id;
+    let mut req_reviewer_value = default_reviewer_id;
+    let mut req_parent_value = validated_parent.unwrap_or(0);
+    let req_current_status_value = default_status_id;
+
+    if let Some(template_req) = template_requirement {
+        let trimmed_title = template_req.req_title.trim();
+        if !trimmed_title.is_empty() {
+            if trimmed_title.to_lowercase().contains("(copy") {
+                req_title = trimmed_title.to_string();
+            } else {
+                req_title = format!("{trimmed_title} (Copy)");
+            }
+        }
+
+        let normalized_description = template_req.req_description.replace("\r\n", "\n");
+        let trimmed_description = normalized_description.trim().to_string();
+        req_description = trimmed_description.clone();
+
+        if let Some((purpose_part, body_part)) = trimmed_description.split_once("\n\n") {
+            let purpose_text = purpose_part.trim();
+            let body_text = body_part.trim();
+            if !purpose_text.is_empty() && !body_text.is_empty() {
+                req_purpose = purpose_text.to_string();
+                req_description = body_text.to_string();
+            }
+        }
+
+        req_justification = template_req
+            .req_justification
+            .as_ref()
+            .map(|value| value.trim().to_string())
+            .unwrap_or_default();
+        let trimmed_link = template_req.req_link.trim();
+        if !trimmed_link.is_empty() {
+            req_link = trimmed_link.to_string();
+        }
+
+        if categories
+            .iter()
+            .any(|category| category.cat_id == template_req.req_category)
+        {
+            req_category_value = template_req.req_category;
+        }
+
+        if applicability
+            .iter()
+            .any(|item| item.app_id == template_req.req_applicability)
+        {
+            req_applicability_value = template_req.req_applicability;
+        }
+
+        if verifications
+            .iter()
+            .any(|item| item.verification_id == template_req.req_verification)
+        {
+            req_verification_value = template_req.req_verification;
+        }
+
+        if users
+            .iter()
+            .any(|user| user.user_id == template_req.req_reviewer)
+        {
+            req_reviewer_value = template_req.req_reviewer;
+        }
+
+        if req_parent_value == 0
+            && template_req.req_parent != 0
+            && parents
+                .iter()
+                .any(|candidate| candidate.req_id == template_req.req_parent)
+        {
+            req_parent_value = template_req.req_parent;
+        }
+
+        // Always start new requirements without a reference so a fresh one can be generated.
+        req_reference.clear();
+    }
 
     let created_flash = created.and_then(|flag| {
         if flag == "1" || flag.eq_ignore_ascii_case("true") {
@@ -668,18 +781,18 @@ async fn new_requirement(
             "name": project.project_name,
         },
         "selected_project_id": project_id,
-        // empty defaults for the form
-        "req_title": "",
-        "req_description": "",
-        "req_justification": "",
-        "req_reference": "",
-        "req_link": "",
-        "req_purpose": "",
-        "req_current_status": statuses
-            .iter()
-            .find(|st| st.req_st_title.eq_ignore_ascii_case("Draft"))
-            .map(|st| st.req_st_id)
-            .unwrap_or_else(|| statuses.first().map(|st| st.req_st_id).unwrap_or_default()),
+        "req_title": req_title,
+        "req_description": req_description,
+        "req_justification": req_justification,
+        "req_reference": req_reference,
+        "req_link": req_link,
+        "req_purpose": req_purpose,
+        "req_current_status": req_current_status_value,
+        "req_category": req_category_value,
+        "req_applicability": req_applicability_value,
+        "req_verification": req_verification_value,
+        "req_reviewer": req_reviewer_value,
+        "req_parent": req_parent_value,
         "created_timestamp": created_timestamp,
         "user": user,
         "error": error,
@@ -704,7 +817,9 @@ async fn post_requirement(
         new_requirement(
             project_id = project_id,
             error = Some("Invalid data provided".to_string()),
-            created = Option::<String>::None
+            created = Option::<String>::None,
+            parent = Option::<i32>::None,
+            template = Option::<i32>::None
         )
     );
 
@@ -758,7 +873,9 @@ async fn post_requirement(
         new_requirement(
             project_id = project_id,
             error = Some("Failed to create requirement".to_string()),
-            created = Option::<String>::None
+            created = Option::<String>::None,
+            parent = Option::<i32>::None,
+            template = Option::<i32>::None
         )
     );
 
@@ -782,7 +899,9 @@ async fn post_requirement(
             new_requirement(
                 project_id = project_id,
                 error = Option::<String>::None,
-                created = Some("1".to_string())
+                created = Some("1".to_string()),
+                parent = Option::<i32>::None,
+                template = Option::<i32>::None
             )
         )));
     }
@@ -1296,10 +1415,7 @@ mod tests {
 
         let response = get_with_session(&client, "/p/1/requirements/show/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(
-            response.headers().get_one("Location"),
-            Some("error")
-        );
+        assert_eq!(response.headers().get_one("Location"), Some("error"));
     }
 
     #[rocket::async_test]

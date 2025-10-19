@@ -53,7 +53,8 @@ impl<'a> RequirementService<'a> {
     }
 
     pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        Ok(self.list_all()?
+        Ok(self
+            .list_all()?
             .into_iter()
             .filter(|r| r.req_parent == parent_id)
             .collect())

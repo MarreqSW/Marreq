@@ -52,6 +52,13 @@ impl<'a> RequirementService<'a> {
         self.repo_read().get_requirement_by_id(id)
     }
 
+    pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        Ok(self.list_all()?
+            .into_iter()
+            .filter(|r| r.req_parent == parent_id)
+            .collect())
+    }
+
     pub fn get_linked_tests(&self, id: i32) -> Result<Vec<Test>, RepoError> {
         self.repo_read().get_tests_for_requirement(id)
     }

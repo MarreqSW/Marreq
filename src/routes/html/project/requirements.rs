@@ -11,12 +11,13 @@ use rocket_dyn_templates::Template;
 use super::prelude::*;
 
 use crate::app::AppState;
-use crate::helper_functions::{decorate_tests_with_repo, generate_requirement_reference};
+use crate::helper_functions::generate_requirement_reference;
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::services::{
-    ApplicabilityService, CategoryService, DecoratedRequirementService, LogService, ProjectService,
-    RequirementAnalyticsService, RequirementService, StatusService, UserService,
+    ApplicabilityService, CategoryService, DecoratedRequirementService, DecoratedTestService,
+    LogService, ProjectService, RequirementAnalyticsService, RequirementService, StatusService,
+    UserService,
     VerificationService,
 };
 
@@ -202,108 +203,31 @@ async fn show_requirement_id(
     let requirement_service = RequirementService::new(state.inner());
     let project_service = ProjectService::new(state.inner());
     let log_service = LogService::new(state.inner());
+    let decorated_test_service = DecoratedTestService::new(state.inner());
 
-    let raw_requirement = match requirement_service.get_by_id(req_id) {
-        Ok(req) => req,
-        Err(crate::repository::errors::RepoError::NotFound) => {
-            let ctx = json!({
-                "title": "Requirement Not Found",
-                "message": "The requirement you're looking for could not be found.",
-                "details": "The specified requirement does not exist.",
-                "user": user
-            });
-            return Ok(Template::render("error", ctx));
-        }
-        Err(err) => {
-            let ctx = json!({
-                "title": "Error Loading Requirement",
-                "message": "An error occurred while loading the requirement.",
-                "details": format!("{:?}", err),
-                "user": user
-            });
-            return Ok(Template::render("error", ctx));
-        }
-    };
+    let raw_requirement = requirement_service.get_by_id(req_id)?;
 
     // Enforce project ownership
     if raw_requirement.project_id != project_id {
-        let reqs_url = uri!(
-            "/p",
-            show_requirements(
-                project_id = raw_requirement.project_id,
-                status_filter = Option::<i32>::None,
-                verification_filter = Option::<i32>::None,
-                category_filter = Option::<i32>::None
-            )
-        );
-
-        eprintln!(
-            "Project ID mismatch: route {}, requirement {}",
-            project_id, raw_requirement.project_id
-        );
-
-        return Err(Redirect::to(reqs_url));
+        return Err(Redirect::to("error"));
     }
 
     let project = project_service.get_by_id(project_id).ok();
-
-    let decorated_requirement = {
-        let repo = state.repo_read();
-        let mut decorated = decorate_requirements_with_repo(&*repo, vec![raw_requirement.clone()]);
-        decorated.pop()
-    };
-
-    let Some(requirement) = decorated_requirement else {
-        let ctx = json!({
-            "title": "Requirement Error",
-            "message": "The requirement could not be displayed.",
-            "details": "Failed to prepare requirement details for rendering.",
-            "user": user
-        });
-        return Ok(Template::render("error", ctx));
-    };
+    let requirement = DecoratedRequirementService::new(state.inner()).get_by_id(req_id)?;
 
     // Relationship lookups
     let parent_requirement = if requirement.req_parent_id != 0 {
-        match requirement_service.get_by_id(requirement.req_parent_id) {
-            Ok(parent_raw) => {
-                let repo = state.repo_read();
-                let mut decorated =
-                    decorate_requirements_with_repo(&*repo, vec![parent_raw.clone()]);
-                decorated.pop()
-            }
-            Err(_) => None,
-        }
+        Some(requirement_service.get_by_id(requirement.req_parent_id)?)
     } else {
         None
     };
 
-    let child_requirements = match requirement_service.list_by_project(project_id) {
-        Ok(all) => {
-            let children: Vec<Requirement> = all
-                .into_iter()
-                .filter(|r| r.req_parent == requirement.req_id)
-                .collect();
-            if children.is_empty() {
-                Vec::new()
-            } else {
-                let repo = state.repo_read();
-                decorate_requirements_with_repo(&*repo, children)
-            }
-        }
-        Err(_) => Vec::new(),
-    };
+    let child_requirements = DecoratedRequirementService::new(state.inner()).get_by_parent_id(requirement.req_id)?;
 
     // Linked verification artefacts
-    let linked_tests_raw = requirement_service
-        .get_linked_tests(req_id)
+    let linked_tests = decorated_test_service
+        .get_linked_to_requirement(req_id)
         .unwrap_or_default();
-    let linked_tests = if linked_tests_raw.is_empty() {
-        Vec::new()
-    } else {
-        let repo = state.repo_read();
-        decorate_tests_with_repo(&*repo, linked_tests_raw)
-    };
 
     let mut tests_passed = 0usize;
     let mut tests_failed = 0usize;
@@ -1606,7 +1530,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/2/requirements")
+            Some("error")
         );
     }
 

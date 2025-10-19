@@ -66,6 +66,10 @@ impl<'a> DecoratedRequirementService<'a> {
         self.decorate(&req)
     }
 
+    pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<DecoratedRequirement>, RepoError> {
+        self.decorate_vec(self.requirement_service.get_by_parent_id(parent_id)?)
+    }
+
     pub fn get_linked_tests(&self, id: i32) -> Result<Vec<Test>, RepoError> {
         self.requirement_service.get_linked_tests(id)
     }

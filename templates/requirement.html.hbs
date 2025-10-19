@@ -1,256 +1,447 @@
 {{#*inline "attachments_panel"}}
-<div class="card shadow-sm">
-  <div class="card-header bg-white">
-    <h3 class="h6 text-uppercase text-muted mb-0">Attachments</h3>
+<section class="card shadow-sm border-0 requirement-side-card">
+  <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+    <div>
+      <div class="text-uppercase small text-muted mb-0">Attachments</div>
+      <h3 class="h6 mb-0">Supporting Evidence</h3>
+    </div>
+    <button
+      class="btn btn-outline-secondary btn-sm"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#requirementAttachmentsContent"
+      aria-expanded="true"
+      aria-controls="requirementAttachmentsContent"
+    >
+      Collapse
+    </button>
   </div>
-  <div class="card-body" data-slot="attachments">
-    <p class="mb-0 text-muted">No supporting evidence has been linked yet.</p>
+  <div class="collapse show" id="requirementAttachmentsContent">
+    <div class="card-body">
+      <div data-slot="attachments">
+        <p class="mb-0 text-muted">No supporting evidence has been linked yet.</p>
+      </div>
+    </div>
   </div>
-</div>
+</section>
 {{/inline}}
 
 {{#*inline "relationships_panel"}}
-<div class="card shadow-sm">
-  <div class="card-header bg-white">
-    <h3 class="h6 text-uppercase text-muted mb-0">Relationships</h3>
+<section class="card shadow-sm border-0 requirement-side-card">
+  <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+    <div>
+      <div class="text-uppercase small text-muted mb-0">Traceability</div>
+      <h3 class="h6 mb-0">Relationships</h3>
+    </div>
+    <button
+      class="btn btn-outline-secondary btn-sm"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#requirementRelationshipsContent"
+      aria-expanded="true"
+      aria-controls="requirementRelationshipsContent"
+    >
+      Collapse
+    </button>
   </div>
-  <div class="card-body" data-slot="relationships">
-    <p class="mb-0 text-muted">No upstream or downstream relationships recorded.</p>
-  </div>
-</div>
-{{/inline}}
-
-{{#*inline "requirement_sections"}}
-<div class="d-flex flex-column gap-3">
-  <div class="d-flex flex-column gap-3" data-slot="body-sections">
-    <details class="card shadow-sm requirement-section" open>
-      <summary class="card-header bg-white d-flex justify-content-between align-items-center">
-        <span class="h5 mb-0">Statement</span>
-        <span class="small text-muted">Tap to collapse</span>
-      </summary>
-      <div class="card-body">
-        {{#if requirement_data.requirement.req_description}}
-        <p class="mb-0">{{requirement_data.requirement.req_description}}</p>
-        {{else}}
-        <p class="mb-0 text-muted">No content provided yet.</p>
-        {{/if}}
+  <div class="collapse show" id="requirementRelationshipsContent">
+    <div class="card-body">
+      <div data-slot="relationships">
+        <p class="mb-0 text-muted">No upstream or downstream relationships recorded.</p>
       </div>
-    </details>
-
-    <details class="card shadow-sm requirement-section" open>
-      <summary class="card-header bg-white d-flex justify-content-between align-items-center">
-        <span class="h5 mb-0">Rationale</span>
-        <span class="small text-muted">Tap to collapse</span>
-      </summary>
-      <div class="card-body">
-        {{#if requirement_data.requirement.req_justification}}
-        <p class="mb-0">{{requirement_data.requirement.req_justification}}</p>
-        {{else}}
-        <p class="mb-0 text-muted">No rationale documented yet.</p>
-        {{/if}}
-      </div>
-    </details>
+    </div>
   </div>
-  {{> relationships_panel}}
-  {{> attachments_panel}}
-</div>
+</section>
 {{/inline}}
 
 {{#*inline "verification_panel"}}
-<div class="card shadow-sm">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-start mb-3">
-      <div>
-        <h3 class="h6 text-uppercase text-muted mb-1">Verification</h3>
-        <div class="fw-semibold" data-field="verification-state">No verifications linked yet</div>
-      </div>
-      <span class="badge" data-field="verification-badge"></span>
-    </div>
-    <div class="mb-3">
-      <div class="progress" style="height: 8px;">
-        <div
-          class="progress-bar"
-          role="progressbar"
-          data-field="verification-progress"
-          style="width: 0%;"
-          aria-valuenow="0"
-          aria-valuemin="0"
-          aria-valuemax="100"
-        ></div>
-      </div>
-      <div class="d-flex justify-content-between small text-muted mt-2">
-        <span data-field="verification-passed">Passed 0</span>
-        <span data-field="verification-failed">Failed 0</span>
-        <span data-field="verification-pending">Pending 0</span>
+<section class="card shadow-sm border-0 requirement-main-card">
+  <div class="card-header bg-white border-0 d-flex flex-wrap gap-3 justify-content-between align-items-center">
+    <div>
+      <div class="text-uppercase small text-muted">Verification</div>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <span class="badge" data-field="verification-badge">—</span>
+        <span class="small text-muted" data-field="verification-state">No verifications linked yet</span>
       </div>
     </div>
-    <div class="small text-muted mb-3" data-field="verification-tool">
-      Tool: — · Last checked —
-    </div>
-    <div class="list-group list-group-flush" data-slot="linked-tests"></div>
-    <p class="mb-0 text-muted" data-field="linked-tests-empty">
-      No tests linked. Add a verification to start tracking compliance.
-    </p>
-  </div>
-</div>
-{{/inline}}
-
-{{#*inline "history_panel"}}
-<div class="card shadow-sm">
-  <div class="card-body">
-    <h3 class="h6 text-uppercase text-muted mb-3">Change History</h3>
-    <ul class="list-unstyled mb-0" data-slot="timeline"></ul>
-  </div>
-</div>
-{{/inline}}
-
-{{#*inline "comments_panel"}}
-<div class="card shadow-sm">
-  <div class="card-body">
-    <h3 class="h6 text-uppercase text-muted mb-3">Discussion</h3>
-    <div class="alert alert-light border mb-3 d-none" data-field="comments-locked"></div>
-    <p class="mb-3 text-muted d-none" data-field="comments-empty">
-      No comments yet. Start the conversation with your team.
-    </p>
-    <div class="d-flex flex-column gap-3" data-slot="comments"></div>
-    <button class="btn btn-outline-primary btn-sm" type="button" data-field="comments-reply-button" disabled>
-      Reply (coming soon)
+    <button
+      class="btn btn-outline-secondary btn-sm"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#requirementVerificationContent"
+      aria-expanded="true"
+      aria-controls="requirementVerificationContent"
+    >
+      Collapse
     </button>
   </div>
-</div>
-{{/inline}}
-
-{{#*inline "page"}}
-<div class="container-fluid requirement-detail-page py-4" data-requirement-root>
-  <script type="application/json" id="requirement-detail-data">
-    {{{requirement_data_json}}}
-  </script>
-
-  <header class="card shadow-sm border-0 mb-4">
+  <div class="collapse show" id="requirementVerificationContent">
     <div class="card-body">
-      <div class="d-flex flex-column flex-lg-row align-items-lg-start gap-3">
-        <div class="flex-grow-1">
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="badge rounded-pill text-bg-dark fs-6" data-field="reference">—</span>
-            <span class="badge" data-field="status-badge">—</span>
+      <div class="mb-3">
+        <div class="d-flex flex-column gap-2">
+          <div class="progress progress-thin flex-grow-1">
+            <div
+              class="progress-bar"
+              role="progressbar"
+              data-field="verification-progress"
+              style="width: 0%;"
+              aria-valuenow="0"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            ></div>
           </div>
-          <h1 class="display-6 mt-3 mb-2" data-field="title">
-            {{requirement_data.requirement.req_title}}
-          </h1>
-          <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-            <span class="fw-semibold text-muted" data-field="solidity-label">—</span>
-            <span class="small text-muted" data-field="solidity-description"></span>
-          </div>
-          <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-            <span class="badge" data-field="verification-badge">—</span>
-            <span class="small text-muted" data-field="verification-state"></span>
-          </div>
-          <div class="d-flex flex-wrap gap-2" data-slot="chips"></div>
-        </div>
-        <div class="ms-lg-auto">
-          <div class="btn-group">
-            <a
-              href="/p/{{selected_project_id}}/requirements/edit/{{requirement_data.requirement.req_id}}"
-              class="btn btn-primary btn-sm"
-            >Edit</a>
-            <button class="btn btn-outline-secondary btn-sm" type="button" disabled title="Coming soon">
-              Duplicate
-            </button>
-            <a
-              href="/logs/REQUIREMENT/{{requirement_data.requirement.req_id}}"
-              class="btn btn-outline-secondary btn-sm"
-            >History</a>
-            <div class="btn-group">
-              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                More
-              </button>
-              <ul class="dropdown-menu dropdown-menu-end">
-                <li>
-                  <a class="dropdown-item" href="/p/{{selected_project_id}}/requirements">Back to list</a>
-                </li>
-                <li>
-                  <a class="dropdown-item" href="/p/{{selected_project_id}}/requirements/edit/{{requirement_data.requirement.req_id}}">Edit requirement</a>
-                </li>
-              </ul>
+          <div class="d-flex justify-content-between align-items-baseline">
+            <div class="d-flex flex-wrap gap-3 small text-muted">
+              <span data-field="verification-passed">Passed 0</span>
+              <span data-field="verification-failed">Failed 0</span>
+              <span data-field="verification-pending">Pending 0</span>
+            </div>
+            <div class="text-end">
+              <div class="fs-3 fw-semibold lh-1" data-field="verification-percent">0%</div>
+              <div class="small text-muted">Overall pass rate</div>
             </div>
           </div>
         </div>
       </div>
-      <div class="row g-3 mt-4 pt-3 border-top">
-        <div class="col-sm-6 col-lg-auto d-flex align-items-center gap-3">
-          <span class="badge rounded-circle text-bg-primary fs-6 px-3 py-2" data-field="author-initial">?</span>
+      <div class="small text-muted mb-3" data-field="verification-tool">
+        Tool: — · Last checked —
+      </div>
+      <div class="list-group list-group-flush requirement-linked-tests" data-slot="linked-tests"></div>
+      <p class="mb-0 text-muted" data-field="linked-tests-empty">
+        No tests linked. Add a verification to start tracking compliance.
+      </p>
+    </div>
+  </div>
+</section>
+{{/inline}}
+
+{{#*inline "metadata_panel"}}
+<section class="card shadow-sm border-0 requirement-side-card">
+  <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+    <div class="text-uppercase small text-muted mb-0">Key People & Dates</div>
+    <button
+      class="btn btn-outline-secondary btn-sm"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#requirementMetadataContent"
+      aria-expanded="true"
+      aria-controls="requirementMetadataContent"
+    >
+      Collapse
+    </button>
+  </div>
+  <div class="collapse show" id="requirementMetadataContent">
+    <div class="card-body">
+      <div class="d-flex flex-column gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
+          <span class="requirement-avatar bg-primary text-white" data-field="author-initial">?</span>
           <div>
             <div class="text-uppercase small text-muted">Author</div>
             <div class="fw-semibold" data-field="author-name">—</div>
             <div class="small text-muted" data-field="author-timestamp"></div>
           </div>
         </div>
-        <div class="col-sm-6 col-lg-auto d-flex align-items-center gap-3">
-          <span class="badge rounded-circle text-bg-secondary fs-6 px-3 py-2" data-field="reviewer-initial">–</span>
+        <div class="d-flex align-items-center gap-3">
+          <span class="requirement-avatar bg-light text-muted border" data-field="reviewer-initial">–</span>
           <div>
             <div class="text-uppercase small text-muted">Reviewer</div>
             <div class="fw-semibold" data-field="reviewer-name">Unassigned</div>
             <div class="small text-muted" data-field="reviewer-timestamp"></div>
           </div>
         </div>
-        <div class="col-sm-6 col-lg-auto">
-          <div class="text-uppercase small text-muted">Last Updated</div>
-          <div class="fw-semibold" data-field="metadata-updated">—</div>
+      </div>
+      <dl class="row requirement-meta-list mb-0">
+        <dt class="col-6 text-uppercase small text-muted">Last Updated</dt>
+        <dd class="col-6 fw-semibold text-end text-lg-start" data-field="metadata-updated">—</dd>
+        <dt class="col-6 text-uppercase small text-muted">Deadline</dt>
+        <dd class="col-6 fw-semibold text-end text-lg-start" data-field="metadata-deadline">—</dd>
+        <dt class="col-6 text-uppercase small text-muted">Version</dt>
+        <dd class="col-6 fw-semibold text-end text-lg-start" data-field="metadata-version">—</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+{{/inline}}
+
+{{#*inline "requirement_sections"}}
+<div class="d-flex flex-column gap-3" data-slot="body-sections">
+  <details class="card shadow-sm requirement-section" open>
+    <summary class="card-header bg-white d-flex justify-content-between align-items-center">
+      <span class="h5 mb-0">Rationale</span>
+    </summary>
+    <div class="card-body">
+      {{#if requirement_data.requirement.req_justification}}
+      <p class="mb-0">{{requirement_data.requirement.req_justification}}</p>
+      {{else}}
+      <p class="mb-0 text-muted">No rationale documented yet.</p>
+      {{/if}}
+    </div>
+  </details>
+
+  <details class="card shadow-sm requirement-section" open>
+    <summary class="card-header bg-white d-flex justify-content-between align-items-center">
+      <span class="h5 mb-0">Notes</span>
+    </summary>
+    <div class="card-body">
+      {{#if requirement_data.requirement.req_link}}
+      <p class="mb-0">Primary reference: <a href="{{requirement_data.requirement.req_link}}" target="_blank" rel="noopener">{{requirement_data.requirement.req_link}}</a></p>
+      {{else}}
+      <p class="mb-0 text-muted">No implementation notes recorded.</p>
+      {{/if}}
+    </div>
+  </details>
+</div>
+{{/inline}}
+
+{{#*inline "history_panel"}}
+<section class="card shadow-sm border-0 requirement-main-card">
+  <div class="card-header bg-white border-0 d-flex flex-wrap gap-3 justify-content-between align-items-center">
+    <div>
+      <div class="text-uppercase small text-muted mb-1">Change Log</div>
+      <h3 class="h5 mb-0">Timeline</h3>
+    </div>
+    <button
+      class="btn btn-outline-secondary btn-sm"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#requirementHistoryContent"
+      aria-expanded="true"
+      aria-controls="requirementHistoryContent"
+    >
+      Collapse
+    </button>
+  </div>
+  <div class="collapse show" id="requirementHistoryContent">
+    <div class="card-body">
+      <ul class="list-unstyled requirement-timeline mb-0" data-slot="timeline">
+        {{#if requirement_data.history.entries}}
+        {{#each requirement_data.history.entries}}
+        <li class="text-muted small">Updated {{this.log.created_at}} by {{this.username}}</li>
+        {{/each}}
+        {{else}}
+        <li class="text-muted">No change history recorded yet.</li>
+        {{/if}}
+      </ul>
+    </div>
+  </div>
+</section>
+{{/inline}}
+
+{{#*inline "comments_panel"}}
+<section class="card shadow-sm border-0 requirement-main-card">
+  <div class="card-header bg-white border-0 d-flex flex-wrap gap-3 justify-content-between align-items-center">
+    <div>
+      <div class="text-uppercase small text-muted mb-1">Discussion</div>
+      <h3 class="h5 mb-0">Comments</h3>
+    </div>
+    <button
+      class="btn btn-outline-secondary btn-sm"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#requirementCommentsContent"
+      aria-expanded="true"
+      aria-controls="requirementCommentsContent"
+    >
+      Collapse
+    </button>
+  </div>
+  <div class="collapse show" id="requirementCommentsContent">
+    <div class="card-body">
+      <div class="alert alert-light border mb-3 d-none" data-field="comments-locked"></div>
+      <p class="mb-3 text-muted d-none" data-field="comments-empty">
+        No comments yet. Start the conversation with your team.
+      </p>
+      <div class="d-flex flex-column gap-3" data-slot="comments"></div>
+      <button class="btn btn-outline-primary btn-sm" type="button" data-field="comments-reply-button" disabled>
+        Reply (coming soon)
+      </button>
+    </div>
+  </div>
+</section>
+{{/inline}}
+
+{{#*inline "page"}}
+<div class="requirement-detail-page" data-requirement-root>
+  <script type="application/json" id="requirement-detail-data">
+    {{{requirement_data_json}}}
+  </script>
+
+  <header class="requirement-header card shadow-sm border-0">
+    <div class="requirement-header__body">
+      <div class="d-flex flex-column gap-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="badge rounded-pill text-bg-dark fs-6" data-field="reference">—</span>
+            <span class="badge" data-field="status-badge">—</span>
+          </div>
+          <div class="ms-lg-auto">
+            <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
+              <a
+                href="/p/{{selected_project_id}}/requirements/edit/{{requirement_data.requirement.req_id}}"
+                class="btn btn-primary btn-sm"
+              >Edit</a>
+              <a
+                href="/logs/REQUIREMENT/{{requirement_data.requirement.req_id}}"
+                class="btn btn-outline-secondary btn-sm"
+              >History</a>
+              <div class="btn-group">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                  More
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="/p/{{selected_project_id}}/requirements/new?parent={{requirement_data.requirement.req_id}}"
+                    >
+                      New child requirement
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="/p/{{selected_project_id}}/requirements/new?template={{requirement_data.requirement.req_id}}"
+                    >
+                      New from template
+                    </a>
+                  </li>
+                  <li>
+                    <button
+                      class="dropdown-item"
+                      type="button"
+                      data-action="copy-requirement-link"
+                      data-requirement-url="/p/{{selected_project_id}}/requirements/show/{{requirement_data.requirement.req_id}}"
+                    >
+                      Copy link
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      class="dropdown-item text-danger"
+                      type="button"
+                      data-action="delete-requirement"
+                      data-project-id="{{selected_project_id}}"
+                      data-requirement-id="{{requirement_data.requirement.req_id}}"
+                      data-requirement-title="{{requirement_data.requirement.req_title}}"
+                    >
+                      Delete
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="col-sm-6 col-lg-auto">
-          <div class="text-uppercase small text-muted">Deadline</div>
-          <div class="fw-semibold" data-field="metadata-deadline">—</div>
-        </div>
-        <div class="col-sm-6 col-lg-auto">
-          <div class="text-uppercase small text-muted">Version</div>
-          <div class="fw-semibold" data-field="metadata-version">—</div>
-        </div>
+
+        <section class="requirement-statement-card p-4 p-lg-5 rounded-4">
+          <div class="text-uppercase small text-muted mb-2">Requirement Statement</div>
+          <h1 class="display-5 fw-bold text-break mb-3" data-field="title">
+            {{requirement_data.requirement.req_title}}
+          </h1>
+          <div class="requirement-header__statement fs-3 lh-base text-break">
+            {{#if requirement_data.requirement.req_description}}
+            <p class="mb-0">{{requirement_data.requirement.req_description}}</p>
+            {{else}}
+            <p class="mb-0 text-muted">No requirement statement provided yet.</p>
+            {{/if}}
+          </div>
+        </section>
+
+        <section class="card shadow-sm border-0 requirement-context-card">
+          <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+            <div class="text-uppercase small text-muted mb-0">Quick Context</div>
+            <button
+              class="btn btn-outline-secondary btn-sm"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#requirementContextContent"
+              aria-expanded="true"
+              aria-controls="requirementContextContent"
+            >
+              Collapse
+            </button>
+          </div>
+          <div class="collapse show" id="requirementContextContent">
+            <div class="card-body">
+              <div class="requirement-header__meta">
+                <div class="requirement-header__meta-grid">
+                  <div>
+                    <div class="requirement-glance h-100">
+                      <div class="text-uppercase small text-muted mb-2">Solidity</div>
+                      <div class="fw-semibold" data-field="solidity-label">Needs definition</div>
+                      <div class="small text-muted" data-field="solidity-description">Waiting for verification data.</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="requirement-glance h-100">
+                      <div class="text-uppercase small text-muted mb-2">Verification</div>
+                      <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="badge" data-field="verification-badge">—</span>
+                        <span class="small text-muted" data-field="verification-state">No verifications linked yet</span>
+                      </div>
+                      <div class="small text-muted mt-2">Keep tests green to build confidence.</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="requirement-glance h-100">
+                      <div class="text-uppercase small text-muted mb-2">Classification</div>
+                      <div class="d-flex flex-wrap gap-2" data-slot="chips">
+                        {{#if requirement_data.requirement.req_category}}
+                        <span class="badge rounded-pill bg-light text-muted border">{{requirement_data.requirement.req_category}}</span>
+                        {{/if}}
+                        {{#if requirement_data.requirement.req_applicability}}
+                        <span class="badge rounded-pill bg-light text-muted border">{{requirement_data.requirement.req_applicability}}</span>
+                        {{/if}}
+                      </div>
+                      <div class="small text-muted mt-2{{#if requirement_data.requirement.req_category}} d-none{{/if}}{{#if requirement_data.requirement.req_applicability}} d-none{{/if}}" data-field="chips-empty">
+                        No classification tags yet.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </header>
 
-  <div class="d-lg-none mb-4">
-    <div class="nav nav-pills nav-fill small" role="tablist">
-      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-details" type="button" role="tab">
-        Details
-      </button>
-      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-verification" type="button" role="tab">
-        Verification
-      </button>
-      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-history" type="button" role="tab">
-        History
-      </button>
-      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-comments" type="button" role="tab">
-        Comments
-      </button>
-    </div>
-    <div class="tab-content mt-3">
-      <div class="tab-pane fade show active" id="tab-details" role="tabpanel">
-        {{> requirement_sections}}
-      </div>
-      <div class="tab-pane fade" id="tab-verification" role="tabpanel">
-        {{> verification_panel}}
-      </div>
-      <div class="tab-pane fade" id="tab-history" role="tabpanel">
-        {{> history_panel}}
-      </div>
-      <div class="tab-pane fade" id="tab-comments" role="tabpanel">
-        {{> comments_panel}}
-      </div>
-    </div>
-  </div>
+  <div class="requirement-detail-grid">
+    <div class="requirement-detail-main">
+      <section class="card shadow-sm border-0 requirement-main-card">
+        <div class="card-header bg-white border-0 d-flex flex-wrap gap-3 justify-content-between align-items-center">
+          <div>
+            <div class="text-uppercase small text-muted mb-1">Supporting Context</div>
+          </div>
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            type="button"
+            data-action="toggle-requirement-details"
+            data-bs-toggle="collapse"
+            data-bs-target="#requirementDetailsContent"
+            aria-expanded="true"
+            aria-controls="requirementDetailsContent"
+          >
+            Collapse
+          </button>
+        </div>
+        <div class="collapse show" id="requirementDetailsContent">
+          <div class="card-body">
+            {{> requirement_sections}}
+          </div>
+        </div>
+      </section>
 
-  <div class="row g-4 d-none d-lg-flex">
-    <div class="col-lg-8">
-      {{> requirement_sections}}
+      {{> verification_panel}}
+      {{> history_panel}}
+      {{> comments_panel}}
     </div>
-    <div class="col-lg-4">
-      <div class="d-flex flex-column gap-3 position-sticky" style="top: 6rem;">
-        {{> verification_panel}}
-        {{> history_panel}}
-        {{> comments_panel}}
-      </div>
-    </div>
+    <aside class="requirement-detail-sidebar" aria-label="Requirement metadata">
+      {{> metadata_panel}}
+      {{> relationships_panel}}
+      {{> attachments_panel}}
+    </aside>
   </div>
 </div>
 

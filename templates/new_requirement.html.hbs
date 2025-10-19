@@ -315,7 +315,6 @@
             value="{{user.user_name}}"
             readonly
           >
-          <input type="hidden" name="req_author" id="req_author" value="{{user.user_id}}">
         </div>
 
         <div class="create-field create-field--combo" data-component="combo" data-combo-field="req_reviewer">
@@ -384,12 +383,6 @@
         <div class="create-field">
           <label class="create-field__label">Project</label>
           <div class="create-field__meta">{{#if project}}{{project.name}}{{else}}Unknown project{{/if}}</div>
-          <input
-            type="hidden"
-            id="project_id"
-            name="project_id"
-            value="{{#if project}}{{project.id}}{{else}}{{project_id}}{{/if}}"
-          >
         </div>
 
         <div class="create-field">

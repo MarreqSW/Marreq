@@ -200,18 +200,10 @@ async fn show_requirement_id(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
-    let requirement_service = RequirementService::new(state.inner());
     let project_service = ProjectService::new(state.inner());
     let log_service = LogService::new(state.inner());
     let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
     let decorated_test_service = DecoratedTestService::new(state.inner());
-
-    let raw_requirement = requirement_service.get_by_id(req_id)?;
-
-    // Enforce project ownership
-    if raw_requirement.project_id != project_id {
-        return Err(Redirect::to("error"));
-    }
 
     let project = project_service.get_by_id(project_id).ok();
     let requirement = decorated_requirement_service.get_by_id(req_id)?;
@@ -267,7 +259,6 @@ async fn show_requirement_id(
         "project": project_value.clone(),
         "selected_project_id": project_id,
         "requirement": requirement,
-        "raw_requirement": raw_requirement,
         "relationships": {
             "parent": parent_requirement,
             "children": child_requirements,

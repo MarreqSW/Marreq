@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use rocket::form::{Form, FromForm};
-use rocket::http::{Cookie, CookieJar};
+use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::serde::json::{json, serde_json, Json};
 use rocket::serde::Deserialize;
@@ -138,7 +138,7 @@ struct InlineVerificationPayload {
 async fn show_requirements(
     project_access: ProjectAccess,
     project_id: i32,
-    cookies: &CookieJar<'_>,
+    _cookies: &CookieJar<'_>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
@@ -147,8 +147,6 @@ async fn show_requirements(
     let user = project_access.into_user();
 
     let selected_project = ProjectService::new(state.inner()).get_by_id(project_id).unwrap();
-
-    cookies.add(Cookie::new("selected_project_id", project_id.to_string()));
 
     let requirement_service = RequirementService::new(state.inner());
     let filtered = requirement_service

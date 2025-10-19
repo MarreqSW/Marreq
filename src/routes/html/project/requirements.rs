@@ -146,33 +146,21 @@ async fn show_requirements(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
-    let selected_project = ProjectService::new(state.inner())
-        .get_by_id(project_id)?;
+    let selected_project = ProjectService::new(state.inner()).get_by_id(project_id)?;
 
-    let requirements = DecoratedRequirementService::new(state.inner())
-        .list_by_project_filtered(
-            project_id,
-            status_filter,
-            verification_filter,
-            category_filter,
-        )?;
+    let requirements = DecoratedRequirementService::new(state.inner()).list_by_project_filtered(
+        project_id,
+        status_filter,
+        verification_filter,
+        category_filter,
+    )?;
 
-    let metrics = RequirementAnalyticsService::new(state.inner())
-        .metrics(
-            project_id,
-            status_filter,
-            verification_filter,
-            category_filter,
-        )?;
-
-    let statuses = StatusService::new(state.inner())
-        .list_legacy()?;
-
-    let categories = CategoryService::new(state.inner())
-        .list_by_project(project_id)?;
-
-    let verifications = VerificationService::new(state.inner())
-        .list_by_project(project_id)?;
+    let metrics = RequirementAnalyticsService::new(state.inner()).metrics(
+        project_id,
+        status_filter,
+        verification_filter,
+        category_filter,
+    )?;
 
     let ctx = json!({
         "requirements": json!(requirements),
@@ -186,9 +174,9 @@ async fn show_requirements(
                 "percent": metrics.coverage_percent
             }
         }),
-        "statuses": json!(statuses),
-        "verifications": json!(verifications),
-        "categories": json!(categories),
+        "statuses": StatusService::new(state.inner()).list_legacy()?,
+        "verifications": VerificationService::new(state.inner()).list_by_project(project_id)?,
+        "categories": CategoryService::new(state.inner()).list_by_project(project_id)?,
         "current_status_filter": json!(status_filter),
         "current_verification_filter": json!(verification_filter),
         "current_category_filter": json!(category_filter),

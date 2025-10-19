@@ -228,11 +228,12 @@
             value="{{requirement.req_reference}}"
             class="editor-field__input"
             placeholder="REQ-SYS-42"
+            readonly
+            disabled
           >
           <small class="editor-field__help">
-            Leave blank to auto-generate.
+            System-generated identifier.
           </small>
-          <div id="reference-error" class="editor-field__error" aria-live="assertive"></div>
         </div>
 
         <div class="editor-field">
@@ -289,18 +290,18 @@
 
         <div class="editor-field">
           <label for="req_author" class="editor-field__label">Author</label>
-          <select
-            name="req_author"
-            id="req_author"
+          <input
+            type="text"
+            id="req_author_display"
             class="editor-field__input"
-            required
+            value="{{requirement.req_author}}"
+            readonly
+            disabled
           >
-            {{#each users}}
-              <option value="{{user_id}}" {{#if (eq user_id ../req_author_id)}}selected{{/if}}>
-                {{user_name}}
-              </option>
-            {{/each}}
-          </select>
+          <input type="hidden" name="req_author" value="{{req_author_id}}">
+          <small class="editor-field__help">
+            Original author cannot be changed.
+          </small>
         </div>
 
         <div class="editor-field">
@@ -324,19 +325,19 @@
         <h2 class="editor-meta__title">Status & links</h2>
 
         <div class="editor-field">
-          <label for="req_current_status" class="editor-field__label">Status</label>
-          <select
-            name="req_current_status"
-            id="req_current_status"
+          <label for="req_current_status_display" class="editor-field__label">Status</label>
+          <input
+            type="text"
+            id="req_current_status_display"
             class="editor-field__input"
-            required
+            value="{{requirement.req_current_status}}"
+            readonly
+            disabled
           >
-            {{#each status}}
-              <option value="{{st_id}}" {{#if (eq st_id ../req_current_status_id)}}selected{{/if}}>
-                {{st_title}}
-              </option>
-            {{/each}}
-          </select>
+          <input type="hidden" name="req_current_status" value="{{req_current_status_id}}">
+          <small class="editor-field__help">
+            Status is managed by the system workflow.
+          </small>
         </div>
 
         <div class="editor-field">
@@ -358,21 +359,6 @@
               </option>
             {{/each}}
           </select>
-        </div>
-
-        <div class="editor-field">
-          <label for="req_link" class="editor-field__label">Reference link</label>
-          <input
-            type="url"
-            id="req_link"
-            name="req_link"
-            value="{{requirement.req_link}}"
-            class="editor-field__input"
-            placeholder="https://example.com/spec"
-          >
-          <small class="editor-field__help">
-            Add design docs, diagrams, or implementation notes.
-          </small>
         </div>
       </section>
 

@@ -164,6 +164,7 @@ async fn show_requirements(
     )?;
 
     let ctx = json!({
+        "user": user,
         "requirements": json!(requirements),
         "requirement_metrics": json!({
             "total": metrics.total,
@@ -203,6 +204,7 @@ async fn show_requirement_id(
     let requirement_service = RequirementService::new(state.inner());
     let project_service = ProjectService::new(state.inner());
     let log_service = LogService::new(state.inner());
+    let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
     let decorated_test_service = DecoratedTestService::new(state.inner());
 
     let raw_requirement = requirement_service.get_by_id(req_id)?;
@@ -213,329 +215,95 @@ async fn show_requirement_id(
     }
 
     let project = project_service.get_by_id(project_id).ok();
-    let requirement = DecoratedRequirementService::new(state.inner()).get_by_id(req_id)?;
+    let requirement = decorated_requirement_service.get_by_id(req_id)?;
 
     // Relationship lookups
     let parent_requirement = if requirement.req_parent_id != 0 {
-        Some(requirement_service.get_by_id(requirement.req_parent_id)?)
+        Some(decorated_requirement_service.get_by_id(
+            requirement.req_parent_id,
+        )?)
     } else {
         None
     };
 
-    let child_requirements = DecoratedRequirementService::new(state.inner()).get_by_parent_id(requirement.req_id)?;
+    let child_requirements =
+        decorated_requirement_service.get_by_parent_id(requirement.req_id)?;
 
     // Linked verification artefacts
     let linked_tests = decorated_test_service
         .get_linked_to_requirement(req_id)
         .unwrap_or_default();
 
-    let mut tests_passed = 0usize;
-    let mut tests_failed = 0usize;
-    let mut tests_pending = 0usize;
-
-    for test in &linked_tests {
-        match test.test_status.trim().to_ascii_lowercase().as_str() {
-            "passed" => tests_passed += 1,
-            "failed" => tests_failed += 1,
-            _ => tests_pending += 1,
-        }
-    }
-
-    let total_tests = linked_tests.len();
-    let verification_percent = if total_tests > 0 {
-        ((tests_passed as f64 / total_tests as f64) * 100.0).round() as i32
-    } else {
-        0
-    };
-
-    let verification_state = if total_tests == 0 {
-        "No verifications linked yet"
-    } else if tests_failed == 0 && tests_pending == 0 {
-        "All linked verifications are passing"
-    } else if tests_failed == 0 {
-        "Verification in progress"
-    } else {
-        "Verification needs attention"
-    };
-
-    let verification_variant = if total_tests == 0 {
-        "bg-warning"
-    } else if tests_failed == 0 && tests_pending == 0 {
-        "bg-primary"
-    } else if tests_failed == 0 {
-        "bg-info"
-    } else {
-        "bg-danger"
-    };
-
-    let status_variant = match requirement
-        .req_current_status
-        .trim()
-        .to_ascii_lowercase()
-        .as_str()
-    {
-        "accepted" | "finished" => "bg-success",
-        "draft" | "proposal" => "bg-secondary",
-        "rejected" | "cancelled" => "bg-danger",
-        _ => "bg-secondary",
-    };
-
-    let solidity_label = if total_tests == 0 {
-        if requirement
-            .req_current_status
-            .trim()
-            .eq_ignore_ascii_case("draft")
-        {
-            "Needs definition"
-        } else {
-            "Unverified"
-        }
-    } else if tests_failed == 0 && tests_pending == 0 {
-        "Rock solid"
-    } else if tests_failed == 0 {
-        "Under evaluation"
-    } else {
-        "At risk"
-    };
-
-    let solidity_variant = match solidity_label {
-        "Rock solid" => "text-success",
-        "Under evaluation" => "text-info",
-        "At risk" => "text-danger",
-        _ => "text-muted",
-    };
-    let solidity_description = match solidity_label {
-        "Rock solid" => "All linked verifications have passed.",
-        "Under evaluation" => "Waiting for pending verification results.",
-        "At risk" => "At least one verification failed; needs attention.",
-        _ => "No verification evidence linked yet.",
-    };
-
-    let reference = if requirement.req_reference.trim().is_empty() {
-        format!("REQ-{:04}", requirement.req_id)
-    } else {
-        requirement.req_reference.clone()
-    };
-
-    let creation_date = raw_requirement
-        .req_creation_date
-        .format("%Y-%m-%d %H:%M")
-        .to_string();
-    let update_date = raw_requirement
-        .req_update_date
-        .format("%Y-%m-%d %H:%M")
-        .to_string();
-    let deadline_date = raw_requirement
-        .req_deadline_date
-        .format("%Y-%m-%d")
-        .to_string();
-
-    let author_initial = requirement
-        .req_author
-        .trim()
-        .chars()
-        .next()
-        .map(|c| c.to_ascii_uppercase().to_string())
-        .unwrap_or_else(|| "?".to_string());
-    let reviewer_initial = requirement
-        .req_reviewer
-        .trim()
-        .chars()
-        .next()
-        .map(|c| c.to_ascii_uppercase().to_string());
-    let reviewer_assigned = reviewer_initial.is_some();
-    let reviewer_initial_value = reviewer_initial.clone();
-
-    let purpose = requirement
-        .req_description
-        .split("\n\n")
-        .next()
-        .unwrap_or(&requirement.req_description)
-        .trim()
-        .to_string();
-    let rationale = requirement
-        .req_justification
-        .clone()
-        .unwrap_or_else(|| "No rationale documented yet.".to_string());
-
-    let req_link = requirement.req_link.clone();
-    let link_trimmed = req_link.trim().to_string();
-    let notes = if link_trimmed.is_empty() {
-        "No implementation notes recorded.".to_string()
-    } else {
-        format!("Primary reference available at {}", link_trimmed)
-    };
-
-    let attachments = if link_trimmed.is_empty() {
-        Vec::new()
-    } else {
-        vec![json!({
-            "label": "Supporting evidence",
-            "href": req_link.clone(),
-        })]
-    };
-
-    let comments_locked_reason = match requirement
-        .req_current_status
-        .trim()
-        .to_ascii_lowercase()
-        .as_str()
-    {
-        "accepted" => Some("Read-only: requirement accepted and locked".to_string()),
-        "rejected" => Some("Archived requirement: comments are closed".to_string()),
-        _ => None,
-    };
-
-    let comments_enabled = comments_locked_reason.is_none();
     let comment_items: Vec<serde_json::Value> = Vec::new();
-    let comments_has_items = !comment_items.is_empty();
 
     let history_entries = log_service
         .entity_logs(&EntityType::Requirement.to_string(), req_id)
         .unwrap_or_default();
-    let total_versions = history_entries.len().saturating_add(1);
-    let mut timeline: Vec<serde_json::Value> = Vec::new();
+    let (tests_passed, tests_failed, tests_pending) =
+        linked_tests
+            .iter()
+            .fold((0_i32, 0_i32, 0_i32), |mut acc, test| {
+                match test.test_status.trim().to_ascii_lowercase().as_str() {
+                    "passed" => acc.0 += 1,
+                    "failed" => acc.1 += 1,
+                    _ => acc.2 += 1,
+                }
+                acc
+            });
+    let total_tests = linked_tests.len() as i32;
 
-    timeline.push(json!({
-        "version": format!("v{}", total_versions),
-        "summary": format!("Current revision — {}", requirement.req_current_status),
-        "actor": if requirement.req_reviewer.trim().is_empty() {
-            &requirement.req_author
-        } else {
-            &requirement.req_reviewer
-        },
-        "timestamp": update_date.clone(),
-        "action": "CURRENT",
-        "old_values": serde_json::Value::Null,
-        "new_values": serde_json::Value::Null,
-        "is_current": true
-    }));
-
-    for (index, entry) in history_entries.into_iter().enumerate() {
-        let summary = entry
-            .log
-            .description
-            .clone()
-            .unwrap_or_else(|| format!("{} requirement", entry.log.action_type));
-        let timestamp = entry.log.created_at.format("%Y-%m-%d %H:%M").to_string();
-        timeline.push(json!({
-            "version": format!("v{}", total_versions.saturating_sub(index + 1)),
-            "summary": summary,
-            "actor": entry.username,
-            "timestamp": timestamp,
-            "action": entry.log.action_type,
-            "old_values": entry.log.old_values,
-            "new_values": entry.log.new_values,
-            "is_current": false
-        }));
-    }
-
-    let current_version = timeline
-        .first()
-        .and_then(|item| item.get("version"))
-        .and_then(|value| value.as_str())
-        .unwrap_or("v1")
-        .to_string();
-    let reviewer_timestamp = if reviewer_assigned {
-        Some(update_date.clone())
-    } else {
-        None
-    };
-
-    let ctx = json!({
-        "user": user,
-        "project": project.as_ref().map(|p| {
+    let project_value = project
+        .as_ref()
+        .map(|p| {
             json!({
                 "id": p.project_id,
                 "name": &p.project_name,
                 "status": &p.project_status,
                 "description": &p.project_description
             })
-        }).unwrap_or(json!({ "id": project_id })),
+        })
+        .unwrap_or_else(|| json!({ "id": project_id }));
+
+    let verification_tool_label = requirement.req_verification.clone();
+    let verification_tool_id = requirement.req_verification_id;
+
+    let canonical_data = json!({
+        "project": project_value.clone(),
         "selected_project_id": project_id,
-        "requirement": &requirement,
-        "reference": reference,
-        "status_badge": {
-            "label": &requirement.req_current_status,
-            "variant": status_variant
-        },
-        "verification_badge": {
-            "label": &requirement.req_verification,
-            "variant": verification_variant,
-            "state": verification_state
-        },
-        "solidity": {
-            "label": solidity_label,
-            "variant": solidity_variant,
-            "description": solidity_description
-        },
-        "chips": [
-            {
-                "label": &requirement.req_category,
-                "type": "category"
-            },
-            {
-                "label": &requirement.req_applicability,
-                "type": "applicability"
-            }
-        ],
-        "metadata": {
-            "author": {
-                "name": &requirement.req_author,
-                "timestamp": creation_date.clone(),
-                "initial": author_initial
-            },
-            "reviewer": {
-                "name": &requirement.req_reviewer,
-                "timestamp": reviewer_timestamp,
-                "initial": reviewer_initial_value,
-                "assigned": reviewer_assigned
-            },
-            "updated": update_date.clone(),
-            "deadline": deadline_date,
-            "version": current_version
-        },
-        "body_sections": [
-            {
-                "title": "Purpose",
-                "content": purpose
-            },
-            {
-                "title": "Statement",
-                "content": &requirement.req_description
-            },
-            {
-                "title": "Rationale",
-                "content": rationale
-            },
-            {
-                "title": "Notes",
-                "content": notes
-            }
-        ],
+        "requirement": requirement,
+        "raw_requirement": raw_requirement,
         "relationships": {
             "parent": parent_requirement,
             "children": child_requirements,
-            "has_links": parent_requirement.is_some() || !child_requirements.is_empty()
-        },
-        "attachments": attachments,
-        "verification_summary": {
-            "total": total_tests,
-            "passed": tests_passed,
-            "failed": tests_failed,
-            "pending": tests_pending,
-            "percent": verification_percent,
-            "last_checked": update_date.clone(),
-            "tool": &requirement.req_verification
         },
         "linked_tests": linked_tests,
-        "timeline": timeline,
+        "verification": {
+            "tool_id": verification_tool_id,
+            "tool_name": verification_tool_label,
+            "counts": {
+                "total": total_tests,
+                "passed": tests_passed,
+                "failed": tests_failed,
+                "pending": tests_pending,
+            }
+        },
+        "history": {
+            "entries": history_entries,
+        },
         "comments": {
-            "enabled": comments_enabled,
             "items": comment_items,
-            "has_items": comments_has_items,
-            "locked_reason": comments_locked_reason
         }
+    });
+
+    let requirement_data_json = serde_json::to_string(&canonical_data)
+        .unwrap_or_else(|_| "{}".to_string());
+
+    let ctx = json!({
+        "user": user,
+        "project": project_value,
+        "selected_project_id": project_id,
+        "requirement_data": canonical_data,
+        "requirement_data_json": requirement_data_json,
     });
 
     Ok(Template::render("requirement", ctx))

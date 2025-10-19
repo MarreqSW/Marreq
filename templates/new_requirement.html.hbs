@@ -161,7 +161,7 @@
               required
             >
               {{#each categories}}
-                <option value="{{cat_id}}" data-tag="{{cat_tag}}">{{cat_title}}</option>
+                <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../req_category)}}selected{{/if}}>{{cat_title}}</option>
               {{/each}}
             </select>
             <p class="create-field__help">Choose the taxonomy bucket this requirement contributes to.</p>
@@ -205,7 +205,7 @@
               required
             >
               {{#each applicability}}
-                <option value="{{app_id}}">{{app_title}}</option>
+                <option value="{{app_id}}" {{#if (eq app_id ../req_applicability)}}selected{{/if}}>{{app_title}}</option>
               {{/each}}
             </select>
             <p class="create-field__help">Limit scope if the statement is not universally required.</p>
@@ -287,7 +287,7 @@
               required
             >
               {{#each verification}}
-                <option value="{{verification_id}}">{{verification_name}}</option>
+                <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification)}}selected{{/if}}>{{verification_name}}</option>
               {{/each}}
             </select>
             <p class="create-field__help">Pick the strategy that will demonstrate compliance.</p>
@@ -340,11 +340,11 @@
             class="create-field__select"
             data-role="combo-source"
             required
-          >
-            {{#each users}}
-              <option value="{{user_id}}">{{user_name}}</option>
-            {{/each}}
-          </select>
+            >
+              {{#each users}}
+              <option value="{{user_id}}" {{#if (eq user_id ../req_reviewer)}}selected{{/if}}>{{user_name}}</option>
+              {{/each}}
+            </select>
           <p class="create-field__help">Assign a reviewer so the workflow can progress.</p>
         </div>
 
@@ -372,9 +372,9 @@
             class="create-field__select"
             data-role="combo-source"
           >
-            <option value="0">None</option>
+            <option value="0" {{#if (eq ../req_parent 0)}}selected{{/if}}>None</option>
             {{#each parent}}
-              <option value="{{req_id}}">{{req_title}}</option>
+              <option value="{{req_id}}" {{#if (eq ../req_parent req_id)}}selected{{/if}}>{{req_title}}</option>
             {{/each}}
           </select>
           <p class="create-field__help">Optional hierarchy so traceability maps stay coherent.</p>

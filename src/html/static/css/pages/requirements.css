@@ -1,9 +1,53 @@
+body[data-page='requirements'] .o-main-content {
+  padding-inline: var(--space-4);
+  width: min(1600px, calc(100% - var(--space-8) * 2));
+}
+
+@media (min-width: 768px) {
+  body[data-page='requirements'] .o-main-content {
+    padding-inline: var(--space-6);
+  }
+}
+
+@media (min-width: 1024px) {
+  body[data-page='requirements'] .o-main-content {
+    padding-inline: var(--space-8);
+  }
+}
+
 .reqman-requirements-page {
   background-color: transparent;
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  padding: var(--space-6);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .reqman-requirements-page {
+    gap: var(--space-8);
+    padding-inline: var(--space-6);
+  }
+}
+
+@media (min-width: 1280px) {
+  .reqman-requirements-page {
+    padding-inline: var(--space-8);
+  }
+}
+
+.reqman-requirements-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+@media (min-width: 1024px) {
+  .reqman-requirements-main {
+    gap: var(--space-8);
+  }
 }
 
 .reqman-requirements-header {
@@ -11,11 +55,17 @@
   background: linear-gradient(135deg, var(--surface-color), var(--surface-accent));
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  justify-content: space-between;
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: 1fr;
   padding: var(--space-6);
+}
+
+@media (min-width: 1024px) {
+  .reqman-requirements-header {
+    align-items: start;
+    grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr);
+  }
 }
 
 .reqman-requirements-header__meta {
@@ -48,6 +98,12 @@
   align-items: center;
   display: flex;
   gap: var(--space-3);
+}
+
+@media (min-width: 1024px) {
+  .reqman-requirements-header__actions {
+    justify-content: flex-end;
+  }
 }
 
 .reqman-requirements-header__secondary {
@@ -87,8 +143,8 @@
 
 .reqman-requirements-metrics {
   display: grid;
-  gap: var(--space-3);
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 .reqman-requirements-metric-card {
@@ -331,8 +387,10 @@
 }
 
 .reqman-requirements-table {
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   min-width: 720px;
+  table-layout: auto;
   width: 100%;
 }
 
@@ -347,8 +405,12 @@
 .reqman-requirements-table th,
 .reqman-requirements-table td {
   border-bottom: 1px solid var(--border-color);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4) var(--space-5);
   text-align: left;
+}
+
+.reqman-requirements-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .reqman-requirements-table .is-sortable {

@@ -19,23 +19,44 @@ function getField(root, name) {
   return root.querySelector(`[data-field="${name}"]`);
 }
 
+function getFields(root, name) {
+  return root.querySelectorAll(`[data-field="${name}"]`);
+}
+
+function toElementArray(target) {
+  if (!target) {
+    return [];
+  }
+  if (typeof Element !== 'undefined' && target instanceof Element) {
+    return [target];
+  }
+  return Array.from(target);
+}
+
 function getSlot(root, name) {
   return root.querySelector(`[data-slot="${name}"]`);
 }
 
 function setText(element, value) {
-  if (!element) {
-    return;
-  }
-  element.textContent = value ?? '';
+  toElementArray(element).forEach((el) => {
+    if (!el) {
+      return;
+    }
+    el.textContent = value ?? '';
+  });
 }
 
 function renderBadge(element, badge) {
-  if (!element || !badge) {
+  if (!badge) {
     return;
   }
-  element.className = `badge ${badge.variant}`;
-  element.textContent = badge.label;
+  toElementArray(element).forEach((el) => {
+    if (!el) {
+      return;
+    }
+    el.className = `badge ${badge.variant}`;
+    el.textContent = badge.label;
+  });
 }
 
 function renderSolidity(root, solidity) {
@@ -61,7 +82,19 @@ function renderChips(root, chips = []) {
     return;
   }
 
+  const emptyMessage = getField(root, 'chips-empty');
   container.innerHTML = '';
+  if (!chips.length) {
+    if (emptyMessage) {
+      emptyMessage.classList.remove('d-none');
+    }
+    return;
+  }
+
+  if (emptyMessage) {
+    emptyMessage.classList.add('d-none');
+  }
+
   chips.forEach((chip) => {
     const badge = document.createElement('span');
     badge.className = 'badge rounded-pill bg-light text-muted border';
@@ -90,10 +123,6 @@ function renderBodySections(root, sections = []) {
     title.className = 'h5 mb-0';
     title.textContent = section.title;
 
-    const hint = document.createElement('span');
-    hint.className = 'small text-muted';
-    hint.textContent = 'Tap to collapse';
-
     const body = document.createElement('div');
     body.className = 'card-body';
 
@@ -101,7 +130,7 @@ function renderBodySections(root, sections = []) {
     paragraph.className = section.empty ? 'mb-0 text-muted' : 'mb-0';
     paragraph.textContent = section.content;
 
-    summary.append(title, hint);
+    summary.append(title);
     body.appendChild(paragraph);
     details.append(summary, body);
     container.appendChild(details);
@@ -220,8 +249,12 @@ function renderAttachments(root, attachments = []) {
 }
 
 function renderVerification(root, view, canonical) {
-  renderBadge(getField(root, 'verification-badge'), view.verification_badge);
-  setText(getField(root, 'verification-state'), view.verification_badge.state);
+  renderBadge(getFields(root, 'verification-badge'), view.verification_badge);
+  setText(getFields(root, 'verification-state'), view.verification_badge.state);
+  setText(
+    getField(root, 'verification-percent'),
+    `${view.verification_summary.percent}%`,
+  );
 
   const progress = getField(root, 'verification-progress');
   if (progress) {
@@ -307,10 +340,14 @@ function renderTimeline(root, timeline) {
   container.innerHTML = '';
   timeline.forEach((entry) => {
     const item = document.createElement('li');
-    item.className = 'mb-3';
+    item.className = 'requirement-timeline__item';
+    if (entry.is_current) {
+      item.classList.add('is-current');
+    }
 
     const header = document.createElement('div');
-    header.className = 'd-flex justify-content-between align-items-center';
+    header.className =
+      'requirement-timeline__header d-flex justify-content-between align-items-center flex-wrap gap-3';
 
     const version = document.createElement('span');
     version.className = 'badge bg-light text-dark border';
@@ -323,11 +360,11 @@ function renderTimeline(root, timeline) {
     header.append(version, timestamp);
 
     const summary = document.createElement('div');
-    summary.className = 'fw-semibold mt-2';
+    summary.className = 'fw-semibold mt-2 requirement-timeline__summary';
     summary.textContent = entry.summary;
 
     const actor = document.createElement('div');
-    actor.className = 'small text-muted';
+    actor.className = 'small text-muted requirement-timeline__actor';
     actor.textContent = `by ${entry.actor || '—'}`;
 
     item.append(header, summary, actor);
@@ -390,24 +427,25 @@ function renderComments(root, comments) {
   }
 
   comments.items.forEach((comment) => {
-    const card = document.createElement('div');
-    card.className = 'border rounded p-3 bg-light';
+    const card = document.createElement('article');
+    card.className = 'requirement-comment shadow-sm border rounded-3 p-3';
 
     const header = document.createElement('div');
-    header.className = 'd-flex justify-content-between align-items-center mb-1';
+    header.className =
+      'd-flex justify-content-between align-items-center gap-3 mb-2 requirement-comment__header';
 
     const author = document.createElement('span');
-    author.className = 'fw-semibold';
+    author.className = 'fw-semibold requirement-comment__author';
     author.textContent = comment.author ?? 'Unknown';
 
     const timestamp = document.createElement('small');
-    timestamp.className = 'text-muted';
+    timestamp.className = 'text-muted requirement-comment__timestamp';
     timestamp.textContent = comment.timestamp ?? '';
 
     header.append(author, timestamp);
 
     const body = document.createElement('p');
-    body.className = 'mb-0';
+    body.className = 'mb-0 requirement-comment__body';
     body.textContent = comment.body ?? '';
 
     card.append(header, body);
@@ -420,46 +458,144 @@ function renderMetadata(root, metadata) {
     return;
   }
 
-  const authorInitial = getField(root, 'author-initial');
-  if (authorInitial) {
-    authorInitial.textContent = metadata.author.initial || '?';
-  }
+  toElementArray(getFields(root, 'author-initial')).forEach((el) => {
+    el.textContent = metadata.author.initial || '?';
+    el.classList.add('bg-primary', 'text-white');
+    el.classList.remove('bg-light', 'text-muted', 'border');
+  });
 
-  setText(getField(root, 'author-name'), metadata.author.name);
+  setText(getFields(root, 'author-name'), metadata.author.name);
   setText(
-    getField(root, 'author-timestamp'),
+    getFields(root, 'author-timestamp'),
     metadata.author.timestamp ? `Created ${metadata.author.timestamp}` : '',
   );
 
-  const reviewerInitial = getField(root, 'reviewer-initial');
-  if (reviewerInitial) {
-    reviewerInitial.textContent = metadata.reviewer.assigned
-      ? metadata.reviewer.initial
-      : '–';
-  }
+  toElementArray(getFields(root, 'reviewer-initial')).forEach((el) => {
+    if (metadata.reviewer.assigned) {
+      el.textContent = metadata.reviewer.initial ?? '–';
+      el.classList.add('bg-secondary', 'text-white');
+      el.classList.remove('bg-light', 'text-muted', 'border');
+    } else {
+      el.textContent = '–';
+      el.classList.add('bg-light', 'text-muted', 'border');
+      el.classList.remove('bg-secondary', 'text-white');
+    }
+  });
 
-  const reviewerName = getField(root, 'reviewer-name');
-  const reviewerTimestamp = getField(root, 'reviewer-timestamp');
+  const reviewerNames = toElementArray(getFields(root, 'reviewer-name'));
+  const reviewerTimestamps = getFields(root, 'reviewer-timestamp');
+
   if (metadata.reviewer.assigned) {
-    setText(reviewerName, metadata.reviewer.name);
+    reviewerNames.forEach((el) => {
+      el.textContent = metadata.reviewer.name ?? '';
+      el.classList.remove('text-muted');
+    });
     setText(
-      reviewerTimestamp,
+      reviewerTimestamps,
       metadata.reviewer.timestamp ? `Reviewed ${metadata.reviewer.timestamp}` : '',
     );
-    reviewerName?.classList.remove('text-muted');
   } else {
-    if (reviewerName) {
-      reviewerName.textContent = 'Unassigned';
-      reviewerName.classList.add('text-muted');
-    }
-    if (reviewerTimestamp) {
-      reviewerTimestamp.textContent = '';
-    }
+    reviewerNames.forEach((el) => {
+      el.textContent = 'Unassigned';
+      el.classList.add('text-muted');
+    });
+    setText(reviewerTimestamps, '');
   }
 
-  setText(getField(root, 'metadata-updated'), metadata.updated);
-  setText(getField(root, 'metadata-deadline'), metadata.deadline);
-  setText(getField(root, 'metadata-version'), metadata.version);
+  setText(getFields(root, 'metadata-updated'), metadata.updated);
+  setText(getFields(root, 'metadata-deadline'), metadata.deadline);
+  setText(getFields(root, 'metadata-version'), metadata.version);
+}
+
+function initRequirementDetailsToggle() {
+  const toggle = document.querySelector('[data-action="toggle-requirement-details"]');
+  if (!toggle) {
+    return;
+  }
+
+  const targetSelector = toggle.getAttribute('data-bs-target');
+  if (!targetSelector) {
+    return;
+  }
+
+  const target = document.querySelector(targetSelector);
+  if (!target) {
+    return;
+  }
+
+  const setExpandedState = (expanded) => {
+    toggle.textContent = expanded ? 'Collapse' : 'Expand';
+    toggle.setAttribute('aria-expanded', String(expanded));
+  };
+
+  setExpandedState(target.classList.contains('show'));
+
+  target.addEventListener('hidden.bs.collapse', () => setExpandedState(false));
+  target.addEventListener('shown.bs.collapse', () => setExpandedState(true));
+}
+
+function initCopyRequirementLink() {
+  const trigger = document.querySelector('[data-action="copy-requirement-link"]');
+  if (!trigger) {
+    return;
+  }
+
+  const originalLabel = trigger.textContent;
+
+  const setStatus = (label) => {
+    trigger.textContent = label;
+    trigger.disabled = true;
+    setTimeout(() => {
+      trigger.textContent = originalLabel;
+      trigger.disabled = false;
+    }, 2000);
+  };
+
+  trigger.addEventListener('click', async () => {
+    const relativeUrl = trigger.getAttribute('data-requirement-url');
+    if (!relativeUrl) {
+      return;
+    }
+
+    const absoluteUrl = new URL(relativeUrl, window.location.origin).toString();
+    let didCopy = false;
+
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(absoluteUrl);
+        didCopy = true;
+      } catch (error) {
+        console.warn('Clipboard API failed, falling back to execCommand', error);
+      }
+    }
+
+    if (!didCopy) {
+      const helper = document.createElement('textarea');
+      helper.value = absoluteUrl;
+      helper.setAttribute('readonly', '');
+      helper.style.position = 'fixed';
+      helper.style.opacity = '0';
+      document.body.appendChild(helper);
+      helper.select();
+      try {
+        didCopy = document.execCommand('copy');
+      } catch (error) {
+        console.error('Fallback copy failed', error);
+      } finally {
+        document.body.removeChild(helper);
+      }
+    }
+
+    setStatus(didCopy ? 'Link copied' : 'Copy failed');
+
+    const dropdownToggle = trigger.closest('.dropdown')?.querySelector('[data-bs-toggle="dropdown"]');
+    if (dropdownToggle && typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
+      const dropdownInstance = bootstrap.Dropdown.getInstance(dropdownToggle);
+      if (dropdownInstance) {
+        dropdownInstance.hide();
+      }
+    }
+  });
 }
 
 function hydratePage(view, canonical) {
@@ -495,6 +631,8 @@ export function init() {
   }
 
   hydratePage(view, canonical);
+  initRequirementDetailsToggle();
+  initCopyRequirementLink();
 
   initDiffModal({
     triggerSelector: '[data-action="show-changes"]',

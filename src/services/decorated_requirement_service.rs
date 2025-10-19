@@ -4,10 +4,13 @@
 //! validation and logging so that route handlers can remain focused on HTTP
 //! concerns.
 
+use super::{
+    ApplicabilityService, CategoryService, RequirementService, StatusService, UserService,
+    VerificationService,
+};
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{DecoratedRequirement, NewRequirement, Requirement, Test, User};
 use crate::repository::errors::RepoError;
-use super::{RequirementService, VerificationService, CategoryService, StatusService, UserService, ApplicabilityService};
 
 /// High level operations for requirements backed by the shared [`AppState`].
 pub struct DecoratedRequirementService<'a> {
@@ -88,34 +91,43 @@ impl<'a> DecoratedRequirementService<'a> {
     }
 
     fn decorate_vec(&self, req: Vec<Requirement>) -> Result<Vec<DecoratedRequirement>, RepoError> {
-        req.iter()
-            .map(|r| self.decorate(r))
-            .collect()
+        req.iter().map(|r| self.decorate(r)).collect()
     }
 
     fn decorate(&self, req: &Requirement) -> Result<DecoratedRequirement, RepoError> {
-
-        let verification = self.verification_service.get_by_id(req.req_verification)
+        let verification = self
+            .verification_service
+            .get_by_id(req.req_verification)
             .map(|v| v.verification_name)
             .unwrap_or_else(|_| format!("Unknown Verification ({})", req.req_verification));
 
-        let status = self.status_service.get_requirement_status(req.req_current_status)
+        let status = self
+            .status_service
+            .get_requirement_status(req.req_current_status)
             .map(|s| s.req_st_title)
             .unwrap_or_else(|_| format!("Unknown Status ({})", req.req_current_status));
 
-        let author = self.user_service.get_by_id(req.req_author)
+        let author = self
+            .user_service
+            .get_by_id(req.req_author)
             .map(|u| u.user_name)
             .unwrap_or_else(|_| format!("Unknown User ({})", req.req_author));
 
-        let reviewer = self.user_service.get_by_id(req.req_reviewer)
+        let reviewer = self
+            .user_service
+            .get_by_id(req.req_reviewer)
             .map(|u| u.user_name)
             .unwrap_or_else(|_| format!("Unknown User ({})", req.req_reviewer));
 
-        let category = self.category_service.get_by_id(req.req_category)
+        let category = self
+            .category_service
+            .get_by_id(req.req_category)
             .map(|c| c.cat_title)
             .unwrap_or_else(|_| format!("Unknown Category ({})", req.req_category));
 
-        let applicability = self.applicability_service.get_by_id(req.req_applicability)
+        let applicability = self
+            .applicability_service
+            .get_by_id(req.req_applicability)
             .map(|a| a.app_title)
             .unwrap_or_else(|_| format!("Unknown Applicability ({})", req.req_applicability));
 

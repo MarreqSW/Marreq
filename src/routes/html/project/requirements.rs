@@ -15,7 +15,9 @@ use crate::helper_functions::{decorate_tests_with_repo, generate_requirement_ref
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::services::{
-    ApplicabilityService, CategoryService, DecoratedRequirementService, LogService, ProjectService, RequirementService, StatusService, UserService, VerificationService
+    ApplicabilityService, CategoryService, DecoratedRequirementService, LogService, ProjectService,
+    RequirementAnalyticsService, RequirementService, StatusService, UserService,
+    VerificationService,
 };
 
 #[derive(FromForm)]
@@ -145,10 +147,11 @@ async fn show_requirements(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
-    let selected_project = ProjectService::new(state.inner()).get_by_id(project_id).unwrap();
+    let selected_project = ProjectService::new(state.inner())
+        .get_by_id(project_id)
+        .unwrap();
 
-    let requirement_service = DecoratedRequirementService::new(state.inner());
-    let requirements = requirement_service
+    let requirements = DecoratedRequirementService::new(state.inner())
         .list_by_project_filtered(
             project_id,
             status_filter,
@@ -157,89 +160,55 @@ async fn show_requirements(
         )
         .unwrap_or_default();
 
-    // TODO: move to frontend js
-    let total_requirements = requirements.len();
-    let mut status_totals: HashMap<String, usize> = HashMap::new();
+    let metrics = RequirementAnalyticsService::new(state.inner())
+        .metrics(
+            project_id,
+            status_filter,
+            verification_filter,
+            category_filter,
+        )
+        .unwrap_or_default();
 
-    for requirement in &requirements {
-        let key = requirement.req_current_status.trim().to_ascii_lowercase();
-        *status_totals.entry(key).or_default() += 1;
-    }
+    let statuses = StatusService::new(state.inner()).list_legacy().unwrap_or_default();
 
-    let draft_count = *status_totals.get("draft").unwrap_or(&0);
-    let accepted_count = *status_totals.get("accepted").unwrap_or(&0);
-    let rejected_count = *status_totals.get("rejected").unwrap_or(&0);
-
-    let coverage_ratio = if total_requirements > 0 {
-        accepted_count as f64 / total_requirements as f64
-    } else {
-        0.0
-    };
-    let coverage_percent = (coverage_ratio * 100.0).round() as i32;
-
-    // Static lists; all default to empty on error
-    let status_service = StatusService::new(state.inner());
-    let statuses = status_service.list_legacy().unwrap_or_default();
-
-    let category_service = CategoryService::new(state.inner());
-    let categories = category_service
+    let categories = CategoryService::new(state.inner())
         .list_by_project(project_id)
         .unwrap_or_default();
 
-    let verifications = {
-        let repo = state.repo_read();
-        repo.get_verification_by_project(project_id)
-            .unwrap_or_default()
-    };
+    let verifications = VerificationService::new(state.inner()).list_by_project(project_id).unwrap_or_default();
 
-    let status_lookup: HashMap<i32, String> = statuses
-        .iter()
-        .map(|s| (s.st_id, s.st_title.clone()))
-        .collect();
-    let verification_lookup: HashMap<i32, String> = verifications
-        .iter()
-        .map(|v| (v.verification_id, v.verification_name.clone()))
-        .collect();
-    let category_lookup: HashMap<i32, String> = categories
-        .iter()
-        .map(|c| (c.cat_id, c.cat_title.clone()))
-        .collect();
+    let status_label = status_filter.and_then(|id| StatusService::new(state.inner()).get_status_name(id).ok());
+    let verification_label = verification_filter.and_then(|id| VerificationService::new(state.inner()).get_verification_name(id).ok());
+    let category_label = category_filter.and_then(|id| CategoryService::new(state.inner()).get_category_name(id).ok());
 
-    let status_label = status_filter.and_then(|id| status_lookup.get(&id).cloned());
-    let verification_label =
-        verification_filter.and_then(|id| verification_lookup.get(&id).cloned());
-    let category_label = category_filter.and_then(|id| category_lookup.get(&id).cloned());
+    let filters = [
+        ("status_filter", "Status", status_label.clone()),
+        ("verification_filter", "Verification", verification_label.clone()),
+        ("category_filter", "Category", category_label.clone()),
+    ];
 
-    let mut active_filters = Vec::new();
-    if let Some(label) = status_label.clone() {
-        active_filters.push(json!({
-            "key": "status_filter",
-            "label": format!("Status: {label}")
-        }));
-    }
-    if let Some(label) = verification_label.clone() {
-        active_filters.push(json!({
-            "key": "verification_filter",
-            "label": format!("Verification: {label}")
-        }));
-    }
-    if let Some(label) = category_label.clone() {
-        active_filters.push(json!({
-            "key": "category_filter",
-            "label": format!("Category: {label}")
-        }));
-    }
+    let active_filters: Vec<_> = filters
+        .into_iter()
+        .filter_map(|(key, prefix, label_opt)| {
+            label_opt.map(|label| {
+                json!({
+                    "key": key,
+                    "label": format!("{prefix}: {label}")
+                })
+            })
+        })
+        .collect();
 
     let ctx = json!({
         "requirements": json!(requirements),
         "requirement_metrics": json!({
-            "total": total_requirements,
-            "draft": draft_count,
-            "accepted": accepted_count,
-            "rejected": rejected_count,
+            "total": metrics.total,
+            "draft": metrics.draft,
+            "accepted": metrics.accepted,
+            "rejected": metrics.rejected,
             "coverage": {
-                "verified": accepted_count,
-                "percent": coverage_percent
+                "verified": metrics.coverage_verified,
+                "percent": metrics.coverage_percent
             }
         }),
        "selected_project_id": json!(project_id),
@@ -1091,9 +1060,7 @@ async fn post_requirement(
     );
 
     // Take ownership and enforce project_id from the route
-    let (mut req, intent) = new_req
-        .into_inner()
-        .into_payload(user.user_id, project_id);
+    let (mut req, intent) = new_req.into_inner().into_payload(user.user_id, project_id);
     req.project_id = project_id;
     req.req_author = user.user_id;
 

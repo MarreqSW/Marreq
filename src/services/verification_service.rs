@@ -28,6 +28,11 @@ impl<'a> VerificationService<'a> {
         self.state.repo_read().get_verification_by_id(id)
     }
 
+    pub fn get_verification_name(&self, id: i32) -> Result<String, RepoError> {
+        let verification = self.state.repo_read().get_verification_by_id(id)?;
+        Ok(verification.verification_name)
+    }
+
     /// Create a new verification entry.
     pub fn create(&self, mut payload: NewVerification) -> Result<i32, RepoError> {
         sanitize(&mut payload.verification_name);

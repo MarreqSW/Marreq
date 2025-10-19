@@ -53,36 +53,6 @@
   text-decoration: underline;
 }
 
-.editor-heading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.editor-heading__title {
-  align-items: baseline;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.editor-heading__prefix {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.editor-heading__id {
-  color: var(--text-primary);
-  font-family: 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', monospace;
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
 .editor-status {
   position: relative;
 }
@@ -153,6 +123,13 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   justify-content: space-between;
+}
+
+.editor-topbar__status {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
 }
 
 .editor-version {

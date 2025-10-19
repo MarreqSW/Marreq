@@ -15,8 +15,7 @@ use crate::helper_functions::{decorate_tests_with_repo, generate_requirement_ref
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::services::{
-    ApplicabilityService, CategoryService, LogService, ProjectService, RequirementService,
-    StatusService, UserService, VerificationService,
+    ApplicabilityService, CategoryService, DecoratedRequirementService, LogService, ProjectService, RequirementService, StatusService, UserService, VerificationService
 };
 
 #[derive(FromForm)]
@@ -148,8 +147,8 @@ async fn show_requirements(
 
     let selected_project = ProjectService::new(state.inner()).get_by_id(project_id).unwrap();
 
-    let requirement_service = RequirementService::new(state.inner());
-    let filtered = requirement_service
+    let requirement_service = DecoratedRequirementService::new(state.inner());
+    let requirements = requirement_service
         .list_by_project_filtered(
             project_id,
             status_filter,
@@ -158,15 +157,11 @@ async fn show_requirements(
         )
         .unwrap_or_default();
 
-    let decorated = {
-        let repo = state.repo_read();
-        decorate_requirements_with_repo(&*repo, filtered)
-    };
-
-    let total_requirements = decorated.len();
+    // TODO: move to frontend js
+    let total_requirements = requirements.len();
     let mut status_totals: HashMap<String, usize> = HashMap::new();
 
-    for requirement in &decorated {
+    for requirement in &requirements {
         let key = requirement.req_current_status.trim().to_ascii_lowercase();
         *status_totals.entry(key).or_default() += 1;
     }
@@ -236,7 +231,7 @@ async fn show_requirements(
     }
 
     let ctx = json!({
-        "requirements": json!(decorated),
+        "requirements": json!(requirements),
         "requirement_metrics": json!({
             "total": total_requirements,
             "draft": draft_count,
@@ -704,9 +699,9 @@ async fn get_edit_requirement(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    let service = RequirementService::new(state.inner());
+    let service = DecoratedRequirementService::new(state.inner());
 
-    let req = match service.get_by_id_decorated(req_id) {
+    let req = match service.get_by_id(req_id) {
         Ok(req) => req,
         Err(err) => {
             let ctx = json!({
@@ -738,7 +733,7 @@ async fn get_edit_requirement(
         return Err(Redirect::to(url));
     }
 
-    let parent: Option<Requirement> = if req.req_parent_id != 0 {
+    let parent: Option<DecoratedRequirement> = if req.req_parent_id != 0 {
         match service.get_by_id(req.req_parent_id) {
             Ok(r) => Some(r),
             Err(_) => None,

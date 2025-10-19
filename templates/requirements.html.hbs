@@ -37,7 +37,7 @@
         <a href="/p/{{project.id}}/requirements.xls" class="btn btn-outline-secondary btn-sm">
           Export
         </a>
-        {{#if user.is_admin}}
+        {{#if is_admin}}
         <a href="/import_excel" class="btn btn-outline-secondary btn-sm">
           Import
         </a>
@@ -46,7 +46,7 @@
         <button type="button" class="btn btn-outline-secondary btn-sm" disabled aria-disabled="true">
           Export
         </button>
-        {{#if user.is_admin}}
+        {{#if is_admin}}
         <button type="button" class="btn btn-outline-secondary btn-sm" disabled aria-disabled="true">
           Import
         </button>

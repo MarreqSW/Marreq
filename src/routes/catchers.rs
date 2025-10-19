@@ -1,6 +1,8 @@
 use rocket::serde::json::json;
 use rocket::Request;
 use rocket_dyn_templates::Template;
+use rocket::response::Redirect;
+use crate::repository::errors::RepoError;
 
 #[catch(401)]
 pub fn unauthorized(_req: &Request<'_>) -> Template {
@@ -19,4 +21,11 @@ pub fn forbidden(_req: &Request<'_>) -> Template {
     });
 
     Template::render("access_denied", context)
+}
+
+impl From<RepoError> for Redirect {
+    fn from(err: RepoError) -> Self {
+        println!("Redirecting to error page due to: {}", err);
+        Redirect::to("error")
+    }
 }

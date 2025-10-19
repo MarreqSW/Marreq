@@ -253,7 +253,7 @@ async fn show_requirement_id(
         .map(|p| {
             json!({
                 "id": p.project_id,
-                "name": &p.project_name,
+                "name": p.project_name,
                 "status": &p.project_status,
                 "description": &p.project_description
             })
@@ -490,7 +490,19 @@ async fn post_edit_requirement(
     let show_url = uri!("/p", show_requirement_id(project_id, req_id));
 
     let service = RequirementService::new(state.inner());
-    match service.update(&user, req_id, new_req.into_inner()) {
+    
+    // Load existing requirement to preserve author and status
+    let existing = match service.get_by_id(req_id) {
+        Ok(req) => req,
+        Err(_) => return Err(Redirect::to(list_url)),
+    };
+    
+    let mut updated_req = new_req.into_inner();
+    // Preserve system-managed fields
+    updated_req.req_author = existing.req_author;
+    updated_req.req_current_status = existing.req_current_status;
+    
+    match service.update(&user, req_id, updated_req) {
         Ok(_) => {}
         Err(crate::repository::errors::RepoError::NotFound) => return Err(Redirect::to(list_url)),
         Err(crate::repository::errors::RepoError::BadInput(_)) => {

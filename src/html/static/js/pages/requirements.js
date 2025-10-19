@@ -387,11 +387,57 @@ function requestSubmit(form) {
   }
 }
 
+function renderFilterChips(form) {
+  const container = document.getElementById('requirementsFilterChips');
+  if (!form || !container) return;
+
+  container.innerHTML = '';
+
+  form.querySelectorAll('[data-filter-control]').forEach((control) => {
+    const value = control.value;
+    if (!value) return;
+
+    const selectedOption = control.options[control.selectedIndex];
+    if (!selectedOption) return;
+
+    const prefix = control.dataset.filterLabel || control.name;
+    const optionLabel = selectedOption.textContent.trim();
+    if (!optionLabel) return;
+
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'reqman-requirements-filter-chip';
+    chip.dataset.filterKey = control.name;
+    chip.dataset.action = 'remove-filter';
+    chip.innerHTML = `${prefix}: ${optionLabel} <span aria-hidden="true">×</span><span class="u-visually-hidden">Clear ${prefix}: ${optionLabel}</span>`;
+    container.appendChild(chip);
+  });
+
+  const hasChips = container.childElementCount > 0;
+  container.hidden = !hasChips;
+
+  if (hasChips) {
+    container.querySelectorAll('[data-action="remove-filter"]').forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const key = chip.dataset.filterKey;
+        if (!key) return;
+        const control = form.querySelector(`[name="${key}"]`);
+        if (control) {
+          control.value = '';
+          renderFilterChips(form);
+          requestSubmit(form);
+        }
+      });
+    });
+  }
+}
+
 function initFiltersForm(form, searchInput) {
   if (!form) return;
 
   form.querySelectorAll('[data-filter-control]').forEach((select) => {
     select.addEventListener('change', () => {
+      renderFilterChips(form);
       requestSubmit(form);
     });
   });
@@ -407,21 +453,12 @@ function initFiltersForm(form, searchInput) {
         searchInput.value = '';
         applySearch('');
       }
+      renderFilterChips(form);
       requestSubmit(form);
     });
   }
 
-  document.querySelectorAll('[data-action="remove-filter"]').forEach((chip) => {
-    chip.addEventListener('click', () => {
-      const key = chip.dataset.filterKey;
-      if (!key) return;
-      const control = form.querySelector(`[name="${key}"]`);
-      if (control) {
-        control.value = '';
-        requestSubmit(form);
-      }
-    });
-  });
+  renderFilterChips(form);
 }
 
 function buildDuplicateTitle(title) {

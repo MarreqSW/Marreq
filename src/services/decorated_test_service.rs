@@ -67,12 +67,7 @@ impl<'a> DecoratedTestService<'a> {
     }
 
     /// Update an existing test entry and log the change.
-    pub fn update(
-        &self,
-        actor: &User,
-        id: i32,
-        payload: NewTest,
-    ) -> Result<Test, RepoError> {
+    pub fn update(&self, actor: &User, id: i32, payload: NewTest) -> Result<Test, RepoError> {
         self.test_service.update(actor, id, payload)
     }
 

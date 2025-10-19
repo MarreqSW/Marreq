@@ -288,7 +288,6 @@ export function buildRequirementViewModel(canonical = {}) {
   const verification = verificationBadge(counts, requirement.req_verification);
   const solidityView = solidity(counts, requirement.req_current_status);
   const percent = verificationPercent(counts);
-  const purposeText = purpose(requirement.req_description);
   const rationale =
     normalise(requirement.req_justification) || 'No rationale documented yet.';
   const notesResult = notesAndAttachments(requirement.req_link);
@@ -323,7 +322,6 @@ export function buildRequirementViewModel(canonical = {}) {
   };
 
   const bodySections = [
-    makeSection('Purpose', purposeText),
     makeSection('Statement', requirement.req_description),
     makeSection('Rationale', rationale),
     makeSection('Notes', notesResult.notes, notesResult.notes),

@@ -33,8 +33,8 @@
     </div>
     <div class="reqman-requirements-header__actions">
       <div class="reqman-requirements-header__secondary">
-        {{#if selected_project_id}}
-        <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-outline-secondary btn-sm">
+        {{#if project.id}}
+        <a href="/p/{{project.id}}/requirements.xls" class="btn btn-outline-secondary btn-sm">
           Export
         </a>
         {{#if user.is_admin}}
@@ -53,8 +53,8 @@
         {{/if}}
         {{/if}}
       </div>
-      {{#if selected_project_id}}
-        <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-primary reqman-requirements-header__primary" id="newRequirementButton">
+      {{#if project.id}}
+        <a href="/p/{{project.id}}/requirements/new" class="btn btn-primary reqman-requirements-header__primary" id="newRequirementButton">
           New Requirement
         </a>
       {{else}}
@@ -111,7 +111,7 @@
     <div class="reqman-requirements-controls__inner">
       <form
         method="GET"
-        action="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}"
+        action="{{#if project.id}}/p/{{project.id}}/requirements{{else}}/requirements{{/if}}"
         class="reqman-requirements-filter-bar"
         id="requirementsFilterForm">
         <div class="reqman-requirements-filter-bar__search">
@@ -130,7 +130,8 @@
             id="statusFilter"
             name="status_filter"
             class="reqman-requirements-filter-bar__select"
-            data-filter-control="status">
+            data-filter-control="status"
+            data-filter-label="Status">
             <option value="">Status · All</option>
             {{#each statuses}}
               <option value="{{st_id}}" {{#if (eq st_id ../current_status_filter)}}selected{{/if}}>
@@ -144,7 +145,8 @@
             id="verificationFilter"
             name="verification_filter"
             class="reqman-requirements-filter-bar__select"
-            data-filter-control="verification">
+            data-filter-control="verification"
+            data-filter-label="Verification">
             <option value="">Verification · All</option>
             {{#each verifications}}
               <option value="{{verification_id}}" {{#if (eq verification_id ../current_verification_filter)}}selected{{/if}}>
@@ -158,7 +160,8 @@
             id="categoryFilter"
             name="category_filter"
             class="reqman-requirements-filter-bar__select"
-            data-filter-control="category">
+            data-filter-control="category"
+            data-filter-label="Category">
             <option value="">Category · All</option>
             {{#each categories}}
               <option value="{{cat_id}}" {{#if (eq cat_id ../current_category_filter)}}selected{{/if}}>
@@ -178,21 +181,12 @@
         </div>
       </form>
 
-      {{#if active_filters}}
-      <div class="reqman-requirements-filter-chips" aria-live="polite">
-        {{#each active_filters}}
-          <button
-            type="button"
-            class="reqman-requirements-filter-chip"
-            data-filter-key="{{key}}"
-            data-action="remove-filter">
-            {{label}}
-            <span aria-hidden="true">×</span>
-            <span class="u-visually-hidden">Clear {{label}}</span>
-          </button>
-        {{/each}}
+      <div
+        class="reqman-requirements-filter-chips"
+        aria-live="polite"
+        id="requirementsFilterChips"
+        hidden>
       </div>
-      {{/if}}
     </div>
   </section>
 
@@ -253,7 +247,7 @@
             </td>
             <td class="reqman-requirements-row__cell reqman-requirements-row__cell--title">
               <a
-                href="/p/{{project_id}}/requirements/show/{{req_id}}"
+                href="/p/{{../project.id}}/requirements/show/{{req_id}}"
                 class="reqman-requirements-title"
                 title="{{req_title}}">
                 {{req_title}}
@@ -285,7 +279,7 @@
             </td>
             <td class="reqman-requirements-row__cell reqman-requirements-row__cell--actions">
               <div class="reqman-requirements-row__actions">
-                <a href="/p/{{project_id}}/requirements/edit/{{req_id}}" class="reqman-requirements-row__action reqman-requirements-row__action--link">Edit</a>
+                <a href="/p/{{../project.id}}/requirements/edit/{{req_id}}" class="reqman-requirements-row__action reqman-requirements-row__action--link">Edit</a>
                 <button
                   type="button"
                   class="reqman-requirements-row__action"
@@ -336,7 +330,7 @@
                   <dt>Parent</dt>
                   <dd>
                     {{#if req_parent_id}}
-                      <a href="/p/{{project_id}}/requirements/show/{{req_parent_id}}">{{req_parent_title}}</a>
+                      <a href="/p/{{project.id}}/requirements/show/{{req_parent_id}}">{{req_parent_title}}</a>
                     {{else}}
                       —
                     {{/if}}
@@ -359,7 +353,7 @@
       <div class="reqman-requirements-empty-state__illustration" aria-hidden="true">📄</div>
       <h2>No requirements yet</h2>
       <p>Let’s add your first one and start shaping this project.</p>
-      <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-primary">New Requirement</a>
+      <a href="/p/{{project.id}}/requirements/new" class="btn btn-primary">New Requirement</a>
     </div>
     {{/if}}
   </section>

@@ -139,7 +139,6 @@ struct InlineVerificationPayload {
 async fn show_requirements(
     project_access: ProjectAccess,
     project_id: i32,
-    _cookies: &CookieJar<'_>,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
@@ -169,35 +168,17 @@ async fn show_requirements(
         )
         .unwrap_or_default();
 
-    let statuses = StatusService::new(state.inner()).list_legacy().unwrap_or_default();
+    let statuses = StatusService::new(state.inner())
+        .list_legacy()
+        .unwrap_or_default();
 
     let categories = CategoryService::new(state.inner())
         .list_by_project(project_id)
         .unwrap_or_default();
 
-    let verifications = VerificationService::new(state.inner()).list_by_project(project_id).unwrap_or_default();
-
-    let status_label = status_filter.and_then(|id| StatusService::new(state.inner()).get_status_name(id).ok());
-    let verification_label = verification_filter.and_then(|id| VerificationService::new(state.inner()).get_verification_name(id).ok());
-    let category_label = category_filter.and_then(|id| CategoryService::new(state.inner()).get_category_name(id).ok());
-
-    let filters = [
-        ("status_filter", "Status", status_label.clone()),
-        ("verification_filter", "Verification", verification_label.clone()),
-        ("category_filter", "Category", category_label.clone()),
-    ];
-
-    let active_filters: Vec<_> = filters
-        .into_iter()
-        .filter_map(|(key, prefix, label_opt)| {
-            label_opt.map(|label| {
-                json!({
-                    "key": key,
-                    "label": format!("{prefix}: {label}")
-                })
-            })
-        })
-        .collect();
+    let verifications = VerificationService::new(state.inner())
+        .list_by_project(project_id)
+        .unwrap_or_default();
 
     let ctx = json!({
         "requirements": json!(requirements),
@@ -220,12 +201,9 @@ async fn show_requirements(
         "current_status_filter": json!(status_filter),
         "current_verification_filter": json!(verification_filter),
         "current_category_filter": json!(category_filter),
-        "active_filters": json!(active_filters),
         "project": json!({
             "id": selected_project.project_id,
             "name": selected_project.project_name,
-            "status": selected_project.project_status,
-            "description": selected_project.project_description,
         }),
         "user": user,
     });

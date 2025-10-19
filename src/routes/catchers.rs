@@ -1,8 +1,8 @@
+use crate::repository::errors::RepoError;
+use rocket::response::Redirect;
 use rocket::serde::json::json;
 use rocket::Request;
 use rocket_dyn_templates::Template;
-use rocket::response::Redirect;
-use crate::repository::errors::RepoError;
 
 #[catch(401)]
 pub fn unauthorized(_req: &Request<'_>) -> Template {

@@ -364,8 +364,7 @@ async fn get_edit_requirement(
         .list_by_project(project_id)
         .unwrap_or_default();
 
-    let user_service = UserService::new(state.inner());
-    let users = user_service.list_all().unwrap_or_default();
+    let users = UserService::new(state.inner()).get_by_project(project_id)?;
 
     let verifications = {
         let repo = state.repo_read();

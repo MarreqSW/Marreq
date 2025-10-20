@@ -302,7 +302,9 @@ async fn get_edit_requirement(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    let project_name = ProjectService::new(state.inner()).get_by_id(project_id)?.project_name;
+    let project_name = ProjectService::new(state.inner())
+        .get_by_id(project_id)?
+        .project_name;
     let service = DecoratedRequirementService::new(state.inner());
     let req = service.get_by_id(req_id)?;
 
@@ -317,9 +319,7 @@ async fn get_edit_requirement(
         None
     };
 
-
-    let log_service = LogService::new(state.inner());
-    let history_entries = log_service
+    let history_entries = LogService::new(state.inner())
         .entity_logs(&EntityType::Requirement.to_string(), req_id)
         .unwrap_or_default();
 
@@ -355,8 +355,9 @@ async fn get_edit_requirement(
         .collect::<Vec<_>>();
 
     // Project-scoped lookups; default to empty on error
-    let status_service = StatusService::new(state.inner());
-    let statuses = status_service.list_legacy().unwrap_or_default();
+    let statuses = StatusService::new(state.inner())
+        .list_legacy()
+        .unwrap_or_default();
 
     let category_service = CategoryService::new(state.inner());
     let categories = category_service

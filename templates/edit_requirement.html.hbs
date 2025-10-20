@@ -36,17 +36,6 @@
             <span class="editor-status__dot"></span>
             <span class="editor-status__label">{{req.req_current_status}}</span>
           </button>
-          <div class="editor-status__menu" data-role="status-menu" hidden>
-            {{#each status}}
-              <button
-                type="button"
-                class="editor-status__menu-item"
-                data-status-id="{{st_id}}"
-              >
-                {{st_title}}
-              </button>
-            {{/each}}
-          </div>
         </div>
 
         <div class="editor-version" data-role="version-indicator">
@@ -322,24 +311,7 @@
       </section>
 
       <section class="editor-meta-group">
-        <h2 class="editor-meta__title">Status & links</h2>
-
-        <div class="editor-field">
-          <label for="req_current_status_display" class="editor-field__label">Status</label>
-          <input
-            type="text"
-            id="req_current_status_display"
-            class="editor-field__input"
-            value="{{req.req_current_status}}"
-            readonly
-            disabled
-          >
-          <input type="hidden" name="req_current_status" value="{{req.req_current_status_id}}">
-          <small class="editor-field__help">
-            Status is managed by the system workflow.
-          </small>
-        </div>
-
+        <h2 class="editor-meta__title">Upstream Trace</h2>
         <div class="editor-field">
           <label for="req_parent" class="editor-field__label">Parent requirement</label>
           <select

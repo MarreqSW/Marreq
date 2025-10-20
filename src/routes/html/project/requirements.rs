@@ -401,38 +401,14 @@ async fn post_edit_requirement(
     new_req: Form<NewRequirement>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let user = project_access.into_user();
-
-    let edit_url = uri!("/p", get_edit_requirement(project_id, req_id));
-    let list_url = uri!(
-        "/p",
-        show_requirements(
-            project_id = project_id,
-            status_filter = Option::<i32>::None,
-            verification_filter = Option::<i32>::None,
-            category_filter = Option::<i32>::None
-        )
-    );
-    let show_url = uri!("/p", show_requirement_id(project_id, req_id));
-
     let service = RequirementService::new(state.inner());
-    match service.update(&user, req_id, new_req.into_inner()) {
-        Ok(_) => {}
-        Err(crate::repository::errors::RepoError::NotFound) => return Err(Redirect::to(list_url)),
-        Err(crate::repository::errors::RepoError::BadInput(_)) => {
-            return Err(Redirect::to(edit_url))
-        }
-        Err(_err) => {
-            #[cfg(debug_assertions)]
-            eprintln!(
-                "Error editing requirement {} in project {}: {:?}",
-                req_id, project_id, _err
-            );
-            return Err(Redirect::to(list_url));
-        }
+    if let Some(redir) = enforce_project_ownership(project_id, service.get_by_id(req_id)?.project_id) {
+        return Err(redir);
     }
 
-    Ok(Redirect::to(show_url))
+    let user = project_access.into_user();
+    service.update(&user, req_id, new_req.into_inner())?;
+    Ok(Redirect::to(uri!(show_requirement_id(project_id, req_id))))
 }
 
 #[delete("/<project_id>/requirements/delete/<req_id>")]

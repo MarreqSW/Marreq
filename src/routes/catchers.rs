@@ -1,4 +1,5 @@
 use crate::repository::errors::RepoError;
+use crate::services::log_service::LogServiceError;
 use rocket::response::Redirect;
 use rocket::serde::json::json;
 use rocket::Request;
@@ -25,6 +26,13 @@ pub fn forbidden(_req: &Request<'_>) -> Template {
 
 impl From<RepoError> for Redirect {
     fn from(err: RepoError) -> Self {
+        println!("Redirecting to error page due to: {}", err);
+        Redirect::to("error")
+    }
+}
+
+impl From<LogServiceError> for Redirect {
+    fn from(err: LogServiceError) -> Self {
         println!("Redirecting to error page due to: {}", err);
         Redirect::to("error")
     }

@@ -272,7 +272,7 @@ async fn show_requirement_id(
 
     let ctx = json!({
         "user": user,
-        "selected_project_id": project_id,
+        "project_id": project_id,
         "requirement_data": canonical_data,
         "requirement_data_json": requirement_data_json,
     });

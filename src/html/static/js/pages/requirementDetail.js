@@ -307,7 +307,7 @@ function renderVerification(root, view, canonical) {
     const link = document.createElement('a');
     link.className =
       'list-group-item list-group-item-action d-flex justify-content-between align-items-start';
-    link.href = `/p/${canonical.selected_project_id}/tests/show/${test.test_id}`;
+    link.href = `/p/${canonical.project_id}/tests/show/${test.test_id}`;
 
     const info = document.createElement('div');
     info.className = 'me-3';
@@ -613,7 +613,7 @@ function hydratePage(view, canonical) {
   renderChips(root, view.chips);
   renderMetadata(root, view.metadata);
   renderBodySections(root, view.body_sections);
-  renderRelationships(root, view.relationships, canonical.selected_project_id);
+  renderRelationships(root, view.relationships, canonical.project_id);
   renderAttachments(root, view.attachments);
   renderTimeline(root, view.timeline);
   renderComments(root, view.comments);

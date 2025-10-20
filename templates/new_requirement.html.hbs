@@ -70,7 +70,7 @@
             name="req_title"
             id="req_title"
             class="create-field__input"
-            value="{{req_title}}"
+            value="{{template.req_title}}"
             placeholder="Control system shall…"
             required
           >
@@ -88,7 +88,7 @@
             class="create-field__textarea"
             rows="3"
             placeholder="Why does this requirement exist?"
-          >{{req_purpose}}</textarea>
+          >{{template.req_purpose}}</textarea>
           <p class="create-field__help">Explain the outcome or capability this unlocks.</p>
         </div>
 
@@ -104,7 +104,7 @@
             rows="6"
             required
             placeholder="The system shall…"
-          >{{req_description}}</textarea>
+          >{{template.req_description}}</textarea>
           <p class="create-field__help">Be specific: prefer measurable verbs over vague terms like “user-friendly”.</p>
         </div>
 
@@ -119,7 +119,7 @@
             class="create-field__textarea"
             rows="4"
             placeholder="What evidence or reasoning supports this?"
-          >{{req_justification}}</textarea>
+          >{{template.req_justification}}</textarea>
           <p class="create-field__help">Cite decisions, studies, or regulations that justify the requirement.</p>
         </div>
 
@@ -362,7 +362,7 @@
             <datalist id="req_parent_options">
               <option value="None" data-id="0"></option>
               {{#each parent}}
-                <option value="{{req_reference}} — {{req_title}}" data-id="{{req_id}}"></option>
+                <option value="{{template.req_reference}} — {{template.req_title}}" data-id="{{req_id}}"></option>
               {{/each}}
             </datalist>
           </div>
@@ -374,7 +374,7 @@
           >
             <option value="0" {{#if (eq ../req_parent 0)}}selected{{/if}}>None</option>
             {{#each parent}}
-              <option value="{{req_id}}" {{#if (eq ../req_parent req_id)}}selected{{/if}}>{{req_title}}</option>
+              <option value="{{req_id}}" {{#if (eq ../req_parent req_id)}}selected{{/if}}>{{template.req_title}}</option>
             {{/each}}
           </select>
           <p class="create-field__help">Optional hierarchy so traceability maps stay coherent.</p>
@@ -397,7 +397,7 @@
             name="req_reference"
             id="req_reference"
             class="create-field__input"
-            value="{{req_reference}}"
+            value="{{template.req_reference}}"
             placeholder="REQ-CAT-001 (auto-generated if left blank)"
           >
           <p class="create-field__help">Leave blank to auto-generate from the chosen category.</p>
@@ -410,7 +410,7 @@
             name="req_link"
             id="req_link"
             class="create-field__input"
-            value="{{req_link}}"
+            value="{{template.req_link}}"
             placeholder="https://example.com/design-decision"
           >
           <p class="create-field__help">Provide a document, ticket, or standard that backs this statement.</p>

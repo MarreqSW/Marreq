@@ -476,120 +476,43 @@ async fn new_requirement(
         })
         .collect::<Vec<_>>();
 
+    let template_requirement: Option<Requirement> =
+        template.and_then(|id| requirement_service.get_by_id(id).ok());
 
-    let validated_parent = parent
-        .and_then(|id| {
-            parents
-                .iter()
-                .find(|req| req["id"] == id)
-                .map(|req| req["id"].as_i64().unwrap_or(0) as i32)
-        })
-        .unwrap_or(0);
+    let tr = template_requirement.as_ref(); // Option<&Requirement>
 
-    let default_status_id = statuses
+    let mut new_requirement = NewRequirement {
+        req_id: None,
+        req_title: tr.map(|r| r.req_title.clone()).unwrap_or_default(),
+        req_description: tr.map(|r| r.req_description.clone()).unwrap_or_default(),
+        req_verification: tr.map(|r| r.req_verification).unwrap_or_default(),
+        req_author: user.user_id,
+        req_link: tr.map(|r| r.req_link.clone()).unwrap_or_default(),
+        req_category: tr.map(|r| r.req_category).unwrap_or_default(),
+        req_current_status: 0, // Draft
+        req_parent: tr.map(|r| r.req_parent).unwrap_or_default(),
+        req_reference: tr.map(|r| r.req_reference.clone()).unwrap_or_default(),
+        req_reviewer: tr.map(|r| r.req_reviewer).unwrap_or_default(),
+        req_applicability: tr.map(|r| r.req_applicability).unwrap_or_default(),
+        req_justification: tr.and_then(|r| r.req_justification.clone()),
+        project_id,
+    };
+
+    // if parent is valid, assign, else 0
+    if let Some(parent_id) = parent {
+        new_requirement.req_parent = parents
+            .iter()
+            .find(|req| req["id"] == parent_id)
+            .map(|_| parent_id)
+            .unwrap_or(0);
+    }
+
+    // Default status to "Draft"
+    new_requirement.req_current_status = statuses
         .iter()
         .find(|st| st.req_st_title.eq_ignore_ascii_case("Draft"))
         .map(|st| st.req_st_id)
-        .unwrap_or_else(|| statuses.first().map(|st| st.req_st_id).unwrap_or_default());
-    let default_category_id = categories.first().map(|cat| cat.cat_id).unwrap_or_default();
-    let default_applicability_id = applicability
-        .first()
-        .map(|app| app.app_id)
         .unwrap_or_default();
-    let default_verification_id = verifications
-        .first()
-        .map(|ver| ver.verification_id)
-        .unwrap_or_default();
-    let default_reviewer_id = users.first().map(|user| user.user_id).unwrap_or_default();
-
-    let mut req_title = String::new();
-    let mut req_description = String::new();
-    let mut req_justification = String::new();
-    let mut req_reference = String::new();
-    let mut req_link = String::new();
-    let mut req_purpose = String::new();
-    let mut req_category_value = default_category_id;
-    let mut req_applicability_value = default_applicability_id;
-    let mut req_verification_value = default_verification_id;
-    let mut req_reviewer_value = default_reviewer_id;
-    let mut req_parent_value = validated_parent;
-    let req_current_status_value = default_status_id;
-
-    if let Some(template_req_id) = template {
-        let requirement = requirement_service.get_by_id(template_req_id)?;
-
-        let trimmed_title = requirement.req_title.trim();
-        if !trimmed_title.is_empty() {
-            if trimmed_title.to_lowercase().contains("(copy") {
-                req_title = trimmed_title.to_string();
-            } else {
-                req_title = format!("{trimmed_title} (Copy)");
-            }
-        }
-
-        let normalized_description = requirement.req_description.replace("\r\n", "\n");
-        let trimmed_description = normalized_description.trim().to_string();
-        req_description = trimmed_description.clone();
-
-        if let Some((purpose_part, body_part)) = trimmed_description.split_once("\n\n") {
-            let purpose_text = purpose_part.trim();
-            let body_text = body_part.trim();
-            if !purpose_text.is_empty() && !body_text.is_empty() {
-                req_purpose = purpose_text.to_string();
-                req_description = body_text.to_string();
-            }
-        }
-
-        req_justification = requirement
-            .req_justification
-            .as_ref()
-            .map(|value| value.trim().to_string())
-            .unwrap_or_default();
-        let trimmed_link = requirement.req_link.trim();
-        if !trimmed_link.is_empty() {
-            req_link = trimmed_link.to_string();
-        }
-
-        if categories
-            .iter()
-            .any(|category| category.cat_id == requirement.req_category)
-        {
-            req_category_value = requirement.req_category;
-        }
-
-        if applicability
-            .iter()
-            .any(|item| item.app_id == requirement.req_applicability)
-        {
-            req_applicability_value = requirement.req_applicability;
-        }
-
-        if verifications
-            .iter()
-            .any(|item| item.verification_id == requirement.req_verification)
-        {
-            req_verification_value = requirement.req_verification;
-        }
-
-        if users
-            .iter()
-            .any(|user| user.user_id == requirement.req_reviewer)
-        {
-            req_reviewer_value = requirement.req_reviewer;
-        }
-
-        if req_parent_value == 0
-            && requirement.req_parent != 0
-            && parents
-                .iter()
-                .any(|candidate| candidate["id"] == requirement.req_parent)
-        {
-            req_parent_value = requirement.req_parent;
-        }
-
-        // Always start new requirements without a reference so a fresh one can be generated.
-        req_reference.clear();
-    }
 
     let created_flash = created.and_then(|flag| {
         if flag == "1" || flag.eq_ignore_ascii_case("true") {
@@ -616,19 +539,7 @@ async fn new_requirement(
             "id": project.project_id,
             "name": project.project_name,
         },
-        "selected_project_id": project_id,
-        "req_title": req_title,
-        "req_description": req_description,
-        "req_justification": req_justification,
-        "req_reference": req_reference,
-        "req_link": req_link,
-        "req_purpose": req_purpose,
-        "req_current_status": req_current_status_value,
-        "req_category": req_category_value,
-        "req_applicability": req_applicability_value,
-        "req_verification": req_verification_value,
-        "req_reviewer": req_reviewer_value,
-        "req_parent": req_parent_value,
+        "template": new_requirement,
         "created_timestamp": created_timestamp,
         "user": user,
         "error": error,

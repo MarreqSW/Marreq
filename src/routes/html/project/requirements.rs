@@ -457,47 +457,16 @@ async fn new_requirement(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
-    let project_service = ProjectService::new(state.inner());
-    let project = match project_service.get_by_id(project_id) {
-        Ok(project) => project,
-        Err(_) => {
-            #[cfg(debug_assertions)]
-            eprintln!(
-                "Failed to load project context for new requirement page: project_id={}",
-                project_id
-            );
-            return Err(Redirect::to(uri!(
-                "/p",
-                show_requirements(
-                    project_id = project_id,
-                    status_filter = Option::<i32>::None,
-                    verification_filter = Option::<i32>::None,
-                    category_filter = Option::<i32>::None
-                )
-            )));
-        }
-    };
-
-    let requirement_service = RequirementService::new(state.inner());
-
-    let parents = match requirement_service.list_by_project(project_id) {
-        Ok(reqs) => reqs,
-        Err(_err) => {
-            #[cfg(debug_assertions)]
-            eprintln!(
-                "Failed to load parent requirements for project {}: {:?}",
-                project_id, _err
-            );
-            Vec::new()
-        }
-    };
+    let project = ProjectService::new(state.inner()).get_by_id(project_id)?;
+    let parents = RequirementService::new(state.inner()).list_by_project(project_id)?;
 
     let validated_parent = parent.and_then(|id| {
         parents
             .iter()
+            .filter(|req| req.req_id != id) // Prevent self-referencing
             .find(|req| req.req_id == id)
             .map(|req| req.req_id)
-    });
+    }).unwrap_or(0);
 
     let template_requirement =
         template.and_then(|id| parents.iter().find(|req| req.req_id == id).cloned());
@@ -552,7 +521,7 @@ async fn new_requirement(
     let mut req_applicability_value = default_applicability_id;
     let mut req_verification_value = default_verification_id;
     let mut req_reviewer_value = default_reviewer_id;
-    let mut req_parent_value = validated_parent.unwrap_or(0);
+    let mut req_parent_value = validated_parent;
     let req_current_status_value = default_status_id;
 
     if let Some(template_req) = template_requirement {

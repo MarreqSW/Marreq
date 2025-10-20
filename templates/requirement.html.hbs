@@ -277,7 +277,7 @@
           <div class="ms-lg-auto">
             <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
               <a
-                href="/p/{{selected_project_id}}/requirements/edit/{{requirement_data.requirement.req_id}}"
+                href="/p/{{project_id}}/requirements/edit/{{requirement_data.requirement.req_id}}"
                 class="btn btn-primary btn-sm"
               >Edit</a>
               <a
@@ -292,7 +292,7 @@
                   <li>
                     <a
                       class="dropdown-item"
-                      href="/p/{{selected_project_id}}/requirements/new?parent={{requirement_data.requirement.req_id}}"
+                      href="/p/{{project_id}}/requirements/new?parent={{requirement_data.requirement.req_id}}"
                     >
                       New child requirement
                     </a>
@@ -300,7 +300,7 @@
                   <li>
                     <a
                       class="dropdown-item"
-                      href="/p/{{selected_project_id}}/requirements/new?template={{requirement_data.requirement.req_id}}"
+                      href="/p/{{project_id}}/requirements/new?template={{requirement_data.requirement.req_id}}"
                     >
                       New from template
                     </a>
@@ -310,7 +310,7 @@
                       class="dropdown-item"
                       type="button"
                       data-action="copy-requirement-link"
-                      data-requirement-url="/p/{{selected_project_id}}/requirements/show/{{requirement_data.requirement.req_id}}"
+                      data-requirement-url="/p/{{project_id}}/requirements/show/{{requirement_data.requirement.req_id}}"
                     >
                       Copy link
                     </button>
@@ -320,7 +320,7 @@
                       class="dropdown-item text-danger"
                       type="button"
                       data-action="delete-requirement"
-                      data-project-id="{{selected_project_id}}"
+                      data-project-id="{{project_id}}"
                       data-requirement-id="{{requirement_data.requirement.req_id}}"
                       data-requirement-title="{{requirement_data.requirement.req_title}}"
                     >

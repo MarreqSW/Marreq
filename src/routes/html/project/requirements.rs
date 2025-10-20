@@ -454,43 +454,37 @@ async fn new_requirement(
     template: Option<i32>, // use this requirement as a template
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
+    let requirement_service = RequirementService::new(state.inner());
 
     let project = ProjectService::new(state.inner()).get_by_id(project_id)?;
-    let parents = RequirementService::new(state.inner()).list_by_project(project_id)?;
+    let statuses = StatusService::new(state.inner()).list_requirement_statuses()?;
+    let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
+    let users = UserService::new(state.inner()).get_by_project(project_id)?;
+    let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
+    let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
 
-    let validated_parent = parent.and_then(|id| {
-        parents
-            .iter()
-            .find(|req| req.req_id == id)
-            .map(|req| req.req_id)
-    }).unwrap_or(0);
+    // Lightweight list of other requirements for linking
+    let parents = RequirementService::new(state.inner())
+        .list_by_project(project_id)?
+        .into_iter()
+        .map(|candidate| {
+            json!({
+                "id": candidate.req_id,
+                "title": candidate.req_title,
+                "reference": candidate.req_reference,
+            })
+        })
+        .collect::<Vec<_>>();
 
-    let template_requirement =
-        template.and_then(|id| parents.iter().find(|req| req.req_id == id).cloned());
 
-    let status_service = StatusService::new(state.inner());
-    let statuses = status_service
-        .list_requirement_statuses()
-        .unwrap_or_default();
-
-    let category_service = CategoryService::new(state.inner());
-    let categories = category_service
-        .list_by_project(project_id)
-        .unwrap_or_default();
-
-    let user_service = UserService::new(state.inner());
-    let users = user_service.list_all().unwrap_or_default();
-
-    let verifications = {
-        let repo = state.repo_read();
-        repo.get_verification_by_project(project_id)
-            .unwrap_or_default()
-    };
-
-    let applicability_service = ApplicabilityService::new(state.inner());
-    let applicability = applicability_service
-        .list_by_project(project_id)
-        .unwrap_or_default();
+    let validated_parent = parent
+        .and_then(|id| {
+            parents
+                .iter()
+                .find(|req| req["id"] == id)
+                .map(|req| req["id"].as_i64().unwrap_or(0) as i32)
+        })
+        .unwrap_or(0);
 
     let default_status_id = statuses
         .iter()
@@ -521,8 +515,10 @@ async fn new_requirement(
     let mut req_parent_value = validated_parent;
     let req_current_status_value = default_status_id;
 
-    if let Some(template_req) = template_requirement {
-        let trimmed_title = template_req.req_title.trim();
+    if let Some(template_req_id) = template {
+        let requirement = requirement_service.get_by_id(template_req_id)?;
+
+        let trimmed_title = requirement.req_title.trim();
         if !trimmed_title.is_empty() {
             if trimmed_title.to_lowercase().contains("(copy") {
                 req_title = trimmed_title.to_string();
@@ -531,7 +527,7 @@ async fn new_requirement(
             }
         }
 
-        let normalized_description = template_req.req_description.replace("\r\n", "\n");
+        let normalized_description = requirement.req_description.replace("\r\n", "\n");
         let trimmed_description = normalized_description.trim().to_string();
         req_description = trimmed_description.clone();
 
@@ -544,51 +540,51 @@ async fn new_requirement(
             }
         }
 
-        req_justification = template_req
+        req_justification = requirement
             .req_justification
             .as_ref()
             .map(|value| value.trim().to_string())
             .unwrap_or_default();
-        let trimmed_link = template_req.req_link.trim();
+        let trimmed_link = requirement.req_link.trim();
         if !trimmed_link.is_empty() {
             req_link = trimmed_link.to_string();
         }
 
         if categories
             .iter()
-            .any(|category| category.cat_id == template_req.req_category)
+            .any(|category| category.cat_id == requirement.req_category)
         {
-            req_category_value = template_req.req_category;
+            req_category_value = requirement.req_category;
         }
 
         if applicability
             .iter()
-            .any(|item| item.app_id == template_req.req_applicability)
+            .any(|item| item.app_id == requirement.req_applicability)
         {
-            req_applicability_value = template_req.req_applicability;
+            req_applicability_value = requirement.req_applicability;
         }
 
         if verifications
             .iter()
-            .any(|item| item.verification_id == template_req.req_verification)
+            .any(|item| item.verification_id == requirement.req_verification)
         {
-            req_verification_value = template_req.req_verification;
+            req_verification_value = requirement.req_verification;
         }
 
         if users
             .iter()
-            .any(|user| user.user_id == template_req.req_reviewer)
+            .any(|user| user.user_id == requirement.req_reviewer)
         {
-            req_reviewer_value = template_req.req_reviewer;
+            req_reviewer_value = requirement.req_reviewer;
         }
 
         if req_parent_value == 0
-            && template_req.req_parent != 0
+            && requirement.req_parent != 0
             && parents
                 .iter()
-                .any(|candidate| candidate.req_id == template_req.req_parent)
+                .any(|candidate| candidate["id"] == requirement.req_parent)
         {
-            req_parent_value = template_req.req_parent;
+            req_parent_value = requirement.req_parent;
         }
 
         // Always start new requirements without a reference so a fresh one can be generated.

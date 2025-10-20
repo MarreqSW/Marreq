@@ -402,7 +402,9 @@ async fn post_edit_requirement(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let service = RequirementService::new(state.inner());
-    if let Some(redir) = enforce_project_ownership(project_id, service.get_by_id(req_id)?.project_id) {
+    if let Some(redir) =
+        enforce_project_ownership(project_id, service.get_by_id(req_id)?.project_id)
+    {
         return Err(redir);
     }
 
@@ -419,48 +421,27 @@ async fn delete_requirement_route(
     state: &State<AppState>,
 ) -> Result<Redirect, rocket::http::Status> {
     let user = project_access.into_user();
-    let list_url = uri!(
-        "/p",
-        show_requirements(
-            project_id = project_id,
-            status_filter = Option::<i32>::None,
-            verification_filter = Option::<i32>::None,
-            category_filter = Option::<i32>::None
-        )
-    );
 
-    // 1) Load requirement or 404
-    let req = match RequirementService::new(state.inner()).get_by_id(req_id) {
-        Ok(r) => r,
-        Err(_) => return Err(rocket::http::Status::NotFound),
-    };
+    let service = RequirementService::new(state.inner());
+    let req = service.get_by_id(req_id)?;
 
-    // 2) Enforce project ownership; if mismatched, redirect to the resource’s project list
-    if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
-        return Ok(redir);
+    if let Some(_redir) = enforce_project_ownership(project_id, req.project_id) {
+        return Err(rocket::http::Status::NotFound);
     }
 
-    // 3) Permission gate: allow only Draft(1) or Proposal(2) or admin
+    // Permission gate: allow only Draft(1) or Proposal(2) or admin
     if req.req_current_status > 2 && !user.is_admin {
         return Err(rocket::http::Status::Forbidden);
     }
 
-    // 4) Delete
-    let service = RequirementService::new(state.inner());
-    match service.delete(&user, req_id) {
-        Ok(_) => {}
-        Err(crate::repository::errors::RepoError::NotFound) => {
-            return Err(rocket::http::Status::NotFound)
-        }
-        Err(_err) => {
-            #[cfg(debug_assertions)]
-            eprintln!("delete_requirement({}) failed: {:?}", req_id, _err);
-            return Err(rocket::http::Status::InternalServerError);
-        }
-    }
+    service.delete(&user, req_id)?;
 
-    // 5) Redirect to this project’s requirements
-    Ok(Redirect::to(list_url))
+    Ok(Redirect::to(uri!(show_requirements(
+        project_id = project_id,
+        status_filter = Option::<i32>::None,
+        verification_filter = Option::<i32>::None,
+        category_filter = Option::<i32>::None
+    ))))
 }
 
 #[get("/<project_id>/requirements/new?<error>&<created>&<parent>&<template>")]

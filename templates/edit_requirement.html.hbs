@@ -10,12 +10,12 @@
   <header class="editor-topbar sticky-top" data-editor-topbar>
     <div class="editor-topbar__context">
       <nav class="editor-breadcrumb" aria-label="Breadcrumb">
-        <a href="/p/{{requirement.project_id}}/requirements" class="editor-breadcrumb__link">
+        <a href="/p/{{req.project_id}}/requirements" class="editor-breadcrumb__link">
           {{#if project}}{{project.name}}{{else}}Project{{/if}}
         </a>
         <span class="editor-breadcrumb__sep">›</span>
         <a
-          href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}"
+          href="/p/{{req.project_id}}/requirements/show/{{req.req_id}}"
           class="editor-breadcrumb__link"
         >{{display_reference}}</a>
       </nav>
@@ -34,7 +34,7 @@
             aria-expanded="false"
           >
             <span class="editor-status__dot"></span>
-            <span class="editor-status__label">{{requirement.req_current_status}}</span>
+            <span class="editor-status__label">{{req.req_current_status}}</span>
           </button>
           <div class="editor-status__menu" data-role="status-menu" hidden>
             {{#each status}}
@@ -87,7 +87,7 @@
         </div>
 
         <a
-          href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}"
+          href="/p/{{req.project_id}}/requirements/show/{{req.req_id}}"
           class="editor-actions__cancel"
         >Cancel</a>
       </div>
@@ -102,7 +102,7 @@
           type="text"
           name="req_title"
           id="req_title"
-          value="{{requirement.req_title}}"
+          value="{{req.req_title}}"
           class="editor-field__input editor-field__input--headline"
           autofocus
           required
@@ -140,7 +140,7 @@
             data-role="requirement-input"
             required
             placeholder="The system shall…"
-          >{{requirement.req_description}}</textarea>
+          >{{req.req_description}}</textarea>
 
           <div class="editor-preview" data-role="preview" hidden>
             <div class="editor-preview__content" data-role="preview-content"></div>
@@ -157,7 +157,7 @@
           type="button"
           class="editor-collapsible__trigger"
           data-role="rationale-toggle"
-          aria-expanded="{{#if requirement.req_justification}}true{{else}}false{{/if}}"
+          aria-expanded="{{#if req.req_justification}}true{{else}}false{{/if}}"
         >
           Rationale / Notes
           <span class="editor-collapsible__hint">Optional</span>
@@ -166,7 +166,7 @@
         <div
           class="editor-collapsible__panel"
           data-role="rationale-panel"
-          {{#unless requirement.req_justification}}hidden{{/unless}}
+          {{#unless req.req_justification}}hidden{{/unless}}
         >
           <textarea
             name="req_justification"
@@ -174,7 +174,7 @@
             class="editor-field__textarea"
             rows="6"
             placeholder="Why is this required?"
-          >{{requirement.req_justification}}</textarea>
+          >{{req.req_justification}}</textarea>
         </div>
       </section>
 
@@ -225,7 +225,7 @@
             type="text"
             name="req_reference"
             id="req_reference"
-            value="{{requirement.req_reference}}"
+            value="{{req.req_reference}}"
             class="editor-field__input"
             placeholder="REQ-SYS-42"
             readonly
@@ -245,7 +245,7 @@
             required
           >
             {{#each categories}}
-              <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../req_category_id)}}selected{{/if}}>
+              <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../req.req_category_id)}}selected{{/if}}>
                 {{cat_title}}
               </option>
             {{/each}}
@@ -261,7 +261,7 @@
             required
           >
             {{#each applicability}}
-              <option value="{{app_id}}" {{#if (eq app_id ../req_applicability_id)}}selected{{/if}}>
+              <option value="{{app_id}}" {{#if (eq app_id ../req.req_applicability_id)}}selected{{/if}}>
                 {{app_title}}
               </option>
             {{/each}}
@@ -277,7 +277,7 @@
             required
           >
             {{#each verification}}
-              <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification_id)}}selected{{/if}}>
+              <option value="{{verification_id}}" {{#if (eq verification_id ../req.req_verification_id)}}selected{{/if}}>
                 {{verification_name}}
               </option>
             {{/each}}
@@ -294,11 +294,11 @@
             type="text"
             id="req_author_display"
             class="editor-field__input"
-            value="{{requirement.req_author}}"
+            value="{{req.req_author}}"
             readonly
             disabled
           >
-          <input type="hidden" name="req_author" value="{{req_author_id}}">
+          <input type="hidden" name="req_author" value="{{req.req_author_id}}">
           <small class="editor-field__help">
             Original author cannot be changed.
           </small>
@@ -313,7 +313,7 @@
             required
           >
             {{#each users}}
-              <option value="{{user_id}}" {{#if (eq user_id ../req_reviewer_id)}}selected{{/if}}>
+              <option value="{{user_id}}" {{#if (eq user_id ../req.req_reviewer_id)}}selected{{/if}}>
                 {{user_name}}
               </option>
             {{/each}}
@@ -330,11 +330,11 @@
             type="text"
             id="req_current_status_display"
             class="editor-field__input"
-            value="{{requirement.req_current_status}}"
+            value="{{req.req_current_status}}"
             readonly
             disabled
           >
-          <input type="hidden" name="req_current_status" value="{{req_current_status_id}}">
+          <input type="hidden" name="req_current_status" value="{{req.req_current_status_id}}">
           <small class="editor-field__help">
             Status is managed by the system workflow.
           </small>
@@ -347,13 +347,13 @@
             id="req_parent"
             class="editor-field__input"
           >
-            <option value="0" {{#if (eq 0 ../req_parent_id)}}selected{{/if}}>None</option>
+            <option value="0" {{#if (eq 0 ../req.req_parent_id)}}selected{{/if}}>None</option>
             {{#each linked_requirement_options}}
               <option
                 value="{{id}}"
                 data-reference="{{reference}}"
                 data-title="{{title}}"
-                {{#if (eq id ../req_parent_id)}}selected{{/if}}
+                {{#if (eq id ../req.req_parent_id)}}selected{{/if}}
               >
                 {{#if reference}}{{reference}}{{else}}RM-{{id}}{{/if}} — {{title}}
               </option>
@@ -363,7 +363,7 @@
       </section>
 
       <section class="editor-meta-group">
-        <h2 class="editor-meta__title">Version comment</h2>
+        <h2 class="editor-meta__title">Changelog</h2>
         <textarea
           class="editor-field__textarea"
           id="version-comment"
@@ -375,38 +375,12 @@
           Coming soon — jot context for reviewers when saving.
         </small>
       </section>
-
-      <section class="editor-meta-group">
-        <h2 class="editor-meta__title">Tags</h2>
-        <div class="editor-tags" data-role="tags-input" aria-disabled="true">
-          <input type="text" class="editor-tags__input" placeholder="Add tags" disabled>
-          <small class="editor-field__help">
-            Tagging is in beta — ask the team to enable it.
-          </small>
-        </div>
-      </section>
-
-      {{#if (or (eq requirement.req_current_status_id 1) (eq requirement.req_current_status_id 2) user.is_admin)}}
-      <section class="editor-meta-group editor-meta-group--danger">
-        <h2 class="editor-meta__title">Danger zone</h2>
-        <button
-          class="btn btn-danger w-100"
-          type="button"
-          data-action="delete-requirement"
-          data-project-id="{{requirement.project_id}}"
-          data-requirement-id="{{requirement.req_id}}"
-          data-requirement-title="{{requirement.req_title}}"
-        >
-          Delete requirement
-        </button>
-      </section>
-      {{/if}}
     </aside>
   </div>
 
   <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
-  <input type="hidden" id="req_id" name="req_id" value="{{requirement.req_id}}">
-  <input type="hidden" id="project_id" name="project_id" value="{{requirement.project_id}}">
+  <input type="hidden" id="req_id" name="req_id" value="{{req.req_id}}">
+  <input type="hidden" id="project_id" name="project_id" value="{{req.project_id}}">
   <input type="hidden" id="autosave-interval" value="{{autosave.interval_ms}}" data-role="autosave-interval">
 </form>
 {{/inline}}

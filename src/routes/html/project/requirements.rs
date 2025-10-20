@@ -200,20 +200,10 @@ async fn show_requirement_id(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
-    let requirement_service = RequirementService::new(state.inner());
-    let project_service = ProjectService::new(state.inner());
     let log_service = LogService::new(state.inner());
     let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
     let decorated_test_service = DecoratedTestService::new(state.inner());
 
-    let raw_requirement = requirement_service.get_by_id(req_id)?;
-
-    // Enforce project ownership
-    if raw_requirement.project_id != project_id {
-        return Err(Redirect::to("error"));
-    }
-
-    let project = project_service.get_by_id(project_id).ok();
     let requirement = decorated_requirement_service.get_by_id(req_id)?;
 
     // Relationship lookups
@@ -248,26 +238,12 @@ async fn show_requirement_id(
             });
     let total_tests = linked_tests.len() as i32;
 
-    let project_value = project
-        .as_ref()
-        .map(|p| {
-            json!({
-                "id": p.project_id,
-                "name": &p.project_name,
-                "status": &p.project_status,
-                "description": &p.project_description
-            })
-        })
-        .unwrap_or_else(|| json!({ "id": project_id }));
-
     let verification_tool_label = requirement.req_verification.clone();
     let verification_tool_id = requirement.req_verification_id;
 
     let canonical_data = json!({
-        "project": project_value.clone(),
-        "selected_project_id": project_id,
+        "project_id": project_id,
         "requirement": requirement,
-        "raw_requirement": raw_requirement,
         "relationships": {
             "parent": parent_requirement,
             "children": child_requirements,
@@ -296,7 +272,6 @@ async fn show_requirement_id(
 
     let ctx = json!({
         "user": user,
-        "project": project_value,
         "selected_project_id": project_id,
         "requirement_data": canonical_data,
         "requirement_data_json": requirement_data_json,
@@ -1403,19 +1378,6 @@ mod tests {
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("REQ-SYS-1"));
         assert!(body.contains("For testing"));
-    }
-
-    #[rocket::async_test]
-    async fn show_requirement_by_id_redirects_on_project_mismatch() {
-        let mut repo = base_repo();
-        let mut req = sample_requirement(1);
-        req.project_id = 2;
-        repo.requirements.insert(1, req);
-        let client = test_client(repo).await;
-
-        let response = get_with_session(&client, "/p/1/requirements/show/1", ADMIN_ID).await;
-        assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("error"));
     }
 
     #[rocket::async_test]

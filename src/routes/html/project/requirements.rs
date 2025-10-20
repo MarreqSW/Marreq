@@ -340,9 +340,9 @@ async fn get_edit_requirement(
         })
         .unwrap_or_else(|| "Unknown author".to_string());
 
+    // Lightweight list of other requirements for linking
     let linked_candidates = service
-        .list_by_project(project_id)
-        .unwrap_or_default()
+        .list_by_project(project_id)?
         .into_iter()
         .filter(|candidate| candidate.req_id != req_id)
         .map(|candidate| {
@@ -354,23 +354,10 @@ async fn get_edit_requirement(
         })
         .collect::<Vec<_>>();
 
-    let category_service = CategoryService::new(state.inner());
-    let categories = category_service
-        .list_by_project(project_id)
-        .unwrap_or_default();
-
+    let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
     let users = UserService::new(state.inner()).get_by_project(project_id)?;
-
-    let verifications = {
-        let repo = state.repo_read();
-        repo.get_verification_by_project(project_id)
-            .unwrap_or_default()
-    };
-
-    let applicability_service = ApplicabilityService::new(state.inner());
-    let applicability = applicability_service
-        .list_by_project(project_id)
-        .unwrap_or_default();
+    let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
+    let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
 
     let display_reference = if req.req_reference.trim().is_empty() {
         format!("RM-{:03}", req.req_id)
@@ -396,7 +383,7 @@ async fn get_edit_requirement(
         "linked_requirement_options": linked_candidates,
         "autosave": {
             "enabled": true,
-            "interval_ms": 30_000
+            "interval_ms": 3_000
         }
     });
 

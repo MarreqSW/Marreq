@@ -168,19 +168,6 @@ function formatDateTime(value) {
   return parsed.toLocaleString();
 }
 
-function formatDate(value) {
-  const raw = normalise(value);
-  if (!raw) {
-    return '';
-  }
-
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.valueOf())) {
-    return raw;
-  }
-  return parsed.toLocaleDateString();
-}
-
 function formatTimelineEntry(entry, index, totalVersions) {
   const summary =
     entry?.log?.description ??
@@ -198,8 +185,8 @@ function formatTimelineEntry(entry, index, totalVersions) {
   };
 }
 
-export function timeline({ requirement = {}, rawRequirement = {}, historyEntries = [] } = {}) {
-  const updateDate = rawRequirement.req_update_date;
+export function timeline({ requirement = {}, historyEntries = [] } = {}) {
+  const updateDate = requirement.req_update_date;
   const reviewer = normalise(requirement.req_reviewer);
   const actor = reviewer || normalise(requirement.req_author);
   const totalVersions = historyEntries.length + 1;
@@ -209,7 +196,7 @@ export function timeline({ requirement = {}, rawRequirement = {}, historyEntries
       version: `v${totalVersions}`,
       summary: `Current revision — ${normalise(requirement.req_current_status)}`,
       actor,
-      timestamp: formatDateTime(updateDate),
+      timestamp: updateDate,
       action: 'CURRENT',
       old_values: null,
       new_values: null,
@@ -280,7 +267,6 @@ export function buildRequirementViewModel(canonical = {}) {
   }
 
   const requirement = canonical.requirement ?? {};
-  const rawRequirement = canonical.raw_requirement ?? {};
   const counts = canonical.verification?.counts ?? {};
   const historyEntries = canonical.history?.entries ?? [];
 
@@ -294,7 +280,6 @@ export function buildRequirementViewModel(canonical = {}) {
   const relationshipsView = relationships(canonical.relationships);
   const timelineEntries = timeline({
     requirement,
-    rawRequirement,
     historyEntries,
   });
 
@@ -305,19 +290,19 @@ export function buildRequirementViewModel(canonical = {}) {
   const metadata = {
     author: {
       name: authorName,
-      timestamp: formatDateTime(rawRequirement.req_creation_date),
+      timestamp: requirement.req_creation_date,
       initial: initials(authorName),
     },
     reviewer: {
       name: reviewerName,
       timestamp: reviewerAssigned
-        ? formatDateTime(rawRequirement.req_update_date)
+        ? requirement.req_update_date
         : null,
       initial: reviewerAssigned ? initials(reviewerName) : null,
       assigned: reviewerAssigned,
     },
-    updated: formatDateTime(rawRequirement.req_update_date),
-    deadline: formatDate(rawRequirement.req_deadline_date),
+    updated: requirement.req_update_date,
+    deadline: requirement.req_deadline_date,
     version: timelineEntries[0]?.version ?? 'v1',
   };
 
@@ -346,7 +331,7 @@ export function buildRequirementViewModel(canonical = {}) {
       failed: safeNumber(counts.failed),
       pending: safeNumber(counts.pending),
       percent,
-      last_checked: formatDateTime(rawRequirement.req_update_date),
+      last_checked: requirement.req_update_date,
       tool: normalise(canonical.verification?.tool_name || requirement.req_verification),
     },
     linked_tests: canonical.linked_tests ?? [],

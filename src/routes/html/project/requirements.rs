@@ -200,31 +200,22 @@ async fn show_requirement_id(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
-    let log_service = LogService::new(state.inner());
     let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
-    let decorated_test_service = DecoratedTestService::new(state.inner());
 
     let requirement = decorated_requirement_service.get_by_id(req_id)?;
-
-    // Relationship lookups
     let parent_requirement = if requirement.req_parent_id != 0 {
-        Some(decorated_requirement_service.get_by_id(requirement.req_parent_id)?)
+        decorated_requirement_service
+            .get_by_id(requirement.req_parent_id)
+            .ok()
     } else {
         None
     };
-
     let child_requirements = decorated_requirement_service.get_by_parent_id(requirement.req_id)?;
 
     // Linked verification artefacts
-    let linked_tests = decorated_test_service
-        .get_linked_to_requirement(req_id)
-        .unwrap_or_default();
+    let linked_tests =
+        DecoratedTestService::new(state.inner()).get_linked_to_requirement(req_id)?;
 
-    let comment_items: Vec<serde_json::Value> = Vec::new();
-
-    let history_entries = log_service
-        .entity_logs(&EntityType::Requirement.to_string(), req_id)
-        .unwrap_or_default();
     let (tests_passed, tests_failed, tests_pending) =
         linked_tests
             .iter()
@@ -236,10 +227,10 @@ async fn show_requirement_id(
                 }
                 acc
             });
-    let total_tests = linked_tests.len() as i32;
 
-    let verification_tool_label = requirement.req_verification.clone();
-    let verification_tool_id = requirement.req_verification_id;
+    let history_entries = LogService::new(state.inner())
+        .entity_logs(&EntityType::Requirement.to_string(), req_id)
+        .unwrap_or_default();
 
     let canonical_data = json!({
         "project_id": project_id,
@@ -250,10 +241,10 @@ async fn show_requirement_id(
         },
         "linked_tests": linked_tests,
         "verification": {
-            "tool_id": verification_tool_id,
-            "tool_name": verification_tool_label,
+            "tool_id": requirement.req_verification_id,
+            "tool_name": requirement.req_verification.clone(),
             "counts": {
-                "total": total_tests,
+                "total": linked_tests.len() as i32,
                 "passed": tests_passed,
                 "failed": tests_failed,
                 "pending": tests_pending,
@@ -263,18 +254,15 @@ async fn show_requirement_id(
             "entries": history_entries,
         },
         "comments": {
-            "items": comment_items,
+            "items": Vec::<serde_json::Value>::new(), // TODO: load comments
         }
     });
-
-    let requirement_data_json =
-        serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string());
 
     let ctx = json!({
         "user": user,
         "project_id": project_id,
         "requirement_data": canonical_data,
-        "requirement_data_json": requirement_data_json,
+        "requirement_data_json": serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string()),
     });
 
     Ok(Template::render("requirement", ctx))

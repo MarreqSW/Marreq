@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use rocket::form::{Form, FromForm};
-use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::serde::json::{json, serde_json, Json};
 use rocket::serde::Deserialize;
@@ -448,12 +447,11 @@ async fn delete_requirement_route(
 async fn new_requirement(
     project_access: ProjectAccess,
     project_id: i32,
-    _cookies: &CookieJar<'_>,
     state: &State<AppState>,
     error: Option<String>,
     created: Option<String>,
     parent: Option<i32>,
-    template: Option<i32>,
+    template: Option<i32>, // use this requirement as a template
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
@@ -463,7 +461,6 @@ async fn new_requirement(
     let validated_parent = parent.and_then(|id| {
         parents
             .iter()
-            .filter(|req| req.req_id != id) // Prevent self-referencing
             .find(|req| req.req_id == id)
             .map(|req| req.req_id)
     }).unwrap_or(0);

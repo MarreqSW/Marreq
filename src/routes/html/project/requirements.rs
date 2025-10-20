@@ -388,13 +388,7 @@ async fn get_edit_requirement(
     };
 
     let ctx = json!({
-        "req_author_id": req.req_author_id,
-        "req_reviewer_id": req.req_reviewer_id,
-        "req_category_id": req.req_category_id,
-        "req_applicability_id": req.req_applicability_id,
-        "req_current_status_id": req.req_current_status_id,
-        "req_verification_id": req.req_verification_id,
-        "req_parent_id": req.req_parent_id,
+        "req": req,
         "categories": categories,
         "status": statuses,
         "parent": parent,
@@ -402,7 +396,6 @@ async fn get_edit_requirement(
         "verification": verifications,
         "applicability": applicability,
         "user": user,
-        "requirement": json!(req),
         "display_reference": display_reference,
         "project": project.map(|p| {
             json!({

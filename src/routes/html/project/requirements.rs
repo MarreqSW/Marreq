@@ -354,11 +354,6 @@ async fn get_edit_requirement(
         })
         .collect::<Vec<_>>();
 
-    // Project-scoped lookups; default to empty on error
-    let statuses = StatusService::new(state.inner())
-        .list_legacy()
-        .unwrap_or_default();
-
     let category_service = CategoryService::new(state.inner());
     let categories = category_service
         .list_by_project(project_id)
@@ -386,7 +381,6 @@ async fn get_edit_requirement(
     let ctx = json!({
         "req": req,
         "categories": categories,
-        "status": statuses,
         "parent": parent,
         "users": users,
         "verification": verifications,

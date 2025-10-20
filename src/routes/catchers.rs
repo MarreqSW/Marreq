@@ -24,6 +24,13 @@ pub fn forbidden(_req: &Request<'_>) -> Template {
     Template::render("access_denied", context)
 }
 
+impl From<RepoError> for rocket::http::Status {
+    fn from(err: RepoError) -> Self {
+        println!("Redirecting to error page due to: {}", err);
+        rocket::http::Status::NotFound
+    }
+}
+
 impl From<RepoError> for Redirect {
     fn from(err: RepoError) -> Self {
         println!("Redirecting to error page due to: {}", err);

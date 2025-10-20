@@ -112,6 +112,27 @@ fn map_repo_error(err: RepoError) -> rocket::http::Status {
     }
 }
 
+// TODO: This shall be an authorization check to enforce project ownership and return a redirect when mismatched
+fn enforce_project_ownership(route_project_id: i32, resource_project_id: i32) -> Option<Redirect> {
+    if resource_project_id != route_project_id {
+        eprintln!(
+            "Project mismatch: route {}, resource {}",
+            route_project_id, resource_project_id
+        );
+        Some(Redirect::to(uri!(
+            "/p",
+            show_requirements(
+                project_id = resource_project_id,
+                status_filter = Option::<i32>::None,
+                verification_filter = Option::<i32>::None,
+                category_filter = Option::<i32>::None
+            )
+        )))
+    } else {
+        None
+    }
+}
+
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
 struct InlineCategoryPayload {
@@ -203,6 +224,11 @@ async fn show_requirement_id(
     let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
 
     let requirement = decorated_requirement_service.get_by_id(req_id)?;
+
+    if let Some(redir) = enforce_project_ownership(project_id, requirement.project_id) {
+        return Err(redir);
+    }
+
     let parent_requirement = if requirement.req_parent_id != 0 {
         decorated_requirement_service
             .get_by_id(requirement.req_parent_id)
@@ -276,51 +302,21 @@ async fn get_edit_requirement(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
+    let project_name = ProjectService::new(state.inner()).get_by_id(project_id)?.project_name;
     let service = DecoratedRequirementService::new(state.inner());
-
-    let req = match service.get_by_id(req_id) {
-        Ok(req) => req,
-        Err(err) => {
-            let ctx = json!({
-                "title": "Error Loading Requirement",
-                "message": "An error occurred while loading the requirement.",
-                "details": format!("{:?}", err),
-                "user": user
-            });
-            return Ok(Template::render("error", ctx));
-        }
-    };
+    let req = service.get_by_id(req_id)?;
 
     // Enforce project ownership; redirect if mismatched
-    if req.project_id != project_id {
-        eprintln!(
-            "Project mismatch on edit: route {}, requirement {}",
-            project_id, req.project_id
-        );
-
-        let url = uri!(
-            "/p",
-            show_requirements(
-                project_id = req.project_id,
-                status_filter = Option::<i32>::None,
-                verification_filter = Option::<i32>::None,
-                category_filter = Option::<i32>::None
-            )
-        );
-        return Err(Redirect::to(url));
+    if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
+        return Err(redir);
     }
 
     let parent: Option<DecoratedRequirement> = if req.req_parent_id != 0 {
-        match service.get_by_id(req.req_parent_id) {
-            Ok(r) => Some(r),
-            Err(_) => None,
-        }
+        Some(service.get_by_id(req.req_parent_id)?)
     } else {
         None
     };
 
-    let project_service = ProjectService::new(state.inner());
-    let project = project_service.get_by_id(project_id).ok();
 
     let log_service = LogService::new(state.inner());
     let history_entries = log_service
@@ -397,14 +393,7 @@ async fn get_edit_requirement(
         "applicability": applicability,
         "user": user,
         "display_reference": display_reference,
-        "project": project.map(|p| {
-            json!({
-                "id": p.project_id,
-                "name": p.project_name,
-                "status": p.project_status,
-                "description": p.project_description,
-            })
-        }),
+        "project_name": project_name,
         "version": {
             "label": version_label,
             "last_editor": last_editor_name,
@@ -489,18 +478,9 @@ async fn delete_requirement_route(
         Err(_) => return Err(rocket::http::Status::NotFound),
     };
 
-    // 2) Enforce project ownership; if mismatched, just bounce to the right project’s list
-    if req.project_id != project_id {
-        let right_list = uri!(
-            "/p",
-            show_requirements(
-                project_id = req.project_id,
-                status_filter = Option::<i32>::None,
-                verification_filter = Option::<i32>::None,
-                category_filter = Option::<i32>::None
-            )
-        );
-        return Ok(Redirect::to(right_list));
+    // 2) Enforce project ownership; if mismatched, redirect to the resource’s project list
+    if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
+        return Ok(redir);
     }
 
     // 3) Permission gate: allow only Draft(1) or Proposal(2) or admin

@@ -45,8 +45,6 @@ struct RequirementCreateForm {
     req_applicability: i32,
     #[field(name = uncased("req_justification"))]
     req_justification: Option<String>,
-    #[field(name = uncased("req_purpose"))]
-    req_purpose: Option<String>,
 }
 
 impl RequirementCreateForm {
@@ -55,7 +53,6 @@ impl RequirementCreateForm {
             intent,
             req_id,
             req_description,
-            req_purpose,
             req_verification,
             req_category,
             req_current_status,
@@ -67,22 +64,10 @@ impl RequirementCreateForm {
             req_title,
         } = self;
 
-        let mut composed_description = req_description.trim().to_string();
-        if let Some(purpose_raw) = req_purpose {
-            let purpose = purpose_raw.trim();
-            if !purpose.is_empty() {
-                if composed_description.is_empty() {
-                    composed_description = purpose.to_string();
-                } else {
-                    composed_description = format!("{purpose}\n\n{composed_description}");
-                }
-            }
-        }
-
         let requirement = NewRequirement {
             req_id,
             req_title,
-            req_description: composed_description,
+            req_description,
             req_verification,
             req_author: author_id,
             req_category,
@@ -335,20 +320,6 @@ async fn get_edit_requirement(
         })
         .unwrap_or_else(|| "Unknown author".to_string());
 
-    // Lightweight list of other requirements for linking
-    let linked_candidates = service
-        .list_by_project(project_id)?
-        .into_iter()
-        .filter(|candidate| candidate.req_id != req_id)
-        .map(|candidate| {
-            json!({
-                "id": candidate.req_id,
-                "title": candidate.req_title,
-                "reference": candidate.req_reference,
-            })
-        })
-        .collect::<Vec<_>>();
-
     let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
     let users = UserService::new(state.inner()).get_by_project(project_id)?;
     let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
@@ -375,7 +346,6 @@ async fn get_edit_requirement(
             "last_editor": last_editor_name,
             "updated_at": req.req_update_date,
         },
-        "linked_requirement_options": linked_candidates,
         "autosave": {
             "enabled": true,
             "interval_ms": 3_000

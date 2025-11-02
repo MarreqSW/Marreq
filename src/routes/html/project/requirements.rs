@@ -31,8 +31,6 @@ struct RequirementCreateForm {
     req_description: String,
     #[field(name = uncased("req_verification"))]
     req_verification: i32,
-    #[field(name = uncased("req_link"))]
-    req_link: String,
     #[field(name = uncased("req_category"))]
     req_category: i32,
     #[field(name = uncased("req_current_status"))]
@@ -59,7 +57,6 @@ impl RequirementCreateForm {
             req_description,
             req_purpose,
             req_verification,
-            req_link,
             req_category,
             req_current_status,
             req_parent,
@@ -88,7 +85,6 @@ impl RequirementCreateForm {
             req_description: composed_description,
             req_verification,
             req_author: author_id,
-            req_link,
             req_category,
             req_current_status,
             req_parent,
@@ -487,7 +483,6 @@ async fn new_requirement(
         req_description: tr.map(|r| r.req_description.clone()).unwrap_or_default(),
         req_verification: tr.map(|r| r.req_verification).unwrap_or_default(),
         req_author: user.user_id,
-        req_link: tr.map(|r| r.req_link.clone()).unwrap_or_default(),
         req_category: tr.map(|r| r.req_category).unwrap_or_default(),
         req_current_status: 0, // Draft
         req_parent: tr.map(|r| r.req_parent).unwrap_or_default(),
@@ -985,7 +980,6 @@ mod tests {
             req_current_status: 1,
             req_author: ADMIN_ID,
             req_reviewer: ADMIN_ID,
-            req_link: "".into(),
             req_reference: format!("REQ-SYS-{id}"),
             req_category: 1,
             req_parent: 0,
@@ -1181,7 +1175,7 @@ mod tests {
             &client,
             "/p/1/requirements/new",
             "req_title=Test&req_description=Description&req_verification=1&\
-             req_current_status=1&req_reviewer=1&req_link=&\
+             req_current_status=1&req_reviewer=1&\
              req_category=1&req_parent=0&req_applicability=1&req_reference=&\
              req_justification=Testing",
             ADMIN_ID,
@@ -1207,7 +1201,7 @@ mod tests {
             &client,
             "/p/1/requirements/new",
             "req_title=Next+Requirement&req_description=Body&req_verification=1&\
-             req_current_status=1&req_reviewer=1&req_link=&\
+             req_current_status=1&req_reviewer=1&\
              req_category=1&req_parent=0&req_applicability=1&req_reference=&\
              req_justification=&intent=add_another",
             ADMIN_ID,
@@ -1297,7 +1291,7 @@ mod tests {
             &client,
             "/p/1/requirements/edit/1",
             "req_id=1&req_title=Updated&req_description=New+desc&req_verification=1&\
-             req_current_status=1&req_author=1&req_reviewer=1&req_link=&\
+             req_current_status=1&req_author=1&req_reviewer=1&\
              req_category=1&req_parent=0&req_applicability=1&\
              req_justification=Changed&project_id=1&req_reference=REQ-SYS-1",
             ADMIN_ID,

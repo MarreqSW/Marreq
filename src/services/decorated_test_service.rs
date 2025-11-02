@@ -204,7 +204,6 @@ mod tests {
                 req_current_status: 0,
                 req_author: 0,
                 req_reviewer: 0,
-                req_link: String::new(),
                 req_reference: String::new(),
                 req_category: 0,
                 req_parent: 0,

@@ -784,10 +784,10 @@ impl TestsRepository for DieselRepo {
             .select((
                 t::test_id,
                 t::test_name,
+                t::test_reference,
                 t::test_description,
                 t::test_source,
                 t::test_status,
-                t::test_reference,
                 t::test_parent,
                 t::project_id,
             ))
@@ -810,7 +810,6 @@ impl TestsRepository for DieselRepo {
                 req_current_status,
                 req_author,
                 req_reviewer,
-                req_link,
                 req_reference,
                 req_category,
                 req_parent,

@@ -532,6 +532,11 @@ async fn new_requirement(
         #[cfg(debug_assertions)]
         println!("Possible parent: {} - {}", parent["id"], parent["title"]);
     }
+
+    // Check if user is admin or project owner
+    let is_admin_or_owner = user.is_admin || 
+        project.project_owner_id.map_or(false, |owner_id| owner_id == user.user_id);
+
     let ctx = json!({
         "categories": categories,
         "status": statuses,
@@ -547,6 +552,7 @@ async fn new_requirement(
         "template": new_requirement,
         "created_timestamp": created_timestamp,
         "user": user,
+        "is_admin_or_owner": is_admin_or_owner,
         "error": error,
         "flash_success": created_flash,
     });

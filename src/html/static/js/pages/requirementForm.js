@@ -180,6 +180,7 @@ function initInlineCreation(form) {
   const config = {
     category: {
       label: 'Category',
+      select: form.querySelector('#req_category'),
       trigger: form.querySelector('[data-role="combo-new"][data-entity="category"]'),
       modal: document.querySelector('#categoryModal'),
       form: document.querySelector('#inlineCategoryForm'),
@@ -191,9 +192,7 @@ function initInlineCreation(form) {
       }),
       apply: (data) => {
         const select = form.querySelector('#req_category');
-        const datalist = form.querySelector('#req_category_options');
-        const input = form.querySelector('#req_category_search');
-        if (!select || !datalist) {
+        if (!select) {
           return;
         }
 
@@ -207,22 +206,13 @@ function initInlineCreation(form) {
         select.value = String(data.id);
         select.dispatchEvent(new Event('change', { bubbles: true }));
 
-        const listOption = document.createElement('option');
-        listOption.value = data.label;
-        listOption.dataset.id = String(data.id);
-        if (data.tag) {
-          listOption.dataset.tag = data.tag;
-        }
-        datalist.append(listOption);
-        if (input) {
-          input.value = data.label;
-        }
         const reference = form.querySelector('#req_reference');
         reference?.dispatchEvent(new Event('input', { bubbles: true }));
       },
     },
     applicability: {
       label: 'Applicability',
+      select: form.querySelector('#req_applicability'),
       trigger: form.querySelector('[data-role="combo-new"][data-entity="applicability"]'),
       modal: document.querySelector('#applicabilityModal'),
       form: document.querySelector('#inlineApplicabilityForm'),
@@ -234,9 +224,7 @@ function initInlineCreation(form) {
       }),
       apply: (data) => {
         const select = form.querySelector('#req_applicability');
-        const datalist = form.querySelector('#req_applicability_options');
-        const input = form.querySelector('#req_applicability_search');
-        if (!select || !datalist) {
+        if (!select) {
           return;
         }
 
@@ -246,18 +234,11 @@ function initInlineCreation(form) {
         select.append(option);
         select.value = String(data.id);
         select.dispatchEvent(new Event('change', { bubbles: true }));
-
-        const listOption = document.createElement('option');
-        listOption.value = data.label;
-        listOption.dataset.id = String(data.id);
-        datalist.append(listOption);
-        if (input) {
-          input.value = data.label;
-        }
       },
     },
     verification: {
       label: 'Verification method',
+      select: form.querySelector('#req_verification'),
       trigger: form.querySelector('[data-role="combo-new"][data-entity="verification"]'),
       modal: document.querySelector('#verificationModal'),
       form: document.querySelector('#inlineVerificationForm'),
@@ -268,9 +249,7 @@ function initInlineCreation(form) {
       }),
       apply: (data) => {
         const select = form.querySelector('#req_verification');
-        const datalist = form.querySelector('#req_verification_options');
-        const input = form.querySelector('#req_verification_search');
-        if (!select || !datalist) {
+        if (!select) {
           return;
         }
 
@@ -280,20 +259,40 @@ function initInlineCreation(form) {
         select.append(option);
         select.value = String(data.id);
         select.dispatchEvent(new Event('change', { bubbles: true }));
-
-        const listOption = document.createElement('option');
-        listOption.value = data.label;
-        listOption.dataset.id = String(data.id);
-        datalist.append(listOption);
-        if (input) {
-          input.value = data.label;
-        }
       },
     },
   };
 
   Object.values(config).forEach((entry) => {
-    const { trigger, modal, form: modalForm } = entry;
+    const { trigger, modal, form: modalForm, select } = entry;
+    
+    // Handle dropdown selection triggering modal
+    if (select && modal && modalForm) {
+      const bootstrapModal = new window.bootstrap.Modal(modal);
+      
+      select.addEventListener('change', (event) => {
+        if (select.value === '') {
+          event.preventDefault();
+          modalForm.reset();
+          bootstrapModal.show();
+        }
+      });
+      
+      modalForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const formData = new FormData(modalForm);
+        const submitButton = modalForm.querySelector('button[type="submit"]');
+        submitInline(entry, entry.serialize(formData), {
+          submitButton,
+          onSuccess: () => {
+            bootstrapModal.hide();
+            modalForm.reset();
+          },
+        });
+      });
+    }
+
+    // Handle old trigger buttons (if they still exist)
     if (!trigger) {
       return;
     }

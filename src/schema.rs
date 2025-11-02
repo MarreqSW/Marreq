@@ -74,6 +74,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    requirement_status (req_st_id) {
+        req_st_id -> Int4,
+        req_st_title -> Varchar,
+        req_st_description -> Varchar,
+        req_st_short_name -> Varchar,
+    }
+}
+
+diesel::table! {
     requirements (req_id) {
         req_id -> Int4,
         req_title -> Varchar,
@@ -82,7 +91,6 @@ diesel::table! {
         req_current_status -> Int4,
         req_author -> Int4,
         req_reviewer -> Int4,
-        req_link -> Varchar,
         req_reference -> Varchar,
         req_category -> Int4,
         req_parent -> Int4,
@@ -92,15 +100,6 @@ diesel::table! {
         req_applicability -> Int4,
         req_justification -> Nullable<Text>,
         project_id -> Int4,
-    }
-}
-
-diesel::table! {
-    requirement_status (req_st_id) {
-        req_st_id -> Int4,
-        req_st_title -> Varchar,
-        req_st_description -> Varchar,
-        req_st_short_name -> Varchar,
     }
 }
 
@@ -117,10 +116,10 @@ diesel::table! {
     tests (test_id) {
         test_id -> Int4,
         test_name -> Varchar,
+        test_reference -> Varchar,
         test_description -> Varchar,
         test_source -> Varchar,
         test_status -> Int4,
-        test_reference -> Varchar,
         test_parent -> Int4,
         project_id -> Int4,
     }
@@ -154,6 +153,8 @@ diesel::joinable!(categories -> projects (project_id));
 diesel::joinable!(logs -> projects (project_id));
 diesel::joinable!(logs -> users (user_id));
 diesel::joinable!(matrix -> projects (project_id));
+diesel::joinable!(matrix -> requirements (matrix_req_id));
+diesel::joinable!(matrix -> tests (matrix_test_id));
 diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (user_id));
 diesel::joinable!(requirements -> applicability (req_applicability));

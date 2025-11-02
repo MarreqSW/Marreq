@@ -928,7 +928,7 @@ function initCreateAutosave(form) {
     };
     window.localStorage.setItem(storageKey, JSON.stringify(payload));
     indicator?.setAttribute('hidden', '');
-    autosaveText.textContent = `Draft saved locally · ${formatTime(new Date(payload.savedAt))}`;
+    // autosaveText.textContent = `Draft saved locally · ${formatTime(new Date(payload.savedAt))}`;
   }
 
   function scheduleSave() {
@@ -941,14 +941,13 @@ function initCreateAutosave(form) {
       return;
     }
     indicator?.removeAttribute('hidden');
-    autosaveText.textContent = 'Saving draft…';
+    // autosaveText.textContent = 'Saving draft…';
     scheduleSave();
   }
 
   function restoreSnapshot() {
     const raw = window.localStorage.getItem(storageKey);
     if (!raw) {
-      autosaveText.textContent = 'Draft not saved';
       return;
     }
 
@@ -958,18 +957,12 @@ function initCreateAutosave(form) {
         restoring = true;
         applySnapshot(form, fields, snapshot.values);
         restoring = false;
-        autosaveText.textContent = snapshot.savedAt
-          ? `Draft restored · ${formatTime(new Date(snapshot.savedAt))}`
-          : 'Draft restored';
         showNotification('Restored unsaved draft for this project', 'info', {
           duration: 4000,
         });
-      } else {
-        autosaveText.textContent = 'Draft not saved';
       }
     } catch (error) {
       console.error('Failed to restore draft', error);
-      autosaveText.textContent = 'Draft not saved';
     }
   }
 
@@ -990,7 +983,6 @@ function initCreateAutosave(form) {
     window.clearTimeout(saveTimer);
     window.localStorage.removeItem(storageKey);
     indicator?.setAttribute('hidden', '');
-    autosaveText.textContent = 'Saving…';
   });
 
   const cancel = form.querySelector('[data-role="cancel-create"]');

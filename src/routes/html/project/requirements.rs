@@ -325,6 +325,20 @@ async fn get_edit_requirement(
     let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
     let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
 
+    // Lightweight list of other requirements for linking (excluding current requirement)
+    let linked_requirement_options = RequirementService::new(state.inner())
+        .list_by_project(project_id)?
+        .into_iter()
+        .filter(|candidate| candidate.req_id != req_id) // Don't allow self-reference
+        .map(|candidate| {
+            json!({
+                "id": candidate.req_id,
+                "title": candidate.req_title,
+                "reference": candidate.req_reference,
+            })
+        })
+        .collect::<Vec<_>>();
+
     let display_reference = if req.req_reference.trim().is_empty() {
         format!("RM-{:03}", req.req_id)
     } else {
@@ -338,6 +352,7 @@ async fn get_edit_requirement(
         "users": users,
         "verification": verifications,
         "applicability": applicability,
+        "linked_requirement_options": linked_requirement_options,
         "user": user,
         "display_reference": display_reference,
         "project_name": project_name,

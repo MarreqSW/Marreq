@@ -167,6 +167,35 @@
         </div>
       </section>
 
+      <section class="editor-section editor-section--changelog">
+        <button
+          type="button"
+          class="editor-collapsible__trigger"
+          data-role="changelog-toggle"
+          aria-expanded="false"
+        >
+          Changelog
+          <span class="editor-collapsible__hint">Optional</span>
+        </button>
+
+        <div
+          class="editor-collapsible__panel"
+          data-role="changelog-panel"
+          hidden
+        >
+          <textarea
+            class="editor-field__textarea"
+            id="version-comment"
+            placeholder="Describe what changed"
+            data-role="version-comment"
+            disabled
+          ></textarea>
+          <small class="editor-field__help">
+            Coming soon — jot context for reviewers when saving.
+          </small>
+        </div>
+      </section>
+
       <section class="editor-section editor-section--attachments">
         <h2 class="editor-section__title">Attachments</h2>
         <div class="editor-dropzone" data-role="attachments-zone">
@@ -310,20 +339,6 @@
             {{/each}}
           </select>
         </div>
-      </section>
-
-      <section class="editor-meta-group">
-        <h2 class="editor-meta__title">Changelog</h2>
-        <textarea
-          class="editor-field__textarea"
-          id="version-comment"
-          placeholder="Describe what changed"
-          data-role="version-comment"
-          disabled
-        ></textarea>
-        <small class="editor-field__help">
-          Coming soon — jot context for reviewers when saving.
-        </small>
       </section>
     </aside>
   </div>

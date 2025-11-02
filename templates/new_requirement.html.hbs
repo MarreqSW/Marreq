@@ -54,7 +54,9 @@
 
       <div class="create-card__body">
         <div class="create-field">
-          <label for="req_title" class="create-field__label">Title</label>
+          <label for="req_title" class="create-field__label">
+            Title <span class="create-field__required">*</span>
+          </label>
           <input
             type="text"
             name="req_title"
@@ -67,7 +69,9 @@
         </div>
 
         <div class="create-field">
-          <label for="req_reference" class="create-field__label">Reference</label>
+          <label for="req_reference" class="create-field__label">
+            Reference <span class="create-field__optional">(optional)</span>
+          </label>
           <input
             type="text"
             name="req_reference"
@@ -79,12 +83,9 @@
         </div>
 
         <div class="create-field">
-          <div class="create-field__label-row">
-            <label for="req_purpose" class="create-field__label">
-              Purpose
-            </label>
-            <span class="create-field__badge">Recommended</span>
-          </div>
+          <label for="req_purpose" class="create-field__label">
+            Purpose <span class="create-field__optional">(optional)</span>
+          </label>
           <textarea
             name="req_purpose"
             id="req_purpose"
@@ -95,10 +96,9 @@
         </div>
 
         <div class="create-field">
-          <div class="create-field__label-row">
-            <label for="req_description" class="create-field__label">Statement</label>
-            <span class="create-field__badge create-field__badge--required">Required</span>
-          </div>
+          <label for="req_description" class="create-field__label">
+            Statement <span class="create-field__required">*</span>
+          </label>
           <textarea
             name="req_description"
             id="req_description"
@@ -110,12 +110,9 @@
         </div>
 
         <div class="create-field">
-          <div class="create-field__label-row">
-            <label for="req_justification" class="create-field__label">
-              Rationale
-            </label>
-            <span class="create-field__badge">Recommended</span>
-          </div>
+          <label for="req_justification" class="create-field__label">
+            Rationale <span class="create-field__optional">(optional)</span>
+          </label>
           <textarea
             name="req_justification"
             id="req_justification"
@@ -147,7 +144,9 @@
         </div>
 
         <div class="create-field">
-          <label for="req_reviewer" class="create-field__label">Reviewer</label>
+          <label for="req_reviewer" class="create-field__label">
+            Reviewer <span class="create-field__required">*</span>
+          </label>
           <div class="custom-dropdown" data-dropdown="reviewer">
             <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
               <span class="custom-dropdown__value" data-role="dropdown-value">Select reviewer...</span>
@@ -172,7 +171,7 @@
 
         <div class="create-field">
           <label for="req_category" class="create-field__label">
-            Category
+            Category <span class="create-field__required">*</span>
           </label>
           <div class="custom-dropdown" data-dropdown="category">
             <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
@@ -204,7 +203,7 @@
 
         <div class="create-field">
           <label for="req_applicability" class="create-field__label">
-            Applicability
+            Applicability <span class="create-field__required">*</span>
           </label>
           <div class="custom-dropdown" data-dropdown="applicability">
             <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
@@ -235,7 +234,7 @@
 
         <div class="create-field">
           <label for="req_verification" class="create-field__label">
-            Verification Method
+            Verification Method <span class="create-field__required">*</span>
           </label>
           <div class="custom-dropdown" data-dropdown="verification">
             <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
@@ -267,7 +266,7 @@
         {{#if is_admin_or_owner}}
         <div class="create-field">
           <label for="req_current_status" class="create-field__label">
-            Status
+            Status <span class="create-field__required">*</span>
           </label>
           <select
             name="req_current_status"
@@ -287,7 +286,9 @@
         {{/if}}
 
         <div class="create-field">
-          <label for="req_parent" class="create-field__label">Parent Requirement</label>
+          <label for="req_parent" class="create-field__label">
+            Parent Requirement <span class="create-field__optional">(optional)</span>
+          </label>
           <div class="custom-dropdown custom-dropdown--searchable" data-dropdown="parent">
             <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
               <span class="custom-dropdown__value" data-role="dropdown-value">Select parent requirement...</span>

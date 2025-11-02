@@ -172,6 +172,21 @@
   font-size: var(--text-sm);
 }
 
+.create-field__tooltip {
+  display: inline-block;
+  margin-left: 0.25rem;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  cursor: help;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.create-field__tooltip:hover {
+  opacity: 1;
+  color: #6b7280;
+}
+
 .create-field__label-row {
   display: flex;
   align-items: baseline;

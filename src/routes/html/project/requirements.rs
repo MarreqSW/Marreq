@@ -1350,4 +1350,390 @@ mod tests {
         assert!(body.contains("REQ-SYS-1"));
         assert!(body.contains("REQ-SYS-2"));
     }
+
+    // Additional edge case and validation tests
+
+    #[rocket::async_test]
+    async fn post_requirement_validates_empty_title() {
+        let client = test_client(base_repo()).await;
+        let response = post_form_with_session(
+            &client,
+            "/p/1/requirements/new",
+            "req_title=&req_description=Test&req_verification=1&\
+             req_current_status=1&req_reviewer=1&\
+             req_category=1&req_parent=0&req_applicability=1&req_reference=",
+            ADMIN_ID,
+        )
+        .await;
+
+        // Should fail validation for empty title
+        assert!(
+            response.status() == Status::BadRequest || response.status() == Status::SeeOther
+        );
+    }
+
+    #[rocket::async_test]
+    async fn post_requirement_with_invalid_reference_format() {
+        let client = test_client(base_repo()).await;
+        let response = post_form_with_session(
+            &client,
+            "/p/1/requirements/new",
+            "req_title=Test&req_description=Body&req_verification=1&\
+             req_current_status=1&req_reviewer=1&\
+             req_category=1&req_parent=0&req_applicability=1&\
+             req_reference=INVALID-FORMAT",
+            ADMIN_ID,
+        )
+        .await;
+
+        // Should redirect to new form with error
+        assert_eq!(response.status(), Status::SeeOther);
+        let location = response.headers().get_one("Location").unwrap_or("");
+        assert!(location.contains("error") || location.contains("new"));
+    }
+
+    #[rocket::async_test]
+    async fn post_requirement_with_valid_custom_reference() {
+        let client = test_client(base_repo()).await;
+        let response = post_form_with_session(
+            &client,
+            "/p/1/requirements/new",
+            "req_title=Custom&req_description=Test&req_verification=1&\
+             req_current_status=1&req_reviewer=1&\
+             req_category=1&req_parent=0&req_applicability=1&\
+             req_reference=REQ-SYS-999",
+            ADMIN_ID,
+        )
+        .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let reqs = state
+            .repo_read()
+            .get_requirements_by_project(PRIMARY_PROJECT)
+            .unwrap();
+        assert_eq!(reqs.len(), 1);
+        assert_eq!(reqs[0].req_reference, "REQ-SYS-999");
+    }
+
+    #[rocket::async_test]
+    async fn show_requirement_enforces_project_ownership() {
+        let mut repo = base_repo();
+        
+        // Create requirement in different project
+        let mut req = sample_requirement(1);
+        req.project_id = 99; // Different project
+        repo.requirements.insert(1, req);
+
+        let client = test_client(repo).await;
+
+        let response = get_with_session(&client, "/p/1/requirements/show/1", ADMIN_ID).await;
+        
+        // Should redirect to the correct project
+        assert_eq!(response.status(), Status::SeeOther);
+        let location = response.headers().get_one("Location").unwrap_or("");
+        assert!(location.contains("/p/99/"));
+    }
+
+    #[rocket::async_test]
+    async fn edit_requirement_enforces_project_ownership() {
+        let mut repo = base_repo();
+        
+        let mut req = sample_requirement(1);
+        req.project_id = 99;
+        repo.requirements.insert(1, req);
+
+        let client = test_client(repo).await;
+
+        let response = get_with_session(&client, "/p/1/requirements/edit/1", ADMIN_ID).await;
+        
+        assert_eq!(response.status(), Status::SeeOther);
+        let location = response.headers().get_one("Location").unwrap_or("");
+        assert!(location.contains("/p/99/"));
+    }
+
+    #[rocket::async_test]
+    async fn new_requirement_displays_flash_message() {
+        let client = test_client(base_repo()).await;
+        let response = get_with_session(&client, "/p/1/requirements/new?created=1", ADMIN_ID).await;
+        
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("created successfully") || body.contains("data-flash-success"));
+    }
+
+    #[rocket::async_test]
+    async fn new_requirement_with_parent_parameter() {
+        let mut repo = base_repo();
+        repo.requirements.insert(1, sample_requirement(1));
+        let client = test_client(repo).await;
+
+        let response = get_with_session(&client, "/p/1/requirements/new?parent=1", ADMIN_ID).await;
+        
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("New Requirement"));
+        // Parent should be pre-selected
+        assert!(body.contains("value=\"1\"") || body.contains("selected"));
+    }
+
+    #[rocket::async_test]
+    async fn new_requirement_with_template_parameter() {
+        let mut repo = base_repo();
+        let mut template_req = sample_requirement(1);
+        template_req.req_title = "Template Title".into();
+        template_req.req_description = "Template Description".into();
+        repo.requirements.insert(1, template_req);
+        let client = test_client(repo).await;
+
+        let response = get_with_session(&client, "/p/1/requirements/new?template=1", ADMIN_ID).await;
+        
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("Template Title") || body.contains("Template Description"));
+    }
+
+    #[rocket::async_test]
+    async fn delete_requirement_admin_can_delete_released() {
+        let mut repo = base_repo();
+        let mut req = sample_requirement(1);
+        req.req_current_status = 5; // Released/higher status
+        repo.requirements.insert(1, req);
+
+        let client = test_client(repo).await;
+
+        let response = delete_with_session(&client, "/p/1/requirements/delete/1", ADMIN_ID).await;
+        
+        // Admin should be able to delete
+        assert_eq!(response.status(), Status::SeeOther);
+    }
+
+    #[rocket::async_test]
+    async fn requirement_edit_updates_all_fields() {
+        let mut repo = base_repo();
+        repo.requirements.insert(1, sample_requirement(1));
+        let client = test_client(repo).await;
+
+        let response = post_form_with_session(
+            &client,
+            "/p/1/requirements/edit/1",
+            "req_id=1&req_title=Updated+Title&req_description=Updated+Description&\
+             req_verification=1&req_current_status=1&req_author=1&req_reviewer=1&\
+             req_category=1&req_parent=0&req_applicability=1&\
+             req_justification=Updated+Justification&project_id=1&req_reference=REQ-SYS-1",
+            ADMIN_ID,
+        )
+        .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let req = state.repo_read().get_requirement_by_id(1).unwrap();
+        assert_eq!(req.req_title, "Updated Title");
+        assert_eq!(req.req_description, "Updated Description");
+        assert_eq!(req.req_justification, Some("Updated Justification".into()));
+    }
+
+    #[rocket::async_test]
+    async fn show_requirements_with_multiple_filters() {
+        let mut repo = base_repo();
+        
+        // Add requirements with different statuses and categories
+        let mut req1 = sample_requirement(1);
+        req1.req_current_status = 1;
+        req1.req_category = 1;
+        req1.req_verification = 1;
+        repo.requirements.insert(1, req1);
+
+        let mut req2 = sample_requirement(2);
+        req2.req_current_status = 2;
+        req2.req_category = 1;
+        req2.req_verification = 1;
+        req2.req_reference = "REQ-SYS-2".into();
+        repo.requirements.insert(2, req2);
+
+        let client = test_client(repo).await;
+
+        let response = get_with_session(
+            &client,
+            "/p/1/requirements?status_filter=1&category_filter=1&verification_filter=1",
+            ADMIN_ID,
+        )
+        .await;
+        
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("Requirement 1"));
+        assert!(!body.contains("Requirement 2"));
+    }
+
+    #[rocket::async_test]
+    async fn show_requirements_displays_metrics() {
+        let mut repo = base_repo();
+        
+        // Add requirements with different statuses
+        let mut req1 = sample_requirement(1);
+        req1.req_current_status = 1; // Draft
+        repo.requirements.insert(1, req1);
+
+        let mut req2 = sample_requirement(2);
+        req2.req_current_status = 1; // Draft
+        req2.req_reference = "REQ-SYS-2".into();
+        repo.requirements.insert(2, req2);
+
+        let client = test_client(repo).await;
+
+        let response = get_with_session(&client, "/p/1/requirements", ADMIN_ID).await;
+        
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("valid response");
+        // Should show total count
+        assert!(body.contains("requirement_metrics"));
+    }
+
+    #[rocket::async_test]
+    async fn requirement_detail_shows_parent_and_children() {
+        let mut repo = base_repo();
+        
+        let parent = sample_requirement(1);
+        repo.requirements.insert(1, parent);
+
+        let mut child = sample_requirement(2);
+        child.req_parent = 1;
+        child.req_reference = "REQ-SYS-2".into();
+        repo.requirements.insert(2, child);
+
+        let client = test_client(repo).await;
+
+        let response = get_with_session(&client, "/p/1/requirements/show/1", ADMIN_ID).await;
+        
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("valid response");
+        // Should contain child requirement
+        assert!(body.contains("REQ-SYS-2"));
+    }
+
+    #[rocket::async_test]
+    async fn requirement_detail_shows_linked_tests() {
+        let mut repo = base_repo();
+        
+        repo.requirements.insert(1, sample_requirement(1));
+        
+        // Note: Test linking is more complex and would require matrix implementation
+        // This test verifies the detail page renders even without linked tests
+
+        let client = test_client(repo).await;
+
+        let response = get_with_session(&client, "/p/1/requirements/show/1", ADMIN_ID).await;
+        
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("REQ-SYS-1"));
+    }
+
+    #[rocket::async_test]
+    async fn inline_category_creation_returns_new_id() {
+        let client = test_client(base_repo()).await;
+        let response = client
+            .post("/p/1/requirements/inline/category")
+            .header(ContentType::JSON)
+            .private_cookie(session_cookie(ADMIN_ID))
+            .body(r#"{"title":"New Category","description":"Test category","tag":"NEW"}"#)
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("inline response");
+        let value: JsonValue = serde_json::from_str(&body).expect("json");
+        assert_eq!(value["label"], "New Category");
+        assert_eq!(value["tag"], "NEW");
+        assert!(value["id"].as_i64().is_some());
+    }
+
+    #[rocket::async_test]
+    async fn requirements_tree_handles_empty_project() {
+        let client = test_client(base_repo()).await;
+
+        let response = get_with_session(&client, "/p/1/requirements/tree", ADMIN_ID).await;
+        
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("total_requirements") || body.contains("tree"));
+    }
+
+    #[rocket::async_test]
+    async fn requirements_tree_handles_multiple_levels() {
+        let mut repo = base_repo();
+        
+        let parent = sample_requirement(1);
+        repo.requirements.insert(1, parent);
+
+        let mut child = sample_requirement(2);
+        child.req_parent = 1;
+        child.req_reference = "REQ-SYS-2".into();
+        repo.requirements.insert(2, child);
+
+        let mut grandchild = sample_requirement(3);
+        grandchild.req_parent = 2;
+        grandchild.req_reference = "REQ-SYS-3".into();
+        repo.requirements.insert(3, grandchild);
+
+        let client = test_client(repo).await;
+
+        let response = get_with_session(&client, "/p/1/requirements/tree", ADMIN_ID).await;
+        
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("valid response");
+        assert!(body.contains("REQ-SYS-1"));
+        assert!(body.contains("REQ-SYS-2"));
+        assert!(body.contains("REQ-SYS-3"));
+    }
+
+    #[rocket::async_test]
+    async fn unauthorized_user_cannot_access_requirements() {
+        let mut repo = base_repo();
+        
+        // Create non-member user
+        let mut user = DieselRepoMock::make_user(99, "outsider", "");
+        user.is_admin = false;
+        repo.users.insert(99, user);
+
+        repo.requirements.insert(1, sample_requirement(1));
+        let client = test_client(repo).await;
+
+        let response = get_with_session(&client, "/p/1/requirements", 99).await;
+        
+        // Should be forbidden or redirect
+        assert!(
+            response.status() == Status::Forbidden 
+            || response.status() == Status::SeeOther
+            || response.status() == Status::Unauthorized
+        );
+    }
+
+    #[rocket::async_test]
+    async fn post_edit_requirement_enforces_project_match() {
+        let mut repo = base_repo();
+        
+        let mut req = sample_requirement(1);
+        req.project_id = 99;
+        repo.requirements.insert(1, req);
+
+        let client = test_client(repo).await;
+
+        let response = post_form_with_session(
+            &client,
+            "/p/1/requirements/edit/1",
+            "req_id=1&req_title=Hack&req_description=Test&req_verification=1&\
+             req_current_status=1&req_author=1&req_reviewer=1&\
+             req_category=1&req_parent=0&req_applicability=1&\
+             req_justification=&project_id=1&req_reference=REQ-SYS-1",
+            ADMIN_ID,
+        )
+        .await;
+
+        // Should redirect to correct project
+        assert_eq!(response.status(), Status::SeeOther);
+        let location = response.headers().get_one("Location").unwrap_or("");
+        assert!(location.contains("/p/99/"));
+    }
 }

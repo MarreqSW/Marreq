@@ -6,6 +6,10 @@ authors = ["Màrius Montón <marius.monton@gmail.com>"]
 description = "Requirements management"
 license = "GNU General Public License"
 
+[features]
+# Enable test helpers for integration tests
+test-helpers = []
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

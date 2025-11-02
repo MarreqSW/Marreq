@@ -517,8 +517,10 @@ async fn new_requirement(
     }
 
     // Check if user is admin or project owner
-    let is_admin_or_owner = user.is_admin || 
-        project.project_owner_id.map_or(false, |owner_id| owner_id == user.user_id);
+    let is_admin_or_owner = user.is_admin
+        || project
+            .project_owner_id
+            .map_or(false, |owner_id| owner_id == user.user_id);
 
     let ctx = json!({
         "categories": categories,
@@ -1367,9 +1369,7 @@ mod tests {
         .await;
 
         // Should fail validation for empty title
-        assert!(
-            response.status() == Status::BadRequest || response.status() == Status::SeeOther
-        );
+        assert!(response.status() == Status::BadRequest || response.status() == Status::SeeOther);
     }
 
     #[rocket::async_test]
@@ -1419,7 +1419,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_requirement_enforces_project_ownership() {
         let mut repo = base_repo();
-        
+
         // Create requirement in different project
         let mut req = sample_requirement(1);
         req.project_id = 99; // Different project
@@ -1428,7 +1428,7 @@ mod tests {
         let client = test_client(repo).await;
 
         let response = get_with_session(&client, "/p/1/requirements/show/1", ADMIN_ID).await;
-        
+
         // Should redirect to the correct project
         assert_eq!(response.status(), Status::SeeOther);
         let location = response.headers().get_one("Location").unwrap_or("");
@@ -1438,7 +1438,7 @@ mod tests {
     #[rocket::async_test]
     async fn edit_requirement_enforces_project_ownership() {
         let mut repo = base_repo();
-        
+
         let mut req = sample_requirement(1);
         req.project_id = 99;
         repo.requirements.insert(1, req);
@@ -1446,7 +1446,7 @@ mod tests {
         let client = test_client(repo).await;
 
         let response = get_with_session(&client, "/p/1/requirements/edit/1", ADMIN_ID).await;
-        
+
         assert_eq!(response.status(), Status::SeeOther);
         let location = response.headers().get_one("Location").unwrap_or("");
         assert!(location.contains("/p/99/"));
@@ -1456,7 +1456,7 @@ mod tests {
     async fn new_requirement_displays_flash_message() {
         let client = test_client(base_repo()).await;
         let response = get_with_session(&client, "/p/1/requirements/new?created=1", ADMIN_ID).await;
-        
+
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("created successfully") || body.contains("data-flash-success"));
@@ -1469,7 +1469,7 @@ mod tests {
         let client = test_client(repo).await;
 
         let response = get_with_session(&client, "/p/1/requirements/new?parent=1", ADMIN_ID).await;
-        
+
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("New Requirement"));
@@ -1486,8 +1486,9 @@ mod tests {
         repo.requirements.insert(1, template_req);
         let client = test_client(repo).await;
 
-        let response = get_with_session(&client, "/p/1/requirements/new?template=1", ADMIN_ID).await;
-        
+        let response =
+            get_with_session(&client, "/p/1/requirements/new?template=1", ADMIN_ID).await;
+
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("Template Title") || body.contains("Template Description"));
@@ -1503,7 +1504,7 @@ mod tests {
         let client = test_client(repo).await;
 
         let response = delete_with_session(&client, "/p/1/requirements/delete/1", ADMIN_ID).await;
-        
+
         // Admin should be able to delete
         assert_eq!(response.status(), Status::SeeOther);
     }
@@ -1536,7 +1537,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_requirements_with_multiple_filters() {
         let mut repo = base_repo();
-        
+
         // Add requirements with different statuses and categories
         let mut req1 = sample_requirement(1);
         req1.req_current_status = 1;
@@ -1559,7 +1560,7 @@ mod tests {
             ADMIN_ID,
         )
         .await;
-        
+
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("Requirement 1"));
@@ -1569,7 +1570,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_requirements_displays_metrics() {
         let mut repo = base_repo();
-        
+
         // Add requirements with different statuses
         let mut req1 = sample_requirement(1);
         req1.req_current_status = 1; // Draft
@@ -1583,7 +1584,7 @@ mod tests {
         let client = test_client(repo).await;
 
         let response = get_with_session(&client, "/p/1/requirements", ADMIN_ID).await;
-        
+
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
         // Should show total count
@@ -1593,7 +1594,7 @@ mod tests {
     #[rocket::async_test]
     async fn requirement_detail_shows_parent_and_children() {
         let mut repo = base_repo();
-        
+
         let parent = sample_requirement(1);
         repo.requirements.insert(1, parent);
 
@@ -1605,7 +1606,7 @@ mod tests {
         let client = test_client(repo).await;
 
         let response = get_with_session(&client, "/p/1/requirements/show/1", ADMIN_ID).await;
-        
+
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
         // Should contain child requirement
@@ -1615,16 +1616,16 @@ mod tests {
     #[rocket::async_test]
     async fn requirement_detail_shows_linked_tests() {
         let mut repo = base_repo();
-        
+
         repo.requirements.insert(1, sample_requirement(1));
-        
+
         // Note: Test linking is more complex and would require matrix implementation
         // This test verifies the detail page renders even without linked tests
 
         let client = test_client(repo).await;
 
         let response = get_with_session(&client, "/p/1/requirements/show/1", ADMIN_ID).await;
-        
+
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("REQ-SYS-1"));
@@ -1654,7 +1655,7 @@ mod tests {
         let client = test_client(base_repo()).await;
 
         let response = get_with_session(&client, "/p/1/requirements/tree", ADMIN_ID).await;
-        
+
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("total_requirements") || body.contains("tree"));
@@ -1663,7 +1664,7 @@ mod tests {
     #[rocket::async_test]
     async fn requirements_tree_handles_multiple_levels() {
         let mut repo = base_repo();
-        
+
         let parent = sample_requirement(1);
         repo.requirements.insert(1, parent);
 
@@ -1680,7 +1681,7 @@ mod tests {
         let client = test_client(repo).await;
 
         let response = get_with_session(&client, "/p/1/requirements/tree", ADMIN_ID).await;
-        
+
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("REQ-SYS-1"));
@@ -1691,7 +1692,7 @@ mod tests {
     #[rocket::async_test]
     async fn unauthorized_user_cannot_access_requirements() {
         let mut repo = base_repo();
-        
+
         // Create non-member user
         let mut user = DieselRepoMock::make_user(99, "outsider", "");
         user.is_admin = false;
@@ -1701,19 +1702,19 @@ mod tests {
         let client = test_client(repo).await;
 
         let response = get_with_session(&client, "/p/1/requirements", 99).await;
-        
+
         // Should be forbidden or redirect
         assert!(
-            response.status() == Status::Forbidden 
-            || response.status() == Status::SeeOther
-            || response.status() == Status::Unauthorized
+            response.status() == Status::Forbidden
+                || response.status() == Status::SeeOther
+                || response.status() == Status::Unauthorized
         );
     }
 
     #[rocket::async_test]
     async fn post_edit_requirement_enforces_project_match() {
         let mut repo = base_repo();
-        
+
         let mut req = sample_requirement(1);
         req.project_id = 99;
         repo.requirements.insert(1, req);

@@ -171,6 +171,122 @@ function initStatusControls(form) {
   });
 }
 
+function initCustomDropdowns(form) {
+  const dropdowns = form.querySelectorAll('[data-dropdown]');
+  
+  dropdowns.forEach((dropdown) => {
+    const trigger = dropdown.querySelector('[data-role="dropdown-trigger"]');
+    const menu = dropdown.querySelector('[data-role="dropdown-menu"]');
+    const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
+    const items = dropdown.querySelectorAll('.custom-dropdown__item');
+    const hiddenSelect = dropdown.querySelector('select');
+    
+    if (!trigger || !menu || !valueDisplay || !hiddenSelect) {
+      return;
+    }
+    
+    function closeMenu() {
+      menu.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+    
+    function openMenu() {
+      menu.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+      updateSelectedState();
+    }
+    
+    function updateSelectedState() {
+      const currentValue = hiddenSelect.value;
+      items.forEach((item) => {
+        if (item.getAttribute('data-value') === currentValue) {
+          item.classList.add('custom-dropdown__item--selected');
+        } else {
+          item.classList.remove('custom-dropdown__item--selected');
+        }
+      });
+    }
+    
+    function updateDisplay() {
+      const selectedOption = hiddenSelect.options[hiddenSelect.selectedIndex];
+      if (selectedOption && selectedOption.value) {
+        valueDisplay.textContent = selectedOption.textContent.trim();
+        valueDisplay.classList.remove('custom-dropdown__value--placeholder');
+      } else {
+        const placeholder = dropdown.dataset.dropdown;
+        valueDisplay.textContent = `Select ${placeholder}...`;
+        valueDisplay.classList.add('custom-dropdown__value--placeholder');
+      }
+      updateSelectedState();
+    }
+    
+    // Toggle dropdown
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      const isOpen = trigger.getAttribute('aria-expanded') === 'true';
+      
+      // Close all other dropdowns first
+      document.querySelectorAll('[data-dropdown]').forEach((otherDropdown) => {
+        if (otherDropdown !== dropdown) {
+          const otherTrigger = otherDropdown.querySelector('[data-role="dropdown-trigger"]');
+          const otherMenu = otherDropdown.querySelector('[data-role="dropdown-menu"]');
+          if (otherTrigger && otherMenu) {
+            otherMenu.hidden = true;
+            otherTrigger.setAttribute('aria-expanded', 'false');
+          }
+        }
+      });
+      
+      if (isOpen) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
+    });
+    
+    // Handle item selection
+    items.forEach((item) => {
+      item.addEventListener('click', (event) => {
+        event.preventDefault();
+        const value = item.getAttribute('data-value');
+        
+        if (value) {
+          hiddenSelect.value = value;
+          
+          // Copy data attributes from item to select option
+          const tag = item.getAttribute('data-tag');
+          const selectedOption = hiddenSelect.options[hiddenSelect.selectedIndex];
+          if (tag && selectedOption) {
+            selectedOption.setAttribute('data-tag', tag);
+          }
+          
+          hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          updateDisplay();
+          closeMenu();
+        }
+      });
+    });
+    
+    // Close on click outside
+    document.addEventListener('click', (event) => {
+      if (!menu.hidden && !dropdown.contains(event.target)) {
+        closeMenu();
+      }
+    });
+    
+    // Close on Escape key
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && trigger.getAttribute('aria-expanded') === 'true') {
+        closeMenu();
+        trigger.focus();
+      }
+    });
+    
+    // Initialize display
+    updateDisplay();
+  });
+}
+
 function initInlineCreation(form) {
   const projectId = form.dataset.projectId;
   if (!projectId || !window.bootstrap) {
@@ -181,9 +297,9 @@ function initInlineCreation(form) {
     category: {
       label: 'Category',
       select: form.querySelector('#req_category'),
-      trigger: form.querySelector('[data-role="combo-new"][data-entity="category"]'),
       modal: document.querySelector('#categoryModal'),
       form: document.querySelector('#inlineCategoryForm'),
+      dropdown: form.querySelector('[data-dropdown="category"]'),
       endpoint: `/p/${projectId}/requirements/inline/category`,
       serialize: (fd) => ({
         title: (fd.get('cat_title') || '').toString().trim(),
@@ -192,10 +308,13 @@ function initInlineCreation(form) {
       }),
       apply: (data) => {
         const select = form.querySelector('#req_category');
-        if (!select) {
+        const dropdown = form.querySelector('[data-dropdown="category"]');
+        
+        if (!select || !dropdown) {
           return;
         }
 
+        // Add to hidden select
         const option = document.createElement('option');
         option.value = String(data.id);
         if (data.tag) {
@@ -205,6 +324,50 @@ function initInlineCreation(form) {
         select.append(option);
         select.value = String(data.id);
         select.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        // Add to dropdown list
+        const list = dropdown.querySelector('[data-role="dropdown-list"]');
+        if (list) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'custom-dropdown__item';
+          button.setAttribute('data-value', String(data.id));
+          if (data.tag) {
+            button.setAttribute('data-tag', data.tag);
+          }
+          button.textContent = data.label;
+          
+          // Add click handler
+          button.addEventListener('click', (event) => {
+            event.preventDefault();
+            select.value = String(data.id);
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
+            const menu = dropdown.querySelector('[data-role="dropdown-menu"]');
+            const trigger = dropdown.querySelector('[data-role="dropdown-trigger"]');
+            
+            if (valueDisplay) {
+              valueDisplay.textContent = data.label;
+              valueDisplay.classList.remove('custom-dropdown__value--placeholder');
+            }
+            if (menu) {
+              menu.hidden = true;
+            }
+            if (trigger) {
+              trigger.setAttribute('aria-expanded', 'false');
+            }
+          });
+          
+          list.append(button);
+        }
+        
+        // Update display
+        const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
+        if (valueDisplay) {
+          valueDisplay.textContent = data.label;
+          valueDisplay.classList.remove('custom-dropdown__value--placeholder');
+        }
 
         const reference = form.querySelector('#req_reference');
         reference?.dispatchEvent(new Event('input', { bubbles: true }));
@@ -213,9 +376,9 @@ function initInlineCreation(form) {
     applicability: {
       label: 'Applicability',
       select: form.querySelector('#req_applicability'),
-      trigger: form.querySelector('[data-role="combo-new"][data-entity="applicability"]'),
       modal: document.querySelector('#applicabilityModal'),
       form: document.querySelector('#inlineApplicabilityForm'),
+      dropdown: form.querySelector('[data-dropdown="applicability"]'),
       endpoint: `/p/${projectId}/requirements/inline/applicability`,
       serialize: (fd) => ({
         title: (fd.get('app_title') || '').toString().trim(),
@@ -224,24 +387,68 @@ function initInlineCreation(form) {
       }),
       apply: (data) => {
         const select = form.querySelector('#req_applicability');
-        if (!select) {
+        const dropdown = form.querySelector('[data-dropdown="applicability"]');
+        
+        if (!select || !dropdown) {
           return;
         }
 
+        // Add to hidden select
         const option = document.createElement('option');
         option.value = String(data.id);
         option.textContent = data.label;
         select.append(option);
         select.value = String(data.id);
         select.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        // Add to dropdown list
+        const list = dropdown.querySelector('[data-role="dropdown-list"]');
+        if (list) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'custom-dropdown__item';
+          button.setAttribute('data-value', String(data.id));
+          button.textContent = data.label;
+          
+          // Add click handler
+          button.addEventListener('click', (event) => {
+            event.preventDefault();
+            select.value = String(data.id);
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
+            const menu = dropdown.querySelector('[data-role="dropdown-menu"]');
+            const trigger = dropdown.querySelector('[data-role="dropdown-trigger"]');
+            
+            if (valueDisplay) {
+              valueDisplay.textContent = data.label;
+              valueDisplay.classList.remove('custom-dropdown__value--placeholder');
+            }
+            if (menu) {
+              menu.hidden = true;
+            }
+            if (trigger) {
+              trigger.setAttribute('aria-expanded', 'false');
+            }
+          });
+          
+          list.append(button);
+        }
+        
+        // Update display
+        const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
+        if (valueDisplay) {
+          valueDisplay.textContent = data.label;
+          valueDisplay.classList.remove('custom-dropdown__value--placeholder');
+        }
       },
     },
     verification: {
       label: 'Verification method',
       select: form.querySelector('#req_verification'),
-      trigger: form.querySelector('[data-role="combo-new"][data-entity="verification"]'),
       modal: document.querySelector('#verificationModal'),
       form: document.querySelector('#inlineVerificationForm'),
+      dropdown: form.querySelector('[data-dropdown="verification"]'),
       endpoint: `/p/${projectId}/requirements/inline/verification`,
       serialize: (fd) => ({
         name: (fd.get('verification_name') || '').toString().trim(),
@@ -249,66 +456,94 @@ function initInlineCreation(form) {
       }),
       apply: (data) => {
         const select = form.querySelector('#req_verification');
-        if (!select) {
+        const dropdown = form.querySelector('[data-dropdown="verification"]');
+        
+        if (!select || !dropdown) {
           return;
         }
 
+        // Add to hidden select
         const option = document.createElement('option');
         option.value = String(data.id);
         option.textContent = data.label;
         select.append(option);
         select.value = String(data.id);
         select.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        // Add to dropdown list
+        const list = dropdown.querySelector('[data-role="dropdown-list"]');
+        if (list) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'custom-dropdown__item';
+          button.setAttribute('data-value', String(data.id));
+          button.textContent = data.label;
+          
+          // Add click handler
+          button.addEventListener('click', (event) => {
+            event.preventDefault();
+            select.value = String(data.id);
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
+            const menu = dropdown.querySelector('[data-role="dropdown-menu"]');
+            const trigger = dropdown.querySelector('[data-role="dropdown-trigger"]');
+            
+            if (valueDisplay) {
+              valueDisplay.textContent = data.label;
+              valueDisplay.classList.remove('custom-dropdown__value--placeholder');
+            }
+            if (menu) {
+              menu.hidden = true;
+            }
+            if (trigger) {
+              trigger.setAttribute('aria-expanded', 'false');
+            }
+          });
+          
+          list.append(button);
+        }
+        
+        // Update display
+        const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
+        if (valueDisplay) {
+          valueDisplay.textContent = data.label;
+          valueDisplay.classList.remove('custom-dropdown__value--placeholder');
+        }
       },
     },
   };
 
-  Object.values(config).forEach((entry) => {
-    const { trigger, modal, form: modalForm, select } = entry;
+  Object.entries(config).forEach(([key, entry]) => {
+    const { modal, form: modalForm, dropdown } = entry;
     
-    // Handle dropdown selection triggering modal
-    if (select && modal && modalForm) {
-      const bootstrapModal = new window.bootstrap.Modal(modal);
-      
-      select.addEventListener('change', (event) => {
-        if (select.value === '') {
-          event.preventDefault();
-          modalForm.reset();
-          bootstrapModal.show();
-        }
-      });
-      
-      modalForm.addEventListener('submit', (event) => {
-        event.preventDefault();
-        const formData = new FormData(modalForm);
-        const submitButton = modalForm.querySelector('button[type="submit"]');
-        submitInline(entry, entry.serialize(formData), {
-          submitButton,
-          onSuccess: () => {
-            bootstrapModal.hide();
-            modalForm.reset();
-          },
-        });
-      });
-    }
-
-    // Handle old trigger buttons (if they still exist)
-    if (!trigger) {
+    if (!modal || !modalForm || !dropdown) {
       return;
     }
-
-    if (!modal || !modalForm) {
-      return;
-    }
-
+    
     const bootstrapModal = new window.bootstrap.Modal(modal);
-
-    trigger.addEventListener('click', (event) => {
-      event.preventDefault();
-      modalForm.reset();
-      bootstrapModal.show();
-    });
-
+    const actionButton = dropdown.querySelector(`[data-action="create-${key}"]`);
+    
+    if (actionButton) {
+      actionButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // Close dropdown menu
+        const menu = dropdown.querySelector('[data-role="dropdown-menu"]');
+        const trigger = dropdown.querySelector('[data-role="dropdown-trigger"]');
+        if (menu) {
+          menu.hidden = true;
+        }
+        if (trigger) {
+          trigger.setAttribute('aria-expanded', 'false');
+        }
+        
+        modalForm.reset();
+        bootstrapModal.show();
+      });
+    }
+    
     modalForm.addEventListener('submit', (event) => {
       event.preventDefault();
       const formData = new FormData(modalForm);
@@ -1058,6 +1293,7 @@ export function init() {
   const isCreateForm = form.classList.contains('create-form');
 
   initComboboxes(form);
+  initCustomDropdowns(form);
   initReferenceValidation(form);
   if (isCreateForm) {
     initInlineCreation(form);

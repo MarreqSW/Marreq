@@ -343,8 +343,10 @@
     </aside>
   </div>
 
-  <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
+  <input type="hidden" name="req_author" value="{{req.req_author_id}}">
   <input type="hidden" id="req_id" name="req_id" value="{{req.req_id}}">
+  <input type="hidden" name="req_reference" value="{{req.req_reference}}">
+  <input type="hidden" name="req_current_status" value="{{req.req_current_status_id}}">
   <input type="hidden" id="project_id" name="project_id" value="{{req.project_id}}">
   <input type="hidden" id="autosave-interval" value="{{autosave.interval_ms}}" data-role="autosave-interval">
 </form>

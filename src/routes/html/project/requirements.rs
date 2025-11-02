@@ -527,6 +527,11 @@ async fn new_requirement(
         .format("%Y-%m-%d")
         .to_string();
 
+    // log parents
+    for parent in &parents {
+        #[cfg(debug_assertions)]
+        println!("Possible parent: {} - {}", parent["id"], parent["title"]);
+    }
     let ctx = json!({
         "categories": categories,
         "status": statuses,

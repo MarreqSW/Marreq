@@ -157,7 +157,6 @@ impl<'a> RequirementService<'a> {
         sanitize_string(&mut payload.req_title);
         sanitize_string(&mut payload.req_description);
         sanitize_string(&mut payload.req_reference);
-        sanitize_string(&mut payload.req_link);
         sanitize_optional_string(&mut payload.req_justification);
 
         validate_requirement(payload).map_err(|err| RepoError::BadInput(err.to_string()))
@@ -237,7 +236,6 @@ mod tests {
             req_current_status: 1,
             req_author: 1,
             req_reviewer: 1,
-            req_link: "https://example.com".into(),
             req_reference: reference.into(),
             req_category: 1,
             req_parent: 1,
@@ -257,10 +255,9 @@ mod tests {
             req_description: "  Description  ".into(),
             req_verification: 1,
             req_author: 1,
-            req_link: "  https://example.com/path  ".into(),
             req_category: 1,
             req_current_status: 1,
-            req_parent: 1,
+            req_parent: 0,
             req_reference: "  REQ-123  ".into(),
             req_reviewer: 1,
             req_applicability: 1,
@@ -282,7 +279,6 @@ mod tests {
         assert_eq!(stored.req_title, "Title");
         assert_eq!(stored.req_description, "Description");
         assert_eq!(stored.req_reference, "REQ-123");
-        assert_eq!(stored.req_link, "https://example.com/path");
         assert!(stored.req_justification.is_none());
     }
 
@@ -315,7 +311,6 @@ mod tests {
         assert_eq!(updated.req_title, "Updated");
         assert_eq!(updated.req_description, "New Description");
         assert_eq!(updated.req_reference, "REQ-999");
-        assert_eq!(updated.req_link, "https://example.com/path");
     }
 
     #[test]

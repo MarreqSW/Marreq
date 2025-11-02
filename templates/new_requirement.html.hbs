@@ -67,12 +67,14 @@
             placeholder="Control system shall…"
             required
           >
-          <p class="create-field__help">Summarise the promise in one crisp sentence.</p>
         </div>
 
         <div class="create-field">
           <div class="create-field__label-row">
-            <label for="req_purpose" class="create-field__label">Purpose</label>
+            <label for="req_purpose" class="create-field__label">
+              Purpose
+              <span class="create-field__tooltip" title="Explain the outcome or capability this unlocks.">ⓘ</span>
+            </label>
             <span class="create-field__badge">Recommended</span>
           </div>
           <textarea
@@ -82,7 +84,6 @@
             rows="3"
             placeholder="Why does this requirement exist?"
           >{{template.req_purpose}}</textarea>
-          <p class="create-field__help">Explain the outcome or capability this unlocks.</p>
         </div>
 
         <div class="create-field">
@@ -98,12 +99,14 @@
             required
             placeholder="The system shall…"
           >{{template.req_description}}</textarea>
-          <p class="create-field__help">Be specific: prefer measurable verbs over vague terms like “user-friendly”.</p>
         </div>
 
         <div class="create-field">
           <div class="create-field__label-row">
-            <label for="req_justification" class="create-field__label">Rationale</label>
+            <label for="req_justification" class="create-field__label">
+              Rationale
+              <span class="create-field__tooltip" title="Cite decisions, studies, or regulations that justify the requirement.">ⓘ</span>
+            </label>
             <span class="create-field__badge">Recommended</span>
           </div>
           <textarea
@@ -113,29 +116,21 @@
             rows="4"
             placeholder="What evidence or reasoning supports this?"
           >{{template.req_justification}}</textarea>
-          <p class="create-field__help">Cite decisions, studies, or regulations that justify the requirement.</p>
         </div>
 
         <div class="create-field-grid">
           <div class="create-field">
-            <div class="create-field__label-row">
-              <label for="req_category" class="create-field__label">
-                Category
-                <span class="create-field__tooltip" title="Choose the taxonomy bucket this requirement contributes to.">ⓘ</span>
-              </label>
-              <button
-                type="button"
-                class="create-field__link"
-                data-role="combo-new"
-                data-entity="category"
-              >+ New</button>
-            </div>
+            <label for="req_category" class="create-field__label">
+              Category
+              <span class="create-field__tooltip" title="Choose the taxonomy bucket this requirement contributes to.">ⓘ</span>
+            </label>
             <select
               name="req_category"
               id="req_category"
               class="create-field__select"
               required
             >
+              <option value="">+ New Category...</option>
               {{#each categories}}
                 <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../req_category)}}selected{{/if}}>{{cat_title}}</option>
               {{/each}}
@@ -144,24 +139,17 @@
           </div>
 
           <div class="create-field">
-            <div class="create-field__label-row">
-              <label for="req_applicability" class="create-field__label">
-                Applicability
-                <span class="create-field__tooltip" title="Limit scope if the statement is not universally required.">ⓘ</span>
-              </label>
-              <button
-                type="button"
-                class="create-field__link"
-                data-role="combo-new"
-                data-entity="applicability"
-              >+ New</button>
-            </div>
+            <label for="req_applicability" class="create-field__label">
+              Applicability
+              <span class="create-field__tooltip" title="Limit scope if the statement is not universally required.">ⓘ</span>
+            </label>
             <select
               name="req_applicability"
               id="req_applicability"
               class="create-field__select"
               required
             >
+              <option value="">+ New Applicability...</option>
               {{#each applicability}}
                 <option value="{{app_id}}" {{#if (eq app_id ../req_applicability)}}selected{{/if}}>{{app_title}}</option>
               {{/each}}
@@ -192,24 +180,17 @@
           </div>
 
           <div class="create-field">
-            <div class="create-field__label-row">
-              <label for="req_verification" class="create-field__label">
-                Verification Method
-                <span class="create-field__tooltip" title="Pick the strategy that will demonstrate compliance.">ⓘ</span>
-              </label>
-              <button
-                type="button"
-                class="create-field__link"
-                data-role="combo-new"
-                data-entity="verification"
-              >+ New</button>
-            </div>
+            <label for="req_verification" class="create-field__label">
+              Verification Method
+              <span class="create-field__tooltip" title="Pick the strategy that will demonstrate compliance.">ⓘ</span>
+            </label>
             <select
               name="req_verification"
               id="req_verification"
               class="create-field__select"
               required
             >
+              <option value="">+ New Verification Method...</option>
               {{#each verification}}
                 <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification)}}selected{{/if}}>{{verification_name}}</option>
               {{/each}}

@@ -390,7 +390,10 @@ async fn post_edit_requirement(
 
     let user = project_access.into_user();
     service.update(&user, req_id, new_req.into_inner())?;
-    Ok(Redirect::to(uri!(show_requirement_id(project_id, req_id))))
+    Ok(Redirect::to(uri!(
+        "/p",
+        show_requirement_id(project_id, req_id)
+    )))
 }
 
 #[delete("/<project_id>/requirements/delete/<req_id>")]

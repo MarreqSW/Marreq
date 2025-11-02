@@ -112,124 +112,6 @@
             placeholder="What evidence or reasoning supports this?"
           >{{template.req_justification}}</textarea>
         </div>
-
-        <div class="create-field-grid">
-          <div class="create-field">
-            <label for="req_category" class="create-field__label">
-              Category
-            </label>
-            <div class="custom-dropdown" data-dropdown="category">
-              <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
-                <span class="custom-dropdown__value" data-role="dropdown-value">Select category...</span>
-                <span class="custom-dropdown__arrow">▼</span>
-              </button>
-              <div class="custom-dropdown__menu" data-role="dropdown-menu" hidden>
-                <div class="custom-dropdown__list" data-role="dropdown-list">
-                  {{#each categories}}
-                    <button type="button" class="custom-dropdown__item" data-value="{{cat_id}}" data-tag="{{cat_tag}}">
-                      {{cat_title}}
-                    </button>
-                  {{/each}}
-                </div>
-                <div class="custom-dropdown__footer">
-                  <button type="button" class="custom-dropdown__action" data-action="create-category">
-                    + Create category
-                  </button>
-                </div>
-              </div>
-              <select name="req_category" id="req_category" class="custom-dropdown__hidden" required hidden>
-                {{#each categories}}
-                  <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../req_category)}}selected{{/if}}>{{cat_title}}</option>
-                {{/each}}
-              </select>
-            </div>
-            <div id="reference-error" class="create-field__error" hidden></div>
-          </div>
-
-          <div class="create-field">
-            <label for="req_applicability" class="create-field__label">
-              Applicability
-            </label>
-            <div class="custom-dropdown" data-dropdown="applicability">
-              <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
-                <span class="custom-dropdown__value" data-role="dropdown-value">Select applicability...</span>
-                <span class="custom-dropdown__arrow">▼</span>
-              </button>
-              <div class="custom-dropdown__menu" data-role="dropdown-menu" hidden>
-                <div class="custom-dropdown__list" data-role="dropdown-list">
-                  {{#each applicability}}
-                    <button type="button" class="custom-dropdown__item" data-value="{{app_id}}">
-                      {{app_title}}
-                    </button>
-                  {{/each}}
-                </div>
-                <div class="custom-dropdown__footer">
-                  <button type="button" class="custom-dropdown__action" data-action="create-applicability">
-                    + Create applicability
-                  </button>
-                </div>
-              </div>
-              <select name="req_applicability" id="req_applicability" class="custom-dropdown__hidden" required hidden>
-                {{#each applicability}}
-                  <option value="{{app_id}}" {{#if (eq app_id ../req_applicability)}}selected{{/if}}>{{app_title}}</option>
-                {{/each}}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="create-field-grid">
-          <div class="create-field">
-            <label for="req_current_status" class="create-field__label">
-              Status
-            </label>
-            <select
-              name="req_current_status"
-              id="req_current_status"
-              class="create-field__select"
-              required
-            >
-              {{#each status}}
-                {{#if (or (eq req_st_title "Draft") (or (eq req_st_title "Accepted") (or (eq req_st_title "Rejected") (eq req_st_title "Deprecated"))))}}
-                  <option value="{{req_st_id}}" {{#if (eq req_st_id ../req_current_status)}}selected{{/if}}>
-                    {{req_st_title}}
-                  </option>
-                {{/if}}
-              {{/each}}
-            </select>
-          </div>
-
-          <div class="create-field">
-            <label for="req_verification" class="create-field__label">
-              Verification Method
-            </label>
-            <div class="custom-dropdown" data-dropdown="verification">
-              <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
-                <span class="custom-dropdown__value" data-role="dropdown-value">Select verification method...</span>
-                <span class="custom-dropdown__arrow">▼</span>
-              </button>
-              <div class="custom-dropdown__menu" data-role="dropdown-menu" hidden>
-                <div class="custom-dropdown__list" data-role="dropdown-list">
-                  {{#each verification}}
-                    <button type="button" class="custom-dropdown__item" data-value="{{verification_id}}">
-                      {{verification_name}}
-                    </button>
-                  {{/each}}
-                </div>
-                <div class="custom-dropdown__footer">
-                  <button type="button" class="custom-dropdown__action" data-action="create-verification">
-                    + Create verification method
-                  </button>
-                </div>
-              </div>
-              <select name="req_verification" id="req_verification" class="custom-dropdown__hidden" required hidden>
-                {{#each verification}}
-                  <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification)}}selected{{/if}}>{{verification_name}}</option>
-                {{/each}}
-              </select>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -275,6 +157,122 @@
             </select>
           </div>
         </div>
+
+        <div class="create-field">
+          <label for="req_category" class="create-field__label">
+            Category
+          </label>
+          <div class="custom-dropdown" data-dropdown="category">
+            <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
+              <span class="custom-dropdown__value" data-role="dropdown-value">Select category...</span>
+              <span class="custom-dropdown__arrow">▼</span>
+            </button>
+            <div class="custom-dropdown__menu" data-role="dropdown-menu" hidden>
+              <div class="custom-dropdown__list" data-role="dropdown-list">
+                {{#each categories}}
+                  <button type="button" class="custom-dropdown__item" data-value="{{cat_id}}" data-tag="{{cat_tag}}">
+                    {{cat_title}}
+                  </button>
+                {{/each}}
+              </div>
+              <div class="custom-dropdown__footer">
+                <button type="button" class="custom-dropdown__action" data-action="create-category">
+                  + Create category
+                </button>
+              </div>
+            </div>
+            <select name="req_category" id="req_category" class="custom-dropdown__hidden" required hidden>
+              {{#each categories}}
+                <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../req_category)}}selected{{/if}}>{{cat_title}}</option>
+              {{/each}}
+            </select>
+          </div>
+          <div id="reference-error" class="create-field__error" hidden></div>
+        </div>
+
+        <div class="create-field">
+          <label for="req_applicability" class="create-field__label">
+            Applicability
+          </label>
+          <div class="custom-dropdown" data-dropdown="applicability">
+            <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
+              <span class="custom-dropdown__value" data-role="dropdown-value">Select applicability...</span>
+              <span class="custom-dropdown__arrow">▼</span>
+            </button>
+            <div class="custom-dropdown__menu" data-role="dropdown-menu" hidden>
+              <div class="custom-dropdown__list" data-role="dropdown-list">
+                {{#each applicability}}
+                  <button type="button" class="custom-dropdown__item" data-value="{{app_id}}">
+                    {{app_title}}
+                  </button>
+                {{/each}}
+              </div>
+              <div class="custom-dropdown__footer">
+                <button type="button" class="custom-dropdown__action" data-action="create-applicability">
+                  + Create applicability
+                </button>
+              </div>
+            </div>
+            <select name="req_applicability" id="req_applicability" class="custom-dropdown__hidden" required hidden>
+              {{#each applicability}}
+                <option value="{{app_id}}" {{#if (eq app_id ../req_applicability)}}selected{{/if}}>{{app_title}}</option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+
+        <div class="create-field">
+          <label for="req_verification" class="create-field__label">
+            Verification Method
+          </label>
+          <div class="custom-dropdown" data-dropdown="verification">
+            <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
+              <span class="custom-dropdown__value" data-role="dropdown-value">Select verification method...</span>
+              <span class="custom-dropdown__arrow">▼</span>
+            </button>
+            <div class="custom-dropdown__menu" data-role="dropdown-menu" hidden>
+              <div class="custom-dropdown__list" data-role="dropdown-list">
+                {{#each verification}}
+                  <button type="button" class="custom-dropdown__item" data-value="{{verification_id}}">
+                    {{verification_name}}
+                  </button>
+                {{/each}}
+              </div>
+              <div class="custom-dropdown__footer">
+                <button type="button" class="custom-dropdown__action" data-action="create-verification">
+                  + Create verification method
+                </button>
+              </div>
+            </div>
+            <select name="req_verification" id="req_verification" class="custom-dropdown__hidden" required hidden>
+              {{#each verification}}
+                <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification)}}selected{{/if}}>{{verification_name}}</option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+
+        {{#if is_admin_or_owner}}
+        <div class="create-field">
+          <label for="req_current_status" class="create-field__label">
+            Status
+          </label>
+          <select
+            name="req_current_status"
+            id="req_current_status"
+            class="create-field__select"
+            required
+          >
+            {{#each status}}
+              {{#if (or (eq req_st_title "Draft") (or (eq req_st_title "Accepted") (or (eq req_st_title "Rejected") (eq req_st_title "Deprecated"))))}}
+                <option value="{{req_st_id}}" {{#if (eq req_st_id ../req_current_status)}}selected{{/if}}>
+                  {{req_st_title}}
+                </option>
+              {{/if}}
+            {{/each}}
+          </select>
+        </div>
+        {{/if}}
 
         <div class="create-field">
           <label for="req_parent" class="create-field__label">Parent Requirement</label>
@@ -323,18 +321,6 @@
             class="create-field__input"
             value="{{template.req_reference}}"
             placeholder="REQ-CAT-001 (auto-generated if left blank)"
-          >
-        </div>
-
-        <div class="create-field">
-          <label for="req_link" class="create-field__label">Supporting Link</label>
-          <input
-            type="url"
-            name="req_link"
-            id="req_link"
-            class="create-field__input"
-            value="{{template.req_link}}"
-            placeholder="https://example.com/design-decision"
           >
         </div>
       </div>

@@ -269,6 +269,18 @@
   font-weight: 500;
 }
 
+.create-field--inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.create-field--inline .create-field__label {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
 .create-field.is-enhanced .create-field__select {
   position: absolute;
   width: 1px;

@@ -12,9 +12,7 @@
 }
 
 .create-topbar {
-  position: sticky;
-  top: var(--space-3);
-  z-index: 2;
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -160,6 +158,19 @@
   font-weight: 600;
   color: var(--text-color);
   font-size: var(--text-sm);
+}
+
+.create-field__required {
+  color: var(--danger-color, #dc2626);
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.create-field__optional {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: var(--text-xs);
+  margin-left: 4px;
 }
 
 .create-field__label-row {

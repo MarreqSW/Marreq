@@ -156,7 +156,6 @@ impl<'a> DecoratedRequirementService<'a> {
             req_author_id: req.req_author,
             req_reviewer: reviewer,
             req_reviewer_id: req.req_reviewer,
-            req_link: req.req_link.clone(),
             req_reference: req.req_reference.clone(),
             req_category: category,
             req_category_id: req.req_category,

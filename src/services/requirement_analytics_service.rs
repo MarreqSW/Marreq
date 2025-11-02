@@ -222,7 +222,6 @@ mod tests {
             req_current_status: status_id,
             req_author: 1,
             req_reviewer: 1,
-            req_link: "link".into(),
             req_reference: format!("REF-{req_id}"),
             req_category: category_id,
             req_parent: 0,

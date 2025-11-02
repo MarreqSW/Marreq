@@ -25,7 +25,6 @@
         <span class="create-breadcrumb__crumb create-breadcrumb__crumb--current">Add New</span>
       </nav>
       <h1 class="create-title">New Requirement</h1>
-      <p class="create-subtitle">Capture a precise, testable statement that advances the project.</p>
     </div>
     <div class="create-topbar__actions">
       <div class="create-autosave" aria-live="polite">
@@ -48,10 +47,8 @@
   <div class="create-layout">
     <section class="create-card create-card--primary">
       <header class="create-card__header">
-        <span class="create-card__icon" aria-hidden="true">🧾</span>
         <div>
           <h2 class="create-card__title">Requirement Details</h2>
-          <p class="create-card__hint">Everything downstream depends on clarity here.</p>
         </div>
       </header>
 
@@ -73,7 +70,6 @@
           <div class="create-field__label-row">
             <label for="req_purpose" class="create-field__label">
               Purpose
-              <span class="create-field__tooltip" title="Explain the outcome or capability this unlocks.">ⓘ</span>
             </label>
             <span class="create-field__badge">Recommended</span>
           </div>
@@ -105,7 +101,6 @@
           <div class="create-field__label-row">
             <label for="req_justification" class="create-field__label">
               Rationale
-              <span class="create-field__tooltip" title="Cite decisions, studies, or regulations that justify the requirement.">ⓘ</span>
             </label>
             <span class="create-field__badge">Recommended</span>
           </div>
@@ -122,7 +117,6 @@
           <div class="create-field">
             <label for="req_category" class="create-field__label">
               Category
-              <span class="create-field__tooltip" title="Choose the taxonomy bucket this requirement contributes to.">ⓘ</span>
             </label>
             <div class="custom-dropdown" data-dropdown="category">
               <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
@@ -155,7 +149,6 @@
           <div class="create-field">
             <label for="req_applicability" class="create-field__label">
               Applicability
-              <span class="create-field__tooltip" title="Limit scope if the statement is not universally required.">ⓘ</span>
             </label>
             <div class="custom-dropdown" data-dropdown="applicability">
               <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
@@ -189,7 +182,6 @@
           <div class="create-field">
             <label for="req_current_status" class="create-field__label">
               Status
-              <span class="create-field__tooltip" title="Start in Draft, promote only when verified or reviewed.">ⓘ</span>
             </label>
             <select
               name="req_current_status"
@@ -210,7 +202,6 @@
           <div class="create-field">
             <label for="req_verification" class="create-field__label">
               Verification Method
-              <span class="create-field__tooltip" title="Pick the strategy that will demonstrate compliance.">ⓘ</span>
             </label>
             <div class="custom-dropdown" data-dropdown="verification">
               <button type="button" class="custom-dropdown__trigger" data-role="dropdown-trigger">
@@ -244,10 +235,8 @@
 
     <aside class="create-card create-card--meta">
       <header class="create-card__header">
-        <span class="create-card__icon" aria-hidden="true">🔗</span>
         <div>
           <h2 class="create-card__title">Ownership &amp; Traceability</h2>
-          <p class="create-card__hint">Provide the hooks our audits rely on.</p>
         </div>
       </header>
 
@@ -291,7 +280,6 @@
               <option value="{{user_id}}" {{#if (eq user_id ../req_reviewer)}}selected{{/if}}>{{user_name}}</option>
               {{/each}}
             </select>
-          <p class="create-field__help">Assign a reviewer so the workflow can progress.</p>
         </div>
 
         <div class="create-field create-field--combo" data-component="combo" data-combo-field="req_parent">
@@ -323,7 +311,6 @@
               <option value="{{req_id}}" {{#if (eq ../req_parent req_id)}}selected{{/if}}>{{template.req_title}}</option>
             {{/each}}
           </select>
-          <p class="create-field__help">Optional hierarchy so traceability maps stay coherent.</p>
         </div>
 
         <div class="create-field">
@@ -346,7 +333,6 @@
             value="{{template.req_reference}}"
             placeholder="REQ-CAT-001 (auto-generated if left blank)"
           >
-          <p class="create-field__help">Leave blank to auto-generate from the chosen category.</p>
         </div>
 
         <div class="create-field">
@@ -359,7 +345,6 @@
             value="{{template.req_link}}"
             placeholder="https://example.com/design-decision"
           >
-          <p class="create-field__help">Provide a document, ticket, or standard that backs this statement.</p>
         </div>
       </div>
     </aside>

@@ -30,20 +30,13 @@
     <div class="create-topbar__actions">
       <div class="create-autosave" aria-live="polite">
         <span class="create-autosave__dot" data-role="autosave-indicator" hidden></span>
-        <span class="create-autosave__text" data-role="autosave-text">Draft not saved</span>
+        <span class="create-autosave__text" data-role="autosave-text"></span>
       </div>
       <button
         type="submit"
         class="btn btn-primary create-topbar__save"
         data-role="submit-requirement"
       >Save</button>
-      <button
-        type="submit"
-        name="intent"
-        value="add_another"
-        class="btn btn-outline-secondary create-topbar__save-more"
-        data-role="submit-requirement"
-      >Save &amp; Add Another</button>
       <a
         href="/p/{{#if project}}{{project.id}}{{else}}{{project_id}}{{/if}}/requirements"
         class="btn btn-outline-secondary create-topbar__cancel"
@@ -124,11 +117,7 @@
         </div>
 
         <div class="create-field-grid">
-          <div
-            class="create-field create-field--combo"
-            data-component="combo"
-            data-combo-field="req_category"
-          >
+          <div class="create-field">
             <div class="create-field__label-row">
               <label for="req_category" class="create-field__label">Category</label>
               <button
@@ -138,26 +127,10 @@
                 data-entity="category"
               >+ New</button>
             </div>
-            <div class="create-combo" data-role="combo-ui" hidden>
-              <input
-                type="text"
-                class="create-combo__input"
-                id="req_category_search"
-                list="req_category_options"
-                placeholder="Search categories"
-                autocomplete="off"
-              >
-              <datalist id="req_category_options">
-                {{#each categories}}
-                  <option value="{{cat_title}}" data-id="{{cat_id}}" data-tag="{{cat_tag}}"></option>
-                {{/each}}
-              </datalist>
-            </div>
             <select
               name="req_category"
               id="req_category"
               class="create-field__select"
-              data-role="combo-source"
               required
             >
               {{#each categories}}
@@ -168,11 +141,7 @@
             <div id="reference-error" class="create-field__error" hidden></div>
           </div>
 
-          <div
-            class="create-field create-field--combo"
-            data-component="combo"
-            data-combo-field="req_applicability"
-          >
+          <div class="create-field">
             <div class="create-field__label-row">
               <label for="req_applicability" class="create-field__label">Applicability</label>
               <button
@@ -182,26 +151,10 @@
                 data-entity="applicability"
               >+ New</button>
             </div>
-            <div class="create-combo" data-role="combo-ui" hidden>
-              <input
-                type="text"
-                class="create-combo__input"
-                id="req_applicability_search"
-                list="req_applicability_options"
-                placeholder="Where does this apply?"
-                autocomplete="off"
-              >
-              <datalist id="req_applicability_options">
-                {{#each applicability}}
-                  <option value="{{app_title}}" data-id="{{app_id}}"></option>
-                {{/each}}
-              </datalist>
-            </div>
             <select
               name="req_applicability"
               id="req_applicability"
               class="create-field__select"
-              data-role="combo-source"
               required
             >
               {{#each applicability}}
@@ -213,30 +166,12 @@
         </div>
 
         <div class="create-field-grid">
-          <div class="create-field create-field--combo" data-component="combo" data-combo-field="req_current_status">
+          <div class="create-field">
             <label for="req_current_status" class="create-field__label">Status</label>
-            <div class="create-combo" data-role="combo-ui" hidden>
-              <input
-                type="text"
-                class="create-combo__input"
-                id="req_status_search"
-                list="req_status_options"
-                placeholder="Draft, Accepted…"
-                autocomplete="off"
-              >
-              <datalist id="req_status_options">
-                {{#each status}}
-                  {{#if (or (eq req_st_title "Draft") (or (eq req_st_title "Accepted") (or (eq req_st_title "Rejected") (eq req_st_title "Deprecated"))))}}
-                    <option value="{{req_st_title}}" data-id="{{req_st_id}}"></option>
-                  {{/if}}
-                {{/each}}
-              </datalist>
-            </div>
             <select
               name="req_current_status"
               id="req_current_status"
               class="create-field__select"
-              data-role="combo-source"
               required
             >
               {{#each status}}
@@ -250,11 +185,7 @@
             <p class="create-field__help">Start in Draft, promote only when verified or reviewed.</p>
           </div>
 
-          <div
-            class="create-field create-field--combo"
-            data-component="combo"
-            data-combo-field="req_verification"
-          >
+          <div class="create-field">
             <div class="create-field__label-row">
               <label for="req_verification" class="create-field__label">Verification Method</label>
               <button
@@ -264,26 +195,10 @@
                 data-entity="verification"
               >+ New</button>
             </div>
-            <div class="create-combo" data-role="combo-ui" hidden>
-              <input
-                type="text"
-                class="create-combo__input"
-                id="req_verification_search"
-                list="req_verification_options"
-                placeholder="Test, Analysis, Inspection…"
-                autocomplete="off"
-              >
-              <datalist id="req_verification_options">
-                {{#each verification}}
-                  <option value="{{verification_name}}" data-id="{{verification_id}}"></option>
-                {{/each}}
-              </datalist>
-            </div>
             <select
               name="req_verification"
               id="req_verification"
               class="create-field__select"
-              data-role="combo-source"
               required
             >
               {{#each verification}}

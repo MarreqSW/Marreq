@@ -67,6 +67,18 @@
         </div>
 
         <div class="create-field">
+          <label for="req_reference" class="create-field__label">Reference</label>
+          <input
+            type="text"
+            name="req_reference"
+            id="req_reference"
+            class="create-field__input"
+            value="{{template.req_reference}}"
+            placeholder="REQ-CAT-001 (auto-generated if left blank)"
+          >
+        </div>
+
+        <div class="create-field">
           <div class="create-field__label-row">
             <label for="req_purpose" class="create-field__label">
               Purpose
@@ -310,18 +322,6 @@
               {{/each}}
             </select>
           </div>
-        </div>
-
-        <div class="create-field">
-          <label for="req_reference" class="create-field__label">Reference</label>
-          <input
-            type="text"
-            name="req_reference"
-            id="req_reference"
-            class="create-field__input"
-            value="{{template.req_reference}}"
-            placeholder="REQ-CAT-001 (auto-generated if left blank)"
-          >
         </div>
       </div>
     </aside>

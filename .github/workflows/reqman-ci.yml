@@ -25,11 +25,39 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libclang-dev
 
       - name: Start database
-        run: docker compose up -d db
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d db
 
       - name: Wait for database to be healthy
         run: |
-          timeout 60 bash -c 'until docker compose exec -T db pg_isready -U rust; do sleep 2; done'
+          echo "Waiting for PostgreSQL container to stabilize..."
+          sleep 5
+          
+          # Check if container is running or restarting
+          for i in {1..30}; do
+            STATUS=$(docker compose ps db --format json | jq -r '.[0].State // .State')
+            echo "Attempt $i/30: Container status: $STATUS"
+            
+            if [ "$STATUS" = "running" ]; then
+              echo "Container is running, checking PostgreSQL readiness..."
+              if docker compose exec -T db pg_isready -U rust 2>/dev/null; then
+                echo "PostgreSQL is ready!"
+                exit 0
+              fi
+            elif [ "$STATUS" = "restarting" ]; then
+              echo "Container is restarting, showing logs:"
+              docker compose logs db --tail 30
+              sleep 3
+            else
+              echo "Container in unexpected state: $STATUS"
+              docker compose logs db --tail 30
+            fi
+            
+            sleep 2
+          done
+          
+          echo "Failed to start database after 30 attempts"
+          docker compose logs db
+          exit 1
 
       - name: Set up Rust (nightly + llvm-tools + rustfmt)
         uses: dtolnay/rust-toolchain@v1

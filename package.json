@@ -29,9 +29,9 @@
     "stylelint-config-clean-order": "^7.0.0",
     "stylelint-config-standard": "^39.0.1",
     "stylelint-order": "^7.0.0",
-    "@vitest/ui": "^1.0.0",
-    "@vitest/coverage-v8": "^1.0.0",
-    "happy-dom": "^12.10.0",
-    "vitest": "^1.0.0"
+    "@vitest/ui": "^4.0.6",
+    "@vitest/coverage-v8": "^4.0.0",
+    "happy-dom": "^20.0.10",
+    "vitest": "^4.0.6"
   }
 }

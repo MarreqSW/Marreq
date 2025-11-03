@@ -513,12 +513,6 @@ async fn new_requirement(
         .format("%Y-%m-%d")
         .to_string();
 
-    // log parents
-    for parent in &parents {
-        #[cfg(debug_assertions)]
-        println!("Possible parent: {} - {}", parent["id"], parent["title"]);
-    }
-
     // Check if user is admin or project owner
     let is_admin_or_owner = user.is_admin
         || project

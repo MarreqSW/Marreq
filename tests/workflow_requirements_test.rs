@@ -1,5 +1,6 @@
 #![cfg(feature = "test-helpers")]
 
+use req_man::models::*;
 /// End-to-end workflow tests for requirements management.
 ///
 /// These tests verify complete user workflows including:
@@ -8,20 +9,18 @@
 /// - Parent-child relationships
 /// - Permission controls
 /// - Data consistency across operations
-
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use rocket_dyn_templates::Template;
-use req_man::models::*;
 
 mod workflow_support {
     use super::*;
+    use chrono::{NaiveDate, NaiveDateTime};
     use req_man::app::AppState;
     use req_man::auth::session::SESSION_COOKIE;
     use req_man::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use chrono::{NaiveDate, NaiveDateTime};
-    use std::sync::{Arc, RwLock};
     use rocket::Route;
+    use std::sync::{Arc, RwLock};
 
     pub type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
 
@@ -59,7 +58,7 @@ mod workflow_support {
 
     pub fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
-        
+
         let mut admin = DieselRepoMock::make_user(1, "admin", "password");
         admin.is_admin = true;
         repo.users.insert(1, admin);
@@ -213,16 +212,22 @@ async fn complete_requirement_lifecycle() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    assert!(response.into_string().await.expect("body").contains("New Requirement"));
+    assert!(response
+        .into_string()
+        .await
+        .expect("body")
+        .contains("New Requirement"));
 
     // 3. Create a new requirement
     let response = client
         .post("/p/1/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
-        .body("req_title=System+Boot+Sequence&req_description=System+shall+boot+in+5+seconds&\
+        .body(
+            "req_title=System+Boot+Sequence&req_description=System+shall+boot+in+5+seconds&\
                req_verification=1&req_current_status=1&req_reviewer=1&req_category=1&\
-               req_parent=0&req_applicability=1&req_reference=&req_justification=Performance")
+               req_parent=0&req_applicability=1&req_reference=&req_justification=Performance",
+        )
         .dispatch()
         .await;
 
@@ -257,7 +262,11 @@ async fn complete_requirement_lifecycle() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    assert!(response.into_string().await.expect("body").contains("System Boot Sequence"));
+    assert!(response
+        .into_string()
+        .await
+        .expect("body")
+        .contains("System Boot Sequence"));
 
     // 6. Save edited requirement
     let response = client
@@ -324,9 +333,11 @@ async fn create_requirement_hierarchy() {
         .post("/p/1/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
-        .body("req_title=Parent+Requirement&req_description=Top+level&req_verification=1&\
+        .body(
+            "req_title=Parent+Requirement&req_description=Top+level&req_verification=1&\
                req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
-               req_applicability=1&req_reference=&req_justification=")
+               req_applicability=1&req_reference=&req_justification=",
+        )
         .dispatch()
         .await;
 
@@ -593,9 +604,11 @@ async fn create_multiple_requirements_with_add_another() {
         .post("/p/1/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
-        .body("req_title=First&req_description=First+req&req_verification=1&\
+        .body(
+            "req_title=First&req_description=First+req&req_verification=1&\
                req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
-               req_applicability=1&req_reference=&req_justification=&intent=add_another")
+               req_applicability=1&req_reference=&req_justification=&intent=add_another",
+        )
         .dispatch()
         .await;
 
@@ -620,9 +633,11 @@ async fn create_multiple_requirements_with_add_another() {
         .post("/p/1/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
-        .body("req_title=Second&req_description=Second+req&req_verification=1&\
+        .body(
+            "req_title=Second&req_description=Second+req&req_verification=1&\
                req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
-               req_applicability=1&req_reference=&req_justification=")
+               req_applicability=1&req_reference=&req_justification=",
+        )
         .dispatch()
         .await;
 
@@ -682,7 +697,7 @@ async fn create_requirement_from_template() {
 
     assert_eq!(response.status(), Status::Ok);
     let html = response.into_string().await.expect("body");
-    
+
     // Verify template data is pre-filled
     assert!(html.contains("Template Requirement") || html.contains("Template description"));
     assert!(html.contains("Template justification"));

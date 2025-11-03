@@ -1,16 +1,16 @@
-body[data-page='requirements'] .o-main-content {
+[data-page='requirements'] .o-main-content {
   padding-inline: var(--space-4);
   width: min(1600px, calc(100% - var(--space-8) * 2));
 }
 
 @media (min-width: 768px) {
-  body[data-page='requirements'] .o-main-content {
+  [data-page='requirements'] .o-main-content {
     padding-inline: var(--space-6);
   }
 }
 
 @media (min-width: 1024px) {
-  body[data-page='requirements'] .o-main-content {
+  [data-page='requirements'] .o-main-content {
     padding-inline: var(--space-8);
   }
 }

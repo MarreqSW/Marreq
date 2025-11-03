@@ -447,6 +447,13 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         Ok(id)
     }
 
+    fn insert_new_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
+        let id = self.inner.insert_new_verification(new)?;
+        self.cache.invalidate_verification(id);
+        self.cache.invalidate_project(new.project_id);
+        Ok(id)
+    }
+
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_category(new)?;
         self.cache.invalidate_category(id);
@@ -602,7 +609,6 @@ mod tests {
             req_current_status: 1,
             req_author: 1,
             req_reviewer: 1,
-            req_link: "link".into(),
             req_reference: "ref".into(),
             req_category: 1,
             req_parent: 0,
@@ -879,7 +885,6 @@ mod tests {
             req_description: "".into(),
             req_verification: 1,
             req_author: 1,
-            req_link: "l2".into(),
             req_category: 1,
             req_current_status: 1,
             req_parent: 0,
@@ -898,7 +903,6 @@ mod tests {
             req_description: "".into(),
             req_verification: 1,
             req_author: 1,
-            req_link: "l2".into(),
             req_category: 1,
             req_current_status: 1,
             req_parent: 0,

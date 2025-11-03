@@ -93,6 +93,7 @@
   --surface-muted: #1f2a3a;
   --surface-hover: #27344a;
   --surface-accent: rgb(37 99 235 / 0.18);
+  --surface-subtle: rgb(51 65 85 / 0.45);
   --text-primary: #f8fafc;
   --text-secondary: #cbd5f5;
   --text-inverse: #0f172a;

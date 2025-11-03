@@ -279,7 +279,6 @@ mod tests {
             req_current_status: status,
             req_author: ADMIN_ID,
             req_reviewer: USER_ID,
-            req_link: format!("https://example.com/{}", id),
             req_reference: format!("REQ-{:03}", id),
             req_category: category,
             req_parent: 0,

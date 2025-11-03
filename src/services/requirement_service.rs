@@ -1,10 +1,14 @@
 //! Service providing requirement related operations.
+//!
+//! The service is intentionally lightweight and wraps repository calls with
+//! validation and logging so that route handlers can remain focused on HTTP
+//! concerns.
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{NewRequirement, Requirement, User};
+use crate::models::{NewRequirement, Requirement, Test, User};
 use crate::repository::errors::RepoError;
-use crate::repository::{PooledConnectionWrapper, RequirementsRepository};
+use crate::repository::{PooledConnectionWrapper, RequirementsRepository, TestsRepository};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
 
 /// High level operations for requirements backed by the shared [`AppState`].
@@ -20,38 +24,63 @@ impl<'a> RequirementService<'a> {
 
     /// Retrieve all requirements.
     pub fn list_all(&self) -> Result<Vec<Requirement>, RepoError> {
-        self.state.repo_read().get_requirements_all()
+        self.repo_read().get_requirements_all()
     }
 
     /// Retrieve requirements scoped to a project.
     pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        self.state
-            .repo_read()
-            .get_requirements_by_project(project_id)
+        self.repo_read().get_requirements_by_project(project_id)
+    }
+
+    pub fn list_by_project_filtered(
+        &self,
+        project_id: i32,
+        status_filter: Option<i32>,
+        verification_filter: Option<i32>,
+        category_filter: Option<i32>,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        Ok(Self::filter(
+            self.list_by_project(project_id)?,
+            status_filter,
+            verification_filter,
+            category_filter,
+        ))
     }
 
     /// Retrieve a single requirement by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
-        self.state.repo_read().get_requirement_by_id(id)
+        self.repo_read().get_requirement_by_id(id)
+    }
+
+    pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        Ok(self
+            .list_all()?
+            .into_iter()
+            .filter(|r| r.req_parent == parent_id)
+            .collect())
+    }
+
+    pub fn get_linked_tests(&self, id: i32) -> Result<Vec<Test>, RepoError> {
+        self.repo_read().get_tests_for_requirement(id)
     }
 
     /// Create a new requirement entry and log the action.
-    pub fn create(&self, user: &User, mut payload: NewRequirement) -> Result<i32, RepoError> {
+    pub fn create(&self, actor: &User, mut payload: NewRequirement) -> Result<i32, RepoError> {
         self.prepare_payload(&mut payload)?;
 
         let id = {
-            let mut repo = self.state.repo_write();
+            let mut repo = self.repo_write();
             repo.insert_new_requirement(&payload)?
         };
 
-        self.log_created(user, id, &payload);
+        self.log_created(actor, id, &payload);
         Ok(id)
     }
 
     /// Update an existing requirement entry and log the change.
     pub fn update(
         &self,
-        user: &User,
+        actor: &User,
         id: i32,
         mut payload: NewRequirement,
     ) -> Result<Requirement, RepoError> {
@@ -61,7 +90,7 @@ impl<'a> RequirementService<'a> {
         let before = self.get_by_id(id)?;
 
         {
-            let mut repo = self.state.repo_write();
+            let mut repo = self.repo_write();
             let updated = repo.edit_requirement(&payload)?;
             if !updated {
                 return Err(RepoError::NotFound);
@@ -69,26 +98,65 @@ impl<'a> RequirementService<'a> {
         }
 
         let after = self.get_by_id(id)?;
-        self.log_updated(user, &before, &after);
+        self.log_updated(actor, &before, &after);
         Ok(after)
     }
 
     /// Delete an requirement entry and log the removal.
-    pub fn delete(&self, user: &User, id: i32) -> Result<Requirement, RepoError> {
+    pub fn delete(&self, actor: &User, id: i32) -> Result<Requirement, RepoError> {
         let removed = {
-            let mut repo = self.state.repo_write();
+            let mut repo = self.repo_write();
             repo.delete_requirement(id)?
         };
 
-        self.log_deleted(user, &removed);
+        self.log_deleted(actor, &removed);
         Ok(removed)
+    }
+
+    fn filter(
+        requirements: Vec<Requirement>,
+        status_filter: Option<i32>,
+        verification_filter: Option<i32>,
+        category_filter: Option<i32>,
+    ) -> Vec<Requirement> {
+        let mut filtered_requirements: Vec<Requirement> = requirements
+            .into_iter()
+            .filter(|req| {
+                let status_match =
+                    status_filter.map_or(true, |status_id| req.req_current_status == status_id);
+                let verification_match = verification_filter.map_or(true, |verification_id| {
+                    req.req_verification == verification_id
+                });
+                let category_match =
+                    category_filter.map_or(true, |category_id| req.req_category == category_id);
+                status_match && verification_match && category_match
+            })
+            .collect();
+
+        filtered_requirements.sort_by(|a, b| {
+            match (a.req_reference.is_empty(), b.req_reference.is_empty()) {
+                (false, false) => a.req_reference.cmp(&b.req_reference),
+                (false, true) => std::cmp::Ordering::Less,
+                (true, false) => std::cmp::Ordering::Greater,
+                (true, true) => a.req_id.cmp(&b.req_id),
+            }
+        });
+
+        filtered_requirements
+    }
+
+    fn repo_read(&self) -> std::sync::RwLockReadGuard<'_, DieselCachedRepo> {
+        self.state.repo.read().expect("repo lock poisoned")
+    }
+
+    fn repo_write(&self) -> std::sync::RwLockWriteGuard<'_, DieselCachedRepo> {
+        self.state.repo.write().expect("repo lock poisoned")
     }
 
     fn prepare_payload(&self, payload: &mut NewRequirement) -> Result<(), RepoError> {
         sanitize_string(&mut payload.req_title);
         sanitize_string(&mut payload.req_description);
         sanitize_string(&mut payload.req_reference);
-        sanitize_string(&mut payload.req_link);
         sanitize_optional_string(&mut payload.req_justification);
 
         validate_requirement(payload).map_err(|err| RepoError::BadInput(err.to_string()))
@@ -98,9 +166,9 @@ impl<'a> RequirementService<'a> {
         self.state.repo_read().inner_repo().get_conn()
     }
 
-    fn log_created(&self, user: &User, id: i32, entity: &NewRequirement) {
+    fn log_created(&self, actor: &User, id: i32, entity: &NewRequirement) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(actor.user_id);
             if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!("Failed to log requirement creation {id}: {_err}");
@@ -108,9 +176,9 @@ impl<'a> RequirementService<'a> {
         }
     }
 
-    fn log_updated(&self, user: &User, before: &Requirement, after: &Requirement) {
+    fn log_updated(&self, actor: &User, before: &Requirement, after: &Requirement) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(actor.user_id);
             if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
                 #[cfg(debug_assertions)]
                 eprintln!(
@@ -121,9 +189,9 @@ impl<'a> RequirementService<'a> {
         }
     }
 
-    fn log_deleted(&self, user: &User, entity: &Requirement) {
+    fn log_deleted(&self, actor: &User, entity: &Requirement) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(actor.user_id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!(
@@ -168,7 +236,6 @@ mod tests {
             req_current_status: 1,
             req_author: 1,
             req_reviewer: 1,
-            req_link: "https://example.com".into(),
             req_reference: reference.into(),
             req_category: 1,
             req_parent: 1,
@@ -188,10 +255,9 @@ mod tests {
             req_description: "  Description  ".into(),
             req_verification: 1,
             req_author: 1,
-            req_link: "  https://example.com/path  ".into(),
             req_category: 1,
             req_current_status: 1,
-            req_parent: 1,
+            req_parent: 0,
             req_reference: "  REQ-123  ".into(),
             req_reviewer: 1,
             req_applicability: 1,
@@ -213,7 +279,6 @@ mod tests {
         assert_eq!(stored.req_title, "Title");
         assert_eq!(stored.req_description, "Description");
         assert_eq!(stored.req_reference, "REQ-123");
-        assert_eq!(stored.req_link, "https://example.com/path");
         assert!(stored.req_justification.is_none());
     }
 
@@ -246,7 +311,6 @@ mod tests {
         assert_eq!(updated.req_title, "Updated");
         assert_eq!(updated.req_description, "New Description");
         assert_eq!(updated.req_reference, "REQ-999");
-        assert_eq!(updated.req_link, "https://example.com/path");
     }
 
     #[test]

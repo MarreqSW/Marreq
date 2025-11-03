@@ -14,7 +14,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  qa-pipeline:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust (nightly + rustfmt)
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: nightly
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Set up Node.js (for stylelint)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install stylelint dependencies
+        run: npm install --no-save stylelint stylelint-config-standard
+
+      - name: Stylelint CSS files
+        run: npx stylelint "src/html/static/**/*.css" --config .stylelintrc.json
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Run JavaScript tests
+        run: npm test
+
+  test-and-coverage:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgres://rust:rust@127.0.0.1:5432/reqman
@@ -30,28 +70,17 @@ jobs:
       - name: Wait for database to be healthy
         run: .github/workflows/wait_for_db.sh
 
-      - name: Set up Rust (nightly + llvm-tools + rustfmt)
+      - name: Set up Rust (nightly + llvm-tools)
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: nightly
-          components: rustfmt, llvm-tools-preview
+          components: llvm-tools-preview
 
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-      - name: Set up Node.js (for stylelint)
-        uses: actions/setup-node@v4
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
         with:
-          node-version: '20'
-
-      - name: Install stylelint dependencies
-        run: npm install --no-save stylelint stylelint-config-standard
-
-      - name: Stylelint CSS files
-        run: npx stylelint "src/html/static/**/*.css" --config .stylelintrc.json
-
-      - name: Run JavaScript tests
-        run: npm test
+          shared-key: "ci"
+          cache-on-failure: true
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
@@ -61,14 +90,10 @@ jobs:
       - name: Initialize database
         run: ./setup_database.sh
 
-      - name: Coverage (run, no report)
-        run: cargo cov --workspace --all-features --doctests --no-report
-
-      - name: Coverage (Cobertura XML)
-        run: cargo cov report --cobertura --output-path coverage.xml
-
-      - name: Coverage (HTML)
-        run: cargo cov report --html --output-dir coverage_html
+      - name: Generate coverage reports
+        run: |
+          cargo cov --workspace --all-features --doctests --cobertura --output-path coverage.xml
+          cargo cov report --html --output-dir coverage_html
 
       - name: Build coverage summary (Markdown)
         uses: irongut/CodeCoverageSummary@v1.3.0

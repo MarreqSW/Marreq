@@ -55,17 +55,6 @@ pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError>
         }
     }
 
-    // Validate link format if provided
-    if !req.req_link.trim().is_empty() {
-        let url_regex = Regex::new(r"^https?://[^\s/$.?#].[^\s]*$").unwrap();
-        if !url_regex.is_match(&req.req_link) {
-            return Err(ValidationError::InvalidFormat {
-                field: "req_link".to_string(),
-                message: "Link must be a valid HTTP/HTTPS URL".to_string(),
-            });
-        }
-    }
-
     // Validate IDs are positive
     if req.req_verification <= 0 {
         return Err(ValidationError::Custom(

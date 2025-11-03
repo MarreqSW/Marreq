@@ -124,7 +124,6 @@ impl ExcelImporter {
                 "req_author".to_string(),
                 "req_reviewer".to_string(),
                 "req_parent".to_string(),
-                "req_link".to_string(),
                 "req_justification".to_string(),
             ],
             "tests" => vec![
@@ -279,7 +278,6 @@ impl ExcelImporter {
             req_author: author_id,
             req_reviewer: reviewer_id,
             req_parent: parent_id.unwrap_or(0),
-            req_link: req_data.get("req_link").unwrap_or(&"".to_string()).clone(),
             req_justification: req_data.get("req_justification").cloned(),
             project_id,
         };

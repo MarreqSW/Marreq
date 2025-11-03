@@ -153,11 +153,10 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
     worksheet.write_string(0, 7, "Verification", None)?;
     worksheet.write_string(0, 8, "Author", None)?;
     worksheet.write_string(0, 9, "Reviewer", None)?;
-    worksheet.write_string(0, 10, "Link", None)?;
-    worksheet.write_string(0, 11, "Creation Date", None)?;
-    worksheet.write_string(0, 12, "Update Date", None)?;
-    worksheet.write_string(0, 13, "Deadline Date", None)?;
-    worksheet.write_string(0, 14, "Justification", None)?;
+    worksheet.write_string(0, 10, "Creation Date", None)?;
+    worksheet.write_string(0, 11, "Update Date", None)?;
+    worksheet.write_string(0, 12, "Deadline Date", None)?;
+    worksheet.write_string(0, 13, "Justification", None)?;
 
     // Write data
     for (i, req) in decorated_requirements.iter().enumerate() {
@@ -172,13 +171,12 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
         worksheet.write_string(row, 7, &req.req_verification, None)?;
         worksheet.write_string(row, 8, &req.req_author, None)?;
         worksheet.write_string(row, 9, &req.req_reviewer, None)?;
-        worksheet.write_string(row, 10, &req.req_link, None)?;
-        worksheet.write_string(row, 11, &req.req_creation_date, None)?;
-        worksheet.write_string(row, 12, &req.req_update_date, None)?;
-        worksheet.write_string(row, 13, &req.req_deadline_date, None)?;
+        worksheet.write_string(row, 10, &req.req_creation_date, None)?;
+        worksheet.write_string(row, 11, &req.req_update_date, None)?;
+        worksheet.write_string(row, 12, &req.req_deadline_date, None)?;
         worksheet.write_string(
             row,
-            14,
+            13,
             &req.req_justification.as_deref().unwrap_or(""),
             None,
         )?;

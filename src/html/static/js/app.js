@@ -10,6 +10,7 @@ const pageControllers = {
   'requirements-tree': () => import('./pages/requirementsTree.js'),
   categories: () => import('./pages/categories.js'),
   'requirement-form': () => import('./pages/requirementForm.js'),
+  'requirement-detail': () => import('./pages/requirementDetail.js'),
   'log-analytics': () => import('./pages/logAnalytics.js'),
   logs: () => import('./pages/logs.js'),
   'entity-logs': () => import('./pages/entityLogs.js'),

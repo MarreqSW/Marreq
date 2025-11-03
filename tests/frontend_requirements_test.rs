@@ -410,10 +410,10 @@ async fn requirement_detail_page_shows_relationships() {
     assert_eq!(response.status(), Status::Ok);
     let html = response.into_string().await.expect("body");
 
-    // Verify relationship sections exist
+    // Verify requirement data is embedded in the page
     assert!(
-        html.contains("requirement_data"),
-        "Missing requirement data"
+        html.contains("requirement-detail-data"),
+        "Missing requirement data script tag"
     );
     assert!(
         html.contains("relationships") || html.contains("children"),

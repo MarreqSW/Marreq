@@ -419,12 +419,15 @@ async fn delete_requirement_route(
 
     service.delete(&user, req_id)?;
 
-    Ok(Redirect::to(uri!(show_requirements(
-        project_id = project_id,
-        status_filter = Option::<i32>::None,
-        verification_filter = Option::<i32>::None,
-        category_filter = Option::<i32>::None
-    ))))
+    Ok(Redirect::to(uri!(
+        "/p",
+        show_requirements(
+            project_id = project_id,
+            status_filter = Option::<i32>::None,
+            verification_filter = Option::<i32>::None,
+            category_filter = Option::<i32>::None
+        )
+    )))
 }
 
 #[get("/<project_id>/requirements/new?<error>&<created>&<parent>&<template>")]

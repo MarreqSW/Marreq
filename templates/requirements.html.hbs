@@ -107,6 +107,11 @@
       </article>
     </section>
 
+    {{!-- Expose metrics for tests and client-side initialization --}}
+    <script id="requirement_metrics" type="application/json">
+      {"total": {{requirement_metrics.total}}, "draft": {{requirement_metrics.draft}}, "accepted": {{requirement_metrics.accepted}}, "rejected": {{requirement_metrics.rejected}}, "coverage_percent": {{requirement_metrics.coverage.percent}}, "coverage_verified": {{requirement_metrics.coverage.verified}}}
+    </script>
+
     <section class="reqman-requirements-controls c-card" aria-label="Filters">
       <div class="reqman-requirements-controls__inner">
         <form

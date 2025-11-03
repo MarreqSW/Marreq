@@ -1153,7 +1153,8 @@ mod tests {
 
         let body = response.into_string().await.expect("valid response");
         assert!(body.contains("New Requirement"));
-        assert!(body.contains("Save &amp; Add Another"));
+        assert!(body.contains("Save"));
+        assert!(body.contains("Cancel"));
     }
 
     #[rocket::async_test]

@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: 'rust'
       POSTGRES_PASSWORD: 'rust'
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql
     ports:
       - '5432:5432'
     healthcheck:

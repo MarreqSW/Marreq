@@ -2,6 +2,6 @@ services:
   db:
     restart: "no"
     volumes:
-      - /var/lib/postgresql/data
+      - /var/lib/postgresql
     tmpfs:
       - /tmp

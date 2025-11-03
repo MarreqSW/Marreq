@@ -76,7 +76,6 @@ mod tests {
             req_current_status: status,
             req_author: 0,
             req_reviewer: 0,
-            req_link: String::new(),
             req_reference: reference.to_string(),
             req_category: category,
             req_parent: 0,

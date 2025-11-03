@@ -23,6 +23,17 @@ impl<'a> UserService<'a> {
         self.state.repo_read().get_users_all()
     }
 
+    /// Retrieve a vector of users members of a project.
+    pub fn get_by_project(&self, id: i32) -> Result<Vec<User>, RepoError> {
+        use crate::repository::ProjectMembersRepository;
+        self.state
+            .repo_read()
+            .get_members_by_project(id)?
+            .into_iter()
+            .map(|member| self.get_by_id(member.user_id))
+            .collect()
+    }
+
     /// Retrieve a single user by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<User, RepoError> {
         self.state.repo_read().get_user_by_id(id)

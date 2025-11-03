@@ -24,7 +24,6 @@ pub struct Requirement {
     pub req_current_status: i32,
     pub req_author: i32,
     pub req_reviewer: i32,
-    pub req_link: String,
     pub req_reference: String,
     pub req_category: i32,
     pub req_parent: i32,
@@ -50,7 +49,6 @@ pub struct NewRequirement {
     pub req_description: String,
     pub req_verification: i32,
     pub req_author: i32,
-    pub req_link: String,
     pub req_category: i32,
     pub req_current_status: i32,
     pub req_parent: i32,
@@ -78,7 +76,6 @@ pub struct DecoratedRequirement {
     pub req_author_id: i32,
     pub req_reviewer: String,
     pub req_reviewer_id: i32,
-    pub req_link: String,
     pub req_reference: String,
     pub req_category: String,
     pub req_category_id: i32,
@@ -194,6 +191,18 @@ pub struct Verification {
     pub project_id: i32,
 }
 
+#[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm, Clone)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = verification)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(primary_key(verification_id))]
+pub struct NewVerification {
+    pub verification_id: Option<i32>,
+    pub verification_name: String,
+    pub verification_description: String,
+    pub project_id: i32,
+}
+
 /// Link between a requirement and a test in the traceability matrix.
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -260,10 +269,10 @@ pub struct UpdateUser {
 pub struct Test {
     pub test_id: i32,
     pub test_name: String,
+    pub test_reference: String,
     pub test_description: String,
     pub test_source: String,
     pub test_status: i32,
-    pub test_reference: String,
     pub test_parent: i32,
     pub project_id: i32,
 }

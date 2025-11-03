@@ -276,6 +276,20 @@ impl LookupRepository for DieselRepoMock {
             .collect())
     }
 
+    fn insert_new_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
+        let id = new
+            .verification_id
+            .unwrap_or_else(|| self.verifications.keys().max().map(|i| i + 1).unwrap_or(1));
+        let verification = Verification {
+            verification_id: id,
+            verification_name: new.verification_name.clone(),
+            verification_description: new.verification_description.clone(),
+            project_id: new.project_id,
+        };
+        self.verifications.insert(id, verification);
+        Ok(id)
+    }
+
     fn insert_new_category(&mut self, _new: &NewCategory) -> Result<i32, RepoError> {
         let id = _new
             .cat_id
@@ -383,7 +397,6 @@ impl RequirementsRepository for DieselRepoMock {
             req_current_status: _new.req_current_status,
             req_author: _new.req_author,
             req_reviewer: _new.req_reviewer,
-            req_link: _new.req_link.clone(),
             req_reference: _new.req_reference.clone(),
             req_category: _new.req_category,
             req_parent: _new.req_parent,
@@ -408,7 +421,6 @@ impl RequirementsRepository for DieselRepoMock {
                 req.req_current_status = _new.req_current_status;
                 req.req_author = _new.req_author;
                 req.req_reviewer = _new.req_reviewer;
-                req.req_link = _new.req_link.clone();
                 req.req_reference = _new.req_reference.clone();
                 req.req_category = _new.req_category;
                 req.req_parent = _new.req_parent;

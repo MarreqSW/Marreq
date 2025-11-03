@@ -3,15 +3,15 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { init } from '../../../src/html/static/js/pages/requirements.js';
+import { init } from '@pages/requirements.js';
 
 // Mock dependencies
-vi.mock('../../../src/html/static/js/core/net.js', () => ({
+vi.mock('@core/net.js', () => ({
   jsonFetch: vi.fn(),
   postJson: vi.fn(),
 }));
 
-vi.mock('../../../src/html/static/js/modules/notifications.js', () => ({
+vi.mock('@modules/notifications.js', () => ({
   showNotification: vi.fn(),
 }));
 

@@ -5,11 +5,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Mock dependencies
-vi.mock('../../../src/html/static/js/modules/referenceValidator.js', () => ({
+vi.mock('@modules/referenceValidator.js', () => ({
   initRequirementReferenceValidation: vi.fn(),
 }));
 
-vi.mock('../../../src/html/static/js/modules/notifications.js', () => ({
+vi.mock('@modules/notifications.js', () => ({
   showNotification: vi.fn(),
 }));
 
@@ -43,7 +43,7 @@ describe('Requirement Form', () => {
 
     it('should validate reference format', async () => {
       const { initRequirementReferenceValidation } = await import(
-        '../../../src/html/static/js/modules/referenceValidator.js'
+        '@modules/referenceValidator.js'
       );
 
       document.body.innerHTML = `
@@ -57,8 +57,8 @@ describe('Requirement Form', () => {
         </form>
       `;
 
-      const { default: initForm } = await import(
-        '../../../src/html/static/js/pages/requirementForm.js'
+      const { init: initForm } = await import(
+        '@pages/requirementForm.js'
       );
 
       initForm();
@@ -84,8 +84,8 @@ describe('Requirement Form', () => {
         </form>
       `;
 
-      const { default: initForm } = await import(
-        '../../../src/html/static/js/pages/requirementForm.js'
+      const { init: initForm } = await import(
+        '@pages/requirementForm.js'
       );
 
       initForm();
@@ -113,8 +113,8 @@ describe('Requirement Form', () => {
         </form>
       `;
 
-      const { default: initForm } = await import(
-        '../../../src/html/static/js/pages/requirementForm.js'
+      const { init: initForm } = await import(
+        '@pages/requirementForm.js'
       );
 
       initForm();
@@ -183,8 +183,8 @@ describe('Requirement Form', () => {
         </form>
       `;
 
-      const { default: initForm } = await import(
-        '../../../src/html/static/js/pages/requirementForm.js'
+      const { init: initForm } = await import(
+        '@pages/requirementForm.js'
       );
 
       initForm();
@@ -219,8 +219,8 @@ describe('Requirement Form', () => {
         </form>
       `;
 
-      const { default: initForm } = await import(
-        '../../../src/html/static/js/pages/requirementForm.js'
+      const { init: initForm } = await import(
+        '@pages/requirementForm.js'
       );
 
       initForm();

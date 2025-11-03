@@ -1,15 +1,15 @@
-#[cfg(test)]
+#[cfg(any(test, feature = "test-helpers"))]
 use crate::repository::diesel_repo_mock::DieselRepoMock;
 use crate::repository::CacheRepository;
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-helpers")))]
 use crate::repository::DieselRepo;
 use rocket::{Build, Rocket};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-helpers")))]
 pub type DieselCachedRepo = CacheRepository<crate::repository::diesel_repo::DieselRepo>;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-helpers"))]
 pub type DieselCachedRepo = CacheRepository<crate::repository::diesel_repo_mock::DieselRepoMock>;
 
 #[derive(Clone)]
@@ -62,12 +62,12 @@ pub fn build() -> Rocket<Build> {
         .attach(crate::app::MyDbConn::fairing())
 }
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "test-helpers")))]
 fn default_inner_repo() -> DieselRepo {
     DieselRepo::new()
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-helpers"))]
 fn default_inner_repo() -> DieselRepoMock {
     DieselRepoMock::default()
 }

@@ -123,3 +123,83 @@
     flex-direction: column;
   }
 }
+
+.c-requirement-section {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.c-requirement-section > summary {
+  background-color: var(--surface-muted);
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  list-style: none;
+}
+
+.c-requirement-section > .c-summary--bg-white {
+  background-color: var(--surface-muted);
+}
+
+.c-requirement-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.c-requirement-section .c-card__body {
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+}
+
+.c-requirement-section .u-text-muted {
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .c-card {
+  background-color: var(--surface-color);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .c-card__header--bg-white,
+[data-theme='dark'] .c-card__header--bg-light,
+[data-theme='dark'] .c-card__body--bg-white,
+[data-theme='dark'] .c-card__body--bg-light {
+  background-color: var(--surface-muted);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .c-req-detail-page .c-badge--bg-light,
+[data-theme='dark'] .c-req-detail-page .c-badge--text-bg-light {
+  background-color: var(--surface-muted);
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .c-req-detail-page .c-list-group-item {
+  background-color: var(--surface-color);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .c-req-detail-page .c-list-group-item--bg-light,
+[data-theme='dark'] .c-req-detail-page .c-list-group-item--bg-white {
+  background-color: var(--surface-muted);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .c-list-group-item .u-text-muted {
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .c-list-group-item--action:hover,
+[data-theme='dark'] .c-list-group-item--action:focus {
+  background-color: var(--surface-hover);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .u-fw-semibold {
+  color: var(--text-primary);
+}

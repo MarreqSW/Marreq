@@ -217,7 +217,6 @@ mod tests {
             req_current_status: 1,
             req_author: ADMIN_ID,
             req_reviewer: ADMIN_ID,
-            req_link: "".to_string(),
             req_reference: format!("REQ-{:03}", id),
             req_category: 1,
             req_parent: 0,

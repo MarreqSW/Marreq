@@ -14,6 +14,7 @@
 }
 
 .editor-topbar {
+  backdrop-filter: blur(18px);
   background: var(--surface-color);
   background: color-mix(in srgb, var(--surface-color) 92%, transparent);
   border: 1px solid var(--border-color);
@@ -26,7 +27,6 @@
   position: sticky;
   top: calc(var(--header-height) + var(--space-2));
   z-index: var(--z-sticky);
-  backdrop-filter: blur(18px);
 }
 
 .editor-topbar__context {
@@ -150,9 +150,9 @@
   border-radius: 999px;
   color: var(--text-secondary);
   display: inline-flex;
+  font-size: 0.8rem;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-3);
-  font-size: 0.8rem;
 }
 
 .editor-autosave__dot {
@@ -231,9 +231,9 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  padding: var(--space-5);
   display: grid;
   gap: var(--space-3);
+  padding: var(--space-5);
 }
 
 .editor-section__title {
@@ -241,8 +241,8 @@
   font-size: 0.9rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  text-transform: uppercase;
   margin: 0;
+  text-transform: uppercase;
 }
 
 .editor-field__header {
@@ -353,7 +353,7 @@
 .editor-preview__content code {
   background: var(--surface-subtle);
   border-radius: var(--radius-sm);
-  font-family: 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', monospace;
+  font-family: 'Fira Code', 'JetBrains Mono', SFMono-Regular, monospace;
   padding: 0 var(--space-1);
 }
 
@@ -379,8 +379,8 @@
 .editor-inline-actions__button:hover,
 .editor-inline-actions__button:focus-visible {
   color: var(--primary-color);
-  text-decoration: underline;
   outline: none;
+  text-decoration: underline;
 }
 
 .editor-collapsible__trigger {
@@ -400,8 +400,8 @@
   color: var(--text-secondary);
   font-size: 0.85rem;
   font-weight: 500;
-  text-transform: uppercase;
   letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 .editor-collapsible__panel {
@@ -518,7 +518,7 @@
   background: var(--surface-accent);
   border-radius: var(--radius-sm);
   color: var(--primary-dark);
-  font-family: 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', monospace;
+  font-family: 'Fira Code', 'JetBrains Mono', SFMono-Regular, monospace;
   font-size: 0.85rem;
   padding: 2px var(--space-2);
 }
@@ -606,8 +606,8 @@
 }
 
 .editor-meta-group--danger {
-  border-color: rgb(239 68 68 / 0.4);
   background: rgb(254 242 242 / 0.65);
+  border-color: rgb(239 68 68 / 0.4);
 }
 
 .editor-meta-group--danger .btn {
@@ -636,8 +636,8 @@
 
   .editor-topbar__context,
   .editor-topbar__actions {
-    flex-direction: column;
     align-items: flex-start;
+    flex-direction: column;
     gap: var(--space-3);
   }
 

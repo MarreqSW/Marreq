@@ -38,9 +38,9 @@ body[data-page='requirement-detail'] .o-main-content {
 
 @media (min-width: 1024px) {
   .requirement-detail-grid {
+    align-items: start;
     gap: var(--space-6);
     grid-template-columns: minmax(0, 2.2fr) minmax(280px, 1fr);
-    align-items: start;
   }
 }
 
@@ -68,8 +68,8 @@ body[data-page='requirement-detail'] .o-main-content {
 }
 
 .requirement-header__title {
-  margin-bottom: var(--space-3);
   line-height: 1.2;
+  margin-bottom: var(--space-3);
 }
 
 .requirement-header__statement {

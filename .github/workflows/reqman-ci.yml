@@ -47,6 +47,9 @@ jobs:
       - name: Stylelint CSS files
         run: npx stylelint "src/html/static/**/*.css" --config .stylelintrc.json
 
+      - name: Run JavaScript tests
+        run: npm test
+
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
         with:

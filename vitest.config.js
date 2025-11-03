@@ -1,6 +1,26 @@
 import { defineConfig } from 'vitest/config';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  root: __dirname,
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src/html/static/js'),
+      '@modules': path.resolve(__dirname, './src/html/static/js/modules'),
+      '@pages': path.resolve(__dirname, './src/html/static/js/pages'),
+      '@core': path.resolve(__dirname, './src/html/static/js/core'),
+    },
+  },
+  publicDir: false, // Disable special handling of 'public' directory
+  server: {
+    fs: {
+      strict: false,
+      allow: [__dirname, path.resolve(__dirname, 'src')],
+    },
+  },
   test: {
     environment: 'happy-dom',
     globals: true,

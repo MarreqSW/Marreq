@@ -555,6 +555,14 @@ impl LookupRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
+    fn insert_new_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
+        let mut conn = self.get_conn()?;
+        let result = diesel::insert_into(schema::verification::table)
+            .values(new)
+            .get_result::<Verification>(conn.as_mut())?;
+        Ok(result.verification_id)
+    }
+
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError> {
         use schema::categories::dsl::*;
         let mut conn = self.get_conn()?;
@@ -776,10 +784,10 @@ impl TestsRepository for DieselRepo {
             .select((
                 t::test_id,
                 t::test_name,
+                t::test_reference,
                 t::test_description,
                 t::test_source,
                 t::test_status,
-                t::test_reference,
                 t::test_parent,
                 t::project_id,
             ))
@@ -802,7 +810,6 @@ impl TestsRepository for DieselRepo {
                 req_current_status,
                 req_author,
                 req_reviewer,
-                req_link,
                 req_reference,
                 req_category,
                 req_parent,

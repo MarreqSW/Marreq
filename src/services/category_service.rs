@@ -31,6 +31,11 @@ impl<'a> CategoryService<'a> {
         self.state.repo_read().get_category_by_id(id)
     }
 
+    pub fn get_category_name(&self, id: i32) -> Result<String, RepoError> {
+        let category = self.state.repo_read().get_category_by_id(id)?;
+        Ok(category.cat_title)
+    }
+
     /// Create a new Category entry and log the action.
     pub fn create(&self, user: &User, new_cat: NewCategory) -> Result<i32, RepoError> {
         let id = {

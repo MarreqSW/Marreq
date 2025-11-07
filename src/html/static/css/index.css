@@ -20,4 +20,8 @@
 @import url('./pages/reports.css');
 @import url('./pages/projects.css');
 @import url('./pages/categories.css');
+@import url('./pages/requirements.css');
+@import url('./pages/requirement-editor.css');
+@import url('./pages/requirement-create.css');
+@import url('./pages/requirement-detail.css');
 @import url('./_graveyard.css');

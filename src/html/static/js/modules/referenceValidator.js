@@ -19,6 +19,7 @@ export function initRequirementReferenceValidation({
   errorSelector,
   submitSelector,
   categories = [],
+  collect,
   allowSoftMismatch = false,
 }) {
   const referenceInput = resolveElement(referenceSelector);
@@ -31,9 +32,11 @@ export function initRequirementReferenceValidation({
   }
 
   function validate() {
+    const availableCategories =
+      typeof collect === 'function' ? collect() : categories;
     const reference = referenceInput.value.trim();
     const categoryId = Number.parseInt(categorySelect.value, 10);
-    errorEl.style.display = 'none';
+    errorEl.hidden = true;
     errorEl.textContent = '';
     submitButton.disabled = false;
 
@@ -41,7 +44,7 @@ export function initRequirementReferenceValidation({
       return true;
     }
 
-    const category = categories.find((entry) => entry.id === categoryId);
+    const category = availableCategories.find((entry) => entry.id === categoryId);
     if (!category) {
       return true;
     }
@@ -51,21 +54,21 @@ export function initRequirementReferenceValidation({
 
     if (!pattern.test(reference)) {
       errorEl.textContent = `Reference must follow the format "REQ-${category.tag}-NUMBER" (e.g., REQ-${category.tag}-1).`;
-      errorEl.style.display = 'block';
+      errorEl.hidden = false;
       submitButton.disabled = !allowSoftMismatch;
       return false;
     }
 
     if (!reference.startsWith(expectedPrefix) && !allowSoftMismatch) {
       errorEl.textContent = `Reference must start with "${expectedPrefix}" for the selected category.`;
-      errorEl.style.display = 'block';
+      errorEl.hidden = false;
       submitButton.disabled = true;
       return false;
     }
 
     if (!reference.startsWith(expectedPrefix) && allowSoftMismatch) {
       errorEl.textContent = `Warning: Reference "${reference}" doesn't match the selected category "${category.tag}". Consider updating the reference to match the category.`;
-      errorEl.style.display = 'block';
+      errorEl.hidden = false;
     }
 
     return true;

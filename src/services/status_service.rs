@@ -37,6 +37,16 @@ impl<'a> StatusService<'a> {
         self.state.repo_read().get_requirement_status_by_id(id)
     }
 
+    /// Retrieve a single test status by identifier.
+    pub fn get_test_status(&self, id: i32) -> Result<TestStatus, RepoError> {
+        self.state.repo_read().get_test_status_by_id(id)
+    }
+
+    pub fn get_status_name(&self, id: i32) -> Result<String, RepoError> {
+        let status = self.state.repo_read().get_status_by_id(id)?;
+        Ok(status.st_title)
+    }
+
     /// Create a new requirement status entry.
     pub fn create_requirement_status(&self, mut payload: NewStatus) -> Result<i32, RepoError> {
         sanitize_string(&mut payload.req_st_title);
@@ -112,6 +122,7 @@ mod tests {
             service.get_requirement_status(2).unwrap().req_st_title,
             "Draft"
         );
+        assert_eq!(service.get_test_status(3).unwrap().test_st_title, "Ready");
     }
 
     #[test]

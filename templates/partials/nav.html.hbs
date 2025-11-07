@@ -23,10 +23,10 @@
           <a class="nav-link dropdown-toggle c-navbar__link c-navbar__link--toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Requirements
           </a>
-          <ul class="dropdown-menu c-navbar__dropdown-menu">
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}">Card View</a></li>
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/requirements_table">Table View</a></li>
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements/tree{{else}}/requirements/tree{{/if}}">Tree View</a></li>
+            <ul class="dropdown-menu c-navbar__dropdown-menu">
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/requirements">Card View</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/requirements_table">Table View</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/requirements/tree">Tree View</a></li>
           </ul>
         </li>
         <li class="nav-item dropdown c-navbar__item">
@@ -35,7 +35,7 @@
           </a>
           <ul class="dropdown-menu c-navbar__dropdown-menu">
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/tests">Card View</a></li>
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/tests_table">Table View</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/tests_table">Table View</a></li>
           </ul>
         </li>
         <li class="c-navbar__item"><a href="/p/{{selected_project_id}}/reports" class="nav-link c-navbar__link">Reports</a></li>

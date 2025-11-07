@@ -7,8 +7,8 @@
   <div class="d-flex justify-content-between align-items-center">
     <h1>Requirements Table</h1>
     <div>
-      <a href="/p/{{selected_project_id}}/requirements" class="btn btn-outline-secondary me-2">Card View</a>
-      <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success me-2">Export Excel</a>
+      <a href="/p/{{project.id}}/requirements" class="btn btn-outline-secondary me-2">Card View</a>
+      <a href="/p/{{project.id}}/requirements.xls" class="btn btn-success me-2">Export Excel</a>
       {{#if user.is_admin}}
       <a href="/import_excel" class="btn btn-warning me-2">Import Excel</a>
       {{/if}}
@@ -23,7 +23,7 @@
     <h5 class="mb-0">Filters</h5>
   </div>
   <div class="card-body c-card__body">
-    <form method="GET" action="/p/{{selected_project_id}}/requirements_table" class="d-flex align-items-end gap-3 filters-form">
+    <form method="GET" action="/p/{{project.id}}/requirements_table" class="d-flex align-items-end gap-3 filters-form">
       {{> partials/filters_form
           status_field_name="status_filter"
           status_label="Status"

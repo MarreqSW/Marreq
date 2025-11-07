@@ -3,9 +3,9 @@ mod categories;
 mod members;
 mod project;
 mod reports;
-mod requirements;
-#[cfg(test)]
-pub(crate) mod test_helpers;
+pub mod requirements;
+#[cfg(any(test, feature = "test-helpers"))]
+pub mod test_helpers;
 mod tests;
 
 use super::helpers;

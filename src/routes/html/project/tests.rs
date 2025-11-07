@@ -641,7 +641,6 @@ mod tests {
             req_current_status: 1,
             req_author: ADMIN_ID,
             req_reviewer: ADMIN_ID,
-            req_link: String::new(),
             req_reference: format!("REQ-SYS-{id}"),
             req_category: 1,
             req_parent: 0,

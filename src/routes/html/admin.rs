@@ -62,6 +62,10 @@ pub async fn generate_backup(
     std::env::set_var("PGPASSWORD", PASSWORD);
 
     let mut conn = get_db_connection(state.inner()).ok();
+    if conn.is_none() {
+        // If we can't even get a connection for logging, fail
+        return Err(admin_redirect());
+    }
     let ctx = LogCtx::new(user_id);
 
     // tiny helper to avoid repeating the logging boilerplate

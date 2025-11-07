@@ -150,7 +150,6 @@ mod tests {
                 req_current_status: 1,
                 req_author: 1,
                 req_reviewer: 1,
-                req_link: format!("https://example.com/requirements/{id}"),
                 req_reference: format!("REQ-{id}"),
                 req_category: 1,
                 req_parent: 0,

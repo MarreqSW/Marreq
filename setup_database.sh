@@ -33,6 +33,30 @@ fi
 echo "✅ Database container is running: ${DB_CID}"
 echo ""
 
+echo "⏳ Waiting for PostgreSQL to be ready..."
+MAX_RETRIES=30
+RETRY_COUNT=0
+until docker exec "${DB_CID}" pg_isready -U rust -q 2>/dev/null; do
+  RETRY_COUNT=$((RETRY_COUNT + 1))
+  if [[ ${RETRY_COUNT} -ge ${MAX_RETRIES} ]]; then
+    echo "❌ Error: PostgreSQL failed to become ready after ${MAX_RETRIES} attempts."
+    echo "   Container logs:"
+    docker logs "${DB_CID}" --tail 20
+    exit 1
+  fi
+  # Check if container is still running
+  if ! docker ps -q --filter "id=${DB_CID}" | grep -q .; then
+    echo "❌ Error: Database container stopped unexpectedly."
+    echo "   Container logs:"
+    docker logs "${DB_CID}" --tail 20
+    exit 1
+  fi
+  echo "   Waiting for database... (attempt ${RETRY_COUNT}/${MAX_RETRIES})"
+  sleep 2
+done
+echo "✅ PostgreSQL is ready to accept connections"
+echo ""
+
 # Make sure the init file exists (so the redirect won't silently pass an empty stream)
 INIT_SQL="${INIT_SQL:-init_complete.sql}"
 if [[ ! -f "${INIT_SQL}" ]]; then

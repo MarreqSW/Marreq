@@ -93,21 +93,26 @@ fn map_repo_error(err: RepoError) -> rocket::http::Status {
 }
 
 // TODO: This shall be an authorization check to enforce project ownership and return a redirect when mismatched
+fn requirements_list_redirect(project_id: i32) -> Redirect {
+    Redirect::to(uri!(
+        "/p",
+        show_requirements(
+            project_id = project_id,
+            status_filter = Option::<i32>::None,
+            verification_filter = Option::<i32>::None,
+            category_filter = Option::<i32>::None,
+            view = Option::<String>::None
+        )
+    ))
+}
+
 fn enforce_project_ownership(route_project_id: i32, resource_project_id: i32) -> Option<Redirect> {
     if resource_project_id != route_project_id {
         eprintln!(
             "Project mismatch: route {}, resource {}",
             route_project_id, resource_project_id
         );
-        Some(Redirect::to(uri!(
-            "/p",
-            show_requirements(
-                project_id = resource_project_id,
-                status_filter = Option::<i32>::None,
-                verification_filter = Option::<i32>::None,
-                category_filter = Option::<i32>::None
-            )
-        )))
+        Some(requirements_list_redirect(resource_project_id))
     } else {
         None
     }
@@ -136,13 +141,14 @@ struct InlineVerificationPayload {
     description: String,
 }
 
-#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>")]
+#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<view>")]
 async fn show_requirements(
     project_access: ProjectAccess,
     project_id: i32,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
+    view: Option<String>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
@@ -163,9 +169,50 @@ async fn show_requirements(
         category_filter,
     )?;
 
+    // Build tree data for tree view
+    let mut children: HashMap<i32, Vec<&DecoratedRequirement>> = HashMap::new();
+    let mut roots: Vec<&DecoratedRequirement> = Vec::new();
+
+    for r in &requirements {
+        if r.req_parent_id == 0 {
+            roots.push(r);
+        } else {
+            children.entry(r.req_parent_id).or_default().push(r);
+        }
+    }
+
+    roots.sort_by_key(|r| r.req_id);
+    for v in children.values_mut() {
+        v.sort_by_key(|r| r.req_id);
+    }
+
+    fn build_node<'a>(
+        req: &'a DecoratedRequirement,
+        idx: &HashMap<i32, Vec<&'a DecoratedRequirement>>,
+    ) -> serde_json::Value {
+        let kids = idx
+            .get(&req.req_id)
+            .map(|vs| vs.iter().map(|c| build_node(c, idx)).collect::<Vec<_>>())
+            .unwrap_or_default();
+
+        json!({
+            "requirement": req,
+            "children": kids
+        })
+    }
+
+    let tree_data = roots
+        .into_iter()
+        .map(|r| build_node(r, &children))
+        .collect::<Vec<_>>();
+
+    // Determine current view (default to card)
+    let current_view = view.as_deref().unwrap_or("card");
+
     let ctx = json!({
         "user": user,
         "requirements": json!(requirements),
+        "tree_data": tree_data,
         "requirement_metrics": json!({
             "total": metrics.total,
             "draft": metrics.draft,
@@ -176,12 +223,15 @@ async fn show_requirements(
                 "percent": metrics.coverage_percent
             }
         }),
-        "statuses": StatusService::new(state.inner()).list_legacy()?,
+        "statuses": StatusService::new(state.inner()).list_requirement_statuses()?,
         "verifications": VerificationService::new(state.inner()).list_by_project(project_id)?,
         "categories": CategoryService::new(state.inner()).list_by_project(project_id)?,
+        "applicability": ApplicabilityService::new(state.inner()).list_by_project(project_id)?,
+        "users": UserService::new(state.inner()).get_by_project(project_id)?,
         "current_status_filter": json!(status_filter),
         "current_verification_filter": json!(verification_filter),
         "current_category_filter": json!(category_filter),
+        "current_view": current_view,
         "project": json!({
             "id": selected_project.project_id,
             "name": selected_project.project_name,
@@ -189,7 +239,7 @@ async fn show_requirements(
         "is_admin": user.is_admin,
     });
 
-    Ok(Template::render("requirements", ctx))
+    Ok(Template::render("requirements/requirements", ctx))
 }
 
 #[get("/<project_id>/requirements/show/<req_id>")]
@@ -201,6 +251,7 @@ async fn show_requirement_id(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
+    let selected_project = ProjectService::new(state.inner()).get_by_id(project_id)?;
     let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
 
     let requirement = decorated_requirement_service.get_by_id(req_id)?;
@@ -267,11 +318,15 @@ async fn show_requirement_id(
     let ctx = json!({
         "user": user,
         "project_id": project_id,
+        "project": json!({
+            "id": selected_project.project_id,
+            "name": selected_project.project_name,
+        }),
         "requirement_data": canonical_data,
         "requirement_data_json": serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string()),
     });
 
-    Ok(Template::render("requirement", ctx))
+    Ok(Template::render("requirements/requirement", ctx))
 }
 
 #[get("/<project_id>/requirements/edit/<req_id>")]
@@ -370,7 +425,7 @@ async fn get_edit_requirement(
     #[cfg(debug_assertions)]
     println!("Edit requirement ctx: {:#}", ctx);
 
-    Ok(Template::render("edit_requirement", ctx))
+    Ok(Template::render("requirements/edit_requirement", ctx))
 }
 
 #[post("/<project_id>/requirements/edit/<req_id>", data = "<new_req>")]
@@ -406,10 +461,12 @@ async fn delete_requirement_route(
     let user = project_access.into_user();
 
     let service = RequirementService::new(state.inner());
-    let req = service.get_by_id(req_id)?;
+    let req = service
+        .get_by_id(req_id)
+        .map_err(|_| rocket::http::Status::NotFound)?;
 
-    if let Some(_redir) = enforce_project_ownership(project_id, req.project_id) {
-        return Err(rocket::http::Status::NotFound);
+    if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
+        return Ok(redir);
     }
 
     // Permission gate: allow only Draft(1) or Proposal(2) or admin
@@ -417,17 +474,11 @@ async fn delete_requirement_route(
         return Err(rocket::http::Status::Forbidden);
     }
 
-    service.delete(&user, req_id)?;
+    service
+        .delete(&user, req_id)
+        .map_err(|_| rocket::http::Status::InternalServerError)?;
 
-    Ok(Redirect::to(uri!(
-        "/p",
-        show_requirements(
-            project_id = project_id,
-            status_filter = Option::<i32>::None,
-            verification_filter = Option::<i32>::None,
-            category_filter = Option::<i32>::None
-        )
-    )))
+    Ok(requirements_list_redirect(project_id))
 }
 
 #[get("/<project_id>/requirements/new?<error>&<created>&<parent>&<template>")]
@@ -539,7 +590,7 @@ async fn new_requirement(
         "flash_success": created_flash,
     });
 
-    Ok(Template::render("new_requirement", ctx))
+    Ok(Template::render("requirements/new_requirement", ctx))
 }
 
 #[post("/<project_id>/requirements/new", data = "<new_req>")]
@@ -721,7 +772,7 @@ async fn show_requirements_tree(
         "selected_project_id": project_id
     });
 
-    Ok(Template::render("requirements_tree", ctx))
+    Ok(Template::render("requirements/requirements_tree", ctx))
 }
 
 #[post(
@@ -1301,6 +1352,10 @@ mod tests {
 
         let response = delete_with_session(&client, "/p/1/requirements/delete/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/requirements")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let reqs = state
@@ -1343,10 +1398,11 @@ mod tests {
         repo.requirements.insert(2, child);
         let client = test_client(repo).await;
 
-        let response = get_with_session(&client, "/p/1/requirements/tree", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/1/requirements", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");
+        // Check that parent and child requirements are rendered in the unified view
         assert!(body.contains("REQ-SYS-1"));
         assert!(body.contains("REQ-SYS-2"));
     }
@@ -1505,6 +1561,10 @@ mod tests {
 
         // Admin should be able to delete
         assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/requirements")
+        );
     }
 
     #[rocket::async_test]
@@ -1652,11 +1712,12 @@ mod tests {
     async fn requirements_tree_handles_empty_project() {
         let client = test_client(base_repo()).await;
 
-        let response = get_with_session(&client, "/p/1/requirements/tree", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/1/requirements", ADMIN_ID).await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
-        assert!(body.contains("total_requirements") || body.contains("tree"));
+        // Check that the tree view section exists in the unified page
+        assert!(body.contains("treeView") || body.contains("tree_data"));
     }
 
     #[rocket::async_test]
@@ -1678,10 +1739,11 @@ mod tests {
 
         let client = test_client(repo).await;
 
-        let response = get_with_session(&client, "/p/1/requirements/tree", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/1/requirements", ADMIN_ID).await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
+        // Check that all requirements are rendered in the tree structure
         assert!(body.contains("REQ-SYS-1"));
         assert!(body.contains("REQ-SYS-2"));
         assert!(body.contains("REQ-SYS-3"));

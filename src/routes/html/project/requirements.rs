@@ -245,6 +245,7 @@ async fn show_requirement_id(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
+    let selected_project = ProjectService::new(state.inner()).get_by_id(project_id)?;
     let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
 
     let requirement = decorated_requirement_service.get_by_id(req_id)?;
@@ -310,7 +311,10 @@ async fn show_requirement_id(
 
     let ctx = json!({
         "user": user,
-        "project_id": project_id,
+        "project": json!({
+            "id": selected_project.project_id,
+            "name": selected_project.project_name,
+        }),
         "requirement_data": canonical_data,
         "requirement_data_json": serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string()),
     });

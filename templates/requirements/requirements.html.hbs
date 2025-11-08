@@ -19,7 +19,9 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+import { initTreeControls } from '/static/js/modules/tree.js';
+
 // View switcher functionality
 (function() {
   const VIEW_KEY = 'requirements_view_preference';
@@ -74,6 +76,18 @@
   cardBtn.addEventListener('click', () => switchView('card'));
   tableBtn.addEventListener('click', () => switchView('table'));
   treeBtn.addEventListener('click', () => switchView('tree'));
+  
+  // Initialize tree controls
+  const treeContainer = document.querySelector('.c-tree');
+  if (treeContainer) {
+    initTreeControls({
+      rootSelector: '.c-tree',
+      toggleSelector: '[data-tree-toggle]',
+      branchSelector: '[data-tree-branch]',
+      expandAllSelector: '[data-tree-expand-all]',
+      collapseAllSelector: '[data-tree-collapse-all]',
+    });
+  }
   
   // Load saved preference or use default
   try {

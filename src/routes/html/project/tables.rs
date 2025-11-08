@@ -1,7 +1,7 @@
 use super::prelude::*;
 use crate::services::{
-    CategoryService, DecoratedTestService, ProjectService,
-    StatusService, UserService, VerificationService,
+    CategoryService, DecoratedTestService, ProjectService, StatusService, UserService,
+    VerificationService,
 };
 
 /// Show tests table view for a specific project

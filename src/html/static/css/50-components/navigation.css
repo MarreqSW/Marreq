@@ -107,68 +107,6 @@
   outline-offset: 4px;
 }
 
-.c-navbar__project-selector {
-  align-items: center;
-  background: rgb(148 163 184 / 0.08);
-  border: 1px solid rgb(148 163 184 / 0.2);
-  border-radius: var(--radius-md);
-  display: inline-flex;
-  gap: var(--space-2);
-  padding: calc(var(--space-1) + 2px) var(--space-2);
-  transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-
-.c-navbar__project-selector:hover {
-  border-color: rgb(148 163 184 / 0.32);
-}
-
-.c-navbar__project-selector:focus-within {
-  background: rgb(37 99 235 / 0.12);
-  border-color: var(--primary-color);
-}
-
-[data-theme='dark'] .c-navbar__project-selector {
-  background: rgb(148 163 184 / 0.18);
-  border-color: rgb(148 163 184 / 0.35);
-}
-
-[data-theme='dark'] .c-navbar__project-selector:hover {
-  border-color: rgb(148 163 184 / 0.5);
-}
-
-[data-theme='dark'] .c-navbar__project-selector:focus-within {
-  background: rgb(37 99 235 / 0.24);
-  border-color: var(--primary-light);
-}
-
-.c-navbar__project-label {
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.c-navbar__project-select {
-  appearance: none;
-  background-color: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  box-shadow: none;
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: 600;
-  min-width: 180px;
-  padding: 0 var(--space-5) 0 var(--space-2);
-}
-
-.c-navbar__project-select:focus {
-  border: none;
-  box-shadow: none;
-  outline: none;
-}
-
 .c-navbar__menu {
   align-items: center;
   display: flex;
@@ -221,8 +159,7 @@
 }
 
 .c-navbar__link:hover::before,
-.c-navbar__link:focus-visible::before,
-.c-navbar__link.c-navbar__link--active::before {
+.c-navbar__link:focus-visible::before {
   opacity: 1;
   transform: scaleX(1);
 }
@@ -230,12 +167,6 @@
 .c-navbar__link:focus-visible {
   box-shadow: 0 0 0 2px rgb(37 99 235 / 0.25);
   outline: none;
-}
-
-.c-navbar__link.c-navbar__link--active,
-.c-navbar__link.c-navbar__link--active:focus-visible {
-  background-color: rgb(37 99 235 / 0.12);
-  color: var(--primary-color);
 }
 
 .c-navbar__link.c-navbar__link--disabled {

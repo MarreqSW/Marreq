@@ -77,7 +77,7 @@ pub fn show_requirements_table(
         "current_category_filter": json!(category_filter),
     });
 
-    Ok(Template::render("requirements_table", ctx))
+    Ok(Template::render("requirements/requirements_table", ctx))
 }
 
 /// Show tests table view for a specific project

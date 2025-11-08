@@ -233,7 +233,7 @@ async fn show_requirements(
         "is_admin": user.is_admin,
     });
 
-    Ok(Template::render("requirements", ctx))
+    Ok(Template::render("requirements/requirements", ctx))
 }
 
 #[get("/<project_id>/requirements/show/<req_id>")]
@@ -315,7 +315,7 @@ async fn show_requirement_id(
         "requirement_data_json": serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string()),
     });
 
-    Ok(Template::render("requirement", ctx))
+    Ok(Template::render("requirements/requirement", ctx))
 }
 
 #[get("/<project_id>/requirements/edit/<req_id>")]
@@ -414,7 +414,7 @@ async fn get_edit_requirement(
     #[cfg(debug_assertions)]
     println!("Edit requirement ctx: {:#}", ctx);
 
-    Ok(Template::render("edit_requirement", ctx))
+    Ok(Template::render("requirements/edit_requirement", ctx))
 }
 
 #[post("/<project_id>/requirements/edit/<req_id>", data = "<new_req>")]
@@ -584,7 +584,7 @@ async fn new_requirement(
         "flash_success": created_flash,
     });
 
-    Ok(Template::render("new_requirement", ctx))
+    Ok(Template::render("requirements/new_requirement", ctx))
 }
 
 #[post("/<project_id>/requirements/new", data = "<new_req>")]
@@ -766,7 +766,7 @@ async fn show_requirements_tree(
         "selected_project_id": project_id
     });
 
-    Ok(Template::render("requirements_tree", ctx))
+    Ok(Template::render("requirements/requirements_tree", ctx))
 }
 
 #[post(

@@ -1,0 +1,375 @@
+/* Requirements Card View - Modern card-based layout for reading requirements */
+
+[data-page='requirements-cards'] .o-main-content {
+  padding-inline: var(--space-4);
+  width: min(1600px, calc(100% - var(--space-8) * 2));
+}
+
+@media (min-width: 768px) {
+  [data-page='requirements-cards'] .o-main-content {
+    padding-inline: var(--space-6);
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-page='requirements-cards'] .o-main-content {
+    padding-inline: var(--space-8);
+  }
+}
+
+.reqman-requirements-cards-page {
+  background-color: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .reqman-requirements-cards-page {
+    gap: var(--space-8);
+    padding-inline: var(--space-6);
+  }
+}
+
+@media (min-width: 1280px) {
+  .reqman-requirements-cards-page {
+    padding-inline: var(--space-8);
+  }
+}
+
+/* Cards Grid Section */
+.reqman-requirements-cards-section {
+  background-color: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.reqman-requirements-cards-grid {
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 450px), 1fr));
+}
+
+@media (min-width: 1024px) {
+  .reqman-requirements-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  }
+}
+
+/* Individual Requirement Card */
+.reqman-requirement-card {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  transition: box-shadow var(--transition-base), transform var(--transition-base), border-color var(--transition-base);
+}
+
+.reqman-requirement-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Card Header */
+.reqman-requirement-card__header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.reqman-requirement-card__header-left {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.reqman-requirement-card__key {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  border-radius: var(--radius-md);
+  color: var(--text-inverse);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: var(--space-1) var(--space-3);
+}
+
+.reqman-requirement-card__status-badge {
+  align-items: center;
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-xl);
+  color: var(--text-secondary);
+  display: inline-flex;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  justify-content: center;
+  letter-spacing: 0.06em;
+  padding: var(--space-1) var(--space-2);
+  text-transform: uppercase;
+}
+
+.reqman-requirement-card__status-badge[data-status-id="1"],
+.reqman-requirement-card__status-badge[data-status="Draft"] {
+  background-color: rgb(148 163 184 / 0.2);
+  color: #475569;
+}
+
+.reqman-requirement-card__status-badge[data-status-id="2"],
+.reqman-requirement-card__status-badge[data-status="Proposal"] {
+  background-color: rgb(245 158 11 / 0.18);
+  color: #b45309;
+}
+
+.reqman-requirement-card__status-badge[data-status-id="3"],
+.reqman-requirement-card__status-badge[data-status="Accepted"],
+.reqman-requirement-card__status-badge[data-status="Approved"],
+.reqman-requirement-card__status-badge[data-status="Finished"] {
+  background-color: rgb(16 185 129 / 0.2);
+  color: #047857;
+}
+
+.reqman-requirement-card__status-badge[data-status-id="4"],
+.reqman-requirement-card__status-badge[data-status="Rejected"],
+.reqman-requirement-card__status-badge[data-status="Cancelled"] {
+  background-color: rgb(239 68 68 / 0.18);
+  color: #b91c1c;
+}
+
+.reqman-requirement-card__header-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.reqman-requirement-card__action-btn {
+  align-items: center;
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  padding: var(--space-2);
+  text-decoration: none;
+  transition: background-color var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+}
+
+.reqman-requirement-card__action-btn:hover {
+  background-color: var(--surface-muted);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.reqman-requirement-card__action-btn svg {
+  height: 16px;
+  width: 16px;
+}
+
+/* Card Title */
+.reqman-requirement-card__title {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.reqman-requirement-card__title-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--transition-base);
+}
+
+.reqman-requirement-card__title-link:hover {
+  color: var(--primary-color);
+}
+
+/* Card Statement/Description */
+.reqman-requirement-card__statement {
+  flex: 1;
+  min-height: 4rem;
+}
+
+.reqman-requirement-card__description {
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  margin: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+/* Card Metadata */
+.reqman-requirement-card__metadata {
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+}
+
+.reqman-requirement-card__meta-row {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.reqman-requirement-card__meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.reqman-requirement-card__meta-label {
+  color: var(--text-secondary);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.reqman-requirement-card__meta-value {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reqman-requirement-card__meta-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: text-decoration var(--transition-base);
+}
+
+.reqman-requirement-card__meta-link:hover {
+  text-decoration: underline;
+}
+
+.reqman-requirement-card__justification {
+  border-top: 1px dashed var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  padding-top: var(--space-3);
+}
+
+.reqman-requirement-card__justification-text {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-style: italic;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Card Footer */
+.reqman-requirement-card__footer {
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-3);
+}
+
+.reqman-requirement-card__view-link {
+  align-items: center;
+  color: var(--primary-color);
+  display: inline-flex;
+  font-size: 0.875rem;
+  font-weight: 600;
+  gap: var(--space-1);
+  text-decoration: none;
+  transition: gap var(--transition-base);
+}
+
+.reqman-requirement-card__view-link:hover {
+  gap: var(--space-2);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .reqman-requirements-cards-page {
+    padding: var(--space-4);
+  }
+
+  .reqman-requirements-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reqman-requirement-card {
+    padding: var(--space-5);
+  }
+
+  .reqman-requirement-card__title {
+    font-size: 1.125rem;
+  }
+
+  .reqman-requirement-card__description {
+    font-size: 0.875rem;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .reqman-requirement-card__meta-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Animation */
+.reqman-requirement-card {
+  animation: card-fade-in 320ms ease-out;
+}
+
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger animation for cards */
+.reqman-requirement-card:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.reqman-requirement-card:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.reqman-requirement-card:nth-child(3) {
+  animation-delay: 80ms;
+}
+
+.reqman-requirement-card:nth-child(4) {
+  animation-delay: 120ms;
+}
+
+.reqman-requirement-card:nth-child(5) {
+  animation-delay: 160ms;
+}
+
+.reqman-requirement-card:nth-child(6) {
+  animation-delay: 200ms;
+}
+
+.reqman-requirement-card:nth-child(n + 7) {
+  animation-delay: 240ms;
+}

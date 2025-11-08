@@ -299,38 +299,10 @@ cargo cov --workspace --all-features --doctests
 
 #### 6. Run All Checks (Full CI Simulation)
 
-Create a script to run all checks in sequence:
+Run all checks in sequence:
 
 ```bash
-#!/bin/bash
-set -e
-
-echo "🔍 Running all CI checks locally..."
-
-echo "\n1️⃣ Checking Rust formatting..."
-cargo +nightly fmt --all -- --check
-
-echo "\n2️⃣ Linting CSS..."
-npx stylelint "src/html/static/**/*.css" --config .stylelintrc.json
-
-echo "\n3️⃣ Checking for unused CSS..."
-npm run check:unused-css
-
-echo "\n4️⃣ Running frontend tests..."
-npm test
-
-echo "\n5️⃣ Running backend tests with coverage..."
-export DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/reqman
-cargo llvm-cov --workspace --all-features --doctests --fail-under-lines 70
-
-echo "\n✅ All checks passed!"
-```
-
-Save this as `run_ci_locally.sh`, make it executable, and run:
-
-```bash
-chmod +x run_ci_locally.sh
-./run_ci_locally.sh
+./local_ci.sh
 ```
 
 ---

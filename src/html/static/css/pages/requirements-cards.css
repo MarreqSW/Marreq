@@ -62,6 +62,7 @@
 
 /* Individual Requirement Card */
 .reqman-requirement-card {
+  animation: card-fade-in 320ms ease-out;
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -82,10 +83,10 @@
 /* Card Header */
 .reqman-requirement-card__header {
   align-items: center;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   padding-bottom: var(--space-3);
-  border-bottom: 1px solid var(--border-color);
 }
 
 .reqman-requirement-card__header-left {
@@ -202,15 +203,15 @@
 }
 
 .reqman-requirement-card__description {
+  -webkit-box-orient: vertical;
   color: var(--text-primary);
+  display: -webkit-box;
   font-size: 0.9375rem;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
   line-height: 1.7;
   margin: 0;
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  line-clamp: 4;
-  -webkit-box-orient: vertical;
 }
 
 /* Card Metadata */
@@ -328,11 +329,7 @@
   }
 }
 
-/* Animation */
-.reqman-requirement-card {
-  animation: card-fade-in 320ms ease-out;
-}
-
+/* Keyframe animations */
 @keyframes card-fade-in {
   from {
     opacity: 0;

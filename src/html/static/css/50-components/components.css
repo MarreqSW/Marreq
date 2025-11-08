@@ -313,16 +313,16 @@
 }
 
 /* Dark mode styles for linked requirements */
-[data-theme='dark'] .c-linked-requirements__list .c-linked-requirements__link .c-linked-requirements__id {
+[data-theme='dark'] .c-linked-requirements__id {
   color: var(--primary-light, #60a5fa);
 }
 
-[data-theme='dark'] .c-linked-requirements__list .c-linked-requirements__link {
+[data-theme='dark'] .c-linked-requirements__link {
   background-color: var(--surface-color);
   border-color: var(--border-color);
 }
 
-[data-theme='dark'] .c-linked-requirements__list .c-linked-requirements__link:hover {
+[data-theme='dark'] .c-linked-requirements__link:hover {
   background-color: var(--surface-accent);
   border-color: var(--primary-light, #60a5fa);
 }

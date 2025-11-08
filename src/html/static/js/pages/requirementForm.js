@@ -1061,7 +1061,6 @@ export function init() {
 
   const isCreateForm = form.classList.contains('create-form');
 
-  initComboboxes(form);
   initCustomDropdowns(form);
   initReferenceValidation(form);
   if (isCreateForm) {

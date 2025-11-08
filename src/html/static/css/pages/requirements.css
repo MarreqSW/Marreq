@@ -829,15 +829,15 @@
 }
 
 .reqman-requirement-card__description {
+  -webkit-box-orient: vertical;
   color: var(--text-secondary);
   display: -webkit-box;
   font-size: 0.875rem;
+  -webkit-line-clamp: 3;
   line-clamp: 3;
   line-height: 1.5;
   margin: 0;
   overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
 }
 
 /* Card metadata badges */

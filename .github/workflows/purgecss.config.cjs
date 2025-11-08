@@ -14,53 +14,28 @@ module.exports = {
       // Dynamic classes that might be added via JavaScript
       /^js-/,
       /^is-/,
-      /^has-/,
       /^status-/,
       // Status badge variants (dynamically added)
       /^reqman-requirements-status-badge--/,
-      /^reqman-badge--bg-/,
-      /^reqman-project-card--bg-/,
       // Editor states
       /^c-editor-dropzone--/,
-      /^c-editor-status__menu/,
-      /^c-editor-linked__/,
-      /^c-editor-field__error/,
-      /^c-editor-preview__empty/,
       /^c-editor-dropzone__/,
       // Table states
-      /^c-table-notification--/,
       /^c-table-editable/,
-      /^c-table__cell--/,
-      /^c-table-view/,
       /^c-table-sort-trigger/,
       // Tree component (used via JS)
       /^c-tree__requirement-link/,
       /^c-tree__indicator/,
-      /^c-tree__empty-state/,
-      /^c-tree__breadcrumb/,
       // Form components
-      /^c-filter-section/,
       /^c-form-select--/,
-      // Navigation
-      /^c-navbar__project-/,
-      /^c-navbar__link--active/,
+      /^c-custom-dropdown__item--/,
+      /^c-custom-dropdown__value--/,
       // Dashboard & metrics (dynamically rendered)
-      /^reqman-metric/,
       /^reqman-action-card/,
       /^reqman-project-card/,
-      // Components (conditional/dynamic)
-      /^c-spinner/,
-      /^c-linked-tests/,
-      /^c-test-info/,
-      /^c-portal-/,
-      /^c-requirement-section/,
-      /^c-requirement-card__reference-tag/,
-      /^c-card__subtitle/,
-      // Create form fields (on specific page)
-      /^c-create-field-grid/,
-      /^c-create-field__meta/,
+      // Create form fields
+      /^c-create-field/,
       // Utility classes
-      /^u-list/,
       /^u-text-/,
       /^o-grid--/,
       // Generic utility classes that might be used dynamically
@@ -71,20 +46,13 @@ module.exports = {
     deep: [
       // Keep all variations of these components
       /reqman-requirements-status-badge/,
-      /reqman-badge/,
+      /reqman-action-card/,
       /reqman-project-card/,
-      /reqman-metric/,
-      /c-editor-/,
-      /c-table-notification/,
+      /c-editor-dropzone/,
       /c-table-editable/,
-      /c-table-view/,
+      /c-table-sort-trigger/,
       /c-tree__/,
-      /c-filter-section/,
-      /c-navbar__project/,
-      /c-linked-/,
-      /c-test-info/,
-      /c-portal-/,
-      /c-requirement-section/,
+      /c-custom-dropdown/,
       /c-create-field/,
     ],
     greedy: [

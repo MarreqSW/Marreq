@@ -47,18 +47,18 @@
     
     // Show selected view and activate button
     switch(viewName) {
-      case 'table':
-        tableView.style.display = 'block';
-        tableBtn.classList.add('active');
+      case 'card':
+        cardView.style.display = 'block';
+        cardBtn.classList.add('active');
         break;
       case 'tree':
         treeView.style.display = 'block';
         treeBtn.classList.add('active');
         break;
-      case 'card':
+      case 'table':
       default:
-        cardView.style.display = 'block';
-        cardBtn.classList.add('active');
+        tableView.style.display = 'block';
+        tableBtn.classList.add('active');
         break;
     }
     
@@ -77,10 +77,10 @@
   
   // Load saved preference or use default
   try {
-    const savedView = localStorage.getItem(VIEW_KEY) || 'card';
+    const savedView = localStorage.getItem(VIEW_KEY) || 'table';
     switchView(savedView);
   } catch (e) {
-    switchView('card');
+    switchView('table');
   }
 })();
 </script>

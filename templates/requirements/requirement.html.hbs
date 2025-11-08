@@ -1,31 +1,3 @@
-{{#*inline "attachments_panel"}}
-<section class="card shadow-sm border-0 requirement-side-card">
-  <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-    <div>
-      <div class="text-uppercase small text-muted mb-0">Attachments</div>
-      <h3 class="h6 mb-0">Supporting Evidence</h3>
-    </div>
-    <button
-      class="btn btn-outline-secondary btn-sm"
-      type="button"
-      data-bs-toggle="collapse"
-      data-bs-target="#requirementAttachmentsContent"
-      aria-expanded="true"
-      aria-controls="requirementAttachmentsContent"
-    >
-      Collapse
-    </button>
-  </div>
-  <div class="collapse show" id="requirementAttachmentsContent">
-    <div class="card-body">
-      <div data-slot="attachments">
-        <p class="mb-0 text-muted">No supporting evidence has been linked yet.</p>
-      </div>
-    </div>
-  </div>
-</section>
-{{/inline}}
-
 {{#*inline "relationships_panel"}}
 <section class="card shadow-sm border-0 requirement-side-card">
   <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
@@ -223,39 +195,6 @@
 </section>
 {{/inline}}
 
-{{#*inline "comments_panel"}}
-<section class="card shadow-sm border-0 requirement-main-card">
-  <div class="card-header bg-white border-0 d-flex flex-wrap gap-3 justify-content-between align-items-center">
-    <div>
-      <div class="text-uppercase small text-muted mb-1">Discussion</div>
-      <h3 class="h5 mb-0">Comments</h3>
-    </div>
-    <button
-      class="btn btn-outline-secondary btn-sm"
-      type="button"
-      data-bs-toggle="collapse"
-      data-bs-target="#requirementCommentsContent"
-      aria-expanded="true"
-      aria-controls="requirementCommentsContent"
-    >
-      Collapse
-    </button>
-  </div>
-  <div class="collapse show" id="requirementCommentsContent">
-    <div class="card-body">
-      <div class="alert alert-light border mb-3 d-none" data-field="comments-locked"></div>
-      <p class="mb-3 text-muted d-none" data-field="comments-empty">
-        No comments yet. Start the conversation with your team.
-      </p>
-      <div class="d-flex flex-column gap-3" data-slot="comments"></div>
-      <button class="btn btn-outline-primary btn-sm" type="button" data-field="comments-reply-button" disabled>
-        Reply (coming soon)
-      </button>
-    </div>
-  </div>
-</section>
-{{/inline}}
-
 {{#*inline "page"}}
 <div class="requirement-detail-page" data-requirement-root>
   <script type="application/json" id="requirement-detail-data">
@@ -431,12 +370,10 @@
 
       {{> verification_panel}}
       {{> history_panel}}
-      {{> comments_panel}}
     </div>
     <aside class="requirement-detail-sidebar" aria-label="Requirement metadata">
       {{> metadata_panel}}
       {{> relationships_panel}}
-      {{> attachments_panel}}
     </aside>
   </div>
 </div>

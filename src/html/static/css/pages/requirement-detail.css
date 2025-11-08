@@ -168,6 +168,7 @@
 }
 
 .c-requirement-linked-tests .c-list-group-item {
+
   border-color: var(--border-color);
   border-left: 0;
   border-right: 0;
@@ -182,58 +183,6 @@
   border-bottom: 0;
 }
 
-.c-requirement-timeline {
-  counter-reset: requirement-timeline;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  margin: 0;
-  padding: 0;
-  position: relative;
-}
-
-.c-requirement-timeline__item {
-  border-left: 2px solid var(--border-color);
-  margin: 0;
-  padding-left: var(--space-4);
-  position: relative;
-}
-
-.c-requirement-timeline__item::before {
-  background: var(--surface-color);
-  border: 2px solid var(--primary-color);
-  border-radius: 50%;
-  content: '';
-  height: 0.9rem;
-  left: -0.54rem;
-  position: absolute;
-  top: 0.2rem;
-  width: 0.9rem;
-}
-
-.c-requirement-timeline__item.is-current::before {
-  background: var(--primary-color);
-}
-
-.c-requirement-timeline__item:last-child {
-  border-left-color: transparent;
-}
-
-.c-requirement-comment {
-  background: var(--surface-muted);
-  border-color: var(--border-color);
-}
-
-.c-requirement-timeline__item .c-badge {
-  background: var(--surface-muted);
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-
-.c-requirement-comment__body {
-  color: var(--text-secondary);
-}
-
 .c-requirement-section p {
   line-height: 1.6;
   max-width: 72ch;
@@ -243,15 +192,7 @@
   background: var(--surface-color);
 }
 
-[data-theme='dark'] .c-requirement-comment {
-  background: var(--surface-color);
-}
-
 [data-theme='dark'] .c-requirement-linked-tests .c-list-group-item {
   background: var(--surface-color);
   color: var(--text-primary);
-}
-
-[data-theme='dark'] .c-requirement-timeline__item .c-badge {
-  background: var(--surface-color);
 }

@@ -187,46 +187,6 @@ function renderRelationships(root, view, projectId) {
   }
 }
 
-function renderAttachments(root, attachments = []) {
-  const container = getSlot(root, 'attachments');
-  if (!container) {
-    return;
-  }
-
-  container.innerHTML = '';
-  if (!attachments.length) {
-    const empty = document.createElement('p');
-    empty.className = 'mb-0 text-muted';
-    empty.textContent = 'No supporting evidence has been linked yet.';
-    container.appendChild(empty);
-    return;
-  }
-
-  const list = document.createElement('div');
-  list.className = 'list-group list-group-flush';
-
-  attachments.forEach((attachment) => {
-    const link = document.createElement('a');
-    link.className =
-      'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
-    link.href = attachment.href;
-    link.target = '_blank';
-    link.rel = 'noopener';
-
-    const name = document.createElement('span');
-    name.textContent = attachment.label;
-
-    const icon = document.createElement('span');
-    icon.className = 'small text-muted';
-    icon.textContent = '↗';
-
-    link.append(name, icon);
-    list.appendChild(link);
-  });
-
-  container.appendChild(list);
-}
-
 function renderVerification(root, view, canonical) {
   renderBadge(getFields(root, 'verification-badge'), view.verification_badge);
   setText(getFields(root, 'verification-state'), view.verification_badge.state);
@@ -307,128 +267,6 @@ function renderVerification(root, view, canonical) {
 
     link.append(info, status);
     testsContainer.appendChild(link);
-  });
-}
-
-function renderTimeline(root, timeline) {
-  const container = getSlot(root, 'timeline');
-  if (!container) {
-    return;
-  }
-
-  container.innerHTML = '';
-  timeline.forEach((entry) => {
-    const item = document.createElement('li');
-    item.className = 'requirement-timeline__item';
-    if (entry.is_current) {
-      item.classList.add('is-current');
-    }
-
-    const header = document.createElement('div');
-    header.className =
-      'requirement-timeline__header d-flex justify-content-between align-items-center flex-wrap gap-3';
-
-    const version = document.createElement('span');
-    version.className = 'badge bg-light text-dark border';
-    version.textContent = entry.version;
-
-    const timestamp = document.createElement('small');
-    timestamp.className = 'text-muted';
-    timestamp.textContent = entry.timestamp;
-
-    header.append(version, timestamp);
-
-    const summary = document.createElement('div');
-    summary.className = 'fw-semibold mt-2 requirement-timeline__summary';
-    summary.textContent = entry.summary;
-
-    const actor = document.createElement('div');
-    actor.className = 'small text-muted requirement-timeline__actor';
-    actor.textContent = `by ${entry.actor || '—'}`;
-
-    item.append(header, summary, actor);
-
-    if (entry.old_values && entry.new_values) {
-      const button = document.createElement('button');
-      button.className = 'btn btn-sm btn-outline-secondary mt-2';
-      button.type = 'button';
-      button.setAttribute('data-action', 'show-changes');
-      button.dataset.oldValues = JSON.stringify(entry.old_values);
-      button.dataset.newValues = JSON.stringify(entry.new_values);
-      button.textContent = 'View diff';
-      item.appendChild(button);
-    }
-
-    container.appendChild(item);
-  });
-}
-
-function renderComments(root, comments) {
-  const container = getSlot(root, 'comments');
-  const lockedMessage = getField(root, 'comments-locked');
-  const emptyMessage = getField(root, 'comments-empty');
-  const replyButton = getField(root, 'comments-reply-button');
-  if (!container) {
-    return;
-  }
-
-  container.innerHTML = '';
-
-  if (!comments.enabled) {
-    if (lockedMessage) {
-      lockedMessage.textContent = comments.locked_reason ?? '';
-      lockedMessage.classList.remove('d-none');
-    }
-    if (replyButton) {
-      replyButton.classList.add('d-none');
-    }
-    return;
-  }
-
-  if (lockedMessage) {
-    lockedMessage.classList.add('d-none');
-  }
-
-  if (!comments.has_items) {
-    if (emptyMessage) {
-      emptyMessage.classList.remove('d-none');
-    }
-    return;
-  }
-
-  if (emptyMessage) {
-    emptyMessage.classList.add('d-none');
-  }
-
-  if (replyButton) {
-    replyButton.classList.remove('d-none');
-    replyButton.setAttribute('disabled', 'disabled');
-  }
-
-  comments.items.forEach((comment) => {
-    const card = document.createElement('article');
-    card.className = 'requirement-comment shadow-sm border rounded-3 p-3';
-
-    const header = document.createElement('div');
-    header.className =
-      'd-flex justify-content-between align-items-center gap-3 mb-2 requirement-comment__header';
-
-    const author = document.createElement('span');
-    author.className = 'fw-semibold requirement-comment__author';
-    author.textContent = comment.author ?? 'Unknown';
-
-    const timestamp = document.createElement('small');
-    timestamp.className = 'text-muted requirement-comment__timestamp';
-    timestamp.textContent = comment.timestamp ?? '';
-
-    header.append(author, timestamp);
-
-    const body = document.createElement('p');
-    body.className = 'mb-0 requirement-comment__body';
-    body.textContent = comment.body ?? '';
-
-    card.append(header, body);
-    container.appendChild(card);
   });
 }
 
@@ -593,9 +431,6 @@ function hydratePage(view, canonical) {
   renderMetadata(root, view.metadata);
   renderBodySections(root, view.body_sections);
   renderRelationships(root, view.relationships, canonical.project_id);
-  renderAttachments(root, view.attachments);
-  renderTimeline(root, view.timeline);
-  renderComments(root, view.comments);
 }
 
 export function init() {

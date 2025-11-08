@@ -33,77 +33,6 @@ function initReferenceValidation(form) {
   });
 }
 
-function initComboboxes(form) {
-  const wrappers = Array.from(form.querySelectorAll('[data-component="combo"]'));
-
-  wrappers.forEach((wrapper) => {
-    const select = wrapper.querySelector('[data-role="combo-source"]');
-    const comboUi = wrapper.querySelector('[data-role="combo-ui"]');
-    const input = comboUi?.querySelector('input');
-
-    if (!select || !comboUi || !input) {
-      return;
-    }
-
-    const labelForValue = (value) => {
-      const option = Array.from(select.options).find((opt) => opt.value === String(value));
-      return option ? option.textContent.trim() : '';
-    };
-
-    const resolveOption = (label) => {
-      const normalised = label.toLowerCase();
-      const options = Array.from(select.options).map((opt) => ({
-        label: opt.textContent.trim(),
-        value: opt.value,
-      }));
-
-      return (
-        options.find((opt) => opt.label.toLowerCase() === normalised) ||
-        options.find((opt) => opt.label.toLowerCase().startsWith(normalised)) ||
-        null
-      );
-    };
-
-    function commitInput() {
-      const label = input.value.trim();
-
-      if (!label) {
-        const defaultOption = select.querySelector('option[value=""]');
-        if (defaultOption) {
-          select.value = '';
-        }
-        input.value = labelForValue(select.value);
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-        return;
-      }
-
-      const match = resolveOption(label);
-      if (match) {
-        select.value = match.value;
-        input.value = match.label;
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-        return;
-      }
-
-      // No match: revert to the current selection label
-      input.value = labelForValue(select.value) || label;
-    }
-
-    wrapper.classList.add('is-enhanced');
-    comboUi.hidden = false;
-
-    select.addEventListener('change', () => {
-      input.value = labelForValue(select.value);
-    });
-
-    input.addEventListener('change', commitInput);
-    input.addEventListener('blur', commitInput);
-
-    // Prefill input with the current selection
-    input.value = labelForValue(select.value);
-  });
-}
-
 function initStatusControls(form) {
   const toggle = form.querySelector('[data-role="status-toggle"]');
   const menu = form.querySelector('[data-role="status-menu"]');
@@ -620,47 +549,6 @@ function initInlineCreation(form) {
       submitButton?.removeAttribute('disabled');
     }
   }
-}
-
-function initSaveMenu(form) {
-  const trigger = form.querySelector('[data-role="save-menu-trigger"]');
-  const panel = form.querySelector('[data-role="save-menu-panel"]');
-  if (!trigger || !panel) {
-    return;
-  }
-
-  function closeMenu() {
-    panel.hidden = true;
-    trigger.setAttribute('aria-expanded', 'false');
-  }
-
-  function openMenu() {
-    panel.hidden = false;
-    trigger.setAttribute('aria-expanded', 'true');
-  }
-
-  trigger.addEventListener('click', (event) => {
-    event.preventDefault();
-    const isOpen = trigger.getAttribute('aria-expanded') === 'true';
-    if (isOpen) {
-      closeMenu();
-    } else {
-      openMenu();
-    }
-  });
-
-  document.addEventListener('click', (event) => {
-    if (!panel.hidden && !panel.contains(event.target) && event.target !== trigger) {
-      closeMenu();
-    }
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && trigger.getAttribute('aria-expanded') === 'true') {
-      closeMenu();
-      trigger.focus();
-    }
-  });
 }
 
 function escapeHtml(value) {
@@ -1181,7 +1069,6 @@ export function init() {
     initSuccessToast(form);
   }
   initStatusControls(form);
-  initSaveMenu(form);
   initRichText(form);
   initRationale(form);
   initAttachments(form);

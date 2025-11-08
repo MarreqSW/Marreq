@@ -5,6 +5,7 @@ import { registerDeleteAction } from './modules/deleteActions.js';
 
 const pageControllers = {
   requirements: () => import('./pages/requirements.js'),
+  'requirements-cards': () => import('./pages/requirements-cards.js'),
   tests: () => import('./pages/tests.js'),
   matrix: () => import('./pages/matrix.js'),
   'requirements-tree': () => import('./pages/requirementsTree.js'),

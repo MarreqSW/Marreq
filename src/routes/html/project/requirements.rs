@@ -189,7 +189,7 @@ async fn show_requirements(
         "is_admin": user.is_admin,
     });
 
-    Ok(Template::render("requirements", ctx))
+    Ok(Template::render("requirements_cards", ctx))
 }
 
 #[get("/<project_id>/requirements/show/<req_id>")]

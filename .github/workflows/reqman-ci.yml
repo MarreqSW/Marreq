@@ -45,8 +45,6 @@ jobs:
 
       - name: Check for unused CSS
         run: node .github/workflows/purgecss-ci.mjs
-        env:
-          UNUSED_CSS_TOLERANCE: 150
 
   frontend-tests:
     runs-on: ubuntu-latest

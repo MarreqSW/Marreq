@@ -47,11 +47,6 @@
   width: 100%;
 }
 
-.c-card__body.c-card__body--table {
-  padding: 0;
-  width: 100%;
-}
-
 .c-table-responsive {
   width: 100%;
 }
@@ -60,7 +55,7 @@
   background-color: var(--surface-muted);
 }
 
-.c-table .c-table__head-cell {
+.c-table .c-table__head th {
   background-color: var(--surface-muted);
   border-bottom: 1px solid var(--border-color);
   color: var(--text-primary);
@@ -69,7 +64,7 @@
   text-align: left;
 }
 
-.c-table .c-table__body-cell {
+.c-table td {
   border-bottom: 1px solid var(--border-color);
   color: var(--text-secondary);
   padding: var(--space-4);
@@ -89,10 +84,6 @@
   min-width: 80px;
   text-align: center;
   width: 80px;
-}
-
-.c-table__cell--center.c-table__body-cell {
-  vertical-align: middle;
 }
 
 .c-table__cell--sticky-first,
@@ -184,16 +175,6 @@
 .c-table-sort-trigger:is(:hover, :focus) .c-table-sort-indicator {
   color: var(--primary-color);
   opacity: 1;
-}
-
-.c-table-sort-trigger.c-table-sort-trigger--stacked {
-  justify-content: space-between;
-  min-height: 60px;
-}
-
-.c-table-sort-trigger.c-table-sort-trigger--stacked .c-table-sort-meta {
-  color: var(--text-secondary);
-  font-size: 0.75rem;
 }
 
 /* Table view layout helpers */

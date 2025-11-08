@@ -1,0 +1,52 @@
+{{!--
+  PARTIAL: Tree Node (Recursive)
+  Individual node in the tree hierarchy
+--}}
+<div class="c-tree__node" data-node-id="{{requirement.req_id}}">
+  <div class="c-tree__node-content">
+    <button class="c-tree__toggle" type="button" data-tree-toggle="{{requirement.req_id}}">
+      {{#if children}}
+      <svg class="c-tree__toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9,18 15,12 9,6"></polyline>
+      </svg>
+      {{else}}
+      <span class="c-tree__toggle-placeholder"></span>
+      {{/if}}
+    </button>
+    <div class="c-tree__requirement-card c-requirement-card">
+      <div class="c-tree__requirement-header">
+        <div class="requirement-id c-requirement-card__id">
+          <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}"
+            class="c-tree__requirement-link c-linked-requirements__link">
+            {{requirement.req_reference}}
+          </a>
+        </div>
+        <div class="requirement-status">
+          <span class="status-badge status-{{requirement.req_current_status}}"
+            data-status="{{requirement.req_current_status}}">
+            {{requirement.req_current_status}}
+          </span>
+        </div>
+      </div>
+      <div class="c-tree__requirement-title c-linked-requirements__title">{{requirement.req_title}}</div>
+      <div class="c-tree__requirement-description">{{requirement.req_description}}</div>
+      <div class="c-tree__requirement-meta">
+        <div class="c-tree__meta-item">
+          <span class="c-tree__meta-label">Category:</span>
+          <span class="meta-value c-requirement-card__meta-value">{{requirement.req_category}}</span>
+        </div>
+        <div class="c-tree__meta-item">
+          <span class="c-tree__meta-label">Reference:</span>
+          <span class="meta-value c-requirement-card__meta-value">{{requirement.req_reference}}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  {{#if children}}
+  <div class="c-tree__children" id="children-{{requirement.req_id}}" data-tree-branch="{{requirement.req_id}}" hidden>
+    {{#each children}}
+    {{> requirements/_tree_child_node}}
+    {{/each}}
+  </div>
+  {{/if}}
+</div>

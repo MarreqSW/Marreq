@@ -28,7 +28,7 @@
    REQUIREMENT DETAIL PAGE ROOT
    ============================================================ */
 
-.requirement-detail-page {
+.reqman-requirement-detail-page {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
@@ -37,7 +37,7 @@
 }
 
 @media (min-width: 1024px) {
-  .requirement-detail-page {
+  .reqman-requirement-detail-page {
     gap: var(--space-8);
     padding-block: var(--space-8);
   }
@@ -47,7 +47,7 @@
    HEADER SECTION - Main requirement information
    ============================================================ */
 
-.requirement-header {
+.reqman-requirement-header {
   background: linear-gradient(135deg, var(--surface-color), var(--surface-accent));
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -56,22 +56,22 @@
   transition: box-shadow var(--transition-base);
 }
 
-.requirement-header:hover {
+.reqman-requirement-header:hover {
   box-shadow: var(--shadow-lg);
 }
 
-.requirement-header__body {
+.reqman-requirement-header__body {
   padding: var(--space-6);
 }
 
 @media (min-width: 768px) {
-  .requirement-header__body {
+  .reqman-requirement-header__body {
     padding: var(--space-8);
   }
 }
 
 @media (min-width: 1024px) {
-  .requirement-header__body {
+  .reqman-requirement-header__body {
     padding: calc(var(--space-8) * 1.5);
   }
 }
@@ -80,7 +80,7 @@
    STATEMENT CARD - Highlighted requirement statement
    ============================================================ */
 
-.requirement-statement-card {
+.reqman-requirement-statement-card {
   background: linear-gradient(145deg, var(--surface-color), rgb(248 250 252 / 0.6));
   border: 2px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -89,19 +89,19 @@
   position: relative;
 }
 
-:root[data-theme='dark'] .requirement-statement-card {
+[data-theme='dark'] .reqman-requirement-statement-card {
   background: linear-gradient(145deg, var(--surface-color), rgb(15 23 42 / 0.8));
   border-color: var(--border-color);
   box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.3);
 }
 
 @media (min-width: 768px) {
-  .requirement-statement-card {
+  .reqman-requirement-statement-card {
     padding: var(--space-8);
   }
 }
 
-.requirement-header__statement {
+.reqman-requirement-header__statement {
   color: var(--text-primary);
   font-weight: 400;
   line-height: 1.6;
@@ -111,54 +111,54 @@
    CONTEXT CARD - Quick overview information
    ============================================================ */
 
-.requirement-context-card {
+.reqman-requirement-context-card {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
 }
 
-.requirement-context-card .card-header {
+.reqman-requirement-context-card .u-card-header {
   background-color: var(--surface-muted);
   border-bottom: 1px solid var(--border-color);
 }
 
-.requirement-context-card .card-body {
+.reqman-requirement-context-card .u-card-body {
   background-color: var(--surface-color);
 }
 
-:root[data-theme='dark'] .requirement-context-card {
+[data-theme='dark'] .reqman-requirement-context-card {
   background-color: var(--surface-color);
   border-color: var(--border-color);
 }
 
-:root[data-theme='dark'] .requirement-context-card .card-header {
+[data-theme='dark'] .reqman-requirement-context-card .u-card-header {
   background-color: var(--surface-muted);
   border-bottom-color: var(--border-color);
 }
 
-:root[data-theme='dark'] .requirement-context-card .card-body {
+[data-theme='dark'] .reqman-requirement-context-card .u-card-body {
   background-color: var(--surface-color);
 }
 
-.requirement-header__meta-grid {
+.reqman-requirement-header__meta-grid {
   display: grid;
   gap: var(--space-4);
   grid-template-columns: 1fr;
 }
 
 @media (min-width: 768px) {
-  .requirement-header__meta-grid {
+  .reqman-requirement-header__meta-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (min-width: 1024px) {
-  .requirement-header__meta-grid {
+  .reqman-requirement-header__meta-grid {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
-.requirement-glance {
+.reqman-requirement-glance {
   background-color: var(--surface-subtle);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -169,15 +169,15 @@
   transition: background-color var(--transition-base);
 }
 
-.requirement-glance:hover {
+.reqman-requirement-glance:hover {
   background-color: var(--surface-hover);
 }
 
-:root[data-theme='dark'] .requirement-glance {
+[data-theme='dark'] .reqman-requirement-glance {
   background-color: rgb(51 65 85 / 0.3);
 }
 
-:root[data-theme='dark'] .requirement-glance:hover {
+[data-theme='dark'] .reqman-requirement-glance:hover {
   background-color: rgb(51 65 85 / 0.5);
 }
 
@@ -185,20 +185,20 @@
    DETAIL GRID - Main content and sidebar layout
    ============================================================ */
 
-.requirement-detail-grid {
+.reqman-requirement-detail-grid {
   display: grid;
   gap: var(--space-6);
   grid-template-columns: 1fr;
 }
 
 @media (min-width: 1024px) {
-  .requirement-detail-grid {
+  .reqman-requirement-detail-grid {
     gap: var(--space-8);
     grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
   }
 }
 
-.requirement-detail-main {
+.reqman-requirement-detail-main {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
@@ -206,19 +206,19 @@
 }
 
 @media (min-width: 1024px) {
-  .requirement-detail-main {
+  .reqman-requirement-detail-main {
     gap: var(--space-6);
   }
 }
 
-.requirement-detail-sidebar {
+.reqman-requirement-detail-sidebar {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
 }
 
 @media (min-width: 1024px) {
-  .requirement-detail-sidebar {
+  .reqman-requirement-detail-sidebar {
     gap: var(--space-6);
   }
 }
@@ -227,8 +227,8 @@
    CARD COMPONENTS
    ============================================================ */
 
-.requirement-main-card,
-.requirement-side-card {
+.reqman-requirement-main-card,
+.reqman-requirement-side-card {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -236,47 +236,47 @@
   transition: box-shadow var(--transition-base);
 }
 
-.requirement-main-card:hover,
-.requirement-side-card:hover {
+.reqman-requirement-main-card:hover,
+.reqman-requirement-side-card:hover {
   box-shadow: var(--shadow-md);
 }
 
-:root[data-theme='dark'] .requirement-main-card,
-:root[data-theme='dark'] .requirement-side-card {
+[data-theme='dark'] .reqman-requirement-main-card,
+[data-theme='dark'] .reqman-requirement-side-card {
   background-color: var(--surface-color);
   border-color: var(--border-color);
 }
 
 /* Custom card header class for proper theme support */
-.requirement-card-header {
-  background-color: var(--surface-muted) !important;
-  border-bottom: 1px solid var(--border-color) !important;
-  color: var(--text-primary) !important;
+.reqman-requirement-card-header {
+  background-color: var(--surface-muted);
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
 }
 
-:root[data-theme='dark'] .requirement-card-header {
-  background-color: var(--surface-muted) !important;
-  border-bottom-color: var(--border-color) !important;
-  color: var(--text-primary) !important;
+[data-theme='dark'] .reqman-requirement-card-header {
+  background-color: var(--surface-muted);
+  border-bottom-color: var(--border-color);
+  color: var(--text-primary);
 }
 
 /* ============================================================
    SECTION COMPONENTS - Collapsible details sections
    ============================================================ */
 
-.requirement-section {
+.reqman-requirement-section {
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background-color: var(--surface-color);
 }
 
-:root[data-theme='dark'] .requirement-section {
+[data-theme='dark'] .reqman-requirement-section {
   background-color: var(--surface-color);
   border-color: var(--border-color);
 }
 
-.requirement-section summary {
+.reqman-requirement-section summary {
   cursor: pointer;
   list-style: none;
   padding: var(--space-4) var(--space-5);
@@ -284,26 +284,26 @@
   user-select: none;
 }
 
-.requirement-section summary::-webkit-details-marker {
+.reqman-requirement-section summary::-webkit-details-marker {
   display: none;
 }
 
-.requirement-section summary::marker {
+.reqman-requirement-section summary::marker {
   display: none;
 }
 
-.requirement-section summary:hover {
+.reqman-requirement-section summary:hover {
   background-color: var(--surface-hover);
 }
 
-.requirement-section summary::after {
+.reqman-requirement-section summary::after {
   content: '▼';
   float: right;
   font-size: 0.875rem;
   transition: transform var(--transition-base);
 }
 
-.requirement-section[open] summary::after {
+.reqman-requirement-section[open] summary::after {
   transform: rotate(-180deg);
 }
 
@@ -311,7 +311,7 @@
    AVATAR COMPONENTS
    ============================================================ */
 
-.requirement-avatar {
+.reqman-requirement-avatar {
   align-items: center;
   border-radius: 50%;
   display: inline-flex;
@@ -327,26 +327,26 @@
    METADATA LIST
    ============================================================ */
 
-.requirement-meta-list {
+.reqman-requirement-meta-list {
   display: grid;
   gap: var(--space-3);
   grid-template-columns: auto 1fr;
 }
 
-.requirement-meta-list dt {
+.reqman-requirement-meta-list dt {
   color: var(--text-secondary);
   font-size: 0.8125rem;
   font-weight: 500;
 }
 
-.requirement-meta-list dd {
+.reqman-requirement-meta-list dd {
   color: var(--text-primary);
   margin: 0;
   text-align: end;
 }
 
 @media (min-width: 1024px) {
-  .requirement-meta-list dd {
+  .reqman-requirement-meta-list dd {
     text-align: start;
   }
 }
@@ -355,7 +355,7 @@
    TIMELINE COMPONENT
    ============================================================ */
 
-.requirement-timeline {
+.reqman-requirement-timeline {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -364,7 +364,7 @@
   padding: 0;
 }
 
-.requirement-timeline li {
+.reqman-requirement-timeline li {
   align-items: flex-start;
   display: flex;
   gap: var(--space-3);
@@ -372,7 +372,7 @@
   position: relative;
 }
 
-.requirement-timeline li::before {
+.reqman-requirement-timeline li::before {
   background-color: var(--primary-color);
   border-radius: 50%;
   content: '';
@@ -384,7 +384,7 @@
   width: 8px;
 }
 
-.requirement-timeline li:not(:last-child)::after {
+.reqman-requirement-timeline li:not(:last-child)::after {
   background-color: var(--border-color);
   content: '';
   height: calc(100% + var(--space-3));
@@ -398,7 +398,7 @@
    CHIP/BADGE COMPONENTS FOR CLASSIFICATION
    ============================================================ */
 
-.requirement-chip {
+.reqman-requirement-chip {
   align-items: center;
   background-color: rgb(37 99 235 / 0.1);
   border: 1px solid rgb(37 99 235 / 0.2);
@@ -412,18 +412,18 @@
   transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
-.requirement-chip:hover {
+.reqman-requirement-chip:hover {
   background-color: rgb(37 99 235 / 0.15);
   transform: translateY(-1px);
 }
 
-:root[data-theme='dark'] .requirement-chip {
+[data-theme='dark'] .reqman-requirement-chip {
   background-color: rgb(37 99 235 / 0.15);
   border-color: rgb(37 99 235 / 0.3);
   color: var(--primary-light);
 }
 
-:root[data-theme='dark'] .requirement-chip:hover {
+[data-theme='dark'] .reqman-requirement-chip:hover {
   background-color: rgb(37 99 235 / 0.25);
 }
 
@@ -431,14 +431,14 @@
    PROGRESS BAR
    ============================================================ */
 
-.progress-thin {
+.reqman-progress-thin {
   background-color: var(--surface-muted);
   border-radius: var(--radius-xl);
   height: 8px;
   overflow: hidden;
 }
 
-.progress-thin .progress-bar {
+.reqman-progress-thin .u-progress-bar {
   background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
   border-radius: inherit;
   transition: width 0.4s ease;
@@ -448,30 +448,30 @@
    LINKED TESTS LIST
    ============================================================ */
 
-.requirement-linked-tests {
+.reqman-requirement-linked-tests {
   border-radius: var(--radius-md);
   overflow: hidden;
 }
 
-.requirement-linked-tests .list-group-item {
+.reqman-requirement-linked-tests .u-list-group-item {
   border: 1px solid var(--border-color);
   border-bottom: none;
   padding: var(--space-4);
   transition: background-color var(--transition-base), transform var(--transition-fast);
 }
 
-.requirement-linked-tests .list-group-item:first-child {
+.reqman-requirement-linked-tests .u-list-group-item:first-child {
   border-top-left-radius: var(--radius-md);
   border-top-right-radius: var(--radius-md);
 }
 
-.requirement-linked-tests .list-group-item:last-child {
+.reqman-requirement-linked-tests .u-list-group-item:last-child {
   border-bottom: 1px solid var(--border-color);
   border-bottom-left-radius: var(--radius-md);
   border-bottom-right-radius: var(--radius-md);
 }
 
-.requirement-linked-tests .list-group-item:hover {
+.reqman-requirement-linked-tests .u-list-group-item:hover {
   background-color: var(--surface-hover);
   transform: translateX(4px);
 }
@@ -480,7 +480,7 @@
    RELATIONSHIPS LINKS
    ============================================================ */
 
-.requirement-relationship-link {
+.reqman-requirement-relationship-link {
   align-items: center;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -492,7 +492,7 @@
   transition: background-color var(--transition-base), border-color var(--transition-base), transform var(--transition-fast);
 }
 
-.requirement-relationship-link:hover {
+.reqman-requirement-relationship-link:hover {
   background-color: var(--surface-hover);
   border-color: var(--primary-color);
   color: var(--primary-color);
@@ -500,7 +500,7 @@
   transform: translateX(4px);
 }
 
-.requirement-relationship-link .badge {
+.reqman-requirement-relationship-link .u-badge {
   flex-shrink: 0;
 }
 
@@ -508,12 +508,12 @@
    ACTION BUTTONS & TOOLBAR
    ============================================================ */
 
-.btn-toolbar {
+.u-btn-toolbar {
   display: flex;
   flex-wrap: wrap;
 }
 
-.btn-toolbar .btn-group {
+.u-btn-toolbar .u-btn-group {
   flex-shrink: 0;
 }
 
@@ -522,29 +522,29 @@
    ============================================================ */
 
 @media (max-width: 768px) {
-  .requirement-detail-page {
+  .reqman-requirement-detail-page {
     gap: var(--space-4);
     padding-block: var(--space-4);
   }
 
-  .requirement-header__body {
+  .reqman-requirement-header__body {
     padding: var(--space-4);
   }
 
-  .requirement-statement-card {
+  .reqman-requirement-statement-card {
     padding: var(--space-4);
   }
 
-  .requirement-detail-grid {
+  .reqman-requirement-detail-grid {
     gap: var(--space-4);
   }
 
-  .requirement-detail-main,
-  .requirement-detail-sidebar {
+  .reqman-requirement-detail-main,
+  .reqman-requirement-detail-sidebar {
     gap: var(--space-4);
   }
 
-  .requirement-header__meta-grid {
+  .reqman-requirement-header__meta-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -553,107 +553,107 @@
    BADGE VARIANTS - Status indicators
    ============================================================ */
 
-.badge.bg-primary {
-  background-color: var(--primary-color) !important;
+.u-badge.u-bg-primary {
+  background-color: var(--primary-color);
   color: var(--text-inverse);
 }
 
-.badge.bg-success {
-  background-color: var(--success-color) !important;
+.u-badge.u-bg-success {
+  background-color: var(--success-color);
   color: var(--text-inverse);
 }
 
-.badge.bg-warning {
-  background-color: var(--warning-color) !important;
+.u-badge.u-bg-warning {
+  background-color: var(--warning-color);
   color: var(--text-inverse);
 }
 
-.badge.bg-danger {
-  background-color: var(--error-color) !important;
+.u-badge.u-bg-danger {
+  background-color: var(--error-color);
   color: var(--text-inverse);
 }
 
-.badge.bg-info {
-  background-color: #3b82f6 !important;
+.u-badge.u-bg-info {
+  background-color: #3b82f6;
   color: var(--text-inverse);
 }
 
-.badge.bg-secondary {
-  background-color: var(--secondary-color) !important;
+.u-badge.u-bg-secondary {
+  background-color: var(--secondary-color);
   color: var(--text-inverse);
 }
 
-.badge.text-bg-dark {
-  background-color: var(--text-primary) !important;
-  color: var(--text-inverse) !important;
+.u-badge.u-text-bg-dark {
+  background-color: var(--text-primary);
+  color: var(--text-inverse);
 }
 
 /* ============================================================
    UTILITY CLASSES
    ============================================================ */
 
-.text-success {
-  color: var(--success-color) !important;
+.u-text-success {
+  color: var(--success-color);
 }
 
-.text-info {
-  color: #3b82f6 !important;
+.u-text-info {
+  color: #3b82f6;
 }
 
-.text-danger {
-  color: var(--error-color) !important;
+.u-text-danger {
+  color: var(--error-color);
 }
 
-.text-muted {
-  color: var(--text-secondary) !important;
+.u-text-muted {
+  color: var(--text-secondary);
 }
 
-.text-break {
+.u-text-break {
   overflow-wrap: break-word;
   word-break: break-word;
 }
 
-.rounded-pill {
-  border-radius: 50rem !important;
+.u-rounded-pill {
+  border-radius: 50rem;
 }
 
-.rounded-4 {
-  border-radius: calc(var(--radius-lg) * 1.5) !important;
+.u-rounded-4 {
+  border-radius: calc(var(--radius-lg) * 1.5);
 }
 
-.fs-3 {
-  font-size: 1.25rem !important;
+.u-fs-3 {
+  font-size: 1.25rem;
 }
 
-.fs-6 {
-  font-size: 1rem !important;
+.u-fs-6 {
+  font-size: 1rem;
 }
 
-.fw-bold {
-  font-weight: 700 !important;
+.u-fw-bold {
+  font-weight: 700;
 }
 
-.fw-semibold {
-  font-weight: 600 !important;
+.u-fw-semibold {
+  font-weight: 600;
 }
 
-.lh-1 {
-  line-height: 1 !important;
+.u-lh-1 {
+  line-height: 1;
 }
 
-.lh-base {
-  line-height: 1.5 !important;
+.u-lh-base {
+  line-height: 1.5;
 }
 
-.display-5 {
-  font-size: 2.5rem !important;
-  font-weight: 300 !important;
-  line-height: 1.2 !important;
+.u-display-5 {
+  font-size: 2.5rem;
+  font-weight: 300;
+  line-height: 1.2;
 }
 
 @media (min-width: 768px) {
-  .display-5 {
-    font-size: 3rem !important;
+  .u-display-5 {
+    font-size: 3rem;
   }
 }
 
@@ -661,7 +661,7 @@
    ANIMATIONS
    ============================================================ */
 
-@keyframes requirement-detail-fade-in {
+@keyframes reqman-requirement-detail-fade-in {
   from {
     opacity: 0;
     transform: translateY(12px);
@@ -673,20 +673,17 @@
   }
 }
 
-.requirement-detail-page > * {
-  animation: requirement-detail-fade-in 0.3s ease-out backwards;
+.reqman-requirement-detail-page > .reqman-requirement-header,
+.reqman-requirement-detail-page > .reqman-requirement-detail-grid {
+  animation: reqman-requirement-detail-fade-in 0.3s ease-out backwards;
 }
 
-.requirement-detail-page > *:nth-child(1) {
+.reqman-requirement-detail-page > .reqman-requirement-header {
   animation-delay: 0ms;
 }
 
-.requirement-detail-page > *:nth-child(2) {
+.reqman-requirement-detail-page > .reqman-requirement-detail-grid {
   animation-delay: 50ms;
-}
-
-.requirement-detail-page > *:nth-child(3) {
-  animation-delay: 100ms;
 }
 
 /* ============================================================
@@ -694,23 +691,22 @@
    ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-delay: 0ms !important;
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+  .reqman-requirement-detail-page {
+    animation-delay: 0ms;
+    animation-duration: 0.01ms;
+    transition-duration: 0.01ms;
   }
 
-  .requirement-detail-page > * {
+  .reqman-requirement-detail-page > .reqman-requirement-header,
+  .reqman-requirement-detail-page > .reqman-requirement-detail-grid {
     animation: none;
   }
 }
 
 /* Focus visible for keyboard navigation */
-.requirement-header button:focus-visible,
-.requirement-section summary:focus-visible,
-.requirement-relationship-link:focus-visible {
+.reqman-requirement-header button:focus-visible,
+.reqman-requirement-section summary:focus-visible,
+.reqman-requirement-relationship-link:focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
 }
@@ -719,39 +715,39 @@
    DARK MODE CARD FIXES - Ensure proper backgrounds
    ============================================================ */
 
-.requirement-detail-page .card,
-:root[data-theme='dark'] .requirement-detail-page .card {
-  background-color: var(--surface-color) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-primary) !important;
-}
-
-.requirement-detail-page .card-header,
-:root[data-theme='dark'] .requirement-detail-page .card-header {
-  background-color: var(--surface-muted) !important;
-  border-color: var(--border-color) !important;
-  color: var(--text-primary) !important;
-}
-
-.requirement-detail-page .card-body,
-:root[data-theme='dark'] .requirement-detail-page .card-body {
-  background-color: var(--surface-color) !important;
-  color: var(--text-primary) !important;
-}
-
-:root[data-theme='dark'] .modal-content {
+.reqman-requirement-detail-page .u-card,
+[data-theme='dark'] .reqman-requirement-detail-page .u-card {
   background-color: var(--surface-color);
   border-color: var(--border-color);
   color: var(--text-primary);
 }
 
-:root[data-theme='dark'] .modal-header {
+.reqman-requirement-detail-page .u-card-header,
+[data-theme='dark'] .reqman-requirement-detail-page .u-card-header {
   background-color: var(--surface-muted);
   border-color: var(--border-color);
   color: var(--text-primary);
 }
 
-:root[data-theme='dark'] .modal-body {
+.reqman-requirement-detail-page .u-card-body,
+[data-theme='dark'] .reqman-requirement-detail-page .u-card-body {
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .u-modal-content {
+  background-color: var(--surface-color);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .u-modal-header {
+  background-color: var(--surface-muted);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .u-modal-body {
   background-color: var(--surface-color);
   color: var(--text-primary);
 }
@@ -760,33 +756,24 @@
    DROPDOWN MENU DARK MODE
    ============================================================ */
 
-:root[data-theme='dark'] .dropdown-menu {
-  background-color: rgb(30 41 59) !important; /* Solid opaque background */
+[data-theme='dark'] .u-dropdown-menu {
+  background-color: rgb(30 41 59); /* Solid opaque background */
   border: 1px solid rgb(71 85 105);
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
 }
 
-:root[data-theme='dark'] .dropdown-item {
+[data-theme='dark'] .u-dropdown-item {
   background-color: transparent;
   color: rgb(226 232 240);
 }
 
-:root[data-theme='dark'] .dropdown-item:hover,
-:root[data-theme='dark'] .dropdown-item:focus {
-  background-color: rgb(51 65 85) !important; /* Solid hover state */
+[data-theme='dark'] .u-dropdown-item:hover,
+[data-theme='dark'] .u-dropdown-item:focus {
+  background-color: rgb(51 65 85); /* Solid hover state */
   color: rgb(248 250 252);
 }
 
-:root[data-theme='dark'] .dropdown-item svg {
-  opacity: 0.9;
-}
-
-:root[data-theme='dark'] .dropdown-item:hover svg,
-:root[data-theme='dark'] .dropdown-item:focus svg {
-  opacity: 1;
-}
-
-:root[data-theme='dark'] .dropdown-divider {
+[data-theme='dark'] .u-dropdown-divider {
   border-color: rgb(71 85 105);
   opacity: 1;
 }
@@ -796,31 +783,31 @@
    ============================================================ */
 
 @media print {
-  .requirement-detail-page {
+  .reqman-requirement-detail-page {
     padding: 0;
   }
 
-  .requirement-header {
+  .reqman-requirement-header {
     box-shadow: none;
   }
 
-  .btn,
-  .dropdown,
+  .u-btn,
+  .u-dropdown,
   [data-bs-toggle],
   [data-action] {
-    display: none !important;
-  }
-
-  .requirement-section[open] {
-    border: none;
-  }
-
-  .requirement-section summary {
     display: none;
   }
 
-  .collapse {
-    display: block !important;
-    height: auto !important;
+  .reqman-requirement-section[open] {
+    border: none;
+  }
+
+  .reqman-requirement-section summary {
+    display: none;
+  }
+
+  .u-collapse {
+    display: block;
+    height: auto;
   }
 }

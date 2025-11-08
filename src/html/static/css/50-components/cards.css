@@ -148,19 +148,13 @@
 }
 
 /* Remove background highlight from reference IDs in tree view for dark mode */
-[data-theme='dark'] .c-tree__node .c-requirement-card__id {
+[data-theme='dark'] .c-tree__requirement-link {
   background-color: transparent;
-}
-
-[data-theme='dark'] .c-tree__node .c-requirement-card__id .c-tree__requirement-link {
   color: var(--text-primary);
 }
 
-[data-theme='dark'] .c-tree__node .c-requirement-card__id:hover {
+[data-theme='dark'] .c-tree__requirement-link:hover {
   background-color: transparent;
-}
-
-[data-theme='dark'] .c-tree__node .c-requirement-card__id .c-tree__requirement-link:hover {
   color: var(--primary-light);
 }
 

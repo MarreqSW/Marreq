@@ -219,9 +219,11 @@ async fn show_requirements(
                 "percent": metrics.coverage_percent
             }
         }),
-        "statuses": StatusService::new(state.inner()).list_legacy()?,
+        "statuses": StatusService::new(state.inner()).list_requirement_statuses()?,
         "verifications": VerificationService::new(state.inner()).list_by_project(project_id)?,
         "categories": CategoryService::new(state.inner()).list_by_project(project_id)?,
+        "applicability": ApplicabilityService::new(state.inner()).list_by_project(project_id)?,
+        "users": UserService::new(state.inner()).get_by_project(project_id)?,
         "current_status_filter": json!(status_filter),
         "current_verification_filter": json!(verification_filter),
         "current_category_filter": json!(category_filter),

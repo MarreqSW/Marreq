@@ -18,6 +18,118 @@
     {{> requirements/_tree_view}}
   </div>
 </div>
+
+{{!-- Duplicate Requirement Modal --}}
+<div class="modal fade" id="duplicateRequirementModal" tabindex="-1" aria-labelledby="duplicateRequirementModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="duplicateRequirementModalLabel">Duplicate Requirement</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="duplicateRequirementForm">
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+          <p class="text-muted mb-4">Review and modify the requirement details before creating the duplicate.</p>
+          
+          <div class="mb-3">
+            <label for="dup_req_title" class="form-label">Title <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="dup_req_title" name="req_title" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="dup_req_reference" class="form-label">Reference <span class="text-muted small">(optional)</span></label>
+            <input type="text" class="form-control" id="dup_req_reference" name="req_reference" placeholder="Auto-generated if left blank">
+            <div class="form-text">Leave blank to auto-generate a new reference</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="dup_req_description" class="form-label">Statement <span class="text-danger">*</span></label>
+            <textarea class="form-control" id="dup_req_description" name="req_description" rows="5" required></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label for="dup_req_justification" class="form-label">Rationale <span class="text-muted small">(optional)</span></label>
+            <textarea class="form-control" id="dup_req_justification" name="req_justification" rows="3"></textarea>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="dup_req_category" class="form-label">Category <span class="text-danger">*</span></label>
+              <select class="form-select" id="dup_req_category" name="req_category" required>
+                <option value="">Select category...</option>
+                {{#each categories}}
+                  <option value="{{cat_id}}">{{cat_title}}</option>
+                {{/each}}
+              </select>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label for="dup_req_current_status" class="form-label">Status <span class="text-danger">*</span></label>
+              <select class="form-select" id="dup_req_current_status" name="req_current_status" required>
+                <option value="">Select status...</option>
+                {{#each statuses}}
+                  <option value="{{req_st_id}}">{{req_st_title}}</option>
+                {{/each}}
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="dup_req_verification" class="form-label">Verification <span class="text-danger">*</span></label>
+              <select class="form-select" id="dup_req_verification" name="req_verification" required>
+                <option value="">Select verification...</option>
+                {{#each verifications}}
+                  <option value="{{verification_id}}">{{verification_name}}</option>
+                {{/each}}
+              </select>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label for="dup_req_applicability" class="form-label">Applicability <span class="text-danger">*</span></label>
+              <select class="form-select" id="dup_req_applicability" name="req_applicability" required>
+                <option value="">Select applicability...</option>
+                {{#each applicability}}
+                  <option value="{{app_id}}">{{app_title}}</option>
+                {{/each}}
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="dup_req_reviewer" class="form-label">Reviewer</label>
+              <select class="form-select" id="dup_req_reviewer" name="req_reviewer">
+                <option value="">Select reviewer...</option>
+                {{#each users}}
+                  <option value="{{user_id}}">{{user_name}}</option>
+                {{/each}}
+              </select>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label for="dup_req_parent" class="form-label">Parent Requirement</label>
+              <select class="form-select" id="dup_req_parent" name="req_parent">
+                <option value="0">None</option>
+                {{!-- Parent options will be populated dynamically --}}
+              </select>
+            </div>
+          </div>
+
+          <input type="hidden" id="dup_project_id" name="project_id">
+          <input type="hidden" id="dup_req_author" name="req_author">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="duplicateSubmitBtn">
+            Create New
+          </button>
+        </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {{/inline}}
 
 {{> layout page_id="requirements"}}

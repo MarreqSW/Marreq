@@ -84,7 +84,7 @@
     <div class="card-body">
       <div class="d-flex flex-column gap-3 mb-3">
         <div class="d-flex align-items-center gap-3">
-          <span class="requirement-avatar bg-primary text-white" data-field="author-initial">?</span>
+          <span class="reqman-requirement-avatar bg-primary text-white" data-field="author-initial">?</span>
           <div>
             <div class="text-uppercase small text-muted">Author</div>
             <div class="fw-semibold" data-field="author-name">—</div>
@@ -92,7 +92,7 @@
           </div>
         </div>
         <div class="d-flex align-items-center gap-3">
-          <span class="requirement-avatar bg-secondary-subtle text-muted border" data-field="reviewer-initial">–</span>
+          <span class="reqman-requirement-avatar bg-secondary-subtle text-muted border" data-field="reviewer-initial">–</span>
           <div>
             <div class="text-uppercase small text-muted">Reviewer</div>
             <div class="fw-semibold" data-field="reviewer-name">Unassigned</div>
@@ -170,13 +170,13 @@
 {{/inline}}
 
 {{#*inline "page"}}
-<div class="requirement-detail-page" data-requirement-root>
+<div class="reqman-requirement-detail-page" data-requirement-root>
   <script type="application/json" id="requirement-detail-data">
     {{{requirement_data_json}}}
   </script>
 
-  <header class="requirement-header card shadow-sm border-0">
-    <div class="requirement-header__body">
+  <header class="reqman-requirement-header card shadow-sm border-0">
+    <div class="reqman-requirement-header__body">
       <div class="d-flex flex-column gap-4">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
           <div class="d-flex flex-wrap align-items-center gap-3">
@@ -257,9 +257,9 @@
           </nav>
         </div>
 
-        <section class="requirement-statement-card p-4 p-lg-5 rounded-4">
+        <section class="reqman-requirement-statement-card p-4 p-lg-5 rounded-4">
           <div class="text-uppercase small text-muted mb-2">Requirement Statement</div>
-          <div class="requirement-header__statement fs-2 lh-base text-break fw-semibold mb-4">
+          <div class="reqman-requirement-header__statement fs-2 lh-base text-break fw-semibold mb-4">
             {{#if requirement_data.requirement.req_description}}
             <p class="mb-0">{{requirement_data.requirement.req_description}}</p>
             {{else}}
@@ -307,12 +307,12 @@
     </div>
   </header>
 
-  <div class="requirement-detail-grid">
-    <div class="requirement-detail-main">
+  <div class="reqman-requirement-detail-grid">
+    <div class="reqman-requirement-detail-main">
       {{> verification_panel}}
       {{> history_panel}}
     </div>
-    <aside class="requirement-detail-sidebar" aria-label="Requirement metadata and relationships">
+    <aside class="reqman-requirement-detail-sidebar" aria-label="Requirement metadata and relationships">
       {{> metadata_panel}}
       {{> relationships_panel}}
     </aside>

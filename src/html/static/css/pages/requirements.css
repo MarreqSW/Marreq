@@ -599,16 +599,6 @@
   color: var(--primary-dark);
 }
 
-.reqman-requirements-row__action--link {
-  text-decoration: none;
-}
-
-.reqman-requirements-row__action--menu {
-  font-size: 1.25rem;
-  line-height: 1;
-  padding-inline: var(--space-1);
-}
-
 .reqman-requirements-row__details {
   background-color: var(--surface-subtle);
 }

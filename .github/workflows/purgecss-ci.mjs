@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import { PurgeCSS } from 'purgecss';
 
-const TOLERANCE = Number(process.env.UNUSED_CSS_TOLERANCE ?? 0);
+const TOLERANCE = 0;
 
 const cfg = (await import('./purgecss.config.cjs')).default ?? (await import('./purgecss.config.cjs'));
 const results = await new PurgeCSS().purge({

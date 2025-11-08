@@ -81,8 +81,8 @@
   border-left: 3px solid var(--primary-color);
 }
 
-/* Enhanced status badge colors integrated into tree */
-.c-tree__requirement-card .status-badge {
+/* Status badge styling - now uses the same classes as Card and Table views */
+.c-tree__requirement-card .reqman-requirements-status-badge {
   align-items: center;
   border-radius: var(--radius-xl);
   display: inline-flex;
@@ -91,30 +91,6 @@
   letter-spacing: 0.05em;
   padding: var(--space-1) var(--space-3);
   text-transform: uppercase;
-}
-
-.c-tree__requirement-card .status-badge.status-draft,
-.c-tree__requirement-card .status-badge[data-status="1"] {
-  background-color: #e3e8ef;
-  color: #4a5568;
-}
-
-.c-tree__requirement-card .status-badge.status-proposal,
-.c-tree__requirement-card .status-badge[data-status="2"] {
-  background-color: #fef3c7;
-  color: #92400e;
-}
-
-.c-tree__requirement-card .status-badge.status-accepted,
-.c-tree__requirement-card .status-badge[data-status="3"] {
-  background-color: #d1fae5;
-  color: #065f46;
-}
-
-.c-tree__requirement-card .status-badge.status-rejected,
-.c-tree__requirement-card .status-badge[data-status="4"] {
-  background-color: #fee2e2;
-  color: #991b1b;
 }
 
 .c-tree__controls {
@@ -413,30 +389,6 @@
 [data-theme='dark'] .c-tree__requirement-link:focus {
   box-shadow: 0 0 0 3px rgb(59 130 246 / 0.3);
   outline-color: var(--primary-light);
-}
-
-[data-theme='dark'] .status-badge.status-draft,
-[data-theme='dark'] .status-badge[data-status="1"] {
-  background-color: rgb(148 163 184 / 0.3);
-  color: #cbd5e1;
-}
-
-[data-theme='dark'] .status-badge.status-proposal,
-[data-theme='dark'] .status-badge[data-status="2"] {
-  background-color: rgb(251 191 36 / 0.3);
-  color: #fde68a;
-}
-
-[data-theme='dark'] .status-badge.status-accepted,
-[data-theme='dark'] .status-badge[data-status="3"] {
-  background-color: rgb(16 185 129 / 0.3);
-  color: #6ee7b7;
-}
-
-[data-theme='dark'] .status-badge.status-rejected,
-[data-theme='dark'] .status-badge[data-status="4"] {
-  background-color: rgb(239 68 68 / 0.3);
-  color: #fca5a5;
 }
 
 [data-theme='dark'] .c-tree__child-card {

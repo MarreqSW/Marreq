@@ -1,0 +1,118 @@
+<div class="c-tree__node" 
+     data-node-id="{{requirement.req_id}}"
+     data-requirement-id="{{requirement.req_id}}"
+     data-status="{{requirement.req_current_status}}"
+     data-category="{{requirement.req_category}}"
+     data-verification="{{requirement.req_verification}}"
+     data-search-text="{{requirement.req_reference}} {{requirement.req_title}} {{requirement.req_description}}"
+     role="treeitem"
+     {{#if children}}aria-expanded="false"{{/if}}>
+  <div class="c-tree__node-content">
+    <button class="c-tree__toggle" 
+            type="button" 
+            data-tree-toggle="{{requirement.req_id}}"
+            {{#if children}}
+            aria-expanded="false"
+            {{else}}
+            aria-hidden="true"
+            tabindex="-1"
+            {{/if}}>
+      {{#if children}}
+      <svg class="c-tree__toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <polyline points="9,18 15,12 9,6"></polyline>
+      </svg>
+      {{/if}}
+    </button>
+    <div class="c-tree__requirement-card c-requirement-card" tabindex="0">
+      <div class="c-tree__requirement-header">
+        <div class="c-tree__requirement-title-wrapper">
+          <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}"
+            class="reqman-requirement-card__reference-text"
+            title="View requirement details">
+            {{requirement.req_reference}}
+          </a>
+          <div class="c-tree__requirement-title c-linked-requirements__title" title="{{requirement.req_title}}">
+            {{requirement.req_title}}
+          </div>
+        </div>
+        <div class="c-tree__actions">
+          <a href="/p/{{requirement.project_id}}/requirements/edit/{{requirement.req_id}}" 
+             class="c-tree__action-button" 
+             title="Edit requirement"
+             aria-label="Edit requirement">
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+            </svg>
+          </a>
+          <a href="/p/{{requirement.project_id}}/requirements/new?parent={{requirement.req_id}}" 
+             class="c-tree__action-button" 
+             title="Add child requirement"
+             aria-label="Add child requirement">
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+              <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+            </svg>
+          </a>
+        </div>
+        <div class="requirement-status">
+          <span class="reqman-requirements-status-badge reqman-requirements-status-badge--{{requirement.req_current_status}}"
+            data-status="{{requirement.req_current_status}}"
+            title="Status: {{requirement.req_current_status}}">
+            {{requirement.req_current_status}}
+          </span>
+        </div>
+      </div>
+      <div class="c-tree__requirement-description" title="{{requirement.req_description}}">
+        {{requirement.req_description}}
+      </div>
+      {{#if requirement.req_author_name}}
+      <div class="c-tree__requirement-meta">
+        <div class="c-tree__meta-item">
+          <span class="c-tree__meta-label">Author:</span>
+          <span class="meta-value c-requirement-card__meta-value">
+            {{requirement.req_author_name}}
+          </span>
+        </div>
+      </div>
+      {{/if}}
+      {{!-- Visual indicators for tests, comments, etc --}}
+      <div class="c-tree__indicators">
+        {{#if requirement.test_count}}
+        <span class="c-tree__indicator c-tree__indicator--tests" title="{{requirement.test_count}} linked test(s)">
+          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+            <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+          </svg>
+          {{requirement.test_count}}
+        </span>
+        {{/if}}
+        {{#if requirement.is_verified}}
+        <span class="c-tree__indicator c-tree__indicator--verified" title="Requirement is verified">
+          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M10.067.87a2.89 2.89 0 0 0-4.134 0l-.622.638-.89-.011a2.89 2.89 0 0 0-2.924 2.924l.01.89-.636.622a2.89 2.89 0 0 0 0 4.134l.637.622-.011.89a2.89 2.89 0 0 0 2.924 2.924l.89-.01.622.636a2.89 2.89 0 0 0 4.134 0l.622-.637.89.011a2.89 2.89 0 0 0 2.924-2.924l-.01-.89.636-.622a2.89 2.89 0 0 0 0-4.134l-.637-.622.011-.89a2.89 2.89 0 0 0-2.924-2.924l-.89.01-.622-.636zm.287 5.984-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708.708z"/>
+          </svg>
+          Verified
+        </span>
+        {{/if}}
+        {{#if requirement.child_count}}
+        <span class="c-tree__indicator" title="{{requirement.child_count}} child requirement(s)">
+          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm8 0A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3z"/>
+          </svg>
+          {{requirement.child_count}}
+        </span>
+        {{/if}}
+      </div>
+    </div>
+  </div>
+  {{#if children}}
+  <div class="c-tree__children" 
+       id="children-{{requirement.req_id}}" 
+       data-tree-branch="{{requirement.req_id}}" 
+       role="group"
+       hidden>
+    {{#each children}}
+    {{> requirements/_tree_child_node}}
+    {{/each}}
+  </div>
+  {{/if}}
+</div>

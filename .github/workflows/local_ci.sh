@@ -17,6 +17,6 @@ npm test
 
 echo "5️⃣ Running backend tests with coverage..."
 export DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/reqman
-cargo llvm-cov --workspace --all-features --doctests --fail-under-lines 70
+cargo +nightly llvm-cov --workspace --all-features --doctests --fail-under-lines 70
 
 echo "✅ All checks passed!"

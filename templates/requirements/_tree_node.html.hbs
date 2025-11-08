@@ -1,7 +1,3 @@
-{{!--
-  PARTIAL: Tree Node (Recursive)
-  Individual node in the tree hierarchy
---}}
 <div class="c-tree__node" 
      data-node-id="{{requirement.req_id}}"
      data-requirement-id="{{requirement.req_id}}"
@@ -10,7 +6,6 @@
      data-verification="{{requirement.req_verification}}"
      data-search-text="{{requirement.req_reference}} {{requirement.req_title}} {{requirement.req_description}}"
      role="treeitem"
-     aria-level="1"
      {{#if children}}aria-expanded="false"{{/if}}>
   <div class="c-tree__node-content">
     <button class="c-tree__toggle" 
@@ -18,7 +13,6 @@
             data-tree-toggle="{{requirement.req_id}}"
             {{#if children}}
             aria-expanded="false"
-            aria-controls="children-{{requirement.req_id}}"
             {{else}}
             aria-hidden="true"
             tabindex="-1"
@@ -27,8 +21,6 @@
       <svg class="c-tree__toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
         <polyline points="9,18 15,12 9,6"></polyline>
       </svg>
-      {{else}}
-      <span class="c-tree__toggle-placeholder" aria-hidden="true"></span>
       {{/if}}
     </button>
     <div class="c-tree__requirement-card c-requirement-card" tabindex="0">
@@ -104,7 +96,6 @@
   <div class="c-tree__children" 
        id="children-{{requirement.req_id}}" 
        data-tree-branch="{{requirement.req_id}}" 
-       aria-hidden="true"
        role="group"
        hidden>
     {{#each children}}

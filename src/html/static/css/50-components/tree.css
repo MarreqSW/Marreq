@@ -1,8 +1,7 @@
-/* Requirements Tree View Styles */
+/* Requirements Tree View Styles - Minimalist */
 .c-tree {
   padding: var(--space-5) 0;
   position: relative;
-  isolation: isolate; /* Create stacking context */
 }
 
 .c-tree__root {
@@ -10,12 +9,10 @@
   flex-direction: column;
   gap: var(--space-4);
   position: relative;
-  z-index: auto; /* Allow proper stacking */
 }
 
 .c-tree__node {
   position: relative;
-  z-index: auto; /* Allow proper stacking */
 }
 
 .c-tree__node-content {
@@ -23,52 +20,6 @@
   display: flex;
   gap: var(--space-3);
   position: relative;
-  z-index: 3; /* Above connectors and cards */
-}
-
-/* SVG connector canvas - positioned absolutely behind tree content */
-.c-tree__connectors {
-  height: 100%;
-  left: 0;
-  pointer-events: none;
-  position: absolute;
-  top: 0;
-  width: 100%;
-  z-index: 1; /* Above background but below cards */
-}
-
-.c-tree__connector-path {
-  fill: none;
-  stroke: var(--border-color);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2;
-  transition: stroke 0.2s ease, stroke-width 0.2s ease;
-}
-
-/* Connector hover effect - when parent or child is hovered */
-.c-tree__node:hover .c-tree__connector-path,
-.c-tree__child-node:hover .c-tree__connector-path {
-  stroke: var(--primary-color);
-  stroke-width: 3;
-}
-
-/* Smooth fade-in animation for new connectors */
-.c-tree__connector-path {
-  animation: connectorFadeIn 0.3s ease-in-out;
-}
-
-@keyframes connectorFadeIn {
-  from {
-    opacity: 0;
-    stroke-dasharray: 10;
-    stroke-dashoffset: 10;
-  }
-  to {
-    opacity: 1;
-    stroke-dasharray: 0;
-    stroke-dashoffset: 0;
-  }
 }
 
 .c-tree__toggle {
@@ -85,7 +36,6 @@
   position: relative;
   transition: all 0.2s ease;
   width: 24px;
-  z-index: 10; /* Well above connectors */
 }
 
 .c-tree__toggle:hover {
@@ -106,62 +56,20 @@
 .c-tree__toggle-icon {
   color: var(--text-secondary);
   height: 16px;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.2s ease;
   width: 16px;
-}
-
-.c-tree__toggle[aria-expanded="true"] .c-tree__toggle-icon {
-  transform: rotate(90deg);
-}
-
-.c-tree__toggle-placeholder {
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: 50%;
-  height: 8px;
-  position: relative;
-  width: 8px;
-  z-index: 1;
+  transform-origin: center;
 }
 
 .c-tree__children {
-  animation: treeSlideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-left: 36px;
   margin-top: var(--space-3);
   padding-left: var(--space-5);
   position: relative;
-  z-index: auto; /* Allow proper stacking */
 }
 
-.c-tree__children[hidden],
-.c-tree__children[aria-hidden="true"] {
+.c-tree__children[hidden] {
   display: none;
-}
-
-/* Children container connector canvas */
-.c-tree__children > .c-tree__connectors {
-  height: 100%;
-  left: -20px;
-  pointer-events: none;
-  position: absolute;
-  top: 0;
-  width: calc(100% + 20px);
-  z-index: 1; /* Above background but behind cards */
-}
-
-@keyframes treeSlideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.c-tree__children[aria-hidden="false"]:not([hidden]) {
-  display: block;
 }
 
 .c-tree__child-node {
@@ -226,35 +134,6 @@
   padding: var(--space-2) var(--space-3);
 }
 
-.c-tree__breadcrumb {
-  align-items: center;
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-  padding: var(--space-3);
-}
-
-.c-tree__breadcrumb-item {
-  align-items: center;
-  color: var(--text-secondary);
-  display: flex;
-  font-size: 0.875rem;
-  gap: var(--space-2);
-}
-
-.c-tree__breadcrumb-item:last-child {
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.c-tree__breadcrumb-separator {
-  color: var(--text-secondary);
-}
-
 .c-tree__requirement-card {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -266,7 +145,6 @@
   padding: var(--space-4);
   position: relative;
   transition: all 0.2s ease;
-  z-index: 2; /* Above connectors but below toggle and node-content */
 }
 
 .c-tree__requirement-card:hover {
@@ -282,18 +160,8 @@
 
 /* Highlight for search matches */
 .c-tree__requirement-card.is-search-match {
-  animation: searchPulse 0.6s ease-in-out;
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-}
-
-@keyframes searchPulse {
-  0%, 100% {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0);
-  }
-  50% {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
-  }
 }
 
 /* Filtered out state */
@@ -462,44 +330,6 @@
   margin-bottom: var(--space-6);
 }
 
-/* Focus mode overlay */
-.c-tree--focus-mode {
-  background: var(--surface-color);
-  border: 2px solid var(--primary-color);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-}
-
-.c-tree__focus-header {
-  align-items: center;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-  padding-bottom: var(--space-3);
-}
-
-.c-tree__focus-title {
-  color: var(--text-primary);
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.c-tree__focus-exit {
-  background: var(--background-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  padding: var(--space-2) var(--space-3);
-  transition: all 0.2s ease;
-}
-
-.c-tree__focus-exit:hover {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-  color: white;
-}
-
 /* Responsive adjustments for tree view */
 @media (max-width: 768px) {
   .c-tree__node-content {
@@ -542,7 +372,7 @@
 }
 
 /* Accessibility improvements */
-.c-tree__node[role="treeitem"][aria-selected="true"] > .c-tree__node-content > .c-tree__requirement-card {
+.c-tree__node[role="treeitem"]:focus-within > .c-tree__node-content > .c-tree__requirement-card {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 }
@@ -551,15 +381,6 @@
 [data-theme='dark'] .c-tree__requirement-link:focus {
   box-shadow: 0 0 0 3px rgb(59 130 246 / 0.3);
   outline-color: var(--primary-light);
-}
-
-[data-theme='dark'] .c-tree__connector-path {
-  stroke: #4b5563;
-}
-
-[data-theme='dark'] .c-tree__node:hover .c-tree__connector-path,
-[data-theme='dark'] .c-tree__child-node:hover .c-tree__connector-path {
-  stroke: #60a5fa;
 }
 
 [data-theme='dark'] .c-tree__requirement-card .status-badge.status-draft,
@@ -597,9 +418,7 @@
 @media (prefers-reduced-motion: reduce) {
   .c-tree__toggle-icon,
   .c-tree__requirement-card,
-  .c-tree__indicator,
-  .c-tree__children {
-    animation: none;
+  .c-tree__indicator {
     transition: none;
   }
 }

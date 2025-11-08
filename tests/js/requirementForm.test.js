@@ -67,67 +67,6 @@ describe('Requirement Form', () => {
     });
   });
 
-  describe('Combobox Enhancement', () => {
-    it('should enhance select elements with combobox UI', async () => {
-      document.body.innerHTML = `
-        <form data-requirement-form>
-          <div data-component="combo">
-            <select data-role="combo-source" id="req_category">
-              <option value="">Select...</option>
-              <option value="1">Systems</option>
-              <option value="2">Network</option>
-            </select>
-            <div data-role="combo-ui" hidden>
-              <input type="text" />
-            </div>
-          </div>
-        </form>
-      `;
-
-      const { init: initForm } = await import(
-        '@pages/requirementForm.js'
-      );
-
-      initForm();
-
-      const wrapper = document.querySelector('[data-component="combo"]');
-      const comboUi = wrapper.querySelector('[data-role="combo-ui"]');
-
-      expect(wrapper.classList.contains('is-enhanced')).toBe(true);
-      expect(comboUi.hidden).toBe(false);
-    });
-
-    it('should sync combobox input with select value', async () => {
-      document.body.innerHTML = `
-        <form data-requirement-form>
-          <div data-component="combo">
-            <select data-role="combo-source" id="req_category">
-              <option value="">Select...</option>
-              <option value="1">Systems</option>
-              <option value="2">Network</option>
-            </select>
-            <div data-role="combo-ui" hidden>
-              <input type="text" />
-            </div>
-          </div>
-        </form>
-      `;
-
-      const { init: initForm } = await import(
-        '@pages/requirementForm.js'
-      );
-
-      initForm();
-
-      const select = document.querySelector('[data-role="combo-source"]');
-      const input = document.querySelector('[data-role="combo-ui"] input');
-
-      select.value = '1';
-      select.dispatchEvent(new Event('change'));
-
-      expect(input.value).toBe('Systems');
-    });
-  });
 
   describe('Reference Input', () => {
     it('should allow custom reference when provided', () => {

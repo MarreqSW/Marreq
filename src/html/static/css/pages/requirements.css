@@ -695,6 +695,384 @@
   }
 }
 
+/* ============================================================
+   CARDS VIEW STYLES
+   Modern card-based layout with rich metadata display
+   ============================================================ */
+
+.reqman-requirements-cards-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.reqman-requirements-cards-grid {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  padding: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .reqman-requirements-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .reqman-requirements-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  }
+}
+
+/* Card container */
+.reqman-requirement-card {
+  animation: card-fade-in 280ms ease-out;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow: hidden;
+  padding: var(--space-5);
+  position: relative;
+  transition: transform var(--transition-base), box-shadow var(--transition-base),
+    border-color var(--transition-base);
+}
+
+.reqman-requirement-card::before {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  content: '';
+  height: 3px;
+  left: 0;
+  opacity: 0;
+  position: absolute;
+  top: 0;
+  transition: opacity var(--transition-base);
+  width: 100%;
+}
+
+.reqman-requirement-card:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.reqman-requirement-card:hover::before {
+  opacity: 1;
+}
+
+.reqman-requirement-card.is-filtered-out {
+  display: none;
+}
+
+/* Card header */
+.reqman-requirement-card__header {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.reqman-requirement-card__reference {
+  flex-shrink: 0;
+}
+
+.reqman-requirement-card__reference-text {
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: var(--space-1) var(--space-3);
+}
+
+/* Status badge in card context */
+.reqman-requirement-card .reqman-requirements-status-badge {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  padding: var(--space-1) var(--space-2);
+}
+
+/* Card body */
+.reqman-requirement-card__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+.reqman-requirement-card__title {
+  color: var(--text-primary);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.reqman-requirement-card__title-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--transition-base);
+}
+
+.reqman-requirement-card__title-link:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.reqman-requirement-card__description {
+  color: var(--text-secondary);
+  display: -webkit-box;
+  font-size: 0.875rem;
+  line-clamp: 3;
+  line-height: 1.5;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* Card metadata badges */
+.reqman-requirement-card__metadata {
+  min-height: 20px;
+  overflow: hidden;
+  position: relative;
+}
+
+.reqman-requirement-card__badge-rail {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.reqman-requirement-card__badge {
+  align-items: center;
+  background-color: rgb(148 163 184 / 0.12);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  gap: 3px;
+  height: 20px;
+  line-height: 1;
+  padding: 2px 6px;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.reqman-requirement-card__badge:hover {
+  background-color: rgb(148 163 184 / 0.18);
+}
+
+.reqman-requirement-card__badge--category {
+  background-color: rgb(37 99 235 / 0.08);
+  color: #3b82f6;
+}
+
+.reqman-requirement-card__badge--category:hover {
+  background-color: rgb(37 99 235 / 0.12);
+  color: #2563eb;
+}
+
+.reqman-requirement-card__badge--verification {
+  background-color: rgb(16 185 129 / 0.08);
+  color: #10b981;
+}
+
+.reqman-requirement-card__badge--verification:hover {
+  background-color: rgb(16 185 129 / 0.12);
+  color: #059669;
+}
+
+.reqman-requirement-card__badge--applicability {
+  background-color: rgb(245 158 11 / 0.08);
+  color: #f59e0b;
+}
+
+.reqman-requirement-card__badge--applicability:hover {
+  background-color: rgb(245 158 11 / 0.12);
+  color: #d97706;
+}
+
+.reqman-requirement-card__badge--parent {
+  background-color: rgb(148 163 184 / 0.12);
+  color: var(--text-secondary);
+}
+
+.reqman-requirement-card__badge--parent:hover {
+  background-color: rgb(148 163 184 / 0.18);
+}
+
+.reqman-requirement-card__badge-icon {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.reqman-requirement-card__badge-overflow {
+  align-items: center;
+  background-color: rgb(148 163 184 / 0.12);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  cursor: help;
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  height: 20px;
+  justify-content: center;
+  line-height: 1;
+  margin-left: 4px;
+  padding: 2px 6px;
+  transition: background-color var(--transition-fast);
+}
+
+.reqman-requirement-card__badge-overflow:hover {
+  background-color: rgb(148 163 184 / 0.18);
+}
+
+/* Card footer */
+.reqman-requirement-card__footer {
+  align-items: center;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding-top: var(--space-3);
+}
+
+.reqman-requirement-card__info {
+  align-items: center;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  gap: var(--space-3);
+}
+
+.reqman-requirement-card__author,
+.reqman-requirement-card__date {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.reqman-requirement-card__info-icon {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* Card actions */
+.reqman-requirement-card__actions {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.reqman-requirement-card__action {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  padding: var(--space-2);
+  text-decoration: none;
+  transition: background-color var(--transition-base), color var(--transition-base),
+    border-color var(--transition-base), transform var(--transition-fast);
+}
+
+.reqman-requirement-card__action:hover {
+  background-color: var(--surface-muted);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.reqman-requirement-card__action:active {
+  transform: translateY(0);
+}
+
+.reqman-requirement-card__action--primary {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--text-inverse);
+}
+
+.reqman-requirement-card__action--primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: var(--text-inverse);
+}
+
+/* Card animations */
+@keyframes card-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Card filtering states */
+.reqman-requirement-card[data-match='false'] {
+  animation: card-fade-out 180ms ease-in forwards;
+}
+
+@keyframes card-fade-out {
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* Empty state within cards view */
+.reqman-requirements-cards-section .reqman-requirements-empty-state {
+  grid-column: 1 / -1;
+}
+
+/* Responsive adjustments for cards */
+@media (max-width: 768px) {
+  .reqman-requirements-cards-grid {
+    grid-template-columns: 1fr;
+    padding: var(--space-3);
+  }
+
+  .reqman-requirement-card {
+    padding: var(--space-4);
+  }
+
+  .reqman-requirement-card__footer {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .reqman-requirement-card__info {
+    width: 100%;
+  }
+
+  .reqman-requirement-card__actions {
+    justify-content: flex-end;
+    width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .reqman-requirements-page {
     padding: var(--space-4);

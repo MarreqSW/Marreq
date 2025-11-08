@@ -3,6 +3,7 @@ import { showNotification } from '../modules/notifications.js';
 
 const state = {
   rows: [],
+  cards: [],
   sortKey: null,
   sortOrder: 'asc',
   searchTerm: '',
@@ -176,6 +177,51 @@ function collectRows(table) {
   state.rows = entries;
 }
 
+function collectCards(container) {
+  const entries = [];
+  container.querySelectorAll('.reqman-requirement-card').forEach((card) => {
+    const requirementId = card.dataset.requirementId;
+
+    const keyText = textFrom(card, '.reqman-requirement-card__reference-text');
+    const titleText = textFrom(card, '.reqman-requirement-card__title');
+    const statusText = (card.dataset.statusLabel || '').trim();
+    const verificationText = card.dataset.verification || '';
+    const categoryText = card.dataset.category || '';
+    const descriptionText = textFrom(card, '.reqman-requirement-card__description');
+    const authorText = textFrom(card, '.reqman-requirement-card__author');
+    const dateText = textFrom(card, '.reqman-requirement-card__date');
+
+    const searchText = [
+      keyText,
+      titleText,
+      statusText,
+      verificationText,
+      categoryText,
+      descriptionText,
+      authorText,
+      dateText,
+    ]
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .toLowerCase();
+
+    entries.push({
+      id: requirementId,
+      card,
+      keyValue: keyText.toLowerCase(),
+      keyNumeric: extractNumber(keyText),
+      titleValue: titleText.toLowerCase(),
+      statusValue: statusText.toLowerCase(),
+      verificationValue: verificationText.toLowerCase(),
+      authorValue: authorText.toLowerCase(),
+      searchText,
+      visible: true,
+    });
+  });
+
+  state.cards = entries;
+}
+
 function ensureNoResultsBanner() {
   if (state.noResultsBanner) {
     return state.noResultsBanner;
@@ -209,6 +255,7 @@ function applySearch(term = '') {
   const needle = normalize(term);
   let visibleCount = 0;
 
+  // Apply to table rows
   state.rows.forEach((entry) => {
     const matches = !needle || entry.searchText.includes(needle);
     const wasVisible = entry.visible;
@@ -230,7 +277,27 @@ function applySearch(term = '') {
     }
   });
 
-  updateNoResultsBanner(visibleCount === 0 && state.rows.length > 0);
+  // Apply to cards
+  state.cards.forEach((entry) => {
+    const matches = !needle || entry.searchText.includes(needle);
+    const wasVisible = entry.visible;
+    entry.visible = matches;
+
+    entry.card.classList.toggle('is-filtered-out', !matches);
+
+    if (matches) {
+      visibleCount += 1;
+      if (!wasVisible) {
+        entry.card.style.animation = 'none';
+        requestAnimationFrame(() => {
+          entry.card.style.animation = '';
+        });
+      }
+    }
+  });
+
+  const totalEntries = state.rows.length + state.cards.length;
+  updateNoResultsBanner(visibleCount === 0 && totalEntries > 0);
 }
 
 function debounce(fn, wait = 150) {
@@ -519,12 +586,12 @@ async function duplicateRequirement(button) {
   }
 }
 
-function initDuplicateButtons(table) {
-  if (!table) return;
+function initDuplicateButtons(container) {
+  if (!container) return;
 
-  table.addEventListener('click', (event) => {
+  container.addEventListener('click', (event) => {
     const trigger = event.target.closest('[data-action="duplicate-requirement"]');
-    if (!trigger || !table.contains(trigger)) {
+    if (!trigger || !container.contains(trigger)) {
       return;
     }
     event.preventDefault();
@@ -540,13 +607,81 @@ function disableSearchWhenEmpty(searchInput, table) {
   }
 }
 
+function handleBadgeOverflow(card) {
+  const metadata = card.querySelector('[data-badge-rail]');
+  if (!metadata) return;
+
+  const rail = metadata.querySelector('.reqman-requirement-card__badge-rail');
+  const overflowChip = metadata.querySelector('[data-overflow]');
+  if (!rail || !overflowChip) return;
+
+  const badges = Array.from(rail.querySelectorAll('[data-badge]'));
+  if (badges.length === 0) return;
+
+  // Reset: show all badges
+  badges.forEach((badge) => (badge.style.display = ''));
+  overflowChip.hidden = true;
+
+  // Check if overflow exists
+  const railWidth = rail.offsetWidth;
+  const availableWidth = metadata.offsetWidth;
+
+  if (railWidth <= availableWidth) return;
+
+  // Calculate how many badges fit, reserving space for +N chip (30px)
+  const overflowChipWidth = 30;
+  let visibleCount = 0;
+  let accumulatedWidth = 0;
+
+  for (let i = 0; i < badges.length; i++) {
+    const badgeWidth = badges[i].offsetWidth + 4; // +4 for gap
+    if (accumulatedWidth + badgeWidth + overflowChipWidth <= availableWidth) {
+      accumulatedWidth += badgeWidth;
+      visibleCount++;
+    } else {
+      break;
+    }
+  }
+
+  // Hide overflow badges and show +N chip
+  const hiddenCount = badges.length - visibleCount;
+  if (hiddenCount > 0) {
+    for (let i = visibleCount; i < badges.length; i++) {
+      badges[i].style.display = 'none';
+    }
+    overflowChip.textContent = `+${hiddenCount}`;
+    overflowChip.title = `${hiddenCount} more: ${badges
+      .slice(visibleCount)
+      .map((b) => b.textContent.trim())
+      .join(', ')}`;
+    overflowChip.hidden = false;
+  }
+}
+
+function initBadgeOverflow() {
+  const cards = document.querySelectorAll('.reqman-requirement-card');
+  cards.forEach((card) => handleBadgeOverflow(card));
+
+  // Re-calculate on window resize (debounced)
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      cards.forEach((card) => handleBadgeOverflow(card));
+    }, 150);
+  });
+}
+
 export function init() {
   const table = document.getElementById('requirementsTable');
+  const cardsContainer = document.querySelector('.reqman-requirements-cards-grid');
   const searchInput = document.getElementById('requirementsSearch');
   const filtersForm = document.getElementById('requirementsFilterForm');
   const newRequirementButton = document.getElementById('newRequirementButton');
 
   state.statusMap = parseStatusDefinitions();
+  
+  // Initialize table view if present
   if (table) {
     collectRows(table);
     decorateStatusBadges();
@@ -556,7 +691,16 @@ export function init() {
     applySearch('');
   }
 
-  disableSearchWhenEmpty(searchInput, table);
+  // Initialize cards view if present
+  if (cardsContainer) {
+    collectCards(cardsContainer);
+    decorateStatusBadges();
+    initDuplicateButtons(cardsContainer);
+    initBadgeOverflow();
+    applySearch('');
+  }
+
+  disableSearchWhenEmpty(searchInput, table || cardsContainer);
   initSearch(searchInput);
   initFiltersForm(filtersForm, searchInput);
   initKeyboardShortcuts({ searchInput, newRequirementButton });

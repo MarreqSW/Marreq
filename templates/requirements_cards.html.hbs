@@ -1,5 +1,5 @@
 {{!--
-  Requirements Card View - Modern card-based layout for reading requirements
+  Requirements Table View - Modern card-based layout for reading requirements
   Depends on: css/pages/requirements-cards.css, js/pages/requirements-cards.js
 --}}
 {{#*inline "page"}}
@@ -14,7 +14,7 @@
             <a href="/p/{{project.id}}" class="reqman-requirements-breadcrumb__link">{{project.name}}</a>
           </li>
           {{/if}}
-          <li aria-current="page" class="reqman-requirements-breadcrumb__current">Requirements - Card View</li>
+          <li aria-current="page" class="reqman-requirements-breadcrumb__current">Requirements - Table View</li>
         </ol>
       </nav>
       <div>
@@ -35,7 +35,7 @@
       <div class="reqman-requirements-header__secondary">
         {{#if project.id}}
         <a href="/p/{{project.id}}/requirements_table" class="btn btn-outline-secondary btn-sm">
-          Table View
+          Card View
         </a>
         <a href="/p/{{project.id}}/requirements/tree" class="btn btn-outline-secondary btn-sm">
           Tree View
@@ -50,7 +50,7 @@
         {{/if}}
         {{else}}
         <button type="button" class="btn btn-outline-secondary btn-sm" disabled aria-disabled="true">
-          Table View
+          Card View
         </button>
         <button type="button" class="btn btn-outline-secondary btn-sm" disabled aria-disabled="true">
           Tree View

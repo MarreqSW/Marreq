@@ -204,7 +204,7 @@ async fn show_requirements(
 
     // Determine current view (default to card)
     let current_view = view.as_deref().unwrap_or("card");
-    
+
     let ctx = json!({
         "user": user,
         "requirements": json!(requirements),

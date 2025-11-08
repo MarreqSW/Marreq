@@ -1,0 +1,29 @@
+{{!--
+  PARTIAL: Tree Child Node
+  Child node in the tree (non-expandable)
+--}}
+<div class="c-tree__node c-tree__child-node" data-node-id="{{requirement.req_id}}">
+  <div class="c-tree__node-content">
+    <div class="c-tree__toggle">
+      <div class="c-tree__toggle-placeholder"></div>
+    </div>
+    <div class="c-tree__requirement-card c-tree__child-card c-requirement-card">
+      <div class="c-tree__requirement-header">
+        <div class="requirement-id c-requirement-card__id">
+          <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}"
+            class="c-tree__requirement-link c-linked-requirements__link">
+            {{requirement.req_reference}}
+          </a>
+        </div>
+        <div class="requirement-status">
+          <span class="status-badge status-{{requirement.req_current_status}}"
+            data-status="{{requirement.req_current_status}}">
+            {{requirement.req_current_status}}
+          </span>
+        </div>
+      </div>
+      <div class="c-tree__requirement-title c-linked-requirements__title">{{requirement.req_title}}</div>
+      <div class="c-tree__requirement-description">{{requirement.req_description}}</div>
+    </div>
+  </div>
+</div>

@@ -27,8 +27,21 @@ function getSlot(root, name) {
   return root.querySelector(`[data-slot="${name}"]`);
 }
 
+function toElementArray(element) {
+  if (!element) {
+    return [];
+  }
+  if (element instanceof Element) {
+    return [element];
+  }
+  if (element instanceof NodeList || Array.isArray(element)) {
+    return Array.from(element);
+  }
+  return [];
+}
+
 function setText(element, value) {
-  const elements = element instanceof Element ? [element] : Array.from(element || []);
+  const elements = toElementArray(element);
   elements.forEach((el) => {
     if (el) {
       el.textContent = value ?? '';
@@ -66,20 +79,31 @@ function renderSolidity(root, solidity) {
   }
 }
 
-function renderChips(container, values) {
+function renderChips(root, values) {
+  const container = getSlot(root, 'chips');
   if (!container) return;
   
   container.innerHTML = '';
   const fragment = document.createDocumentFragment();
   
-  (values || []).forEach((value) => {
-    const chip = document.createElement('span');
-    chip.className = 'requirement-chip';
-    chip.textContent = value;
-    fragment.appendChild(chip);
+  (values || []).forEach((chip) => {
+    const chipElement = document.createElement('span');
+    chipElement.className = 'requirement-chip';
+    chipElement.textContent = chip.label || chip;
+    fragment.appendChild(chipElement);
   });
   
   container.appendChild(fragment);
+  
+  // Handle empty state
+  const emptyField = getField(root, 'chips-empty');
+  if (emptyField) {
+    if (values && values.length > 0) {
+      emptyField.classList.add('d-none');
+    } else {
+      emptyField.classList.remove('d-none');
+    }
+  }
 }
 
 function renderBodySections(root, sections = []) {
@@ -88,32 +112,17 @@ function renderBodySections(root, sections = []) {
     return;
   }
 
-  container.innerHTML = '';
-  sections.forEach((section) => {
-    const details = document.createElement('details');
-    details.className = 'card shadow-sm requirement-section';
-    details.open = true;
-
-    const summary = document.createElement('summary');
-    summary.className =
-      'card-header bg-white d-flex justify-content-between align-items-center';
-
-    const title = document.createElement('span');
-    title.className = 'h5 mb-0';
-    title.textContent = section.title;
-
-    const body = document.createElement('div');
-    body.className = 'card-body';
-
+  // Only render Notes section (Rationale is handled server-side)
+  const notesSection = sections.find(s => s.title === 'Notes');
+  
+  if (notesSection) {
     const paragraph = document.createElement('p');
-    paragraph.className = section.empty ? 'mb-0 text-muted' : 'mb-0';
-    paragraph.textContent = section.content;
-
-    summary.append(title);
-    body.appendChild(paragraph);
-    details.append(summary, body);
-    container.appendChild(details);
-  });
+    paragraph.className = notesSection.empty ? 'mb-0 fst-italic' : 'mb-0';
+    paragraph.textContent = notesSection.content;
+    
+    container.innerHTML = '';
+    container.appendChild(paragraph);
+  }
 }
 
 function renderRelationships(root, view, projectId) {

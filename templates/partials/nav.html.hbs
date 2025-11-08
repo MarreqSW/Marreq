@@ -25,17 +25,11 @@
           </a>
             <ul class="dropdown-menu c-navbar__dropdown-menu">
             {{#if project.id}}
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/requirements">Card View</a></li>
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/requirements_table">Table View</a></li>
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/requirements/tree">Tree View</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/requirements">All Views</a></li>
             {{else if selected_project_id}}
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/requirements">Card View</a></li>
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/requirements_table">Table View</a></li>
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/requirements/tree">Tree View</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/requirements">All Views</a></li>
             {{else}}
-            <li><span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">Card View</span></li>
-            <li><span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">Table View</span></li>
-            <li><span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">Tree View</span></li>
+            <li><span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">All Views</span></li>
             {{/if}}
           </ul>
         </li>

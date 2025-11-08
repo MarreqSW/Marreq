@@ -24,7 +24,6 @@
   padding: var(--space-6);
 }
 
-.c-card__subtitle,
 .c-card__text {
   color: var(--text-secondary);
 }
@@ -49,25 +48,6 @@
 }
 
 .c-requirement-card__id:hover {
-  background-color: var(--primary-dark);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
-}
-
-.c-requirement-card__reference-tag {
-  background-color: var(--primary-color);
-  border-radius: var(--radius-md);
-  color: #fff;
-  display: inline-block;
-  font-size: 0.875rem;
-  font-weight: 600;
-  margin-bottom: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.c-requirement-card__reference-tag:hover {
   background-color: var(--primary-dark);
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
@@ -124,38 +104,6 @@
   }
 }
 
-.c-requirement-section {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  color: var(--text-primary);
-  overflow: hidden;
-}
-
-.c-requirement-section > summary {
-  background-color: var(--surface-muted);
-  border-bottom: 1px solid var(--border-color);
-  cursor: pointer;
-  list-style: none;
-}
-
-.c-requirement-section > .c-summary--bg-white {
-  background-color: var(--surface-muted);
-}
-
-.c-requirement-section > summary::-webkit-details-marker {
-  display: none;
-}
-
-.c-requirement-section .c-card__body {
-  background-color: var(--surface-color);
-  color: var(--text-primary);
-}
-
-.c-requirement-section .u-text-muted {
-  color: var(--text-secondary);
-}
-
 [data-theme='dark'] .c-card {
   background-color: var(--surface-color);
   border-color: var(--border-color);
@@ -189,14 +137,12 @@
   color: var(--text-primary);
 }
 
-[data-theme='dark'] .c-requirement-card__id,
-[data-theme='dark'] .c-requirement-card__reference-tag {
+[data-theme='dark'] .c-requirement-card__id {
   background-color: var(--primary-light);
   color: #0f172a;
 }
 
-[data-theme='dark'] .c-requirement-card__id:hover,
-[data-theme='dark'] .c-requirement-card__reference-tag:hover {
+[data-theme='dark'] .c-requirement-card__id:hover {
   background-color: #60a5fa;
   box-shadow: var(--shadow-md);
 }

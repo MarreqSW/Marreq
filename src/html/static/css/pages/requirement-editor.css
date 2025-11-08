@@ -84,39 +84,6 @@
   width: 8px;
 }
 
-.c-editor-status__menu {
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  display: grid;
-  gap: var(--space-1);
-  left: 0;
-  min-width: 200px;
-  padding: var(--space-2);
-  position: absolute;
-  top: calc(100% + var(--space-2));
-}
-
-.c-editor-status__menu-item {
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  cursor: pointer;
-  font-size: 0.95rem;
-  padding: var(--space-2) var(--space-3);
-  text-align: left;
-  transition: background var(--transition-base), color var(--transition-base);
-}
-
-.c-editor-status__menu-item:hover,
-.c-editor-status__menu-item:focus-visible {
-  background: var(--surface-accent);
-  color: var(--primary-dark);
-  outline: none;
-}
-
 .c-editor-topbar__actions {
   align-items: center;
   display: flex;
@@ -225,8 +192,7 @@
 }
 
 .c-editor-field__input,
-.c-editor-field__textarea,
-.c-editor-linked__search {
+.c-editor-field__textarea {
   background: var(--surface-muted);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -238,16 +204,10 @@
 }
 
 .c-editor-field__input:focus,
-.c-editor-field__textarea:focus,
-.c-editor-linked__search:focus {
+.c-editor-field__textarea:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12);
   outline: none;
-}
-
-.c-editor-field__input--headline {
-  font-size: 1.5rem;
-  font-weight: 600;
 }
 
 .c-editor-field__textarea {
@@ -315,12 +275,6 @@
   border-radius: var(--radius-sm);
   font-family: 'Fira Code', 'JetBrains Mono', SFMono-Regular, monospace;
   padding: 0 var(--space-1);
-}
-
-.c-editor-preview__empty {
-  color: var(--text-secondary);
-  font-style: italic;
-  margin: 0;
 }
 
 .c-editor-inline-actions__button {
@@ -463,21 +417,6 @@
   gap: var(--space-2);
 }
 
-.c-editor-field__error {
-  color: var(--error-color);
-  font-size: 0.8rem;
-  min-height: 1em;
-}
-
-.c-editor-meta-group--danger {
-  background: rgb(254 242 242 / 0.65);
-  border-color: rgb(239 68 68 / 0.4);
-}
-
-.c-editor-meta-group--danger .c-btn {
-  box-shadow: none;
-}
-
 @media (max-width: 1100px) {
   .c-editor-layout {
     flex-direction: column;
@@ -509,10 +448,6 @@
     width: 100%;
   }
 
-  .c-editor-actions .c-editor-action-btn {
-    width: 100%;
-  }
-
   .c-editor-autosave {
     width: auto;
   }
@@ -526,8 +461,6 @@
 @media (prefers-reduced-motion: reduce) {
   .c-editor-status__chip,
   .c-editor-toolbar__btn,
-  .c-editor-save-menu__item,
-  .c-editor-linked__result,
   .c-editor-dropzone {
     transition: none;
   }

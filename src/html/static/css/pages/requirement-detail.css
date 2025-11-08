@@ -108,80 +108,6 @@
 }
 
 /* ============================================================
-   CONTEXT CARD - Quick overview information
-   ============================================================ */
-
-.reqman-requirement-context-card {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-}
-
-.reqman-requirement-context-card .u-card-header {
-  background-color: var(--surface-muted);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.reqman-requirement-context-card .u-card-body {
-  background-color: var(--surface-color);
-}
-
-[data-theme='dark'] .reqman-requirement-context-card {
-  background-color: var(--surface-color);
-  border-color: var(--border-color);
-}
-
-[data-theme='dark'] .reqman-requirement-context-card .u-card-header {
-  background-color: var(--surface-muted);
-  border-bottom-color: var(--border-color);
-}
-
-[data-theme='dark'] .reqman-requirement-context-card .u-card-body {
-  background-color: var(--surface-color);
-}
-
-.reqman-requirement-header__meta-grid {
-  display: grid;
-  gap: var(--space-4);
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 768px) {
-  .reqman-requirement-header__meta-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .reqman-requirement-header__meta-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.reqman-requirement-glance {
-  background-color: var(--surface-subtle);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  transition: background-color var(--transition-base);
-}
-
-.reqman-requirement-glance:hover {
-  background-color: var(--surface-hover);
-}
-
-[data-theme='dark'] .reqman-requirement-glance {
-  background-color: rgb(51 65 85 / 0.3);
-}
-
-[data-theme='dark'] .reqman-requirement-glance:hover {
-  background-color: rgb(51 65 85 / 0.5);
-}
-
-/* ============================================================
    DETAIL GRID - Main content and sidebar layout
    ============================================================ */
 
@@ -227,85 +153,7 @@
    CARD COMPONENTS
    ============================================================ */
 
-.reqman-requirement-main-card,
-.reqman-requirement-side-card {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition-base);
-}
-
-.reqman-requirement-main-card:hover,
-.reqman-requirement-side-card:hover {
-  box-shadow: var(--shadow-md);
-}
-
-[data-theme='dark'] .reqman-requirement-main-card,
-[data-theme='dark'] .reqman-requirement-side-card {
-  background-color: var(--surface-color);
-  border-color: var(--border-color);
-}
-
 /* Custom card header class for proper theme support */
-.reqman-requirement-card-header {
-  background-color: var(--surface-muted);
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-primary);
-}
-
-[data-theme='dark'] .reqman-requirement-card-header {
-  background-color: var(--surface-muted);
-  border-bottom-color: var(--border-color);
-  color: var(--text-primary);
-}
-
-/* ============================================================
-   SECTION COMPONENTS - Collapsible details sections
-   ============================================================ */
-
-.reqman-requirement-section {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-[data-theme='dark'] .reqman-requirement-section {
-  background-color: var(--surface-color);
-  border-color: var(--border-color);
-}
-
-.reqman-requirement-section summary {
-  cursor: pointer;
-  list-style: none;
-  padding: var(--space-4) var(--space-5);
-  transition: background-color var(--transition-base);
-  user-select: none;
-}
-
-.reqman-requirement-section summary::-webkit-details-marker {
-  display: none;
-}
-
-.reqman-requirement-section summary::marker {
-  display: none;
-}
-
-.reqman-requirement-section summary:hover {
-  background-color: var(--surface-hover);
-}
-
-.reqman-requirement-section summary::after {
-  content: '▼';
-  float: right;
-  font-size: 0.875rem;
-  transition: transform var(--transition-base);
-}
-
-.reqman-requirement-section[open] summary::after {
-  transform: rotate(-180deg);
-}
 
 /* ============================================================
    AVATAR COMPONENTS
@@ -324,198 +172,12 @@
 }
 
 /* ============================================================
-   METADATA LIST
-   ============================================================ */
-
-.reqman-requirement-meta-list {
-  display: grid;
-  gap: var(--space-3);
-  grid-template-columns: auto 1fr;
-}
-
-.reqman-requirement-meta-list dt {
-  color: var(--text-secondary);
-  font-size: 0.8125rem;
-  font-weight: 500;
-}
-
-.reqman-requirement-meta-list dd {
-  color: var(--text-primary);
-  margin: 0;
-  text-align: end;
-}
-
-@media (min-width: 1024px) {
-  .reqman-requirement-meta-list dd {
-    text-align: start;
-  }
-}
-
-/* ============================================================
-   TIMELINE COMPONENT
-   ============================================================ */
-
-.reqman-requirement-timeline {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.reqman-requirement-timeline li {
-  align-items: flex-start;
-  display: flex;
-  gap: var(--space-3);
-  padding-left: var(--space-4);
-  position: relative;
-}
-
-.reqman-requirement-timeline li::before {
-  background-color: var(--primary-color);
-  border-radius: 50%;
-  content: '';
-  flex-shrink: 0;
-  height: 8px;
-  left: 0;
-  margin-top: 0.375rem;
-  position: absolute;
-  width: 8px;
-}
-
-.reqman-requirement-timeline li:not(:last-child)::after {
-  background-color: var(--border-color);
-  content: '';
-  height: calc(100% + var(--space-3));
-  left: 3px;
-  position: absolute;
-  top: 1rem;
-  width: 2px;
-}
-
-/* ============================================================
    CHIP/BADGE COMPONENTS FOR CLASSIFICATION
    ============================================================ */
-
-.reqman-requirement-chip {
-  align-items: center;
-  background-color: rgb(37 99 235 / 0.1);
-  border: 1px solid rgb(37 99 235 / 0.2);
-  border-radius: var(--radius-xl);
-  color: var(--primary-color);
-  display: inline-flex;
-  font-size: 0.75rem;
-  font-weight: 600;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  transition: background-color var(--transition-fast), transform var(--transition-fast);
-}
-
-.reqman-requirement-chip:hover {
-  background-color: rgb(37 99 235 / 0.15);
-  transform: translateY(-1px);
-}
-
-[data-theme='dark'] .reqman-requirement-chip {
-  background-color: rgb(37 99 235 / 0.15);
-  border-color: rgb(37 99 235 / 0.3);
-  color: var(--primary-light);
-}
-
-[data-theme='dark'] .reqman-requirement-chip:hover {
-  background-color: rgb(37 99 235 / 0.25);
-}
-
-/* ============================================================
-   PROGRESS BAR
-   ============================================================ */
-
-.reqman-progress-thin {
-  background-color: var(--surface-muted);
-  border-radius: var(--radius-xl);
-  height: 8px;
-  overflow: hidden;
-}
-
-.reqman-progress-thin .u-progress-bar {
-  background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
-  border-radius: inherit;
-  transition: width 0.4s ease;
-}
-
-/* ============================================================
-   LINKED TESTS LIST
-   ============================================================ */
-
-.reqman-requirement-linked-tests {
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.reqman-requirement-linked-tests .u-list-group-item {
-  border: 1px solid var(--border-color);
-  border-bottom: none;
-  padding: var(--space-4);
-  transition: background-color var(--transition-base), transform var(--transition-fast);
-}
-
-.reqman-requirement-linked-tests .u-list-group-item:first-child {
-  border-top-left-radius: var(--radius-md);
-  border-top-right-radius: var(--radius-md);
-}
-
-.reqman-requirement-linked-tests .u-list-group-item:last-child {
-  border-bottom: 1px solid var(--border-color);
-  border-bottom-left-radius: var(--radius-md);
-  border-bottom-right-radius: var(--radius-md);
-}
-
-.reqman-requirement-linked-tests .u-list-group-item:hover {
-  background-color: var(--surface-hover);
-  transform: translateX(4px);
-}
 
 /* ============================================================
    RELATIONSHIPS LINKS
    ============================================================ */
-
-.reqman-requirement-relationship-link {
-  align-items: center;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  display: flex;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  text-decoration: none;
-  transition: background-color var(--transition-base), border-color var(--transition-base), transform var(--transition-fast);
-}
-
-.reqman-requirement-relationship-link:hover {
-  background-color: var(--surface-hover);
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-  text-decoration: none;
-  transform: translateX(4px);
-}
-
-.reqman-requirement-relationship-link .u-badge {
-  flex-shrink: 0;
-}
-
-/* ============================================================
-   ACTION BUTTONS & TOOLBAR
-   ============================================================ */
-
-.u-btn-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.u-btn-toolbar .u-btn-group {
-  flex-shrink: 0;
-}
 
 /* ============================================================
    RESPONSIVE ADJUSTMENTS
@@ -543,49 +205,6 @@
   .reqman-requirement-detail-sidebar {
     gap: var(--space-4);
   }
-
-  .reqman-requirement-header__meta-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ============================================================
-   BADGE VARIANTS - Status indicators
-   ============================================================ */
-
-.u-badge.u-bg-primary {
-  background-color: var(--primary-color);
-  color: var(--text-inverse);
-}
-
-.u-badge.u-bg-success {
-  background-color: var(--success-color);
-  color: var(--text-inverse);
-}
-
-.u-badge.u-bg-warning {
-  background-color: var(--warning-color);
-  color: var(--text-inverse);
-}
-
-.u-badge.u-bg-danger {
-  background-color: var(--error-color);
-  color: var(--text-inverse);
-}
-
-.u-badge.u-bg-info {
-  background-color: #3b82f6;
-  color: var(--text-inverse);
-}
-
-.u-badge.u-bg-secondary {
-  background-color: var(--secondary-color);
-  color: var(--text-inverse);
-}
-
-.u-badge.u-text-bg-dark {
-  background-color: var(--text-primary);
-  color: var(--text-inverse);
 }
 
 /* ============================================================
@@ -611,50 +230,6 @@
 .u-text-break {
   overflow-wrap: break-word;
   word-break: break-word;
-}
-
-.u-rounded-pill {
-  border-radius: 50rem;
-}
-
-.u-rounded-4 {
-  border-radius: calc(var(--radius-lg) * 1.5);
-}
-
-.u-fs-3 {
-  font-size: 1.25rem;
-}
-
-.u-fs-6 {
-  font-size: 1rem;
-}
-
-.u-fw-bold {
-  font-weight: 700;
-}
-
-.u-fw-semibold {
-  font-weight: 600;
-}
-
-.u-lh-1 {
-  line-height: 1;
-}
-
-.u-lh-base {
-  line-height: 1.5;
-}
-
-.u-display-5 {
-  font-size: 2.5rem;
-  font-weight: 300;
-  line-height: 1.2;
-}
-
-@media (min-width: 768px) {
-  .u-display-5 {
-    font-size: 3rem;
-  }
 }
 
 /* ============================================================
@@ -705,7 +280,6 @@
 
 /* Focus visible for keyboard navigation */
 .reqman-requirement-header button:focus-visible,
-.reqman-requirement-section summary:focus-visible,
 .reqman-requirement-relationship-link:focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
@@ -715,68 +289,9 @@
    DARK MODE CARD FIXES - Ensure proper backgrounds
    ============================================================ */
 
-.reqman-requirement-detail-page .u-card,
-[data-theme='dark'] .reqman-requirement-detail-page .u-card {
-  background-color: var(--surface-color);
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-
-.reqman-requirement-detail-page .u-card-header,
-[data-theme='dark'] .reqman-requirement-detail-page .u-card-header {
-  background-color: var(--surface-muted);
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-
-.reqman-requirement-detail-page .u-card-body,
-[data-theme='dark'] .reqman-requirement-detail-page .u-card-body {
-  background-color: var(--surface-color);
-  color: var(--text-primary);
-}
-
-[data-theme='dark'] .u-modal-content {
-  background-color: var(--surface-color);
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-
-[data-theme='dark'] .u-modal-header {
-  background-color: var(--surface-muted);
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-
-[data-theme='dark'] .u-modal-body {
-  background-color: var(--surface-color);
-  color: var(--text-primary);
-}
-
 /* ============================================================
    DROPDOWN MENU DARK MODE
    ============================================================ */
-
-[data-theme='dark'] .u-dropdown-menu {
-  background-color: rgb(30 41 59); /* Solid opaque background */
-  border: 1px solid rgb(71 85 105);
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
-}
-
-[data-theme='dark'] .u-dropdown-item {
-  background-color: transparent;
-  color: rgb(226 232 240);
-}
-
-[data-theme='dark'] .u-dropdown-item:hover,
-[data-theme='dark'] .u-dropdown-item:focus {
-  background-color: rgb(51 65 85); /* Solid hover state */
-  color: rgb(248 250 252);
-}
-
-[data-theme='dark'] .u-dropdown-divider {
-  border-color: rgb(71 85 105);
-  opacity: 1;
-}
 
 /* ============================================================
    PRINT STYLES
@@ -789,25 +304,5 @@
 
   .reqman-requirement-header {
     box-shadow: none;
-  }
-
-  .u-btn,
-  .u-dropdown,
-  [data-bs-toggle],
-  [data-action] {
-    display: none;
-  }
-
-  .reqman-requirement-section[open] {
-    border: none;
-  }
-
-  .reqman-requirement-section summary {
-    display: none;
-  }
-
-  .u-collapse {
-    display: block;
-    height: auto;
   }
 }

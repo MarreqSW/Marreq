@@ -236,6 +236,12 @@
 .reqman-requirements-controls {
   border: 1px solid var(--border-color);
   padding: 0;
+  transform: none !important;
+  transition: box-shadow var(--transition-base);
+}
+
+.reqman-requirements-controls:hover {
+  transform: none !important;
 }
 
 .reqman-requirements-controls__inner {
@@ -309,19 +315,15 @@
   justify-content: flex-end;
 }
 
-.reqman-requirements-filter-bar__clear,
-.reqman-requirements-filter-bar__submit {
+.reqman-requirements-filter-bar__clear {
   background: none;
   border: none;
   border-radius: var(--radius-md);
+  color: var(--text-secondary);
   cursor: pointer;
   font-weight: 600;
   padding: var(--space-2) var(--space-3);
   transition: background-color var(--transition-base);
-}
-
-.reqman-requirements-filter-bar__clear {
-  color: var(--text-secondary);
 }
 
 .reqman-requirements-filter-bar__clear:hover {
@@ -330,11 +332,21 @@
 
 .reqman-requirements-filter-bar__submit {
   background-color: var(--primary-color);
-  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  padding: var(--space-2) var(--space-4);
+  transition: background-color var(--transition-base);
 }
 
 .reqman-requirements-filter-bar__submit:hover {
   background-color: var(--primary-dark);
+}
+
+.reqman-requirements-filter-bar__submit:active {
+  transform: scale(0.98);
 }
 
 .reqman-requirements-filter-chips {
@@ -453,11 +465,19 @@
 }
 
 .reqman-requirements-key__value {
-  background-color: var(--surface-muted);
+  background-color: var(--primary-surface);
   border-radius: var(--radius-md);
+  color: var(--primary-color);
   font-family: var(--font-sans);
   font-size: 0.875rem;
+  font-weight: 700;
   padding: var(--space-1) var(--space-2);
+}
+
+/* Dark mode adjustments for table key badge */
+:root[data-theme='dark'] .reqman-requirements-key__value {
+  background-color: rgb(37 99 235 / 0.15);
+  color: var(--primary-light);
 }
 
 .reqman-requirements-key__toggle {
@@ -782,15 +802,34 @@
 }
 
 .reqman-requirement-card__reference-text {
-  background-color: var(--surface-muted);
+  background-color: var(--primary-surface);
   border-radius: var(--radius-md);
-  color: var(--text-primary);
+  color: var(--primary-color);
   display: inline-block;
   font-family: var(--font-sans);
   font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   padding: var(--space-1) var(--space-3);
+  text-decoration: none;
+  transition: background-color var(--transition-base), transform var(--transition-fast);
+}
+
+.reqman-requirement-card__reference-text:hover {
+  background-color: var(--surface-accent);
+  color: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+/* Dark mode adjustments for reference badge */
+:root[data-theme='dark'] .reqman-requirement-card__reference-text {
+  background-color: rgb(37 99 235 / 0.15);
+  color: var(--primary-light);
+}
+
+:root[data-theme='dark'] .reqman-requirement-card__reference-text:hover {
+  background-color: rgb(37 99 235 / 0.25);
+  color: var(--primary-light);
 }
 
 /* Status badge in card context */

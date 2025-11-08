@@ -12,6 +12,7 @@ export default defineConfig({
       '@modules': path.resolve(__dirname, './src/html/static/js/modules'),
       '@pages': path.resolve(__dirname, './src/html/static/js/pages'),
       '@core': path.resolve(__dirname, './src/html/static/js/core'),
+      '@presenters': path.resolve(__dirname, './src/html/static/js/presenters'),
     },
   },
   publicDir: false, // Disable special handling of 'public' directory

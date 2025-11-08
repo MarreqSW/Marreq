@@ -34,13 +34,13 @@ impl From<RepoError> for rocket::http::Status {
 impl From<RepoError> for Redirect {
     fn from(err: RepoError) -> Self {
         println!("Redirecting to error page due to: {}", err);
-        Redirect::to("error")
+        Redirect::to("/error")
     }
 }
 
 impl From<LogServiceError> for Redirect {
     fn from(err: LogServiceError) -> Self {
         println!("Redirecting to error page due to: {}", err);
-        Redirect::to("error")
+        Redirect::to("/error")
     }
 }

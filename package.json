@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "check:unused-css": "node .github/workflows/purgecss-ci.mjs"
   },
   "repository": {
     "type": "git",
@@ -32,6 +33,7 @@
     "@vitest/ui": "^4.0.6",
     "@vitest/coverage-v8": "^4.0.0",
     "happy-dom": "^20.0.10",
-    "vitest": "^4.0.6"
+    "vitest": "^4.0.6",
+    "purgecss": "^6.0.0"
   }
 }

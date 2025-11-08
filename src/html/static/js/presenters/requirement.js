@@ -307,7 +307,6 @@ export function buildRequirementViewModel(canonical = {}) {
   };
 
   const bodySections = [
-    makeSection('Statement', requirement.req_description),
     makeSection('Rationale', rationale),
     makeSection('Notes', notesResult.notes, notesResult.notes),
   ];

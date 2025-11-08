@@ -6,6 +6,7 @@
 
 # Code Coverage artifacts
 coverage_html/
+coverage/
 
 # IDE and editor files
 .vscode/

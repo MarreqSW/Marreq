@@ -23,26 +23,16 @@ function getFields(root, name) {
   return root.querySelectorAll(`[data-field="${name}"]`);
 }
 
-function toElementArray(target) {
-  if (!target) {
-    return [];
-  }
-  if (typeof Element !== 'undefined' && target instanceof Element) {
-    return [target];
-  }
-  return Array.from(target);
-}
-
 function getSlot(root, name) {
   return root.querySelector(`[data-slot="${name}"]`);
 }
 
 function setText(element, value) {
-  toElementArray(element).forEach((el) => {
-    if (!el) {
-      return;
+  const elements = element instanceof Element ? [element] : Array.from(element || []);
+  elements.forEach((el) => {
+    if (el) {
+      el.textContent = value ?? '';
     }
-    el.textContent = value ?? '';
   });
 }
 
@@ -76,31 +66,20 @@ function renderSolidity(root, solidity) {
   }
 }
 
-function renderChips(root, chips = []) {
-  const container = getSlot(root, 'chips');
-  if (!container) {
-    return;
-  }
-
-  const emptyMessage = getField(root, 'chips-empty');
+function renderChips(container, values) {
+  if (!container) return;
+  
   container.innerHTML = '';
-  if (!chips.length) {
-    if (emptyMessage) {
-      emptyMessage.classList.remove('d-none');
-    }
-    return;
-  }
-
-  if (emptyMessage) {
-    emptyMessage.classList.add('d-none');
-  }
-
-  chips.forEach((chip) => {
-    const badge = document.createElement('span');
-    badge.className = 'badge rounded-pill bg-light text-muted border';
-    badge.textContent = chip.label;
-    container.appendChild(badge);
+  const fragment = document.createDocumentFragment();
+  
+  (values || []).forEach((value) => {
+    const chip = document.createElement('span');
+    chip.className = 'requirement-chip';
+    chip.textContent = value;
+    fragment.appendChild(chip);
   });
+  
+  container.appendChild(fragment);
 }
 
 function renderBodySections(root, sections = []) {

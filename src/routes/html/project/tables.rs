@@ -1,6 +1,6 @@
 use super::prelude::*;
 use crate::services::{
-    CategoryService, DecoratedRequirementService, DecoratedTestService, ProjectService,
+    CategoryService, DecoratedTestService, ProjectService,
     StatusService, UserService, VerificationService,
 };
 

@@ -231,3 +231,20 @@
   box-shadow: var(--shadow-md);
 }
 
+/* Remove background highlight from reference IDs in tree view for dark mode */
+[data-theme='dark'] .c-tree__node .c-requirement-card__id {
+  background-color: transparent;
+}
+
+[data-theme='dark'] .c-tree__node .c-requirement-card__id .c-tree__requirement-link {
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .c-tree__node .c-requirement-card__id:hover {
+  background-color: transparent;
+}
+
+[data-theme='dark'] .c-tree__node .c-requirement-card__id .c-tree__requirement-link:hover {
+  color: var(--primary-light);
+}
+

@@ -56,6 +56,10 @@ import { initTreeControls } from '/static/js/modules/tree.js';
       case 'tree':
         treeView.style.display = 'block';
         treeBtn.classList.add('active');
+        // Redraw connectors when tree view becomes visible
+        if (window.__treeAPI) {
+          setTimeout(() => window.__treeAPI.redrawConnectors(), 50);
+        }
         break;
       case 'table':
       default:
@@ -80,13 +84,25 @@ import { initTreeControls } from '/static/js/modules/tree.js';
   // Initialize tree controls
   const treeContainer = document.querySelector('.c-tree');
   if (treeContainer) {
-    initTreeControls({
+    console.log('[TreeInit] Found tree container:', treeContainer);
+    console.log('[TreeInit] Tree has', treeContainer.querySelectorAll('[role="treeitem"]').length, 'tree items');
+    console.log('[TreeInit] Tree has', treeContainer.querySelectorAll('.c-tree__node').length, 'nodes');
+    console.log('[TreeInit] Tree has', treeContainer.querySelectorAll('.c-tree__children').length, 'children containers');
+    
+    const treeAPI = initTreeControls({
       rootSelector: '.c-tree',
       toggleSelector: '[data-tree-toggle]',
       branchSelector: '[data-tree-branch]',
       expandAllSelector: '[data-tree-expand-all]',
       collapseAllSelector: '[data-tree-collapse-all]',
     });
+    
+    console.log('[TreeInit] Tree API initialized:', treeAPI);
+    
+    // Store tree API globally for connector redrawing
+    window.__treeAPI = treeAPI;
+  } else {
+    console.warn('[TreeInit] Tree container (.c-tree) not found!');
   }
   
   // Load saved preference or use default

@@ -311,6 +311,7 @@ async fn show_requirement_id(
 
     let ctx = json!({
         "user": user,
+        "project_id": project_id,
         "project": json!({
             "id": selected_project.project_id,
             "name": selected_project.project_name,

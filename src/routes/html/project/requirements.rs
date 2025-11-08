@@ -105,7 +105,8 @@ fn enforce_project_ownership(route_project_id: i32, resource_project_id: i32) ->
                 project_id = resource_project_id,
                 status_filter = Option::<i32>::None,
                 verification_filter = Option::<i32>::None,
-                category_filter = Option::<i32>::None
+                category_filter = Option::<i32>::None,
+                view = Option::<String>::None
             )
         )))
     } else {
@@ -136,13 +137,14 @@ struct InlineVerificationPayload {
     description: String,
 }
 
-#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>")]
+#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<view>")]
 async fn show_requirements(
     project_access: ProjectAccess,
     project_id: i32,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
+    view: Option<String>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
@@ -163,9 +165,50 @@ async fn show_requirements(
         category_filter,
     )?;
 
+    // Build tree data for tree view
+    let mut children: HashMap<i32, Vec<&DecoratedRequirement>> = HashMap::new();
+    let mut roots: Vec<&DecoratedRequirement> = Vec::new();
+
+    for r in &requirements {
+        if r.req_parent_id == 0 {
+            roots.push(r);
+        } else {
+            children.entry(r.req_parent_id).or_default().push(r);
+        }
+    }
+
+    roots.sort_by_key(|r| r.req_id);
+    for v in children.values_mut() {
+        v.sort_by_key(|r| r.req_id);
+    }
+
+    fn build_node<'a>(
+        req: &'a DecoratedRequirement,
+        idx: &HashMap<i32, Vec<&'a DecoratedRequirement>>,
+    ) -> serde_json::Value {
+        let kids = idx
+            .get(&req.req_id)
+            .map(|vs| vs.iter().map(|c| build_node(c, idx)).collect::<Vec<_>>())
+            .unwrap_or_default();
+
+        json!({
+            "requirement": req,
+            "children": kids
+        })
+    }
+
+    let tree_data = roots
+        .into_iter()
+        .map(|r| build_node(r, &children))
+        .collect::<Vec<_>>();
+
+    // Determine current view (default to card)
+    let current_view = view.as_deref().unwrap_or("card");
+    
     let ctx = json!({
         "user": user,
         "requirements": json!(requirements),
+        "tree_data": tree_data,
         "requirement_metrics": json!({
             "total": metrics.total,
             "draft": metrics.draft,
@@ -182,6 +225,7 @@ async fn show_requirements(
         "current_status_filter": json!(status_filter),
         "current_verification_filter": json!(verification_filter),
         "current_category_filter": json!(category_filter),
+        "current_view": current_view,
         "project": json!({
             "id": selected_project.project_id,
             "name": selected_project.project_name,
@@ -189,7 +233,7 @@ async fn show_requirements(
         "is_admin": user.is_admin,
     });
 
-    Ok(Template::render("requirements_cards", ctx))
+    Ok(Template::render("requirements", ctx))
 }
 
 #[get("/<project_id>/requirements/show/<req_id>")]
@@ -425,7 +469,8 @@ async fn delete_requirement_route(
             project_id = project_id,
             status_filter = Option::<i32>::None,
             verification_filter = Option::<i32>::None,
-            category_filter = Option::<i32>::None
+            category_filter = Option::<i32>::None,
+            view = Option::<String>::None
         )
     )))
 }

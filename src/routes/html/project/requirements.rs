@@ -93,22 +93,26 @@ fn map_repo_error(err: RepoError) -> rocket::http::Status {
 }
 
 // TODO: This shall be an authorization check to enforce project ownership and return a redirect when mismatched
+fn requirements_list_redirect(project_id: i32) -> Redirect {
+    Redirect::to(uri!(
+        "/p",
+        show_requirements(
+            project_id = project_id,
+            status_filter = Option::<i32>::None,
+            verification_filter = Option::<i32>::None,
+            category_filter = Option::<i32>::None,
+            view = Option::<String>::None
+        )
+    ))
+}
+
 fn enforce_project_ownership(route_project_id: i32, resource_project_id: i32) -> Option<Redirect> {
     if resource_project_id != route_project_id {
         eprintln!(
             "Project mismatch: route {}, resource {}",
             route_project_id, resource_project_id
         );
-        Some(Redirect::to(uri!(
-            "/p",
-            show_requirements(
-                project_id = resource_project_id,
-                status_filter = Option::<i32>::None,
-                verification_filter = Option::<i32>::None,
-                category_filter = Option::<i32>::None,
-                view = Option::<String>::None
-            )
-        )))
+        Some(requirements_list_redirect(resource_project_id))
     } else {
         None
     }
@@ -453,7 +457,7 @@ async fn delete_requirement_route(
     project_id: i32,
     req_id: i32,
     state: &State<AppState>,
-) -> Result<rocket::http::Status, rocket::http::Status> {
+) -> Result<Redirect, rocket::http::Status> {
     let user = project_access.into_user();
 
     let service = RequirementService::new(state.inner());
@@ -461,8 +465,8 @@ async fn delete_requirement_route(
         .get_by_id(req_id)
         .map_err(|_| rocket::http::Status::NotFound)?;
 
-    if let Some(_redir) = enforce_project_ownership(project_id, req.project_id) {
-        return Err(rocket::http::Status::NotFound);
+    if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
+        return Ok(redir);
     }
 
     // Permission gate: allow only Draft(1) or Proposal(2) or admin
@@ -474,7 +478,7 @@ async fn delete_requirement_route(
         .delete(&user, req_id)
         .map_err(|_| rocket::http::Status::InternalServerError)?;
 
-    Ok(rocket::http::Status::NoContent)
+    Ok(requirements_list_redirect(project_id))
 }
 
 #[get("/<project_id>/requirements/new?<error>&<created>&<parent>&<template>")]
@@ -1348,6 +1352,10 @@ mod tests {
 
         let response = delete_with_session(&client, "/p/1/requirements/delete/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/requirements")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let reqs = state
@@ -1553,6 +1561,10 @@ mod tests {
 
         // Admin should be able to delete
         assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/1/requirements")
+        );
     }
 
     #[rocket::async_test]

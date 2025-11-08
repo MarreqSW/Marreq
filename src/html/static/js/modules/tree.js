@@ -87,7 +87,7 @@ function toggleBranch(nodeId, root) {
   const isHidden = branch.hidden || branch.getAttribute('aria-hidden') === 'true';
   
   branch.hidden = !isHidden;
-  branch.setAttribute('aria-hidden', String(isHidden));
+  branch.setAttribute('aria-hidden', String(!isHidden));
   toggle.setAttribute('aria-expanded', String(!isHidden));
 
   // Update parent node aria-expanded

@@ -92,10 +92,14 @@
 .c-tree__children {
   animation: treeSlideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border-left: 2px solid var(--border-color);
-  display: none;
   margin-left: 36px;
   margin-top: var(--space-3);
   padding-left: var(--space-5);
+}
+
+.c-tree__children[hidden],
+.c-tree__children[aria-hidden="true"] {
+  display: none;
 }
 
 @keyframes treeSlideDown {
@@ -109,7 +113,7 @@
   }
 }
 
-.c-tree__children[aria-hidden="false"] {
+.c-tree__children[aria-hidden="false"]:not([hidden]) {
   display: block;
 }
 

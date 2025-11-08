@@ -26,17 +26,15 @@
     <div class="c-tree__requirement-card c-tree__child-card c-requirement-card" tabindex="0">
       <div class="c-tree__requirement-header">
         <div class="c-tree__requirement-title-wrapper">
-          <div class="requirement-id c-requirement-card__id">
-            <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}"
-              class="c-tree__requirement-link c-linked-requirements__link"
-              title="View requirement details">
-              {{#if requirement.req_reference}}
-                {{requirement.req_reference}}
-              {{else}}
-                RM-{{requirement.req_id}}
-              {{/if}}
-            </a>
-          </div>
+          <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}"
+            class="reqman-requirement-card__reference-text"
+            title="View requirement details">
+            {{#if requirement.req_reference}}
+              {{requirement.req_reference}}
+            {{else}}
+              RM-{{requirement.req_id}}
+            {{/if}}
+          </a>
           <div class="c-tree__requirement-title c-linked-requirements__title" title="{{requirement.req_title}}">
             {{requirement.req_title}}
           </div>

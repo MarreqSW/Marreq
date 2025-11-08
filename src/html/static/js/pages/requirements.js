@@ -1,6 +1,6 @@
 import { jsonFetch, postJson } from '../core/net.js';
 import { showNotification } from '../modules/notifications.js';
-import { searchTree, filterTree } from '../modules/tree.js';
+import { searchTree, filterTree, initTreeControls } from '../modules/tree.js';
 
 const state = {
   rows: [],
@@ -475,43 +475,71 @@ function initRowDetails(table) {
   });
 }
 
-function shouldIgnoreShortcut(target) {
-  if (!target) return false;
-  const tagName = target.tagName;
-  return (
-    tagName === 'INPUT' ||
-    tagName === 'TEXTAREA' ||
-    tagName === 'SELECT' ||
-    target.isContentEditable
-  );
-}
-
 function initKeyboardShortcuts({ searchInput, newRequirementButton }) {
   document.addEventListener('keydown', (event) => {
-    if (event.key === '/' && !shouldIgnoreShortcut(event.target)) {
-      event.preventDefault();
-      if (searchInput) {
-        searchInput.focus();
-        searchInput.select();
-      }
+    // Skip if focus is in input field
+    const target = event.target;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) {
+      return;
     }
 
-    if (event.key.toLowerCase() === 'n' && !shouldIgnoreShortcut(event.target)) {
-      if (newRequirementButton) {
-        event.preventDefault();
-        newRequirementButton.click();
-      }
+    if (event.key === '/' && searchInput) {
+      event.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+
+    if (event.key.toLowerCase() === 'n' && newRequirementButton) {
+      event.preventDefault();
+      newRequirementButton.click();
     }
   });
 }
 
-function requestSubmit(form) {
+function initFiltersForm(form, searchInput) {
   if (!form) return;
-  if (typeof form.requestSubmit === 'function') {
-    form.requestSubmit();
-  } else {
-    form.submit();
+
+  form.querySelectorAll('[data-filter-control]').forEach((select) => {
+    select.addEventListener('change', () => {
+      // Update current filters
+      const filterName = select.dataset.filterControl;
+      const filterValue = select.value ? parseInt(select.value, 10) : null;
+      
+      if (filterName) {
+        applyFilters({ [filterName]: filterValue });
+      }
+      
+      renderFilterChips(form);
+      
+      // Removed auto-submit - user must click Apply button
+    });
+  });
+
+  const clearButton = form.querySelector('[data-action="clear-filters"]');
+  if (clearButton) {
+    clearButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      form.querySelectorAll('[data-filter-control]').forEach((select) => {
+        select.value = '';
+      });
+      if (searchInput) {
+        searchInput.value = '';
+        applySearch('');
+      }
+      // Clear all filters
+      applyFilters({ status: null, verification: null, category: null });
+      renderFilterChips(form);
+      
+      // Use native form submission
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    });
   }
+
+  renderFilterChips(form);
 }
 
 function renderFilterChips(form) {
@@ -552,50 +580,17 @@ function renderFilterChips(form) {
         if (control) {
           control.value = '';
           renderFilterChips(form);
-          requestSubmit(form);
+          
+          // Use native form submission
+          if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
         }
       });
     });
   }
-}
-
-function initFiltersForm(form, searchInput) {
-  if (!form) return;
-
-  form.querySelectorAll('[data-filter-control]').forEach((select) => {
-    select.addEventListener('change', () => {
-      // Update current filters
-      const filterName = select.dataset.filterControl;
-      const filterValue = select.value ? parseInt(select.value, 10) : null;
-      
-      if (filterName) {
-        applyFilters({ [filterName]: filterValue });
-      }
-      
-      renderFilterChips(form);
-      requestSubmit(form);
-    });
-  });
-
-  const clearButton = form.querySelector('[data-action="clear-filters"]');
-  if (clearButton) {
-    clearButton.addEventListener('click', (event) => {
-      event.preventDefault();
-      form.querySelectorAll('[data-filter-control]').forEach((select) => {
-        select.value = '';
-      });
-      if (searchInput) {
-        searchInput.value = '';
-        applySearch('');
-      }
-      // Clear all filters
-      applyFilters({ status: null, verification: null, category: null });
-      renderFilterChips(form);
-      requestSubmit(form);
-    });
-  }
-
-  renderFilterChips(form);
 }
 
 function buildDuplicateTitle(title) {
@@ -669,14 +664,6 @@ function initDuplicateButtons(container) {
   });
 }
 
-function disableSearchWhenEmpty(searchInput, table) {
-  if (!searchInput) return;
-  if (!table) {
-    searchInput.disabled = true;
-    searchInput.placeholder = 'No requirements to search yet';
-  }
-}
-
 function handleBadgeOverflow(card) {
   const metadata = card.querySelector('[data-badge-rail]');
   if (!metadata) return;
@@ -742,6 +729,68 @@ function initBadgeOverflow() {
   });
 }
 
+function initViewSwitcher() {
+  const VIEW_KEY = 'requirements_view_preference';
+  
+  const cardBtn = document.getElementById('cardViewBtn');
+  const tableBtn = document.getElementById('tableViewBtn');
+  const treeBtn = document.getElementById('treeViewBtn');
+  
+  const cardView = document.getElementById('cardView');
+  const tableView = document.getElementById('tableView');
+  const treeView = document.getElementById('treeView');
+  
+  if (!cardBtn || !tableBtn || !treeBtn || !cardView || !tableView || !treeView) {
+    return;
+  }
+  
+  function switchView(viewName) {
+    cardView.style.display = 'none';
+    tableView.style.display = 'none';
+    treeView.style.display = 'none';
+    
+    cardBtn.classList.remove('active');
+    tableBtn.classList.remove('active');
+    treeBtn.classList.remove('active');
+    
+    switch(viewName) {
+      case 'card':
+        cardView.style.display = 'block';
+        cardBtn.classList.add('active');
+        break;
+      case 'tree':
+        treeView.style.display = 'block';
+        treeBtn.classList.add('active');
+        if (window.__treeAPI) {
+          setTimeout(() => window.__treeAPI.redrawConnectors(), 50);
+        }
+        break;
+      case 'table':
+      default:
+        tableView.style.display = 'block';
+        tableBtn.classList.add('active');
+        break;
+    }
+    
+    try {
+      localStorage.setItem(VIEW_KEY, viewName);
+    } catch (e) {
+      console.warn('Could not save view preference:', e);
+    }
+  }
+  
+  cardBtn.addEventListener('click', () => switchView('card'));
+  tableBtn.addEventListener('click', () => switchView('table'));
+  treeBtn.addEventListener('click', () => switchView('tree'));
+  
+  try {
+    const savedView = localStorage.getItem(VIEW_KEY) || 'table';
+    switchView(savedView);
+  } catch (e) {
+    switchView('table');
+  }
+}
+
 export function init() {
   const table = document.getElementById('requirementsTable');
   const cardsContainer = document.querySelector('.reqman-requirements-cards-grid');
@@ -752,6 +801,9 @@ export function init() {
 
   state.statusMap = parseStatusDefinitions();
   state.treeRoot = treeRoot;
+  
+  // Initialize view switcher
+  initViewSwitcher();
   
   // Initialize table view if present
   if (table) {
@@ -778,6 +830,20 @@ export function init() {
     decorateStatusBadges();
     applySearch('');
     
+    // Initialize tree controls
+    const treeAPI = initTreeControls({
+      rootSelector: '.c-tree',
+      toggleSelector: '[data-tree-toggle]',
+      branchSelector: '[data-tree-branch]',
+      expandAllSelector: '[data-tree-expand-all]',
+      collapseAllSelector: '[data-tree-collapse-all]',
+    });
+    
+    // Store tree API globally for connector redrawing
+    if (treeAPI) {
+      window.__treeAPI = treeAPI;
+    }
+    
     // Parse URL params for initial filters
     const params = new URLSearchParams(window.location.search);
     const statusFilter = params.get('status_filter');
@@ -793,7 +859,12 @@ export function init() {
     }
   }
 
-  disableSearchWhenEmpty(searchInput, table || cardsContainer || treeRoot);
+  // Disable search if no data
+  if (searchInput && !table && !cardsContainer && !treeRoot) {
+    searchInput.disabled = true;
+    searchInput.placeholder = 'No requirements to search yet';
+  }
+
   initSearch(searchInput);
   initFiltersForm(filtersForm, searchInput);
   initKeyboardShortcuts({ searchInput, newRequirementButton });

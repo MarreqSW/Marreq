@@ -1,14 +1,22 @@
 import { jsonFetch, postJson } from '../core/net.js';
 import { showNotification } from '../modules/notifications.js';
+import { searchTree, filterTree } from '../modules/tree.js';
 
 const state = {
   rows: [],
   cards: [],
+  treeNodes: [],
   sortKey: null,
   sortOrder: 'asc',
   searchTerm: '',
   statusMap: new Map(),
   noResultsBanner: null,
+  treeRoot: null,
+  currentFilters: {
+    status: null,
+    verification: null,
+    category: null,
+  },
 };
 
 const SORTERS = {
@@ -222,6 +230,31 @@ function collectCards(container) {
   state.cards = entries;
 }
 
+function collectTreeNodes(treeRoot) {
+  if (!treeRoot) return;
+
+  const entries = [];
+  treeRoot.querySelectorAll('[role="treeitem"]').forEach((node) => {
+    const requirementId = node.dataset.requirementId;
+    const statusId = node.dataset.status;
+    const categoryId = node.dataset.category;
+    const verificationId = node.dataset.verification;
+    const searchText = (node.dataset.searchText || '').toLowerCase();
+
+    entries.push({
+      id: requirementId,
+      node,
+      statusId: statusId ? parseInt(statusId, 10) : null,
+      categoryId: categoryId ? parseInt(categoryId, 10) : null,
+      verificationId: verificationId ? parseInt(verificationId, 10) : null,
+      searchText,
+      visible: true,
+    });
+  });
+
+  state.treeNodes = entries;
+}
+
 function ensureNoResultsBanner() {
   if (state.noResultsBanner) {
     return state.noResultsBanner;
@@ -296,8 +329,51 @@ function applySearch(term = '') {
     }
   });
 
-  const totalEntries = state.rows.length + state.cards.length;
+  // Apply to tree view
+  if (state.treeRoot) {
+    const matchCount = searchTree(state.treeRoot, needle);
+    visibleCount += matchCount;
+  }
+
+  const totalEntries = state.rows.length + state.cards.length + state.treeNodes.length;
   updateNoResultsBanner(visibleCount === 0 && totalEntries > 0);
+}
+
+function applyFilters(filters = {}) {
+  state.currentFilters = { ...state.currentFilters, ...filters };
+
+  if (!state.treeRoot) return;
+
+  // Apply combined filters to tree view
+  const filterFn = (node) => {
+    const entry = state.treeNodes.find((e) => e.node === node);
+    if (!entry) return true;
+
+    // Check status filter
+    if (state.currentFilters.status && entry.statusId !== state.currentFilters.status) {
+      return false;
+    }
+
+    // Check verification filter
+    if (state.currentFilters.verification && entry.verificationId !== state.currentFilters.verification) {
+      return false;
+    }
+
+    // Check category filter
+    if (state.currentFilters.category && entry.categoryId !== state.currentFilters.category) {
+      return false;
+    }
+
+    // Check search term
+    if (state.searchTerm) {
+      const needle = normalize(state.searchTerm);
+      return entry.searchText.includes(needle);
+    }
+
+    return true;
+  };
+
+  filterTree(state.treeRoot, filterFn);
 }
 
 function debounce(fn, wait = 150) {
@@ -504,6 +580,14 @@ function initFiltersForm(form, searchInput) {
 
   form.querySelectorAll('[data-filter-control]').forEach((select) => {
     select.addEventListener('change', () => {
+      // Update current filters
+      const filterName = select.dataset.filterControl;
+      const filterValue = select.value ? parseInt(select.value, 10) : null;
+      
+      if (filterName) {
+        applyFilters({ [filterName]: filterValue });
+      }
+      
       renderFilterChips(form);
       requestSubmit(form);
     });
@@ -520,6 +604,8 @@ function initFiltersForm(form, searchInput) {
         searchInput.value = '';
         applySearch('');
       }
+      // Clear all filters
+      applyFilters({ status: null, verification: null, category: null });
       renderFilterChips(form);
       requestSubmit(form);
     });
@@ -675,11 +761,13 @@ function initBadgeOverflow() {
 export function init() {
   const table = document.getElementById('requirementsTable');
   const cardsContainer = document.querySelector('.reqman-requirements-cards-grid');
+  const treeRoot = document.querySelector('.c-tree');
   const searchInput = document.getElementById('requirementsSearch');
   const filtersForm = document.getElementById('requirementsFilterForm');
   const newRequirementButton = document.getElementById('newRequirementButton');
 
   state.statusMap = parseStatusDefinitions();
+  state.treeRoot = treeRoot;
   
   // Initialize table view if present
   if (table) {
@@ -700,7 +788,28 @@ export function init() {
     applySearch('');
   }
 
-  disableSearchWhenEmpty(searchInput, table || cardsContainer);
+  // Initialize tree view if present
+  if (treeRoot) {
+    collectTreeNodes(treeRoot);
+    decorateStatusBadges();
+    applySearch('');
+    
+    // Parse URL params for initial filters
+    const params = new URLSearchParams(window.location.search);
+    const statusFilter = params.get('status_filter');
+    const verificationFilter = params.get('verification_filter');
+    const categoryFilter = params.get('category_filter');
+    
+    if (statusFilter || verificationFilter || categoryFilter) {
+      applyFilters({
+        status: statusFilter ? parseInt(statusFilter, 10) : null,
+        verification: verificationFilter ? parseInt(verificationFilter, 10) : null,
+        category: categoryFilter ? parseInt(categoryFilter, 10) : null,
+      });
+    }
+  }
+
+  disableSearchWhenEmpty(searchInput, table || cardsContainer || treeRoot);
   initSearch(searchInput);
   initFiltersForm(filtersForm, searchInput);
   initKeyboardShortcuts({ searchInput, newRequirementButton });

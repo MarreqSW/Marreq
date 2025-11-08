@@ -38,24 +38,39 @@
 /* Requirement Cards */
 .c-requirement-card__id {
   background-color: var(--primary-color);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   color: #fff;
+  display: inline-block;
   font-size: 0.875rem;
   font-weight: 600;
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-3);
   text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.c-requirement-card__id:hover {
+  background-color: var(--primary-dark);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 .c-requirement-card__reference-tag {
   background-color: var(--primary-color);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   color: #fff;
   display: inline-block;
   font-size: 0.875rem;
   font-weight: 600;
   margin-bottom: var(--space-2);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-3);
   text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.c-requirement-card__reference-tag:hover {
+  background-color: var(--primary-dark);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
 }
 
 .c-requirement-card__meta-value {
@@ -203,3 +218,16 @@
 [data-theme='dark'] .u-fw-semibold {
   color: var(--text-primary);
 }
+
+[data-theme='dark'] .c-requirement-card__id,
+[data-theme='dark'] .c-requirement-card__reference-tag {
+  background-color: var(--primary-light);
+  color: #0f172a;
+}
+
+[data-theme='dark'] .c-requirement-card__id:hover,
+[data-theme='dark'] .c-requirement-card__reference-tag:hover {
+  background-color: #60a5fa;
+  box-shadow: var(--shadow-md);
+}
+

@@ -43,9 +43,7 @@
   text-align: center;
 }
 
-.u-text-right,
-[class~="text-right"],
-[class~="text-end"] {
+.u-text-right {
   text-align: right;
 }
 
@@ -82,7 +80,6 @@
 
 .u-font-medium,
 [class~="font-medium"],
-[class~="fw-medium"],
 [class~="fw-semibold"] {
   font-weight: 500;
 }

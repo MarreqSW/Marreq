@@ -88,11 +88,6 @@
   padding: var(--space-2) var(--space-4);
 }
 
-[class~='btn-lg'] {
-  font-size: 1rem;
-  padding: var(--space-4) var(--space-8);
-}
-
 /* Filter Buttons */
 [class~='btn-filter'],
 [class~='btn-clear'] {

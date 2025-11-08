@@ -1,0 +1,52 @@
+{{!--
+  PARTIAL: Table View (Detailed)
+  Bootstrap-styled table with all columns visible
+--}}
+<section class="reqman-requirements-table-view" id="tableView" style="display: none;" aria-live="polite">
+  {{#if requirements}}
+  <div class="card c-card">
+    <div class="card-body p-0 c-card__body">
+      <div class="table-responsive c-table-responsive">
+        <table class="table table-hover mb-0 c-table c-table--hover" id="requirementsTableDetailed">
+          <thead class="table-light c-table__head">
+            <tr>
+              <th class="sortable c-table-sortable" style="width: 10%;">ID</th>
+              <th class="sortable c-table-sortable" style="width: 25%;">Title</th>
+              <th class="sortable c-table-sortable" style="width: 12%;">Reference</th>
+              <th class="sortable c-table-sortable" style="width: 12%;">Category</th>
+              <th class="sortable c-table-sortable" style="width: 10%;">Status</th>
+              <th class="sortable c-table-sortable" style="width: 12%;">Verification</th>
+              <th class="sortable c-table-sortable" style="width: 10%;">Author</th>
+              <th style="width: 9%;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each requirements}}
+            <tr data-requirement-id="{{req_id}}">
+              <td>
+                <a href="/p/{{../project.id}}/requirements/show/{{req_id}}" class="text-decoration-none fw-bold">
+                  {{#if req_reference}}{{req_reference}}{{else}}REQ-{{req_id}}{{/if}}
+                </a>
+              </td>
+              <td>{{req_title}}</td>
+              <td><span class="text-muted">{{req_reference}}</span></td>
+              <td>{{req_category}}</td>
+              <td>{{req_current_status}}</td>
+              <td>{{req_verification}}</td>
+              <td>{{req_author}}</td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <a class="btn btn-outline-primary btn-sm" href="/p/{{../project.id}}/requirements/edit/{{req_id}}" title="Edit">Edit</a>
+                </div>
+              </td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {{else}}
+  {{> requirements/_empty_state}}
+  {{/if}}
+</section>

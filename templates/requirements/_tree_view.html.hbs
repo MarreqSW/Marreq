@@ -1,0 +1,30 @@
+{{!--
+  PARTIAL: Tree View
+  Hierarchical tree structure showing parent-child relationships
+--}}
+<section class="reqman-requirements-tree-view" id="treeView" style="display: none;" aria-live="polite">
+  {{#if tree_data}}
+  <div class="card c-card">
+    <div class="card-header c-card__header">
+      <div class="d-flex justify-content-between align-items-center">
+        <h3>Requirements Hierarchy</h3>
+        <div class="c-tree__controls">
+          <button class="btn btn-outline-primary btn-sm c-tree__control-button" type="button" data-tree-expand-all>Expand All</button>
+          <button class="btn btn-outline-primary btn-sm c-tree__control-button" type="button" data-tree-collapse-all>Collapse All</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body c-card__body">
+      <div class="c-tree">
+        <div class="c-tree__root">
+          {{#each tree_data}}
+          {{> requirements/_tree_node}}
+          {{/each}}
+        </div>
+      </div>
+    </div>
+  </div>
+  {{else}}
+  {{> requirements/_empty_state}}
+  {{/if}}
+</section>

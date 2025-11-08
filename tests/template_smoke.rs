@@ -36,7 +36,17 @@ fn register_partials(hb: &mut Handlebars) {
         ),
         ("partials/modals", "templates/partials/modals.html.hbs"),
         ("footer", "templates/footer.html.hbs"),
-        ("requirement", "templates/requirement.html.hbs"),
+        ("requirement", "templates/requirements/requirement.html.hbs"),
+    ("requirements/_page_header", "templates/requirements/_page_header.html.hbs"),
+    ("requirements/_filter_controls", "templates/requirements/_filter_controls.html.hbs"),
+    ("requirements/_table_view", "templates/requirements/_table_view.html.hbs"),
+    ("requirements/_card_view", "templates/requirements/_card_view.html.hbs"),
+    ("requirements/_tree_view", "templates/requirements/_tree_view.html.hbs"),
+    ("requirements/_tree_node", "templates/requirements/_tree_node.html.hbs"),
+    ("requirements/_tree_child_node", "templates/requirements/_tree_child_node.html.hbs"),
+    ("requirements/_empty_state", "templates/requirements/_empty_state.html.hbs"),
+    ("requirements/_metrics_section", "templates/requirements/_metrics_section.html.hbs"),
+    ("requirements/_view_controls", "templates/requirements/_view_controls.html.hbs"),
     ];
 
     for (name, path) in entries {
@@ -49,11 +59,8 @@ fn register_partials(hb: &mut Handlebars) {
 fn register_templates(hb: &mut Handlebars) {
     let entries = [
         ("index", "templates/index.html.hbs"),
-        ("requirements", "templates/requirements.html.hbs"),
-        (
-            "requirements_table",
-            "templates/requirements_table.html.hbs",
-        ),
+        ("requirements", "templates/requirements/requirements.html.hbs"),
+        ("requirements_table", "templates/requirements/_table_view.html.hbs"),
         ("tests_table", "templates/tests_table.html.hbs"),
         ("projects", "templates/projects.html.hbs"),
         ("project", "templates/project.html.hbs"),

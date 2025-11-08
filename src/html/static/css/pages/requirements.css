@@ -236,12 +236,12 @@
 .reqman-requirements-controls {
   border: 1px solid var(--border-color);
   padding: 0;
-  transform: none !important;
+  transform: none;
   transition: box-shadow var(--transition-base);
 }
 
 .reqman-requirements-controls:hover {
-  transform: none !important;
+  transform: none;
 }
 
 .reqman-requirements-controls__inner {
@@ -544,36 +544,27 @@
   transform: translateY(-1px);
 }
 
-.reqman-requirements-status-badge--draft,
-.reqman-requirements-status-badge--Draft {
+.reqman-requirements-status-badge--draft {
   background-color: rgb(148 163 184 / 0.2);
   color: #475569;
 }
 
-.reqman-requirements-status-badge--proposal,
-.reqman-requirements-status-badge--Proposal {
+.reqman-requirements-status-badge--proposal {
   background-color: rgb(245 158 11 / 0.18);
   color: #b45309;
 }
 
 .reqman-requirements-status-badge--accepted,
-.reqman-requirements-status-badge--Accepted,
 .reqman-requirements-status-badge--approved,
-.reqman-requirements-status-badge--Approved,
 .reqman-requirements-status-badge--finished,
-.reqman-requirements-status-badge--Finished,
-.reqman-requirements-status-badge--passed,
-.reqman-requirements-status-badge--Passed {
+.reqman-requirements-status-badge--passed {
   background-color: rgb(16 185 129 / 0.2);
   color: #047857;
 }
 
 .reqman-requirements-status-badge--rejected,
-.reqman-requirements-status-badge--Rejected,
 .reqman-requirements-status-badge--failed,
-.reqman-requirements-status-badge--Failed,
-.reqman-requirements-status-badge--cancelled,
-.reqman-requirements-status-badge--Cancelled {
+.reqman-requirements-status-badge--cancelled {
   background-color: rgb(239 68 68 / 0.18);
   color: #b91c1c;
 }
@@ -794,10 +785,6 @@
   opacity: 1;
 }
 
-.reqman-requirement-card.is-filtered-out {
-  display: none;
-}
-
 /* Card header */
 .reqman-requirement-card__header {
   align-items: center;
@@ -836,7 +823,7 @@
   color: var(--primary-light);
 }
 
-:root[data-theme='dark'] .reqman-requirement-card__reference-text:hover {
+[data-theme='dark'] .reqman-requirement-card__reference-text:hover {
   background-color: rgb(37 99 235 / 0.25);
   color: var(--primary-light);
 }

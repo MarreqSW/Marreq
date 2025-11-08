@@ -544,27 +544,36 @@
   transform: translateY(-1px);
 }
 
-.reqman-requirements-status-badge--draft {
+.reqman-requirements-status-badge--draft,
+.reqman-requirements-status-badge--Draft {
   background-color: rgb(148 163 184 / 0.2);
   color: #475569;
 }
 
-.reqman-requirements-status-badge--proposal {
+.reqman-requirements-status-badge--proposal,
+.reqman-requirements-status-badge--Proposal {
   background-color: rgb(245 158 11 / 0.18);
   color: #b45309;
 }
 
 .reqman-requirements-status-badge--accepted,
+.reqman-requirements-status-badge--Accepted,
 .reqman-requirements-status-badge--approved,
+.reqman-requirements-status-badge--Approved,
 .reqman-requirements-status-badge--finished,
-.reqman-requirements-status-badge--passed {
+.reqman-requirements-status-badge--Finished,
+.reqman-requirements-status-badge--passed,
+.reqman-requirements-status-badge--Passed {
   background-color: rgb(16 185 129 / 0.2);
   color: #047857;
 }
 
 .reqman-requirements-status-badge--rejected,
+.reqman-requirements-status-badge--Rejected,
 .reqman-requirements-status-badge--failed,
-.reqman-requirements-status-badge--cancelled {
+.reqman-requirements-status-badge--Failed,
+.reqman-requirements-status-badge--cancelled,
+.reqman-requirements-status-badge--Cancelled {
   background-color: rgb(239 68 68 / 0.18);
   color: #b91c1c;
 }

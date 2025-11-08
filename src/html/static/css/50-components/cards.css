@@ -107,24 +107,9 @@
   text-transform: uppercase;
 }
 
-[class~='status-draft'] {
-  background-color: #f1f5f9;
-  color: #64748b;
-}
-
-[class~='status-review'] {
-  background-color: #fef3c7;
-  color: #d97706;
-}
-
 [class~='status-approved'] {
   background-color: #d1fae5;
   color: #059669;
-}
-
-[class~='status-rejected'] {
-  background-color: #fee2e2;
-  color: #dc2626;
 }
 
 [class~='status-warning'] {
@@ -185,17 +170,10 @@
   color: var(--text-primary);
 }
 
-[data-theme='dark'] .c-req-detail-page .c-badge--bg-light,
-[data-theme='dark'] .c-req-detail-page .c-badge--text-bg-light {
+[data-theme='dark'] .c-req-detail-page .c-badge--bg-light {
   background-color: var(--surface-muted);
   border-color: var(--border-color);
   color: var(--text-secondary);
-}
-
-[data-theme='dark'] .c-req-detail-page .c-list-group-item {
-  background-color: var(--surface-color);
-  border-color: var(--border-color);
-  color: var(--text-primary);
 }
 
 [data-theme='dark'] .c-req-detail-page .c-list-group-item--bg-light,
@@ -204,18 +182,10 @@
   color: var(--text-primary);
 }
 
-[data-theme='dark'] .c-list-group-item .u-text-muted {
-  color: var(--text-secondary);
-}
-
 [data-theme='dark'] .c-list-group-item--action:hover,
 [data-theme='dark'] .c-list-group-item--action:focus {
   background-color: var(--surface-hover);
   border-color: var(--border-color);
-  color: var(--text-primary);
-}
-
-[data-theme='dark'] .u-fw-semibold {
   color: var(--text-primary);
 }
 

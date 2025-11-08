@@ -1070,7 +1070,7 @@
 }
 
 /* Card filtering states */
-.reqman-requirement-card[data-match='false'] {
+.reqman-requirement-card.is-filtered-out {
   animation: card-fade-out 180ms ease-in forwards;
 }
 

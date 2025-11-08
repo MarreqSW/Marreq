@@ -175,6 +175,43 @@
   margin-bottom: var(--space-3);
 }
 
+.c-tree__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0 var(--space-2);
+}
+
+.c-tree__action-button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  padding: var(--space-1);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.c-tree__action-button:hover {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+  text-decoration: none;
+  transform: scale(1.1);
+}
+
+.c-tree__action-button:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  outline: none;
+}
+
+.c-tree__action-button svg {
+  height: 14px;
+  width: 14px;
+}
+
 .c-tree__requirement-title-wrapper {
   align-items: center;
   display: flex;

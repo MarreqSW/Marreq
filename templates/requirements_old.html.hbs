@@ -35,7 +35,7 @@
       <div class="reqman-requirements-header__secondary">
         {{!-- View Switcher Buttons --}}
         <div class="btn-group me-3" role="group" aria-label="View switcher">
-          <button type="button" class="btn btn-outline-secondary btn-sm view-switcher-btn active" data-view="card" id="cardViewBtn">
+          <button type="button" class="btn btn-outline-secondary btn-sm view-switcher-btn" data-view="card" id="cardViewBtn">
             <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
               <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z"/>
             </svg>
@@ -217,8 +217,7 @@
       </div>
     </section>
 
-    {{!-- Card View (default) --}}
-    <section class="reqman-requirements-table-section" id="cardView" aria-live="polite">
+    <section class="reqman-requirements-table-section" aria-live="polite">
       {{#if requirements}}
       <div class="reqman-requirements-table__wrapper">
         <table class="reqman-requirements-table" id="requirementsTable">
@@ -380,238 +379,13 @@
       <div class="reqman-requirements-empty-state">
         <div class="reqman-requirements-empty-state__illustration" aria-hidden="true">📄</div>
         <h2>No requirements yet</h2>
-        <p>Let's add your first one and start shaping this project.</p>
-        <a href="/p/{{project.id}}/requirements/new" class="btn btn-primary">New Requirement</a>
-      </div>
-      {{/if}}
-    </section>
-
-    {{!-- Table View --}}
-    <section class="reqman-requirements-table-view" id="tableView" style="display: none;" aria-live="polite">
-      {{#if requirements}}
-      <div class="card c-card">
-        <div class="card-body p-0 c-card__body">
-          <div class="table-responsive c-table-responsive">
-            <table class="table table-hover mb-0 c-table c-table--hover" id="requirementsTableDetailed">
-              <thead class="table-light c-table__head">
-                <tr>
-                  <th class="sortable c-table-sortable" style="width: 10%;">ID</th>
-                  <th class="sortable c-table-sortable" style="width: 25%;">Title</th>
-                  <th class="sortable c-table-sortable" style="width: 12%;">Reference</th>
-                  <th class="sortable c-table-sortable" style="width: 12%;">Category</th>
-                  <th class="sortable c-table-sortable" style="width: 10%;">Status</th>
-                  <th class="sortable c-table-sortable" style="width: 12%;">Verification</th>
-                  <th class="sortable c-table-sortable" style="width: 10%;">Author</th>
-                  <th style="width: 9%;">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {{#each requirements}}
-                <tr data-requirement-id="{{req_id}}">
-                  <td>
-                    <a href="/p/{{../project.id}}/requirements/show/{{req_id}}" class="text-decoration-none fw-bold">
-                      {{#if req_reference}}{{req_reference}}{{else}}REQ-{{req_id}}{{/if}}
-                    </a>
-                  </td>
-                  <td>{{req_title}}</td>
-                  <td><span class="text-muted">{{req_reference}}</span></td>
-                  <td>{{req_category}}</td>
-                  <td>{{req_current_status}}</td>
-                  <td>{{req_verification}}</td>
-                  <td>{{req_author}}</td>
-                  <td>
-                    <div class="btn-group btn-group-sm">
-                      <a class="btn btn-outline-primary btn-sm" href="/p/{{../project.id}}/requirements/edit/{{req_id}}" title="Edit">Edit</a>
-                    </div>
-                  </td>
-                </tr>
-                {{/each}}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-      {{else}}
-      <div class="reqman-requirements-empty-state">
-        <div class="reqman-requirements-empty-state__illustration" aria-hidden="true">📄</div>
-        <h2>No requirements yet</h2>
-        <p>Let's add your first one and start shaping this project.</p>
-        <a href="/p/{{project.id}}/requirements/new" class="btn btn-primary">New Requirement</a>
-      </div>
-      {{/if}}
-    </section>
-
-    {{!-- Tree View --}}
-    <section class="reqman-requirements-tree-view" id="treeView" style="display: none;" aria-live="polite">
-      {{#if tree_data}}
-      <div class="card c-card">
-        <div class="card-header c-card__header">
-          <div class="d-flex justify-content-between align-items-center">
-            <h3>Requirements Hierarchy</h3>
-            <div class="c-tree__controls">
-              <button class="btn btn-outline-primary btn-sm c-tree__control-button" type="button" data-tree-expand-all>Expand All</button>
-              <button class="btn btn-outline-primary btn-sm c-tree__control-button" type="button" data-tree-collapse-all>Collapse All</button>
-            </div>
-          </div>
-        </div>
-        <div class="card-body c-card__body">
-          <div class="c-tree">
-            <div class="c-tree__root">
-              {{#each tree_data}}
-              <div class="c-tree__node" data-node-id="{{requirement.req_id}}">
-                <div class="c-tree__node-content">
-                  <button class="c-tree__toggle" type="button" data-tree-toggle="{{requirement.req_id}}">
-                    {{#if children}}
-                    <svg class="c-tree__toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <polyline points="9,18 15,12 9,6"></polyline>
-                    </svg>
-                    {{else}}
-                    <span class="c-tree__toggle-placeholder"></span>
-                    {{/if}}
-                  </button>
-                  <div class="c-tree__requirement-card c-requirement-card">
-                    <div class="c-tree__requirement-header">
-                      <div class="requirement-id c-requirement-card__id">
-                        <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}"
-                          class="c-tree__requirement-link c-linked-requirements__link">
-                          {{requirement.req_reference}}
-                        </a>
-                      </div>
-                      <div class="requirement-status">
-                        <span class="status-badge status-{{requirement.req_current_status}}"
-                          data-status="{{requirement.req_current_status}}">
-                          {{requirement.req_current_status}}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="c-tree__requirement-title c-linked-requirements__title">{{requirement.req_title}}</div>
-                    <div class="c-tree__requirement-description">{{requirement.req_description}}</div>
-                    <div class="c-tree__requirement-meta">
-                      <div class="c-tree__meta-item">
-                        <span class="c-tree__meta-label">Category:</span>
-                        <span class="meta-value c-requirement-card__meta-value">{{requirement.req_category}}</span>
-                      </div>
-                      <div class="c-tree__meta-item">
-                        <span class="c-tree__meta-label">Reference:</span>
-                        <span class="meta-value c-requirement-card__meta-value">{{requirement.req_reference}}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {{#if children}}
-                <div class="c-tree__children" id="children-{{requirement.req_id}}" data-tree-branch="{{requirement.req_id}}" hidden>
-                  {{#each children}}
-                  <div class="c-tree__node c-tree__child-node" data-node-id="{{requirement.req_id}}">
-                    <div class="c-tree__node-content">
-                      <div class="c-tree__toggle">
-                        <div class="c-tree__toggle-placeholder"></div>
-                      </div>
-                      <div class="c-tree__requirement-card c-tree__child-card c-requirement-card">
-                        <div class="c-tree__requirement-header">
-                          <div class="requirement-id c-requirement-card__id">
-                            <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}"
-                              class="c-tree__requirement-link c-linked-requirements__link">
-                              {{requirement.req_reference}}
-                            </a>
-                          </div>
-                          <div class="requirement-status">
-                            <span class="status-badge status-{{requirement.req_current_status}}"
-                              data-status="{{requirement.req_current_status}}">
-                              {{requirement.req_current_status}}
-                            </span>
-                          </div>
-                        </div>
-                        <div class="c-tree__requirement-title c-linked-requirements__title">{{requirement.req_title}}</div>
-                        <div class="c-tree__requirement-description">{{requirement.req_description}}</div>
-                      </div>
-                    </div>
-                  </div>
-                  {{/each}}
-                </div>
-                {{/if}}
-              </div>
-              {{/each}}
-            </div>
-          </div>
-        </div>
-      </div>
-      {{else}}
-      <div class="reqman-requirements-empty-state">
-        <div class="reqman-requirements-empty-state__illustration" aria-hidden="true">📄</div>
-        <h2>No requirements yet</h2>
-        <p>Let's add your first one and start shaping this project.</p>
+        <p>Let’s add your first one and start shaping this project.</p>
         <a href="/p/{{project.id}}/requirements/new" class="btn btn-primary">New Requirement</a>
       </div>
       {{/if}}
     </section>
   </div>
 </div>
-
-<script>
-// View switcher functionality
-(function() {
-  const VIEW_KEY = 'requirements_view_preference';
-  
-  // Get all view buttons and sections
-  const cardBtn = document.getElementById('cardViewBtn');
-  const tableBtn = document.getElementById('tableViewBtn');
-  const treeBtn = document.getElementById('treeViewBtn');
-  
-  const cardView = document.getElementById('cardView');
-  const tableView = document.getElementById('tableView');
-  const treeView = document.getElementById('treeView');
-  
-  // Function to switch views
-  function switchView(viewName) {
-    // Hide all views
-    cardView.style.display = 'none';
-    tableView.style.display = 'none';
-    treeView.style.display = 'none';
-    
-    // Remove active class from all buttons
-    cardBtn.classList.remove('active');
-    tableBtn.classList.remove('active');
-    treeBtn.classList.remove('active');
-    
-    // Show selected view and activate button
-    switch(viewName) {
-      case 'table':
-        tableView.style.display = 'block';
-        tableBtn.classList.add('active');
-        break;
-      case 'tree':
-        treeView.style.display = 'block';
-        treeBtn.classList.add('active');
-        break;
-      case 'card':
-      default:
-        cardView.style.display = 'block';
-        cardBtn.classList.add('active');
-        break;
-    }
-    
-    // Save preference to localStorage
-    try {
-      localStorage.setItem(VIEW_KEY, viewName);
-    } catch (e) {
-      console.warn('Could not save view preference:', e);
-    }
-  }
-  
-  // Add click listeners
-  cardBtn.addEventListener('click', () => switchView('card'));
-  tableBtn.addEventListener('click', () => switchView('table'));
-  treeBtn.addEventListener('click', () => switchView('tree'));
-  
-  // Load saved preference or use default
-  try {
-    const savedView = localStorage.getItem(VIEW_KEY) || 'card';
-    switchView(savedView);
-  } catch (e) {
-    switchView('card');
-  }
-})();
-</script>
 
 {{/inline}}
 {{> layout page_id="requirements"}}

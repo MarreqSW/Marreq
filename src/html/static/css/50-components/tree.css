@@ -1,16 +1,21 @@
 /* Requirements Tree View Styles */
 .c-tree {
   padding: var(--space-5) 0;
+  position: relative;
+  isolation: isolate; /* Create stacking context */
 }
 
 .c-tree__root {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  position: relative;
+  z-index: auto; /* Allow proper stacking */
 }
 
 .c-tree__node {
   position: relative;
+  z-index: auto; /* Allow proper stacking */
 }
 
 .c-tree__node-content {
@@ -18,22 +23,52 @@
   display: flex;
   gap: var(--space-3);
   position: relative;
+  z-index: 3; /* Above connectors and cards */
 }
 
-/* Enhanced connecting lines */
-.c-tree__node-content::before {
-  background: var(--border-color);
-  content: '';
+/* SVG connector canvas - positioned absolutely behind tree content */
+.c-tree__connectors {
   height: 100%;
-  left: 11px;
+  left: 0;
+  pointer-events: none;
   position: absolute;
-  top: 28px;
-  width: 2px;
-  z-index: 0;
+  top: 0;
+  width: 100%;
+  z-index: 1; /* Above background but below cards */
 }
 
-.c-tree__node:last-child > .c-tree__node-content::before {
-  display: none;
+.c-tree__connector-path {
+  fill: none;
+  stroke: var(--border-color);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+/* Connector hover effect - when parent or child is hovered */
+.c-tree__node:hover .c-tree__connector-path,
+.c-tree__child-node:hover .c-tree__connector-path {
+  stroke: var(--primary-color);
+  stroke-width: 3;
+}
+
+/* Smooth fade-in animation for new connectors */
+.c-tree__connector-path {
+  animation: connectorFadeIn 0.3s ease-in-out;
+}
+
+@keyframes connectorFadeIn {
+  from {
+    opacity: 0;
+    stroke-dasharray: 10;
+    stroke-dashoffset: 10;
+  }
+  to {
+    opacity: 1;
+    stroke-dasharray: 0;
+    stroke-dashoffset: 0;
+  }
 }
 
 .c-tree__toggle {
@@ -50,7 +85,7 @@
   position: relative;
   transition: all 0.2s ease;
   width: 24px;
-  z-index: 1;
+  z-index: 10; /* Well above connectors */
 }
 
 .c-tree__toggle:hover {
@@ -91,15 +126,27 @@
 
 .c-tree__children {
   animation: treeSlideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-left: 2px solid var(--border-color);
   margin-left: 36px;
   margin-top: var(--space-3);
   padding-left: var(--space-5);
+  position: relative;
+  z-index: auto; /* Allow proper stacking */
 }
 
 .c-tree__children[hidden],
 .c-tree__children[aria-hidden="true"] {
   display: none;
+}
+
+/* Children container connector canvas */
+.c-tree__children > .c-tree__connectors {
+  height: 100%;
+  left: -20px;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: calc(100% + 20px);
+  z-index: 1; /* Above background but behind cards */
 }
 
 @keyframes treeSlideDown {
@@ -217,7 +264,9 @@
   margin-bottom: var(--space-6);
   min-width: 0;
   padding: var(--space-4);
+  position: relative;
   transition: all 0.2s ease;
+  z-index: 2; /* Above connectors but below toggle and node-content */
 }
 
 .c-tree__requirement-card:hover {
@@ -458,10 +507,6 @@
     gap: var(--space-2);
   }
 
-  .c-tree__node-content::before {
-    display: none;
-  }
-
   .c-tree__toggle {
     align-self: flex-start;
     margin-top: 0;
@@ -506,6 +551,15 @@
 [data-theme='dark'] .c-tree__requirement-link:focus {
   box-shadow: 0 0 0 3px rgb(59 130 246 / 0.3);
   outline-color: var(--primary-light);
+}
+
+[data-theme='dark'] .c-tree__connector-path {
+  stroke: #4b5563;
+}
+
+[data-theme='dark'] .c-tree__node:hover .c-tree__connector-path,
+[data-theme='dark'] .c-tree__child-node:hover .c-tree__connector-path {
+  stroke: #60a5fa;
 }
 
 [data-theme='dark'] .c-tree__requirement-card .status-badge.status-draft,

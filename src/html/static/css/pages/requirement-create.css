@@ -65,12 +65,6 @@
   margin: 0;
 }
 
-.c-create-subtitle {
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  margin: 0;
-}
-
 .c-create-topbar__actions {
   align-items: center;
   display: flex;
@@ -175,31 +169,9 @@
   margin-left: 4px;
 }
 
-.c-create-field__label-row {
-  align-items: baseline;
-  display: flex;
-  gap: var(--space-2);
-  justify-content: space-between;
-}
-
-.c-create-field__badge {
-  background: var(--primary-color-muted, rgb(37 99 235 / 0.12));
-  border-radius: var(--radius-pill);
-  color: var(--primary-color);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  padding: 2px 8px;
-}
-
-.c-create-field__badge--required {
-  background: rgb(220 38 38 / 0.12);
-  color: var(--danger-color);
-}
-
 .c-create-field__input,
 .c-create-field__textarea,
-.c-create-field__select,
-.c-create-combo__input {
+.c-create-field__select {
   background-color: var(--surface-alt);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -213,8 +185,7 @@
 
 .c-create-field__input:focus,
 .c-create-field__textarea:focus,
-.c-create-field__select:focus,
-.c-create-combo__input:focus {
+.c-create-field__select:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
   outline: none;
@@ -234,32 +205,11 @@
   min-height: 168px;
 }
 
-.c-create-field__help {
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  margin: 0;
-}
-
 .c-create-field__error {
   color: var(--danger-color);
   font-size: var(--text-xs);
   line-height: 1.4;
   margin-top: var(--space-2);
-}
-
-.c-create-field__link {
-  background: none;
-  border: 0;
-  color: var(--primary-color);
-  cursor: pointer;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  padding: 0;
-}
-
-.c-create-field__link:hover,
-.c-create-field__link:focus {
-  text-decoration: underline;
 }
 
 .c-create-field-grid {
@@ -268,32 +218,10 @@
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
 
-.c-create-combo {
-  align-items: center;
-  display: flex;
-  gap: var(--space-2);
-}
-
-.c-create-combo__input {
-  flex: 1;
-}
-
 .c-create-field__meta {
   color: var(--text-color);
   font-size: var(--text-sm);
   font-weight: 500;
-}
-
-.c-create-field--inline {
-  align-items: center;
-  display: flex;
-  gap: var(--space-3);
-  justify-content: space-between;
-}
-
-.c-create-field--inline .c-create-field__label {
-  flex-shrink: 0;
-  margin-bottom: 0;
 }
 
 .c-create-field.is-enhanced .c-create-field__select {
@@ -307,8 +235,7 @@
   width: 1px;
 }
 
-.c-create-topbar__save,
-.c-create-topbar__save-more {
+.c-create-topbar__save {
   white-space: nowrap;
 }
 

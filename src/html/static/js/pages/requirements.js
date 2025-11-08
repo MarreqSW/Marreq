@@ -6,6 +6,7 @@ const state = {
   rows: [],
   cards: [],
   treeNodes: [],
+  treeNodesMap: new Map(), // Cache for faster lookups
   sortKey: null,
   sortOrder: 'asc',
   searchTerm: '',
@@ -233,7 +234,9 @@ function collectCards(container) {
 function collectTreeNodes(treeRoot) {
   if (!treeRoot) return;
 
+  state.treeNodesMap.clear();
   const entries = [];
+  
   treeRoot.querySelectorAll('[role="treeitem"]').forEach((node) => {
     const requirementId = node.dataset.requirementId;
     const statusId = node.dataset.status;
@@ -241,7 +244,7 @@ function collectTreeNodes(treeRoot) {
     const verificationId = node.dataset.verification;
     const searchText = (node.dataset.searchText || '').toLowerCase();
 
-    entries.push({
+    const entry = {
       id: requirementId,
       node,
       statusId: statusId ? parseInt(statusId, 10) : null,
@@ -249,9 +252,12 @@ function collectTreeNodes(treeRoot) {
       verificationId: verificationId ? parseInt(verificationId, 10) : null,
       searchText,
       visible: true,
-    });
+    };
+    
+    entries.push(entry);
+    state.treeNodesMap.set(node, entry);
   });
-
+  
   state.treeNodes = entries;
 }
 
@@ -344,36 +350,14 @@ function applyFilters(filters = {}) {
 
   if (!state.treeRoot) return;
 
-  // Apply combined filters to tree view
-  const filterFn = (node) => {
-    const entry = state.treeNodes.find((e) => e.node === node);
-    if (!entry) return true;
-
-    // Check status filter
-    if (state.currentFilters.status && entry.statusId !== state.currentFilters.status) {
-      return false;
-    }
-
-    // Check verification filter
-    if (state.currentFilters.verification && entry.verificationId !== state.currentFilters.verification) {
-      return false;
-    }
-
-    // Check category filter
-    if (state.currentFilters.category && entry.categoryId !== state.currentFilters.category) {
-      return false;
-    }
-
-    // Check search term
-    if (state.searchTerm) {
-      const needle = normalize(state.searchTerm);
-      return entry.searchText.includes(needle);
-    }
-
+  const { status, verification, category } = state.currentFilters;
+  
+  filterTree(state.treeRoot, (node) => {
+    if (status && node.dataset.status !== String(status)) return false;
+    if (verification && node.dataset.verification !== String(verification)) return false;
+    if (category && node.dataset.category !== String(category)) return false;
     return true;
-  };
-
-  filterTree(state.treeRoot, filterFn);
+  });
 }
 
 function debounce(fn, wait = 150) {

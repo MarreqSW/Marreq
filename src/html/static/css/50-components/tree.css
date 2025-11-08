@@ -130,7 +130,6 @@
   align-items: center;
   display: flex;
   font-size: 0.875rem;
-  gap: 6px;
   padding: var(--space-2) var(--space-3);
 }
 

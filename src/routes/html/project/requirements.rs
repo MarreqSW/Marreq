@@ -453,11 +453,11 @@ async fn delete_requirement_route(
     project_id: i32,
     req_id: i32,
     state: &State<AppState>,
-) -> Result<Redirect, rocket::http::Status> {
+) -> Result<rocket::http::Status, rocket::http::Status> {
     let user = project_access.into_user();
 
     let service = RequirementService::new(state.inner());
-    let req = service.get_by_id(req_id)?;
+    let req = service.get_by_id(req_id).map_err(|_| rocket::http::Status::NotFound)?;
 
     if let Some(_redir) = enforce_project_ownership(project_id, req.project_id) {
         return Err(rocket::http::Status::NotFound);
@@ -468,18 +468,9 @@ async fn delete_requirement_route(
         return Err(rocket::http::Status::Forbidden);
     }
 
-    service.delete(&user, req_id)?;
+    service.delete(&user, req_id).map_err(|_| rocket::http::Status::InternalServerError)?;
 
-    Ok(Redirect::to(uri!(
-        "/p",
-        show_requirements(
-            project_id = project_id,
-            status_filter = Option::<i32>::None,
-            verification_filter = Option::<i32>::None,
-            category_filter = Option::<i32>::None,
-            view = Option::<String>::None
-        )
-    )))
+    Ok(rocket::http::Status::NoContent)
 }
 
 #[get("/<project_id>/requirements/new?<error>&<created>&<parent>&<template>")]

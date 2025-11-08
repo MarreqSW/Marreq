@@ -235,11 +235,11 @@ describe('Tree Module - Expand/Collapse', () => {
   it('should update toggle icon rotation on expand', () => {
     api.expandAll();
     
-    const icons = tree.querySelectorAll('.c-tree__toggle-icon');
-    icons.forEach(icon => {
-      if (icon.parentElement.dataset.treeToggle) {
-        expect(icon.style.transform).toBe('rotate(90deg)');
-      }
+    // Icon rotation is now handled by CSS via aria-expanded attribute
+    // Check that aria-expanded is set correctly instead of inline styles
+    const toggles = tree.querySelectorAll('[data-tree-toggle]');
+    toggles.forEach(toggle => {
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
     });
   });
 
@@ -247,11 +247,11 @@ describe('Tree Module - Expand/Collapse', () => {
     api.expandAll();
     api.collapseAll();
     
-    const icons = tree.querySelectorAll('.c-tree__toggle-icon');
-    icons.forEach(icon => {
-      if (icon.parentElement.dataset.treeToggle) {
-        expect(icon.style.transform).toBe('rotate(0deg)');
-      }
+    // Icon rotation is now handled by CSS via aria-expanded attribute
+    // Check that aria-expanded is set correctly instead of inline styles
+    const toggles = tree.querySelectorAll('[data-tree-toggle]');
+    toggles.forEach(toggle => {
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
     });
   });
 });

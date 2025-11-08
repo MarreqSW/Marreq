@@ -1392,10 +1392,11 @@ mod tests {
         repo.requirements.insert(2, child);
         let client = test_client(repo).await;
 
-        let response = get_with_session(&client, "/p/1/requirements/tree", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/1/requirements", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");
+        // Check that parent and child requirements are rendered in the unified view
         assert!(body.contains("REQ-SYS-1"));
         assert!(body.contains("REQ-SYS-2"));
     }
@@ -1701,11 +1702,12 @@ mod tests {
     async fn requirements_tree_handles_empty_project() {
         let client = test_client(base_repo()).await;
 
-        let response = get_with_session(&client, "/p/1/requirements/tree", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/1/requirements", ADMIN_ID).await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
-        assert!(body.contains("total_requirements") || body.contains("tree"));
+        // Check that the tree view section exists in the unified page
+        assert!(body.contains("treeView") || body.contains("tree_data"));
     }
 
     #[rocket::async_test]
@@ -1727,10 +1729,11 @@ mod tests {
 
         let client = test_client(repo).await;
 
-        let response = get_with_session(&client, "/p/1/requirements/tree", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/1/requirements", ADMIN_ID).await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
+        // Check that all requirements are rendered in the tree structure
         assert!(body.contains("REQ-SYS-1"));
         assert!(body.contains("REQ-SYS-2"));
         assert!(body.contains("REQ-SYS-3"));

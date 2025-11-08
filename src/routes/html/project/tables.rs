@@ -4,7 +4,6 @@ use crate::services::{
     StatusService, UserService, VerificationService,
 };
 
-
 /// Show tests table view for a specific project
 #[get("/<project_id>/tests_table?<sort_by>&<sort_order>&<status_filter>&<verification_filter>&<category_filter>")]
 pub fn show_tests_table(
@@ -85,4 +84,3 @@ pub fn show_tests_table(
 pub fn routes() -> Vec<Route> {
     routes![show_tests_table]
 }
-

@@ -615,40 +615,199 @@ async function duplicateRequirement(button) {
     return;
   }
 
-  const originalLabel = button.textContent;
-  button.disabled = true;
-  button.textContent = 'Duplicating…';
-
   try {
+    // Fetch the requirement data
     const requirement = await jsonFetch(`/api/requirements/${requirementId}`);
-    const payload = {
-      req_id: null,
-      req_title: buildDuplicateTitle(requirement.req_title),
-      req_description: requirement.req_description,
-      req_verification: requirement.req_verification,
-      req_author: requirement.req_author,
-      req_link: requirement.req_link,
-      req_category: requirement.req_category,
-      req_current_status: requirement.req_current_status,
-      req_parent: requirement.req_parent,
-      req_reference: buildDuplicateReference(requirement.req_reference),
-      req_reviewer: requirement.req_reviewer,
-      req_applicability: requirement.req_applicability,
-      req_justification: requirement.req_justification,
-      project_id: requirement.project_id,
-    };
-
-    await postJson('/api/requirements', payload);
-    showNotification('Requirement duplicated successfully', 'success');
-    setTimeout(() => window.location.reload(), 600);
+    
+    // Show the modal with pre-filled data
+    showDuplicateModal(requirement);
   } catch (error) {
-    console.error('Failed to duplicate requirement', error);
-    const message = error?.message || 'Failed to duplicate requirement';
+    console.error('Failed to fetch requirement for duplication', error);
+    const message = error?.message || 'Failed to load requirement data';
     showNotification(message, 'error');
-  } finally {
-    button.disabled = false;
-    button.textContent = originalLabel;
   }
+}
+
+function showDuplicateModal(requirement) {
+  const modal = document.getElementById('duplicateRequirementModal');
+  if (!modal) {
+    console.error('Duplicate modal not found');
+    return;
+  }
+
+  // Pre-fill the form fields
+  document.getElementById('dup_req_title').value = buildDuplicateTitle(requirement.req_title);
+  document.getElementById('dup_req_reference').value = ''; // Leave blank for auto-generation
+  document.getElementById('dup_req_description').value = requirement.req_description || '';
+  document.getElementById('dup_req_justification').value = requirement.req_justification || '';
+  document.getElementById('dup_req_category').value = requirement.req_category || '';
+  document.getElementById('dup_req_current_status').value = requirement.req_current_status || '';
+  document.getElementById('dup_req_verification').value = requirement.req_verification || '';
+  document.getElementById('dup_req_applicability').value = requirement.req_applicability || '';
+  document.getElementById('dup_req_reviewer').value = requirement.req_reviewer || '';
+  document.getElementById('dup_req_parent').value = requirement.req_parent || '0';
+  document.getElementById('dup_project_id').value = requirement.project_id;
+  document.getElementById('dup_req_author').value = requirement.req_author;
+  
+  // Load parent requirement options from the current page's requirements
+  loadParentRequirementOptionsFromPage(requirement.req_id, requirement.req_parent);
+
+  // Show the modal using Bootstrap
+  if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+  } else {
+    modal.classList.add('show');
+    modal.style.display = 'block';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+  }
+}
+
+function loadParentRequirementOptionsFromPage(currentReqId, selectedValue) {
+  const select = document.getElementById('dup_req_parent');
+  
+  // Clear existing options except the first one (None)
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+  
+  // Get all requirements from the page
+  const allRequirements = [];
+  
+  // Collect from table view rows
+  state.rows.forEach(entry => {
+    const row = entry.row;
+    const reqId = parseInt(row.dataset.requirementId, 10);
+    if (reqId && reqId !== currentReqId) {
+      const titleCell = row.querySelector('.reqman-requirements-title');
+      const keyCell = row.querySelector('.reqman-requirements-key__value');
+      if (titleCell && keyCell) {
+        allRequirements.push({
+          id: reqId,
+          reference: keyCell.textContent.trim(),
+          title: titleCell.textContent.trim()
+        });
+      }
+    }
+  });
+  
+  // Collect from card view cards
+  state.cards.forEach(entry => {
+    const card = entry.card;
+    const reqId = parseInt(card.dataset.requirementId, 10);
+    if (reqId && reqId !== currentReqId) {
+      const titleEl = card.querySelector('.reqman-requirement-card__title');
+      const keyEl = card.querySelector('.reqman-requirement-card__key');
+      if (titleEl && keyEl) {
+        // Check if not already added
+        if (!allRequirements.find(r => r.id === reqId)) {
+          allRequirements.push({
+            id: reqId,
+            reference: keyEl.textContent.trim(),
+            title: titleEl.textContent.trim()
+          });
+        }
+      }
+    }
+  });
+  
+  // Collect from tree view nodes
+  state.treeNodes.forEach(entry => {
+    const node = entry.node;
+    const reqId = parseInt(node.dataset.requirementId, 10);
+    if (reqId && reqId !== currentReqId) {
+      const titleEl = node.querySelector('.c-tree__title');
+      const keyEl = node.querySelector('.c-tree__key');
+      if (titleEl && keyEl) {
+        // Check if not already added
+        if (!allRequirements.find(r => r.id === reqId)) {
+          allRequirements.push({
+            id: reqId,
+            reference: keyEl.textContent.trim(),
+            title: titleEl.textContent.trim()
+          });
+        }
+      }
+    }
+  });
+  
+  // Sort by ID
+  allRequirements.sort((a, b) => a.id - b.id);
+  
+  // Add options to select
+  allRequirements.forEach(req => {
+    const option = document.createElement('option');
+    option.value = req.id;
+    option.textContent = `${req.reference} - ${req.title}`;
+    if (req.id === selectedValue) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+  });
+}
+
+function initDuplicateForm() {
+  const form = document.getElementById('duplicateRequirementForm');
+  if (!form) return;
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    
+    const submitBtn = document.getElementById('duplicateSubmitBtn');
+    const spinner = submitBtn.querySelector('.spinner-border');
+    const originalText = submitBtn.textContent;
+    
+    // Disable button and show spinner
+    submitBtn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating...';
+    
+    try {
+      const formData = new FormData(form);
+      const payload = {
+        req_id: null,
+        req_title: formData.get('req_title'),
+        req_description: formData.get('req_description'),
+        req_reference: formData.get('req_reference') || '',
+        req_justification: formData.get('req_justification') || '',
+        req_category: parseInt(formData.get('req_category'), 10),
+        req_current_status: parseInt(formData.get('req_current_status'), 10),
+        req_verification: parseInt(formData.get('req_verification'), 10),
+        req_applicability: parseInt(formData.get('req_applicability'), 10),
+        req_reviewer: parseInt(formData.get('req_reviewer'), 10) || 0,
+        req_parent: parseInt(formData.get('req_parent'), 10) || 0,
+        project_id: parseInt(formData.get('project_id'), 10),
+        req_author: parseInt(formData.get('req_author'), 10),
+      };
+
+      await postJson('/api/requirements', payload);
+      showNotification('Requirement duplicated successfully', 'success');
+      
+      // Close modal
+      const modal = document.getElementById('duplicateRequirementModal');
+      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) bsModal.hide();
+      } else {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+      }
+      
+      // Reload page after a short delay
+      setTimeout(() => window.location.reload(), 600);
+    } catch (error) {
+      console.error('Failed to duplicate requirement', error);
+      const message = error?.message || 'Failed to create duplicate requirement';
+      showNotification(message, 'error');
+      
+      // Re-enable button
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
 }
 
 function initDuplicateButtons(container) {
@@ -868,4 +1027,5 @@ export function init() {
   initSearch(searchInput);
   initFiltersForm(filtersForm, searchInput);
   initKeyboardShortcuts({ searchInput, newRequirementButton });
+  initDuplicateForm();
 }

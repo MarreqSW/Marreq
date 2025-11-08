@@ -45,20 +45,20 @@
 }
 
 .c-tree__toggle:hover .c-tree__toggle-icon {
-  color: white;
+  color: #fff;
 }
 
 .c-tree__toggle:focus {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.3);
   outline: none;
 }
 
 .c-tree__toggle-icon {
   color: var(--text-secondary);
   height: 16px;
+  transform-origin: center;
   transition: transform 0.2s ease;
   width: 16px;
-  transform-origin: center;
 }
 
 .c-tree__children {
@@ -94,28 +94,24 @@
 }
 
 .c-tree__requirement-card .status-badge.status-draft,
-.c-tree__requirement-card .status-badge.status-Draft,
 .c-tree__requirement-card .status-badge[data-status="1"] {
   background-color: #e3e8ef;
   color: #4a5568;
 }
 
 .c-tree__requirement-card .status-badge.status-proposal,
-.c-tree__requirement-card .status-badge.status-Proposal,
 .c-tree__requirement-card .status-badge[data-status="2"] {
   background-color: #fef3c7;
   color: #92400e;
 }
 
 .c-tree__requirement-card .status-badge.status-accepted,
-.c-tree__requirement-card .status-badge.status-Accepted,
 .c-tree__requirement-card .status-badge[data-status="3"] {
   background-color: #d1fae5;
   color: #065f46;
 }
 
 .c-tree__requirement-card .status-badge.status-rejected,
-.c-tree__requirement-card .status-badge.status-Rejected,
 .c-tree__requirement-card .status-badge[data-status="4"] {
   background-color: #fee2e2;
   color: #991b1b;
@@ -154,13 +150,13 @@
 
 .c-tree__requirement-card:focus-within {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.2);
 }
 
 /* Highlight for search matches */
 .c-tree__requirement-card.is-search-match {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.3);
 }
 
 /* Filtered out state */
@@ -197,13 +193,13 @@
 .c-tree__action-button:hover {
   background: var(--primary-color);
   border-color: var(--primary-color);
-  color: white;
+  color: #fff;
   text-decoration: none;
   transform: scale(1.1);
 }
 
 .c-tree__action-button:focus {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.3);
   outline: none;
 }
 
@@ -224,7 +220,7 @@
 .c-tree__requirement-link {
   color: inherit;
   display: inline-block;
-  font-family: 'Monaco', 'Courier New', monospace;
+  font-family: Monaco, 'Courier New', monospace;
   font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.025em;
@@ -304,7 +300,7 @@
 
 .c-tree__indicator:hover {
   background: var(--primary-color);
-  color: white;
+  color: #fff;
   transform: scale(1.05);
 }
 
@@ -320,7 +316,7 @@
 
 .c-tree__indicator--tests:hover {
   background: #3b82f6;
-  color: white;
+  color: #fff;
 }
 
 .c-tree__indicator--comments {
@@ -330,7 +326,7 @@
 
 .c-tree__indicator--comments:hover {
   background: #f59e0b;
-  color: white;
+  color: #fff;
 }
 
 .c-tree__indicator--verified {
@@ -340,7 +336,7 @@
 
 .c-tree__indicator--verified:hover {
   background: #10b981;
-  color: white;
+  color: #fff;
 }
 
 .c-tree__empty-state {
@@ -408,9 +404,9 @@
 }
 
 /* Accessibility improvements */
-.c-tree__node[role="treeitem"]:focus-within > .c-tree__node-content > .c-tree__requirement-card {
+.c-tree__node:focus-within .c-tree__requirement-card {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.2);
 }
 
 /* Dark mode styles */
@@ -419,30 +415,26 @@
   outline-color: var(--primary-light);
 }
 
-[data-theme='dark'] .c-tree__requirement-card .status-badge.status-draft,
-[data-theme='dark'] .c-tree__requirement-card .status-badge.status-Draft,
-[data-theme='dark'] .c-tree__requirement-card .status-badge[data-status="1"] {
+[data-theme='dark'] .status-badge.status-draft,
+[data-theme='dark'] .status-badge[data-status="1"] {
   background-color: rgb(148 163 184 / 0.3);
   color: #cbd5e1;
 }
 
-[data-theme='dark'] .c-tree__requirement-card .status-badge.status-proposal,
-[data-theme='dark'] .c-tree__requirement-card .status-badge.status-Proposal,
-[data-theme='dark'] .c-tree__requirement-card .status-badge[data-status="2"] {
+[data-theme='dark'] .status-badge.status-proposal,
+[data-theme='dark'] .status-badge[data-status="2"] {
   background-color: rgb(251 191 36 / 0.3);
   color: #fde68a;
 }
 
-[data-theme='dark'] .c-tree__requirement-card .status-badge.status-accepted,
-[data-theme='dark'] .c-tree__requirement-card .status-badge.status-Accepted,
-[data-theme='dark'] .c-tree__requirement-card .status-badge[data-status="3"] {
+[data-theme='dark'] .status-badge.status-accepted,
+[data-theme='dark'] .status-badge[data-status="3"] {
   background-color: rgb(16 185 129 / 0.3);
   color: #6ee7b7;
 }
 
-[data-theme='dark'] .c-tree__requirement-card .status-badge.status-rejected,
-[data-theme='dark'] .c-tree__requirement-card .status-badge.status-Rejected,
-[data-theme='dark'] .c-tree__requirement-card .status-badge[data-status="4"] {
+[data-theme='dark'] .status-badge.status-rejected,
+[data-theme='dark'] .status-badge[data-status="4"] {
   background-color: rgb(239 68 68 / 0.3);
   color: #fca5a5;
 }
@@ -467,7 +459,7 @@
   }
 
   .c-tree__children {
-    display: block !important;
+    display: block;
   }
 
   .c-tree__requirement-card {

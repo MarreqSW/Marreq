@@ -1,37 +1,33 @@
 {{!--
-  Depends on: css/50-components/cards.css, js/app.js (delete handler)
-  Dynamic classes: requirement-card
+  Depends on: css/pages/applicability.css, js/pages/applicability.js
+  Dynamic classes: reqman-applicability-row (visibility toggled)
 --}}
-<div class="card requirement-card c-card c-requirement-card">
-  <div class="card-body c-card__body">
-    <div class="requirement-header">
-      <div>
-        <span class="requirement-id c-requirement-card__id">APP-{{app_id}}</span>
-        <h3 class="requirement-title c-linked-requirements__title">{{app_title}}</h3>
-      </div>
-      <div class="requirement-actions c-requirement-card__actions">
-        <a href="/p/{{project_id}}/applicability/edit/{{app_id}}" class="btn btn-outline btn-sm">Edit</a>
-        <button
-          class="btn btn-danger btn-sm"
-          type="button"
-          data-action="delete-applicability"
-          data-project-id="{{project_id}}"
-          data-applicability-id="{{app_id}}"
-        >Delete</button>
-      </div>
+<article class="reqman-applicability-row" data-applicability-row data-search-text="{{app_title}} {{app_tag}} {{app_description}} {{app_id}}">
+  <div class="reqman-applicability-row__main">
+    <div class="reqman-applicability-row__headline">
+      <span class="reqman-applicability-tag" aria-label="Applicability tag {{app_tag}}">{{app_tag}}</span>
+      <h3 class="reqman-applicability-row__title">{{app_title}}</h3>
     </div>
-    
-    <p class="requirement-description">{{app_description}}</p>
-    
-    <div class="requirement-meta">
-      <div class="meta-item">
-        <span class="meta-label">Tag</span>
-        <span class="meta-value tag c-requirement-card__meta-value c-requirement-card__meta-value--tag">{{app_tag}}</span>
-      </div>
-      <div class="meta-item">
-        <span class="meta-label">ID</span>
-        <span class="meta-value c-requirement-card__meta-value">{{app_id}}</span>
-      </div>
+    {{#if app_description}}
+      <p class="reqman-applicability-row__description">{{app_description}}</p>
+    {{/if}}
+  </div>
+  <div class="reqman-applicability-row__meta">
+    <span class="reqman-applicability-row__id" title="Applicability ID">#{{app_id}}</span>
+    <div class="reqman-applicability-row__actions">
+      <a
+        href="/p/{{@root.selected_project_id}}/requirements?applicability_filter={{app_id}}"
+        class="btn btn-secondary btn-sm reqman-applicability-row__action-btn"
+      >View Requirements</a>
+      <a href="/p/{{@root.selected_project_id}}/applicability/edit/{{app_id}}" class="btn btn-outline btn-sm reqman-applicability-row__action-btn">Edit</a>
+      <button
+        class="btn btn-danger btn-sm reqman-applicability-row__action-btn"
+        type="button"
+        data-action="delete-applicability"
+        data-applicability-id="{{app_id}}"
+        data-applicability-title="applicability {{app_tag}}"
+        data-project-id="{{@root.selected_project_id}}"
+      >Delete</button>
     </div>
   </div>
-</div>
+</article>

@@ -101,6 +101,7 @@ fn requirements_list_redirect(project_id: i32) -> Redirect {
             status_filter = Option::<i32>::None,
             verification_filter = Option::<i32>::None,
             category_filter = Option::<i32>::None,
+            applicability_filter = Option::<i32>::None,
             view = Option::<String>::None
         )
     ))
@@ -141,13 +142,14 @@ struct InlineVerificationPayload {
     description: String,
 }
 
-#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<view>")]
+#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<applicability_filter>&<view>")]
 async fn show_requirements(
     project_access: ProjectAccess,
     project_id: i32,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
+    applicability_filter: Option<i32>,
     view: Option<String>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
@@ -160,6 +162,7 @@ async fn show_requirements(
         status_filter,
         verification_filter,
         category_filter,
+        applicability_filter,
     )?;
 
     let metrics = RequirementAnalyticsService::new(state.inner()).metrics(
@@ -167,6 +170,7 @@ async fn show_requirements(
         status_filter,
         verification_filter,
         category_filter,
+        applicability_filter,
     )?;
 
     // Build tree data for tree view
@@ -231,6 +235,7 @@ async fn show_requirements(
         "current_status_filter": json!(status_filter),
         "current_verification_filter": json!(verification_filter),
         "current_category_filter": json!(category_filter),
+        "current_applicability_filter": json!(applicability_filter),
         "current_view": current_view,
         "project": json!({
             "id": selected_project.project_id,

@@ -9,6 +9,7 @@ const pageControllers = {
   matrix: () => import('./pages/matrix.js'),
   'requirements-tree': () => import('./pages/requirementsTree.js'),
   categories: () => import('./pages/categories.js'),
+  applicability: () => import('./pages/applicability.js'),
   'requirement-form': () => import('./pages/requirementForm.js'),
   'requirement-detail': () => import('./pages/requirementDetail.js'),
   'log-analytics': () => import('./pages/logAnalytics.js'),
@@ -79,7 +80,10 @@ function initGlobalDeleteHandlers() {
       const applicabilityId = button.getAttribute('data-applicability-id');
       return `/p/${projectId}/applicability/delete/${applicabilityId}`;
     },
-    getMessage: () => 'Are you sure you want to delete this applicability? This action cannot be undone.',
+    getMessage: (button) => {
+      const title = button.getAttribute('data-applicability-title') || 'this applicability';
+      return `Are you sure you want to delete ${title}? This action cannot be undone.`;
+    },
   });
 }
 

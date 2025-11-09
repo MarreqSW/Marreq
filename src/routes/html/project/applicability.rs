@@ -3,7 +3,6 @@ use super::prelude::*;
 use crate::services::ApplicabilityService;
 use rocket::http::Status;
 
-
 #[get("/<project_id>/applicability")]
 pub async fn show_applicability(
     project_access: ProjectAccess,

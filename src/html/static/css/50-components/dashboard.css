@@ -332,64 +332,6 @@
   margin: 0;
 }
 
-/* Metrics Cards */
-.reqman-metrics {
-  display: grid;
-  gap: var(--spacing-lg);
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin-bottom: var(--spacing-xl);
-}
-
-.reqman-metric-card {
-  align-items: center;
-  background: var(--surface-color, #fff);
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: var(--radius-lg);
-  display: flex;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg);
-}
-
-.reqman-metric-card__icon {
-  border-radius: var(--radius-md);
-  display: grid;
-  font-size: 1.5rem;
-  height: 48px;
-  place-items: center;
-  width: 48px;
-}
-
-.reqman-metric-card__icon--primary {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.reqman-metric-card__icon--success {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.reqman-metric-card__icon--warning {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.reqman-metric-card__icon--info {
-  background: #e0e7ff;
-  color: #3730a3;
-}
-
-.reqman-metric-card__value {
-  color: var(--text-primary, #1e293b);
-  font-size: 1.75rem;
-  font-weight: 700;
-}
-
-.reqman-metric-card__label {
-  color: var(--text-secondary, #64748b);
-  font-size: 0.875rem;
-}
-
 /* Sections */
 .reqman-section {
   margin-bottom: var(--spacing-xl);
@@ -730,10 +672,6 @@
 @media (max-width: 768px) {
   .reqman-main {
     padding: var(--spacing-md);
-  }
-  
-  .reqman-metrics {
-    grid-template-columns: 1fr;
   }
   
   .reqman-projects-grid {

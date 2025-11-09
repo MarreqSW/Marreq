@@ -1,0 +1,179 @@
+{{!--
+  PARTIAL: Table View (Default/Compact)
+  Compact table with expandable row details
+--}}
+<section class="reqman-requirements-table-section" id="tableView" aria-live="polite">
+  {{#if requirements}}
+  <div class="reqman-requirements-table__wrapper">
+    <table class="reqman-requirements-table" id="requirementsTable">
+      <thead>
+        <tr>
+          <th scope="col" data-sort-key="key" class="is-sortable">
+            Key
+            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+          </th>
+          <th scope="col" data-sort-key="title" class="is-sortable">
+            Title
+            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+          </th>
+          <th scope="col" data-sort-key="status" class="is-sortable">
+            Status
+            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+          </th>
+          <th scope="col" data-sort-key="verification" class="is-sortable">
+            Verification
+            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+          </th>
+          <th scope="col" data-sort-key="updated" class="is-sortable">
+            Modified
+            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+          </th>
+          <th scope="col" data-sort-key="author" class="is-sortable">
+            Author
+            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+          </th>
+          <th scope="col" class="reqman-requirements-table__actions-head">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each requirements}}
+        <tr
+          class="reqman-requirements-row"
+          data-requirement-id="{{req_id}}"
+          data-status-id="{{req_current_status_id}}"
+          data-status-label="{{req_current_status}}">
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--key">
+            <div class="reqman-requirements-key">
+              <span class="reqman-requirements-key__value">
+                {{#if req_reference}}{{req_reference}}{{else}}REQ-{{req_id}}{{/if}}
+              </span>
+              <button
+                type="button"
+                class="reqman-requirements-key__toggle"
+                data-action="toggle-row-details"
+                aria-expanded="false"
+                aria-controls="requirement-details-{{req_id}}">
+                <span class="u-visually-hidden">Toggle details for {{req_title}}</span>
+              </button>
+            </div>
+          </td>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--title">
+            <a
+              href="/p/{{../project.id}}/requirements/show/{{req_id}}"
+              class="reqman-requirements-title"
+              title="{{req_title}}">
+              {{req_title}}
+            </a>
+            {{#if req_reference}}
+            <span class="reqman-requirements-title__reference">({{req_reference}})</span>
+            {{/if}}
+          </td>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--status">
+            <span
+              class="reqman-requirements-status-badge"
+              data-status-id="{{req_current_status_id}}"
+              data-status="{{req_current_status}}">
+              {{req_current_status}}
+            </span>
+          </td>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--verification">
+            <span class="reqman-requirements-cell-muted">{{req_verification}}</span>
+          </td>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--updated">
+            <time>{{req_update_date}}</time>
+          </td>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--author">
+            {{#if req_author}}
+              {{req_author}}
+            {{else}}
+              <span class="reqman-requirements-cell-muted">—</span>
+            {{/if}}
+          </td>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--actions">
+            <div class="reqman-requirements-row__actions">
+              <a 
+                href="/p/{{../project.id}}/requirements/show/{{req_id}}" 
+                class="reqman-requirements-row__action reqman-requirements-row__action--icon"
+                title="View requirement">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                  <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                </svg>
+                <span class="u-visually-hidden">View</span>
+              </a>
+              <a 
+                href="/p/{{../project.id}}/requirements/edit/{{req_id}}" 
+                class="reqman-requirements-row__action reqman-requirements-row__action--icon"
+                title="Edit requirement">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/>
+                </svg>
+                <span class="u-visually-hidden">Edit</span>
+              </a>
+              <button
+                type="button"
+                class="reqman-requirements-row__action reqman-requirements-row__action--icon"
+                data-action="duplicate-requirement"
+                data-requirement-id="{{req_id}}"
+                title="Duplicate requirement">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/>
+                </svg>
+                <span class="u-visually-hidden">Duplicate</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <tr
+          id="requirement-details-{{req_id}}"
+          class="reqman-requirements-row__details"
+          data-details-for="{{req_id}}"
+          hidden>
+          <td colspan="7">
+            <dl class="reqman-requirements-details-grid">
+              <div>
+                <dt>Category</dt>
+                <dd>{{req_category}}</dd>
+              </div>
+              <div>
+                <dt>Applicability</dt>
+                <dd>{{req_applicability}}</dd>
+              </div>
+              <div>
+                <dt>Reviewer</dt>
+                <dd>{{#if req_reviewer}}{{req_reviewer}}{{else}}—{{/if}}</dd>
+              </div>
+              <div>
+                <dt>Updated</dt>
+                <dd>{{req_update_date}}</dd>
+              </div>
+              <div>
+                <dt>Author</dt>
+                <dd>{{#if req_author}}{{req_author}}{{else}}—{{/if}}</dd>
+              </div>
+              <div>
+                <dt>Parent</dt>
+                <dd>
+                  {{#if req_parent_id}}
+                    <a href="/p/{{project.id}}/requirements/show/{{req_parent_id}}">{{req_parent_title}}</a>
+                  {{else}}
+                    —
+                  {{/if}}
+                </dd>
+              </div>
+            </dl>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  <nav class="reqman-requirements-pagination" aria-label="Requirements pagination">
+    <button type="button" class="reqman-requirements-pagination__button is-disabled" disabled aria-disabled="true">Prev</button>
+    <span class="reqman-requirements-pagination__status">All {{requirement_metrics.total}} requirements</span>
+    <button type="button" class="reqman-requirements-pagination__button is-disabled" disabled aria-disabled="true">Next</button>
+  </nav>
+  {{else}}
+  {{> requirements/_empty_state}}
+  {{/if}}
+</section>

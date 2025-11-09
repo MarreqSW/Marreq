@@ -7,8 +7,8 @@
   <div class="d-flex justify-content-between align-items-center">
     <h1>Tests Table</h1>
     <div>
-      <a href="/p/{{selected_project_id}}/tests" class="btn btn-outline-secondary me-2">Card View</a>
-      <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success me-2">Export Excel</a>
+      <a href="/p/{{project.id}}/tests" class="btn btn-outline-secondary me-2">Card View</a>
+      <a href="/p/{{project.id}}/tests.xls" class="btn btn-success me-2">Export Excel</a>
       {{#if user.is_admin}}
       <a href="/import_excel" class="btn btn-warning me-2">Import Excel</a>
       {{/if}}
@@ -127,7 +127,7 @@
           {{#each tests}}
           <tr data-test-id="{{test_id}}">
               <td>
-                <a href="/p/{{../selected_project_id}}/tests/show/{{test_id}}" class="text-decoration-none fw-bold">TEST-{{test_id}}</a>
+                <a href="/p/{{../project.id}}/tests/show/{{test_id}}" class="text-decoration-none fw-bold">TEST-{{test_id}}</a>
               </td>
             <td>
               <span class="editable-field c-table-editable__field" data-field="test_name" data-id="{{test_id}}">{{test_name}}</span>
@@ -160,14 +160,14 @@
             </td>
             <td>
               <div class="btn-group btn-group-sm">
-                <a class="btn btn-outline-primary btn-sm" href="/p/{{../selected_project_id}}/tests/edit/{{test_id}}" title="Edit">
+                <a class="btn btn-outline-primary btn-sm" href="/p/{{../project.id}}/tests/edit/{{test_id}}" title="Edit">
                   <i class="bi bi-pencil"></i>
                 </a>
                 <button
                   class="btn btn-outline-danger btn-sm"
                   type="button"
                   data-action="delete-test"
-                  data-project-id="{{../selected_project_id}}"
+                  data-project-id="{{../project.id}}"
                   data-test-id="{{test_id}}"
                   data-test-name="{{test_name}}"
                   title="Delete"

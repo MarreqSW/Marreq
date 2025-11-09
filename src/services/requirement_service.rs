@@ -38,12 +38,14 @@ impl<'a> RequirementService<'a> {
         status_filter: Option<i32>,
         verification_filter: Option<i32>,
         category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
     ) -> Result<Vec<Requirement>, RepoError> {
         Ok(Self::filter(
             self.list_by_project(project_id)?,
             status_filter,
             verification_filter,
             category_filter,
+            applicability_filter,
         ))
     }
 
@@ -118,6 +120,7 @@ impl<'a> RequirementService<'a> {
         status_filter: Option<i32>,
         verification_filter: Option<i32>,
         category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
     ) -> Vec<Requirement> {
         let mut filtered_requirements: Vec<Requirement> = requirements
             .into_iter()
@@ -129,7 +132,10 @@ impl<'a> RequirementService<'a> {
                 });
                 let category_match =
                     category_filter.map_or(true, |category_id| req.req_category == category_id);
-                status_match && verification_match && category_match
+                let applicability_match = applicability_filter.map_or(true, |applicability_id| {
+                    req.req_applicability == applicability_id
+                });
+                status_match && verification_match && category_match && applicability_match
             })
             .collect();
 

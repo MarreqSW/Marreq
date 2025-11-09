@@ -64,6 +64,21 @@
             </option>
           {{/each}}
         </select>
+
+        <label for="applicabilityFilter" class="u-visually-hidden">Filter by applicability</label>
+        <select
+          id="applicabilityFilter"
+          name="applicability_filter"
+          class="reqman-requirements-filter-bar__select"
+          data-filter-control="applicability"
+          data-filter-label="Applicability">
+          <option value="">Applicability · All</option>
+          {{#each applicability}}
+            <option value="{{app_id}}" {{#if (eq app_id ../current_applicability_filter)}}selected{{/if}}>
+              {{app_title}}
+            </option>
+          {{/each}}
+        </select>
       </div>
 
       <div class="reqman-requirements-filter-bar__actions">

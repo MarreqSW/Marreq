@@ -1,0 +1,186 @@
+/**
+ * List Page Component
+ * 
+ * Reusable component for list-based pages (categories, applicability, etc.)
+ * This component provides a consistent layout pattern for pages that display
+ * searchable lists of items with similar structure.
+ * 
+ * Usage:
+ * Apply .reqman-list-page to the main container, then use BEM modifiers
+ * for page-specific customizations. Each page should also include a specific
+ * class (e.g., .reqman-category-page) for any unique styling needs.
+ */
+
+/* Page Container */
+.reqman-list-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md, 1rem);
+}
+
+/* Page Header */
+.reqman-list-page__header {
+    align-items: center;
+    display: flex;
+    gap: var(--spacing-sm, 0.75rem);
+    justify-content: space-between;
+}
+
+.reqman-list-page__title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* Toolbar (contains search and other controls) */
+.reqman-list-page__toolbar {
+    align-items: center;
+    display: flex;
+}
+
+.reqman-list-page__search {
+    background: var(--surface-muted, #f1f5f9);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    color: var(--text-primary, #1e293b);
+    max-width: 360px;
+    padding: 0.5rem 0.75rem;
+    width: 100%;
+}
+
+.reqman-list-page__search:focus {
+    outline: 2px solid rgb(59 130 246 / 0.35);
+    outline-offset: 2px;
+}
+
+/* List Container */
+.reqman-list-page__list {
+    background: var(--surface-subtle, rgb(148 163 184 / 0.08));
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: var(--radius-md, 0.5rem);
+    overflow: hidden;
+}
+
+/* List Row (Individual Item) */
+.reqman-list-page__row {
+    align-items: flex-start;
+    background: var(--surface-color, #fff);
+    display: flex;
+    gap: var(--spacing-md, 1rem);
+    justify-content: space-between;
+    padding: var(--spacing-sm, 0.75rem) var(--spacing-md, 1rem);
+    transition: background var(--transition-base, 0.2s ease), border-color var(--transition-base, 0.2s ease);
+}
+
+.reqman-list-page__row + .reqman-list-page__row {
+    border-top: 1px solid var(--border-color, #e2e8f0);
+}
+
+.reqman-list-page__row:hover {
+    background: var(--surface-muted, #f1f5f9);
+}
+
+/* Row Content Areas */
+.reqman-list-page__row-main {
+    flex: 1 1 60%;
+    min-width: 0;
+}
+
+.reqman-list-page__row-headline {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm, 0.75rem);
+}
+
+.reqman-list-page__tag {
+    align-items: center;
+    background: linear-gradient(135deg, var(--primary-color, #3b82f6), #2563eb);
+    border: 1px solid rgb(37 99 235 / 0.65);
+    border-radius: 999px;
+    color: var(--text-inverse, #fff);
+    display: inline-flex;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 0.15rem 0.6rem;
+    text-transform: uppercase;
+}
+
+.reqman-list-page__row-title {
+    color: var(--text-primary, #1e293b);
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.reqman-list-page__row-description {
+    color: var(--text-secondary, #64748b);
+    font-size: 0.875rem;
+    margin: 0.35rem 0 0;
+}
+
+/* Row Metadata */
+.reqman-list-page__row-meta {
+    align-items: center;
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--spacing-md, 1rem);
+}
+
+.reqman-list-page__row-id {
+    color: var(--text-secondary, #64748b);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+}
+
+/* Row Actions */
+.reqman-list-page__row-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs, 0.5rem);
+}
+
+.reqman-list-page__action-btn {
+    font-size: 0.75rem;
+    line-height: 1.2;
+    padding: 0.25rem 0.65rem;
+    white-space: nowrap;
+}
+
+/* Empty State */
+.reqman-list-page__empty {
+    background: var(--surface-muted, #f1f5f9);
+    border-radius: var(--radius-md, 0.5rem);
+    color: var(--text-secondary, #64748b);
+    margin: 1rem 0 0;
+    padding: var(--spacing-sm, 0.75rem) var(--spacing-md, 1rem);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .reqman-list-page__header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .reqman-list-page__toolbar {
+        width: 100%;
+    }
+
+    .reqman-list-page__search {
+        max-width: 100%;
+    }
+
+    .reqman-list-page__row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .reqman-list-page__row-meta {
+        justify-content: space-between;
+        width: 100%;
+    }
+}

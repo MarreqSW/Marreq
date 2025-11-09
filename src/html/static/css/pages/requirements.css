@@ -274,6 +274,11 @@
   grid-area: search;
 }
 
+.reqman-requirements-filter-bar__search {
+  /* anchor absolute-positioned shortcut inside the search area */
+  position: relative;
+}
+
 .reqman-requirements-filter-bar__selects {
   display: contents;
 }
@@ -322,6 +327,9 @@
   padding: 0 var(--space-2);
   position: absolute;
   right: var(--space-2);
+  /* vertically center relative to the search input */
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .reqman-requirements-filter-bar__select {

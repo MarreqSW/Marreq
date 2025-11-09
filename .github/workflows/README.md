@@ -311,6 +311,8 @@ Run all checks in sequence:
 
 ### docker-compose.ci.yml
 
+**Location:** `.github/docker-compose.ci.yml` (not in workflows/ to avoid GitHub Actions validation)
+
 CI-specific Docker Compose overrides:
 - Disables container restart policy for CI runs
 - Uses tmpfs for `/tmp` to improve performance

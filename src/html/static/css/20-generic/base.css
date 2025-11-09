@@ -12,8 +12,7 @@ h3,
 h4,
 h5,
 h6,
-p,
-figure {
+p {
   margin: 0;
   padding: 0;
 }
@@ -99,33 +98,6 @@ h2 {
 
 h3 {
   font-size: 1.5rem;
-}
-
-/* Fluid Layout Utilities */
-.o-fluid-container {
-  margin: 0;
-  max-width: none;
-  padding: 0;
-  width: 100%;
-}
-
-.o-fluid-row {
-  display: flex;
-  flex-wrap: wrap;
-  margin: 0;
-  width: 100%;
-}
-
-.o-fluid-col {
-  flex: 1;
-  min-width: 0;
-  padding: 0;
-}
-
-/* Ensure all content uses full width */
-.o-page-content {
-  max-width: none;
-  width: 100%;
 }
 
 /* Responsive Layout */

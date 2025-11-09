@@ -40,6 +40,12 @@ jobs:
       - name: Stylelint CSS files
         run: npx stylelint "src/html/static/**/*.css" --config .stylelintrc.json
 
+      - name: Install PurgeCSS
+        run: npm install --no-save purgecss
+
+      - name: Check for unused CSS
+        run: node .github/workflows/purgecss-ci.mjs
+
   frontend-tests:
     runs-on: ubuntu-latest
     steps:

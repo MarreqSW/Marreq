@@ -1,5 +1,17 @@
 /* Utility Styles */
 
+/* Screen Reader Only - Visually hidden but accessible to screen readers */
+.u-sr-only {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+
 /* Grid Layout */
 .o-grid {
   display: grid;

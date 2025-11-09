@@ -1,14 +1,7 @@
+use super::helpers::*;
 use super::prelude::*;
 use crate::services::ApplicabilityService;
 use rocket::http::Status;
-use rocket::serde::Serialize;
-
-#[derive(Serialize)]
-struct ApplicabilityCtx<'a> {
-    user: &'a User,
-    selected_project_id: i32,
-    applicability: Option<Vec<Applicability>>,
-}
 
 #[get("/<project_id>/applicability")]
 pub async fn show_applicability(
@@ -16,32 +9,39 @@ pub async fn show_applicability(
     project_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let user = project_access.into_user();
+    let projects = get_accessible_projects(state, &user);
     let service = ApplicabilityService::new(state.inner());
     let apps = service.list_by_project(project_id).unwrap_or_default();
 
-    let ctx = ApplicabilityCtx {
-        user: &project_access.into_user(),
-        selected_project_id: project_id,
-        applicability: Some(apps),
-    };
+    let ctx = json!({
+        "user": user,
+        "projects": projects,
+        "selected_project_id": project_id,
+        "applicability": apps,
+    });
 
-    Ok(Template::render("applicability", &ctx))
+    Ok(Template::render("applicability/applicability", ctx))
 }
 
 #[get("/<project_id>/applicability/new?<error>")]
 pub async fn new_applicability(
     project_access: ProjectAccess,
     project_id: i32,
+    state: &State<AppState>,
     error: Option<String>,
 ) -> Result<Template, Redirect> {
+    let user = project_access.into_user();
+    let projects = get_accessible_projects(state, &user);
+
     let ctx = json!({
-        "user": &project_access.into_user(),
+        "user": user,
+        "projects": projects,
         "selected_project_id": project_id,
-        "applicability": Option::<Vec<Applicability>>::None,
         "error": error
     });
 
-    Ok(Template::render("new_applicability", ctx))
+    Ok(Template::render("applicability/new_applicability", ctx))
 }
 
 #[post("/<project_id>/applicability/new", data = "<form>")]
@@ -86,6 +86,7 @@ pub async fn get_edit_applicability(
     error: Option<String>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
+    let projects = get_accessible_projects(state, &user);
     let service = ApplicabilityService::new(state.inner());
     let applicability = service
         .get_by_id(app_id)
@@ -101,10 +102,11 @@ pub async fn get_edit_applicability(
     let ctx = json!({
         "applicability": applicability,
         "user": user,
+        "projects": projects,
         "selected_project_id": project_id,
         "error": error
     });
-    Ok(Template::render("edit_applicability", ctx))
+    Ok(Template::render("applicability/edit_applicability", ctx))
 }
 
 #[post("/<project_id>/applicability/edit/<app_id>", data = "<form>")]
@@ -269,7 +271,7 @@ mod tests {
         let response = get_with_session(&client, "/p/1/applicability", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
-        assert!(body.contains("APP-1"));
+        assert!(body.contains("#1"));
         assert!(body.contains("Flight"));
     }
 

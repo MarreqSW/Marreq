@@ -20,7 +20,7 @@ async fn show_categories(
         "categories": categories,
     });
 
-    Ok(Template::render("categories", ctx))
+    Ok(Template::render("categories/categories", ctx))
 }
 
 #[get("/<project_id>/categories/new")]
@@ -37,7 +37,7 @@ async fn new_category(
         "projects": projects,
         "selected_project_id": project_id
     });
-    Ok(Template::render("new_category", ctx))
+    Ok(Template::render("categories/new_category", ctx))
 }
 
 #[post("/<project_id>/categories/new", data = "<new_category>")]
@@ -95,7 +95,7 @@ async fn get_edit_category(
         "selected_project_id": project_id
     });
 
-    Ok(Template::render("edit_category", ctx))
+    Ok(Template::render("categories/edit_category", ctx))
 }
 
 #[post("/<project_id>/categories/edit/<cat_id>", data = "<category>")]

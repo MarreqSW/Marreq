@@ -1,13 +1,23 @@
 import { jsonFetch, postJson } from '../core/net.js';
 import { showNotification } from '../modules/notifications.js';
+import { searchTree, filterTree, initTreeControls } from '../modules/tree.js';
 
 const state = {
   rows: [],
+  cards: [],
+  treeNodes: [],
+  treeNodesMap: new Map(), // Cache for faster lookups
   sortKey: null,
   sortOrder: 'asc',
   searchTerm: '',
   statusMap: new Map(),
   noResultsBanner: null,
+  treeRoot: null,
+  currentFilters: {
+    status: null,
+    verification: null,
+    category: null,
+  },
 };
 
 const SORTERS = {
@@ -176,6 +186,81 @@ function collectRows(table) {
   state.rows = entries;
 }
 
+function collectCards(container) {
+  const entries = [];
+  container.querySelectorAll('.reqman-requirement-card').forEach((card) => {
+    const requirementId = card.dataset.requirementId;
+
+    const keyText = textFrom(card, '.reqman-requirement-card__reference-text');
+    const titleText = textFrom(card, '.reqman-requirement-card__title');
+    const statusText = (card.dataset.statusLabel || '').trim();
+    const verificationText = card.dataset.verification || '';
+    const categoryText = card.dataset.category || '';
+    const descriptionText = textFrom(card, '.reqman-requirement-card__description');
+    const authorText = textFrom(card, '.reqman-requirement-card__author');
+    const dateText = textFrom(card, '.reqman-requirement-card__date');
+
+    const searchText = [
+      keyText,
+      titleText,
+      statusText,
+      verificationText,
+      categoryText,
+      descriptionText,
+      authorText,
+      dateText,
+    ]
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .toLowerCase();
+
+    entries.push({
+      id: requirementId,
+      card,
+      keyValue: keyText.toLowerCase(),
+      keyNumeric: extractNumber(keyText),
+      titleValue: titleText.toLowerCase(),
+      statusValue: statusText.toLowerCase(),
+      verificationValue: verificationText.toLowerCase(),
+      authorValue: authorText.toLowerCase(),
+      searchText,
+      visible: true,
+    });
+  });
+
+  state.cards = entries;
+}
+
+function collectTreeNodes(treeRoot) {
+  if (!treeRoot) return;
+
+  state.treeNodesMap.clear();
+  const entries = [];
+  
+  treeRoot.querySelectorAll('[role="treeitem"]').forEach((node) => {
+    const requirementId = node.dataset.requirementId;
+    const statusId = node.dataset.status;
+    const categoryId = node.dataset.category;
+    const verificationId = node.dataset.verification;
+    const searchText = (node.dataset.searchText || '').toLowerCase();
+
+    const entry = {
+      id: requirementId,
+      node,
+      statusId: statusId ? parseInt(statusId, 10) : null,
+      categoryId: categoryId ? parseInt(categoryId, 10) : null,
+      verificationId: verificationId ? parseInt(verificationId, 10) : null,
+      searchText,
+      visible: true,
+    };
+    
+    entries.push(entry);
+    state.treeNodesMap.set(node, entry);
+  });
+  
+  state.treeNodes = entries;
+}
+
 function ensureNoResultsBanner() {
   if (state.noResultsBanner) {
     return state.noResultsBanner;
@@ -209,6 +294,7 @@ function applySearch(term = '') {
   const needle = normalize(term);
   let visibleCount = 0;
 
+  // Apply to table rows
   state.rows.forEach((entry) => {
     const matches = !needle || entry.searchText.includes(needle);
     const wasVisible = entry.visible;
@@ -230,7 +316,48 @@ function applySearch(term = '') {
     }
   });
 
-  updateNoResultsBanner(visibleCount === 0 && state.rows.length > 0);
+  // Apply to cards
+  state.cards.forEach((entry) => {
+    const matches = !needle || entry.searchText.includes(needle);
+    const wasVisible = entry.visible;
+    entry.visible = matches;
+
+    entry.card.classList.toggle('is-filtered-out', !matches);
+
+    if (matches) {
+      visibleCount += 1;
+      if (!wasVisible) {
+        entry.card.style.animation = 'none';
+        requestAnimationFrame(() => {
+          entry.card.style.animation = '';
+        });
+      }
+    }
+  });
+
+  // Apply to tree view
+  if (state.treeRoot) {
+    const matchCount = searchTree(state.treeRoot, needle);
+    visibleCount += matchCount;
+  }
+
+  const totalEntries = state.rows.length + state.cards.length + state.treeNodes.length;
+  updateNoResultsBanner(visibleCount === 0 && totalEntries > 0);
+}
+
+function applyFilters(filters = {}) {
+  state.currentFilters = { ...state.currentFilters, ...filters };
+
+  if (!state.treeRoot) return;
+
+  const { status, verification, category } = state.currentFilters;
+  
+  filterTree(state.treeRoot, (node) => {
+    if (status && node.dataset.status !== String(status)) return false;
+    if (verification && node.dataset.verification !== String(verification)) return false;
+    if (category && node.dataset.category !== String(category)) return false;
+    return true;
+  });
 }
 
 function debounce(fn, wait = 150) {
@@ -348,43 +475,71 @@ function initRowDetails(table) {
   });
 }
 
-function shouldIgnoreShortcut(target) {
-  if (!target) return false;
-  const tagName = target.tagName;
-  return (
-    tagName === 'INPUT' ||
-    tagName === 'TEXTAREA' ||
-    tagName === 'SELECT' ||
-    target.isContentEditable
-  );
-}
-
 function initKeyboardShortcuts({ searchInput, newRequirementButton }) {
   document.addEventListener('keydown', (event) => {
-    if (event.key === '/' && !shouldIgnoreShortcut(event.target)) {
-      event.preventDefault();
-      if (searchInput) {
-        searchInput.focus();
-        searchInput.select();
-      }
+    // Skip if focus is in input field
+    const target = event.target;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) {
+      return;
     }
 
-    if (event.key.toLowerCase() === 'n' && !shouldIgnoreShortcut(event.target)) {
-      if (newRequirementButton) {
-        event.preventDefault();
-        newRequirementButton.click();
-      }
+    if (event.key === '/' && searchInput) {
+      event.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+
+    if (event.key.toLowerCase() === 'n' && newRequirementButton) {
+      event.preventDefault();
+      newRequirementButton.click();
     }
   });
 }
 
-function requestSubmit(form) {
+function initFiltersForm(form, searchInput) {
   if (!form) return;
-  if (typeof form.requestSubmit === 'function') {
-    form.requestSubmit();
-  } else {
-    form.submit();
+
+  form.querySelectorAll('[data-filter-control]').forEach((select) => {
+    select.addEventListener('change', () => {
+      // Update current filters
+      const filterName = select.dataset.filterControl;
+      const filterValue = select.value ? parseInt(select.value, 10) : null;
+      
+      if (filterName) {
+        applyFilters({ [filterName]: filterValue });
+      }
+      
+      renderFilterChips(form);
+      
+      // Removed auto-submit - user must click Apply button
+    });
+  });
+
+  const clearButton = form.querySelector('[data-action="clear-filters"]');
+  if (clearButton) {
+    clearButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      form.querySelectorAll('[data-filter-control]').forEach((select) => {
+        select.value = '';
+      });
+      if (searchInput) {
+        searchInput.value = '';
+        applySearch('');
+      }
+      // Clear all filters
+      applyFilters({ status: null, verification: null, category: null });
+      renderFilterChips(form);
+      
+      // Use native form submission
+      if (typeof form.requestSubmit === 'function') {
+        form.requestSubmit();
+      } else {
+        form.submit();
+      }
+    });
   }
+
+  renderFilterChips(form);
 }
 
 function renderFilterChips(form) {
@@ -425,40 +580,17 @@ function renderFilterChips(form) {
         if (control) {
           control.value = '';
           renderFilterChips(form);
-          requestSubmit(form);
+          
+          // Use native form submission
+          if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
         }
       });
     });
   }
-}
-
-function initFiltersForm(form, searchInput) {
-  if (!form) return;
-
-  form.querySelectorAll('[data-filter-control]').forEach((select) => {
-    select.addEventListener('change', () => {
-      renderFilterChips(form);
-      requestSubmit(form);
-    });
-  });
-
-  const clearButton = form.querySelector('[data-action="clear-filters"]');
-  if (clearButton) {
-    clearButton.addEventListener('click', (event) => {
-      event.preventDefault();
-      form.querySelectorAll('[data-filter-control]').forEach((select) => {
-        select.value = '';
-      });
-      if (searchInput) {
-        searchInput.value = '';
-        applySearch('');
-      }
-      renderFilterChips(form);
-      requestSubmit(form);
-    });
-  }
-
-  renderFilterChips(form);
 }
 
 function buildDuplicateTitle(title) {
@@ -483,48 +615,207 @@ async function duplicateRequirement(button) {
     return;
   }
 
-  const originalLabel = button.textContent;
-  button.disabled = true;
-  button.textContent = 'Duplicating…';
-
   try {
+    // Fetch the requirement data
     const requirement = await jsonFetch(`/api/requirements/${requirementId}`);
-    const payload = {
-      req_id: null,
-      req_title: buildDuplicateTitle(requirement.req_title),
-      req_description: requirement.req_description,
-      req_verification: requirement.req_verification,
-      req_author: requirement.req_author,
-      req_link: requirement.req_link,
-      req_category: requirement.req_category,
-      req_current_status: requirement.req_current_status,
-      req_parent: requirement.req_parent,
-      req_reference: buildDuplicateReference(requirement.req_reference),
-      req_reviewer: requirement.req_reviewer,
-      req_applicability: requirement.req_applicability,
-      req_justification: requirement.req_justification,
-      project_id: requirement.project_id,
-    };
-
-    await postJson('/api/requirements', payload);
-    showNotification('Requirement duplicated successfully', 'success');
-    setTimeout(() => window.location.reload(), 600);
+    
+    // Show the modal with pre-filled data
+    showDuplicateModal(requirement);
   } catch (error) {
-    console.error('Failed to duplicate requirement', error);
-    const message = error?.message || 'Failed to duplicate requirement';
+    console.error('Failed to fetch requirement for duplication', error);
+    const message = error?.message || 'Failed to load requirement data';
     showNotification(message, 'error');
-  } finally {
-    button.disabled = false;
-    button.textContent = originalLabel;
   }
 }
 
-function initDuplicateButtons(table) {
-  if (!table) return;
+function showDuplicateModal(requirement) {
+  const modal = document.getElementById('duplicateRequirementModal');
+  if (!modal) {
+    console.error('Duplicate modal not found');
+    return;
+  }
 
-  table.addEventListener('click', (event) => {
+  // Pre-fill the form fields
+  document.getElementById('dup_req_title').value = buildDuplicateTitle(requirement.req_title);
+  document.getElementById('dup_req_reference').value = ''; // Leave blank for auto-generation
+  document.getElementById('dup_req_description').value = requirement.req_description || '';
+  document.getElementById('dup_req_justification').value = requirement.req_justification || '';
+  document.getElementById('dup_req_category').value = requirement.req_category || '';
+  document.getElementById('dup_req_current_status').value = requirement.req_current_status || '';
+  document.getElementById('dup_req_verification').value = requirement.req_verification || '';
+  document.getElementById('dup_req_applicability').value = requirement.req_applicability || '';
+  document.getElementById('dup_req_reviewer').value = requirement.req_reviewer || '';
+  document.getElementById('dup_req_parent').value = requirement.req_parent || '0';
+  document.getElementById('dup_project_id').value = requirement.project_id;
+  document.getElementById('dup_req_author').value = requirement.req_author;
+  
+  // Load parent requirement options from the current page's requirements
+  loadParentRequirementOptionsFromPage(requirement.req_id, requirement.req_parent);
+
+  // Show the modal using Bootstrap
+  if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+  } else {
+    modal.classList.add('show');
+    modal.style.display = 'block';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+  }
+}
+
+function loadParentRequirementOptionsFromPage(currentReqId, selectedValue) {
+  const select = document.getElementById('dup_req_parent');
+  
+  // Clear existing options except the first one (None)
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+  
+  // Get all requirements from the page
+  const allRequirements = [];
+  
+  // Collect from table view rows
+  state.rows.forEach(entry => {
+    const row = entry.row;
+    const reqId = parseInt(row.dataset.requirementId, 10);
+    if (reqId && reqId !== currentReqId) {
+      const titleCell = row.querySelector('.reqman-requirements-title');
+      const keyCell = row.querySelector('.reqman-requirements-key__value');
+      if (titleCell && keyCell) {
+        allRequirements.push({
+          id: reqId,
+          reference: keyCell.textContent.trim(),
+          title: titleCell.textContent.trim()
+        });
+      }
+    }
+  });
+  
+  // Collect from card view cards
+  state.cards.forEach(entry => {
+    const card = entry.card;
+    const reqId = parseInt(card.dataset.requirementId, 10);
+    if (reqId && reqId !== currentReqId) {
+      const titleEl = card.querySelector('.reqman-requirement-card__title');
+      const keyEl = card.querySelector('.reqman-requirement-card__key');
+      if (titleEl && keyEl) {
+        // Check if not already added
+        if (!allRequirements.find(r => r.id === reqId)) {
+          allRequirements.push({
+            id: reqId,
+            reference: keyEl.textContent.trim(),
+            title: titleEl.textContent.trim()
+          });
+        }
+      }
+    }
+  });
+  
+  // Collect from tree view nodes
+  state.treeNodes.forEach(entry => {
+    const node = entry.node;
+    const reqId = parseInt(node.dataset.requirementId, 10);
+    if (reqId && reqId !== currentReqId) {
+      const titleEl = node.querySelector('.c-tree__title');
+      const keyEl = node.querySelector('.c-tree__key');
+      if (titleEl && keyEl) {
+        // Check if not already added
+        if (!allRequirements.find(r => r.id === reqId)) {
+          allRequirements.push({
+            id: reqId,
+            reference: keyEl.textContent.trim(),
+            title: titleEl.textContent.trim()
+          });
+        }
+      }
+    }
+  });
+  
+  // Sort by ID
+  allRequirements.sort((a, b) => a.id - b.id);
+  
+  // Add options to select
+  allRequirements.forEach(req => {
+    const option = document.createElement('option');
+    option.value = req.id;
+    option.textContent = `${req.reference} - ${req.title}`;
+    if (req.id === selectedValue) {
+      option.selected = true;
+    }
+    select.appendChild(option);
+  });
+}
+
+function initDuplicateForm() {
+  const form = document.getElementById('duplicateRequirementForm');
+  if (!form) return;
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    
+    const submitBtn = document.getElementById('duplicateSubmitBtn');
+    const spinner = submitBtn.querySelector('.spinner-border');
+    const originalText = submitBtn.textContent;
+    
+    // Disable button and show spinner
+    submitBtn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating...';
+    
+    try {
+      const formData = new FormData(form);
+      const payload = {
+        req_id: null,
+        req_title: formData.get('req_title'),
+        req_description: formData.get('req_description'),
+        req_reference: formData.get('req_reference') || '',
+        req_justification: formData.get('req_justification') || '',
+        req_category: parseInt(formData.get('req_category'), 10),
+        req_current_status: parseInt(formData.get('req_current_status'), 10),
+        req_verification: parseInt(formData.get('req_verification'), 10),
+        req_applicability: parseInt(formData.get('req_applicability'), 10),
+        req_reviewer: parseInt(formData.get('req_reviewer'), 10) || 0,
+        req_parent: parseInt(formData.get('req_parent'), 10) || 0,
+        project_id: parseInt(formData.get('project_id'), 10),
+        req_author: parseInt(formData.get('req_author'), 10),
+      };
+
+      await postJson('/api/requirements', payload);
+      showNotification('Requirement duplicated successfully', 'success');
+      
+      // Close modal
+      const modal = document.getElementById('duplicateRequirementModal');
+      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        const bsModal = bootstrap.Modal.getInstance(modal);
+        if (bsModal) bsModal.hide();
+      } else {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('modal-open');
+      }
+      
+      // Reload page after a short delay
+      setTimeout(() => window.location.reload(), 600);
+    } catch (error) {
+      console.error('Failed to duplicate requirement', error);
+      const message = error?.message || 'Failed to create duplicate requirement';
+      showNotification(message, 'error');
+      
+      // Re-enable button
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  });
+}
+
+function initDuplicateButtons(container) {
+  if (!container) return;
+
+  container.addEventListener('click', (event) => {
     const trigger = event.target.closest('[data-action="duplicate-requirement"]');
-    if (!trigger || !table.contains(trigger)) {
+    if (!trigger || !container.contains(trigger)) {
       return;
     }
     event.preventDefault();
@@ -532,21 +823,148 @@ function initDuplicateButtons(table) {
   });
 }
 
-function disableSearchWhenEmpty(searchInput, table) {
-  if (!searchInput) return;
-  if (!table) {
-    searchInput.disabled = true;
-    searchInput.placeholder = 'No requirements to search yet';
+function handleBadgeOverflow(card) {
+  const metadata = card.querySelector('[data-badge-rail]');
+  if (!metadata) return;
+
+  const rail = metadata.querySelector('.reqman-requirement-card__badge-rail');
+  const overflowChip = metadata.querySelector('[data-overflow]');
+  if (!rail || !overflowChip) return;
+
+  const badges = Array.from(rail.querySelectorAll('[data-badge]'));
+  if (badges.length === 0) return;
+
+  // Reset: show all badges
+  badges.forEach((badge) => (badge.style.display = ''));
+  overflowChip.hidden = true;
+
+  // Check if overflow exists
+  const railWidth = rail.offsetWidth;
+  const availableWidth = metadata.offsetWidth;
+
+  if (railWidth <= availableWidth) return;
+
+  // Calculate how many badges fit, reserving space for +N chip (30px)
+  const overflowChipWidth = 30;
+  let visibleCount = 0;
+  let accumulatedWidth = 0;
+
+  for (let i = 0; i < badges.length; i++) {
+    const badgeWidth = badges[i].offsetWidth + 4; // +4 for gap
+    if (accumulatedWidth + badgeWidth + overflowChipWidth <= availableWidth) {
+      accumulatedWidth += badgeWidth;
+      visibleCount++;
+    } else {
+      break;
+    }
+  }
+
+  // Hide overflow badges and show +N chip
+  const hiddenCount = badges.length - visibleCount;
+  if (hiddenCount > 0) {
+    for (let i = visibleCount; i < badges.length; i++) {
+      badges[i].style.display = 'none';
+    }
+    overflowChip.textContent = `+${hiddenCount}`;
+    overflowChip.title = `${hiddenCount} more: ${badges
+      .slice(visibleCount)
+      .map((b) => b.textContent.trim())
+      .join(', ')}`;
+    overflowChip.hidden = false;
+  }
+}
+
+function initBadgeOverflow() {
+  const cards = document.querySelectorAll('.reqman-requirement-card');
+  cards.forEach((card) => handleBadgeOverflow(card));
+
+  // Re-calculate on window resize (debounced)
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      cards.forEach((card) => handleBadgeOverflow(card));
+    }, 150);
+  });
+}
+
+function initViewSwitcher() {
+  const VIEW_KEY = 'requirements_view_preference';
+  
+  const cardBtn = document.getElementById('cardViewBtn');
+  const tableBtn = document.getElementById('tableViewBtn');
+  const treeBtn = document.getElementById('treeViewBtn');
+  
+  const cardView = document.getElementById('cardView');
+  const tableView = document.getElementById('tableView');
+  const treeView = document.getElementById('treeView');
+  
+  if (!cardBtn || !tableBtn || !treeBtn || !cardView || !tableView || !treeView) {
+    return;
+  }
+  
+  function switchView(viewName) {
+    cardView.style.display = 'none';
+    tableView.style.display = 'none';
+    treeView.style.display = 'none';
+    
+    cardBtn.classList.remove('active');
+    tableBtn.classList.remove('active');
+    treeBtn.classList.remove('active');
+    
+    switch(viewName) {
+      case 'card':
+        cardView.style.display = 'block';
+        cardBtn.classList.add('active');
+        break;
+      case 'tree':
+        treeView.style.display = 'block';
+        treeBtn.classList.add('active');
+        if (window.__treeAPI) {
+          setTimeout(() => window.__treeAPI.redrawConnectors(), 50);
+        }
+        break;
+      case 'table':
+      default:
+        tableView.style.display = 'block';
+        tableBtn.classList.add('active');
+        break;
+    }
+    
+    try {
+      localStorage.setItem(VIEW_KEY, viewName);
+    } catch (e) {
+      console.warn('Could not save view preference:', e);
+    }
+  }
+  
+  cardBtn.addEventListener('click', () => switchView('card'));
+  tableBtn.addEventListener('click', () => switchView('table'));
+  treeBtn.addEventListener('click', () => switchView('tree'));
+  
+  try {
+    const savedView = localStorage.getItem(VIEW_KEY) || 'table';
+    switchView(savedView);
+  } catch (e) {
+    switchView('table');
   }
 }
 
 export function init() {
   const table = document.getElementById('requirementsTable');
+  const cardsContainer = document.querySelector('.reqman-requirements-cards-grid');
+  const treeRoot = document.querySelector('.c-tree');
   const searchInput = document.getElementById('requirementsSearch');
   const filtersForm = document.getElementById('requirementsFilterForm');
   const newRequirementButton = document.getElementById('newRequirementButton');
 
   state.statusMap = parseStatusDefinitions();
+  state.treeRoot = treeRoot;
+  
+  // Initialize view switcher
+  initViewSwitcher();
+  
+  // Initialize table view if present
   if (table) {
     collectRows(table);
     decorateStatusBadges();
@@ -556,8 +974,58 @@ export function init() {
     applySearch('');
   }
 
-  disableSearchWhenEmpty(searchInput, table);
+  // Initialize cards view if present
+  if (cardsContainer) {
+    collectCards(cardsContainer);
+    decorateStatusBadges();
+    initDuplicateButtons(cardsContainer);
+    initBadgeOverflow();
+    applySearch('');
+  }
+
+  // Initialize tree view if present
+  if (treeRoot) {
+    collectTreeNodes(treeRoot);
+    decorateStatusBadges();
+    applySearch('');
+    
+    // Initialize tree controls
+    const treeAPI = initTreeControls({
+      rootSelector: '.c-tree',
+      toggleSelector: '[data-tree-toggle]',
+      branchSelector: '[data-tree-branch]',
+      expandAllSelector: '[data-tree-expand-all]',
+      collapseAllSelector: '[data-tree-collapse-all]',
+    });
+    
+    // Store tree API globally for connector redrawing
+    if (treeAPI) {
+      window.__treeAPI = treeAPI;
+    }
+    
+    // Parse URL params for initial filters
+    const params = new URLSearchParams(window.location.search);
+    const statusFilter = params.get('status_filter');
+    const verificationFilter = params.get('verification_filter');
+    const categoryFilter = params.get('category_filter');
+    
+    if (statusFilter || verificationFilter || categoryFilter) {
+      applyFilters({
+        status: statusFilter ? parseInt(statusFilter, 10) : null,
+        verification: verificationFilter ? parseInt(verificationFilter, 10) : null,
+        category: categoryFilter ? parseInt(categoryFilter, 10) : null,
+      });
+    }
+  }
+
+  // Disable search if no data
+  if (searchInput && !table && !cardsContainer && !treeRoot) {
+    searchInput.disabled = true;
+    searchInput.placeholder = 'No requirements to search yet';
+  }
+
   initSearch(searchInput);
   initFiltersForm(filtersForm, searchInput);
   initKeyboardShortcuts({ searchInput, newRequirementButton });
+  initDuplicateForm();
 }

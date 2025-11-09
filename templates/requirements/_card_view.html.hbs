@@ -1,0 +1,156 @@
+{{!--
+  PARTIAL: Card View
+  Modern card-based layout for requirement browsing
+--}}
+<section class="reqman-requirements-cards-section" id="cardView" aria-live="polite">
+  {{#if requirements}}
+  <div class="reqman-requirements-cards-grid">
+    {{#each requirements}}
+    <article 
+      class="reqman-requirement-card"
+      data-requirement-id="{{req_id}}"
+      data-status-id="{{req_current_status_id}}"
+      data-status-label="{{req_current_status}}"
+      data-verification="{{req_verification}}"
+      data-category="{{req_category}}">
+      
+      {{!-- Card Header: Reference and Status --}}
+      <header class="reqman-requirement-card__header">
+        <div class="reqman-requirement-card__reference">
+          <span class="reqman-requirement-card__reference-text">
+            {{#if req_reference}}{{req_reference}}{{else}}REQ-{{req_id}}{{/if}}
+          </span>
+        </div>
+        <span
+          class="reqman-requirements-status-badge reqman-requirements-status-badge--{{req_current_status}}"
+          data-status-id="{{req_current_status_id}}"
+          data-status="{{req_current_status}}">
+          {{req_current_status}}
+        </span>
+      </header>
+
+      {{!-- Card Body: Title and Description --}}
+      <div class="reqman-requirement-card__body">
+        <h3 class="reqman-requirement-card__title">
+          <a 
+            href="/p/{{../project.id}}/requirements/show/{{req_id}}"
+            class="reqman-requirement-card__title-link">
+            {{req_title}}
+          </a>
+        </h3>
+        {{#if req_description}}
+        <p class="reqman-requirement-card__description">
+          {{req_description}}
+        </p>
+        {{/if}}
+      </div>
+
+      {{!-- Card Metadata: Tags and Badges --}}
+      <div class="reqman-requirement-card__metadata" data-badge-rail>
+        <div class="reqman-requirement-card__badge-rail">
+          {{#if req_category}}
+          <span class="reqman-requirement-card__badge reqman-requirement-card__badge--category" data-badge title="Category: {{req_category}}">
+            <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm8.5 9.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V11.5z"/>
+            </svg>
+            {{req_category}}
+          </span>
+          {{/if}}
+          {{#if req_verification}}
+          <span class="reqman-requirement-card__badge reqman-requirement-card__badge--verification" data-badge title="Verification: {{req_verification}}">
+            <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M10.067.87a2.89 2.89 0 0 0-4.134 0l-.622.638-.89-.011a2.89 2.89 0 0 0-2.924 2.924l.01.89-.636.622a2.89 2.89 0 0 0 0 4.134l.637.622-.011.89a2.89 2.89 0 0 0 2.924 2.924l.89-.01.622.636a2.89 2.89 0 0 0 4.134 0l.622-.637.89.011a2.89 2.89 0 0 0 2.924-2.924l-.01-.89.636-.622a2.89 2.89 0 0 0 0-4.134l-.637-.622.011-.89a2.89 2.89 0 0 0-2.924-2.924l-.89.01-.622-.636zm.287 5.984-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708.708z"/>
+            </svg>
+            {{req_verification}}
+          </span>
+          {{/if}}
+          {{#if req_applicability}}
+          <span class="reqman-requirement-card__badge reqman-requirement-card__badge--applicability" data-badge title="Applicability: {{req_applicability}}">
+            <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+            </svg>
+            {{req_applicability}}
+          </span>
+          {{/if}}
+          {{#if req_parent_title}}
+          <span class="reqman-requirement-card__badge reqman-requirement-card__badge--parent" data-badge title="Parent: {{req_parent_title}}">
+            <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M1 0a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5v-1H2v-1h4v-9H2V2h4v3h9a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1H1z"/>
+            </svg>
+            {{req_parent_title}}
+          </span>
+          {{/if}}
+        </div>
+        <span class="reqman-requirement-card__badge-overflow" data-overflow hidden></span>
+      </div>
+
+      {{!-- Card Footer: Author, Date, and Actions --}}
+      <footer class="reqman-requirement-card__footer">
+        <div class="reqman-requirement-card__info">
+          {{#if req_author}}
+          <span class="reqman-requirement-card__author" title="Author">
+            <svg class="reqman-requirement-card__info-icon" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+              <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
+            </svg>
+            {{req_author}}
+          </span>
+          {{/if}}
+          {{#if req_update_date}}
+          <time class="reqman-requirement-card__date" title="Last modified">
+            <svg class="reqman-requirement-card__info-icon" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+              <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+            </svg>
+            {{req_update_date}}
+          </time>
+          {{/if}}
+        </div>
+        
+        <div class="reqman-requirement-card__actions">
+          <a 
+            href="/p/{{../project.id}}/requirements/show/{{req_id}}" 
+            class="reqman-requirement-card__action reqman-requirement-card__action--primary"
+            title="View details">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+              <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+            </svg>
+            <span class="u-visually-hidden">View</span>
+          </a>
+          <a 
+            href="/p/{{../project.id}}/requirements/edit/{{req_id}}" 
+            class="reqman-requirement-card__action"
+            title="Edit requirement">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/>
+            </svg>
+            <span class="u-visually-hidden">Edit</span>
+          </a>
+          <button 
+            type="button"
+            class="reqman-requirement-card__action"
+            data-action="duplicate-requirement"
+            data-requirement-id="{{req_id}}"
+            title="Duplicate requirement">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M4 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H6zM2 5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1h1v1a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h1v1H2z"/>
+            </svg>
+            <span class="u-visually-hidden">Duplicate</span>
+          </button>
+        </div>
+      </footer>
+    </article>
+    {{/each}}
+  </div>
+  
+  {{!-- Pagination --}}
+  <nav class="reqman-requirements-pagination" aria-label="Requirements pagination">
+    <button type="button" class="reqman-requirements-pagination__button is-disabled" disabled aria-disabled="true">Prev</button>
+    <span class="reqman-requirements-pagination__status">All {{requirement_metrics.total}} requirements</span>
+    <button type="button" class="reqman-requirements-pagination__button is-disabled" disabled aria-disabled="true">Next</button>
+  </nav>
+  {{else}}
+  {{> requirements/_empty_state}}
+  {{/if}}
+</section>

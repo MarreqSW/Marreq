@@ -55,26 +55,6 @@
           data-role="submit-requirement"
         >Save</button>
 
-        <div class="c-editor-save-menu" data-role="save-menu">
-          <button
-            type="button"
-            class="btn btn-outline-secondary btn-sm editor-save-menu__trigger"
-            data-role="save-menu-trigger"
-            aria-haspopup="true"
-            aria-expanded="false"
-          >
-            Save options
-          </button>
-          <div class="c-editor-save-menu__panel" data-role="save-menu-panel" hidden>
-            <button type="submit" name="intent" value="draft" class="c-editor-save-menu__item">
-              Save as draft
-            </button>
-            <button type="submit" name="intent" value="review" class="c-editor-save-menu__item">
-              Submit for review
-            </button>
-          </div>
-        </div>
-
         <a
           href="/p/{{req.project_id}}/requirements/show/{{req.req_id}}"
           class="c-editor-actions__cancel"
@@ -164,35 +144,6 @@
             rows="6"
             placeholder="Why is this required?"
           >{{req.req_justification}}</textarea>
-        </div>
-      </section>
-
-      <section class="c-editor-section editor-section--changelog">
-        <button
-          type="button"
-          class="c-editor-collapsible__trigger"
-          data-role="changelog-toggle"
-          aria-expanded="false"
-        >
-          Changelog
-          <span class="c-editor-collapsible__hint">Optional</span>
-        </button>
-
-        <div
-          class="c-editor-collapsible__panel"
-          data-role="changelog-panel"
-          hidden
-        >
-          <textarea
-            class="c-editor-field__textarea"
-            id="version-comment"
-            placeholder="Describe what changed"
-            data-role="version-comment"
-            disabled
-          ></textarea>
-          <small class="c-editor-field__help">
-            Coming soon — jot context for reviewers when saving.
-          </small>
         </div>
       </section>
 

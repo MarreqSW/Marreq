@@ -393,18 +393,6 @@ async fn create_requirement_hierarchy() {
     assert_eq!(response.status(), Status::Ok);
     let html = response.into_string().await.expect("body");
     assert!(html.contains("Child Requirement"));
-
-    // 5. View tree view
-    let response = client
-        .get("/p/1/requirements/tree")
-        .private_cookie(session_cookie(1))
-        .dispatch()
-        .await;
-
-    assert_eq!(response.status(), Status::Ok);
-    let html = response.into_string().await.expect("body");
-    assert!(html.contains("Parent Requirement") || html.contains("REQ-"));
-    assert!(html.contains("Child Requirement") || html.contains("REQ-"));
 }
 
 // ============================================================================

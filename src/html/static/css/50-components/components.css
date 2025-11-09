@@ -73,22 +73,6 @@
   pointer-events: none;
 }
 
-.c-spinner {
-  animation: spin 1s ease-in-out infinite;
-  border: 2px solid var(--border-color);
-  border-radius: 50%;
-  border-top-color: var(--primary-color);
-  display: inline-block;
-  height: 20px;
-  width: 20px;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* Alert styles */
 .c-alert {
   border-radius: 8px;
@@ -298,96 +282,21 @@
   border-color: var(--primary-color);
 }
 
-.c-linked-requirements__list .c-linked-requirements__link .c-linked-requirements__id {
-  color: #fff;
-  font-size: 0.875rem;
-  font-weight: 600;
-  min-width: 80px;
-  text-decoration: none;
-}
-
 .c-linked-requirements__list .c-linked-requirements__link .c-linked-requirements__title {
   color: var(--text-primary);
   flex: 1;
   font-weight: 500;
 }
 
-/* Linked Tests Section */
-.c-linked-tests {
-  border-top: 1px solid var(--border-color);
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-}
-
-.c-linked-tests h4 {
-  color: var(--text-primary);
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-
-.c-linked-tests__list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.c-linked-tests__item {
-  background: var(--surface-muted);
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-  transition: all 0.2s ease;
-}
-
-.c-linked-tests__item:hover {
-  background: var(--surface-hover);
+/* Dark mode styles for linked requirements */
+[data-theme='dark'] .c-linked-requirements__link {
+  background-color: var(--surface-color);
   border-color: var(--border-color);
 }
 
-.c-test-info {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.c-test-info__id {
-  background: var(--surface-hover);
-  border-radius: 0.25rem;
-  color: var(--text-primary);
-  font-family: 'Courier New', monospace;
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-}
-
-.c-test-info__name {
-  color: var(--text-primary);
-  flex: 1;
-  font-weight: 500;
-}
-
-.c-test-info__name-link {
-  color: var(--primary-color);
-  flex: 1;
-  font-weight: 500;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.c-test-info__name-link:hover {
-  color: var(--primary-dark);
-  text-decoration: underline;
-}
-
-.c-test-info__status {
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  padding: 0.25rem 0.5rem;
-  text-transform: uppercase;
+[data-theme='dark'] .c-linked-requirements__link:hover {
+  background-color: var(--surface-accent);
+  border-color: var(--primary-light, #60a5fa);
 }
 
 /* Test status colors */
@@ -407,18 +316,4 @@
   background-color: #fee2e2;
   border: 1px solid #ef4444;
   color: #991b1b;
-}
-
-.c-portal-overview .c-portal-overview__projects {
-  gap: var(--space-4);
-}
-
-.c-portal-project-card {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.c-portal-project-card .c-card__body {
-  flex: 1 1 auto;
 }

@@ -271,7 +271,7 @@ mod tests {
         let response = get_with_session(&client, "/p/1/applicability", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
-        assert!(body.contains("APP-1"));
+        assert!(body.contains("#1"));
         assert!(body.contains("Flight"));
     }
 

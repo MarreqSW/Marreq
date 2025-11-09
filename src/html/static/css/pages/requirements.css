@@ -272,9 +272,6 @@
 
 .reqman-requirements-filter-bar__search {
   grid-area: search;
-}
-
-.reqman-requirements-filter-bar__search {
   /* anchor absolute-positioned shortcut inside the search area */
   position: relative;
 }

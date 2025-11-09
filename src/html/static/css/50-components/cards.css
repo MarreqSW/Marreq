@@ -58,17 +58,6 @@
   font-weight: 500;
 }
 
-/* Tag styling for better visibility */
-.c-requirement-card__meta-value--tag {
-  background-color: #2563eb;
-  border-radius: var(--radius-sm);
-  color: #fff;
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: var(--space-1) var(--space-2);
-}
-
 .c-requirement-card__actions {
   display: flex;
   gap: var(--space-2);

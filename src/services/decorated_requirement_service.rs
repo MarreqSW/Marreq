@@ -51,12 +51,14 @@ impl<'a> DecoratedRequirementService<'a> {
         status_filter: Option<i32>,
         verification_filter: Option<i32>,
         category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
     ) -> Result<Vec<DecoratedRequirement>, RepoError> {
         self.decorate_vec(self.requirement_service.list_by_project_filtered(
             project_id,
             status_filter,
             verification_filter,
             category_filter,
+            applicability_filter,
         )?)
     }
 

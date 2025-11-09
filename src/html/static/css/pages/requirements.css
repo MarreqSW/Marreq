@@ -252,15 +252,56 @@
 }
 
 .reqman-requirements-filter-bar {
-  align-items: center;
+  align-items: stretch;
   display: grid;
   gap: var(--space-3);
-  grid-template-columns: minmax(220px, 2fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) auto;
+  grid-template-areas:
+    'search search search search'
+    'filter1 filter2 filter3 filter4'
+    'actions actions actions actions';
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (min-width: 1280px) {
+  .reqman-requirements-filter-bar {
+    grid-template-areas:
+      'search filter1 filter2 filter3 filter4 actions';
+    grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(100px, 1fr)) auto;
+  }
+}
+
+.reqman-requirements-filter-bar__search {
+  grid-area: search;
+}
+
+.reqman-requirements-filter-bar__selects {
+  display: contents;
+}
+
+.reqman-requirements-filter-bar__select:nth-of-type(1) {
+  grid-area: filter1;
+}
+
+.reqman-requirements-filter-bar__select:nth-of-type(2) {
+  grid-area: filter2;
+}
+
+.reqman-requirements-filter-bar__select:nth-of-type(3) {
+  grid-area: filter3;
+}
+
+.reqman-requirements-filter-bar__select:nth-of-type(4) {
+  grid-area: filter4;
+}
+
+.reqman-requirements-filter-bar__actions {
+  grid-area: actions;
 }
 
 .reqman-requirements-filter-bar__search {
   align-items: center;
   display: flex;
+  grid-area: search;
   position: relative;
 }
 
@@ -694,14 +735,14 @@
   }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .reqman-requirements-filter-bar {
-    grid-auto-rows: auto;
+    grid-template-areas:
+      'search search'
+      'filter1 filter2'
+      'filter3 filter4'
+      'actions actions';
     grid-template-columns: 1fr 1fr;
-  }
-
-  .reqman-requirements-filter-bar__actions {
-    justify-content: flex-start;
   }
 }
 

@@ -40,6 +40,7 @@ impl<'a> RequirementAnalyticsService<'a> {
         status_filter: Option<i32>,
         verification_filter: Option<i32>,
         category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
     ) -> Result<RequirementMetrics, RepoError> {
         // Try to use the optimized SQL path first.
         match self.metrics_via_sql(
@@ -47,6 +48,7 @@ impl<'a> RequirementAnalyticsService<'a> {
             status_filter,
             verification_filter,
             category_filter,
+            applicability_filter,
         ) {
             Ok(metrics) => Ok(metrics),
             Err(RepoError::Pool(_)) => {
@@ -56,6 +58,7 @@ impl<'a> RequirementAnalyticsService<'a> {
                     status_filter,
                     verification_filter,
                     category_filter,
+                    applicability_filter,
                 )
             }
             Err(err) => Err(err),
@@ -68,6 +71,7 @@ impl<'a> RequirementAnalyticsService<'a> {
         status_filter: Option<i32>,
         verification_filter: Option<i32>,
         category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
     ) -> Result<RequirementMetrics, RepoError> {
         // Acquire a database connection from the underlying repository.
         let mut conn = {
@@ -92,6 +96,7 @@ impl<'a> RequirementAnalyticsService<'a> {
                AND ($2 IS NULL OR r.req_current_status = $2)
                AND ($3 IS NULL OR r.req_verification = $3)
                AND ($4 IS NULL OR r.req_category = $4)
+               AND ($5 IS NULL OR r.req_applicability = $5)
              GROUP BY status",
         );
 
@@ -100,6 +105,7 @@ impl<'a> RequirementAnalyticsService<'a> {
             .bind::<Nullable<Integer>, _>(status_filter)
             .bind::<Nullable<Integer>, _>(verification_filter)
             .bind::<Nullable<Integer>, _>(category_filter)
+            .bind::<Nullable<Integer>, _>(applicability_filter)
             .load(conn.as_mut())?;
 
         let counts = aggregated.into_iter().map(|row| (row.status, row.total));
@@ -113,6 +119,7 @@ impl<'a> RequirementAnalyticsService<'a> {
         status_filter: Option<i32>,
         verification_filter: Option<i32>,
         category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
     ) -> Result<RequirementMetrics, RepoError> {
         // Gather requirements and statuses through the cached repository.
         let repo_guard = self.state.repo_read();
@@ -141,6 +148,11 @@ impl<'a> RequirementAnalyticsService<'a> {
             }
             if let Some(filter) = category_filter {
                 if requirement.req_category != filter {
+                    continue;
+                }
+            }
+            if let Some(filter) = applicability_filter {
+                if requirement.req_applicability != filter {
                     continue;
                 }
             }
@@ -263,7 +275,7 @@ mod tests {
         let service = RequirementAnalyticsService::new(&state);
 
         let metrics = service
-            .metrics(1, None, None, None)
+            .metrics(1, None, None, None, None)
             .expect("metrics should be computed");
 
         assert_eq!(metrics.total, 4);
@@ -291,20 +303,20 @@ mod tests {
         let service = RequirementAnalyticsService::new(&state);
 
         let status_filtered = service
-            .metrics(1, Some(2), None, None)
+            .metrics(1, Some(2), None, None, None)
             .expect("status filtered metrics");
         assert_eq!(status_filtered.total, 2);
         assert_eq!(status_filtered.accepted, 2);
         assert_eq!(status_filtered.coverage_percent, 100);
 
         let verification_filtered = service
-            .metrics(1, None, Some(2), None)
+            .metrics(1, None, Some(2), None, None)
             .expect("verification filtered metrics");
         assert_eq!(verification_filtered.total, 1);
         assert_eq!(verification_filtered.accepted, 1);
 
         let category_filtered = service
-            .metrics(1, None, None, Some(10))
+            .metrics(1, None, None, Some(10), None)
             .expect("category filtered metrics");
         assert_eq!(category_filtered.total, 2);
     }

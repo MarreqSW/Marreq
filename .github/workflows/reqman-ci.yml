@@ -74,7 +74,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libclang-dev
 
       - name: Start database
-        run: docker compose -f docker-compose.yml -f .github/workflows/docker-compose.ci.yml up -d db
+        run: docker compose -f docker-compose.yml -f .github/docker-compose.ci.yml up -d db
 
       - name: Wait for database to be healthy
         run: .github/workflows/wait_for_db.sh

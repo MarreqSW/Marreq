@@ -22,7 +22,7 @@ pub async fn show_applicability(
         "applicability": apps,
     });
 
-    Ok(Template::render("applicability", ctx))
+    Ok(Template::render("applicability/applicability", ctx))
 }
 
 #[get("/<project_id>/applicability/new?<error>")]
@@ -42,7 +42,7 @@ pub async fn new_applicability(
         "error": error
     });
 
-    Ok(Template::render("new_applicability", ctx))
+    Ok(Template::render("applicability/new_applicability", ctx))
 }
 
 #[post("/<project_id>/applicability/new", data = "<form>")]
@@ -107,7 +107,7 @@ pub async fn get_edit_applicability(
         "selected_project_id": project_id,
         "error": error
     });
-    Ok(Template::render("edit_applicability", ctx))
+    Ok(Template::render("applicability/edit_applicability", ctx))
 }
 
 #[post("/<project_id>/applicability/edit/<app_id>", data = "<form>")]

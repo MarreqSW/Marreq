@@ -1,0 +1,130 @@
+{{!--
+  PARTIAL: Tree View
+  Hierarchical tree structure showing parent-child relationships
+--}}
+<section class="reqman-requirements-tree-view" id="treeView" style="display: none;" aria-live="polite">
+  {{#if tree_data}}
+  <div class="card c-card">
+    <div class="card-header c-card__header">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3 flex-grow-1">
+          <h3 class="mb-0">Requirements Hierarchy</h3>
+        </div>
+        <div class="c-tree__controls">
+          <button class="btn btn-outline-primary btn-sm c-tree__control-button" 
+                  type="button" 
+                  data-tree-expand-all
+                  title="Expand all branches (Ctrl+E)"
+                  aria-label="Expand all branches">
+            Expand All
+          </button>
+          <button class="btn btn-outline-primary btn-sm c-tree__control-button" 
+                  type="button" 
+                  data-tree-collapse-all
+                  title="Collapse all branches (Ctrl+Shift+E)"
+                  aria-label="Collapse all branches">
+            Collapse All
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body c-card__body">
+      {{!-- Search result indicator --}}
+      <div class="alert alert-info" id="treeSearchResults" style="display: none;" role="status">
+        <strong id="treeSearchCount">0</strong> matching requirements found.
+        <button type="button" class="btn-close btn-sm" aria-label="Dismiss" onclick="this.parentElement.style.display='none'"></button>
+      </div>
+
+      {{!-- Tree container with ARIA tree role --}}
+      <div class="c-tree" role="tree" aria-label="Requirements hierarchy tree">
+        <div class="c-tree__root">
+          {{#each tree_data}}
+          {{> requirements/_tree_node}}
+          {{/each}}
+        </div>
+      </div>
+
+      {{!-- No visible nodes message --}}
+      <div class="c-tree__empty-filtered" style="display: none;" role="status">
+        <div class="c-tree__empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="32" cy="32" r="30"/>
+            <path d="M20 20 L44 44 M44 20 L20 44"/>
+          </svg>
+        </div>
+        <h3>No matching requirements found</h3>
+        <p>Try adjusting your search or filters to see more results.</p>
+      </div>
+    </div>
+    <div class="card-footer c-card__footer text-muted">
+      <small>
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" class="me-1" aria-hidden="true">
+          <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+          <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+        </svg>
+        Click nodes to expand/collapse. Use arrow keys to navigate.
+        {{#if metrics.total}}
+        Showing {{metrics.visible}} of {{metrics.total}} requirements.
+        {{/if}}
+      </small>
+    </div>
+  </div>
+  {{else}}
+  {{> requirements/_empty_state}}
+  {{/if}}
+</section>
+
+<script>
+// Tree view initialization and helpers
+(function() {
+  const treeView = document.getElementById('treeView');
+  if (!treeView) return;
+
+  const treeRoot = treeView.querySelector('.c-tree');
+  const searchResultsAlert = document.getElementById('treeSearchResults');
+  const searchCountSpan = document.getElementById('treeSearchCount');
+  const emptyFilteredMessage = treeView.querySelector('.c-tree__empty-filtered');
+
+  // Update search results display
+  function updateSearchResults(count) {
+    if (searchResultsAlert && searchCountSpan) {
+      if (count > 0) {
+        searchCountSpan.textContent = count;
+        searchResultsAlert.style.display = 'block';
+      } else {
+        searchResultsAlert.style.display = 'none';
+      }
+    }
+
+    // Show/hide empty state
+    if (emptyFilteredMessage && treeRoot) {
+      const visibleNodes = treeRoot.querySelectorAll('[role="treeitem"]:not(.is-filtered-out)');
+      emptyFilteredMessage.style.display = visibleNodes.length === 0 ? 'block' : 'none';
+      treeRoot.style.display = visibleNodes.length === 0 ? 'none' : 'block';
+    }
+  }
+
+  // Expose helper for requirements.js to call
+  window.updateTreeSearchResults = updateSearchResults;
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (event) => {
+    // Only when tree view is visible
+    if (treeView.style.display === 'none') return;
+
+    if (event.ctrlKey && event.key === 'e') {
+      event.preventDefault();
+      if (event.shiftKey) {
+        // Ctrl+Shift+E: Collapse all
+        const collapseBtn = document.querySelector('[data-tree-collapse-all]');
+        collapseBtn?.click();
+      } else {
+        // Ctrl+E: Expand all
+        const expandBtn = document.querySelector('[data-tree-expand-all]');
+        expandBtn?.click();
+      }
+    }
+  });
+})();
+</script>
+

@@ -8,7 +8,6 @@ pub mod excel;
 pub mod logs;
 pub mod project;
 pub mod projects;
-pub mod tables;
 pub mod user;
 
 pub use admin::*;
@@ -16,7 +15,6 @@ pub use auth::*;
 pub use excel::*;
 pub use logs::*;
 pub use projects::*;
-pub use tables::*;
 pub use user::*;
 
 pub use cache::{
@@ -53,8 +51,6 @@ pub fn routes() -> Vec<Route> {
         auth::change_password,
         dashboard::index,
         dashboard::show_status,
-        tables::show_requirements_table,
-        tables::show_tests_table,
         projects::show_projects,
         projects::new_project,
         projects::post_project,

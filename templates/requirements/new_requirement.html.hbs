@@ -304,9 +304,9 @@
               </div>
             </div>
             <select name="req_parent" id="req_parent" class="c-custom-dropdown__hidden" hidden>
-              <option value="0" {{#if (eq ../req_parent 0)}}selected{{/if}}>None</option>
+              <option value="0" {{#if (not template.req_parent)}}selected{{/if}}>None</option>
               {{#each parent}}
-                <option value="{{id}}" {{#if (eq ../req_parent id)}}selected{{/if}}>{{title}}</option>
+                <option value="{{id}}" {{#if (eq id ../template.req_parent)}}selected{{/if}}>{{reference}} - {{title}}</option>
               {{/each}}
             </select>
           </div>

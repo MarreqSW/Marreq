@@ -1,24 +1,5 @@
 /* Utility Styles */
 
-/* Lists */
-.u-list {
-  list-style: none;
-}
-
-.u-list__item {
-  border-bottom: 1px solid var(--border-color);
-  padding: 1rem;
-  transition: background-color 0.2s ease;
-}
-
-.u-list__item:hover {
-  background-color: var(--surface-muted);
-}
-
-.u-list__item:last-child {
-  border-bottom: none;
-}
-
 /* Grid Layout */
 .o-grid {
   display: grid;
@@ -43,9 +24,7 @@
   text-align: center;
 }
 
-.u-text-right,
-[class~="text-right"],
-[class~="text-end"] {
+.u-text-right {
   text-align: right;
 }
 
@@ -82,7 +61,6 @@
 
 .u-font-medium,
 [class~="font-medium"],
-[class~="fw-medium"],
 [class~="fw-semibold"] {
   font-weight: 500;
 }

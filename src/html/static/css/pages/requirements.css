@@ -298,13 +298,6 @@
   grid-area: actions;
 }
 
-.reqman-requirements-filter-bar__search {
-  align-items: center;
-  display: flex;
-  grid-area: search;
-  position: relative;
-}
-
 .reqman-requirements-filter-bar__search-input {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -331,10 +324,6 @@
   right: var(--space-2);
 }
 
-.reqman-requirements-filter-bar__selects {
-  display: contents;
-}
-
 .reqman-requirements-filter-bar__select {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -347,13 +336,6 @@
 .reqman-requirements-filter-bar__select:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgb(37 99 235 / 0.15);
-}
-
-.reqman-requirements-filter-bar__actions {
-  align-items: center;
-  display: inline-flex;
-  gap: var(--space-2);
-  justify-content: flex-end;
 }
 
 .reqman-requirements-filter-bar__clear {

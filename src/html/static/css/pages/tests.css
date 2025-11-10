@@ -599,8 +599,8 @@
   }
 
   .c-test-card {
-    break-inside: avoid;
     box-shadow: none;
+    break-inside: avoid;
     page-break-inside: avoid;
   }
 }

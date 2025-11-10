@@ -149,7 +149,7 @@ async fn show_test_id(
     }
 
     Ok(Template::render(
-        "tests/test_by_id",
+        "tests/test",
         serde_json::Value::Object(ctx_map),
     ))
 }
@@ -282,7 +282,7 @@ async fn get_edit_test(
     #[cfg(debug_assertions)]
     println!("Tests: {:#}", ctx);
 
-    Ok(Template::render("tests/edit_test_by_id", ctx))
+    Ok(Template::render("tests/edit_test", ctx))
 }
 
 #[post("/<project_id>/tests/edit/<test_id>", data = "<edit_test_form>")]

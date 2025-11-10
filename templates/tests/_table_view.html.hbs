@@ -100,7 +100,7 @@
                 </svg>
                 <span class="u-visually-hidden">Edit</span>
               </a>
-              {{#if (or (eq test_status_id 1) (eq test_status_id 2) ../user.is_admin)}}
+              {{#if (or (eq test_status "Passed") (eq test_status "Failed") ../user.is_admin)}}
               <button
                 type="button"
                 class="reqman-requirements-row__action reqman-requirements-row__action--icon reqman-requirements-row__action--danger"

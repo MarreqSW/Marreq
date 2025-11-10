@@ -253,7 +253,7 @@
   background-color: var(--primary-light);
 }
 
-[data-theme='dark'] .c-button--primary:hover:not(:disabled) {
+[data-theme='dark'] .c-button--primary:hover {
   background-color: var(--primary-color);
 }
 
@@ -262,7 +262,7 @@
   color: var(--text-secondary);
 }
 
-[data-theme='dark'] .c-button--outline:hover:not(:disabled) {
+[data-theme='dark'] .c-button--outline:hover {
   background-color: var(--surface-hover);
   border-color: var(--primary-light);
   color: var(--primary-light);

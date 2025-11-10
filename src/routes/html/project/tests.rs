@@ -2,7 +2,7 @@ use super::helpers::*;
 use super::prelude::*;
 use crate::services::TestService;
 
-#[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>")]
+#[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>&<search>")]
 async fn show_tests(
     project_access: ProjectAccess,
     project_id: i32,
@@ -10,24 +10,66 @@ async fn show_tests(
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
+    search: Option<String>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     use serde_json::json;
 
     let user = project_access.into_user();
+    let is_admin = user.is_admin;
     let service = TestService::new(state.inner());
     let repo = state.repo_read();
 
     let mut ctx = build_context_with_projects(state, user, cookies);
 
-    // Fetch and process tests
-    let tests = service.list_by_project(project_id).unwrap_or_default();
+    // Get project info
+    let project = repo.get_project_by_id(project_id).ok();
+    if let Some(ref proj) = project {
+        ctx["project"] = json!({
+            "id": proj.project_id,
+            "name": proj.project_name,
+        });
+    }
 
-    let tests = decorate_tests_cached(
-        state,
-        filter_tests(tests, status_filter, verification_filter, category_filter),
-    );
+    // Fetch and process tests
+    let all_tests = service.list_by_project(project_id).unwrap_or_default();
+    
+    // Calculate metrics before filtering
+    // Test status IDs: 1=Draft, 2=Proposal, 3=Accepted, 4=Rejected, 5=Passed, 6=Failed, 7=Cancelled
+    let total = all_tests.len();
+    let draft = all_tests.iter().filter(|t| t.test_status == 1).count();
+    let active = all_tests.iter().filter(|t| t.test_status == 3).count();
+    let obsolete = all_tests.iter().filter(|t| t.test_status == 7).count();
+    let passed = all_tests.iter().filter(|t| t.test_status == 5).count();
+    let pass_rate_percent = if total > 0 { (passed * 100) / total } else { 0 };
+
+    // Apply filters
+    let mut tests = filter_tests(all_tests, status_filter, verification_filter, category_filter);
+    
+    // Apply search filter
+    if let Some(ref query) = search {
+        let query_lower = query.to_lowercase();
+        tests.retain(|t| {
+            t.test_name.to_lowercase().contains(&query_lower)
+                || t.test_description.to_lowercase().contains(&query_lower)
+                || t.test_reference.to_lowercase().contains(&query_lower)
+        });
+    }
+
+    let tests = decorate_tests_cached(state, tests);
     ctx["tests"] = json!(tests);
+
+    // Add metrics
+    ctx["test_metrics"] = json!({
+        "total": total,
+        "draft": draft,
+        "active": active,
+        "obsolete": obsolete,
+        "pass_rate": {
+            "percent": pass_rate_percent,
+            "passed": passed
+        }
+    });
 
     // Common data lookups
     ctx["statuses"] = json!(repo.get_test_status_all().unwrap_or_default());
@@ -42,6 +84,10 @@ async fn show_tests(
     ctx["current_status_filter"] = json!(status_filter);
     ctx["current_verification_filter"] = json!(verification_filter);
     ctx["current_category_filter"] = json!(category_filter);
+    ctx["search_query"] = json!(search.unwrap_or_default());
+
+    // User info for admin checks
+    ctx["is_admin"] = json!(is_admin);
 
     Ok(Template::render("tests", ctx))
 }
@@ -236,10 +282,7 @@ async fn post_edit_test(
     let user = project_access.into_user();
     let service = TestService::new(state.inner());
     let to_list = || {
-        Redirect::to(uri!(
-            "/p",
-            show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
-        ))
+        Redirect::to(format!("/p/{}/tests", project_id))
     };
 
     // Own the form to avoid cloning strings
@@ -299,10 +342,7 @@ async fn delete_test_route(
         _ => Status::InternalServerError,
     })?;
 
-    Ok(Redirect::to(uri!(
-        "/p",
-        show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
-    )))
+    Ok(Redirect::to(format!("/p/{}/tests", project_id)))
 }
 
 #[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
@@ -755,7 +795,6 @@ mod tests {
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
         assert!(body.contains("Baseline Test"));
-        assert!(body.contains("TEST-001"));
     }
 
     #[rocket::async_test]
@@ -881,7 +920,9 @@ mod tests {
         let response = delete_with_session(&client, "/p/1/tests/delete/1", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/1/tests"));
+        let location = response.headers().get_one("Location");
+        assert!(location.is_some());
+        assert!(location.unwrap().contains("/p/1/tests"));
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");

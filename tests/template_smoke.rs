@@ -97,7 +97,6 @@ fn register_templates(hb: &mut Handlebars) {
             "requirements_table",
             "templates/requirements/_table_view.html.hbs",
         ),
-        ("tests_table", "templates/tests_table.html.hbs"),
         ("projects", "templates/projects.html.hbs"),
         ("project", "templates/project.html.hbs"),
     ];
@@ -215,39 +214,6 @@ fn render_core_templates() {
             }),
         )
         .expect("render requirements_table.html.hbs");
-
-    handlebars
-        .render(
-            "tests_table",
-            &json!({
-                "user": user,
-                "selected_project_id": 1,
-                "statuses": [
-                    { "test_st_id": 1, "test_st_title": "Draft" }
-                ],
-                "verifications": [
-                    { "verification_id": 1, "verification_name": "Analysis" }
-                ],
-                "categories": [
-                    { "cat_id": 1, "cat_title": "General" }
-                ],
-                "tests": [
-                    {
-                        "test_id": 201,
-                        "test_name": "Sample Test",
-                        "test_reference": "TST-201",
-                        "test_description": "Smoke test entry",
-                        "test_status_id": 1,
-                        "test_source": "Manual",
-                        "test_parent_id": 0
-                    }
-                ],
-                "current_status_filter": "",
-                "current_verification_filter": "",
-                "current_category_filter": ""
-            }),
-        )
-        .expect("render tests_table.html.hbs");
 
     handlebars
         .render(

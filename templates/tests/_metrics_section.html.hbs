@@ -1,0 +1,50 @@
+{{!--
+  PARTIAL: Metrics Section
+  Dashboard cards showing test health statistics
+--}}
+<section class="reqman-requirements-metrics" aria-label="Test health">
+  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--total">
+    <span class="reqman-requirements-metric-card__label">Total</span>
+    <span class="reqman-requirements-metric-card__value">{{test_metrics.total}}</span>
+    <span class="reqman-requirements-metric-card__hint">Tracked tests</span>
+  </article>
+  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--draft">
+    <span class="reqman-requirements-metric-card__label">Draft</span>
+    <span class="reqman-requirements-metric-card__value">{{test_metrics.draft}}</span>
+    <span class="reqman-requirements-metric-card__badge">In progress</span>
+  </article>
+  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--accepted">
+    <span class="reqman-requirements-metric-card__label">Active</span>
+    <span class="reqman-requirements-metric-card__value">{{test_metrics.active}}</span>
+    <span class="reqman-requirements-metric-card__badge">Ready to run</span>
+  </article>
+  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--rejected">
+    <span class="reqman-requirements-metric-card__label">Obsolete</span>
+    <span class="reqman-requirements-metric-card__value">{{test_metrics.obsolete}}</span>
+    <span class="reqman-requirements-metric-card__badge">Deprecated</span>
+  </article>
+  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--coverage">
+    <div class="reqman-requirements-metric-card__header">
+      <span class="reqman-requirements-metric-card__label">Pass Rate</span>
+      <span class="reqman-requirements-metric-card__value">{{test_metrics.pass_rate.percent}}%</span>
+    </div>
+    <div class="reqman-requirements-metric-card__progress">
+      <div
+        class="reqman-requirements-metric-card__progress-bar"
+        style="width: {{test_metrics.pass_rate.percent}}%;"
+        aria-valuenow="{{test_metrics.pass_rate.percent}}"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        role="progressbar">
+      </div>
+    </div>
+    <span class="reqman-requirements-metric-card__hint">
+      {{test_metrics.pass_rate.passed}} passed of {{test_metrics.total}}
+    </span>
+  </article>
+</section>
+
+{{!-- Expose metrics for tests and client-side initialization --}}
+<script id="test_metrics" type="application/json">
+  {"total": {{test_metrics.total}}, "draft": {{test_metrics.draft}}, "active": {{test_metrics.active}}, "obsolete": {{test_metrics.obsolete}}, "pass_rate_percent": {{test_metrics.pass_rate.percent}}, "pass_rate_passed": {{test_metrics.pass_rate.passed}}}
+</script>

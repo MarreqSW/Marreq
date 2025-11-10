@@ -8,27 +8,27 @@ This document summarizes the implementation of canonical status enums for Requir
 
 ### Requirement Statuses
 
-Following `init_complete.sql`, requirements have 6 possible statuses:
+Requirements have 6 possible statuses:
 
-| ID | Title      | Short | Description                                          | Editable by User | Counts for Coverage |
-|----|------------|-------|------------------------------------------------------|------------------|---------------------|
-| 1  | Draft      | Drf   | Still being edited and developed                     | ✓                | ✗                   |
-| 2  | Proposal   | Pro   | Proposed and awaiting approval                       | ✓                | ✗                   |
-| 3  | Accepted   | Acc   | Accepted and must be processed                       | ✗                | ✓                   |
-| 4  | Rejected   | Rej   | Not accepted, needs revision                         | ✗                | ✗                   |
-| 5  | Cancelled  | Can   | Cancelled, will not be implemented                   | ✗                | ✗                   |
-| 6  | Finished   | Fsh   | Finished and completed                               | ✗                | ✗                   |
+| ID | Title      | Short | Description                                          |
+|----|------------|-------|------------------------------------------------------|
+| 1  | Draft      | Drf   | Still being edited and developed                     |
+| 2  | Proposal   | Pro   | Proposed and awaiting approval                       |
+| 3  | Accepted   | Acc   | Accepted and must be processed                       |
+| 4  | Rejected   | Rej   | Not accepted, needs revision                         |
+| 5  | Cancelled  | Can   | Cancelled, will not be implemented                   |
+| 6  | Finished   | Fsh   | Finished and completed                               |
 
 ### Test Statuses
 
-Following `init_complete.sql`, tests have 4 possible statuses:
+Tests have 4 possible statuses:
 
-| ID | Title       | Short | Description                           | Deletable |
-|----|-------------|-------|---------------------------------------|-----------|
-| 1  | Passed      | Pass  | Test passed all criteria              | ✓         |
-| 2  | Failed      | Fail  | Test failed one or more criteria      | ✓         |
-| 3  | Pending     | Pend  | Test is pending execution             | ✗         |
-| 4  | In Progress | Prog  | Test is currently being executed      | ✗         |
+| ID | Title       | Short | Description                           |
+|----|-------------|-------|---------------------------------------|
+| 1  | Passed      | Pass  | Test passed all criteria              |
+| 2  | Failed      | Fail  | Test failed one or more criteria      |
+| 3  | Pending     | Pend  | Test is pending execution             |
+| 4  | In Progress | Prog  | Test is currently being executed      |
 
 ## Coverage Calculation
 

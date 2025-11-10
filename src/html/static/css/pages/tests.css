@@ -564,7 +564,7 @@
 }
 
 [data-theme='dark'] .c-test-card__requirement-link:hover {
-  background: var(--surface-accent);
+  background: var(--surface-hover);
   border-color: var(--primary-light);
 }
 

@@ -119,13 +119,6 @@
   color: var(--text-primary);
 }
 
-[data-theme='dark'] .c-list-group-item--action:hover,
-[data-theme='dark'] .c-list-group-item--action:focus {
-  background-color: var(--surface-hover);
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-
 [data-theme='dark'] .c-requirement-card__id {
   background-color: var(--primary-light);
   color: #0f172a;
@@ -148,25 +141,26 @@
 }
 
 /* Bootstrap list-group dark mode overrides */
-[data-theme='dark'] .list-group-item {
+[data-theme='dark'] .c-list-group-item {
   background-color: var(--surface-color);
   border-color: var(--border-color);
   color: var(--text-primary);
 }
 
-[data-theme='dark'] .list-group-item-action:hover,
-[data-theme='dark'] .list-group-item-action:focus {
+[data-theme='dark'] .c-list-group-item--action:hover,
+[data-theme='dark'] .c-list-group-item--action:focus {
   background-color: var(--surface-hover);
-  color: var(--text-primary);
-}
-
-[data-theme='dark'] .list-group-item .badge.bg-light {
-  background-color: var(--surface-muted) !important;
   border-color: var(--border-color);
   color: var(--text-primary);
 }
 
-[data-theme='dark'] .list-group-item .text-muted {
-  color: var(--text-secondary) !important;
+[data-theme='dark'] .c-list-group-item .c-badge--bg-light {
+  background-color: var(--surface-muted);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .c-list-group-item .c-text--muted {
+  color: var(--text-secondary);
 }
 

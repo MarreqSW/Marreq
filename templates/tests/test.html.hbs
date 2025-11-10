@@ -9,17 +9,6 @@
             <span class="badge rounded-pill text-bg-dark fs-5" aria-label="Test reference">{{test_reference}}</span>
             <h1 class="h4 mb-0 text-break">{{test_name}}</h1>
           </div>
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            {{#if test_status}}
-              {{#if (eq test_status "passed")}}
-                <span class="badge" style="background-color: #d4edda; color: #155724;">Passed</span>
-              {{else if (eq test_status "failed")}}
-                <span class="badge bg-danger">Failed</span>
-              {{else}}
-                <span class="badge bg-secondary">{{test_status}}</span>
-              {{/if}}
-            {{/if}}
-          </div>
           <nav class="ms-lg-auto" aria-label="Test actions">
             <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
               <a href="/p/{{selected_project_id}}/tests/edit/{{test_id}}"
@@ -108,6 +97,15 @@
       <section class="card shadow-sm border-0 requirement-main-card mb-3">
         <div class="card-header requirement-card-header border-0 d-flex justify-content-between align-items-center">
           <div class="text-uppercase small text-muted">Verification</div>
+          {{#if test_status}}
+            {{#if (eq test_status "passed")}}
+              <span class="badge" style="background-color: #d4edda; color: #155724;">Passed</span>
+            {{else if (eq test_status "failed")}}
+              <span class="badge bg-danger">Failed</span>
+            {{else}}
+              <span class="badge bg-secondary">{{test_status}}</span>
+            {{/if}}
+          {{/if}}
         </div>
         <div class="card-body">
           <div class="d-flex flex-column gap-2">
@@ -127,7 +125,13 @@
                 <span class="fw-semibold">REQ-{{req_id}}</span>
                 <span class="small text-muted ms-2">{{req_title}}</span>
               </div>
-              <span class="badge bg-light text-dark border">View</span>
+              {{#if req_category}}
+                <span class="badge bg-secondary">{{req_category}}</span>
+              {{else if req_applicability}}
+                <span class="badge bg-info">{{req_applicability}}</span>
+              {{else}}
+                <span class="badge bg-light text-dark border">—</span>
+              {{/if}}
             </a>
             {{/each}}
           </div>

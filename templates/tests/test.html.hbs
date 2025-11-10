@@ -122,10 +122,10 @@
           <h5 class="mb-3">Linked Requirements</h5>
           <div class="list-group list-group-flush">
             {{#each linked_requirements}}
-            <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-start">
+            <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
               <div class="me-3">
-                <div class="fw-semibold">REQ-{{req_id}}</div>
-                <div class="small text-muted">{{req_title}}</div>
+                <span class="fw-semibold">REQ-{{req_id}}</span>
+                <span class="small text-muted ms-2">{{req_title}}</span>
               </div>
               <span class="badge bg-light text-dark border">View</span>
             </a>

@@ -103,7 +103,7 @@ async fn show_tests(
     // User info for admin checks
     ctx["is_admin"] = json!(is_admin);
 
-    Ok(Template::render("tests", ctx))
+    Ok(Template::render("tests/tests", ctx))
 }
 
 #[get("/<project_id>/tests/show/<test_id>")]
@@ -149,7 +149,7 @@ async fn show_test_id(
     }
 
     Ok(Template::render(
-        "test_by_id",
+        "tests/test_by_id",
         serde_json::Value::Object(ctx_map),
     ))
 }
@@ -181,7 +181,7 @@ async fn new_test(
     ctx["selected_project_id"] = json!(project_id);
     ctx["error"] = json!(error);
 
-    Ok(Template::render("new_test", ctx))
+    Ok(Template::render("tests/new_test", ctx))
 }
 
 #[post("/<project_id>/tests/new", data = "<new_test>")]
@@ -282,7 +282,7 @@ async fn get_edit_test(
     #[cfg(debug_assertions)]
     println!("Tests: {:#}", ctx);
 
-    Ok(Template::render("edit_test_by_id", ctx))
+    Ok(Template::render("tests/edit_test_by_id", ctx))
 }
 
 #[post("/<project_id>/tests/edit/<test_id>", data = "<edit_test_form>")]

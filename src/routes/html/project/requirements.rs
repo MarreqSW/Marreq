@@ -284,8 +284,9 @@ async fn show_requirement_id(
             .iter()
             .fold((0_i32, 0_i32, 0_i32), |mut acc, test| {
                 // Use enum to properly identify test status
-                if let Some(status_enum) = 
-                    crate::status_enums::TestStatusEnum::from_title(&test.test_status) {
+                if let Some(status_enum) =
+                    crate::status_enums::TestStatusEnum::from_title(&test.test_status)
+                {
                     match status_enum {
                         crate::status_enums::TestStatusEnum::Passed => acc.0 += 1,
                         crate::status_enums::TestStatusEnum::Failed => acc.1 += 1,
@@ -487,7 +488,7 @@ async fn delete_requirement_route(
     let is_editable = RequirementStatusEnum::from_id(req.req_current_status)
         .map(|status| status.is_editable_by_user())
         .unwrap_or(false);
-    
+
     if !is_editable && !user.is_admin {
         return Err(rocket::http::Status::Forbidden);
     }

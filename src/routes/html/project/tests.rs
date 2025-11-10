@@ -35,7 +35,7 @@ async fn show_tests(
 
     // Fetch and process tests
     let all_tests = service.list_by_project(project_id).unwrap_or_default();
-    
+
     // Calculate metrics before filtering
     // Using enum definitions for test statuses: Passed=1, Failed=2, Pending=3, InProgress=4
     let total = all_tests.len();
@@ -58,8 +58,13 @@ async fn show_tests(
     let pass_rate_percent = if total > 0 { (passed * 100) / total } else { 0 };
 
     // Apply filters
-    let mut tests = filter_tests(all_tests, status_filter, verification_filter, category_filter);
-    
+    let mut tests = filter_tests(
+        all_tests,
+        status_filter,
+        verification_filter,
+        category_filter,
+    );
+
     // Apply search filter
     if let Some(ref query) = search {
         let query_lower = query.to_lowercase();
@@ -298,9 +303,7 @@ async fn post_edit_test(
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
     let service = TestService::new(state.inner());
-    let to_list = || {
-        Redirect::to(format!("/p/{}/tests", project_id))
-    };
+    let to_list = || Redirect::to(format!("/p/{}/tests", project_id));
 
     // Own the form to avoid cloning strings
     let f = edit_test_form.into_inner();
@@ -354,7 +357,7 @@ async fn delete_test_route(
     let is_deletable = TestStatusEnum::from_id(test.test_status)
         .map(|status| matches!(status, TestStatusEnum::Passed | TestStatusEnum::Failed))
         .unwrap_or(false);
-    
+
     if !is_deletable && !user.is_admin {
         return Err(Status::Forbidden);
     }

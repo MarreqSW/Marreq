@@ -190,7 +190,7 @@ impl<'a> RequirementAnalyticsService<'a> {
         // Tally totals and the statuses we care about.
         for (status, count) in counts {
             metrics.total += count;
-            
+
             // Use the enum to determine status type consistently
             if let Some(status_enum) = RequirementStatusEnum::from_title(&status) {
                 match status_enum {

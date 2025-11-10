@@ -252,10 +252,7 @@ impl TestStatusEnum {
 
     /// Check if the test is in an active execution state.
     pub fn is_active(&self) -> bool {
-        matches!(
-            self,
-            TestStatusEnum::InProgress | TestStatusEnum::Pending
-        )
+        matches!(self, TestStatusEnum::InProgress | TestStatusEnum::Pending)
     }
 }
 

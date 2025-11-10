@@ -1,6 +1,7 @@
 use super::helpers::*;
 use super::prelude::*;
 use crate::services::TestService;
+use crate::status_enums::TestStatusEnum;
 
 #[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>&<search>")]
 async fn show_tests(
@@ -35,12 +36,24 @@ async fn show_tests(
     let all_tests = service.list_by_project(project_id).unwrap_or_default();
     
     // Calculate metrics before filtering
-    // Test status IDs: 1=Draft, 2=Proposal, 3=Accepted, 4=Rejected, 5=Passed, 6=Failed, 7=Cancelled
+    // Using enum definitions for test statuses: Passed=1, Failed=2, Pending=3, InProgress=4
     let total = all_tests.len();
-    let draft = all_tests.iter().filter(|t| t.test_status == 1).count();
-    let active = all_tests.iter().filter(|t| t.test_status == 3).count();
-    let obsolete = all_tests.iter().filter(|t| t.test_status == 7).count();
-    let passed = all_tests.iter().filter(|t| t.test_status == 5).count();
+    let passed = all_tests
+        .iter()
+        .filter(|t| t.test_status == TestStatusEnum::Passed.id())
+        .count();
+    let failed = all_tests
+        .iter()
+        .filter(|t| t.test_status == TestStatusEnum::Failed.id())
+        .count();
+    let pending = all_tests
+        .iter()
+        .filter(|t| t.test_status == TestStatusEnum::Pending.id())
+        .count();
+    let in_progress = all_tests
+        .iter()
+        .filter(|t| t.test_status == TestStatusEnum::InProgress.id())
+        .count();
     let pass_rate_percent = if total > 0 { (passed * 100) / total } else { 0 };
 
     // Apply filters
@@ -62,9 +75,10 @@ async fn show_tests(
     // Add metrics
     ctx["test_metrics"] = json!({
         "total": total,
-        "draft": draft,
-        "active": active,
-        "obsolete": obsolete,
+        "passed": passed,
+        "failed": failed,
+        "pending": pending,
+        "in_progress": in_progress,
         "pass_rate": {
             "percent": pass_rate_percent,
             "passed": passed
@@ -332,8 +346,13 @@ async fn delete_test_route(
 
     let test = service.get_by_id(test_id).map_err(|_| Status::NotFound)?;
 
-    // allow only Draft(1) or Proposal(2) unless admin
-    if test.test_status > 2 && !user.is_admin {
+    // Permission gate: only allow deletion of tests in Passed or Failed status, or if admin
+    // Using enum to check if the test is in a deletable state
+    let is_deletable = TestStatusEnum::from_id(test.test_status)
+        .map(|status| matches!(status, TestStatusEnum::Passed | TestStatusEnum::Failed))
+        .unwrap_or(false);
+    
+    if !is_deletable && !user.is_admin {
         return Err(Status::Forbidden);
     }
 

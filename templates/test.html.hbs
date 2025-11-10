@@ -1,28 +1,23 @@
-
 <div class="card requirement-card c-card c-requirement-card">
   <div class="card-body c-card__body">
     <div class="requirement-header">
       <div>
-        <a href="/p/{{@root.selected_project_id}}/tests/show/{{test_id}}" class="requirement-id c-requirement-card__id">{{test_reference}}</a>
+        <a href="/p/{{@root.selected_project_id}}/tests/show/{{test_id}}"
+          class="requirement-id c-requirement-card__id">{{test_reference}}</a>
         <h3 class="requirement-title c-linked-requirements__title">{{test_name}}</h3>
       </div>
       <div class="requirement-actions c-requirement-card__actions">
         <a href="/p/{{@root.selected_project_id}}/tests/edit/{{test_id}}" class="btn btn-outline btn-sm">Edit</a>
-        {{#if (or (eq test_status_id 1) (eq test_status_id 2) ../user.is_admin)}}
-          <button
-            class="btn btn-danger btn-sm"
-            type="button"
-            data-action="delete-test"
-            data-project-id="{{@root.selected_project_id}}"
-            data-test-id="{{test_id}}"
-            data-test-name="{{test_name}}"
-          >Delete</button>
+        {{#if (or (eq test_status "Passed") (eq test_status "Failed") ../user.is_admin)}}
+        <button class="btn btn-danger btn-sm" type="button" data-action="delete-test"
+          data-project-id="{{@root.selected_project_id}}" data-test-id="{{test_id}}"
+          data-test-name="{{test_name}}">Delete</button>
         {{/if}}
       </div>
     </div>
-    
+
     <p class="requirement-description">{{test_description}}</p>
-    
+
     <div class="requirement-meta">
       <div class="meta-item">
         <span class="meta-label">Source</span>
@@ -36,21 +31,22 @@
         <span class="meta-label">Parent</span>
         <span class="meta-value c-requirement-card__meta-value">
           {{#if test_parent_id}}
-            <a href="/p/{{@root.selected_project_id}}/tests/show/{{test_parent_id}}">{{test_parent_title}}</a>
+          <a href="/p/{{@root.selected_project_id}}/tests/show/{{test_parent_id}}">{{test_parent_title}}</a>
           {{else}}
-            None
+          None
           {{/if}}
         </span>
       </div>
     </div>
-    
+
     {{#if linked_requirements}}
     <div class="linked-requirements c-linked-requirements">
       <h4>Linked Requirements</h4>
       <div class="requirements-list c-linked-requirements__list">
         {{#each linked_requirements}}
         <div class="requirement-link c-linked-requirements__link">
-          <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="requirement-id c-requirement-card__id">REQ-{{req_id}}</a>
+          <a href="/p/{{project_id}}/requirements/show/{{req_id}}"
+            class="requirement-id c-requirement-card__id">REQ-{{req_id}}</a>
           <span class="requirement-title c-linked-requirements__title">{{req_title}}</span>
         </div>
         {{/each}}
@@ -60,6 +56,6 @@
   </div>
 </div>
 {{!--
-  Depends on: css/50-components/cards.css, js/app.js (delete-test)
-  Dynamic classes: status-{{test_status}}
+Depends on: css/50-components/cards.css, js/app.js (delete-test)
+Dynamic classes: status-{{test_status}}
 --}}

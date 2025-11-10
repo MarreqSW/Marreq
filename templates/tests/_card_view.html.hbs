@@ -1,18 +1,14 @@
 {{!--
-  PARTIAL: Card View
-  Modern card-based layout for test browsing
+PARTIAL: Card View
+Modern card-based layout for test browsing
 --}}
 <section class="reqman-requirements-cards-section" id="cardView" aria-live="polite">
   {{#if tests}}
   <div class="reqman-requirements-cards-grid">
     {{#each tests}}
-    <article 
-      class="reqman-requirement-card"
-      data-test-id="{{test_id}}"
-      data-status-id="{{test_status_id}}"
-      data-status-label="{{test_status}}"
-      data-source="{{test_source}}">
-      
+    <article class="reqman-requirement-card" data-test-id="{{test_id}}" data-status-id="{{test_status_id}}"
+      data-status-label="{{test_status}}" data-source="{{test_source}}">
+
       {{!-- Card Header: Reference and Status --}}
       <header class="reqman-requirement-card__header">
         <div class="reqman-requirement-card__reference">
@@ -20,10 +16,8 @@
             {{#if test_reference}}{{test_reference}}{{else}}TEST-{{test_id}}{{/if}}
           </span>
         </div>
-        <span
-          class="reqman-requirements-status-badge reqman-requirements-status-badge--{{test_status}}"
-          data-status-id="{{test_status_id}}"
-          data-status="{{test_status}}">
+        <span class="reqman-requirements-status-badge reqman-requirements-status-badge--{{test_status}}"
+          data-status-id="{{test_status_id}}" data-status="{{test_status}}">
           {{test_status}}
         </span>
       </header>
@@ -31,9 +25,7 @@
       {{!-- Card Body: Title and Description --}}
       <div class="reqman-requirement-card__body">
         <h3 class="reqman-requirement-card__title">
-          <a 
-            href="/p/{{../project.id}}/tests/show/{{test_id}}"
-            class="reqman-requirement-card__title-link">
+          <a href="/p/{{../project.id}}/tests/show/{{test_id}}" class="reqman-requirement-card__title-link">
             {{test_name}}
           </a>
         </h3>
@@ -48,25 +40,33 @@
       <div class="reqman-requirement-card__metadata" data-badge-rail>
         <div class="reqman-requirement-card__badge-rail">
           {{#if test_category}}
-          <span class="reqman-requirement-card__badge reqman-requirement-card__badge--category" data-badge title="Category: {{test_category}}">
-            <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm8.5 9.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V11.5z"/>
+          <span class="reqman-requirement-card__badge reqman-requirement-card__badge--category" data-badge
+            title="Category: {{test_category}}">
+            <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor"
+              viewBox="0 0 16 16">
+              <path
+                d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm8.5 9.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V11.5z" />
             </svg>
             {{test_category}}
           </span>
           {{/if}}
           {{#if test_source}}
-          <span class="reqman-requirement-card__badge reqman-requirement-card__badge--verification" data-badge title="Source: {{test_source}}">
-            <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z"/>
+          <span class="reqman-requirement-card__badge reqman-requirement-card__badge--verification" data-badge
+            title="Source: {{test_source}}">
+            <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor"
+              viewBox="0 0 16 16">
+              <path
+                d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z" />
             </svg>
             {{test_source}}
           </span>
           {{/if}}
           {{#if test_parent_title}}
-          <span class="reqman-requirement-card__badge reqman-requirement-card__badge--parent" data-badge title="Parent: {{test_parent_title}}">
-            <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M1 0a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5v-1H2v-1h4v-9H2V2h4v3h9a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1H1z"/>
+          <span class="reqman-requirement-card__badge reqman-requirement-card__badge--parent" data-badge
+            title="Parent: {{test_parent_title}}">
+            <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor"
+              viewBox="0 0 16 16">
+              <path d="M1 0a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5v-1H2v-1h4v-9H2V2h4v3h9a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1H1z" />
             </svg>
             {{test_parent_title}}
           </span>
@@ -80,39 +80,34 @@
         <div class="reqman-requirement-card__info">
           <!-- Reserved for future metadata like dates, authors -->
         </div>
-        
+
         <div class="reqman-requirement-card__actions">
-          <a 
-            href="/p/{{../project.id}}/tests/show/{{test_id}}" 
-            class="reqman-requirement-card__action reqman-requirement-card__action--primary"
-            title="View details">
+          <a href="/p/{{../project.id}}/tests/show/{{test_id}}"
+            class="reqman-requirement-card__action reqman-requirement-card__action--primary" title="View details">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
-              <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+              <path
+                d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z" />
+              <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z" />
             </svg>
             <span class="u-visually-hidden">View</span>
           </a>
-          <a 
-            href="/p/{{../project.id}}/tests/edit/{{test_id}}" 
-            class="reqman-requirement-card__action"
+          <a href="/p/{{../project.id}}/tests/edit/{{test_id}}" class="reqman-requirement-card__action"
             title="Edit test">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/>
+              <path
+                d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z" />
             </svg>
             <span class="u-visually-hidden">Edit</span>
           </a>
-          {{#if (or (eq test_status_id 1) (eq test_status_id 2) ../user.is_admin)}}
-          <button 
-            type="button"
-            class="reqman-requirement-card__action reqman-requirement-card__action--danger"
-            data-action="delete-test"
-            data-project-id="{{../project.id}}"
-            data-test-id="{{test_id}}"
-            data-test-name="{{test_name}}"
-            title="Delete test">
+          {{#if (or (eq test_status "Passed") (eq test_status "Failed") ../user.is_admin)}}
+          <button type="button" class="reqman-requirement-card__action reqman-requirement-card__action--danger"
+            data-action="delete-test" data-project-id="{{../project.id}}" data-test-id="{{test_id}}"
+            data-test-name="{{test_name}}" title="Delete test">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-              <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+              <path
+                d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+              <path fill-rule="evenodd"
+                d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
             </svg>
             <span class="u-visually-hidden">Delete</span>
           </button>
@@ -122,12 +117,14 @@
     </article>
     {{/each}}
   </div>
-  
+
   {{!-- Pagination --}}
   <nav class="reqman-requirements-pagination" aria-label="Tests pagination">
-    <button type="button" class="reqman-requirements-pagination__button is-disabled" disabled aria-disabled="true">Prev</button>
+    <button type="button" class="reqman-requirements-pagination__button is-disabled" disabled
+      aria-disabled="true">Prev</button>
     <span class="reqman-requirements-pagination__status">All {{test_metrics.total}} tests</span>
-    <button type="button" class="reqman-requirements-pagination__button is-disabled" disabled aria-disabled="true">Next</button>
+    <button type="button" class="reqman-requirements-pagination__button is-disabled" disabled
+      aria-disabled="true">Next</button>
   </nav>
   {{else}}
   {{> tests/_empty_state}}

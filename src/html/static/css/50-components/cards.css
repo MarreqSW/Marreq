@@ -147,3 +147,26 @@
   color: var(--primary-light);
 }
 
+/* Bootstrap list-group dark mode overrides */
+[data-theme='dark'] .list-group-item {
+  background-color: var(--surface-color);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .list-group-item-action:hover,
+[data-theme='dark'] .list-group-item-action:focus {
+  background-color: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .list-group-item .badge.bg-light {
+  background-color: var(--surface-muted) !important;
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .list-group-item .text-muted {
+  color: var(--text-secondary) !important;
+}
+

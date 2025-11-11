@@ -1,0 +1,11 @@
+/**
+ * Applicability Page
+ * 
+ * Page-specific styles for the applicability list page.
+ * Inherits layout from the list-page component (50-components/list-page.css).
+ * 
+ * The page now uses the shared .reqman-list-page component classes.
+ * Add applicability-specific styling overrides below as needed.
+ */
+
+/* Add any applicability-specific styling below this line */

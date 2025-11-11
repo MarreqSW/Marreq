@@ -1,21 +1,22 @@
 {{!--
   PARTIAL: Filter Controls
-  Search bar and filter dropdowns for requirements
+  Search bar and filter dropdowns for tests
 --}}
 <section class="reqman-requirements-controls c-card" aria-label="Filters">
   <div class="reqman-requirements-controls__inner">
     <form
       method="GET"
-      action="{{#if project.id}}/p/{{project.id}}/requirements{{else}}/requirements{{/if}}"
+      action="{{#if project.id}}/p/{{project.id}}/tests{{else}}/tests{{/if}}"
       class="reqman-requirements-filter-bar"
-      id="requirementsFilterForm">
+      id="testsFilterForm">
       <div class="reqman-requirements-filter-bar__search">
-        <label for="requirementsSearch" class="u-visually-hidden">Search requirements</label>
+        <label for="testsSearch" class="u-visually-hidden">Search tests</label>
         <input type="search"
-          id="requirementsSearch"
+          id="testsSearch"
           class="reqman-requirements-filter-bar__search-input"
           name="search"
-          placeholder="Filter by title, key, or text…"
+          placeholder="Filter by name, reference, or description…"
+          value="{{search_query}}"
           autocomplete="off" />
         <span class="reqman-requirements-filter-bar__shortcut" aria-hidden="true">/</span>
       </div>
@@ -29,8 +30,8 @@
           data-filter-label="Status">
           <option value="">Status · All</option>
           {{#each statuses}}
-            <option value="{{req_st_id}}" {{#if (eq req_st_id ../current_status_filter)}}selected{{/if}}>
-              {{req_st_title}}
+            <option value="{{test_st_id}}" {{#if (eq test_st_id ../current_status_filter)}}selected{{/if}}>
+              {{test_st_title}}
             </option>
           {{/each}}
         </select>
@@ -64,21 +65,6 @@
             </option>
           {{/each}}
         </select>
-
-        <label for="applicabilityFilter" class="u-visually-hidden">Filter by applicability</label>
-        <select
-          id="applicabilityFilter"
-          name="applicability_filter"
-          class="reqman-requirements-filter-bar__select"
-          data-filter-control="applicability"
-          data-filter-label="Applicability">
-          <option value="">Applicability · All</option>
-          {{#each applicability}}
-            <option value="{{app_id}}" {{#if (eq app_id ../current_applicability_filter)}}selected{{/if}}>
-              {{app_title}}
-            </option>
-          {{/each}}
-        </select>
       </div>
 
       <div class="reqman-requirements-filter-bar__actions">
@@ -94,7 +80,7 @@
     <div
       class="reqman-requirements-filter-chips"
       aria-live="polite"
-      id="requirementsFilterChips"
+      id="testsFilterChips"
       hidden>
     </div>
   </div>

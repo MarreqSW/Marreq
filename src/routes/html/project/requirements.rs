@@ -18,6 +18,7 @@ use crate::services::{
     LogService, ProjectService, RequirementAnalyticsService, RequirementService, StatusService,
     UserService, VerificationService,
 };
+use crate::status_enums::RequirementStatusEnum;
 
 #[derive(FromForm)]
 struct RequirementCreateForm {
@@ -282,10 +283,18 @@ async fn show_requirement_id(
         linked_tests
             .iter()
             .fold((0_i32, 0_i32, 0_i32), |mut acc, test| {
-                match test.test_status.trim().to_ascii_lowercase().as_str() {
-                    "passed" => acc.0 += 1,
-                    "failed" => acc.1 += 1,
-                    _ => acc.2 += 1,
+                // Use enum to properly identify test status
+                if let Some(status_enum) =
+                    crate::status_enums::TestStatusEnum::from_title(&test.test_status)
+                {
+                    match status_enum {
+                        crate::status_enums::TestStatusEnum::Passed => acc.0 += 1,
+                        crate::status_enums::TestStatusEnum::Failed => acc.1 += 1,
+                        _ => acc.2 += 1,
+                    }
+                } else {
+                    // Unknown status, count as pending
+                    acc.2 += 1;
                 }
                 acc
             });
@@ -474,8 +483,13 @@ async fn delete_requirement_route(
         return Ok(redir);
     }
 
-    // Permission gate: allow only Draft(1) or Proposal(2) or admin
-    if req.req_current_status > 2 && !user.is_admin {
+    // Permission gate: allow only Draft or Proposal status, or admin
+    // Use the enum to check if the status is editable
+    let is_editable = RequirementStatusEnum::from_id(req.req_current_status)
+        .map(|status| status.is_editable_by_user())
+        .unwrap_or(false);
+
+    if !is_editable && !user.is_admin {
         return Err(rocket::http::Status::Forbidden);
     }
 
@@ -554,7 +568,7 @@ async fn new_requirement(
         .iter()
         .find(|st| st.req_st_title.eq_ignore_ascii_case("Draft"))
         .map(|st| st.req_st_id)
-        .unwrap_or_default();
+        .unwrap_or(RequirementStatusEnum::Draft.id());
 
     let created_flash = created.and_then(|flag| {
         if flag == "1" || flag.eq_ignore_ascii_case("true") {

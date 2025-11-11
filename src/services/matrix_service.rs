@@ -2,10 +2,11 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{ActionType, EntityType, Matrix, NewMatrix, User};
+use crate::models::{ActionType, EntityType, Matrix, NewMatrix, Requirement, User};
 use crate::repository::errors::RepoError;
-use crate::repository::{MatrixRepository, PooledConnectionWrapper};
+use crate::repository::{MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsRepository};
 use diesel::prelude::*;
+use std::collections::HashSet;
 
 /// High level matrix operations backed by the shared [`AppState`].
 pub struct MatrixService<'a> {
@@ -31,6 +32,98 @@ impl<'a> MatrixService<'a> {
     /// Retrieve matrix entries scoped to a project.
     pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
         self.state.repo_read().get_matrix_by_project(project_id)
+    }
+
+    /// Retrieve requirements paginated for matrix display.
+    /// Returns (requirements, total_count).
+    /// Note: This currently loads all requirements and paginates in memory.
+    /// For very large datasets, consider adding pagination to the repository layer.
+    pub fn list_requirements_paginated(
+        &self,
+        _project_id: i32,
+        page: i64,
+        per_page: i64,
+    ) -> Result<(Vec<Requirement>, i64), RepoError> {
+        let repo = self.state.repo_read();
+        let mut all_reqs = repo.get_requirements_by_project(_project_id)?;
+        
+        // Sort by req_id for consistent pagination
+        all_reqs.sort_by_key(|r| r.req_id);
+        
+        let total = all_reqs.len() as i64;
+        let start = ((page - 1) * per_page) as usize;
+        let end = (start + per_page as usize).min(all_reqs.len());
+        
+        let paginated = if start < all_reqs.len() {
+            all_reqs[start..end].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        Ok((paginated, total))
+    }
+
+    /// Generate CSV export data for the traceability matrix.
+    /// Returns CSV string with headers and all matrix data filtered by project and optional test status.
+    pub fn export_matrix_csv(
+        &self,
+        project_id: i32,
+        test_status_filter: Option<i32>,
+    ) -> Result<String, RepoError> {
+        let repo = self.state.repo_read();
+        
+        // Load all requirements for the project
+        let mut reqs = repo.get_requirements_by_project(project_id)?;
+        reqs.sort_by_key(|r| r.req_id);
+
+        // Load all tests for the project
+        let mut all_tests = repo.get_tests_by_project(project_id)?;
+        all_tests.sort_by_key(|t| t.test_id);
+        
+        // Filter tests by status if specified
+        if let Some(status) = test_status_filter {
+            all_tests.retain(|t| t.test_status == status);
+        }
+
+        // Load all matrix links for the project
+        let all_links = repo.get_matrix_by_project(project_id)?;
+        let links: HashSet<(i32, i32)> = all_links
+            .into_iter()
+            .map(|m| (m.matrix_req_id, m.matrix_test_id))
+            .collect();
+
+        // Build CSV
+        let mut csv = String::from("Req ID,Title,Reference");
+        for test in &all_tests {
+            csv.push_str(&format!(",Test #{}", test.test_id));
+        }
+        csv.push('\n');
+
+        for req in &reqs {
+            csv.push_str(&format!(
+                "REQ-{},{},{}",
+                req.req_id,
+                Self::csv_escape(&req.req_title),
+                Self::csv_escape(&req.req_reference)
+            ));
+
+            for test in &all_tests {
+                let linked = links.contains(&(req.req_id, test.test_id));
+                csv.push_str(if linked { ",✓" } else { ",-" });
+            }
+            csv.push('\n');
+        }
+
+        Ok(csv)
+    }
+
+    /// Helper to escape CSV fields containing special characters.
+    fn csv_escape(s: &str) -> String {
+        if s.contains(',') || s.contains('"') || s.contains('\n') {
+            format!("\"{}\"", s.replace('"', "\"\""))
+        } else {
+            s.to_string()
+        }
     }
 
     /// Create a new traceability link between a requirement and a test.
@@ -92,6 +185,7 @@ impl<'a> MatrixService<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::Test;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -159,5 +253,264 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].matrix_req_id, 5);
         assert_eq!(entries[0].matrix_test_id, 6);
+    }
+
+    #[test]
+    fn pagination_returns_correct_page_and_total() {
+        let mut repo = DieselRepoMock::default();
+        
+        // Add 5 requirements to project 1
+        for i in 1..=5 {
+            repo.requirements.insert(i, Requirement {
+                req_id: i,
+                req_title: format!("Req {}", i),
+                req_description: String::new(),
+                req_verification: 1,
+                req_current_status: 1,
+                req_author: 1,
+                req_reviewer: 1,
+                req_reference: format!("REF-{}", i),
+                req_category: 1,
+                req_parent: 0,
+                req_creation_date: timestamp(),
+                req_update_date: timestamp(),
+                req_deadline_date: timestamp(),
+                req_applicability: 1,
+                req_justification: None,
+                project_id: 1,
+            });
+        }
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        // Page 1: should get first 2 items
+        let (page1, total) = service.list_requirements_paginated(1, 1, 2).unwrap();
+        assert_eq!(total, 5);
+        assert_eq!(page1.len(), 2);
+        assert_eq!(page1[0].req_id, 1);
+        assert_eq!(page1[1].req_id, 2);
+
+        // Page 2: should get next 2 items
+        let (page2, _) = service.list_requirements_paginated(1, 2, 2).unwrap();
+        assert_eq!(page2.len(), 2);
+        assert_eq!(page2[0].req_id, 3);
+        assert_eq!(page2[1].req_id, 4);
+
+        // Page 3: should get last item
+        let (page3, _) = service.list_requirements_paginated(1, 3, 2).unwrap();
+        assert_eq!(page3.len(), 1);
+        assert_eq!(page3[0].req_id, 5);
+    }
+
+    #[test]
+    fn pagination_filters_by_project() {
+        let mut repo = DieselRepoMock::default();
+        
+        // Add requirements to different projects
+        repo.requirements.insert(1, Requirement {
+            req_id: 1,
+            req_title: "Req 1".to_string(),
+            req_description: String::new(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 1,
+            req_reviewer: 1,
+            req_reference: "REF-1".to_string(),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 1,
+        });
+        repo.requirements.insert(2, Requirement {
+            req_id: 2,
+            req_title: "Req 2".to_string(),
+            req_description: String::new(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 1,
+            req_reviewer: 1,
+            req_reference: "REF-2".to_string(),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 2,
+        });
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let (reqs, total) = service.list_requirements_paginated(1, 1, 10).unwrap();
+        assert_eq!(total, 1);
+        assert_eq!(reqs.len(), 1);
+        assert_eq!(reqs[0].project_id, 1);
+    }
+
+    #[test]
+    fn csv_export_generates_correct_format() {
+        let mut repo = DieselRepoMock::default();
+        
+        // Add a requirement
+        repo.requirements.insert(1, Requirement {
+            req_id: 1,
+            req_title: "Test Requirement".to_string(),
+            req_description: String::new(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 1,
+            req_reviewer: 1,
+            req_reference: "REF-001".to_string(),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 1,
+        });
+
+        // Add tests
+        repo.tests.insert(10, Test {
+            test_id: 10,
+            test_name: "Test 10".to_string(),
+            test_reference: "TST-10".to_string(),
+            test_description: String::new(),
+            test_source: String::new(),
+            test_status: 1,
+            test_parent: 0,
+            project_id: 1,
+        });
+        repo.tests.insert(20, Test {
+            test_id: 20,
+            test_name: "Test 20".to_string(),
+            test_reference: "TST-20".to_string(),
+            test_description: String::new(),
+            test_source: String::new(),
+            test_status: 1,
+            test_parent: 0,
+            project_id: 1,
+        });
+
+        // Add matrix link
+        repo.matrices.push(Matrix {
+            matrix_req_id: 1,
+            matrix_test_id: 10,
+            matrix_creation_date: timestamp(),
+            project_id: 1,
+        });
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let csv = service.export_matrix_csv(1, None).unwrap();
+        
+        // Check CSV structure
+        let lines: Vec<&str> = csv.lines().collect();
+        assert_eq!(lines.len(), 2); // Header + 1 requirement row
+        assert!(lines[0].starts_with("Req ID,Title,Reference"));
+        assert!(lines[0].contains("Test #10"));
+        assert!(lines[0].contains("Test #20"));
+        assert!(lines[1].starts_with("REQ-1,Test Requirement,REF-001"));
+        assert!(lines[1].contains(",✓,")); // Linked to test 10
+        assert!(lines[1].ends_with(",-")); // Not linked to test 20
+    }
+
+    #[test]
+    fn csv_export_handles_special_characters() {
+        let mut repo = DieselRepoMock::default();
+        
+        repo.requirements.insert(1, Requirement {
+            req_id: 1,
+            req_title: "Test, with \"quotes\"".to_string(),
+            req_description: String::new(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 1,
+            req_reviewer: 1,
+            req_reference: "REF-001".to_string(),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 1,
+        });
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let csv = service.export_matrix_csv(1, None).unwrap();
+        
+        // Should escape the title properly
+        assert!(csv.contains("\"Test, with \"\"quotes\"\"\""));
+    }
+
+    #[test]
+    fn csv_export_filters_by_test_status() {
+        let mut repo = DieselRepoMock::default();
+        
+        repo.requirements.insert(1, Requirement {
+            req_id: 1,
+            req_title: "Req 1".to_string(),
+            req_description: String::new(),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 1,
+            req_reviewer: 1,
+            req_reference: "REF-1".to_string(),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: None,
+            project_id: 1,
+        });
+
+        // Test with status 1
+        repo.tests.insert(10, Test {
+            test_id: 10,
+            test_name: "Test 10".to_string(),
+            test_reference: "TST-10".to_string(),
+            test_description: String::new(),
+            test_source: String::new(),
+            test_status: 1,
+            test_parent: 0,
+            project_id: 1,
+        });
+        
+        // Test with status 2
+        repo.tests.insert(20, Test {
+            test_id: 20,
+            test_name: "Test 20".to_string(),
+            test_reference: "TST-20".to_string(),
+            test_description: String::new(),
+            test_source: String::new(),
+            test_status: 2,
+            test_parent: 0,
+            project_id: 1,
+        });
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        // Export with status filter for status 1
+        let csv = service.export_matrix_csv(1, Some(1)).unwrap();
+        
+        let lines: Vec<&str> = csv.lines().collect();
+        assert!(lines[0].contains("Test #10"));
+        assert!(!lines[0].contains("Test #20"));
     }
 }

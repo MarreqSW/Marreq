@@ -66,8 +66,7 @@
 }
 
 .u-font-bold,
-[class~="font-bold"],
-[class~="fw-bold"] {
+[class~="font-bold"] {
   font-weight: 700;
 }
 

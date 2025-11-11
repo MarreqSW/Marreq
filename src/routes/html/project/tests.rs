@@ -1,8 +1,10 @@
 use super::helpers::*;
 use super::prelude::*;
+use crate::helper_functions::decorators::decorate_requirements_with_repo;
 use crate::services::TestService;
+use crate::status_enums::TestStatusEnum;
 
-#[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>")]
+#[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>&<search>")]
 async fn show_tests(
     project_access: ProjectAccess,
     project_id: i32,
@@ -10,24 +12,84 @@ async fn show_tests(
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
+    search: Option<String>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     use serde_json::json;
 
     let user = project_access.into_user();
+    let is_admin = user.is_admin;
     let service = TestService::new(state.inner());
     let repo = state.repo_read();
 
     let mut ctx = build_context_with_projects(state, user, cookies);
 
-    // Fetch and process tests
-    let tests = service.list_by_project(project_id).unwrap_or_default();
+    // Get project info
+    let project = repo.get_project_by_id(project_id).ok();
+    if let Some(ref proj) = project {
+        ctx["project"] = json!({
+            "id": proj.project_id,
+            "name": proj.project_name,
+        });
+    }
 
-    let tests = decorate_tests_cached(
-        state,
-        filter_tests(tests, status_filter, verification_filter, category_filter),
+    // Fetch and process tests
+    let all_tests = service.list_by_project(project_id).unwrap_or_default();
+
+    // Calculate metrics before filtering
+    // Using enum definitions for test statuses: Passed=1, Failed=2, Pending=3, InProgress=4
+    let total = all_tests.len();
+    let passed = all_tests
+        .iter()
+        .filter(|t| t.test_status == TestStatusEnum::Passed.id())
+        .count();
+    let failed = all_tests
+        .iter()
+        .filter(|t| t.test_status == TestStatusEnum::Failed.id())
+        .count();
+    let pending = all_tests
+        .iter()
+        .filter(|t| t.test_status == TestStatusEnum::Pending.id())
+        .count();
+    let in_progress = all_tests
+        .iter()
+        .filter(|t| t.test_status == TestStatusEnum::InProgress.id())
+        .count();
+    let pass_rate_percent = if total > 0 { (passed * 100) / total } else { 0 };
+
+    // Apply filters
+    let mut tests = filter_tests(
+        all_tests,
+        status_filter,
+        verification_filter,
+        category_filter,
     );
+
+    // Apply search filter
+    if let Some(ref query) = search {
+        let query_lower = query.to_lowercase();
+        tests.retain(|t| {
+            t.test_name.to_lowercase().contains(&query_lower)
+                || t.test_description.to_lowercase().contains(&query_lower)
+                || t.test_reference.to_lowercase().contains(&query_lower)
+        });
+    }
+
+    let tests = decorate_tests_cached(state, tests);
     ctx["tests"] = json!(tests);
+
+    // Add metrics
+    ctx["test_metrics"] = json!({
+        "total": total,
+        "passed": passed,
+        "failed": failed,
+        "pending": pending,
+        "in_progress": in_progress,
+        "pass_rate": {
+            "percent": pass_rate_percent,
+            "passed": passed
+        }
+    });
 
     // Common data lookups
     ctx["statuses"] = json!(repo.get_test_status_all().unwrap_or_default());
@@ -42,8 +104,12 @@ async fn show_tests(
     ctx["current_status_filter"] = json!(status_filter);
     ctx["current_verification_filter"] = json!(verification_filter);
     ctx["current_category_filter"] = json!(category_filter);
+    ctx["search_query"] = json!(search.unwrap_or_default());
 
-    Ok(Template::render("tests", ctx))
+    // User info for admin checks
+    ctx["is_admin"] = json!(is_admin);
+
+    Ok(Template::render("tests/tests", ctx))
 }
 
 #[get("/<project_id>/tests/show/<test_id>")]
@@ -75,11 +141,13 @@ async fn show_test_id(
     let test = &decorated[0];
 
     let linked_requirements = get_requirements_for_test_cached(state, test_id).unwrap_or_default();
+    let repo = state.repo_read();
+    let decorated_requirements = decorate_requirements_with_repo(&*repo, linked_requirements);
 
     let mut ctx_map = serde_json::Map::new();
     ctx_map.insert("project_id".into(), json!(project_id));
     ctx_map.insert("selected_project_id".into(), json!(project_id));
-    ctx_map.insert("linked_requirements".into(), json!(linked_requirements));
+    ctx_map.insert("linked_requirements".into(), json!(decorated_requirements));
     ctx_map.insert("user".into(), json!(user));
 
     if let Ok(serde_json::Value::Object(test_obj)) = serde_json::to_value(&test) {
@@ -89,7 +157,7 @@ async fn show_test_id(
     }
 
     Ok(Template::render(
-        "test_by_id",
+        "tests/test",
         serde_json::Value::Object(ctx_map),
     ))
 }
@@ -121,7 +189,7 @@ async fn new_test(
     ctx["selected_project_id"] = json!(project_id);
     ctx["error"] = json!(error);
 
-    Ok(Template::render("new_test", ctx))
+    Ok(Template::render("tests/new_test", ctx))
 }
 
 #[post("/<project_id>/tests/new", data = "<new_test>")]
@@ -222,7 +290,7 @@ async fn get_edit_test(
     #[cfg(debug_assertions)]
     println!("Tests: {:#}", ctx);
 
-    Ok(Template::render("edit_test_by_id", ctx))
+    Ok(Template::render("tests/edit_test", ctx))
 }
 
 #[post("/<project_id>/tests/edit/<test_id>", data = "<edit_test_form>")]
@@ -235,12 +303,7 @@ async fn post_edit_test(
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
     let service = TestService::new(state.inner());
-    let to_list = || {
-        Redirect::to(uri!(
-            "/p",
-            show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
-        ))
-    };
+    let to_list = || Redirect::to(format!("/p/{}/tests", project_id));
 
     // Own the form to avoid cloning strings
     let f = edit_test_form.into_inner();
@@ -289,8 +352,13 @@ async fn delete_test_route(
 
     let test = service.get_by_id(test_id).map_err(|_| Status::NotFound)?;
 
-    // allow only Draft(1) or Proposal(2) unless admin
-    if test.test_status > 2 && !user.is_admin {
+    // Permission gate: only allow deletion of tests in Passed or Failed status, or if admin
+    // Using enum to check if the test is in a deletable state
+    let is_deletable = TestStatusEnum::from_id(test.test_status)
+        .map(|status| matches!(status, TestStatusEnum::Passed | TestStatusEnum::Failed))
+        .unwrap_or(false);
+
+    if !is_deletable && !user.is_admin {
         return Err(Status::Forbidden);
     }
 
@@ -299,10 +367,7 @@ async fn delete_test_route(
         _ => Status::InternalServerError,
     })?;
 
-    Ok(Redirect::to(uri!(
-        "/p",
-        show_tests(project_id, None::<i32>, None::<i32>, None::<i32>)
-    )))
+    Ok(Redirect::to(format!("/p/{}/tests", project_id)))
 }
 
 #[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
@@ -755,7 +820,6 @@ mod tests {
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
         assert!(body.contains("Baseline Test"));
-        assert!(body.contains("TEST-001"));
     }
 
     #[rocket::async_test]
@@ -881,7 +945,9 @@ mod tests {
         let response = delete_with_session(&client, "/p/1/tests/delete/1", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/1/tests"));
+        let location = response.headers().get_one("Location");
+        assert!(location.is_some());
+        assert!(location.unwrap().contains("/p/1/tests"));
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");

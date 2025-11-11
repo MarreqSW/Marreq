@@ -90,37 +90,48 @@ function initSortIndicators(root) {
  * Initialize filter form handlers
  */
 function initFilterHandlers() {
-  // Auto-submit on filter changes
-  const filterSelect = document.getElementById('test_status_filter');
-  if (filterSelect?.form) {
-    filterSelect.addEventListener('change', () => {
-      filterSelect.form.submit();
-    });
-  }
+  const form = document.getElementById('matrixFilterForm');
+  if (!form) return;
 
-  const linkageFilter = document.getElementById('linkage_filter');
-  if (linkageFilter?.form) {
-    linkageFilter.addEventListener('change', () => {
-      linkageFilter.form.submit();
-    });
-  }
+  // Auto-submit on filter changes for all select elements
+  const autoSubmitSelects = [
+    'test_status_filter',
+    'req_status_filter',
+    'category_filter',
+    'applicability_filter',
+    'per_page'
+  ];
 
-  const perPageSelect = document.getElementById('per_page');
-  if (perPageSelect?.form) {
-    perPageSelect.addEventListener('change', () => {
-      perPageSelect.form.submit();
-    });
-  }
+  autoSubmitSelects.forEach(id => {
+    const select = document.getElementById(id);
+    if (select) {
+      select.addEventListener('change', () => {
+        form.submit();
+      });
+    }
+  });
 
-  // Search input with debounce
+  // Search input - submit on Enter
   const searchInput = document.getElementById('search');
   if (searchInput) {
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        form.submit();
+      }
+    });
+
+    // Optional: Live search feedback (visual only, not submitting)
     let debounceTimer;
     searchInput.addEventListener('input', (e) => {
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        // Could implement client-side filtering here for instant feedback
-        console.log('Search:', e.target.value);
+        // Add visual feedback that search is ready
+        if (e.target.value) {
+          searchInput.style.borderColor = 'var(--primary-color)';
+        } else {
+          searchInput.style.borderColor = '';
+        }
       }, 300);
     });
   }
@@ -353,56 +364,12 @@ function initMatrixScrollIndicator() {
 
 /**
  * Initialize tooltips for cells
+ * Note: Tooltips are now handled via CSS using the data-tooltip attribute
+ * This function is kept for potential future enhancements
  */
 function initTooltips() {
-  const cells = document.querySelectorAll('.matrix-cell[data-linked="true"]');
-  cells.forEach(cell => {
-    const testStatus = cell.dataset.testStatus;
-    const reqId = cell.dataset.reqId;
-    const testId = cell.dataset.testId;
-    
-    cell.addEventListener('mouseenter', (e) => {
-      showTooltip(e.target, `Req ${reqId} ↔ Test ${testId}`);
-    });
-    
-    cell.addEventListener('mouseleave', () => {
-      hideTooltip();
-    });
-  });
-}
-
-let tooltipElement = null;
-
-function showTooltip(target, text) {
-  hideTooltip();
-  
-  tooltipElement = document.createElement('div');
-  tooltipElement.className = 'matrix-tooltip';
-  tooltipElement.textContent = text;
-  tooltipElement.style.cssText = `
-    position: absolute;
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.25rem;
-    font-size: 0.875rem;
-    pointer-events: none;
-    z-index: 10000;
-    white-space: nowrap;
-  `;
-  
-  document.body.appendChild(tooltipElement);
-  
-  const rect = target.getBoundingClientRect();
-  tooltipElement.style.top = `${rect.top - tooltipElement.offsetHeight - 8}px`;
-  tooltipElement.style.left = `${rect.left + rect.width / 2 - tooltipElement.offsetWidth / 2}px`;
-}
-
-function hideTooltip() {
-  if (tooltipElement) {
-    tooltipElement.remove();
-    tooltipElement = null;
-  }
+  // Tooltips are now handled purely via CSS [data-tooltip] attribute
+  // No JavaScript manipulation needed
 }
 
 /**
@@ -449,11 +416,12 @@ function initCellInteractions() {
     }
   });
   
-  // Highlight row and column on hover
+  // Highlight row and column on hover - optimized
   const table = document.getElementById('matrixTable');
   if (table) {
     let currentHighlightedRow = null;
     let currentHighlightedCols = [];
+    let currentFocusedCell = null;
     
     table.addEventListener('mouseover', (e) => {
       const cell = e.target.closest('td, th');
@@ -462,35 +430,57 @@ function initCellInteractions() {
       const row = cell.parentElement;
       const cellIndex = Array.from(row.children).indexOf(cell);
       
-      // Highlight row
-      if (currentHighlightedRow && currentHighlightedRow !== row) {
-        currentHighlightedRow.style.backgroundColor = '';
+      // Skip if same cell to avoid unnecessary operations
+      if (currentFocusedCell === cell) return;
+      
+      // Clear ALL previous highlights first
+      if (currentHighlightedRow) {
+        currentHighlightedRow.classList.remove('matrix-row-highlight');
       }
-      row.style.backgroundColor = 'var(--surface-hover)';
+      currentHighlightedCols.forEach(c => c.classList.remove('matrix-col-highlight'));
+      currentHighlightedCols = [];
+      
+      // Remove previous cell focus
+      if (currentFocusedCell) {
+        currentFocusedCell.classList.remove('matrix-cell-focus');
+      }
+      
+      // Add new highlights
+      row.classList.add('matrix-row-highlight');
       currentHighlightedRow = row;
       
       // Highlight column
-      currentHighlightedCols.forEach(c => c.style.backgroundColor = '');
-      currentHighlightedCols = [];
-      
       const allRows = table.querySelectorAll('tr');
       allRows.forEach(r => {
         const targetCell = r.children[cellIndex];
         if (targetCell) {
-          targetCell.style.backgroundColor = 'var(--surface-hover)';
+          targetCell.classList.add('matrix-col-highlight');
           currentHighlightedCols.push(targetCell);
         }
       });
+      
+      // Add focused highlight to current cell (will be on top due to CSS specificity)
+      cell.classList.add('matrix-cell-focus');
+      currentFocusedCell = cell;
     });
     
     table.addEventListener('mouseout', (e) => {
-      if (!table.contains(e.relatedTarget)) {
+      const relatedTarget = e.relatedTarget;
+      
+      // Only clear highlights if mouse truly leaves the table
+      if (!table.contains(relatedTarget)) {
+        // Clear all highlights
         if (currentHighlightedRow) {
-          currentHighlightedRow.style.backgroundColor = '';
+          currentHighlightedRow.classList.remove('matrix-row-highlight');
           currentHighlightedRow = null;
         }
-        currentHighlightedCols.forEach(c => c.style.backgroundColor = '');
+        currentHighlightedCols.forEach(c => c.classList.remove('matrix-col-highlight'));
         currentHighlightedCols = [];
+        
+        if (currentFocusedCell) {
+          currentFocusedCell.classList.remove('matrix-cell-focus');
+          currentFocusedCell = null;
+        }
       }
     });
   }

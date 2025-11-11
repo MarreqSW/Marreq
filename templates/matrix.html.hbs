@@ -1,5 +1,5 @@
 {{!--
-  Enhanced Interactive Traceability Matrix
+  Enhanced Traceability Traceability Matrix
   Depends on: css/50-components/tables.css, css/pages/matrix.css, js/pages/matrix.js
   Features: Sticky headers, virtual scrolling, filters, search, grouping, export
 --}}
@@ -11,6 +11,37 @@
       <p class="text-secondary matrix-subtitle">Requirements to Tests mapping and verification status</p>
     </div>
     <div class="d-flex gap-2 align-items-center flex-wrap">
+      <div class="d-flex gap-1 align-items-center">
+        {{#if has_prev_page}}
+          <a 
+            href="/p/{{selected_project_id}}/matrix?page={{prev_page}}&per_page={{per_page}}{{#if current_sort_by}}&sort_by={{current_sort_by}}{{/if}}{{#if current_sort_order}}&sort_order={{current_sort_order}}{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if req_status_filter}}&req_status_filter={{req_status_filter}}{{/if}}{{#if category_filter}}&category_filter={{category_filter}}{{/if}}{{#if applicability_filter}}&applicability_filter={{applicability_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}"
+            class="text-secondary"
+            style="text-decoration: none; font-size: 1.25rem; line-height: 1; opacity: 0.7; transition: opacity 0.2s;"
+            onmouseover="this.style.opacity='1'"
+            onmouseout="this.style.opacity='0.7'"
+            aria-label="Previous page"
+            title="Previous page"
+          >‹</a>
+        {{else}}
+          <span class="text-secondary" style="font-size: 1.25rem; line-height: 1; opacity: 0.3;" aria-disabled="true">‹</span>
+        {{/if}}
+        <span class="text-secondary" style="font-size: 0.875rem; margin: 0 0.5rem;">
+          <span aria-label="Showing page information">Page {{page}} of {{total_pages}}</span>
+        </span>
+        {{#if has_next_page}}
+          <a 
+            href="/p/{{selected_project_id}}/matrix?page={{next_page}}&per_page={{per_page}}{{#if current_sort_by}}&sort_by={{current_sort_by}}{{/if}}{{#if current_sort_order}}&sort_order={{current_sort_order}}{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if req_status_filter}}&req_status_filter={{req_status_filter}}{{/if}}{{#if category_filter}}&category_filter={{category_filter}}{{/if}}{{#if applicability_filter}}&applicability_filter={{applicability_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}"
+            class="text-secondary"
+            style="text-decoration: none; font-size: 1.25rem; line-height: 1; opacity: 0.7; transition: opacity 0.2s;"
+            onmouseover="this.style.opacity='1'"
+            onmouseout="this.style.opacity='0.7'"
+            aria-label="Next page"
+            title="Next page"
+          >›</a>
+        {{else}}
+          <span class="text-secondary" style="font-size: 1.25rem; line-height: 1; opacity: 0.3;" aria-disabled="true">›</span>
+        {{/if}}
+      </div>
       <button id="toggleGrouping" class="btn btn-outline-secondary" aria-label="Toggle grouping">
         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <rect x="3" y="3" width="7" height="7"></rect>
@@ -40,69 +71,84 @@
     </div>
   </div>
   
-  <!-- Enhanced Filter Bar with Search and Quick Actions -->
-  <div class="matrix-filter-card filter-card c-filter-card mt-3">
-    <form method="get" class="filter-form c-filter-form" role="search" aria-label="Matrix filters" id="matrixFilterForm">
-      <div class="filter-group c-filter-group">
-        <label for="search" class="filter-label c-filter-label">
-          <svg class="filter-icon c-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-          Search Requirements
+  <!-- Compact Filter Bar -->
+  <div class="matrix-filter-card filter-card c-filter-card mt-3" style="padding: 1rem;">
+    <form method="get" class="filter-form c-filter-form" role="search" aria-label="Matrix filters" id="matrixFilterForm" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr auto; gap: 0.75rem; align-items: end;">
+      
+      <!-- Search (wider) -->
+      <div class="filter-group c-filter-group" style="margin: 0;">
+        <label for="search" class="filter-label c-filter-label" style="font-size: 0.875rem; margin-bottom: 0.25rem;">
+          Search
         </label>
         <input 
           type="text" 
           name="search" 
           id="search" 
           class="filter-select c-filter-select c-form-control" 
-          placeholder="Search by ID, title, or reference... (Ctrl+K)"
+          placeholder="ID, title, reference... (Ctrl+K)"
           value="{{search}}"
-          aria-describedby="search-help"
+          style="padding: 0.5rem 0.75rem; font-size: 0.875rem;"
         />
-        <small id="search-help" class="text-secondary">Search across requirement ID, title, and reference</small>
       </div>
       
-      <div class="filter-group c-filter-group">
-        <label for="test_status_filter" class="filter-label c-filter-label">
-          <svg class="filter-icon c-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"></polygon>
-          </svg>
-          Test Status
+      <!-- Requirement Status -->
+      <div class="filter-group c-filter-group" style="margin: 0;">
+        <label for="req_status_filter" class="filter-label c-filter-label" style="font-size: 0.875rem; margin-bottom: 0.25rem;">
+          Req Status
         </label>
-        <select name="test_status_filter" id="test_status_filter" class="filter-select c-filter-select c-form-control c-form-control--select" aria-label="Filter by test status">
-          <option value="">All Statuses</option>
-          {{#each statuses}}
-            <option value="{{test_st_id}}" {{#if (eq ../test_status_filter test_st_id)}}selected{{/if}}>{{test_st_title}}</option>
+        <select name="req_status_filter" id="req_status_filter" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
+          <option value="">All</option>
+          {{#each req_statuses}}
+            <option value="{{req_st_id}}" {{#if (eq ../req_status_filter req_st_id)}}selected{{/if}}>{{req_st_title}}</option>
           {{/each}}
         </select>
       </div>
 
-      <div class="filter-group c-filter-group">
-        <label for="linkage_filter" class="filter-label c-filter-label">
-          <svg class="filter-icon c-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-          </svg>
-          Coverage
+      <!-- Category -->
+      <div class="filter-group c-filter-group" style="margin: 0;">
+        <label for="category_filter" class="filter-label c-filter-label" style="font-size: 0.875rem; margin-bottom: 0.25rem;">
+          Category
         </label>
-        <select name="linkage_filter" id="linkage_filter" class="filter-select c-filter-select c-form-control c-form-control--select" aria-label="Filter by test coverage">
-          <option value="">All Requirements</option>
-          <option value="linked">With Tests</option>
-          <option value="unlinked">Without Tests</option>
+        <select name="category_filter" id="category_filter" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
+          <option value="">All</option>
+          {{#each categories}}
+            <option value="{{req_cat_id}}" {{#if (eq ../category_filter req_cat_id)}}selected{{/if}}>{{req_cat_title}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      <!-- Applicability -->
+      <div class="filter-group c-filter-group" style="margin: 0;">
+        <label for="applicability_filter" class="filter-label c-filter-label" style="font-size: 0.875rem; margin-bottom: 0.25rem;">
+          Applicability
+        </label>
+        <select name="applicability_filter" id="applicability_filter" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
+          <option value="">All</option>
+          {{#each applicabilities}}
+            <option value="{{req_appl_id}}" {{#if (eq ../applicability_filter req_appl_id)}}selected{{/if}}>{{req_appl_title}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      <!-- Test Status -->
+      <div class="filter-group c-filter-group" style="margin: 0;">
+        <label for="test_status_filter" class="filter-label c-filter-label" style="font-size: 0.875rem; margin-bottom: 0.25rem;">
+          Test Status
+        </label>
+        <select name="test_status_filter" id="test_status_filter" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
+          <option value="">All</option>
+          {{#each test_statuses}}
+            <option value="{{test_st_id}}" {{#if (eq ../test_status_filter test_st_id)}}selected{{/if}}>{{test_st_title}}</option>
+          {{/each}}
         </select>
       </div>
       
-      <div class="filter-group c-filter-group">
-        <label for="per_page" class="filter-label c-filter-label">
-          <svg class="filter-icon c-filter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="9" y1="9" x2="15" y2="9"></line>
-            <line x1="9" y1="15" x2="15" y2="15"></line>
-          </svg>
-          Per Page
+      <!-- Per Page -->
+      <div class="filter-group c-filter-group" style="margin: 0;">
+        <label for="per_page" class="filter-label c-filter-label" style="font-size: 0.875rem; margin-bottom: 0.25rem;">
+          Show
         </label>
-        <select name="per_page" id="per_page" class="filter-select c-filter-select c-form-control c-form-control--select" aria-label="Items per page">
+        <select name="per_page" id="per_page" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
           <option value="25" {{#if (eq per_page 25)}}selected{{/if}}>25</option>
           <option value="50" {{#if (eq per_page 50)}}selected{{/if}}>50</option>
           <option value="100" {{#if (eq per_page 100)}}selected{{/if}}>100</option>
@@ -110,63 +156,60 @@
         </select>
       </div>
       
-      <!-- Preserve sort parameters -->
-      {{#if current_sort_by}}
-        <input type="hidden" name="sort_by" value="{{current_sort_by}}" />
-      {{/if}}
-      {{#if current_sort_order}}
-        <input type="hidden" name="sort_order" value="{{current_sort_order}}" />
-      {{/if}}
-      
-      <div class="filter-actions c-filter-actions">
-        <button type="submit" class="btn-filter" aria-label="Apply filters">
-          <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-          <span class="btn-text">Apply</span>
+      <!-- Actions -->
+      <div class="filter-actions c-filter-actions" style="display: flex; gap: 0.5rem; margin: 0; align-self: end;">
+        <button type="submit" class="btn btn-sm btn-primary" aria-label="Apply filters" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+          Apply
         </button>
-        {{#if (or test_status_filter search)}}
-          <a href="/p/{{selected_project_id}}/matrix" class="btn-clear" aria-label="Clear all filters">
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-            <span class="btn-text">Clear</span>
+        {{#if (or test_status_filter req_status_filter category_filter applicability_filter search)}}
+          <a href="/p/{{selected_project_id}}/matrix" class="btn btn-sm btn-outline-secondary" aria-label="Clear all filters" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+            Clear
           </a>
         {{/if}}
       </div>
+      
+      <!-- Preserve sort order -->
+      {{#if current_sort_order}}
+        <input type="hidden" name="sort_order" value="{{current_sort_order}}" />
+      {{/if}}
     </form>
     
-    <!-- Quick Stats Bar -->
-    <div class="matrix-quick-stats mt-3 p-3" style="background: var(--surface-muted); border-radius: var(--radius-md);">
-      <div class="d-flex justify-content-around align-items-center flex-wrap gap-3">
-        <div class="stat-item text-center">
-          <div class="stat-value" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">{{total_requirements}}</div>
-          <div class="stat-label" style="font-size: 0.875rem; color: var(--text-secondary);">Requirements</div>
-        </div>
-        <div class="stat-divider" style="width: 1px; height: 40px; background: var(--border-color);"></div>
-        <div class="stat-item text-center">
-          <div class="stat-value" style="font-size: 1.5rem; font-weight: 600; color: var(--primary-color);">{{total_tests}}</div>
-          <div class="stat-label" style="font-size: 0.875rem; color: var(--text-secondary);">Tests</div>
-        </div>
-        <div class="stat-divider" style="width: 1px; height: 40px; background: var(--border-color);"></div>
-        <div class="stat-item text-center">
-          <div class="stat-value" style="font-size: 1.5rem; font-weight: 600; color: var(--success-color);">{{total_links}}</div>
-          <div class="stat-label" style="font-size: 0.875rem; color: var(--text-secondary);">Links</div>
-        </div>
-        <div class="stat-divider" style="width: 1px; height: 40px; background: var(--border-color);"></div>
-        <div class="stat-item text-center">
-          <div class="stat-value" id="coveragePercentage" style="font-size: 1.5rem; font-weight: 600; color: var(--info-color);" 
-               data-links="{{total_links}}" 
-               data-reqs="{{total_requirements}}" 
-               data-tests="{{total_tests}}">
-            0%
-          </div>
-          <div class="stat-label" style="font-size: 0.875rem; color: var(--text-secondary);">Coverage</div>
-        </div>
-      </div>
+    <!-- Active Filters Pills -->
+    {{#if (or test_status_filter req_status_filter category_filter applicability_filter search)}}
+    <div class="matrix-active-filters mt-2" style="display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; font-size: 0.875rem;">
+      <span style="color: var(--text-secondary); font-weight: 500;">Active filters:</span>
+      {{#if search}}
+        <span class="filter-pill" style="background: var(--primary-color); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+          Search: "{{search}}"
+          <a href="/p/{{selected_project_id}}/matrix?{{#if test_status_filter}}test_status_filter={{test_status_filter}}&{{/if}}{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
+        </span>
+      {{/if}}
+      {{#if req_status_filter}}
+        <span class="filter-pill" style="background: var(--info-color); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+          Req Status
+          <a href="/p/{{selected_project_id}}/matrix?{{#if test_status_filter}}test_status_filter={{test_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
+        </span>
+      {{/if}}
+      {{#if category_filter}}
+        <span class="filter-pill" style="background: var(--warning-color); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+          Category
+          <a href="/p/{{selected_project_id}}/matrix?{{#if test_status_filter}}test_status_filter={{test_status_filter}}&{{/if}}{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
+        </span>
+      {{/if}}
+      {{#if applicability_filter}}
+        <span class="filter-pill" style="background: var(--purple-color, #a855f7); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+          Applicability
+          <a href="/p/{{selected_project_id}}/matrix?{{#if test_status_filter}}test_status_filter={{test_status_filter}}&{{/if}}{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
+        </span>
+      {{/if}}
+      {{#if test_status_filter}}
+        <span class="filter-pill" style="background: var(--success-color); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
+          Test Status
+          <a href="/p/{{selected_project_id}}/matrix?{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
+        </span>
+      {{/if}}
     </div>
+    {{/if}}
   </div>
 </div>
 
@@ -179,89 +222,61 @@
   class="matrix-section"
 >
   <div class="card c-card matrix-card">
-    <div class="card-header c-card__header matrix-card-header">
+    <div class="card-header c-card__header matrix-card-header" style="padding: 0.5rem 1rem;">
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <h3 class="mb-0">Interactive Matrix</h3>
+        <button id="toggleFullscreen" class="btn btn-sm btn-outline-secondary" title="Toggle fullscreen" style="padding: 0.25rem 0.5rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+          </svg>
+        </button>
         <div class="matrix-controls d-flex gap-2 align-items-center">
-          <button id="toggleColumnFilters" class="btn btn-sm btn-outline-secondary" title="Toggle column filters">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="4" y1="21" x2="4" y2="14"></line>
-              <line x1="4" y1="10" x2="4" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12" y2="3"></line>
-              <line x1="20" y1="21" x2="20" y2="16"></line>
-              <line x1="20" y1="12" x2="20" y2="3"></line>
-            </svg>
-          </button>
-          <button id="toggleFullscreen" class="btn btn-sm btn-outline-secondary" title="Toggle fullscreen">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
-            </svg>
-          </button>
-          <span class="text-secondary" style="font-size: 0.875rem;">
-            <span aria-label="Showing page information">Page {{page}} of {{total_pages}}</span>
-          </span>
+          <div class="d-flex gap-1 align-items-center">
+            {{#if has_prev_page}}
+              <a 
+                href="/p/{{selected_project_id}}/matrix?page={{prev_page}}&per_page={{per_page}}{{#if current_sort_by}}&sort_by={{current_sort_by}}{{/if}}{{#if current_sort_order}}&sort_order={{current_sort_order}}{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if req_status_filter}}&req_status_filter={{req_status_filter}}{{/if}}{{#if category_filter}}&category_filter={{category_filter}}{{/if}}{{#if applicability_filter}}&applicability_filter={{applicability_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}"
+                class="text-secondary"
+                style="text-decoration: none; font-size: 1rem; line-height: 1; opacity: 0.7; transition: opacity 0.2s;"
+                onmouseover="this.style.opacity='1'"
+                onmouseout="this.style.opacity='0.7'"
+                aria-label="Previous page"
+                title="Previous page"
+              >‹</a>
+            {{else}}
+              <span class="text-secondary" style="font-size: 1rem; line-height: 1; opacity: 0.3;" aria-disabled="true">‹</span>
+            {{/if}}
+            <span class="text-secondary" style="font-size: 0.8rem; margin: 0 0.5rem;">
+              <span aria-label="Showing page information">Page {{page}} of {{total_pages}}</span>
+            </span>
+            {{#if has_next_page}}
+              <a 
+                href="/p/{{selected_project_id}}/matrix?page={{next_page}}&per_page={{per_page}}{{#if current_sort_by}}&sort_by={{current_sort_by}}{{/if}}{{#if current_sort_order}}&sort_order={{current_sort_order}}{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if req_status_filter}}&req_status_filter={{req_status_filter}}{{/if}}{{#if category_filter}}&category_filter={{category_filter}}{{/if}}{{#if applicability_filter}}&applicability_filter={{applicability_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}"
+                class="text-secondary"
+                style="text-decoration: none; font-size: 1rem; line-height: 1; opacity: 0.7; transition: opacity 0.2s;"
+                onmouseover="this.style.opacity='1'"
+                onmouseout="this.style.opacity='0.7'"
+                aria-label="Next page"
+                title="Next page"
+              >›</a>
+            {{else}}
+              <span class="text-secondary" style="font-size: 1rem; line-height: 1; opacity: 0.3;" aria-disabled="true">›</span>
+            {{/if}}
+          </div>
         </div>
       </div>
     </div>
-    <div class="card-body p-0 c-card__body matrix-card-body">
-      <!-- Top scroll indicator - positioned outside table container -->
-      <div class="scroll-indicator c-table-scroll-indicator matrix-scroll-indicator" id="scrollIndicator">
-        <div class="scroll-track">
-          <div class="scroll-thumb c-table-scroll-thumb" id="scrollThumb"></div>
-        </div>
-      </div>
-      
-      <!-- Column Filters Panel (Hidden by default) -->
-      <div id="columnFiltersPanel" class="matrix-column-filters" style="display: none;">
-        <div class="p-3" style="background: var(--surface-muted); border-bottom: 1px solid var(--border-color);">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <strong>Column Visibility</strong>
-            <div class="d-flex gap-2">
-              <button id="showAllColumns" class="btn btn-xs btn-outline-primary">Show All</button>
-              <button id="hideAllTests" class="btn btn-xs btn-outline-secondary">Hide All Tests</button>
-            </div>
-          </div>
-          <div class="matrix-column-toggle-list d-flex flex-wrap gap-2">
-            {{#each tests}}
-              <label class="matrix-column-toggle">
-                <input type="checkbox" checked data-column-toggle="test-{{test_id}}" class="me-1">
-                <span style="font-size: 0.875rem;">Test #{{test_id}}</span>
-              </label>
-            {{/each}}
-          </div>
-        </div>
-      </div>
-      
-      <div class="table-container c-table-container matrix-table-container" role="region" aria-label="Traceability matrix table" tabindex="0">
-        <table class="table c-table matrix-table" id="matrixTable" role="table">
+
+    <div class="table-container c-table-container matrix-table-container" role="region" aria-label="Traceability matrix table" tabindex="0" style="padding: 0; margin: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
+        <table class="table c-table matrix-table" id="matrixTable" role="table" style="margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
           <thead role="rowgroup" class="matrix-thead">
             <tr role="row" class="matrix-header-row">
-              <th class="sortable c-table-sortable matrix-col-sticky matrix-col-title" data-sort="req_title" scope="col" role="columnheader" style="min-width: 250px;">
-                <a
-                  href="/p/{{selected_project_id}}/matrix?sort_by=req_title&sort_order={{#if (eq current_sort_by "req_title")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
-                  class="text-decoration-none d-flex align-items-center justify-content-between"
-                  data-matrix-sort-link
-                  aria-label="Sort by requirement title"
-                >
-                  <span>Requirement Title</span>
-                  <span class="sort-indicator c-table-sort-indicator" aria-hidden="true">
-                    {{#if (eq current_sort_by "req_title")}}
-                      {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
-                    {{else}}
-                      ↕
-                    {{/if}}
-                  </span>
-                </a>
-              </th>
-              <th class="sortable c-table-sortable matrix-col-sticky matrix-col-reference" data-sort="req_reference" scope="col" role="columnheader" style="min-width: 150px; left: 250px;">
+              <th class="sortable c-table-sortable matrix-col-sticky matrix-col-reference" data-sort="req_reference" scope="col" role="columnheader" style="min-width: 200px; left: 0;">
                 <a
                   href="/p/{{selected_project_id}}/matrix?sort_by=req_reference&sort_order={{#if (eq current_sort_by "req_reference")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
                   class="text-decoration-none d-flex align-items-center justify-content-between"
                   data-matrix-sort-link
                   aria-label="Sort by requirement reference"
                 >
-                  <span>Reference</span>
+                  <span>Requirement</span>
                   <span class="sort-indicator c-table-sort-indicator" aria-hidden="true">
                     {{#if (eq current_sort_by "req_reference")}}
                       {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
@@ -275,39 +290,30 @@
                 <th class="text-center sortable c-table-sortable matrix-col-test u-text-center" data-sort="test_{{test_id}}" data-column-id="test-{{test_id}}" scope="col" role="columnheader" style="min-width: 120px;">
                   <a
                     href="/p/{{@root.selected_project_id}}/matrix?sort_by=test_{{test_id}}&sort_order={{#if (eq @root.current_sort_order "asc")}}desc{{else}}asc{{/if}}{{#if @root.test_status_filter}}&test_status_filter={{@root.test_status_filter}}{{/if}}{{#if @root.search}}&search={{@root.search}}{{/if}}&page={{@root.page}}&per_page={{@root.per_page}}"
-                    class="text-decoration-none d-flex flex-column align-items-center matrix-test-header-link"
+                    class="text-decoration-none d-flex align-items-center justify-content-between w-100"
                     data-matrix-sort-link
-                    aria-label="Sort by test {{test_id}} status"
+                    aria-label="Sort by test {{test_reference}} status"
                     title="{{test_name}} - {{test_status}}"
                   >
-                    <div class="d-flex align-items-center justify-content-between w-100 mb-1">
-                      <span style="font-weight: 600; font-size: 0.875rem;">Test #{{test_id}}</span>
-                      <span class="sort-indicator c-table-sort-indicator" data-test-indicator="{{test_id}}" aria-hidden="true">↕</span>
-                    </div>
-                    <div class="matrix-test-status-badge" style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: var(--surface-muted);">
-                      {{test_status}}
-                    </div>
+                    <span style="font-weight: 600; font-size: 0.875rem;">{{test_reference}}</span>
+                    <span class="sort-indicator c-table-sort-indicator" data-test-indicator="{{test_id}}" aria-hidden="true">↕</span>
                   </a>
                 </th>
               {{/each}}
             </tr>
           </thead>
-          <tbody role="rowgroup" class="matrix-tbody">
+          <tbody role="rowgroup" class="matrix-tbody" style="border-radius: 0;">
             {{#each requirements}}
               <tr role="row" class="matrix-body-row" data-req-id="{{req_id}}">
-                <td role="cell" class="matrix-col-sticky matrix-col-title" style="min-width: 250px;">
+                <td role="cell" class="matrix-col-sticky matrix-col-reference" style="min-width: 200px; left: 0;">
                   <div class="matrix-req-cell">
                     <a href="/p/{{@root.selected_project_id}}/requirements/show/{{req_id}}" 
                        class="matrix-req-link font-medium u-font-medium" 
                        aria-label="View requirement {{req_id}}"
                        title="{{req_title}}">
-                      <span class="matrix-req-id" style="font-size: 0.75rem; color: var(--text-secondary); margin-right: 0.5rem;">{{req_id}}</span>
-                      <span class="matrix-req-title">{{req_title}}</span>
+                      <span class="text-secondary matrix-req-reference">{{req_reference}}</span>
                     </a>
                   </div>
-                </td>
-                <td role="cell" class="matrix-col-sticky matrix-col-reference" style="min-width: 150px; left: 250px;">
-                  <span class="text-secondary matrix-req-reference">{{req_reference}}</span>
                 </td>
                 {{#each matrix}}
                   <td class="text-center u-text-center matrix-cell" 
@@ -360,140 +366,30 @@
           </tbody>
         </table>
       </div>
-      
-      <!-- Matrix Legend -->
-      <div class="matrix-legend p-3" style="background: var(--surface-muted); border-top: 1px solid var(--border-color);">
-        <div class="d-flex justify-content-center align-items-center flex-wrap gap-4" style="font-size: 0.875rem;">
-          <div class="legend-item d-flex align-items-center gap-2">
+    <div class="card-footer c-card__footer matrix-card-footer" style="padding: 0; margin: 0;">
+      <nav aria-label="Matrix pagination" class="d-flex justify-content-between align-items-center flex-wrap gap-3" style="margin: 0; padding: 0;">
+        <div class="matrix-legend d-flex align-items-center justify-content-center gap-3" style="font-size: 0.875rem; width: 100%; margin: 0; padding: 0.5rem 0;">
+          <div class="legend-item d-flex align-items-center justify-content-center gap-1">
             <span class="matrix-status-dot status-passed">●</span>
-            <span>Passed/Approved</span>
+            <span>Passed</span>
           </div>
-          <div class="legend-item d-flex align-items-center gap-2">
+          <div class="legend-item d-flex align-items-center justify-content-center gap-1">
             <span class="matrix-status-dot status-in-progress">◐</span>
             <span>In Progress</span>
           </div>
-          <div class="legend-item d-flex align-items-center gap-2">
+          <div class="legend-item d-flex align-items-center justify-content-center gap-1">
             <span class="matrix-status-dot status-pending">○</span>
             <span>Pending</span>
           </div>
-          <div class="legend-item d-flex align-items-center gap-2">
+          <div class="legend-item d-flex align-items-center justify-content-center gap-1">
             <span class="matrix-status-dot status-failed">✕</span>
             <span>Failed</span>
           </div>
-          <div class="legend-item d-flex align-items-center gap-2">
+          <div class="legend-item d-flex align-items-center justify-content-center gap-1">
             <span class="matrix-no-link">–</span>
             <span>Not Linked</span>
           </div>
         </div>
-      </div>
-    </div>
-    
-    <!-- Pagination Controls -->
-    <div class="card-footer c-card__footer matrix-card-footer">
-      <nav aria-label="Matrix pagination" class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div class="text-secondary matrix-pagination-info">
-          {{#if requirements}}
-            Showing <strong>{{start_item}}</strong> to <strong>{{end_item}}</strong> of <strong>{{total_requirements}}</strong> requirements
-          {{else}}
-            No requirements found
-          {{/if}}
-        </div>
-        
-        <ul class="pagination matrix-pagination" role="navigation" aria-label="Pagination">
-            <li class="page-item {{#unless has_prev_page}}disabled{{/unless}}">
-              {{#if has_prev_page}}
-                <a 
-                  class="page-link" 
-                  href="/p/{{selected_project_id}}/matrix?page={{prev_page}}&per_page={{per_page}}{{#if current_sort_by}}&sort_by={{current_sort_by}}{{/if}}{{#if current_sort_order}}&sort_order={{current_sort_order}}{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}"
-                  aria-label="Previous page"
-                  title="Go to previous page"
-                >
-                  ← Previous
-                </a>
-              {{else}}
-                <span class="page-link" aria-disabled="true">← Previous</span>
-              {{/if}}
-            </li>
-            
-            {{#if show_first_page}}
-              <li class="page-item">
-                <a 
-                  class="page-link" 
-                  href="/p/{{selected_project_id}}/matrix?page=1&per_page={{per_page}}{{#if current_sort_by}}&sort_by={{current_sort_by}}{{/if}}{{#if current_sort_order}}&sort_order={{current_sort_order}}{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}"
-                  aria-label="Page 1"
-                >
-                  1
-                </a>
-              </li>
-            {{/if}}
-            
-            {{#if show_first_ellipsis}}
-              <li class="page-item disabled">
-                <span class="page-link">...</span>
-              </li>
-            {{/if}}
-            
-            {{#if has_prev_page}}
-              <li class="page-item">
-                <a 
-                  class="page-link" 
-                  href="/p/{{selected_project_id}}/matrix?page={{prev_page}}&per_page={{per_page}}{{#if current_sort_by}}&sort_by={{current_sort_by}}{{/if}}{{#if current_sort_order}}&sort_order={{current_sort_order}}{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}"
-                  aria-label="Page {{prev_page}}"
-                >
-                  {{prev_page}}
-                </a>
-              </li>
-            {{/if}}
-            
-            <li class="page-item active" aria-current="page">
-              <span class="page-link">{{page}}</span>
-            </li>
-            
-            {{#if has_next_page}}
-              <li class="page-item">
-                <a 
-                  class="page-link" 
-                  href="/p/{{selected_project_id}}/matrix?page={{next_page}}&per_page={{per_page}}{{#if current_sort_by}}&sort_by={{current_sort_by}}{{/if}}{{#if current_sort_order}}&sort_order={{current_sort_order}}{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}"
-                  aria-label="Page {{next_page}}"
-                >
-                  {{next_page}}
-                </a>
-              </li>
-            {{/if}}
-            
-            {{#if show_last_ellipsis}}
-              <li class="page-item disabled">
-                <span class="page-link">...</span>
-              </li>
-            {{/if}}
-            
-            {{#if show_last_page}}
-              <li class="page-item">
-                <a 
-                  class="page-link" 
-                  href="/p/{{selected_project_id}}/matrix?page={{total_pages}}&per_page={{per_page}}{{#if current_sort_by}}&sort_by={{current_sort_by}}{{/if}}{{#if current_sort_order}}&sort_order={{current_sort_order}}{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}"
-                  aria-label="Page {{total_pages}}"
-                >
-                  {{total_pages}}
-                </a>
-              </li>
-            {{/if}}
-            
-            <li class="page-item {{#unless has_next_page}}disabled{{/unless}}">
-              {{#if has_next_page}}
-                <a 
-                  class="page-link" 
-                  href="/p/{{selected_project_id}}/matrix?page={{next_page}}&per_page={{per_page}}{{#if current_sort_by}}&sort_by={{current_sort_by}}{{/if}}{{#if current_sort_order}}&sort_order={{current_sort_order}}{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}"
-                  aria-label="Next page"
-                  title="Go to next page"
-                >
-                  Next →
-                </a>
-              {{else}}
-                <span class="page-link" aria-disabled="true">Next →</span>
-              {{/if}}
-            </li>
-          </ul>
       </nav>
     </div>
   </div>

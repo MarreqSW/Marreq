@@ -1,0 +1,50 @@
+{{!--
+  PARTIAL: Metrics Section
+  Dashboard cards showing test health statistics
+--}}
+<section class="reqman-requirements-metrics" aria-label="Test health">
+  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--passed">
+    <span class="reqman-requirements-metric-card__label">Passed</span>
+    <span class="reqman-requirements-metric-card__value">{{test_metrics.passed}}</span>
+    <span class="reqman-requirements-metric-card__badge">All criteria met</span>
+  </article>
+  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--failed">
+    <span class="reqman-requirements-metric-card__label">Failed</span>
+    <span class="reqman-requirements-metric-card__value">{{test_metrics.failed}}</span>
+    <span class="reqman-requirements-metric-card__badge">Failed criteria</span>
+  </article>
+  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--pending">
+    <span class="reqman-requirements-metric-card__label">Pending</span>
+    <span class="reqman-requirements-metric-card__value">{{test_metrics.pending}}</span>
+    <span class="reqman-requirements-metric-card__badge">Awaiting execution</span>
+  </article>
+  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--in-progress">
+    <span class="reqman-requirements-metric-card__label">In Progress</span>
+    <span class="reqman-requirements-metric-card__value">{{test_metrics.in_progress}}</span>
+    <span class="reqman-requirements-metric-card__badge">Currently running</span>
+  </article>
+  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--coverage">
+    <div class="reqman-requirements-metric-card__header">
+      <span class="reqman-requirements-metric-card__label">Pass Rate</span>
+      <span class="reqman-requirements-metric-card__value">{{test_metrics.pass_rate.percent}}%</span>
+    </div>
+    <div class="reqman-requirements-metric-card__progress">
+      <div
+        class="reqman-requirements-metric-card__progress-bar"
+        style="width: {{test_metrics.pass_rate.percent}}%;"
+        aria-valuenow="{{test_metrics.pass_rate.percent}}"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        role="progressbar">
+      </div>
+    </div>
+    <span class="reqman-requirements-metric-card__hint">
+      {{test_metrics.pass_rate.passed}} passed of {{test_metrics.total}}
+    </span>
+  </article>
+</section>
+
+{{!-- Expose metrics for tests and client-side initialization --}}
+<script id="test_metrics" type="application/json">
+  {"total": {{test_metrics.total}}, "passed": {{test_metrics.passed}}, "failed": {{test_metrics.failed}}, "pending": {{test_metrics.pending}}, "in_progress": {{test_metrics.in_progress}}, "pass_rate_percent": {{test_metrics.pass_rate.percent}}, "pass_rate_passed": {{test_metrics.pass_rate.passed}}}
+</script>

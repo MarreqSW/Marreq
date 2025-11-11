@@ -1,0 +1,33 @@
+{{!--
+  PARTIAL: Page Header
+  Breadcrumb navigation, title, view switcher, and action buttons
+--}}
+<header class="reqman-requirements-header">
+  <div class="reqman-requirements-header__meta">
+    <nav class="reqman-requirements-breadcrumb" aria-label="Breadcrumb">
+      <ol>
+        <li><a href="/projects" class="reqman-requirements-breadcrumb__link">Projects</a></li>
+        {{#if project.id}}
+        <li>
+          <a href="/p/{{project.id}}" class="reqman-requirements-breadcrumb__link">{{project.name}}</a>
+        </li>
+        {{/if}}
+        <li aria-current="page" class="reqman-requirements-breadcrumb__current">Tests</li>
+      </ol>
+    </nav>
+    <div>
+      <h1 class="reqman-requirements-header__title">
+        {{#if project.name}}
+          {{project.name}}
+          <span class="reqman-requirements-header__title-accent">tests</span>
+        {{else}}
+          Verification Tests
+        {{/if}}
+      </h1>
+      <p class="reqman-requirements-header__subtitle">
+        Comprehensive view of verification tests and their status.
+      </p>
+    </div>
+  </div>
+  {{> tests/_view_controls}}
+</header>

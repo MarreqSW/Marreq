@@ -28,6 +28,9 @@ export function initScrollIndicator({
     const tableWidth = container.scrollWidth;
     const containerWidth = container.clientWidth;
 
+    // Mark as initialized to show with fade-in
+    indicator.classList.add('is-initialized');
+
     if (tableWidth > containerWidth) {
       indicator.style.display = 'block';
       maxScroll = tableWidth - containerWidth;

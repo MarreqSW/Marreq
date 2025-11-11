@@ -370,7 +370,7 @@ async fn delete_test_route(
     Ok(Redirect::to(format!("/p/{}/tests", project_id)))
 }
 
-#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>&<page>&<per_page>&<search>")]
+#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<linkage_filter>&<page>&<per_page>&<search>")]
 async fn get_matrix(
     project_access: ProjectAccess,
     project_id: i32,
@@ -378,6 +378,10 @@ async fn get_matrix(
     sort_by: Option<String>,
     sort_order: Option<String>,
     test_status_filter: Option<i32>,
+    req_status_filter: Option<i32>,
+    category_filter: Option<i32>,
+    applicability_filter: Option<i32>,
+    linkage_filter: Option<String>,
     page: Option<i64>,
     per_page: Option<i64>,
     search: Option<String>,
@@ -409,6 +413,21 @@ async fn get_matrix(
             Redirect::to(uri!(crate::routes::html::dashboard::index))
         })?;
 
+    // Apply requirement status filter if provided
+    if let Some(req_status) = req_status_filter {
+        all_reqs.retain(|r| r.req_current_status == req_status);
+    }
+
+    // Apply category filter if provided
+    if let Some(category) = category_filter {
+        all_reqs.retain(|r| r.req_category == category);
+    }
+
+    // Apply applicability filter if provided
+    if let Some(applicability) = applicability_filter {
+        all_reqs.retain(|r| r.req_applicability == applicability);
+    }
+
     // Apply search filter if provided
     if let Some(ref search_term) = search {
         let search_lower = search_term.to_lowercase();
@@ -418,8 +437,6 @@ async fn get_matrix(
                 || r.req_id.to_string().contains(&search_lower)
         });
     }
-
-    let total_requirements = all_reqs.len() as i64;
 
     let mut all_tests: Vec<Test> = tests::dsl::tests
         .filter(tests::project_id.eq(project_id))
@@ -445,6 +462,27 @@ async fn get_matrix(
         })?
         .into_iter()
         .collect();
+
+    // Apply linkage filter (before pagination to get accurate counts)
+    if let Some(ref linkage) = linkage_filter {
+        match linkage.as_str() {
+            "linked" => {
+                // Keep only requirements that have at least one test link
+                all_reqs.retain(|r| {
+                    all_tests.iter().any(|t| links.contains(&(r.req_id, t.test_id)))
+                });
+            }
+            "unlinked" => {
+                // Keep only requirements that have no test links
+                all_reqs.retain(|r| {
+                    !all_tests.iter().any(|t| links.contains(&(r.req_id, t.test_id)))
+                });
+            }
+            _ => {} // "all" or unknown: no filtering
+        }
+    }
+
+    let total_requirements = all_reqs.len() as i64;
 
     // Sort requirements.
     let sort_by = sort_by.unwrap_or_else(|| "req_id".to_string());
@@ -518,6 +556,7 @@ async fn get_matrix(
             json!({
                 "test_id": t.test_id,
                 "test_name": t.test_name,
+                "test_reference": t.test_reference,
                 "test_status": get_status_name_by_id_cached(state, t.test_status)
             })
         })
@@ -540,6 +579,10 @@ async fn get_matrix(
     ctx["current_sort_by"] = json!(sort_by);
     ctx["current_sort_order"] = json!(if desc { "desc" } else { "asc" });
     ctx["test_status_filter"] = json!(test_status_filter);
+    ctx["req_status_filter"] = json!(req_status_filter);
+    ctx["category_filter"] = json!(category_filter);
+    ctx["applicability_filter"] = json!(applicability_filter);
+    ctx["linkage_filter"] = json!(linkage_filter);
     ctx["search"] = json!(search);
     ctx["page"] = json!(page);
     ctx["per_page"] = json!(per_page);
@@ -554,8 +597,11 @@ async fn get_matrix(
     ctx["show_last_page"] = json!(show_last_page);
     ctx["show_first_ellipsis"] = json!(show_first_ellipsis);
     ctx["show_last_ellipsis"] = json!(show_last_ellipsis);
-    ctx["statuses"] = json!(state.repo_read().get_status_all().unwrap_or_default());
-    ctx["total_test_columns"] = json!(all_tests.len() + 2); // Title + Reference + test columns
+    ctx["test_statuses"] = json!(state.repo_read().get_test_status_all().unwrap_or_default());
+    ctx["req_statuses"] = json!(state.repo_read().get_status_all().unwrap_or_default());
+    ctx["categories"] = json!(state.repo_read().get_categories_by_project(project_id).unwrap_or_default());
+    ctx["applicabilities"] = json!(state.repo_read().get_applicability_all().unwrap_or_default());
+    ctx["total_test_columns"] = json!(all_tests.len() + 1); // Reference + test columns
 
     Ok(Template::render("matrix", ctx))
 }
@@ -612,7 +658,7 @@ async fn get_matrix_csv(
     let csv_data = service.export_matrix_csv(project_id, test_status_filter)
         .map_err(|e| {
             eprintln!("Error generating CSV: {e:?}");
-            Redirect::to(uri!(get_matrix(project_id = project_id, sort_by = None::<String>, sort_order = None::<String>, test_status_filter = None::<i32>, page = None::<i64>, per_page = None::<i64>, search = None::<String>)))
+            Redirect::to(uri!(get_matrix(project_id = project_id, sort_by = None::<String>, sort_order = None::<String>, test_status_filter = None::<i32>, req_status_filter = None::<i32>, category_filter = None::<i32>, applicability_filter = None::<i32>, linkage_filter = None::<String>, page = None::<i64>, per_page = None::<i64>, search = None::<String>)))
         })?;
 
     let ct = ContentType::new("text", "csv");

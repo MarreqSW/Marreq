@@ -58,12 +58,6 @@
   font-weight: 500;
 }
 
-.c-requirement-card__actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
-}
-
 /* Status Badges */
 [class~='status-badge'] {
   align-items: center;
@@ -85,12 +79,6 @@
   background-color: #fffbeb;
   border: 1px solid #fed7aa;
   color: #d97706;
-}
-
-@media (max-width: 768px) {
-  .c-requirement-card__actions {
-    flex-direction: column;
-  }
 }
 
 [data-theme='dark'] .c-card {
@@ -119,13 +107,6 @@
   color: var(--text-primary);
 }
 
-[data-theme='dark'] .c-list-group-item--action:hover,
-[data-theme='dark'] .c-list-group-item--action:focus {
-  background-color: var(--surface-hover);
-  border-color: var(--border-color);
-  color: var(--text-primary);
-}
-
 [data-theme='dark'] .c-requirement-card__id {
   background-color: var(--primary-light);
   color: #0f172a;
@@ -145,5 +126,19 @@
 [data-theme='dark'] .c-tree__requirement-link:hover {
   background-color: transparent;
   color: var(--primary-light);
+}
+
+/* Bootstrap list-group dark mode overrides */
+[data-theme='dark'] .c-list-group-item--action:hover,
+[data-theme='dark'] .c-list-group-item--action:focus {
+  background-color: var(--surface-hover);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+[data-theme='dark'] .c-list-group-item .c-badge--bg-light {
+  background-color: var(--surface-muted);
+  border-color: var(--border-color);
+  color: var(--text-primary);
 }
 

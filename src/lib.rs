@@ -21,4 +21,5 @@ pub mod repository;
 pub mod routes;
 pub mod schema;
 pub mod services;
+pub mod status_enums;
 pub mod validation;

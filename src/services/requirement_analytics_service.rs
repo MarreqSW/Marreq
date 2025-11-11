@@ -6,12 +6,25 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::repository::errors::RepoError;
 use crate::repository::{LookupRepository, RequirementsRepository};
+use crate::status_enums::RequirementStatusEnum;
 use diesel::prelude::*;
 use diesel::sql_types::{BigInt, Integer, Nullable, Text};
 use serde::Serialize;
 use std::collections::HashMap;
 
 /// Aggregated requirement metrics for a project scope.
+///
+/// # Coverage Calculation
+///
+/// The `coverage_verified` and `coverage_percent` fields represent requirements coverage,
+/// which is based on the `Accepted` status only. According to the canonical status definitions:
+///
+/// - **coverage_verified**: Count of requirements with status = "Accepted" (ID 3)
+/// - **coverage_percent**: `(accepted / total) * 100`, rounded to nearest integer
+///
+/// Only "Accepted" requirements count toward coverage because they represent requirements
+/// that have been formally approved and must be processed. Other statuses (Draft, Proposal,
+/// Rejected, Cancelled, Finished) do not contribute to the coverage metric.
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct RequirementMetrics {
     pub total: i64,
@@ -177,15 +190,19 @@ impl<'a> RequirementAnalyticsService<'a> {
         // Tally totals and the statuses we care about.
         for (status, count) in counts {
             metrics.total += count;
-            let normalized = status.trim().to_ascii_lowercase();
-            match normalized.as_str() {
-                "draft" => metrics.draft += count,
-                "accepted" => metrics.accepted += count,
-                "rejected" => metrics.rejected += count,
-                _ => {}
+
+            // Use the enum to determine status type consistently
+            if let Some(status_enum) = RequirementStatusEnum::from_title(&status) {
+                match status_enum {
+                    RequirementStatusEnum::Draft => metrics.draft += count,
+                    RequirementStatusEnum::Accepted => metrics.accepted += count,
+                    RequirementStatusEnum::Rejected => metrics.rejected += count,
+                    _ => {}
+                }
             }
         }
 
+        // For coverage calculation, only Accepted requirements are considered verified
         metrics.coverage_verified = metrics.accepted;
         metrics.coverage_percent = if metrics.total > 0 {
             ((metrics.accepted as f64 / metrics.total as f64) * 100.0).round() as i32

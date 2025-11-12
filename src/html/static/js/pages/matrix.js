@@ -7,7 +7,6 @@ import { initScrollIndicator } from '../modules/scrollIndicator.js';
 
 // State management
 const matrixState = {
-  groupingEnabled: false,
   fullscreenEnabled: false,
   columnFiltersVisible: false,
   hiddenColumns: new Set(),
@@ -29,7 +28,6 @@ export function init() {
   initTableNavigation();
   initMatrixScrollIndicator();
   initTooltips();
-  initGrouping();
   initCellInteractions();
   calculateCoverage();
   
@@ -245,12 +243,6 @@ function initKeyboardShortcuts() {
       document.getElementById('toggleFullscreen')?.click();
     }
     
-    // G: Toggle grouping
-    if (e.key === 'g' || e.key === 'G') {
-      e.preventDefault();
-      document.getElementById('toggleGrouping')?.click();
-    }
-    
     // ?: Show shortcuts help
     if (e.key === '?' && e.shiftKey) {
       e.preventDefault();
@@ -355,26 +347,6 @@ function initMatrixScrollIndicator() {
 function initTooltips() {
   // Tooltips are now handled purely via CSS [data-tooltip] attribute
   // No JavaScript manipulation needed
-}
-
-/**
- * Initialize grouping functionality
- */
-function initGrouping() {
-  const toggleButton = document.getElementById('toggleGrouping');
-  
-  if (toggleButton) {
-    toggleButton.addEventListener('click', () => {
-      matrixState.groupingEnabled = !matrixState.groupingEnabled;
-      toggleButton.classList.toggle('active', matrixState.groupingEnabled);
-      
-      // Could implement actual grouping logic here
-      // For now, just indicate the feature is toggled
-      console.log('Grouping:', matrixState.groupingEnabled ? 'enabled' : 'disabled');
-      
-      // Could group by category, status, etc.
-    });
-  }
 }
 
 /**

@@ -88,48 +88,6 @@
   padding: var(--space-2) var(--space-4);
 }
 
-/* Filter Buttons */
-[class~='btn-filter'],
-[class~='btn-clear'] {
-  align-items: center;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: flex;
-  font-size: 0.875rem;
-  font-weight: 500;
-  gap: var(--space-2);
-  justify-content: center;
-  min-width: 80px;
-  padding: var(--space-2) var(--space-4);
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-[class~='btn-filter'] {
-  background-color: var(--primary-color);
-  color: #fff;
-}
-
-[class~='btn-filter']:hover {
-  background-color: var(--primary-dark);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-[class~='btn-clear'] {
-  background-color: var(--surface-muted);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-}
-
-[class~='btn-clear']:hover {
-  background-color: var(--surface-hover);
-  box-shadow: var(--shadow-sm);
-  color: var(--text-primary);
-  transform: translateY(-1px);
-}
-
 [class~='btn-icon'] {
   flex-shrink: 0;
   height: 16px;

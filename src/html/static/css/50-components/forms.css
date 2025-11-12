@@ -107,12 +107,6 @@
   margin: 0;
 }
 
-.c-filter-icon {
-  color: var(--primary-color);
-  height: 16px;
-  width: 16px;
-}
-
 .c-filter-select:hover {
   border-color: var(--primary-light);
 }

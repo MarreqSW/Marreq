@@ -235,7 +235,7 @@ async fn get_matrix(
     ctx["applicabilities"] = json!(state.repo_read().get_applicability_all().unwrap_or_default());
     ctx["total_test_columns"] = json!(all_tests.len() + 1); // Reference + test columns
 
-    Ok(Template::render("matrix", ctx))
+    Ok(Template::render("matrix/matrix", ctx))
 }
 
 #[get("/<project_id>/matrix.xls")]

@@ -2,7 +2,7 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{ActionType, EntityType, Matrix, NewMatrix, Requirement, User};
+use crate::models::{ActionType, EntityType, Matrix, NewMatrix, Requirement, Test, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsRepository};
 use diesel::prelude::*;
@@ -180,6 +180,222 @@ impl<'a> MatrixService<'a> {
             }
         }
     }
+
+    /// Comprehensive matrix view data with all filters and pagination applied.
+    pub fn get_matrix_view(
+        &self,
+        project_id: i32,
+        filters: MatrixFilters,
+        pagination: MatrixPagination,
+    ) -> Result<MatrixView, RepoError> {
+        let repo = self.state.repo_read();
+
+        // Load all requirements
+        let mut all_reqs = repo.get_requirements_by_project(project_id)?;
+
+        // Apply requirement filters
+        Self::apply_requirement_filters(
+            &mut all_reqs,
+            filters.req_status,
+            filters.category,
+            filters.applicability,
+            filters.search.as_deref(),
+        );
+
+        // Load all tests
+        let mut all_tests = repo.get_tests_by_project(project_id)?;
+        all_tests.sort_by_key(|t| t.test_id);
+
+        // Filter tests by status
+        if let Some(status) = filters.test_status {
+            all_tests.retain(|t| t.test_status == status);
+        }
+
+        // Load matrix links
+        let matrix_links = repo.get_matrix_by_project(project_id)?;
+        let links: HashSet<(i32, i32)> = matrix_links
+            .into_iter()
+            .map(|m| (m.matrix_req_id, m.matrix_test_id))
+            .collect();
+
+        // Apply linkage filter
+        Self::apply_linkage_filter(&mut all_reqs, &all_tests, &links, filters.linkage.as_deref());
+
+        let total_requirements = all_reqs.len() as i64;
+
+        // Sort requirements
+        Self::sort_requirements(
+            &mut all_reqs,
+            &pagination.sort_by,
+            pagination.sort_order == SortOrder::Desc,
+            &links,
+        );
+
+        // Paginate
+        let total_pages = if total_requirements == 0 {
+            1
+        } else {
+            (total_requirements as f64 / pagination.per_page as f64).ceil() as i64
+        };
+        let start_idx = ((pagination.page - 1) * pagination.per_page) as usize;
+        let end_idx = (start_idx + pagination.per_page as usize).min(all_reqs.len());
+        
+        let paginated_reqs = if start_idx < all_reqs.len() {
+            all_reqs[start_idx..end_idx].to_vec()
+        } else {
+            Vec::new()
+        };
+
+        // Count total links
+        let total_links = paginated_reqs
+            .iter()
+            .map(|req| {
+                all_tests
+                    .iter()
+                    .filter(|t| links.contains(&(req.req_id, t.test_id)))
+                    .count()
+            })
+            .sum();
+
+        Ok(MatrixView {
+            requirements: paginated_reqs,
+            tests: all_tests,
+            links,
+            total_requirements,
+            total_links,
+            total_pages,
+        })
+    }
+
+    fn apply_requirement_filters(
+        reqs: &mut Vec<Requirement>,
+        status_filter: Option<i32>,
+        category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
+        search: Option<&str>,
+    ) {
+        if let Some(status) = status_filter {
+            reqs.retain(|r| r.req_current_status == status);
+        }
+
+        if let Some(category) = category_filter {
+            reqs.retain(|r| r.req_category == category);
+        }
+
+        if let Some(applicability) = applicability_filter {
+            reqs.retain(|r| r.req_applicability == applicability);
+        }
+
+        if let Some(search_term) = search {
+            let search_lower = search_term.to_lowercase();
+            reqs.retain(|r| {
+                r.req_title.to_lowercase().contains(&search_lower)
+                    || r.req_reference.to_lowercase().contains(&search_lower)
+                    || r.req_id.to_string().contains(&search_lower)
+            });
+        }
+    }
+
+    fn apply_linkage_filter(
+        reqs: &mut Vec<Requirement>,
+        tests: &[Test],
+        links: &HashSet<(i32, i32)>,
+        linkage: Option<&str>,
+    ) {
+        if let Some(filter) = linkage {
+            match filter {
+                "linked" => {
+                    reqs.retain(|r| tests.iter().any(|t| links.contains(&(r.req_id, t.test_id))));
+                }
+                "unlinked" => {
+                    reqs.retain(|r| !tests.iter().any(|t| links.contains(&(r.req_id, t.test_id))));
+                }
+                _ => {} // "all" or unknown
+            }
+        }
+    }
+
+    fn sort_requirements(
+        reqs: &mut Vec<Requirement>,
+        sort_by: &str,
+        desc: bool,
+        links: &HashSet<(i32, i32)>,
+    ) {
+        // Check if sorting by test column
+        if let Some(test_id_str) = sort_by.strip_prefix("test_") {
+            if let Ok(target_test_id) = test_id_str.parse::<i32>() {
+                reqs.sort_by_key(|r| links.contains(&(r.req_id, target_test_id)));
+                if desc {
+                    reqs.reverse();
+                }
+                return;
+            }
+        }
+
+        // Sort by requirement fields
+        match sort_by {
+            "req_title" => {
+                reqs.sort_by(|a, b| a.req_title.cmp(&b.req_title));
+            }
+            "req_reference" => {
+                reqs.sort_by(|a, b| a.req_reference.cmp(&b.req_reference));
+            }
+            _ => {
+                reqs.sort_by_key(|r| r.req_id);
+            }
+        }
+
+        if desc {
+            reqs.reverse();
+        }
+    }
+}
+
+/// Filter parameters for matrix view
+#[derive(Debug, Clone, Default)]
+pub struct MatrixFilters {
+    pub test_status: Option<i32>,
+    pub req_status: Option<i32>,
+    pub category: Option<i32>,
+    pub applicability: Option<i32>,
+    pub linkage: Option<String>,
+    pub search: Option<String>,
+}
+
+/// Pagination parameters for matrix view
+#[derive(Debug, Clone)]
+pub struct MatrixPagination {
+    pub page: i64,
+    pub per_page: i64,
+    pub sort_by: String,
+    pub sort_order: SortOrder,
+}
+
+impl Default for MatrixPagination {
+    fn default() -> Self {
+        Self {
+            page: 1,
+            per_page: 50,
+            sort_by: "req_id".to_string(),
+            sort_order: SortOrder::Asc,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortOrder {
+    Asc,
+    Desc,
+}
+
+/// Complete matrix view data ready for rendering
+pub struct MatrixView {
+    pub requirements: Vec<Requirement>,
+    pub tests: Vec<Test>,
+    pub links: HashSet<(i32, i32)>,
+    pub total_requirements: i64,
+    pub total_links: usize,
+    pub total_pages: i64,
 }
 
 #[cfg(test)]

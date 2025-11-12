@@ -93,23 +93,8 @@ function initFilterHandlers() {
   const form = document.getElementById('matrixFilterForm');
   if (!form) return;
 
-  // Auto-submit on filter changes for all select elements
-  const autoSubmitSelects = [
-    'test_status_filter',
-    'req_status_filter',
-    'category_filter',
-    'applicability_filter',
-    'per_page'
-  ];
-
-  autoSubmitSelects.forEach(id => {
-    const select = document.getElementById(id);
-    if (select) {
-      select.addEventListener('change', () => {
-        form.submit();
-      });
-    }
-  });
+  // Filters are now only applied when the "Apply" button is clicked
+  // No auto-submit on filter changes
 
   // Search input - submit on Enter
   const searchInput = document.getElementById('search');

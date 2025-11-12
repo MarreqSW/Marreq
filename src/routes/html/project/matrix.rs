@@ -1,6 +1,6 @@
 use super::helpers::*;
 use super::prelude::*;
-use crate::services::MatrixService;
+use crate::services::{ApplicabilityService, CategoryService, MatrixService, StatusService};
 
 #[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<linkage_filter>&<page>&<per_page>&<search>")]
 async fn get_matrix(
@@ -229,10 +229,10 @@ async fn get_matrix(
     ctx["show_last_page"] = json!(show_last_page);
     ctx["show_first_ellipsis"] = json!(show_first_ellipsis);
     ctx["show_last_ellipsis"] = json!(show_last_ellipsis);
-    ctx["test_statuses"] = json!(state.repo_read().get_test_status_all().unwrap_or_default());
-    ctx["req_statuses"] = json!(state.repo_read().get_status_all().unwrap_or_default());
-    ctx["categories"] = json!(state.repo_read().get_categories_by_project(project_id).unwrap_or_default());
-    ctx["applicabilities"] = json!(state.repo_read().get_applicability_all().unwrap_or_default());
+    ctx["test_statuses"] = json!(StatusService::new(state.inner()).list_test_statuses().unwrap_or_default());
+    ctx["statuses"] = json!(StatusService::new(state.inner()).list_requirement_statuses().unwrap_or_default());
+    ctx["categories"] = json!(CategoryService::new(state.inner()).list_by_project(project_id).unwrap_or_default());
+    ctx["applicabilities"] = json!(ApplicabilityService::new(state.inner()).list_by_project(project_id).unwrap_or_default());
     ctx["total_test_columns"] = json!(all_tests.len() + 1); // Reference + test columns
 
     Ok(Template::render("matrix/matrix", ctx))

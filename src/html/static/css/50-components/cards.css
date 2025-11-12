@@ -35,24 +35,6 @@
 }
 
 /* Requirement Cards */
-.c-requirement-card__id {
-  background-color: var(--primary-color);
-  border-radius: var(--radius-md);
-  color: #fff;
-  display: inline-block;
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: var(--space-2) var(--space-3);
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.c-requirement-card__id:hover {
-  background-color: var(--primary-dark);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
-}
-
 .c-requirement-card__meta-value {
   color: var(--text-primary);
   font-weight: 500;
@@ -73,12 +55,6 @@
 [class~='status-approved'] {
   background-color: #d1fae5;
   color: #059669;
-}
-
-[class~='status-warning'] {
-  background-color: #fffbeb;
-  border: 1px solid #fed7aa;
-  color: #d97706;
 }
 
 [data-theme='dark'] .c-card {
@@ -105,16 +81,6 @@
 [data-theme='dark'] .c-req-detail-page .c-list-group-item--bg-white {
   background-color: var(--surface-muted);
   color: var(--text-primary);
-}
-
-[data-theme='dark'] .c-requirement-card__id {
-  background-color: var(--primary-light);
-  color: #0f172a;
-}
-
-[data-theme='dark'] .c-requirement-card__id:hover {
-  background-color: #60a5fa;
-  box-shadow: var(--shadow-md);
 }
 
 /* Remove background highlight from reference IDs in tree view for dark mode */

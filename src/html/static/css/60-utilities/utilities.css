@@ -55,21 +55,6 @@
   color: var(--primary-color);
 }
 
-.u-text-xs,
-[class~="text-xs"] {
-  font-size: 0.75rem;
-}
-
-.u-text-2xl,
-[class~="text-2xl"] {
-  font-size: 1.5rem;
-}
-
-.u-font-bold,
-[class~="font-bold"] {
-  font-weight: 700;
-}
-
 .u-font-medium,
 [class~="font-medium"],
 [class~="fw-semibold"] {

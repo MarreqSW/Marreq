@@ -101,13 +101,15 @@ async fn get_matrix(
     ctx["show_last_page"] = json!(pagination_ctx.show_last_page);
     ctx["show_first_ellipsis"] = json!(pagination_ctx.show_first_ellipsis);
     ctx["show_last_ellipsis"] = json!(pagination_ctx.show_last_ellipsis);
-    ctx["test_statuses"] =
-        json!(StatusService::new(state.inner()).list_test_statuses().unwrap_or_default());
+    ctx["test_statuses"] = json!(StatusService::new(state.inner())
+        .list_test_statuses()
+        .unwrap_or_default());
     ctx["statuses"] = json!(StatusService::new(state.inner())
         .list_requirement_statuses()
         .unwrap_or_default());
-    ctx["categories"] =
-        json!(CategoryService::new(state.inner()).list_by_project(project_id).unwrap_or_default());
+    ctx["categories"] = json!(CategoryService::new(state.inner())
+        .list_by_project(project_id)
+        .unwrap_or_default());
     ctx["applicabilities"] = json!(ApplicabilityService::new(state.inner())
         .list_by_project(project_id)
         .unwrap_or_default());
@@ -214,41 +216,37 @@ async fn get_matrix_xls(
 
     excel::create_matrix_workbook(cookies).map_err(|e| {
         eprintln!("Error creating matrix workbook: {e:?}");
-        Redirect::to(uri!(
-            get_matrix(
-                project_id = project_id,
-                sort_by = None::<String>,
-                sort_order = None::<String>,
-                test_status_filter = None::<i32>,
-                req_status_filter = None::<i32>,
-                category_filter = None::<i32>,
-                applicability_filter = None::<i32>,
-                linkage_filter = None::<String>,
-                page = None::<i64>,
-                per_page = None::<i64>,
-                search = None::<String>
-            )
-        ))
+        Redirect::to(uri!(get_matrix(
+            project_id = project_id,
+            sort_by = None::<String>,
+            sort_order = None::<String>,
+            test_status_filter = None::<i32>,
+            req_status_filter = None::<i32>,
+            category_filter = None::<i32>,
+            applicability_filter = None::<i32>,
+            linkage_filter = None::<String>,
+            page = None::<i64>,
+            per_page = None::<i64>,
+            search = None::<String>
+        )))
     })?;
 
     let path = std::path::Path::new("target/matrix.xls");
     let file = NamedFile::open(path).await.map_err(|e| {
         eprintln!("Error opening matrix file: {e:?}");
-        Redirect::to(uri!(
-            get_matrix(
-                project_id = project_id,
-                sort_by = None::<String>,
-                sort_order = None::<String>,
-                test_status_filter = None::<i32>,
-                req_status_filter = None::<i32>,
-                category_filter = None::<i32>,
-                applicability_filter = None::<i32>,
-                linkage_filter = None::<String>,
-                page = None::<i64>,
-                per_page = None::<i64>,
-                search = None::<String>
-            )
-        ))
+        Redirect::to(uri!(get_matrix(
+            project_id = project_id,
+            sort_by = None::<String>,
+            sort_order = None::<String>,
+            test_status_filter = None::<i32>,
+            req_status_filter = None::<i32>,
+            category_filter = None::<i32>,
+            applicability_filter = None::<i32>,
+            linkage_filter = None::<String>,
+            page = None::<i64>,
+            per_page = None::<i64>,
+            search = None::<String>
+        )))
     })?;
 
     let ct = ContentType::new(
@@ -278,21 +276,19 @@ async fn get_matrix_csv(
         .export_matrix_csv(project_id, test_status_filter)
         .map_err(|e| {
             eprintln!("Error generating CSV: {e:?}");
-            Redirect::to(uri!(
-                get_matrix(
-                    project_id = project_id,
-                    sort_by = None::<String>,
-                    sort_order = None::<String>,
-                    test_status_filter = None::<i32>,
-                    req_status_filter = None::<i32>,
-                    category_filter = None::<i32>,
-                    applicability_filter = None::<i32>,
-                    linkage_filter = None::<String>,
-                    page = None::<i64>,
-                    per_page = None::<i64>,
-                    search = None::<String>
-                )
-            ))
+            Redirect::to(uri!(get_matrix(
+                project_id = project_id,
+                sort_by = None::<String>,
+                sort_order = None::<String>,
+                test_status_filter = None::<i32>,
+                req_status_filter = None::<i32>,
+                category_filter = None::<i32>,
+                applicability_filter = None::<i32>,
+                linkage_filter = None::<String>,
+                page = None::<i64>,
+                per_page = None::<i64>,
+                search = None::<String>
+            )))
         })?;
 
     Ok((ContentType::new("text", "csv"), csv_data))
@@ -473,15 +469,7 @@ mod tests {
     }
 
     async fn test_client(repo: DieselRepoMock) -> Client {
-        client_with_routes(
-            repo,
-            routes![
-                get_matrix,
-                get_matrix_csv,
-                get_matrix_xls
-            ],
-        )
-        .await
+        client_with_routes(repo, routes![get_matrix, get_matrix_csv, get_matrix_xls]).await
     }
 
     #[rocket::async_test]
@@ -507,47 +495,50 @@ mod tests {
     async fn get_matrix_supports_pagination() {
         let mut repo = base_repo();
         repo.requirements.clear(); // Clear default requirement
-        
+
         // Add 25 requirements to test pagination with per_page=10
         for i in 1..=25 {
-            repo.requirements.insert(i, Requirement {
-                req_id: i,
-                req_title: format!("Req {}", i),
-                req_description: String::new(),
-                req_verification: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: format!("REF-{}", i),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
-                project_id: 1,
-            });
+            repo.requirements.insert(
+                i,
+                Requirement {
+                    req_id: i,
+                    req_title: format!("Req {}", i),
+                    req_description: String::new(),
+                    req_verification: 1,
+                    req_current_status: 1,
+                    req_author: 1,
+                    req_reviewer: 1,
+                    req_reference: format!("REF-{}", i),
+                    req_category: 1,
+                    req_parent: 0,
+                    req_creation_date: timestamp(),
+                    req_update_date: timestamp(),
+                    req_deadline_date: timestamp(),
+                    req_applicability: 1,
+                    req_justification: None,
+                    project_id: 1,
+                },
+            );
         }
 
         let client = test_client(repo).await;
-        
+
         // Request first page with 10 items per page (minimum allowed by clamp)
         let response = get_with_session(&client, "/p/1/matrix?page=1&per_page=10", ADMIN_ID).await;
         assert_eq!(response.status(), HttpStatus::Ok);
-        
+
         let body = response.into_string().await.expect("response body");
         // Page 1 should contain first 10 requirements
         let req_1_in_table = body.contains(r#"req_id":1"#) || body.contains("REF-1");
         let req_10_in_table = body.contains(r#"req_id":10"#) || body.contains("REF-10");
         assert!(req_1_in_table, "Page 1 should contain requirement 1");
         assert!(req_10_in_table, "Page 1 should contain requirement 10");
-        
+
         // Test page 2 - should contain requirements 11-20
         let response2 = get_with_session(&client, "/p/1/matrix?page=2&per_page=10", ADMIN_ID).await;
         assert_eq!(response2.status(), HttpStatus::Ok);
         let body2 = response2.into_string().await.expect("response body");
-        
+
         let req_11_in_table = body2.contains(r#"req_id":11"#) || body2.contains("REF-11");
         let req_20_in_table = body2.contains(r#"req_id":20"#) || body2.contains("REF-20");
         assert!(req_11_in_table, "Page 2 should contain requirement 11");
@@ -558,98 +549,116 @@ mod tests {
     async fn get_matrix_supports_search() {
         let mut repo = base_repo();
         repo.requirements.clear(); // Clear default requirement
-        
-        repo.requirements.insert(1, Requirement {
-            req_id: 1,
-            req_title: "Authentication Requirement".to_string(),
-            req_description: String::new(),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: "AUTH-001".to_string(),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: None,
-            project_id: 1,
-        });
-        
-        repo.requirements.insert(2, Requirement {
-            req_id: 2,
-            req_title: "Database Requirement".to_string(),
-            req_description: String::new(),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: "DB-001".to_string(),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: None,
-            project_id: 1,
-        });
+
+        repo.requirements.insert(
+            1,
+            Requirement {
+                req_id: 1,
+                req_title: "Authentication Requirement".to_string(),
+                req_description: String::new(),
+                req_verification: 1,
+                req_current_status: 1,
+                req_author: 1,
+                req_reviewer: 1,
+                req_reference: "AUTH-001".to_string(),
+                req_category: 1,
+                req_parent: 0,
+                req_creation_date: timestamp(),
+                req_update_date: timestamp(),
+                req_deadline_date: timestamp(),
+                req_applicability: 1,
+                req_justification: None,
+                project_id: 1,
+            },
+        );
+
+        repo.requirements.insert(
+            2,
+            Requirement {
+                req_id: 2,
+                req_title: "Database Requirement".to_string(),
+                req_description: String::new(),
+                req_verification: 1,
+                req_current_status: 1,
+                req_author: 1,
+                req_reviewer: 1,
+                req_reference: "DB-001".to_string(),
+                req_category: 1,
+                req_parent: 0,
+                req_creation_date: timestamp(),
+                req_update_date: timestamp(),
+                req_deadline_date: timestamp(),
+                req_applicability: 1,
+                req_justification: None,
+                project_id: 1,
+            },
+        );
 
         let client = test_client(repo).await;
-        
+
         // Search for "auth" should only find the first requirement
         let response = get_with_session(&client, "/p/1/matrix?search=auth", ADMIN_ID).await;
         let body = response.into_string().await.expect("response body");
         // Check if Authentication requirement is present in the table
         let has_auth = body.contains("Authentication") || body.contains("AUTH-001");
-        assert!(has_auth, "Search results should contain Authentication requirement");
+        assert!(
+            has_auth,
+            "Search results should contain Authentication requirement"
+        );
         // Database requirement should not be in the results (not in pagination or filtered out)
         // Note: We check total_requirements to verify filtering worked
         let total_shown = body.contains(r#""total_requirements":1"#) || body.contains("of 1");
-        assert!(total_shown, "Should show only 1 requirement after filtering");
+        assert!(
+            total_shown,
+            "Should show only 1 requirement after filtering"
+        );
     }
 
     #[rocket::async_test]
     async fn get_matrix_csv_returns_csv_format() {
         let mut repo = base_repo();
-        
-        repo.requirements.insert(1, Requirement {
-            req_id: 1,
-            req_title: "Test Requirement".to_string(),
-            req_description: String::new(),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: "REF-001".to_string(),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: None,
-            project_id: 1,
-        });
 
-        repo.tests.insert(1, Test {
-            test_id: 1,
-            test_name: "Test 1".to_string(),
-            test_reference: "TST-1".to_string(),
-            test_description: String::new(),
-            test_source: String::new(),
-            test_status: 1,
-            test_parent: 0,
-            project_id: 1,
-        });
+        repo.requirements.insert(
+            1,
+            Requirement {
+                req_id: 1,
+                req_title: "Test Requirement".to_string(),
+                req_description: String::new(),
+                req_verification: 1,
+                req_current_status: 1,
+                req_author: 1,
+                req_reviewer: 1,
+                req_reference: "REF-001".to_string(),
+                req_category: 1,
+                req_parent: 0,
+                req_creation_date: timestamp(),
+                req_update_date: timestamp(),
+                req_deadline_date: timestamp(),
+                req_applicability: 1,
+                req_justification: None,
+                project_id: 1,
+            },
+        );
+
+        repo.tests.insert(
+            1,
+            Test {
+                test_id: 1,
+                test_name: "Test 1".to_string(),
+                test_reference: "TST-1".to_string(),
+                test_description: String::new(),
+                test_source: String::new(),
+                test_status: 1,
+                test_parent: 0,
+                project_id: 1,
+            },
+        );
 
         let client = test_client(repo).await;
         let response = get_with_session(&client, "/p/1/matrix.csv", ADMIN_ID).await;
-        
+
         assert_eq!(response.status(), HttpStatus::Ok);
-        
+
         let body = response.into_string().await.expect("response body");
         assert!(body.starts_with("Req ID,Title,Reference"));
         assert!(body.contains("REQ-1,Test Requirement,REF-001"));
@@ -659,29 +668,32 @@ mod tests {
     #[rocket::async_test]
     async fn get_matrix_csv_escapes_special_characters() {
         let mut repo = base_repo();
-        
-        repo.requirements.insert(1, Requirement {
-            req_id: 1,
-            req_title: "Test, with \"quotes\"".to_string(),
-            req_description: String::new(),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: "REF-001".to_string(),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: None,
-            project_id: 1,
-        });
+
+        repo.requirements.insert(
+            1,
+            Requirement {
+                req_id: 1,
+                req_title: "Test, with \"quotes\"".to_string(),
+                req_description: String::new(),
+                req_verification: 1,
+                req_current_status: 1,
+                req_author: 1,
+                req_reviewer: 1,
+                req_reference: "REF-001".to_string(),
+                req_category: 1,
+                req_parent: 0,
+                req_creation_date: timestamp(),
+                req_update_date: timestamp(),
+                req_deadline_date: timestamp(),
+                req_applicability: 1,
+                req_justification: None,
+                project_id: 1,
+            },
+        );
 
         let client = test_client(repo).await;
         let response = get_with_session(&client, "/p/1/matrix.csv", ADMIN_ID).await;
-        
+
         let body = response.into_string().await.expect("response body");
         // Should escape commas and quotes properly
         assert!(body.contains("\"Test, with \"\"quotes\"\"\""));
@@ -692,11 +704,11 @@ mod tests {
         let mut repo = base_repo();
         // Remove the requirement to get empty dataset
         repo.requirements.clear();
-        
+
         let client = test_client(repo).await;
         let response = get_with_session(&client, "/p/1/matrix", ADMIN_ID).await;
         assert_eq!(response.status(), HttpStatus::Ok);
-        
+
         let body = response.into_string().await.expect("response body");
         // With no requirements, the table should still render but be empty
         assert!(body.contains("0") || body.contains("matrix"));
@@ -705,41 +717,47 @@ mod tests {
     #[rocket::async_test]
     async fn get_matrix_displays_missing_links() {
         let mut repo = base_repo();
-        
-        // Add requirement without test links
-        repo.requirements.insert(1, Requirement {
-            req_id: 1,
-            req_title: "Unlinked Requirement".to_string(),
-            req_description: String::new(),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: "REF-001".to_string(),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: None,
-            project_id: 1,
-        });
 
-        repo.tests.insert(1, Test {
-            test_id: 1,
-            test_name: "Test 1".to_string(),
-            test_reference: "TST-1".to_string(),
-            test_description: String::new(),
-            test_source: String::new(),
-            test_status: 1,
-            test_parent: 0,
-            project_id: 1,
-        });
+        // Add requirement without test links
+        repo.requirements.insert(
+            1,
+            Requirement {
+                req_id: 1,
+                req_title: "Unlinked Requirement".to_string(),
+                req_description: String::new(),
+                req_verification: 1,
+                req_current_status: 1,
+                req_author: 1,
+                req_reviewer: 1,
+                req_reference: "REF-001".to_string(),
+                req_category: 1,
+                req_parent: 0,
+                req_creation_date: timestamp(),
+                req_update_date: timestamp(),
+                req_deadline_date: timestamp(),
+                req_applicability: 1,
+                req_justification: None,
+                project_id: 1,
+            },
+        );
+
+        repo.tests.insert(
+            1,
+            Test {
+                test_id: 1,
+                test_name: "Test 1".to_string(),
+                test_reference: "TST-1".to_string(),
+                test_description: String::new(),
+                test_source: String::new(),
+                test_status: 1,
+                test_parent: 0,
+                project_id: 1,
+            },
+        );
 
         let client = test_client(repo).await;
         let response = get_with_session(&client, "/p/1/matrix", ADMIN_ID).await;
-        
+
         let body = response.into_string().await.expect("response body");
         assert!(body.contains("Unlinked Requirement"));
         // Should show dash for unlinked test

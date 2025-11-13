@@ -2,14 +2,14 @@
 
 .c-matrix-card.is-fullscreen {
   border-radius: 0;
+  inset: var(--header-height) 0 0 0;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  inset: 0;
+  height: calc(100vh - var(--header-height));
   margin: 0;
   position: fixed;
   width: 100vw;
-  z-index: 9999;
+  z-index: 100;
 }
 
 .c-matrix-card.is-fullscreen .c-matrix-card__header {

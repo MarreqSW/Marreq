@@ -6,12 +6,6 @@
   box-shadow: var(--shadow-sm);
   color: var(--text-primary);
   overflow: hidden;
-  transition: all 0.2s ease;
-}
-
-.c-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
 }
 
 .c-card__header {
@@ -106,5 +100,26 @@
   background-color: var(--surface-muted);
   border-color: var(--border-color);
   color: var(--text-primary);
+}
+
+/* Matrix status colors */
+.status-passed {
+  color: #28a745;
+}
+
+.status-in-progress {
+  color: #28a745;
+}
+
+.status-pending {
+  color: #28a745;
+}
+
+.status-failed {
+  color: #dc3545;
+}
+
+.c-matrix-no-link {
+  color: #dc3545;
 }
 

@@ -54,6 +54,7 @@ module.exports = {
       /c-tree__/,
       /c-custom-dropdown/,
       /c-create-field/,
+      /c-matrix-card/,
     ],
     greedy: [
       // Status variants

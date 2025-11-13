@@ -95,7 +95,7 @@ impl<'a> MatrixService<'a> {
             .collect();
 
         // Build CSV
-        let mut csv = String::from("Req ID,Title,Reference");
+        let mut csv = String::from("Title,Reference");
         for test in &all_tests {
             csv.push_str(&format!(",Test #{}", test.test_id));
         }
@@ -103,8 +103,7 @@ impl<'a> MatrixService<'a> {
 
         for req in &reqs {
             csv.push_str(&format!(
-                "REQ-{},{},{}",
-                req.req_id,
+                "{},{}",
                 Self::csv_escape(&req.req_title),
                 Self::csv_escape(&req.req_reference)
             ));
@@ -657,10 +656,10 @@ mod tests {
         // Check CSV structure
         let lines: Vec<&str> = csv.lines().collect();
         assert_eq!(lines.len(), 2); // Header + 1 requirement row
-        assert!(lines[0].starts_with("Req ID,Title,Reference"));
+        assert!(lines[0].starts_with("Title,Reference"));
         assert!(lines[0].contains("Test #10"));
         assert!(lines[0].contains("Test #20"));
-        assert!(lines[1].starts_with("REQ-1,Test Requirement,REF-001"));
+        assert!(lines[1].starts_with("Test Requirement,REF-001"));
         assert!(lines[1].contains(",✓,")); // Linked to test 10
         assert!(lines[1].ends_with(",-")); // Not linked to test 20
     }

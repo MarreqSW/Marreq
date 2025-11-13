@@ -2,10 +2,10 @@
 
 .c-matrix-card.is-fullscreen {
   border-radius: 0;
-  inset: var(--header-height) 0 0 0;
   display: flex;
   flex-direction: column;
   height: calc(100vh - var(--header-height));
+  inset: var(--header-height) 0 0 0;
   margin: 0;
   position: fixed;
   width: 100vw;

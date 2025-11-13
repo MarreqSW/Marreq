@@ -66,15 +66,14 @@ pub fn create_matrix_workbook(
 
     // Write headers
     // First column headers (requirement info)
-    sheet1.write_string(0, 0, "Req ID", None)?;
-    sheet1.write_string(0, 1, "Title", None)?;
-    sheet1.write_string(0, 2, "Reference", None)?;
-    sheet1.write_string(0, 3, "Category", None)?;
-    sheet1.write_string(0, 4, "Status", None)?;
+    sheet1.write_string(0, 0, "Title", None)?;
+    sheet1.write_string(0, 1, "Reference", None)?;
+    sheet1.write_string(0, 2, "Category", None)?;
+    sheet1.write_string(0, 3, "Status", None)?;
 
-    // Test headers starting from column 5
+    // Test headers starting from column 4
     for (col_idx, test) in decorated_tests.iter().enumerate() {
-        let col = (col_idx + 5) as u16;
+        let col = (col_idx + 4) as u16;
         let header = format!("Test #{} ({})", test.test_id, test.test_name);
         sheet1.write_string(0, col, &header, None)?;
     }
@@ -84,15 +83,14 @@ pub fn create_matrix_workbook(
         let row = (row_idx + 1) as u32;
 
         // Write requirement info
-        sheet1.write_number(row, 0, req.req_id as f64, None)?;
-        sheet1.write_string(row, 1, &req.req_title, None)?;
-        sheet1.write_string(row, 2, &req.req_reference, None)?;
-        sheet1.write_string(row, 3, &req.req_category, None)?;
-        sheet1.write_string(row, 4, &req.req_current_status, None)?;
+        sheet1.write_string(row, 0, &req.req_title, None)?;
+        sheet1.write_string(row, 1, &req.req_reference, None)?;
+        sheet1.write_string(row, 2, &req.req_category, None)?;
+        sheet1.write_string(row, 3, &req.req_current_status, None)?;
 
         // Check matrix links for each test
         for (col_idx, test) in decorated_tests.iter().enumerate() {
-            let col = (col_idx + 5) as u16;
+            let col = (col_idx + 4) as u16;
 
             // Check if this requirement is linked to this test
             let test_present: i64 = matrix

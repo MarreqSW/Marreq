@@ -36,35 +36,6 @@ impl<'a> MatrixService<'a> {
         self.state.repo_read().get_matrix_by_project(project_id)
     }
 
-    /// Retrieve requirements paginated for matrix display.
-    /// Returns (requirements, total_count).
-    /// Note: This currently loads all requirements and paginates in memory.
-    /// For very large datasets, consider adding pagination to the repository layer.
-    pub fn list_requirements_paginated(
-        &self,
-        _project_id: i32,
-        page: i64,
-        per_page: i64,
-    ) -> Result<(Vec<Requirement>, i64), RepoError> {
-        let repo = self.state.repo_read();
-        let mut all_reqs = repo.get_requirements_by_project(_project_id)?;
-
-        // Sort by req_id for consistent pagination
-        all_reqs.sort_by_key(|r| r.req_id);
-
-        let total = all_reqs.len() as i64;
-        let start = ((page - 1) * per_page) as usize;
-        let end = (start + per_page as usize).min(all_reqs.len());
-
-        let paginated = if start < all_reqs.len() {
-            all_reqs[start..end].to_vec()
-        } else {
-            Vec::new()
-        };
-
-        Ok((paginated, total))
-    }
-
     /// Generate CSV export data for the traceability matrix.
     /// Returns CSV string with headers and all matrix data filtered by project and optional test status.
     pub fn export_matrix_csv(
@@ -219,14 +190,6 @@ impl<'a> MatrixService<'a> {
             .map(|m| (m.matrix_req_id, m.matrix_test_id))
             .collect();
 
-        // Apply linkage filter
-        Self::apply_linkage_filter(
-            &mut all_reqs,
-            &all_tests,
-            &links,
-            filters.linkage.as_deref(),
-        );
-
         let total_requirements = all_reqs.len() as i64;
 
         // Sort requirements
@@ -302,25 +265,6 @@ impl<'a> MatrixService<'a> {
         }
     }
 
-    fn apply_linkage_filter(
-        reqs: &mut Vec<Requirement>,
-        tests: &[Test],
-        links: &HashSet<(i32, i32)>,
-        linkage: Option<&str>,
-    ) {
-        if let Some(filter) = linkage {
-            match filter {
-                "linked" => {
-                    reqs.retain(|r| tests.iter().any(|t| links.contains(&(r.req_id, t.test_id))));
-                }
-                "unlinked" => {
-                    reqs.retain(|r| !tests.iter().any(|t| links.contains(&(r.req_id, t.test_id))));
-                }
-                _ => {} // "all" or unknown
-            }
-        }
-    }
-
     fn sort_requirements(
         reqs: &mut Vec<Requirement>,
         sort_by: &str,
@@ -364,7 +308,6 @@ pub struct MatrixFilters {
     pub req_status: Option<i32>,
     pub category: Option<i32>,
     pub applicability: Option<i32>,
-    pub linkage: Option<String>,
     pub search: Option<String>,
 }
 
@@ -475,114 +418,6 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].matrix_req_id, 5);
         assert_eq!(entries[0].matrix_test_id, 6);
-    }
-
-    #[test]
-    fn pagination_returns_correct_page_and_total() {
-        let mut repo = DieselRepoMock::default();
-
-        // Add 5 requirements to project 1
-        for i in 1..=5 {
-            repo.requirements.insert(
-                i,
-                Requirement {
-                    req_id: i,
-                    req_title: format!("Req {}", i),
-                    req_description: String::new(),
-                    req_verification: 1,
-                    req_current_status: 1,
-                    req_author: 1,
-                    req_reviewer: 1,
-                    req_reference: format!("REF-{}", i),
-                    req_category: 1,
-                    req_parent: 0,
-                    req_creation_date: timestamp(),
-                    req_update_date: timestamp(),
-                    req_deadline_date: timestamp(),
-                    req_applicability: 1,
-                    req_justification: None,
-                    project_id: 1,
-                },
-            );
-        }
-
-        let state = state_with_repo(repo);
-        let service = MatrixService::new(&state);
-
-        // Page 1: should get first 2 items
-        let (page1, total) = service.list_requirements_paginated(1, 1, 2).unwrap();
-        assert_eq!(total, 5);
-        assert_eq!(page1.len(), 2);
-        assert_eq!(page1[0].req_id, 1);
-        assert_eq!(page1[1].req_id, 2);
-
-        // Page 2: should get next 2 items
-        let (page2, _) = service.list_requirements_paginated(1, 2, 2).unwrap();
-        assert_eq!(page2.len(), 2);
-        assert_eq!(page2[0].req_id, 3);
-        assert_eq!(page2[1].req_id, 4);
-
-        // Page 3: should get last item
-        let (page3, _) = service.list_requirements_paginated(1, 3, 2).unwrap();
-        assert_eq!(page3.len(), 1);
-        assert_eq!(page3[0].req_id, 5);
-    }
-
-    #[test]
-    fn pagination_filters_by_project() {
-        let mut repo = DieselRepoMock::default();
-
-        // Add requirements to different projects
-        repo.requirements.insert(
-            1,
-            Requirement {
-                req_id: 1,
-                req_title: "Req 1".to_string(),
-                req_description: String::new(),
-                req_verification: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-1".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
-                project_id: 1,
-            },
-        );
-        repo.requirements.insert(
-            2,
-            Requirement {
-                req_id: 2,
-                req_title: "Req 2".to_string(),
-                req_description: String::new(),
-                req_verification: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-2".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
-                project_id: 2,
-            },
-        );
-
-        let state = state_with_repo(repo);
-        let service = MatrixService::new(&state);
-
-        let (reqs, total) = service.list_requirements_paginated(1, 1, 10).unwrap();
-        assert_eq!(total, 1);
-        assert_eq!(reqs.len(), 1);
-        assert_eq!(reqs[0].project_id, 1);
     }
 
     #[test]

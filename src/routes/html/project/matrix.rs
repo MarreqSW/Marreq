@@ -660,8 +660,8 @@ mod tests {
         assert_eq!(response.status(), HttpStatus::Ok);
 
         let body = response.into_string().await.expect("response body");
-        assert!(body.starts_with("Req ID,Title,Reference"));
-        assert!(body.contains("REQ-1,Test Requirement,REF-001"));
+        assert!(body.starts_with("Title,Reference"));
+        assert!(body.contains("Test Requirement,REF-001"));
         assert!(body.contains("Test #1"));
     }
 

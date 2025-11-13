@@ -5,7 +5,7 @@ use crate::services::{
     SortOrder, StatusService,
 };
 
-#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<linkage_filter>&<page>&<per_page>&<search>")]
+#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<page>&<per_page>&<search>")]
 async fn get_matrix(
     project_access: ProjectAccess,
     project_id: i32,
@@ -16,7 +16,6 @@ async fn get_matrix(
     req_status_filter: Option<i32>,
     category_filter: Option<i32>,
     applicability_filter: Option<i32>,
-    linkage_filter: Option<String>,
     page: Option<i64>,
     per_page: Option<i64>,
     search: Option<String>,
@@ -32,7 +31,6 @@ async fn get_matrix(
         req_status: req_status_filter,
         category: category_filter,
         applicability: applicability_filter,
-        linkage: linkage_filter.clone(),
         search: search.clone(),
     };
 
@@ -86,7 +84,6 @@ async fn get_matrix(
     ctx["req_status_filter"] = json!(req_status_filter);
     ctx["category_filter"] = json!(category_filter);
     ctx["applicability_filter"] = json!(applicability_filter);
-    ctx["linkage_filter"] = json!(linkage_filter);
     ctx["search"] = json!(search);
     ctx["page"] = json!(pagination.page);
     ctx["per_page"] = json!(pagination.per_page);
@@ -126,19 +123,16 @@ fn build_matrix_rows(
 ) -> (Vec<serde_json::Value>, usize) {
     use serde_json::json;
 
-    let mut total_links = 0;
-
-    let rows = reqs
+    let rows: Vec<_> = reqs
         .iter()
         .map(|req| {
             let row: Vec<_> = tests
                 .iter()
                 .map(|test| {
-                    let linked = links.contains(&(req.req_id, test.test_id));
-                    if linked {
-                        total_links += 1;
-                    }
-                    json!({ "linked": linked, "test_status": test.test_status })
+                    json!({ 
+                        "linked": links.contains(&(req.req_id, test.test_id)), 
+                        "test_status": test.test_status 
+                    })
                 })
                 .collect();
 
@@ -150,6 +144,17 @@ fn build_matrix_rows(
             })
         })
         .collect();
+
+    // Count total links separately
+    let total_links = reqs
+        .iter()
+        .map(|req| {
+            tests
+                .iter()
+                .filter(|test| links.contains(&(req.req_id, test.test_id)))
+                .count()
+        })
+        .sum();
 
     (rows, total_links)
 }
@@ -216,37 +221,13 @@ async fn get_matrix_xls(
 
     excel::create_matrix_workbook(cookies).map_err(|e| {
         eprintln!("Error creating matrix workbook: {e:?}");
-        Redirect::to(uri!(get_matrix(
-            project_id = project_id,
-            sort_by = None::<String>,
-            sort_order = None::<String>,
-            test_status_filter = None::<i32>,
-            req_status_filter = None::<i32>,
-            category_filter = None::<i32>,
-            applicability_filter = None::<i32>,
-            linkage_filter = None::<String>,
-            page = None::<i64>,
-            per_page = None::<i64>,
-            search = None::<String>
-        )))
+        Redirect::to(format!("/p/{}/matrix", project_id))
     })?;
 
     let path = std::path::Path::new("target/matrix.xls");
     let file = NamedFile::open(path).await.map_err(|e| {
         eprintln!("Error opening matrix file: {e:?}");
-        Redirect::to(uri!(get_matrix(
-            project_id = project_id,
-            sort_by = None::<String>,
-            sort_order = None::<String>,
-            test_status_filter = None::<i32>,
-            req_status_filter = None::<i32>,
-            category_filter = None::<i32>,
-            applicability_filter = None::<i32>,
-            linkage_filter = None::<String>,
-            page = None::<i64>,
-            per_page = None::<i64>,
-            search = None::<String>
-        )))
+        Redirect::to(format!("/p/{}/matrix", project_id))
     })?;
 
     let ct = ContentType::new(
@@ -276,19 +257,7 @@ async fn get_matrix_csv(
         .export_matrix_csv(project_id, test_status_filter)
         .map_err(|e| {
             eprintln!("Error generating CSV: {e:?}");
-            Redirect::to(uri!(get_matrix(
-                project_id = project_id,
-                sort_by = None::<String>,
-                sort_order = None::<String>,
-                test_status_filter = None::<i32>,
-                req_status_filter = None::<i32>,
-                category_filter = None::<i32>,
-                applicability_filter = None::<i32>,
-                linkage_filter = None::<String>,
-                page = None::<i64>,
-                per_page = None::<i64>,
-                search = None::<String>
-            )))
+            Redirect::to(format!("/p/{}/matrix", project_id))
         })?;
 
     Ok((ContentType::new("text", "csv"), csv_data))
@@ -302,7 +271,7 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Applicability, Category, Matrix, Project, ProjectMember, Requirement, Status, Test,
+        Applicability, Category, Project, ProjectMember, Requirement, Status, Test,
         TestStatus, Verification,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
@@ -396,20 +365,6 @@ mod tests {
         }
     }
 
-    #[allow(dead_code)]
-    fn sample_test(id: i32, status: i32, name: &str) -> Test {
-        Test {
-            test_id: id,
-            test_name: name.to_string(),
-            test_description: format!("{name} description"),
-            test_source: "Design Spec".into(),
-            test_status: status,
-            test_reference: format!("TEST-{id:03}"),
-            test_parent: 0,
-            project_id: PRIMARY_PROJECT,
-        }
-    }
-
     fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
 
@@ -452,19 +407,6 @@ mod tests {
         repo.applicability.insert(1, sample_applicability(1, "All"));
         repo.requirements.insert(1, sample_requirement(1));
 
-        repo
-    }
-
-    #[allow(dead_code)]
-    fn repo_with_tests() -> DieselRepoMock {
-        let mut repo = base_repo();
-        repo.tests.insert(1, sample_test(1, 1, "Baseline Test"));
-        repo.matrices.push(Matrix {
-            matrix_req_id: 1,
-            matrix_test_id: 1,
-            matrix_creation_date: timestamp(),
-            project_id: PRIMARY_PROJECT,
-        });
         repo
     }
 

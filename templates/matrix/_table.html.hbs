@@ -1,23 +1,23 @@
 {{!-- Matrix Table --}}
-<div class="card c-card matrix-card">
-  <div class="card-header c-card__header matrix-card-header" style="padding: 0.5rem 1rem;">
+<div class="card c-card c-matrix-card">
+  <div class="card-header c-card__header c-matrix-card__header" style="padding: 0.5rem 1rem;">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
       <button id="toggleFullscreen" class="btn btn-sm btn-outline-secondary" title="Toggle fullscreen" style="padding: 0.25rem 0.5rem;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
         </svg>
       </button>
-      <div class="matrix-controls d-flex gap-2 align-items-center">
+      <div class="c-matrix-controls d-flex gap-2 align-items-center">
         {{> matrix/_pagination_controls size="small"}}
       </div>
     </div>
   </div>
 
-  <div class="table-container c-table-container matrix-table-container" role="region" aria-label="Traceability matrix table" tabindex="0" style="padding: 0; margin: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
-    <table class="table c-table matrix-table" id="matrixTable" role="table" style="margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
-      <thead role="rowgroup" class="matrix-thead">
-        <tr role="row" class="matrix-header-row">
-          <th class="sortable c-table-sortable matrix-col-sticky matrix-col-reference" data-sort="req_reference" scope="col" role="columnheader" style="min-width: 200px; left: 0;">
+  <div class="table-container c-table-container c-matrix-table-container" role="region" aria-label="Traceability matrix table" tabindex="0" style="padding: 0; margin: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
+    <table class="table c-table c-matrix-table" id="matrixTable" role="table" style="margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
+      <thead role="rowgroup" class="c-matrix-thead">
+        <tr role="row" class="c-matrix-header-row c-matrix-row">
+          <th class="sortable c-table-sortable c-matrix-col c-matrix-col--sticky c-matrix-col--reference" data-sort="req_reference" scope="col" role="columnheader" style="min-width: 200px; left: 0;">
             <a
               href="/p/{{selected_project_id}}/matrix?sort_by=req_reference&sort_order={{#if (eq current_sort_by "req_reference")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
               class="text-decoration-none d-flex align-items-center justify-content-between"
@@ -35,69 +35,68 @@
             </a>
           </th>
           {{#each tests}}
-            <th class="text-center sortable c-table-sortable matrix-col-test u-text-center" data-sort="test_{{test_id}}" data-column-id="test-{{test_id}}" scope="col" role="columnheader" style="min-width: 120px;">
+            <th class="text-center sortable c-table-sortable c-matrix-col c-matrix-col--test u-text-center" data-sort="test_{{test_id}}" data-column-id="test-{{test_id}}" scope="col" role="columnheader" style="min-width: 120px;">
               <a
-                href="/p/{{@root.selected_project_id}}/matrix?sort_by=test_{{test_id}}&sort_order={{#if (eq @root.current_sort_order "asc")}}desc{{else}}asc{{/if}}{{#if @root.test_status_filter}}&test_status_filter={{@root.test_status_filter}}{{/if}}{{#if @root.search}}&search={{@root.search}}{{/if}}&page={{@root.page}}&per_page={{@root.per_page}}"
-                class="text-decoration-none d-flex align-items-center justify-content-between w-100"
+                href="/p/{{@root.selected_project_id}}/matrix?sort_by=test_{{test_id}}&sort_order=desc{{#if @root.test_status_filter}}&test_status_filter={{@root.test_status_filter}}{{/if}}{{#if @root.search}}&search={{@root.search}}{{/if}}&page={{@root.page}}&per_page={{@root.per_page}}"
+                class="text-decoration-none"
                 data-matrix-sort-link
-                aria-label="Sort by test {{test_reference}} status"
-                title="{{test_name}} - {{test_status}}"
+                aria-label="Sort by test {{test_reference}} - linked requirements first"
+                title="{{test_name}} - {{test_status}} (Click to show linked requirements first)"
               >
                 <span style="font-weight: 600; font-size: 0.875rem;">{{test_reference}}</span>
-                <span class="sort-indicator c-table-sort-indicator" data-test-indicator="{{test_id}}" aria-hidden="true">↕</span>
               </a>
             </th>
           {{/each}}
         </tr>
       </thead>
-      <tbody role="rowgroup" class="matrix-tbody" style="border-radius: 0;">
+      <tbody role="rowgroup" class="c-matrix-tbody" style="border-radius: 0;">
         {{#each requirements}}
-          <tr role="row" class="matrix-body-row" data-req-id="{{req_id}}">
-            <td role="cell" class="matrix-col-sticky matrix-col-reference" style="min-width: 200px; left: 0;">
-              <div class="matrix-req-cell">
+          <tr role="row" class="c-matrix-body-row c-matrix-row" data-req-id="{{req_id}}">
+            <td role="cell" class="c-matrix-col c-matrix-col--sticky c-matrix-col--reference" style="min-width: 200px; left: 0;">
+              <div class="c-matrix-req-cell">
                 <a href="/p/{{@root.selected_project_id}}/requirements/show/{{req_id}}" 
-                   class="matrix-req-link font-medium u-font-medium" 
+                   class="c-matrix-req-link font-medium u-font-medium" 
                    aria-label="View requirement {{req_id}}"
                    title="{{req_title}}">
-                  <span class="text-secondary matrix-req-reference">{{req_reference}}</span>
+                  <span class="text-secondary c-matrix-req-reference">{{req_reference}}</span>
                 </a>
               </div>
             </td>
             {{#each matrix}}
-              <td class="text-center u-text-center matrix-cell" 
+              <td class="text-center u-text-center c-matrix-cell c-matrix-col" 
                   role="cell" 
                   data-column-id="test-{{@index}}"
                   data-req-id="{{../req_id}}"
-                  data-test-id="{{@index}}"
+                  data-test-id="{{#with (lookup @root.tests @index)}}{{test_id}}{{/with}}"
                   data-linked="{{this.linked}}"
                   data-test-status="{{this.test_status}}">
                 {{#if this.linked}}
-                  <div class="matrix-link-indicator" data-tooltip="Linked - Status: {{#if (eq this.test_status 7)}}Passed{{else if (eq this.test_status 6)}}Approved{{else if (eq this.test_status 1)}}Passed{{else}}In Progress{{/if}}">
+                  <div class="c-matrix-link-indicator" data-tooltip="Linked - Status: {{#if (eq this.test_status 7)}}Passed{{else if (eq this.test_status 6)}}Approved{{else if (eq this.test_status 1)}}Passed{{else}}In Progress{{/if}}">
                     {{#if (eq this.test_status 7)}}
-                      <span class="matrix-status-dot status-passed" aria-label="Test passed" title="Test Passed">●</span>
+                      <span class="c-matrix-status-dot status-passed" aria-label="Test passed" title="Test Passed">●</span>
                     {{else if (eq this.test_status 1)}}
-                      <span class="matrix-status-dot status-passed" aria-label="Test passed" title="Test Passed">●</span>
+                      <span class="c-matrix-status-dot status-passed" aria-label="Test passed" title="Test Passed">●</span>
                     {{else if (eq this.test_status 6)}}
-                      <span class="matrix-status-dot status-approved" aria-label="Test approved" title="Test Approved">●</span>
+                      <span class="c-matrix-status-dot status-approved" aria-label="Test approved" title="Test Approved">●</span>
                     {{else if (eq this.test_status 2)}}
-                      <span class="matrix-status-dot status-in-progress" aria-label="Test in progress" title="In Progress">◐</span>
+                      <span class="c-matrix-status-dot status-in-progress" aria-label="Test in progress" title="In Progress">◐</span>
                     {{else if (eq this.test_status 3)}}
-                      <span class="matrix-status-dot status-failed" aria-label="Test failed" title="Test Failed">✕</span>
+                      <span class="c-matrix-status-dot status-failed" aria-label="Test failed" title="Test Failed">✕</span>
                     {{else}}
-                      <span class="matrix-status-dot status-pending" aria-label="Test pending" title="Pending">○</span>
+                      <span class="c-matrix-status-dot status-pending" aria-label="Test pending" title="Pending">○</span>
                     {{/if}}
                   </div>
                 {{else}}
-                  <span class="matrix-no-link" aria-label="Not linked" title="No link">–</span>
+                  <span class="c-matrix-no-link" aria-label="Not linked" title="No link">–</span>
                 {{/if}}
               </td>
             {{/each}}
           </tr>
         {{/each}}
         {{#unless requirements}}
-          <tr role="row" class="matrix-empty-row">
+          <tr role="row" class="c-matrix-empty-row c-matrix-row">
             <td colspan="{{total_test_columns}}" class="text-center text-secondary p-5" role="cell">
-              <div class="matrix-empty-state">
+              <div class="c-matrix-empty-state">
                 <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin: 0 auto 1rem; opacity: 0.3;">
                   <circle cx="11" cy="11" r="8"></circle>
                   <path d="m21 21-4.35-4.35"></path>

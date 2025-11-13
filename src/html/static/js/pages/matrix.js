@@ -195,12 +195,21 @@ function hideColumn(columnId) {
  */
 function initFullscreen() {
   const toggleButton = document.getElementById('toggleFullscreen');
-  const matrixCard = document.querySelector('.matrix-card');
+  const matrixCard = document.querySelector('.c-matrix-card');
+  
+  console.log('initFullscreen called');
+  console.log('toggleButton:', toggleButton);
+  console.log('matrixCard:', matrixCard);
   
   if (toggleButton && matrixCard) {
-    toggleButton.addEventListener('click', () => {
+    console.log('Adding fullscreen event listener');
+    toggleButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      console.log('Fullscreen button clicked');
       matrixState.fullscreenEnabled = !matrixState.fullscreenEnabled;
-      matrixCard.classList.toggle('fullscreen', matrixState.fullscreenEnabled);
+      console.log('Fullscreen enabled:', matrixState.fullscreenEnabled);
+      matrixCard.classList.toggle('is-fullscreen', matrixState.fullscreenEnabled);
+      console.log('Matrix card classes:', matrixCard.className);
       
       // Update button icon or text
       const icon = toggleButton.querySelector('svg');
@@ -211,6 +220,11 @@ function initFullscreen() {
         toggleButton.title = 'Toggle fullscreen';
         toggleButton.setAttribute('aria-label', 'Toggle fullscreen');
       }
+    });
+  } else {
+    console.error('Cannot initialize fullscreen: missing elements', {
+      hasButton: !!toggleButton,
+      hasCard: !!matrixCard
     });
   }
 }
@@ -353,94 +367,121 @@ function initTooltips() {
  * Initialize cell interactions
  */
 function initCellInteractions() {
-  // Add click handlers to matrix cells
-  document.querySelectorAll('.matrix-cell').forEach(cell => {
-    if (cell.dataset.linked === 'true') {
-      cell.style.cursor = 'pointer';
-      cell.addEventListener('click', (e) => {
+  const table = document.getElementById('matrixTable');
+  if (!table) return;
+  
+  let selectedRow = null;
+  
+  // Add click handlers to all matrix cells (linked or not)
+  document.querySelectorAll('.c-matrix-cell').forEach(cell => {
+    cell.addEventListener('click', (e) => {
+      // Don't trigger if clicking on a link inside the cell
+      if (e.target.tagName === 'A') return;
+      
+      const row = cell.closest('tr');
+      if (!row) return;
+      
+      // Remove selection from previously selected row
+      if (selectedRow && selectedRow !== row) {
+        selectedRow.classList.remove('is-selected');
+      }
+      
+      // Toggle selection on current row
+      if (selectedRow === row) {
+        row.classList.remove('is-selected');
+        selectedRow = null;
+      } else {
+        row.classList.add('is-selected');
+        selectedRow = row;
+      }
+      
+      // Log for linked cells
+      if (cell.dataset.linked === 'true') {
         const reqId = cell.dataset.reqId;
         const testId = cell.dataset.testId;
-        
-        // Could open a modal or navigate to detail view
-        console.log(`Cell clicked: Req ${reqId} ↔ Test ${testId}`);
-        
-        // Add visual feedback
-        cell.style.transform = 'scale(1.1)';
-        setTimeout(() => {
-          cell.style.transform = '';
-        }, 200);
-      });
-    }
+        const testStatus = cell.dataset.testStatus;
+        console.log(`Cell clicked: Req ${reqId} ↔ Test ${testId}, Status: ${testStatus}`);
+      }
+    });
   });
   
   // Highlight row and column on hover - optimized
-  const table = document.getElementById('matrixTable');
-  if (table) {
-    let currentHighlightedRow = null;
-    let currentHighlightedCols = [];
-    let currentFocusedCell = null;
+  
+  let currentHighlightedRow = null;
+  let currentHighlightedCols = [];
+  let currentFocusedCell = null;
+  
+  table.addEventListener('mouseover', (e) => {
+    const cell = e.target.closest('td, th');
+    if (!cell) return;
     
-    table.addEventListener('mouseover', (e) => {
-      const cell = e.target.closest('td, th');
-      if (!cell) return;
-      
-      const row = cell.parentElement;
-      const cellIndex = Array.from(row.children).indexOf(cell);
-      
-      // Skip if same cell to avoid unnecessary operations
-      if (currentFocusedCell === cell) return;
-      
-      // Clear ALL previous highlights first
-      if (currentHighlightedRow) {
-        currentHighlightedRow.classList.remove('matrix-row-highlight');
+    const row = cell.parentElement;
+    if (!row) return;
+    
+    const cellIndex = Array.from(row.children).indexOf(cell);
+    
+    // Skip if same cell to avoid unnecessary operations
+    if (currentFocusedCell === cell) return;
+    
+    // Clear ALL previous highlights first
+    if (currentHighlightedRow) {
+      currentHighlightedRow.classList.remove('is-highlight');
+    }
+    currentHighlightedCols.forEach(c => c.classList.remove('is-highlight'));
+    currentHighlightedCols = [];
+    
+    // Remove previous cell focus
+    if (currentFocusedCell) {
+      currentFocusedCell.classList.remove('is-focus');
+    }
+    
+    // Add new highlights
+    row.classList.add('is-highlight');
+    currentHighlightedRow = row;
+    
+    // Highlight column - only for tbody and thead
+    const tbody = table.querySelector('tbody');
+    const thead = table.querySelector('thead');
+    
+    if (thead) {
+      const headerRow = thead.querySelector('tr');
+      if (headerRow && headerRow.children[cellIndex]) {
+        const headerCell = headerRow.children[cellIndex];
+        headerCell.classList.add('is-highlight');
+        currentHighlightedCols.push(headerCell);
       }
-      currentHighlightedCols.forEach(c => c.classList.remove('matrix-col-highlight'));
-      currentHighlightedCols = [];
-      
-      // Remove previous cell focus
-      if (currentFocusedCell) {
-        currentFocusedCell.classList.remove('matrix-cell-focus');
-      }
-      
-      // Add new highlights
-      row.classList.add('matrix-row-highlight');
-      currentHighlightedRow = row;
-      
-      // Highlight column
-      const allRows = table.querySelectorAll('tr');
-      allRows.forEach(r => {
+    }
+    
+    if (tbody) {
+      tbody.querySelectorAll('tr').forEach(r => {
         const targetCell = r.children[cellIndex];
         if (targetCell) {
-          targetCell.classList.add('matrix-col-highlight');
+          targetCell.classList.add('is-highlight');
           currentHighlightedCols.push(targetCell);
         }
       });
-      
-      // Add focused highlight to current cell (will be on top due to CSS specificity)
-      cell.classList.add('matrix-cell-focus');
-      currentFocusedCell = cell;
-    });
+    }
     
-    table.addEventListener('mouseout', (e) => {
-      const relatedTarget = e.relatedTarget;
-      
-      // Only clear highlights if mouse truly leaves the table
-      if (!table.contains(relatedTarget)) {
-        // Clear all highlights
-        if (currentHighlightedRow) {
-          currentHighlightedRow.classList.remove('matrix-row-highlight');
-          currentHighlightedRow = null;
-        }
-        currentHighlightedCols.forEach(c => c.classList.remove('matrix-col-highlight'));
-        currentHighlightedCols = [];
-        
-        if (currentFocusedCell) {
-          currentFocusedCell.classList.remove('matrix-cell-focus');
-          currentFocusedCell = null;
-        }
-      }
-    });
-  }
+    // Add focused highlight to current cell (will be on top due to CSS specificity)
+    cell.classList.add('is-focus');
+    currentFocusedCell = cell;
+  });
+  
+  // Use mouseleave on the table for cleaner cleanup
+  table.addEventListener('mouseleave', () => {
+    // Clear all highlights when mouse leaves the table
+    if (currentHighlightedRow) {
+      currentHighlightedRow.classList.remove('is-highlight');
+      currentHighlightedRow = null;
+    }
+    currentHighlightedCols.forEach(c => c.classList.remove('is-highlight'));
+    currentHighlightedCols = [];
+    
+    if (currentFocusedCell) {
+      currentFocusedCell.classList.remove('is-focus');
+      currentFocusedCell = null;
+    }
+  });
 }
 
 // Export state for debugging

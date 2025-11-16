@@ -1,5 +1,6 @@
 mod applicability;
 mod categories;
+mod matrix;
 mod members;
 mod project;
 mod reports;
@@ -40,6 +41,7 @@ pub fn routes() -> Vec<Route> {
     let mut routes = Vec::new();
     routes.extend(applicability::routes());
     routes.extend(categories::routes());
+    routes.extend(matrix::routes());
     routes.extend(members::routes());
     routes.extend(reports::routes());
     routes.extend(requirements::routes());

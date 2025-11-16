@@ -6,12 +6,6 @@
   box-shadow: var(--shadow-sm);
   color: var(--text-primary);
   overflow: hidden;
-  transition: all 0.2s ease;
-}
-
-.c-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
 }
 
 .c-card__header {
@@ -35,24 +29,6 @@
 }
 
 /* Requirement Cards */
-.c-requirement-card__id {
-  background-color: var(--primary-color);
-  border-radius: var(--radius-md);
-  color: #fff;
-  display: inline-block;
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: var(--space-2) var(--space-3);
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.c-requirement-card__id:hover {
-  background-color: var(--primary-dark);
-  box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
-}
-
 .c-requirement-card__meta-value {
   color: var(--text-primary);
   font-weight: 500;
@@ -73,12 +49,6 @@
 [class~='status-approved'] {
   background-color: #d1fae5;
   color: #059669;
-}
-
-[class~='status-warning'] {
-  background-color: #fffbeb;
-  border: 1px solid #fed7aa;
-  color: #d97706;
 }
 
 [data-theme='dark'] .c-card {
@@ -107,16 +77,6 @@
   color: var(--text-primary);
 }
 
-[data-theme='dark'] .c-requirement-card__id {
-  background-color: var(--primary-light);
-  color: #0f172a;
-}
-
-[data-theme='dark'] .c-requirement-card__id:hover {
-  background-color: #60a5fa;
-  box-shadow: var(--shadow-md);
-}
-
 /* Remove background highlight from reference IDs in tree view for dark mode */
 [data-theme='dark'] .c-tree__requirement-link {
   background-color: transparent;
@@ -140,5 +100,26 @@
   background-color: var(--surface-muted);
   border-color: var(--border-color);
   color: var(--text-primary);
+}
+
+/* Matrix status colors */
+.status-passed {
+  color: #28a745;
+}
+
+.status-in-progress {
+  color: #28a745;
+}
+
+.status-pending {
+  color: #28a745;
+}
+
+.status-failed {
+  color: #dc3545;
+}
+
+.c-matrix-no-link {
+  color: #6c757d;
 }
 

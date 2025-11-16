@@ -1,4 +1,3 @@
-// scripts/purgecss-ci.mjs
 import fs from 'node:fs';
 import { PurgeCSS } from 'purgecss';
 

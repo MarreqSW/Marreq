@@ -370,182 +370,6 @@ async fn delete_test_route(
     Ok(Redirect::to(format!("/p/{}/tests", project_id)))
 }
 
-#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>")]
-async fn get_matrix(
-    project_access: ProjectAccess,
-    project_id: i32,
-    cookies: &CookieJar<'_>,
-    sort_by: Option<String>,
-    sort_order: Option<String>,
-    test_status_filter: Option<i32>,
-    state: &State<AppState>,
-) -> Result<Template, Redirect> {
-    use crate::schema::*;
-    use diesel::prelude::*;
-    use serde_json::json;
-    use std::collections::HashSet;
-
-    let user = project_access.into_user();
-
-    // DB connection with a single redirect-on-error path.
-    let mut conn = get_db_connection(state).map_err(|e| {
-        eprintln!("Database connection error: {e}");
-        Redirect::to(uri!(crate::routes::html::dashboard::index))
-    })?;
-
-    // Load requirements & tests for the project in one go.
-    let mut all_reqs: Vec<Requirement> = requirements::dsl::requirements
-        .filter(requirements::project_id.eq(project_id))
-        .load(conn.as_mut())
-        .map_err(|e| {
-            eprintln!("DB error loading requirements: {e}");
-            Redirect::to(uri!(crate::routes::html::dashboard::index))
-        })?;
-
-    let mut all_tests: Vec<Test> = tests::dsl::tests
-        .filter(tests::project_id.eq(project_id))
-        .load(conn.as_mut())
-        .map_err(|e| {
-            eprintln!("DB error loading tests: {e}");
-            Redirect::to(uri!(crate::routes::html::dashboard::index))
-        })?;
-
-    // Always sort tests by id (ascending), then optionally filter by status.
-    all_tests.sort_by_key(|t| t.test_id);
-    if let Some(s) = test_status_filter {
-        all_tests.retain(|t| t.test_status == s);
-    }
-
-    // Preload all links once; check membership in O(1) later.
-    let links: HashSet<(i32, i32)> = matrix::dsl::matrix
-        .select((matrix::matrix_req_id, matrix::matrix_test_id))
-        .load::<(i32, i32)>(conn.as_mut())
-        .map_err(|e| {
-            eprintln!("DB error loading matrix links: {e}");
-            Redirect::to(uri!(crate::routes::html::dashboard::index))
-        })?
-        .into_iter()
-        .collect();
-
-    // Sort requirements.
-    let sort_by = sort_by.unwrap_or_else(|| "req_id".to_string());
-    let desc = sort_order.as_deref() == Some("desc");
-
-    if let Some(test_id_str) = sort_by.strip_prefix("test_") {
-        if let Ok(target_test_id) = test_id_str.parse::<i32>() {
-            all_reqs.sort_by_key(|r| links.contains(&(r.req_id, target_test_id)));
-            if desc {
-                all_reqs.reverse();
-            }
-        }
-    } else {
-        match sort_by.as_str() {
-            "req_title" => {
-                all_reqs.sort_by(|a, b| a.req_title.cmp(&b.req_title));
-                if desc {
-                    all_reqs.reverse();
-                }
-            }
-            "req_reference" => {
-                all_reqs.sort_by(|a, b| a.req_reference.cmp(&b.req_reference));
-                if desc {
-                    all_reqs.reverse();
-                }
-            }
-            _ => {
-                all_reqs.sort_by_key(|r| r.req_id);
-                if desc {
-                    all_reqs.reverse();
-                }
-            }
-        }
-    }
-
-    // Build matrix cells + counts.
-    let mut total_links = 0;
-    let requirements_with_matrix: Vec<_> = all_reqs
-        .iter()
-        .map(|req| {
-            let row: Vec<_> = all_tests
-                .iter()
-                .map(|test| {
-                    let linked = links.contains(&(req.req_id, test.test_id));
-                    if linked {
-                        total_links += 1;
-                    }
-                    json!({ "linked": linked, "test_status": test.test_status })
-                })
-                .collect();
-
-            json!({
-                "req_id": req.req_id,
-                "req_title": req.req_title,
-                "req_reference": req.req_reference,
-                "matrix": row
-            })
-        })
-        .collect();
-
-    // Tests with human-readable status name.
-    let tests_with_status: Vec<_> = all_tests
-        .iter()
-        .map(|t| {
-            json!({
-                "test_id": t.test_id,
-                "test_name": t.test_name,
-                "test_status": get_status_name_by_id_cached(state, t.test_status)
-            })
-        })
-        .collect();
-
-    let mut ctx = build_context_with_projects(state, user, cookies);
-    ctx["requirements"] = json!(requirements_with_matrix);
-    ctx["tests"] = json!(tests_with_status);
-    ctx["total_tests"] = json!(all_tests.len() as i32);
-    ctx["total_requirements"] = json!(all_reqs.len() as i32);
-    ctx["total_links"] = json!(total_links);
-    ctx["current_sort_by"] = json!(sort_by);
-    ctx["current_sort_order"] = json!(if desc { "desc" } else { "asc" });
-    ctx["test_status_filter"] = json!(test_status_filter);
-    ctx["statuses"] = json!(state.repo_read().get_status_all().unwrap_or_default());
-
-    Ok(Template::render("matrix", ctx))
-}
-
-#[get("/<project_id>/matrix.xls")]
-async fn get_matrix_xls(
-    project_access: ProjectAccess,
-    project_id: i32,
-    cookies: &CookieJar<'_>,
-) -> Result<(ContentType, NamedFile), Redirect> {
-    let user = project_access.into_user();
-
-    // Log user and project info
-    println!(
-        "User [{} - id:{}] requested matrix export for project_id={}",
-        user.user_username, user.user_id, project_id
-    );
-
-    excel::create_matrix_workbook(cookies).map_err(|e| {
-        eprintln!("Error creating matrix workbook: {e:?}");
-        Redirect::to("/matrix")
-    })?;
-
-    let path = std::path::Path::new("target/matrix.xls");
-    let file = NamedFile::open(path).await.map_err(|e| {
-        eprintln!("Error opening matrix file: {e:?}");
-        Redirect::to("/matrix")
-    })?;
-
-    // Note: MIME here is for .xlsx; change if you truly emit legacy .xls files.
-    let ct = ContentType::new(
-        "application",
-        "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    );
-
-    Ok((ct, file))
-}
-
 #[get("/<project_id>/requirements.xls")]
 async fn get_requirements_xls(
     project_access: ProjectAccess,
@@ -612,8 +436,6 @@ pub fn routes() -> Vec<Route> {
         get_edit_test,
         post_edit_test,
         post_test,
-        get_matrix,
-        get_matrix_xls,
         get_requirements_xls,
         get_tests_xls
     ]
@@ -805,8 +627,7 @@ mod tests {
                 post_test,
                 get_edit_test,
                 post_edit_test,
-                delete_test_route,
-                get_matrix
+                delete_test_route
             ],
         )
         .await
@@ -960,14 +781,6 @@ mod tests {
         let response = delete_with_session(&client, "/p/1/tests/delete/1", USER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Forbidden);
-    }
-
-    #[rocket::async_test]
-    async fn get_matrix_redirects_when_database_unavailable() {
-        let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/matrix", ADMIN_ID).await;
-
-        assert_eq!(response.status(), HttpStatus::SeeOther);
     }
 
     #[rocket::async_test]

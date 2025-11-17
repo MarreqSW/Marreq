@@ -88,22 +88,22 @@ CREATE TABLE verification (
 
 -- Requirements table
 CREATE TABLE requirements (
-    req_id SERIAL PRIMARY KEY,
-    req_title VARCHAR NOT NULL DEFAULT ' ',
-    req_description VARCHAR NOT NULL DEFAULT ' ',
-    req_verification_method INTEGER NOT NULL DEFAULT 1,
-    req_current_status INTEGER NOT NULL DEFAULT 1,
-    req_author INTEGER NOT NULL DEFAULT 0,
-    req_reviewer INTEGER NOT NULL DEFAULT 0,
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL DEFAULT ' ',
+    description VARCHAR NOT NULL DEFAULT ' ',
+    verification_method_id INTEGER NOT NULL DEFAULT 1,
+    current_status_id INTEGER NOT NULL DEFAULT 1,
+    author_id INTEGER NOT NULL DEFAULT 0,
+    reviewer_id INTEGER NOT NULL DEFAULT 0,
     req_link VARCHAR NOT NULL DEFAULT ' ',
-    req_reference VARCHAR NOT NULL DEFAULT ' ',
-    req_category INTEGER NOT NULL DEFAULT 1,
-    req_parent INTEGER NOT NULL DEFAULT 0,
-    req_creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    req_update_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    req_deadline_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    req_applicability INTEGER NOT NULL DEFAULT 1,
-    req_justification TEXT,
+    reference_code VARCHAR NOT NULL DEFAULT ' ',
+    category_id INTEGER NOT NULL DEFAULT 1,
+    parent_id INTEGER NOT NULL DEFAULT 0,
+    creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deadline_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    applicability_id INTEGER NOT NULL DEFAULT 1,
+    justification TEXT,
     project_id INTEGER NOT NULL
 );
 
@@ -160,7 +160,7 @@ ALTER TABLE requirements ADD CONSTRAINT fk_requirements_project
     FOREIGN KEY (project_id) REFERENCES projects(project_id);
 
 ALTER TABLE requirements ADD CONSTRAINT fk_requirements_applicability 
-    FOREIGN KEY (req_applicability) REFERENCES applicability(app_id);
+    FOREIGN KEY (applicability_id) REFERENCES applicability(app_id);
 
 ALTER TABLE tests ADD CONSTRAINT fk_tests_project 
     FOREIGN KEY (project_id) REFERENCES projects(project_id);
@@ -169,7 +169,7 @@ ALTER TABLE matrix ADD CONSTRAINT fk_matrix_project
     FOREIGN KEY (project_id) REFERENCES projects(project_id);
 
 ALTER TABLE matrix ADD CONSTRAINT fk_matrix_requirements 
-    FOREIGN KEY (matrix_req_id) REFERENCES requirements(req_id) ON DELETE CASCADE;
+    FOREIGN KEY (matrix_req_id) REFERENCES requirements(id) ON DELETE CASCADE;
 
 ALTER TABLE matrix ADD CONSTRAINT fk_matrix_tests 
     FOREIGN KEY (matrix_test_id) REFERENCES tests(test_id) ON DELETE CASCADE;
@@ -192,10 +192,10 @@ CREATE INDEX idx_logs_created_at ON logs(created_at);
 CREATE INDEX idx_logs_action_type ON logs(action_type);
 
 CREATE INDEX idx_requirements_project_id ON requirements(project_id);
-CREATE INDEX idx_requirements_category ON requirements(req_category);
-CREATE INDEX idx_requirements_status ON requirements(req_current_status);
-CREATE INDEX idx_requirements_author ON requirements(req_author);
-CREATE INDEX idx_requirements_reviewer ON requirements(req_reviewer);
+CREATE INDEX idx_requirements_category ON requirements(category_id);
+CREATE INDEX idx_requirements_status ON requirements(current_status_id);
+CREATE INDEX idx_requirements_author ON requirements(author_id);
+CREATE INDEX idx_requirements_reviewer ON requirements(reviewer_id);
 
 CREATE INDEX idx_tests_project_id ON tests(project_id);
 CREATE INDEX idx_tests_status ON tests(test_status);
@@ -262,7 +262,7 @@ INSERT INTO verification (verification_name, verification_description, project_i
     ('Test', 'Controlled verification with predefined inputs', 1);
 
 -- Requirements (simplified)
-INSERT INTO requirements (req_title, req_description, req_reference, req_category, req_applicability, req_current_status, req_verification_method, req_author, req_reviewer, req_parent, req_link, req_creation_date, req_update_date, req_deadline_date, project_id) VALUES
+INSERT INTO requirements (title, description, reference_code, category_id, applicability_id, current_status_id, verification_method_id, author_id, reviewer_id, parent_id, req_link, creation_date, update_date, deadline_date, project_id) VALUES
     ('REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations', 'REQ-PWR-001', 1, 1, 1, 1, 1, 2, 0, 'https://spacecorp.com/power-specs', '2024-01-15', '2024-01-15', '2024-06-30', 1),
     ('REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse', 'REQ-PWR-002', 1, 1, 2, 1, 1, 2, 0, '', '2024-01-15', '2024-01-20', '2024-07-15', 1),
     ('REQ-COMM-001', 'The satellite shall maintain continuous communication with ground stations during 90% of each orbit', 'REQ-COMM-001', 2, 1, 3, 1, 1, 2, 0, '', '2024-01-16', '2024-01-16', '2024-08-15', 1),

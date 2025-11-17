@@ -114,17 +114,17 @@ impl ExcelImporter {
     pub fn get_available_fields(&self) -> Vec<String> {
         match self.import_type.as_str() {
             "requirements" => vec![
-                "req_title".to_string(),
-                "req_description".to_string(),
-                "req_reference".to_string(),
-                "req_category".to_string(),
-                "req_applicability".to_string(),
-                "req_current_status".to_string(),
-                "req_verification_method".to_string(),
-                "req_author".to_string(),
-                "req_reviewer".to_string(),
-                "req_parent".to_string(),
-                "req_justification".to_string(),
+                "title".to_string(),
+                "description".to_string(),
+                "reference_code".to_string(),
+                "category_id".to_string(),
+                "applicability_id".to_string(),
+                "current_status_id".to_string(),
+                "verification_method_id".to_string(),
+                "author_id".to_string(),
+                "reviewer_id".to_string(),
+                "parent_id".to_string(),
+                "justification".to_string(),
             ],
             "tests" => vec![
                 "test_name".to_string(),
@@ -215,37 +215,37 @@ impl ExcelImporter {
         }
 
         // Resolve foreign key references
-        let category_id = if let Some(category_name) = req_data.get("req_category") {
+        let category_id = if let Some(category_name) = req_data.get("category_id") {
             self.resolve_category_id(category_name, project_id)?
         } else {
             1 // Default category
         };
 
-        let applicability_id = if let Some(app_name) = req_data.get("req_applicability") {
+        let applicability_id = if let Some(app_name) = req_data.get("applicability_id") {
             self.resolve_applicability_id(app_name, project_id)?
         } else {
             1 // Default applicability
         };
 
-        let status_id = if let Some(status_name) = req_data.get("req_current_status") {
+        let status_id = if let Some(status_name) = req_data.get("current_status_id") {
             self.resolve_requirement_status_id(status_name, conn)?
         } else {
             1 // Default status
         };
 
-        let author_id = if let Some(author_name) = req_data.get("req_author") {
+        let author_id = if let Some(author_name) = req_data.get("author_id") {
             self.resolve_user_id(author_name, project_id, conn)?
         } else {
             1 // Default user
         };
 
-        let reviewer_id = if let Some(reviewer_name) = req_data.get("req_reviewer") {
+        let reviewer_id = if let Some(reviewer_name) = req_data.get("reviewer_id") {
             self.resolve_user_id(reviewer_name, project_id, conn)?
         } else {
             1 // Default user
         };
 
-        let parent_id = if let Some(parent_title) = req_data.get("req_parent") {
+        let parent_id = if let Some(parent_title) = req_data.get("parent_id") {
             if !parent_title.is_empty() && parent_title != "None" {
                 self.resolve_requirement_id_by_title(parent_title, project_id, conn)
                     .ok()
@@ -258,27 +258,27 @@ impl ExcelImporter {
 
         // Create new requirement
         let new_req = NewRequirement {
-            req_id: None,
-            req_title: req_data
-                .get("req_title")
+            id: None,
+            title: req_data
+                .get("title")
                 .unwrap_or(&"Imported Requirement".to_string())
                 .clone(),
-            req_description: req_data
-                .get("req_description")
+            description: req_data
+                .get("description")
                 .unwrap_or(&"".to_string())
                 .clone(),
-            req_reference: req_data
-                .get("req_reference")
+            reference_code: req_data
+                .get("reference_code")
                 .unwrap_or(&"".to_string())
                 .clone(),
-            req_category: category_id,
-            req_applicability: applicability_id,
-            req_current_status: status_id,
-            req_verification_method: 1, // Default verification
-            req_author: author_id,
-            req_reviewer: reviewer_id,
-            req_parent: parent_id.unwrap_or(0),
-            req_justification: req_data.get("req_justification").cloned(),
+            category_id: category_id,
+            applicability_id: applicability_id,
+            current_status_id: status_id,
+            verification_method_id: 1, // Default verification
+            author_id: author_id,
+            reviewer_id: reviewer_id,
+            parent_id: parent_id.unwrap_or(0),
+            justification: req_data.get("justification").cloned(),
             project_id,
         };
 
@@ -468,8 +468,8 @@ impl ExcelImporter {
             .get_requirements_by_project(project_id)
             .map_err(|e| anyhow!("{}", e))?;
         for req in requirements {
-            if req.req_title == title {
-                return Ok(req.req_id);
+            if req.title == title {
+                return Ok(req.id);
             }
         }
 

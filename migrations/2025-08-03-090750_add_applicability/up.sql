@@ -16,8 +16,8 @@ INSERT INTO applicability (app_title, app_description, app_tag) VALUES
     ('New Systems', 'Applicable to new systems only', 'NEW');
 
 -- Add applicability column to requirements table
-ALTER TABLE requirements ADD COLUMN req_applicability INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE requirements ADD COLUMN applicability_id INTEGER NOT NULL DEFAULT 1;
 
 -- Add foreign key constraint
 ALTER TABLE requirements ADD CONSTRAINT fk_requirements_applicability 
-    FOREIGN KEY (req_applicability) REFERENCES applicability(app_id);
+    FOREIGN KEY (applicability_id) REFERENCES applicability(app_id);

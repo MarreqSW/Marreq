@@ -33,22 +33,22 @@ mod tests {
 
     fn create_test_requirement() -> Requirement {
         Requirement {
-            req_id: 1,
-            req_title: "Test Requirement".to_string(),
-            req_description: "Test Description".to_string(),
-            req_verification_method: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
+            id: 1,
+            title: "Test Requirement".to_string(),
+            description: "Test Description".to_string(),
+            verification_method_id: 1,
+            current_status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
             req_link: "http://example.com".to_string(),
-            req_reference: "REQ-1".to_string(),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: test_datetime(),
-            req_update_date: test_datetime(),
-            req_deadline_date: test_datetime(),
-            req_applicability: 1,
-            req_justification: None,
+            reference_code: "REQ-1".to_string(),
+            category_id: 1,
+            parent_id: 0,
+            creation_date: test_datetime(),
+            update_date: test_datetime(),
+            deadline_date: test_datetime(),
+            applicability_id: 1,
+            justification: None,
             project_id: 1,
         }
     }
@@ -271,7 +271,7 @@ mod tests {
         let result = repo.get_requirement_by_id(1);
         assert!(result.is_ok());
         let found_req = result.unwrap();
-        assert_eq!(found_req.req_title, "Test Requirement");
+        assert_eq!(found_req.title, "Test Requirement");
     }
 
     #[test]
@@ -293,7 +293,7 @@ mod tests {
         assert!(result.is_ok());
         let requirements = result.unwrap();
         assert_eq!(requirements.len(), 1);
-        assert_eq!(requirements[0].req_title, "Test Requirement");
+        assert_eq!(requirements[0].title, "Test Requirement");
     }
 
     #[test]
@@ -319,7 +319,7 @@ mod tests {
         assert!(result.is_ok());
         let requirements = result.unwrap();
         assert_eq!(requirements.len(), 1);
-        assert_eq!(requirements[0].req_category, 1);
+        assert_eq!(requirements[0].category_id, 1);
     }
 
     #[test]
@@ -332,26 +332,26 @@ mod tests {
         assert!(result.is_ok());
         let requirements = result.unwrap();
         assert_eq!(requirements.len(), 1);
-        assert_eq!(requirements[0].req_current_status, 1);
+        assert_eq!(requirements[0].current_status_id, 1);
     }
 
     #[test]
     fn test_requirements_repository_insert_new_requirement() {
         let mut repo = DieselRepoMock::default();
         let new_req = NewRequirement {
-            req_id: None,
-            req_title: "New Requirement".to_string(),
-            req_description: "New Description".to_string(),
-            req_verification_method: 1,
-            req_author: 1,
+            id: None,
+            title: "New Requirement".to_string(),
+            description: "New Description".to_string(),
+            verification_method_id: 1,
+            author_id: 1,
             req_link: "http://example.com".to_string(),
-            req_category: 1,
-            req_current_status: 1,
-            req_parent: 0,
-            req_reference: "REQ-NEW".to_string(),
-            req_reviewer: 1,
-            req_applicability: 1,
-            req_justification: None,
+            category_id: 1,
+            current_status_id: 1,
+            parent_id: 0,
+            reference_code: "REQ-NEW".to_string(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: None,
             project_id: 1,
         };
         
@@ -364,19 +364,19 @@ mod tests {
     fn test_requirements_repository_edit_requirement() {
         let mut repo = DieselRepoMock::default();
         let new_req = NewRequirement {
-            req_id: Some(1),
-            req_title: "Updated Requirement".to_string(),
-            req_description: "Updated Description".to_string(),
-            req_verification_method: 1,
-            req_author: 1,
+            id: Some(1),
+            title: "Updated Requirement".to_string(),
+            description: "Updated Description".to_string(),
+            verification_method_id: 1,
+            author_id: 1,
             req_link: "http://example.com".to_string(),
-            req_category: 1,
-            req_current_status: 1,
-            req_parent: 0,
-            req_reference: "REQ-UPDATED".to_string(),
-            req_reviewer: 1,
-            req_applicability: 1,
-            req_justification: None,
+            category_id: 1,
+            current_status_id: 1,
+            parent_id: 0,
+            reference_code: "REQ-UPDATED".to_string(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: None,
             project_id: 1,
         };
         
@@ -488,7 +488,7 @@ mod tests {
         assert!(result.is_ok());
         let requirements = result.unwrap();
         assert_eq!(requirements.len(), 1);
-        assert_eq!(requirements[0].req_id, 1);
+        assert_eq!(requirements[0].id, 1);
     }
 
     #[test]

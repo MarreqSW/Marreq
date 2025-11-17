@@ -18,20 +18,20 @@ use std::fmt;
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = requirements)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(primary_key(req_id))]
+#[diesel(primary_key(id))]
 pub struct NewRequirement {
-    pub req_id: Option<i32>,
-    pub req_title: String,
-    pub req_description: String,
-    pub req_verification_method: i32,
-    pub req_author: i32,
-    pub req_category: i32,
-    pub req_current_status: i32,
-    pub req_parent: i32,
-    pub req_reference: String,
-    pub req_reviewer: i32,
-    pub req_applicability: i32,
-    pub req_justification: Option<String>,
+    pub id: Option<i32>,
+    pub title: String,
+    pub description: String,
+    pub verification_method_id: i32,
+    pub author_id: i32,
+    pub category_id: i32,
+    pub current_status_id: i32,
+    pub parent_id: i32,
+    pub reference_code: String,
+    pub reviewer_id: i32,
+    pub applicability_id: i32,
+    pub justification: Option<String>,
     pub project_id: i32,
 }
 
@@ -251,7 +251,7 @@ impl fmt::Display for NewRequirement {
             <div class='ReqTitle'>Title: {}</div><div class='ReqDesc'>Description: {}</div>
             <div class='ReqAuthor'>Author: {}</div>
         </div>",
-            self.req_title, self.req_description, self.req_author
+            self.title, self.description, self.author_id
         )
     }
 }
@@ -294,7 +294,7 @@ macro_rules! impl_loggable {
     };
 }
 
-impl_loggable!(NewRequirement, EntityType::Requirement, req_id?, req_title);
+impl_loggable!(NewRequirement, EntityType::Requirement, id?, title);
 impl_loggable!(NewCategory, EntityType::Category, cat_id?, cat_title);
 impl_loggable!(
     NewApplicability,

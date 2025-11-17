@@ -34,7 +34,7 @@ async fn get_matrix(
         search: search.clone(),
     };
 
-    let sort_by_value = sort_by.clone().unwrap_or_else(|| "req_id".to_string());
+    let sort_by_value = sort_by.clone().unwrap_or_else(|| "id".to_string());
     let is_desc = sort_order.as_deref() == Some("desc");
     let pagination = MatrixPagination {
         page: page.unwrap_or(1).max(1),
@@ -130,16 +130,16 @@ fn build_matrix_rows(
                 .iter()
                 .map(|test| {
                     json!({ 
-                        "linked": links.contains(&(req.req_id, test.test_id)), 
+                        "linked": links.contains(&(req.id, test.test_id)), 
                         "test_status": test.test_status 
                     })
                 })
                 .collect();
 
             json!({
-                "req_id": req.req_id,
-                "req_title": req.req_title,
-                "req_reference": req.req_reference,
+                "id": req.id,
+                "title": req.title,
+                "reference_code": req.reference_code,
                 "matrix": row
             })
         })
@@ -151,7 +151,7 @@ fn build_matrix_rows(
         .map(|req| {
             tests
                 .iter()
-                .filter(|test| links.contains(&(req.req_id, test.test_id)))
+                .filter(|test| links.contains(&(req.id, test.test_id)))
                 .count()
         })
         .sum();
@@ -346,21 +346,21 @@ mod tests {
 
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Requirement {id}"),
-            req_description: "Test requirement".into(),
-            req_verification_method: 1,
-            req_current_status: 1,
-            req_author: ADMIN_ID,
-            req_reviewer: ADMIN_ID,
-            req_reference: format!("REQ-SYS-{id}"),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("For testing".into()),
+            id: id,
+            title: format!("Requirement {id}"),
+            description: "Test requirement".into(),
+            verification_method_id: 1,
+            current_status_id: 1,
+            author_id: ADMIN_ID,
+            reviewer_id: ADMIN_ID,
+            reference_code: format!("REQ-SYS-{id}"),
+            category_id: 1,
+            parent_id: 0,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: timestamp(),
+            applicability_id: 1,
+            justification: Some("For testing".into()),
             project_id: PRIMARY_PROJECT,
         }
     }
@@ -443,21 +443,21 @@ mod tests {
             repo.requirements.insert(
                 i,
                 Requirement {
-                    req_id: i,
-                    req_title: format!("Req {}", i),
-                    req_description: String::new(),
-                    req_verification_method: 1,
-                    req_current_status: 1,
-                    req_author: 1,
-                    req_reviewer: 1,
-                    req_reference: format!("REF-{}", i),
-                    req_category: 1,
-                    req_parent: 0,
-                    req_creation_date: timestamp(),
-                    req_update_date: timestamp(),
-                    req_deadline_date: timestamp(),
-                    req_applicability: 1,
-                    req_justification: None,
+                    id: i,
+                    title: format!("Req {}", i),
+                    description: String::new(),
+                    verification_method_id: 1,
+                    current_status_id: 1,
+                    author_id: 1,
+                    reviewer_id: 1,
+                    reference_code: format!("REF-{}", i),
+                    category_id: 1,
+                    parent_id: 0,
+                    creation_date: timestamp(),
+                    update_date: timestamp(),
+                    deadline_date: timestamp(),
+                    applicability_id: 1,
+                    justification: None,
                     project_id: 1,
                 },
             );
@@ -471,8 +471,8 @@ mod tests {
 
         let body = response.into_string().await.expect("response body");
         // Page 1 should contain first 10 requirements
-        let req_1_in_table = body.contains(r#"req_id":1"#) || body.contains("REF-1");
-        let req_10_in_table = body.contains(r#"req_id":10"#) || body.contains("REF-10");
+        let req_1_in_table = body.contains(r#"id":1"#) || body.contains("REF-1");
+        let req_10_in_table = body.contains(r#"id":10"#) || body.contains("REF-10");
         assert!(req_1_in_table, "Page 1 should contain requirement 1");
         assert!(req_10_in_table, "Page 1 should contain requirement 10");
 
@@ -481,8 +481,8 @@ mod tests {
         assert_eq!(response2.status(), HttpStatus::Ok);
         let body2 = response2.into_string().await.expect("response body");
 
-        let req_11_in_table = body2.contains(r#"req_id":11"#) || body2.contains("REF-11");
-        let req_20_in_table = body2.contains(r#"req_id":20"#) || body2.contains("REF-20");
+        let req_11_in_table = body2.contains(r#"id":11"#) || body2.contains("REF-11");
+        let req_20_in_table = body2.contains(r#"id":20"#) || body2.contains("REF-20");
         assert!(req_11_in_table, "Page 2 should contain requirement 11");
         assert!(req_20_in_table, "Page 2 should contain requirement 20");
     }
@@ -495,21 +495,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Authentication Requirement".to_string(),
-                req_description: String::new(),
-                req_verification_method: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "AUTH-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Authentication Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                current_status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "AUTH-001".to_string(),
+                category_id: 1,
+                parent_id: 0,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: timestamp(),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -517,21 +517,21 @@ mod tests {
         repo.requirements.insert(
             2,
             Requirement {
-                req_id: 2,
-                req_title: "Database Requirement".to_string(),
-                req_description: String::new(),
-                req_verification_method: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "DB-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 2,
+                title: "Database Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                current_status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "DB-001".to_string(),
+                category_id: 1,
+                parent_id: 0,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: timestamp(),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -563,21 +563,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Test Requirement".to_string(),
-                req_description: String::new(),
-                req_verification_method: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Test Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                current_status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-001".to_string(),
+                category_id: 1,
+                parent_id: 0,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: timestamp(),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -614,21 +614,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Test, with \"quotes\"".to_string(),
-                req_description: String::new(),
-                req_verification_method: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Test, with \"quotes\"".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                current_status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-001".to_string(),
+                category_id: 1,
+                parent_id: 0,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: timestamp(),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -664,21 +664,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Unlinked Requirement".to_string(),
-                req_description: String::new(),
-                req_verification_method: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Unlinked Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                current_status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-001".to_string(),
+                category_id: 1,
+                parent_id: 0,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: timestamp(),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );

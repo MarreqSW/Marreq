@@ -21,7 +21,7 @@ where
     let existing_count = repo
         .get_requirements_by_project(project_id)?
         .into_iter()
-        .filter(|req| req.req_category == category_id)
+        .filter(|req| req.category_id == category_id)
         .count();
 
     Ok(format!("REQ-{}-{}", category.cat_tag, existing_count + 1))

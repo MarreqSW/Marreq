@@ -58,7 +58,7 @@ impl<'a> RequirementService<'a> {
         Ok(self
             .list_all()?
             .into_iter()
-            .filter(|r| r.req_parent == parent_id)
+            .filter(|r| r.parent_id == parent_id)
             .collect())
     }
 
@@ -87,7 +87,7 @@ impl<'a> RequirementService<'a> {
         mut payload: NewRequirement,
     ) -> Result<Requirement, RepoError> {
         self.prepare_payload(&mut payload)?;
-        payload.req_id = Some(id);
+        payload.id = Some(id);
 
         let before = self.get_by_id(id)?;
 
@@ -126,25 +126,25 @@ impl<'a> RequirementService<'a> {
             .into_iter()
             .filter(|req| {
                 let status_match =
-                    status_filter.map_or(true, |status_id| req.req_current_status == status_id);
+                    status_filter.map_or(true, |status_id| req.current_status_id == status_id);
                 let verification_match = verification_filter.map_or(true, |verification_id| {
-                    req.req_verification_method == verification_id
+                    req.verification_method_id == verification_id
                 });
                 let category_match =
-                    category_filter.map_or(true, |category_id| req.req_category == category_id);
+                    category_filter.map_or(true, |category_id| req.category_id == category_id);
                 let applicability_match = applicability_filter.map_or(true, |applicability_id| {
-                    req.req_applicability == applicability_id
+                    req.applicability_id == applicability_id
                 });
                 status_match && verification_match && category_match && applicability_match
             })
             .collect();
 
         filtered_requirements.sort_by(|a, b| {
-            match (a.req_reference.is_empty(), b.req_reference.is_empty()) {
-                (false, false) => a.req_reference.cmp(&b.req_reference),
+            match (a.reference_code.is_empty(), b.reference_code.is_empty()) {
+                (false, false) => a.reference_code.cmp(&b.reference_code),
                 (false, true) => std::cmp::Ordering::Less,
                 (true, false) => std::cmp::Ordering::Greater,
-                (true, true) => a.req_id.cmp(&b.req_id),
+                (true, true) => a.id.cmp(&b.id),
             }
         });
 
@@ -160,10 +160,10 @@ impl<'a> RequirementService<'a> {
     }
 
     fn prepare_payload(&self, payload: &mut NewRequirement) -> Result<(), RepoError> {
-        sanitize_string(&mut payload.req_title);
-        sanitize_string(&mut payload.req_description);
-        sanitize_string(&mut payload.req_reference);
-        sanitize_optional_string(&mut payload.req_justification);
+        sanitize_string(&mut payload.title);
+        sanitize_string(&mut payload.description);
+        sanitize_string(&mut payload.reference_code);
+        sanitize_optional_string(&mut payload.justification);
 
         validate_requirement(payload).map_err(|err| RepoError::BadInput(err.to_string()))
     }
@@ -189,7 +189,7 @@ impl<'a> RequirementService<'a> {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log requirement update {} -> {}: {_err}",
-                    before.req_id, after.req_id
+                    before.id, after.id
                 );
             }
         }
@@ -202,7 +202,7 @@ impl<'a> RequirementService<'a> {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log requirement deletion {}: {_err}",
-                    entity.req_id
+                    entity.id
                 );
             }
         }
@@ -235,39 +235,39 @@ mod tests {
 
     fn requirement(id: i32, project_id: i32, reference: &str) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Requirement {id}"),
-            req_description: "Existing description".into(),
-            req_verification_method: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: reference.into(),
-            req_category: 1,
-            req_parent: 1,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("because".into()),
+            id: id,
+            title: format!("Requirement {id}"),
+            description: "Existing description".into(),
+            verification_method_id: 1,
+            current_status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: reference.into(),
+            category_id: 1,
+            parent_id: 1,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: timestamp(),
+            applicability_id: 1,
+            justification: Some("because".into()),
             project_id,
         }
     }
 
     fn new_payload() -> NewRequirement {
         NewRequirement {
-            req_id: None,
-            req_title: "  Title  ".into(),
-            req_description: "  Description  ".into(),
-            req_verification_method: 1,
-            req_author: 1,
-            req_category: 1,
-            req_current_status: 1,
-            req_parent: 0,
-            req_reference: "  REQ-123  ".into(),
-            req_reviewer: 1,
-            req_applicability: 1,
-            req_justification: Some("   ".into()),
+            id: None,
+            title: "  Title  ".into(),
+            description: "  Description  ".into(),
+            verification_method_id: 1,
+            author_id: 1,
+            category_id: 1,
+            current_status_id: 1,
+            parent_id: 0,
+            reference_code: "  REQ-123  ".into(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: Some("   ".into()),
             project_id: 7,
         }
     }
@@ -282,10 +282,10 @@ mod tests {
         let id = service.create(&actor(), payload).unwrap();
 
         let stored = service.get_by_id(id).unwrap();
-        assert_eq!(stored.req_title, "Title");
-        assert_eq!(stored.req_description, "Description");
-        assert_eq!(stored.req_reference, "REQ-123");
-        assert!(stored.req_justification.is_none());
+        assert_eq!(stored.title, "Title");
+        assert_eq!(stored.description, "Description");
+        assert_eq!(stored.reference_code, "REQ-123");
+        assert!(stored.justification.is_none());
     }
 
     #[test]
@@ -295,7 +295,7 @@ mod tests {
         let service = RequirementService::new(&state);
 
         let mut payload = new_payload();
-        payload.req_reference = "invalid".into();
+        payload.reference_code = "invalid".into();
 
         let err = service.create(&actor(), payload).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
@@ -309,14 +309,14 @@ mod tests {
         let service = RequirementService::new(&state);
 
         let mut payload = new_payload();
-        payload.req_title = "  Updated  ".into();
-        payload.req_description = "  New Description  ".into();
-        payload.req_reference = "  REQ-999  ".into();
+        payload.title = "  Updated  ".into();
+        payload.description = "  New Description  ".into();
+        payload.reference_code = "  REQ-999  ".into();
 
         let updated = service.update(&actor(), 1, payload).unwrap();
-        assert_eq!(updated.req_title, "Updated");
-        assert_eq!(updated.req_description, "New Description");
-        assert_eq!(updated.req_reference, "REQ-999");
+        assert_eq!(updated.title, "Updated");
+        assert_eq!(updated.description, "New Description");
+        assert_eq!(updated.reference_code, "REQ-999");
     }
 
     #[test]
@@ -327,7 +327,7 @@ mod tests {
         let service = RequirementService::new(&state);
 
         let removed = service.delete(&actor(), 2).unwrap();
-        assert_eq!(removed.req_id, 2);
+        assert_eq!(removed.id, 2);
         assert!(matches!(service.get_by_id(2), Err(RepoError::NotFound)));
     }
 

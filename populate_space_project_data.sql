@@ -41,7 +41,7 @@ INSERT INTO applicability (app_title, app_description, app_tag) VALUES
 ('CubeSat', 'Small satellite missions', 'CUBE');
 
 -- Insert requirements for Space Project
-INSERT INTO requirements (req_title, req_description, req_reference, req_category, req_applicability, req_current_status, req_verification_method, req_author, req_reviewer, req_parent, req_link, req_creation_date, req_update_date, req_deadline_date) VALUES
+INSERT INTO requirements (title, description, reference_code, category_id, applicability_id, current_status_id, verification_method_id, author_id, reviewer_id, parent_id, req_link, creation_date, update_date, deadline_date) VALUES
 -- Power System Requirements
 ('REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations', 'The solar array system must provide sufficient power to operate all subsystems including payload, communication, and attitude control systems during sunlit portions of the orbit.', 1, 1, 1, 1, 1, 2, 0, 'https://spacecorp.com/power-specs', '2024-01-15', '2024-01-15', '2024-06-30'),
 ('REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse', 'During orbital eclipse periods, the battery system must maintain critical systems operation without degradation for the maximum expected eclipse duration.', 1, 1, 2, 1, 1, 2, 0, '', '2024-01-15', '2024-01-20', '2024-07-15'),

@@ -1,23 +1,23 @@
 -- Your SQL goes here
 CREATE TABLE requirements
 (
-    req_id              SERIAL PRIMARY KEY,
-    req_title           VARCHAR NOT NULL DEFAULT ' ',
-    req_description     VARCHAR NOT NULL DEFAULT ' ',
-    req_verification_method    INTEGER NOT NULL DEFAULT 1,
-    req_current_status  INTEGER NOT NULL DEFAULT 1,
-    req_author          INTEGER NOT NULL DEFAULT 0,
-    req_reviewer        INTEGER NOT NULL DEFAULT 0,
+    id              SERIAL PRIMARY KEY,
+    title           VARCHAR NOT NULL DEFAULT ' ',
+    description     VARCHAR NOT NULL DEFAULT ' ',
+    verification_method_id    INTEGER NOT NULL DEFAULT 1,
+    current_status_id  INTEGER NOT NULL DEFAULT 1,
+    author_id          INTEGER NOT NULL DEFAULT 0,
+    reviewer_id        INTEGER NOT NULL DEFAULT 0,
     req_link            VARCHAR NOT NULL DEFAULT ' ',
-    req_reference       VARCHAR NOT NULL DEFAULT ' ',
-    req_category        INTEGER NOT NULL DEFAULT 1,
-    req_parent          INTEGER NOT NULL DEFAULT 0,
-    req_creation_date   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    req_update_date     timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    req_deadline_date   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    reference_code       VARCHAR NOT NULL DEFAULT ' ',
+    category_id        INTEGER NOT NULL DEFAULT 1,
+    parent_id          INTEGER NOT NULL DEFAULT 0,
+    creation_date   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_date     timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deadline_date   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO requirements (req_title, req_description, req_current_status, req_author, req_reference, req_category) VALUES
+INSERT INTO requirements (title, description, current_status_id, author_id, reference_code, category_id) VALUES
     ('The SW must manage requirements', 'Blablabla', 3, 1, 'REQ-SYS-010', 1),
     ('The SW must implement an API REST', 'API REST, blablabla', 3, 1, 'REQ-API-010' , 5),
     ('The SW must implement a Web app', 'Web app', 3, 1, 'REQ-SYS-020', 2),

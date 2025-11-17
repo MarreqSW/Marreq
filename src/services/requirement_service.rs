@@ -8,7 +8,7 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
 use crate::models::{NewRequirement, Requirement, TestCase, User};
 use crate::repository::errors::RepoError;
-use crate::repository::{PooledConnectionWrapper, RequirementsRepository, TestsRepository};
+use crate::repository::{PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
 
 /// High level operations for requirements backed by the shared [`AppState`].

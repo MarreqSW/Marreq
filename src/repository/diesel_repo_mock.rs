@@ -442,7 +442,7 @@ impl RequirementsRepository for DieselRepoMock {
     }
 }
 
-impl TestsRepository for DieselRepoMock {
+impl TestsCaseRepository for DieselRepoMock {
     fn get_test_by_id(&self, id: i32) -> Result<TestCase, RepoError> {
         self.tests.get(&id).cloned().ok_or(RepoError::NotFound)
     }

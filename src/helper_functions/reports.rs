@@ -493,9 +493,9 @@ mod tests {
         req_status.insert("Open".to_string(), 5);
         req_status.insert("Closed".to_string(), 3);
 
-        let mut test_status = HashMap::new();
-        test_status.insert("Passed".to_string(), 10);
-        test_status.insert("Failed".to_string(), 2);
+        let mut status_id = HashMap::new();
+        status_id.insert("Passed".to_string(), 10);
+        status_id.insert("Failed".to_string(), 2);
 
         let mut category_id = HashMap::new();
         category_id.insert("Functional".to_string(), 4);
@@ -509,7 +509,7 @@ mod tests {
             total_tests: 12,
             total_categories: 3,
             requirements_by_status: req_status.clone(),
-            tests_by_status: test_status.clone(),
+            tests_by_status: status_id.clone(),
             requirements_by_category: category_id.clone(),
             recent_requirements: 0,
             recent_tests: 0,
@@ -537,9 +537,9 @@ mod tests {
         for i in 0..15 {
             req_status.insert(format!("Status{}", i), i as i32);
         }
-        let mut test_status = HashMap::new();
+        let mut status_id = HashMap::new();
         for i in 0..15 {
-            test_status.insert(format!("TestStatus{}", i), i as i32);
+            status_id.insert(format!("TestStatus{}", i), i as i32);
         }
         let pdf_bytes = generate_pdf_report_data(&Metrics {
             categories: vec![],
@@ -549,7 +549,7 @@ mod tests {
             total_tests: 50,
             total_categories: 5,
             requirements_by_status: req_status.clone(),
-            tests_by_status: test_status.clone(),
+            tests_by_status: status_id.clone(),
             requirements_by_category: HashMap::new(),
             recent_requirements: 0,
             recent_tests: 0,

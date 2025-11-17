@@ -6,19 +6,19 @@
       <div class="d-flex flex-column gap-4">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
           <div class="d-flex flex-wrap align-items-center gap-3">
-            <span class="badge rounded-pill text-bg-dark fs-5" aria-label="Test reference">{{test_reference}}</span>
-            <h1 class="h4 mb-0 text-break">{{test_name}}</h1>
+            <span class="badge rounded-pill text-bg-dark fs-5" aria-label="Test reference">{{reference_code}}</span>
+            <h1 class="h4 mb-0 text-break">{{name}}</h1>
           </div>
           <nav class="ms-lg-auto" aria-label="Test actions">
             <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
-              <a href="/p/{{selected_project_id}}/tests/edit/{{test_id}}"
+              <a href="/p/{{selected_project_id}}/tests/edit/{{id}}"
                 class="btn btn-primary btn-sm" aria-label="Edit test">
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                   <use href="#icon-pencil" />
                 </svg>
                 <span class="ms-1">Edit</span>
               </a>
-              <a href="/logs/TEST/{{test_id}}"
+              <a href="/logs/TEST/{{id}}"
                 class="btn btn-outline-secondary btn-sm" aria-label="View test history">
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                   <use href="#icon-clock-history" />
@@ -32,7 +32,7 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li>
-                    <button class="dropdown-item" type="button" data-action="copy-requirement-link" data-requirement-url="/p/{{selected_project_id}}/tests/show/{{test_id}}">
+                    <button class="dropdown-item" type="button" data-action="copy-requirement-link" data-requirement-url="/p/{{selected_project_id}}/tests/show/{{id}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-link" />
                       </svg>
@@ -41,7 +41,7 @@
                   </li>
                   <li><hr class="dropdown-divider"></li>
                   <li>
-                    <button class="dropdown-item text-danger" type="button" data-action="delete-test" data-project-id="{{selected_project_id}}" data-test-id="{{test_id}}" data-test-name="{{test_name}}">
+                    <button class="dropdown-item text-danger" type="button" data-action="delete-test" data-project-id="{{selected_project_id}}" data-test-id="{{id}}" data-test-name="{{name}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-trash" />
                       </svg>
@@ -57,8 +57,8 @@
         <section class="reqman-requirement-statement-card p-4 p-lg-5 rounded-4 bg-white">
           <div class="text-uppercase small text-muted mb-2">Test Description</div>
           <div class="reqman-requirement-header__statement fs-5 lh-base text-break fw-semibold mb-3">
-            {{#if test_description}}
-              <p class="mb-0">{{test_description}}</p>
+            {{#if description}}
+              <p class="mb-0">{{description}}</p>
             {{else}}
               <p class="mb-0 text-muted"><em>No test description provided yet.</em></p>
             {{/if}}
@@ -73,7 +73,7 @@
                   <svg class="text-primary" width="20" height="20" fill="currentColor" aria-hidden="true"><use href="#icon-lightbulb"/></svg>
                   <h2 class="h5 mb-0 fw-semibold">Source</h2>
                 </div>
-                <div class="text-muted lh-lg">{{test_source}}</div>
+                <div class="text-muted lh-lg">{{source}}</div>
               </div>
             </div>
 
@@ -97,13 +97,13 @@
       <section class="card shadow-sm border-0 requirement-main-card mb-3">
         <div class="card-header requirement-card-header border-0 d-flex justify-content-between align-items-center">
           <div class="text-uppercase small text-muted">Verification</div>
-          {{#if test_status}}
-            {{#if (eq test_status "passed")}}
+          {{#if status_id}}
+            {{#if (eq status_id "passed")}}
               <span class="badge" style="background-color: #d4edda; color: #155724;">Passed</span>
-            {{else if (eq test_status "failed")}}
+            {{else if (eq status_id "failed")}}
               <span class="badge bg-danger">Failed</span>
             {{else}}
-              <span class="badge bg-secondary">{{test_status}}</span>
+              <span class="badge bg-secondary">{{status_id}}</span>
             {{/if}}
           {{/if}}
         </div>
@@ -152,7 +152,7 @@
           <div class="card-body">
             <dl class="row mb-0">
               <dt class="col-6 text-uppercase small text-muted">Status</dt>
-              <dd class="col-6 fw-semibold text-end text-lg-start">{{test_status}}</dd>
+              <dd class="col-6 fw-semibold text-end text-lg-start">{{status_id}}</dd>
               <dt class="col-6 text-uppercase small text-muted">Parent</dt>
               <dd class="col-6 fw-semibold text-end text-lg-start">{{#if test_parent_id}}<a href="/p/{{selected_project_id}}/tests/show/{{test_parent_id}}">{{test_parent_title}}</a>{{else}}—{{/if}}</dd>
               <dt class="col-6 text-uppercase small text-muted">TODO: Add verification type</dt>

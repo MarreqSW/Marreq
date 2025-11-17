@@ -11,8 +11,8 @@ pub fn filter_requirements(
         .filter(|req| {
             let status_match =
                 status_filter.map_or(true, |status_id| req.current_status_id == status_id);
-            let verification_match = verification_filter.map_or(true, |verification_id| {
-                req.verification_method_id == verification_id
+            let verification_match = verification_filter.map_or(true, |id| {
+                req.verification_method_id == id
             });
             let category_match =
                 category_filter.map_or(true, |category_id| req.category_id == category_id);
@@ -42,7 +42,7 @@ pub fn filter_tests(
         .into_iter()
         .filter(|test| {
             let status_match =
-                status_filter.map_or(true, |status_id| test.test_status == status_id);
+                status_filter.map_or(true, |status_id| test.status_id == status_id);
             status_match
         })
         .collect()
@@ -116,23 +116,23 @@ mod tests {
         let only_status1 = filter_tests(
             vec![
                 TestCase {
-                    test_id: 1,
-                    test_name: "T1".into(),
-                    test_description: String::new(),
-                    test_source: String::new(),
-                    test_reference: "TEST-1".into(),
-                    test_status: 1,
-                    test_parent: 0,
+                    id: 1,
+                    name: "T1".into(),
+                    description: String::new(),
+                    source: String::new(),
+                    reference_code: "TEST-1".into(),
+                    status_id: 1,
+                    parent_id: 0,
                     project_id: 0,
                 },
                 TestCase {
-                    test_id: 2,
-                    test_name: "T2".into(),
-                    test_description: String::new(),
-                    test_source: String::new(),
-                    test_reference: "TEST-2".into(),
-                    test_status: 2,
-                    test_parent: 0,
+                    id: 2,
+                    name: "T2".into(),
+                    description: String::new(),
+                    source: String::new(),
+                    reference_code: "TEST-2".into(),
+                    status_id: 2,
+                    parent_id: 0,
                     project_id: 0,
                 },
             ],
@@ -141,28 +141,28 @@ mod tests {
             None,
         );
         assert_eq!(only_status1.len(), 1);
-        assert_eq!(only_status1[0].test_id, 1);
+        assert_eq!(only_status1[0].id, 1);
 
         let all = filter_tests(
             vec![
                 TestCase {
-                    test_id: 1,
-                    test_name: "T1".into(),
-                    test_description: String::new(),
-                    test_source: String::new(),
-                    test_reference: "TEST-1".into(),
-                    test_status: 1,
-                    test_parent: 0,
+                    id: 1,
+                    name: "T1".into(),
+                    description: String::new(),
+                    source: String::new(),
+                    reference_code: "TEST-1".into(),
+                    status_id: 1,
+                    parent_id: 0,
                     project_id: 0,
                 },
                 TestCase {
-                    test_id: 2,
-                    test_name: "T2".into(),
-                    test_description: String::new(),
-                    test_source: String::new(),
-                    test_reference: "TEST-2".into(),
-                    test_status: 2,
-                    test_parent: 0,
+                    id: 2,
+                    name: "T2".into(),
+                    description: String::new(),
+                    source: String::new(),
+                    reference_code: "TEST-2".into(),
+                    status_id: 2,
+                    parent_id: 0,
                     project_id: 0,
                 },
             ],

@@ -89,7 +89,7 @@ DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS applicability CASCADE;
 DROP TABLE IF EXISTS verification CASCADE;
 DROP TABLE IF EXISTS requirement_status CASCADE;
-DROP TABLE IF EXISTS test_status CASCADE;
+DROP TABLE IF EXISTS status_id CASCADE;
 DROP TABLE IF EXISTS status CASCADE;
 DROP TABLE IF EXISTS projects CASCADE;
 SQL
@@ -105,25 +105,25 @@ echo ""
 echo "🔍 Verifying database setup..."
 echo "📋 Tables created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "\dt" \
-  | grep -E "(projects|users|requirements|tests|matrix|logs|categories|applicability|verification|requirement_status|test_status)" || true
+  | grep -E "(projects|users|requirements|tests|matrix|logs|categories|applicability|verification|requirement_status|status_id)" || true
 echo ""
 
 echo "👥 Users created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c \
-  "SELECT user_username, user_name, is_admin FROM users ORDER BY user_id;"
+  "SELECT username, name, is_admin FROM users ORDER BY id;"
 echo ""
 
 echo "📁 Projects created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c \
-  "SELECT project_id, project_name, project_status FROM projects ORDER BY project_id;"
+  "SELECT project_id, name, status_id FROM projects ORDER BY project_id;"
 echo ""
 
 echo "🤝 Project memberships:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman <<'SQL'
 SELECT pm.project_id,
-       p.project_name,
-       pm.user_id,
-       u.user_username,
+       p.name,
+       pm.id,
+       u.username,
        pm.role,
        CASE pm.role
            WHEN 1 THEN 'Owner'
@@ -134,8 +134,8 @@ SELECT pm.project_id,
        END AS role_name
   FROM project_members pm
   JOIN projects p ON p.project_id = pm.project_id
-  JOIN users u ON u.user_id = pm.user_id
- ORDER BY pm.project_id, pm.user_id;
+  JOIN users u ON u.id = pm.id
+ ORDER BY pm.project_id, pm.id;
 SQL
 echo ""
 
@@ -153,7 +153,7 @@ SELECT 'Applicability', COUNT(*) FROM applicability
 UNION ALL
 SELECT 'Requirement Status', COUNT(*) FROM requirement_status
 UNION ALL
-SELECT 'Test Status', COUNT(*) FROM test_status
+SELECT 'Test Status', COUNT(*) FROM status_id
 UNION ALL
 SELECT 'Logs', COUNT(*) FROM logs;
 "

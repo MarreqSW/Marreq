@@ -126,7 +126,7 @@
             type="text"
             id="req_author_display"
             class="c-create-field__input c-create-field__input--readonly"
-            value="{{user.user_name}}"
+            value="{{user.name}}"
             readonly
           >
         </div>
@@ -143,15 +143,15 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each users}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{user_id}}">
-                    {{user_name}}
+                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
+                    {{name}}
                   </button>
                 {{/each}}
               </div>
             </div>
             <select name="reviewer_id" id="reviewer_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each users}}
-                <option value="{{user_id}}" {{#if (eq user_id ../reviewer_id)}}selected{{/if}}>{{user_name}}</option>
+                <option value="{{id}}" {{#if (eq id ../reviewer_id)}}selected{{/if}}>{{name}}</option>
               {{/each}}
             </select>
           </div>
@@ -169,8 +169,8 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each categories}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{cat_id}}" data-tag="{{cat_tag}}">
-                    {{cat_title}}
+                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}" data-tag="{{tag}}">
+                    {{title}}
                   </button>
                 {{/each}}
               </div>
@@ -182,7 +182,7 @@
             </div>
             <select name="category_id" id="category_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each categories}}
-                <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../category_id)}}selected{{/if}}>{{cat_title}}</option>
+                <option value="{{id}}" data-tag="{{tag}}" {{#if (eq id ../category_id)}}selected{{/if}}>{{title}}</option>
               {{/each}}
             </select>
           </div>
@@ -200,8 +200,8 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each applicability}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{app_id}}">
-                    {{app_title}}
+                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
+                    {{title}}
                   </button>
                 {{/each}}
               </div>
@@ -213,7 +213,7 @@
             </div>
             <select name="applicability_id" id="applicability_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each applicability}}
-                <option value="{{app_id}}" {{#if (eq app_id ../applicability_id)}}selected{{/if}}>{{app_title}}</option>
+                <option value="{{id}}" {{#if (eq id ../applicability_id)}}selected{{/if}}>{{title}}</option>
               {{/each}}
             </select>
           </div>
@@ -231,8 +231,8 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each verification}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{verification_id}}">
-                    {{verification_name}}
+                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
+                    {{name}}
                   </button>
                 {{/each}}
               </div>
@@ -244,7 +244,7 @@
             </div>
             <select name="verification_method_id" id="verification_method_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each verification}}
-                <option value="{{verification_id}}" {{#if (eq verification_id ../verification_method_id)}}selected{{/if}}>{{verification_name}}</option>
+                <option value="{{id}}" {{#if (eq id ../verification_method_id)}}selected{{/if}}>{{name}}</option>
               {{/each}}
             </select>
           </div>
@@ -262,9 +262,9 @@
             required
           >
             {{#each status}}
-              {{#if (or (eq req_st_title "Draft") (or (eq req_st_title "Accepted") (or (eq req_st_title "Rejected") (eq req_st_title "Deprecated"))))}}
-                <option value="{{req_st_id}}" {{#if (eq req_st_id ../current_status_id)}}selected{{/if}}>
-                  {{req_st_title}}
+              {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title "Deprecated"))))}}
+                <option value="{{id}}" {{#if (eq id ../current_status_id)}}selected{{/if}}>
+                  {{title}}
                 </option>
               {{/if}}
             {{/each}}
@@ -338,15 +338,15 @@
         <div class="modal-body">
           <div class="mb-3">
             <label for="inline_cat_title" class="form-label">Title</label>
-            <input type="text" class="form-control" id="inline_cat_title" name="cat_title" required>
+            <input type="text" class="form-control" id="inline_cat_title" name="title" required>
           </div>
           <div class="mb-3">
             <label for="inline_cat_tag" class="form-label">Tag</label>
-            <input type="text" class="form-control" id="inline_cat_tag" name="cat_tag" required>
+            <input type="text" class="form-control" id="inline_cat_tag" name="tag" required>
           </div>
           <div class="mb-3">
             <label for="inline_cat_description" class="form-label">Description</label>
-            <textarea class="form-control" id="inline_cat_description" name="cat_description" rows="3" required></textarea>
+            <textarea class="form-control" id="inline_cat_description" name="description" rows="3" required></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -375,15 +375,15 @@
         <div class="modal-body">
           <div class="mb-3">
             <label for="inline_app_title" class="form-label">Title</label>
-            <input type="text" class="form-control" id="inline_app_title" name="app_title" required>
+            <input type="text" class="form-control" id="inline_app_title" name="title" required>
           </div>
           <div class="mb-3">
             <label for="inline_app_tag" class="form-label">Tag</label>
-            <input type="text" class="form-control" id="inline_app_tag" name="app_tag" required>
+            <input type="text" class="form-control" id="inline_app_tag" name="tag" required>
           </div>
           <div class="mb-3">
             <label for="inline_app_description" class="form-label">Description</label>
-            <textarea class="form-control" id="inline_app_description" name="app_description" rows="3" required></textarea>
+            <textarea class="form-control" id="inline_app_description" name="description" rows="3" required></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -416,7 +416,7 @@
               type="text"
               class="form-control"
               id="inline_verification_name"
-              name="verification_name"
+              name="name"
               required
             >
           </div>
@@ -425,7 +425,7 @@
             <textarea
               class="form-control"
               id="inline_verification_description"
-              name="verification_description"
+              name="description"
               rows="3"
               required
             ></textarea>

@@ -127,11 +127,11 @@ impl ExcelImporter {
                 "justification".to_string(),
             ],
             "tests" => vec![
-                "test_name".to_string(),
-                "test_description".to_string(),
-                "test_status".to_string(),
-                "test_source".to_string(),
-                "test_parent".to_string(),
+                "name".to_string(),
+                "description".to_string(),
+                "status_id".to_string(),
+                "source".to_string(),
+                "parent_id".to_string(),
             ],
             _ => vec![],
         }
@@ -311,13 +311,13 @@ impl ExcelImporter {
         }
 
         // Resolve foreign key references
-        let status_id = if let Some(status_name) = test_data.get("test_status") {
+        let status_id = if let Some(status_name) = test_data.get("status_id") {
             self.resolve_test_status_id(status_name, conn)?
         } else {
             1 // Default status
         };
 
-        let parent_id = if let Some(parent_name) = test_data.get("test_parent") {
+        let parent_id = if let Some(parent_name) = test_data.get("parent_id") {
             if !parent_name.is_empty() && parent_name != "None" {
                 self.resolve_test_id_by_name(parent_name, project_id, conn)
                     .ok()
@@ -330,25 +330,25 @@ impl ExcelImporter {
 
         // Create new test
         let new_test = NewTestCase {
-            test_id: None,
-            test_name: test_data
-                .get("test_name")
+            id: None,
+            name: test_data
+                .get("name")
                 .unwrap_or(&"Imported Test".to_string())
                 .clone(),
-            test_description: test_data
-                .get("test_description")
+            description: test_data
+                .get("description")
                 .unwrap_or(&"".to_string())
                 .clone(),
-            test_source: test_data
-                .get("test_source")
+            source: test_data
+                .get("source")
                 .unwrap_or(&"".to_string())
                 .clone(),
-            test_reference: test_data
-                .get("test_reference")
+            reference_code: test_data
+                .get("reference_code")
                 .unwrap_or(&format!("TEST-{}", chrono::Utc::now().timestamp()))
                 .clone(),
-            test_status: status_id,
-            test_parent: parent_id.unwrap_or(0),
+            status_id: status_id,
+            parent_id: parent_id.unwrap_or(0),
             project_id,
         };
 
@@ -364,17 +364,17 @@ impl ExcelImporter {
             .get_categories_by_project(project_id)
             .map_err(|e| anyhow!("{}", e))?;
         for category in categories {
-            if category.cat_title == category_name {
-                return Ok(category.cat_id);
+            if category.title == category_name {
+                return Ok(category.id);
             }
         }
 
         // Create new category if not found
         let new_category = NewCategory {
-            cat_id: None,
-            cat_title: category_name.to_string(),
-            cat_description: format!("Imported category: {}", category_name),
-            cat_tag: category_name.to_lowercase().replace(" ", "_"),
+            id: None,
+            title: category_name.to_string(),
+            description: format!("Imported category: {}", category_name),
+            tag: category_name.to_lowercase().replace(" ", "_"),
             project_id,
         };
 
@@ -388,17 +388,17 @@ impl ExcelImporter {
             .get_applicability_by_project(project_id)
             .map_err(|e| anyhow!("{}", e))?;
         for app in applicability_list {
-            if app.app_title == app_name {
-                return Ok(app.app_id);
+            if app.title == app_name {
+                return Ok(app.id);
             }
         }
 
         // Create new applicability if not found
         let new_app = NewApplicability {
-            app_id: None,
-            app_title: app_name.to_string(),
-            app_description: format!("Imported applicability: {}", app_name),
-            app_tag: app_name.to_lowercase().replace(" ", "_"),
+            id: None,
+            title: app_name.to_string(),
+            description: format!("Imported applicability: {}", app_name),
+            tag: app_name.to_lowercase().replace(" ", "_"),
             project_id,
         };
 
@@ -417,8 +417,8 @@ impl ExcelImporter {
             .get_requirement_status_all()
             .map_err(|e| anyhow!("{}", e))?;
         for status in statuses {
-            if status.req_st_title == status_name {
-                return Ok(status.req_st_id);
+            if status.title == status_name {
+                return Ok(status.id);
             }
         }
 
@@ -430,8 +430,8 @@ impl ExcelImporter {
         let repo = DieselRepo::new();
         let statuses = repo.get_test_status_all().map_err(|e| anyhow!("{}", e))?;
         for status in statuses {
-            if status.test_st_title == status_name {
-                return Ok(status.test_st_id);
+            if status.title == status_name {
+                return Ok(status.id);
             }
         }
 
@@ -441,15 +441,15 @@ impl ExcelImporter {
 
     fn resolve_user_id(
         &self,
-        user_name: &str,
+        name: &str,
         _project_id: i32,
         _conn: &mut PgConnection,
     ) -> Result<i32> {
         let repo = DieselRepo::new();
         let users = repo.get_users_all().map_err(|e| anyhow!("{}", e))?;
         for user in users {
-            if user.user_name == user_name {
-                return Ok(user.user_id);
+            if user.name == name {
+                return Ok(user.id);
             }
         }
 
@@ -487,8 +487,8 @@ impl ExcelImporter {
             .get_tests_by_project(project_id)
             .map_err(|e| anyhow!("{}", e))?;
         for test in tests {
-            if test.test_name == name {
-                return Ok(test.test_id);
+            if test.name == name {
+                return Ok(test.id);
             }
         }
 

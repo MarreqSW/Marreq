@@ -19,7 +19,7 @@ fn change_user_password_impl<R: Repository>(
 ) -> Result<(), AuthError> {
     let user = repo.get_user_by_id(uid)?;
 
-    match verify_password(current_password, &user.user_password) {
+    match verify_password(current_password, &user.password_hash) {
         Ok(true) => {
             let new_hash =
                 hash_password(new_password).map_err(|e| AuthError::Verify(e.to_string()))?;
@@ -43,12 +43,12 @@ pub fn change_user_password<R: Repository>(
     let user_id_cookie = cookies
         .get_private(super::session::SESSION_COOKIE)
         .ok_or(AuthError::NotLoggedIn)?;
-    let user_id = user_id_cookie
+    let id = user_id_cookie
         .value()
         .parse::<i32>()
         .map_err(|_| AuthError::InvalidSession)?;
 
-    change_user_password_impl(repo, user_id, current_password, new_password)
+    change_user_password_impl(repo, id, current_password, new_password)
 }
 
 #[cfg(test)]
@@ -88,9 +88,9 @@ mod tests {
 
         // Assert: stored hash changed AND matches the new password
         let updated = repo.get_user_by_id(1).unwrap();
-        assert_ne!(updated.user_password, current_hash);
-        assert!(verify_password(newpw, &updated.user_password).unwrap());
-        assert!(!verify_password(current, &updated.user_password).unwrap());
+        assert_ne!(updated.password_hash, current_hash);
+        assert!(verify_password(newpw, &updated.password_hash).unwrap());
+        assert!(!verify_password(current, &updated.password_hash).unwrap());
     }
 
     #[test]
@@ -104,7 +104,7 @@ mod tests {
         assert!(matches!(err, AuthError::InvalidCredentials));
 
         // Ensure nothing was changed
-        let stored = repo.get_user_by_id(7).unwrap().user_password;
+        let stored = repo.get_user_by_id(7).unwrap().password_hash;
         assert_eq!(stored, current_hash);
     }
 

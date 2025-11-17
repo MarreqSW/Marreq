@@ -40,12 +40,12 @@ pub struct DecoratedRequirement {
 /// Test case information with resolved foreign keys for presentation.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DecoratedTestCase {
-    pub test_id: i32,
-    pub test_reference: String,
-    pub test_name: String,
-    pub test_description: String,
-    pub test_source: String,
-    pub test_status: String,
+    pub id: i32,
+    pub reference_code: String,
+    pub name: String,
+    pub description: String,
+    pub source: String,
+    pub status_id: String,
     pub test_status_id: i32, // Add numeric status ID for access control
     pub test_parent_id: i32,
     pub test_parent_title: String,

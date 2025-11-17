@@ -54,7 +54,7 @@ pub async fn generate_backup(
     const DB: &str = "reqman";
     const DIR: &str = "backups";
 
-    let user_id = admin.into_inner().user_id;
+    let id = admin.into_inner().id;
     let filename = ensure_sql_extension(&filename);
     let backup_path = Path::new(DIR).join(&filename);
 
@@ -66,7 +66,7 @@ pub async fn generate_backup(
         // If we can't even get a connection for logging, fail
         return Err(admin_redirect());
     }
-    let ctx = LogCtx::new(user_id);
+    let ctx = LogCtx::new(id);
 
     // tiny helper to avoid repeating the logging boilerplate
     let mut log = |msg: String| {
@@ -161,8 +161,8 @@ mod tests {
     fn make_user(id: i32, username: &str, is_admin: bool) -> crate::models::User {
         let mut user = DieselRepoMock::make_user(id, username, "");
         user.is_admin = is_admin;
-        user.user_name = format!("User {id}");
-        user.user_email = format!("{username}@example.com");
+        user.name = format!("User {id}");
+        user.email = format!("{username}@example.com");
         user
     }
 

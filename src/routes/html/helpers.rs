@@ -34,14 +34,14 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
     if user.is_admin {
         let mut projects = repo.get_projects_all().unwrap_or_default();
         projects.sort_by(|a, b| {
-            a.project_name
+            a.name
                 .to_lowercase()
-                .cmp(&b.project_name.to_lowercase())
+                .cmp(&b.name.to_lowercase())
         });
         return projects;
     }
 
-    let memberships = repo.get_projects_for_user(user.user_id).unwrap_or_default();
+    let memberships = repo.get_projects_for_user(user.id).unwrap_or_default();
 
     if memberships.is_empty() {
         return Vec::new();
@@ -53,9 +53,9 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
         .collect();
 
     projects.sort_by(|a, b| {
-        a.project_name
+        a.name
             .to_lowercase()
-            .cmp(&b.project_name.to_lowercase())
+            .cmp(&b.name.to_lowercase())
     });
     projects
 }
@@ -109,7 +109,7 @@ pub(crate) fn decorate_projects_for_listing(
     let repo = state.repo_read();
 
     let membership_by_project: HashMap<i32, ProjectMember> = repo
-        .get_projects_for_user(user.user_id)
+        .get_projects_for_user(user.id)
         .unwrap_or_default()
         .into_iter()
         .map(|membership| (membership.project_id, membership))
@@ -119,7 +119,7 @@ pub(crate) fn decorate_projects_for_listing(
         .get_users_all()
         .unwrap_or_default()
         .into_iter()
-        .map(|u| (u.user_id, u.user_name))
+        .map(|u| (u.id, u.name))
         .collect();
 
     let mut decorated: Vec<Value> = Vec::with_capacity(projects.len());
@@ -155,11 +155,11 @@ pub(crate) fn decorate_projects_for_listing(
             .map(|membership| membership.role);
 
         let owner_name = project
-            .project_owner_id
+            .owner_id
             .and_then(|owner_id| owner_lookup.get(&owner_id).cloned());
 
         let status_original = project
-            .project_status
+            .status_id
             .as_ref()
             .map(|status| status.trim().to_string());
         let status_display = status_original
@@ -171,7 +171,7 @@ pub(crate) fn decorate_projects_for_listing(
             .unwrap_or_else(|| "unknown".to_string());
         let status_badge = project_status_badge(status_display.as_str());
         let project_initial = project
-            .project_name
+            .name
             .chars()
             .find(|c| c.is_alphanumeric())
             .map(|c| c.to_uppercase().collect::<String>())
@@ -179,18 +179,18 @@ pub(crate) fn decorate_projects_for_listing(
 
         decorated.push(json!({
             "project_id": project.project_id,
-            "project_name": project.project_name,
-            "project_description": project.project_description,
-            "project_creation_date": project
-                .project_creation_date
+            "name": project.name,
+            "description": project.description,
+            "creation_date": project
+                .creation_date
                 .map(|dt| dt.format("%Y-%m-%d").to_string()),
-            "project_update_date": project
-                .project_update_date
+            "update_date": project
+                .update_date
                 .map(|dt| dt.format("%Y-%m-%d").to_string()),
-            "project_status": status_display,
+            "status_id": status_display,
             "project_status_normalized": status_normalized,
             "project_status_badge": status_badge,
-            "project_owner_id": project.project_owner_id,
+            "owner_id": project.owner_id,
             "project_owner_name": owner_name,
             "role_label": role_label,
             "role_id": role_id,
@@ -202,12 +202,12 @@ pub(crate) fn decorate_projects_for_listing(
 
     decorated.sort_by(|a, b| {
         let a_name = a
-            .get("project_name")
+            .get("name")
             .and_then(|value| value.as_str())
             .unwrap_or("")
             .to_lowercase();
         let b_name = b
-            .get("project_name")
+            .get("name")
             .and_then(|value| value.as_str())
             .unwrap_or("")
             .to_lowercase();
@@ -247,10 +247,10 @@ pub(crate) fn get_category_by_id_cached(state: &AppState, id: i32) -> Category {
         .repo_read()
         .get_category_by_id(id)
         .unwrap_or_else(|_| Category {
-            cat_id: id,
-            cat_title: format!("Unknown Category ({})", id),
-            cat_description: "Category not found".to_string(),
-            cat_tag: "unknown".to_string(),
+            id: id,
+            title: format!("Unknown Category ({})", id),
+            description: "Category not found".to_string(),
+            tag: "unknown".to_string(),
             project_id: 1,
         })
 }
@@ -265,11 +265,11 @@ pub(crate) fn get_status_name_by_id_cached(state: &AppState, id: i32) -> String 
 
 pub(crate) fn get_requirements_for_test_cached(
     state: &AppState,
-    test_id: i32,
+    id: i32,
 ) -> Result<Vec<Requirement>, String> {
     state
         .repo_read()
-        .get_requirements_for_test(test_id)
+        .get_requirements_for_test(id)
         .map_err(|e| e.to_string())
 }
 
@@ -279,11 +279,11 @@ pub(crate) fn get_project_by_id_pooled_safe(state: &State<AppState>, project_id:
         .get_by_id(project_id)
         .unwrap_or(Project {
             project_id: 0,
-            project_name: "Unknown Project".to_string(),
-            project_description: Some("Unknown project".to_string()),
-            project_creation_date: Some(Utc::now().naive_utc()),
-            project_update_date: Some(Utc::now().naive_utc()),
-            project_status: Some("Unknown".to_string()),
-            project_owner_id: Some(0),
+            name: "Unknown Project".to_string(),
+            description: Some("Unknown project".to_string()),
+            creation_date: Some(Utc::now().naive_utc()),
+            update_date: Some(Utc::now().naive_utc()),
+            status_id: Some("Unknown".to_string()),
+            owner_id: Some(0),
         })
 }

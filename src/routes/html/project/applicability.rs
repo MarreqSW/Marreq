@@ -77,11 +77,11 @@ pub async fn post_applicability(
     Ok(Redirect::to(show_url))
 }
 
-#[get("/<project_id>/applicability/edit/<app_id>?<error>")]
+#[get("/<project_id>/applicability/edit/<id>?<error>")]
 pub async fn get_edit_applicability(
     project_access: ProjectAccess,
     project_id: i32,
-    app_id: i32,
+    id: i32,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<Template, Redirect> {
@@ -89,7 +89,7 @@ pub async fn get_edit_applicability(
     let projects = get_accessible_projects(state, &user);
     let service = ApplicabilityService::new(state.inner());
     let applicability = service
-        .get_by_id(app_id)
+        .get_by_id(id)
         .map_err(|_| Redirect::to(uri!("/p", show_applicability(project_id = project_id))))?;
 
     if applicability.project_id != project_id {
@@ -109,11 +109,11 @@ pub async fn get_edit_applicability(
     Ok(Template::render("applicability/edit_applicability", ctx))
 }
 
-#[post("/<project_id>/applicability/edit/<app_id>", data = "<form>")]
+#[post("/<project_id>/applicability/edit/<id>", data = "<form>")]
 pub async fn post_edit_applicability(
     project_access: ProjectAccess,
     project_id: i32,
-    app_id: i32,
+    id: i32,
     form: Form<NewApplicability>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
@@ -124,14 +124,14 @@ pub async fn post_edit_applicability(
         "/p",
         get_edit_applicability(
             project_id = project_id,
-            app_id = app_id,
+            id = id,
             error = Some("Failed to update applicability".to_string())
         )
     );
     let show_url = uri!("/p", show_applicability(project_id = project_id));
 
     let old = service
-        .get_by_id(app_id)
+        .get_by_id(id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
     if old.project_id != project_id {
         return Err(Redirect::to(uri!(
@@ -145,27 +145,27 @@ pub async fn post_edit_applicability(
         ..form.into_inner()
     };
 
-    if let Err(_err) = service.update(&user, app_id, new) {
+    if let Err(_err) = service.update(&user, id, new) {
         #[cfg(debug_assertions)]
-        eprintln!("Error updating applicability {app_id}: {_err:?}");
+        eprintln!("Error updating applicability {id}: {_err:?}");
         return Ok(Redirect::to(edit_url));
     }
 
     Ok(Redirect::to(show_url))
 }
 
-#[delete("/<project_id>/applicability/delete/<app_id>")]
+#[delete("/<project_id>/applicability/delete/<id>")]
 pub async fn delete_applicability_route(
     project_access: ProjectAccess,
     project_id: i32,
-    app_id: i32,
+    id: i32,
     state: &State<AppState>,
 ) -> Result<Status, Redirect> {
     let user = project_access.into_user();
     let show_url = uri!("/p", show_applicability(project_id = project_id));
     let service = ApplicabilityService::new(state.inner());
     let applicability = service
-        .get_by_id(app_id)
+        .get_by_id(id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
     if applicability.project_id != project_id {
         return Err(Redirect::to(uri!(
@@ -174,11 +174,11 @@ pub async fn delete_applicability_route(
         )));
     }
 
-    match service.delete(&user, app_id) {
+    match service.delete(&user, id) {
         Ok(_) => Ok(Status::Ok),
         Err(_err) => {
             #[cfg(debug_assertions)]
-            eprintln!("Error deleting applicability {app_id}: {_err:?}");
+            eprintln!("Error deleting applicability {id}: {_err:?}");
             Ok(Status::InternalServerError)
         }
     }
@@ -212,21 +212,21 @@ mod tests {
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
             project_id: id,
-            project_name: name.to_string(),
-            project_description: Some(format!("{name} project")),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("Active".to_string()),
-            project_owner_id: Some(ADMIN_ID),
+            name: name.to_string(),
+            description: Some(format!("{name} project")),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status_id: Some("Active".to_string()),
+            owner_id: Some(ADMIN_ID),
         }
     }
 
     fn sample_applicability(id: i32, project_id: i32, title: &str) -> Applicability {
         Applicability {
-            app_id: id,
-            app_title: title.to_string(),
-            app_description: format!("Description for {title}"),
-            app_tag: title.to_ascii_lowercase(),
+            id: id,
+            title: title.to_string(),
+            description: format!("Description for {title}"),
+            tag: title.to_ascii_lowercase(),
             project_id,
         }
     }
@@ -242,7 +242,7 @@ mod tests {
             .insert(1, sample_applicability(1, PRIMARY_PROJECT, "Flight"));
         repo.project_members.push(ProjectMember {
             project_id: PRIMARY_PROJECT,
-            user_id: ADMIN_ID,
+            id: ADMIN_ID,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),
@@ -320,7 +320,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/applicability/edit/2",
-            "app_id=2&project_id=2&app_title=Surface&app_description=Planet&app_tag=surface",
+            "id=2&project_id=2&title=Surface&description=Planet&tag=surface",
             ADMIN_ID,
         )
         .await;

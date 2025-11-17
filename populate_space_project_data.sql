@@ -14,14 +14,14 @@ ALTER SEQUENCE categories_cat_id_seq RESTART WITH 1;
 ALTER SEQUENCE applicability_app_id_seq RESTART WITH 1;
 
 -- Insert users (space project team)
-INSERT INTO users (user_username, user_name, user_email, user_level) VALUES
+INSERT INTO users (username, name, email, user_level) VALUES
 ('dr_smith', 'Dr. Sarah Smith', 'sarah.smith@spacecorp.com', 1),
 ('eng_jones', 'Engineer Mike Jones', 'mike.jones@spacecorp.com', 1),
 ('tech_lee', 'Technician Lisa Lee', 'lisa.lee@spacecorp.com', 1),
 ('qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', 1);
 
 -- Insert categories (space system components)
-INSERT INTO categories (cat_title, cat_description, cat_tag) VALUES
+INSERT INTO categories (title, description, tag) VALUES
 ('Power System', 'Solar panels, batteries, and power distribution', 'PWR'),
 ('Communication', 'Antennas, transponders, and data links', 'COMM'),
 ('Attitude Control', 'Gyroscopes, reaction wheels, and star trackers', 'ACS'),
@@ -32,7 +32,7 @@ INSERT INTO categories (cat_title, cat_description, cat_tag) VALUES
 ('Software', 'On-board computer systems and algorithms', 'SW');
 
 -- Insert applicability (mission types)
-INSERT INTO applicability (app_title, app_description, app_tag) VALUES
+INSERT INTO applicability (title, description, tag) VALUES
 ('All Missions', 'Applies to all satellite missions', 'ALL'),
 ('Earth Observation', 'Low Earth orbit observation satellites', 'EO'),
 ('Communication', 'Geostationary communication satellites', 'COMM'),
@@ -83,7 +83,7 @@ INSERT INTO requirements (title, description, reference_code, category_id, appli
 ('REQ-SW-003', 'The system shall maintain accurate onboard time synchronization', 'Precise timekeeping is required for data correlation and mission operations.', 8, 1, 2, 1, 1, 2, 0, '', '2024-01-22', '2024-01-26', '2024-12-15');
 
 -- Insert tests for Space Project
-INSERT INTO tests (test_name, test_description, test_status, test_source) VALUES
+INSERT INTO tests (name, description, status_id, source) VALUES
 -- Power System Tests
 ('TEST-PWR-001', 'Verify solar array generates 500W under AM0 illumination', 1, 'Solar array testing in thermal vacuum chamber'),
 ('TEST-PWR-002', 'Verify battery provides 200W for 45 minutes during discharge test', 1, 'Battery cycle testing'),
@@ -133,7 +133,7 @@ INSERT INTO tests (test_name, test_description, test_status, test_source) VALUES
 ('TEST-SW-004', 'Verify software integration with hardware', 1, 'System integration testing');
 
 -- Create traceability matrix links
-INSERT INTO matrix (matrix_req_id, matrix_test_id) VALUES
+INSERT INTO matrix (req_id, id) VALUES
 -- Power System Requirements -> Tests
 (1, 1), (1, 4),          -- REQ-PWR-001 -> Solar array and system efficiency tests
 (2, 2), (2, 4),          -- REQ-PWR-002 -> Battery and system efficiency tests

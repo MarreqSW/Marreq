@@ -90,7 +90,7 @@ Defines:
 ### Frontend Integration
 
 **Modified Template Files**:
-1. **`templates/test.html.hbs`**: Changed status check from `(eq test_status_id 1)` to `(eq test_status "Passed")`
+1. **`templates/test.html.hbs`**: Changed status check from `(eq test_status_id 1)` to `(eq status_id "Passed")`
 2. **`templates/tests/_table_view.html.hbs`**: Changed status check to string comparison
 3. **`templates/tests/_card_view.html.hbs`**: Changed status check to string comparison
 
@@ -126,12 +126,12 @@ println!("Description: {}", status.description());
 
 ```handlebars
 {{!-- Check test status by string --}}
-{{#if (eq test_status "Passed")}}
+{{#if (eq status_id "Passed")}}
     <span class="badge badge-success">Test Passed</span>
 {{/if}}
 
 {{!-- Permission check for delete --}}
-{{#if (or (eq test_status "Passed") (eq test_status "Failed") user.is_admin)}}
+{{#if (or (eq status_id "Passed") (eq status_id "Failed") user.is_admin)}}
     <button data-action="delete-test">Delete</button>
 {{/if}}
 ```

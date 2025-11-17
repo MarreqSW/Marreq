@@ -125,10 +125,10 @@ mod tests {
             &client,
             "/api/applicability",
             json!({
-                "app_id": null,
-                "app_title": "Safety",
-                "app_description": "Applies to safety",
-                "app_tag": "safety",
+                "id": null,
+                "title": "Safety",
+                "description": "Applies to safety",
+                "tag": "safety",
                 "project_id": 1
             }),
         )
@@ -147,10 +147,10 @@ mod tests {
             &client,
             "/api/applicability",
             json!({
-                "app_id": null,
-                "app_title": "Legacy",
-                "app_description": "Old description",
-                "app_tag": "legacy",
+                "id": null,
+                "title": "Legacy",
+                "description": "Old description",
+                "tag": "legacy",
                 "project_id": 2
             }),
         )
@@ -164,10 +164,10 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "app_id": id,
-                    "app_title": "Modern",
-                    "app_description": "Updated description",
-                    "app_tag": "modern",
+                    "id": id,
+                    "title": "Modern",
+                    "description": "Updated description",
+                    "tag": "modern",
                     "project_id": 2
                 })
                 .to_string(),
@@ -188,8 +188,8 @@ mod tests {
             .dispatch()
             .await;
         let fetched: Applicability = get_response.into_json().await.unwrap();
-        assert_eq!(fetched.app_title, "Modern");
-        assert_eq!(fetched.app_description, "Updated description");
+        assert_eq!(fetched.title, "Modern");
+        assert_eq!(fetched.description, "Updated description");
     }
 
     #[rocket::async_test]
@@ -199,10 +199,10 @@ mod tests {
             &client,
             "/api/applicability",
             json!({
-                "app_id": null,
-                "app_title": "To be removed",
-                "app_description": "Temporary",
-                "app_tag": "temp",
+                "id": null,
+                "title": "To be removed",
+                "description": "Temporary",
+                "tag": "temp",
                 "project_id": 1
             }),
         )

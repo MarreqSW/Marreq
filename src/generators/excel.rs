@@ -10,9 +10,9 @@ pub fn create_matrix_workbook(
     eprintln!("Creating matrix workbook");
 
     use crate::helper_functions::*;
-    use crate::schema::matrix::dsl::*;
-    use crate::schema::requirements::dsl::*;
-    use crate::schema::tests::dsl::*;
+    use crate::schema::matrix::dsl::{matrix, req_id};
+    use crate::schema::requirements::dsl::requirements;
+    use crate::schema::tests::dsl::tests;
 
     let mut connection = DieselRepo::new()
         .get_conn()
@@ -59,7 +59,7 @@ pub fn create_matrix_workbook(
     decorated_reqs.sort_by(|a, b| a.id.cmp(&b.id));
 
     // Sort tests by ID
-    decorated_tests.sort_by(|a, b| a.test_id.cmp(&b.test_id));
+    decorated_tests.sort_by(|a, b| a.id.cmp(&b.id));
 
     let workbook = xlsxwriter::Workbook::new("target/matrix.xls")?;
     let mut sheet1 = workbook.add_worksheet(None)?;
@@ -74,7 +74,7 @@ pub fn create_matrix_workbook(
     // Test headers starting from column 4
     for (col_idx, test) in decorated_tests.iter().enumerate() {
         let col = (col_idx + 4) as u16;
-        let header = format!("Test #{} ({})", test.test_id, test.test_name);
+        let header = format!("Test #{} ({})", test.id, test.name);
         sheet1.write_string(0, col, &header, None)?;
     }
 
@@ -94,8 +94,8 @@ pub fn create_matrix_workbook(
 
             // Check if this requirement is linked to this test
             let test_present: i64 = matrix
-                .filter(matrix_req_id.eq(req.id))
-                .filter(matrix_test_id.eq(test.test_id))
+                .filter(req_id.eq(req.id))
+                .filter(crate::schema::matrix::dsl::id.eq(test.id))
                 .count()
                 .get_result(connection.as_mut())
                 .map_err(|e| format!("Error checking matrix link: {:?}", e))?;
@@ -213,12 +213,12 @@ pub fn create_tests_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     // Write data
     for (i, test) in decorated_tests.iter().enumerate() {
         let row = (i + 1) as u32;
-        worksheet.write_number(row, 0, test.test_id as f64, None)?;
-        worksheet.write_string(row, 1, &test.test_name, None)?;
-        worksheet.write_string(row, 2, &test.test_description, None)?;
-        worksheet.write_string(row, 3, &test.test_source, None)?;
-        worksheet.write_string(row, 4, &test.test_reference, None)?;
-        worksheet.write_string(row, 5, &test.test_status, None)?;
+        worksheet.write_number(row, 0, test.id as f64, None)?;
+        worksheet.write_string(row, 1, &test.name, None)?;
+        worksheet.write_string(row, 2, &test.description, None)?;
+        worksheet.write_string(row, 3, &test.source, None)?;
+        worksheet.write_string(row, 4, &test.reference_code, None)?;
+        worksheet.write_string(row, 5, &test.status_id, None)?;
         worksheet.write_string(row, 6, &test.test_parent_title, None)?;
     }
 

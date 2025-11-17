@@ -36,14 +36,14 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
     });
 
     let tests_by_status = tests.iter().fold(HashMap::new(), |mut acc, t| {
-        let status = get_status_name_by_id_cached(state, t.test_status);
+        let status = get_status_name_by_id_cached(state, t.status_id);
         *acc.entry(status).or_insert(0) += 1i32;
         acc
     });
 
     let requirements_by_category = requirements.iter().fold(HashMap::new(), |mut acc, req| {
         let cat = get_category_by_id_cached(state, req.category_id);
-        *acc.entry(cat.cat_title.clone()).or_insert(0) += 1i32;
+        *acc.entry(cat.title.clone()).or_insert(0) += 1i32;
         acc
     });
 
@@ -74,7 +74,7 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
     let recent_requirements = requirements.len();
     let recent_tests = tests.len();
 
-    let selected_project_name = get_project_by_id_pooled_safe(state, project_id).project_name;
+    let selected_project_name = get_project_by_id_pooled_safe(state, project_id).name;
 
     let metrics = Metrics {
         users_len,
@@ -107,12 +107,12 @@ async fn show_reports(
 ) -> Result<Template, Redirect> {
     let user: User = project_access.into_user();
 
-    let (m, project_name) = compute_metrics(state, project_id);
+    let (m, name) = compute_metrics(state, project_id);
 
     let ctx = serde_json::json!({
         "user": user,
         "selected_project_id": project_id,
-        "selected_project_name": project_name,
+        "selected_project_name": name,
         "metrics": {
             "total_requirements": m.total_requirements,
             "total_tests": m.total_tests,
@@ -180,21 +180,21 @@ mod tests {
     fn sample_project() -> Project {
         Project {
             project_id: PROJECT_ID,
-            project_name: "Orbiter".to_string(),
-            project_description: Some("Orbiter project".to_string()),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("Active".to_string()),
-            project_owner_id: Some(ADMIN_ID),
+            name: "Orbiter".to_string(),
+            description: Some("Orbiter project".to_string()),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status_id: Some("Active".to_string()),
+            owner_id: Some(ADMIN_ID),
         }
     }
 
     fn sample_category() -> Category {
         Category {
-            cat_id: 1,
-            cat_title: "Systems".to_string(),
-            cat_description: "Core systems".to_string(),
-            cat_tag: "systems".to_string(),
+            id: 1,
+            title: "Systems".to_string(),
+            description: "Core systems".to_string(),
+            tag: "systems".to_string(),
             project_id: PROJECT_ID,
         }
     }
@@ -231,13 +231,13 @@ mod tests {
 
     fn sample_test(id: i32, status_id: i32, name: &str) -> TestCase {
         TestCase {
-            test_id: id,
-            test_name: name.to_string(),
-            test_description: "Validation test".to_string(),
-            test_source: "Spec".to_string(),
-            test_status: status_id,
-            test_reference: format!("TEST-{id:03}"),
-            test_parent: 0,
+            id: id,
+            name: name.to_string(),
+            description: "Validation test".to_string(),
+            source: "Spec".to_string(),
+            status_id: status_id,
+            reference_code: format!("TEST-{id:03}"),
+            parent_id: 0,
             project_id: PROJECT_ID,
         }
     }
@@ -256,14 +256,14 @@ mod tests {
         repo.requirements.insert(1, sample_requirement(1));
         repo.tests.insert(1, sample_test(1, 1, "System Validation"));
         repo.matrices.push(Matrix {
-            matrix_req_id: 1,
-            matrix_test_id: 1,
-            matrix_creation_date: timestamp(),
+            req_id: 1,
+            id: 1,
+            creation_date: timestamp(),
             project_id: PROJECT_ID,
         });
         repo.project_members.push(ProjectMember {
             project_id: PROJECT_ID,
-            user_id: ADMIN_ID,
+            id: ADMIN_ID,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),

@@ -102,7 +102,7 @@ pub enum LogEntity {
     Category,
     Applicability,
     User,
-    Matrix,
+    MatrixLink,
     Verification,
 }
 

@@ -1,6 +1,6 @@
 use super::errors::RepoError;
 use crate::models::entities::{
-    Applicability, Category, Matrix, Project, ProjectMember, Requirement, RequirementStatus,
+    Applicability, Category, MatrixLink, Project, ProjectMember, Requirement, RequirementStatus,
     TestCase, TestStatus, User, VerificationMethod,
 };
 use crate::models::forms::{
@@ -952,12 +952,12 @@ impl ProjectsRepository for DieselRepo {
 }
 
 impl MatrixRepository for DieselRepo {
-    fn get_matrix_by_project(&self, pid: i32) -> Result<Vec<Matrix>, RepoError> {
+    fn get_matrix_by_project(&self, pid: i32) -> Result<Vec<MatrixLink>, RepoError> {
         use schema::matrix::dsl;
         let mut conn = self.get_conn()?;
         dsl::matrix
             .filter(dsl::project_id.eq(pid))
-            .load::<Matrix>(conn.as_mut())
+            .load::<MatrixLink>(conn.as_mut())
             .map_err(|e| e.into())
     }
 

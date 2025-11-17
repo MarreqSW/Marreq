@@ -114,7 +114,7 @@ impl<'a> DecoratedTestService<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Matrix, Requirement, TestCase, TestStatus};
+    use crate::models::{MatrixLink, Requirement, TestCase, TestStatus};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -218,7 +218,7 @@ mod tests {
                 project_id: 99,
             },
         );
-        repo.matrices.push(Matrix {
+        repo.matrices.push(MatrixLink {
             req_id: 3,
             id: 10,
             creation_date: ts(),

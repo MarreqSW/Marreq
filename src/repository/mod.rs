@@ -78,7 +78,8 @@ pub trait LookupRepository {
     fn get_verification_by_id(&self, id: i32) -> Result<VerificationMethod, RepoError>;
     fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<VerificationMethod>, RepoError>;
 
-    fn create_status(&mut self, new: &NewStatus) -> Result<i32, RepoError>;
+    fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError>;
+    fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError>;
 
     fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError>;
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError>;

@@ -426,7 +426,7 @@ pub fn validate_project(project: &NewProject) -> Result<(), ValidationError> {
 }
 
 /// Validate a requirement status before creation
-pub fn validate_requirement_status(status: &NewStatus) -> Result<(), ValidationError> {
+pub fn validate_requirement_status(status: &NewRequirementStatus) -> Result<(), ValidationError> {
     // Validate status name
     if status.title.trim().is_empty() {
         return Err(ValidationError::Required {

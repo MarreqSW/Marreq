@@ -36,7 +36,7 @@ INSERT INTO applicability (app_title, app_description, app_tag) VALUES
 ('Cloud', 'Cloud-based deployments', 'CLOUD');
 
 -- Insert requirements for ReqMan project
-INSERT INTO requirements (req_title, req_description, req_reference, req_category, req_applicability, req_current_status, req_verification, req_author, req_reviewer, req_parent_id, req_link, req_creation_date, req_update_date, req_deadline_date) VALUES
+INSERT INTO requirements (req_title, req_description, req_reference, req_category, req_applicability, req_current_status, req_verification_method, req_author, req_reviewer, req_parent_id, req_link, req_creation_date, req_update_date, req_deadline_date) VALUES
 -- Core System Requirements
 ('REQ-SYS-001', 'The system shall provide a web-based interface for managing requirements and tests', 'The ReqMan system must offer a modern, responsive web interface that allows users to create, edit, view, and delete requirements and tests through a browser-based application.', 'REQ-SYS-001', 1, 1, 1, 1, 2, 0, 'https://github.com/reqman/web-interface', '2024-01-15', '2024-01-15', '2024-06-30'),
 ('REQ-SYS-002', 'The system shall support hierarchical requirements with parent-child relationships', 'Requirements must be organized in a hierarchical structure where child requirements can be linked to parent requirements, allowing for complex requirement decomposition and traceability.', 'REQ-SYS-002', 1, 2, 1, 1, 2, 0, '', '2024-01-15', '2024-01-20', '2024-07-15'),

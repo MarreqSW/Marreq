@@ -1,4 +1,4 @@
-use crate::models::{NewApplicability, NewCategory, NewRequirement, NewTest};
+use crate::models::{NewApplicability, NewCategory, NewRequirement, NewTestCase};
 use crate::repository::{
     DieselRepo, LookupRepository, RequirementsRepository, TestsRepository, UserRepository,
 };
@@ -120,7 +120,7 @@ impl ExcelImporter {
                 "req_category".to_string(),
                 "req_applicability".to_string(),
                 "req_current_status".to_string(),
-                "req_verification".to_string(),
+                "req_verification_method".to_string(),
                 "req_author".to_string(),
                 "req_reviewer".to_string(),
                 "req_parent".to_string(),
@@ -274,7 +274,7 @@ impl ExcelImporter {
             req_category: category_id,
             req_applicability: applicability_id,
             req_current_status: status_id,
-            req_verification: 1, // Default verification
+            req_verification_method: 1, // Default verification
             req_author: author_id,
             req_reviewer: reviewer_id,
             req_parent: parent_id.unwrap_or(0),
@@ -329,7 +329,7 @@ impl ExcelImporter {
         };
 
         // Create new test
-        let new_test = NewTest {
+        let new_test = NewTestCase {
             test_id: None,
             test_name: test_data
                 .get("test_name")

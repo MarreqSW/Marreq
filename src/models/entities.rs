@@ -18,7 +18,7 @@ pub struct Requirement {
     pub req_id: i32,
     pub req_title: String,
     pub req_description: String,
-    pub req_verification: i32,
+    pub req_verification_method: i32,
     pub req_current_status: i32,
     pub req_author: i32,
     pub req_reviewer: i32,
@@ -89,7 +89,7 @@ pub struct Status {
 /// Verification methods available for requirements.
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Verification {
+pub struct VerificationMethod {
     pub verification_id: i32,
     pub verification_name: String,
     pub verification_description: String,
@@ -122,7 +122,7 @@ pub struct User {
 /// A test case that can verify one or more requirements.
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Test {
+pub struct TestCase {
     pub test_id: i32,
     pub test_name: String,
     pub test_reference: String,
@@ -328,7 +328,7 @@ impl fmt::Display for Matrix {
     }
 }
 
-impl fmt::Display for Test {
+impl fmt::Display for TestCase {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -394,5 +394,5 @@ impl_loggable!(Project, EntityType::Project, project_id, project_name);
 impl_loggable!(Requirement, EntityType::Requirement, req_id, req_title);
 impl_loggable!(Category, EntityType::Category, cat_id, cat_title);
 impl_loggable!(Applicability, EntityType::Applicability, app_id, app_title);
-impl_loggable!(Test, EntityType::Test, test_id, test_name);
+impl_loggable!(TestCase, EntityType::Test, test_id, test_name);
 impl_loggable!(User, EntityType::User, user_id, user_username, no_project);

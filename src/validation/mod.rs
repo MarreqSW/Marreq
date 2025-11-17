@@ -56,7 +56,7 @@ pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError>
     }
 
     // Validate IDs are positive
-    if req.req_verification <= 0 {
+    if req.req_verification_method <= 0 {
         return Err(ValidationError::Custom(
             "Verification method ID must be positive".to_string(),
         ));
@@ -96,7 +96,7 @@ pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError>
 }
 
 /// Validate a test before creation or update
-pub fn validate_test(test: &NewTest) -> Result<(), ValidationError> {
+pub fn validate_test(test: &NewTestCase) -> Result<(), ValidationError> {
     // Validate test name
     if test.test_name.trim().is_empty() {
         return Err(ValidationError::Required {

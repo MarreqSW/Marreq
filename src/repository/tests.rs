@@ -36,7 +36,7 @@ mod tests {
             req_id: 1,
             req_title: "Test Requirement".to_string(),
             req_description: "Test Description".to_string(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_current_status: 1,
             req_author: 1,
             req_reviewer: 1,
@@ -53,8 +53,8 @@ mod tests {
         }
     }
 
-    fn create_test_test() -> Test {
-        Test {
+    fn create_test_test() -> TestCase {
+        TestCase {
             test_id: 1,
             test_name: "Test Test".to_string(),
             test_description: "Test Description".to_string(),
@@ -116,8 +116,8 @@ mod tests {
         }
     }
 
-    fn create_test_verification() -> Verification {
-        Verification {
+    fn create_test_verification() -> VerificationMethod {
+        VerificationMethod {
             verification_id: 1,
             verification_name: "Test Verification".to_string(),
             verification_description: "Test Verification Description".to_string(),
@@ -342,7 +342,7 @@ mod tests {
             req_id: None,
             req_title: "New Requirement".to_string(),
             req_description: "New Description".to_string(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_author: 1,
             req_link: "http://example.com".to_string(),
             req_category: 1,
@@ -367,7 +367,7 @@ mod tests {
             req_id: Some(1),
             req_title: "Updated Requirement".to_string(),
             req_description: "Updated Description".to_string(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_author: 1,
             req_link: "http://example.com".to_string(),
             req_category: 1,
@@ -509,7 +509,7 @@ mod tests {
     #[test]
     fn test_tests_repository_insert_test() {
         let mut repo = DieselRepoMock::default();
-        let new_test = NewTest {
+        let new_test = NewTestCase {
             test_id: None,
             test_name: "New Test".to_string(),
             test_description: "New Description".to_string(),
@@ -528,7 +528,7 @@ mod tests {
     #[test]
     fn test_tests_repository_edit_test() {
         let mut repo = DieselRepoMock::default();
-        let new_test = NewTest {
+        let new_test = NewTestCase {
             test_id: Some(1),
             test_name: "Updated Test".to_string(),
             test_description: "Updated Description".to_string(),

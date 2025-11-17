@@ -16,18 +16,18 @@ pub fn decorate_requirements_with_repo<R: Repository>(
 }
 
 /// Decorate tests using the default Diesel repository.
-pub fn decorate_tests(tests: Vec<Test>) -> Vec<DecoratedTest> {
+pub fn decorate_tests(tests: Vec<TestCase>) -> Vec<DecoratedTestCase> {
     let repo = DieselRepo::new();
     decorate_tests_impl(&repo, tests)
 }
 
 /// Decorate tests using an explicitly provided repository.
-pub fn decorate_tests_with_repo<R: Repository>(repo: &R, tests: Vec<Test>) -> Vec<DecoratedTest> {
+pub fn decorate_tests_with_repo<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<DecoratedTestCase> {
     decorate_tests_impl(repo, tests)
 }
 
 /// Get linked tests for a requirement using the default Diesel repository.
-pub fn get_linked_tests_for_requirement(req_id: i32) -> Result<Vec<DecoratedTest>, RepoError> {
+pub fn get_linked_tests_for_requirement(req_id: i32) -> Result<Vec<DecoratedTestCase>, RepoError> {
     let repo = DieselRepo::new();
     get_linked_tests_for_requirement_impl(&repo, req_id)
 }
@@ -36,7 +36,7 @@ pub fn get_linked_tests_for_requirement(req_id: i32) -> Result<Vec<DecoratedTest
 pub fn get_linked_tests_for_requirement_with_repo<R: Repository>(
     repo: &R,
     req_id: i32,
-) -> Result<Vec<DecoratedTest>, RepoError> {
+) -> Result<Vec<DecoratedTestCase>, RepoError> {
     get_linked_tests_for_requirement_impl(repo, req_id)
 }
 
@@ -48,9 +48,9 @@ fn decorate_requirements_impl<R: Repository>(
     reqs.into_iter()
         .map(|r| {
             let verification = repo
-                .get_verification_by_id(r.req_verification)
+                .get_verification_by_id(r.req_verification_method)
                 .map(|v| v.verification_name)
-                .unwrap_or_else(|_| format!("Unknown Verification ({})", r.req_verification));
+                .unwrap_or_else(|_| format!("Unknown Verification ({})", r.req_verification_method));
 
             let status = repo
                 .get_requirement_status_by_id(r.req_current_status)
@@ -95,8 +95,8 @@ fn decorate_requirements_impl<R: Repository>(
             DecoratedRequirement {
                 req_id: r.req_id,
                 req_title: r.req_title,
-                req_verification: verification,
-                req_verification_id: r.req_verification,
+                req_verification_method: verification,
+                req_verification_id: r.req_verification_method,
                 req_description: r.req_description,
                 req_current_status: status,
                 req_current_status_id: r.req_current_status,
@@ -122,7 +122,7 @@ fn decorate_requirements_impl<R: Repository>(
 }
 
 /// Decorate a list of tests using repository lookups.
-fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<Test>) -> Vec<DecoratedTest> {
+fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<DecoratedTestCase> {
     tests
         .into_iter()
         .map(|t| {
@@ -139,7 +139,7 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<Test>) -> Vec<Decorat
                 String::new()
             };
 
-            DecoratedTest {
+            DecoratedTestCase {
                 test_id: t.test_id,
                 test_name: t.test_name,
                 test_description: t.test_description,
@@ -159,7 +159,7 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<Test>) -> Vec<Decorat
 fn get_linked_tests_for_requirement_impl<R: Repository>(
     repo: &R,
     req_id: i32,
-) -> Result<Vec<DecoratedTest>, RepoError> {
+) -> Result<Vec<DecoratedTestCase>, RepoError> {
     let requirement = repo.get_requirement_by_id(req_id)?;
     let matrix = repo.get_matrix_by_project(requirement.project_id)?;
 
@@ -211,7 +211,7 @@ mod tests {
         );
         repo.verifications.insert(
             1,
-            Verification {
+            VerificationMethod {
                 verification_id: 1,
                 verification_name: "Analysis".into(),
                 verification_description: String::new(),
@@ -273,7 +273,7 @@ mod tests {
                 req_id: 31,
                 req_title: "Parent".into(),
                 req_description: String::new(),
-                req_verification: 1,
+                req_verification_method: 1,
                 req_current_status: 1,
                 req_author: 1,
                 req_reviewer: 2,
@@ -293,7 +293,7 @@ mod tests {
             req_id: 1,
             req_title: "R1".into(),
             req_description: String::new(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_current_status: 1,
             req_author: 1,
             req_reviewer: 2,
@@ -312,7 +312,7 @@ mod tests {
             req_id: 2,
             req_title: "R2".into(),
             req_description: String::new(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_current_status: 1,
             req_author: 0,
             req_reviewer: 0,
@@ -331,7 +331,7 @@ mod tests {
             req_id: 3,
             req_title: "R3".into(),
             req_description: String::new(),
-            req_verification: 99,
+            req_verification_method: 99,
             req_current_status: 99,
             req_author: 99,
             req_reviewer: 98,
@@ -350,7 +350,7 @@ mod tests {
 
         assert_eq!(decorated.len(), 3);
         let d1 = &decorated[0];
-        assert_eq!(d1.req_verification, "Analysis");
+        assert_eq!(d1.req_verification_method, "Analysis");
         assert_eq!(d1.req_current_status, "Open");
         assert_eq!(d1.req_author, "Author");
         assert_eq!(d1.req_reviewer, "Reviewer");
@@ -364,7 +364,7 @@ mod tests {
         assert_eq!(d2.req_parent_title, "Parent");
 
         let d3 = &decorated[2];
-        assert!(d3.req_verification.starts_with("Unknown Verification"));
+        assert!(d3.req_verification_method.starts_with("Unknown Verification"));
         assert!(d3.req_current_status.starts_with("Unknown Status"));
         assert_eq!(d3.req_author, "");
         assert_eq!(d3.req_reviewer, "");
@@ -388,7 +388,7 @@ mod tests {
         // parent test for branch
         repo.tests.insert(
             10,
-            Test {
+            TestCase {
                 test_id: 10,
                 test_name: "Parent".into(),
                 test_description: String::new(),
@@ -400,7 +400,7 @@ mod tests {
             },
         );
 
-        let t1 = Test {
+        let t1 = TestCase {
             test_id: 20,
             test_name: "T1".into(),
             test_description: String::new(),
@@ -410,7 +410,7 @@ mod tests {
             test_parent: 0,
             project_id: 1,
         };
-        let t2 = Test {
+        let t2 = TestCase {
             test_id: 21,
             test_name: "T2".into(),
             test_description: String::new(),
@@ -420,7 +420,7 @@ mod tests {
             test_parent: 10,
             project_id: 1,
         };
-        let t3 = Test {
+        let t3 = TestCase {
             test_id: 22,
             test_name: "T3".into(),
             test_description: String::new(),
@@ -466,7 +466,7 @@ mod tests {
             req_id: 1,
             req_title: "R".into(),
             req_description: String::new(),
-            req_verification: 0,
+            req_verification_method: 0,
             req_current_status: 0,
             req_author: 0,
             req_reviewer: 0,
@@ -480,7 +480,7 @@ mod tests {
             req_justification: None,
             project_id: 1,
         };
-        let test = Test {
+        let test = TestCase {
             test_id: 10,
             test_name: "T".into(),
             test_description: String::new(),
@@ -513,7 +513,7 @@ mod tests {
             req_id: 2,
             req_title: "R".into(),
             req_description: String::new(),
-            req_verification: 0,
+            req_verification_method: 0,
             req_current_status: 0,
             req_author: 0,
             req_reviewer: 0,
@@ -555,7 +555,7 @@ mod tests {
             req_id: 3,
             req_title: "R".into(),
             req_description: String::new(),
-            req_verification: 0,
+            req_verification_method: 0,
             req_current_status: 0,
             req_author: 0,
             req_reviewer: 0,

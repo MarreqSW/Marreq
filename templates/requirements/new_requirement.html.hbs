@@ -220,7 +220,7 @@
         </div>
 
         <div class="c-create-field">
-          <label for="req_verification" class="c-create-field__label">
+          <label for="req_verification_method" class="c-create-field__label">
             Verification Method <span class="c-create-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="verification">
@@ -242,9 +242,9 @@
                 </button>
               </div>
             </div>
-            <select name="req_verification" id="req_verification" class="c-custom-dropdown__hidden" required hidden>
+            <select name="req_verification_method" id="req_verification_method" class="c-custom-dropdown__hidden" required hidden>
               {{#each verification}}
-                <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification)}}selected{{/if}}>{{verification_name}}</option>
+                <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification_method)}}selected{{/if}}>{{verification_name}}</option>
               {{/each}}
             </select>
           </div>

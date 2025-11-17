@@ -926,7 +926,7 @@ impl ProjectsRepository for DieselRepo {
         let result = diesel::insert_into(dsl::projects)
             .values(new)
             .get_result::<Project>(conn.as_mut())?;
-        Ok(result.project_id)
+        Ok(result.id)
     }
 
     fn edit_project(

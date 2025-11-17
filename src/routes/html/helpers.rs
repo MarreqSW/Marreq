@@ -68,11 +68,11 @@ pub(crate) fn resolve_selected_project_id(
         Some(project_id)
             if projects
                 .iter()
-                .any(|project| project.project_id == project_id) =>
+                .any(|project| project.id == project_id) =>
         {
             Some(project_id)
         }
-        _ => projects.first().map(|project| project.project_id),
+        _ => projects.first().map(|project| project.id),
     }
 }
 
@@ -125,22 +125,22 @@ pub(crate) fn decorate_projects_for_listing(
     let mut decorated: Vec<Value> = Vec::with_capacity(projects.len());
 
     for project in projects {
-        if !user.is_admin && !membership_by_project.contains_key(&project.project_id) {
+        if !user.is_admin && !membership_by_project.contains_key(&project.id) {
             continue;
         }
 
         let requirements_count = repo
-            .get_requirements_by_project(project.project_id)
+            .get_requirements_by_project(project.id)
             .map(|reqs| reqs.len())
             .unwrap_or(0);
 
         let tests_count = repo
-            .get_tests_by_project(project.project_id)
+            .get_tests_by_project(project.id)
             .map(|tests| tests.len())
             .unwrap_or(0);
 
         let role_label = membership_by_project
-            .get(&project.project_id)
+            .get(&project.id)
             .map(|membership| describe_project_role(membership.role).to_string())
             .or_else(|| {
                 if user.is_admin {
@@ -151,7 +151,7 @@ pub(crate) fn decorate_projects_for_listing(
             });
 
         let role_id = membership_by_project
-            .get(&project.project_id)
+            .get(&project.id)
             .map(|membership| membership.role);
 
         let owner_name = project
@@ -178,7 +178,7 @@ pub(crate) fn decorate_projects_for_listing(
             .unwrap_or_else(|| "#".to_string());
 
         decorated.push(json!({
-            "project_id": project.project_id,
+            "project_id": project.id,
             "name": project.name,
             "description": project.description,
             "creation_date": project
@@ -278,7 +278,7 @@ pub(crate) fn get_project_by_id_pooled_safe(state: &State<AppState>, project_id:
     ProjectService::new(state.inner())
         .get_by_id(project_id)
         .unwrap_or(Project {
-            project_id: 0,
+            id: 0,
             name: "Unknown Project".to_string(),
             description: Some("Unknown project".to_string()),
             creation_date: Some(Utc::now().naive_utc()),

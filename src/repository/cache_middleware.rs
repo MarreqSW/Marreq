@@ -593,7 +593,7 @@ mod tests {
             project_id: 1,
         };
         let project = Project {
-            project_id: 1,
+            id: 1,
             name: "Proj".into(),
             description: Some("Desc".into()),
             creation_date: Some(epoch()),

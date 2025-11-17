@@ -179,7 +179,7 @@ mod tests {
 
     fn sample_project() -> Project {
         Project {
-            project_id: PROJECT_ID,
+            id: PROJECT_ID,
             name: "Orbiter".to_string(),
             description: Some("Orbiter project".to_string()),
             creation_date: Some(timestamp()),

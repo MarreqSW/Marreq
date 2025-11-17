@@ -136,7 +136,7 @@ pub struct TestCase {
 /// A project groups a collection of requirements and tests.
 #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 pub struct Project {
-    pub project_id: i32,
+    pub id: i32,
     pub name: String,
     pub description: Option<String>,
     pub creation_date: Option<chrono::NaiveDateTime>,
@@ -363,7 +363,7 @@ macro_rules! impl_loggable {
                 self.$id
             }
             fn project_id(&self) -> Option<i32> {
-                Some(self.project_id)
+                Some(self.id)
             }
             fn display_name(&self) -> String {
                 self.$name.clone()
@@ -390,7 +390,7 @@ macro_rules! impl_loggable {
     };
 }
 
-impl_loggable!(Project, EntityType::Project, project_id, name);
+impl_loggable!(Project, EntityType::Project, id, name);
 impl_loggable!(Requirement, EntityType::Requirement, id, title);
 impl_loggable!(Category, EntityType::Category, id, title);
 impl_loggable!(Applicability, EntityType::Applicability, id, title);

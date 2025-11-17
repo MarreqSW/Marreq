@@ -239,7 +239,7 @@ async fn show_requirements(
         "current_applicability_filter": json!(applicability_filter),
         "current_view": current_view,
         "project": json!({
-            "id": selected_project.project_id,
+            "id": selected_project.id,
             "name": selected_project.name,
         }),
         "is_admin": user.is_admin,
@@ -331,9 +331,9 @@ async fn show_requirement_id(
 
     let ctx = json!({
         "user": user,
-        "project_id": project_id,
+        "project_id": id,
         "project": json!({
-            "id": selected_project.project_id,
+            "id": selected_project.id,
             "name": selected_project.name,
         }),
         "requirement_data": canonical_data,
@@ -598,7 +598,7 @@ async fn new_requirement(
         "applicability": applicability,
         "project_id": project_id,
         "project": {
-            "id": project.project_id,
+            "id": project.id,
             "name": project.name,
         },
         "template": new_requirement,
@@ -953,7 +953,7 @@ mod tests {
         repo.projects.insert(
             PRIMARY_PROJECT,
             Project {
-                project_id: PRIMARY_PROJECT,
+                id: PRIMARY_PROJECT,
                 name: "Test Project".into(),
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
@@ -1152,7 +1152,7 @@ mod tests {
         repo.projects.insert(
             2,
             Project {
-                project_id: 2,
+                id: 2,
                 name: "Other Project".into(),
                 description: Some("Alt".into()),
                 creation_date: Some(timestamp()),

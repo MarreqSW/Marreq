@@ -28,7 +28,7 @@ async fn show_tests(
     let project = repo.get_project_by_id(project_id).ok();
     if let Some(ref proj) = project {
         ctx["project"] = json!({
-            "id": proj.project_id,
+            "id": proj.id,
             "name": proj.name,
         });
     }
@@ -462,7 +462,7 @@ mod tests {
 
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
-            project_id: id,
+            id: id,
             name: name.to_string(),
             description: Some(format!("{name} project")),
             creation_date: Some(timestamp()),

@@ -18,7 +18,7 @@ pub fn import_excel_page(
         // Default to the first project if no project is selected
         let projects = state.repo_read().get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            (first_project.project_id, first_project.name.clone())
+            (first_project.id, first_project.name.clone())
         } else {
             (1, "Default Project".to_string())
         }
@@ -253,7 +253,7 @@ pub fn process_excel_import(
         // Default to the first project if no project is selected
         let projects = state.repo_read().get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            first_project.project_id
+            first_project.id
         } else {
             1 // Fallback to project 1 if no projects exist
         }

@@ -252,7 +252,7 @@ mod tests {
 
     fn sample_project() -> Project {
         Project {
-            project_id: PROJECT_ID,
+            id: PROJECT_ID,
             name: "Lunar Lander".into(),
             description: Some("Exploration program".into()),
             creation_date: Some(timestamp()),

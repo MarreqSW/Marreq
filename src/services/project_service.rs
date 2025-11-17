@@ -149,7 +149,7 @@ impl<'a> ProjectService<'a> {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log project update {} -> {}: {_err}",
-                    before.project_id, after.project_id
+                    before.id, after.id
                 );
             }
         }
@@ -162,7 +162,7 @@ impl<'a> ProjectService<'a> {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log project deletion {}: {_err}",
-                    entity.project_id
+                    entity.id
                 );
             }
         }
@@ -196,7 +196,7 @@ mod tests {
 
     fn project(id: i32, name: &str) -> Project {
         Project {
-            project_id: id,
+            id: id,
             name: name.into(),
             description: Some("Existing description".into()),
             creation_date: Some(timestamp()),
@@ -381,7 +381,7 @@ mod tests {
         let service = ProjectService::new(&state);
 
         let deleted = service.delete(&actor(), 4).unwrap();
-        assert_eq!(deleted.project_id, 4);
+        assert_eq!(deleted.id, 4);
         assert!(matches!(service.get_by_id(4), Err(RepoError::NotFound)));
     }
 
@@ -394,7 +394,7 @@ mod tests {
         let service = ProjectService::new(&state);
 
         let mut projects = service.list_all().unwrap();
-        projects.sort_by_key(|p| p.project_id);
+        projects.sort_by_key(|p| p.id);
         assert_eq!(projects.len(), 2);
         assert_eq!(projects[0].name, "A");
         assert_eq!(projects[1].name, "B");

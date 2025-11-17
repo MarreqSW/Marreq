@@ -258,8 +258,8 @@ pub(crate) fn get_category_by_id_cached(state: &AppState, id: i32) -> Category {
 pub(crate) fn get_status_name_by_id_cached(state: &AppState, id: i32) -> String {
     state
         .repo_read()
-        .get_status_by_id(id)
-        .map(|s| s.st_title)
+        .get_requirement_status_by_id(id)
+        .map(|s| s.title)
         .unwrap_or_else(|_| "[Status Not Found]".to_string())
 }
 

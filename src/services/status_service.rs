@@ -1,7 +1,7 @@
 //! Service exposing helpers for requirement and test statuses.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{NewStatus, RequirementStatus, Status, TestStatus};
+use crate::models::{NewStatus, RequirementStatus, TestStatus};
 use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 use crate::validation::{sanitize_string, validate_requirement_status};
@@ -15,11 +15,6 @@ impl<'a> StatusService<'a> {
     /// Create a new service instance bound to the provided application state.
     pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
         Self { state }
-    }
-
-    /// Retrieve legacy status records (used by the old API representation).
-    pub fn list_legacy(&self) -> Result<Vec<Status>, RepoError> {
-        self.state.repo_read().get_status_all()
     }
 
     /// Retrieve requirement statuses.
@@ -43,8 +38,8 @@ impl<'a> StatusService<'a> {
     }
 
     pub fn get_status_name(&self, id: i32) -> Result<String, RepoError> {
-        let status = self.state.repo_read().get_status_by_id(id)?;
-        Ok(status.st_title)
+        let status = self.state.repo_read().get_requirement_status_by_id(id)?;
+        Ok(status.title)
     }
 
     /// Create a new requirement status entry.
@@ -81,11 +76,11 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         repo.statuses.insert(
             1,
-            Status {
-                st_id: 1,
-                st_title: "Legacy".into(),
-                st_description: "legacy".into(),
-                st_short_name: "LEG".into(),
+            RequirementStatus {
+                id: 1,
+                title: "Legacy".into(),
+                description: "legacy".into(),
+                short_name: "LEG".into(),
             },
         );
         repo.requirement_statuses.insert(
@@ -115,7 +110,6 @@ mod tests {
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        assert_eq!(service.list_legacy().unwrap().len(), 1);
         assert_eq!(service.list_requirement_statuses().unwrap().len(), 1);
         assert_eq!(service.list_test_statuses().unwrap().len(), 1);
         assert_eq!(
@@ -141,9 +135,9 @@ mod tests {
 
         let repo_guard = state.repo_read();
         let stored = repo_guard.inner_repo().statuses.get(&id).unwrap();
-        assert_eq!(stored.st_title, "Verified");
-        assert_eq!(stored.st_description, "Description");
-        assert_eq!(stored.st_short_name, "VFD");
+        assert_eq!(stored.title, "Verified");
+        assert_eq!(stored.description, "Description");
+        assert_eq!(stored.short_name, "VFD");
     }
 
     #[test]

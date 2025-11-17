@@ -212,8 +212,8 @@ impl ApiClient {
         let statuses: Vec<Value> = response.json().await?;
         
         for status in statuses {
-            if status["st_title"].as_str() == Some(status_name) {
-                return Ok(status["st_id"].as_i64().unwrap_or(0) as i32);
+            if status["title"].as_str() == Some(status_name) {
+                return Ok(status["id"].as_i64().unwrap_or(0) as i32);
             }
         }
 

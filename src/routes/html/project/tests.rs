@@ -445,7 +445,7 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Applicability, Category, Matrix, Project, ProjectMember, Requirement, Status, TestCase,
+        Applicability, Category, Matrix, Project, ProjectMember, Requirement, RequirementStatus, TestCase,
         TestStatus, VerificationMethod,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
@@ -482,12 +482,12 @@ mod tests {
         }
     }
 
-    fn sample_status(id: i32, title: &str) -> Status {
-        Status {
-            st_id: id,
-            st_title: title.to_string(),
-            st_description: format!("{title} status"),
-            st_short_name: title.to_ascii_uppercase(),
+    fn sample_status(id: i32, title: &str) -> RequirementStatus {
+        RequirementStatus {
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} status"),
+            short_name: title.to_ascii_uppercase(),
         }
     }
 

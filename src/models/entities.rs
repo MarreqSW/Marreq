@@ -75,7 +75,8 @@ pub struct TestStatus {
     pub id: i32,
     pub title: String,
     pub description: String,
-    pub short_name: String,
+    pub tag: String,
+    pub project_id: i32,
 }
 
 /// Verification methods available for requirements.

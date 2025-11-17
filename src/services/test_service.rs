@@ -156,7 +156,7 @@ mod tests {
             source: "manual".into(),
             status_id: 1,
             reference_code: reference.into(),
-            parent_id: 1,
+            parent_id: Some(1),
             project_id,
         }
     }
@@ -169,7 +169,7 @@ mod tests {
             description: "Description".into(),
             source: "manual".into(),
             status_id: 1,
-            parent_id: 1,
+            parent_id: Some(1),
             project_id,
         }
     }

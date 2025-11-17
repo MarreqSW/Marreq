@@ -58,7 +58,7 @@ impl<'a> RequirementService<'a> {
         Ok(self
             .list_all()?
             .into_iter()
-            .filter(|r| r.parent_id == parent_id)
+            .filter(|r| r.parent_id == Some(parent_id))
             .collect())
     }
 
@@ -244,7 +244,7 @@ mod tests {
             reviewer_id: 1,
             reference_code: reference.into(),
             category_id: 1,
-            parent_id: 1,
+            parent_id: Some(1),
             creation_date: timestamp(),
             update_date: timestamp(),
             deadline_date: timestamp(),
@@ -263,7 +263,7 @@ mod tests {
             author_id: 1,
             category_id: 1,
             current_status_id: 1,
-            parent_id: 0,
+            parent_id: None,
             reference_code: "  REQ-123  ".into(),
             reviewer_id: 1,
             applicability_id: 1,

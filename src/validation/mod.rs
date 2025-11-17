@@ -161,10 +161,12 @@ pub fn validate_test(test: &NewTestCase) -> Result<(), ValidationError> {
         ));
     }
 
-    if test.parent_id <= 0 {
-        return Err(ValidationError::Custom(
-            "Test parent ID must be positive".to_string(),
-        ));
+    if let Some(parent_id) = test.parent_id {
+        if parent_id <= 0 {
+            return Err(ValidationError::Custom(
+                "Test parent ID must be positive".to_string(),
+            ));
+        }
     }
 
     if test.project_id <= 0 {

@@ -103,7 +103,7 @@ pub struct NewVerificationMethod {
     pub project_id: i32,
 }
 
-/// Form used to create a new [`Matrix`] entry tying a requirement to a test.
+/// Form used to create a new [`MatrixLink`] entry tying a requirement to a test.
 #[derive(Serialize, Deserialize, Insertable)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = matrix)]

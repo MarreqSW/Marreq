@@ -17,7 +17,7 @@ pub struct DieselRepoMock {
     pub requirements: HashMap<i32, Requirement>,
     pub tests: HashMap<i32, TestCase>,
     pub projects: HashMap<i32, Project>,
-    pub matrices: Vec<Matrix>,
+    pub matrices: Vec<MatrixLink>,
     pub project_members: Vec<ProjectMember>,
     pub force_err: bool,
 }
@@ -553,7 +553,7 @@ impl TestsCaseRepository for DieselRepoMock {
         self.matrices.retain(|m| m.id != _test_id);
         let project_id = self.tests.get(&_test_id).map(|t| t.project_id).unwrap_or(0);
         for &id in _requirement_ids {
-            self.matrices.push(Matrix {
+            self.matrices.push(MatrixLink {
                 req_id: id,
                 id: _test_id,
                 creation_date: epoch(),
@@ -615,7 +615,7 @@ impl ProjectsRepository for DieselRepoMock {
 }
 
 impl MatrixRepository for DieselRepoMock {
-    fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
+    fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<MatrixLink>, RepoError> {
         Ok(self
             .matrices
             .iter()
@@ -625,7 +625,7 @@ impl MatrixRepository for DieselRepoMock {
     }
 
     fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError> {
-        self.matrices.push(Matrix {
+        self.matrices.push(MatrixLink {
             req_id: new.req_id,
             id: new.id,
             creation_date: epoch(),

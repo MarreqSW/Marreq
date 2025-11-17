@@ -529,7 +529,7 @@ impl<R: Repository> ProjectsRepository for CacheRepository<R> {
 }
 
 impl<R: Repository> MatrixRepository for CacheRepository<R> {
-    fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
+    fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<MatrixLink>, RepoError> {
         let key = keys::Matrix::by_project(project_id);
         self.get_or_fetch(&key, Duration::from_secs(180), || {
             self.inner.get_matrix_by_project(project_id)
@@ -624,7 +624,7 @@ mod tests {
             parent_id: None,
             project_id: 1,
         };
-        let matrix = Matrix {
+        let matrix = MatrixLink {
             req_id: 1,
             id: 1,
             creation_date: epoch(),

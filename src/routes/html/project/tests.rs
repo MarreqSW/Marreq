@@ -445,7 +445,7 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Applicability, Category, Matrix, Project, ProjectMember, Requirement, RequirementStatus, TestCase,
+        Applicability, Category, MatrixLink, Project, ProjectMember, Requirement, RequirementStatus, TestCase,
         TestStatus, VerificationMethod,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
@@ -603,7 +603,7 @@ mod tests {
     fn repo_with_tests() -> DieselRepoMock {
         let mut repo = base_repo();
         repo.tests.insert(1, sample_test(1, 1, "Baseline Test"));
-        repo.matrices.push(Matrix {
+        repo.matrices.push(MatrixLink {
             req_id: 1,
             id: 1,
             creation_date: timestamp(),

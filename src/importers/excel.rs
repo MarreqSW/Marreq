@@ -1,6 +1,6 @@
 use crate::models::{NewApplicability, NewCategory, NewRequirement, NewTestCase};
 use crate::repository::{
-    DieselRepo, LookupRepository, RequirementsRepository, TestsRepository, UserRepository,
+    DieselRepo, LookupRepository, RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use anyhow::{anyhow, Result};
 use calamine::{open_workbook, DataType, Reader, Xlsx};

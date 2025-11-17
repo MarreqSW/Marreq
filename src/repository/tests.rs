@@ -4,7 +4,7 @@ mod tests {
     use crate::repository::errors::RepoError;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::repository::{
-        UserRepository, RequirementsRepository, TestsRepository, LookupRepository,
+        UserRepository, RequirementsRepository, TestsCaseRepository, LookupRepository,
         ProjectsRepository, MatrixRepository
     };
     use chrono::{NaiveDate, NaiveDateTime};
@@ -402,7 +402,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    // TestsRepository Tests
+    // TestsCaseRepository Tests
     #[test]
     fn test_tests_repository_get_test_by_id() {
         let mut repo = DieselRepoMock::default();

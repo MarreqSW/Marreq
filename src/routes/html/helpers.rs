@@ -13,7 +13,7 @@ use crate::models::{Category, DecoratedTestCase, Project, ProjectMember, Require
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
     LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
-    TestsRepository, UserRepository,
+    TestsCaseRepository, UserRepository,
 };
 use crate::services::project_service::ProjectService;
 

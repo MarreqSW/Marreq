@@ -39,7 +39,7 @@ pub trait RequirementsRepository {
     fn update_requirement(&mut self, req: i32) -> Result<(), RepoError>;
 }
 
-pub trait TestsRepository {
+pub trait TestsCaseRepository {
     fn get_test_by_id(&self, id: i32) -> Result<TestCase, RepoError>;
     fn get_tests_all(&self) -> Result<Vec<TestCase>, RepoError>;
     fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<TestCase>, RepoError>;
@@ -122,7 +122,7 @@ pub trait Repository:
     UserRepository
     + LookupRepository
     + RequirementsRepository
-    + TestsRepository
+    + TestsCaseRepository
     + ProjectsRepository
     + ProjectMembersRepository
     + MatrixRepository
@@ -133,7 +133,7 @@ impl<T> Repository for T where
     T: UserRepository
         + LookupRepository
         + RequirementsRepository
-        + TestsRepository
+        + TestsCaseRepository
         + ProjectsRepository
         + ProjectMembersRepository
         + MatrixRepository

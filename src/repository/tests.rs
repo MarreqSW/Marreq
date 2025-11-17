@@ -41,9 +41,9 @@ mod tests {
             author_id: 1,
             reviewer_id: 1,
             req_link: "http://example.com".to_string(),
-            reference_code: "REQ-1".to_string(),
+            reference_code: "REF-001".to_string(),
             category_id: 1,
-            parent_id: 0,
+            parent_id: None,
             creation_date: test_datetime(),
             update_date: test_datetime(),
             deadline_date: test_datetime(),
@@ -61,7 +61,7 @@ mod tests {
             source: "Manual".to_string(),
             reference_code: "TEST-1".to_string(),
             status_id: 1,
-            parent_id: 0,
+            parent_id: None,
             project_id: 1,
         }
     }
@@ -347,7 +347,7 @@ mod tests {
             req_link: "http://example.com".to_string(),
             category_id: 1,
             current_status_id: 1,
-            parent_id: 0,
+            parent_id: None,
             reference_code: "REQ-NEW".to_string(),
             reviewer_id: 1,
             applicability_id: 1,
@@ -372,7 +372,7 @@ mod tests {
             req_link: "http://example.com".to_string(),
             category_id: 1,
             current_status_id: 1,
-            parent_id: 0,
+            parent_id: None,
             reference_code: "REQ-UPDATED".to_string(),
             reviewer_id: 1,
             applicability_id: 1,
@@ -516,7 +516,7 @@ mod tests {
             source: "Manual".to_string(),
             reference_code: "TEST-NEW".to_string(),
             status_id: 1,
-            parent_id: 0,
+            parent_id: None,
             project_id: 1,
         };
         
@@ -535,7 +535,7 @@ mod tests {
             source: "Manual".to_string(),
             reference_code: "TEST-UPDATED".to_string(),
             status_id: 1,
-            parent_id: 0,
+            parent_id: None,
             project_id: 1,
         };
         

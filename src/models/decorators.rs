@@ -28,7 +28,7 @@ pub struct DecoratedRequirement {
     pub req_category_id: i32,
     pub applicability_id: String,
     pub req_applicability_id: i32,
-    pub req_parent_id: i32,
+    pub req_parent_id: Option<i32>,
     pub req_parent_title: String,
     pub creation_date: String,
     pub update_date: String,
@@ -47,7 +47,7 @@ pub struct DecoratedTestCase {
     pub source: String,
     pub status_id: String,
     pub test_status_id: i32, // Add numeric status ID for access control
-    pub test_parent_id: i32,
+    pub test_parent_id: Option<i32>,
     pub test_parent_title: String,
     pub project_id: i32,
 }

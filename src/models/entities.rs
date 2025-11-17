@@ -24,7 +24,7 @@ pub struct Requirement {
     pub reviewer_id: i32,
     pub reference_code: String,
     pub category_id: i32,
-    pub parent_id: i32,
+    pub parent_id: Option<i32>,
     pub creation_date: chrono::NaiveDateTime,
     pub update_date: chrono::NaiveDateTime,
     pub deadline_date: chrono::NaiveDateTime,
@@ -120,7 +120,7 @@ pub struct TestCase {
     pub description: String,
     pub source: String,
     pub status_id: i32,
-    pub parent_id: i32,
+    pub parent_id: Option<i32>,
     pub project_id: i32,
 }
 
@@ -276,7 +276,7 @@ impl fmt::Display for Requirement {
             self.author_id,
             self.reference_code,
             self.creation_date,
-            self.parent_id
+            self.parent_id.map(|id| id.to_string()).unwrap_or_else(|| "None".to_string())
         )
     }
 }
@@ -337,7 +337,7 @@ impl fmt::Display for TestCase {
             self.name,
             self.description,
             self.source,
-            self.parent_id
+            self.parent_id.map(|id| id.to_string()).unwrap_or_else(|| "None".to_string())
         )
     }
 }

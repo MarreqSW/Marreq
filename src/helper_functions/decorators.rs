@@ -83,8 +83,8 @@ fn decorate_requirements_impl<R: Repository>(
                 .map(|a| a.title)
                 .unwrap_or_else(|_| format!("Unknown Applicability ({})", r.applicability_id));
 
-            let parent_title = if r.parent_id != 0 {
-                match repo.get_requirement_by_id(r.parent_id) {
+            let parent_title = if let Some(parent_id) = r.parent_id {
+                match repo.get_requirement_by_id(parent_id) {
                     Ok(parent_req) => parent_req.title,
                     Err(_) => "[Deleted Parent]".to_string(),
                 }
@@ -131,8 +131,8 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
                 .map(|s| s.title)
                 .unwrap_or_else(|_| format!("Unknown Status ({})", t.status_id));
 
-            let parent_title = if t.parent_id != 0 {
-                repo.get_test_by_id(t.parent_id)
+            let parent_title = if let Some(parent_id) = t.parent_id {
+                repo.get_test_by_id(parent_id)
                     .map(|p| p.name)
                     .unwrap_or_default()
             } else {
@@ -279,7 +279,7 @@ mod tests {
                 reviewer_id: 2,
                 reference_code: String::new(),
                 category_id: 1,
-                parent_id: 0,
+                parent_id: None,
                 creation_date: now,
                 update_date: now,
                 deadline_date: now,
@@ -299,7 +299,7 @@ mod tests {
             reviewer_id: 2,
             reference_code: String::new(),
             category_id: 1,
-            parent_id: 0,
+            parent_id: None,
             creation_date: now,
             update_date: now,
             deadline_date: now,
@@ -318,7 +318,7 @@ mod tests {
             reviewer_id: 0,
             reference_code: String::new(),
             category_id: 1,
-            parent_id: 31,
+            parent_id: Some(31),
             creation_date: now,
             update_date: now,
             deadline_date: now,
@@ -337,7 +337,7 @@ mod tests {
             reviewer_id: 98,
             reference_code: String::new(),
             category_id: 99,
-            parent_id: 32,
+            parent_id: Some(32),
             creation_date: now,
             update_date: now,
             deadline_date: now,
@@ -395,7 +395,7 @@ mod tests {
                 source: String::new(),
                 reference_code: "TEST-10".into(),
                 status_id: 1,
-                parent_id: 0,
+                parent_id: None,
                 project_id: 1,
             },
         );
@@ -407,7 +407,7 @@ mod tests {
             source: String::new(),
             reference_code: "TEST-20".into(),
             status_id: 1,
-            parent_id: 0,
+            parent_id: None,
             project_id: 1,
         };
         let t2 = TestCase {
@@ -417,7 +417,7 @@ mod tests {
             source: String::new(),
             reference_code: "TEST-21".into(),
             status_id: 99,
-            parent_id: 10,
+            parent_id: Some(10),
             project_id: 1,
         };
         let t3 = TestCase {
@@ -427,7 +427,7 @@ mod tests {
             source: String::new(),
             reference_code: "TEST-22".into(),
             status_id: 1,
-            parent_id: 999,
+            parent_id: Some(999),
             project_id: 1,
         };
 
@@ -472,7 +472,7 @@ mod tests {
             reviewer_id: 0,
             reference_code: String::new(),
             category_id: 0,
-            parent_id: 0,
+            parent_id: None,
             creation_date: now,
             update_date: now,
             deadline_date: now,
@@ -487,7 +487,7 @@ mod tests {
             source: String::new(),
             reference_code: "TEST-10".into(),
             status_id: 1,
-            parent_id: 0,
+            parent_id: None,
             project_id: 1,
         };
         repo.requirements.insert(1, req);
@@ -519,7 +519,7 @@ mod tests {
             reviewer_id: 0,
             reference_code: String::new(),
             category_id: 0,
-            parent_id: 0,
+            parent_id: None,
             creation_date: now,
             update_date: now,
             deadline_date: now,
@@ -561,7 +561,7 @@ mod tests {
             reviewer_id: 0,
             reference_code: String::new(),
             category_id: 0,
-            parent_id: 0,
+            parent_id: None,
             creation_date: now,
             update_date: now,
             deadline_date: now,

@@ -530,7 +530,7 @@ mod tests {
             reviewer_id: ADMIN_ID,
             reference_code: format!("REQ-SYS-{id}"),
             category_id: 1,
-            parent_id: 0,
+            parent_id: None,
             creation_date: timestamp(),
             update_date: timestamp(),
             deadline_date: timestamp(),
@@ -548,7 +548,7 @@ mod tests {
             source: "Design Spec".into(),
             status_id: status,
             reference_code: format!("TEST-{id:03}"),
-            parent_id: 0,
+            parent_id: None,
             project_id: PRIMARY_PROJECT,
         }
     }

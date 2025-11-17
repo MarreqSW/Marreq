@@ -27,7 +27,7 @@ pub struct NewRequirement {
     pub author_id: i32,
     pub category_id: i32,
     pub current_status_id: i32,
-    pub parent_id: i32,
+    pub parent_id: Option<i32>,
     pub reference_code: String,
     pub reviewer_id: i32,
     pub applicability_id: i32,
@@ -134,7 +134,7 @@ pub struct NewTestCase {
     pub description: String,
     pub source: String,
     pub status_id: i32,
-    pub parent_id: i32,
+    pub parent_id: Option<i32>,
     pub project_id: i32,
 }
 
@@ -148,7 +148,7 @@ pub struct NewTestForm {
     pub description: String,
     pub source: String,
     pub status_id: i32,
-    pub parent_id: i32,
+    pub parent_id: Option<i32>,
     pub test_req: Vec<i32>,
     pub project_id: i32,
 }
@@ -163,7 +163,7 @@ pub struct EditTestForm {
     pub description: String,
     pub source: String,
     pub status_id: i32,
-    pub parent_id: i32,
+    pub parent_id: Option<i32>,
     pub linked_requirements: Vec<i32>,
     pub project_id: i32,
 }

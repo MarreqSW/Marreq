@@ -73,7 +73,7 @@ impl RequirementCreateForm {
             author_id: author_id,
             category_id,
             current_status_id,
-            parent_id,
+            parent_id: Some(parent_id),
             reference_code,
             reviewer_id,
             applicability_id,
@@ -179,10 +179,10 @@ async fn show_requirements(
     let mut roots: Vec<&DecoratedRequirement> = Vec::new();
 
     for r in &requirements {
-        if r.req_parent_id == 0 {
+        if r.req_parent_id.is_none() || r.req_parent_id == Some(0) {
             roots.push(r);
-        } else {
-            children.entry(r.req_parent_id).or_default().push(r);
+        } else if let Some(parent_id) = r.req_parent_id {
+            children.entry(parent_id).or_default().push(r);
         }
     }
 
@@ -266,10 +266,14 @@ async fn show_requirement_id(
         return Err(redir);
     }
 
-    let parent_requirement = if requirement.req_parent_id != 0 {
-        decorated_requirement_service
-            .get_by_id(requirement.req_parent_id)
-            .ok()
+    let parent_requirement = if let Some(parent_id) = requirement.req_parent_id {
+        if parent_id != 0 {
+            decorated_requirement_service
+                .get_by_id(parent_id)
+                .ok()
+        } else {
+            None
+        }
     } else {
         None
     };
@@ -362,8 +366,12 @@ async fn get_edit_requirement(
         return Err(redir);
     }
 
-    let parent: Option<DecoratedRequirement> = if req.req_parent_id != 0 {
-        Some(service.get_by_id(req.req_parent_id)?)
+    let parent: Option<DecoratedRequirement> = if let Some(parent_id) = req.req_parent_id {
+        if parent_id != 0 {
+            Some(service.get_by_id(parent_id)?)
+        } else {
+            None
+        }
     } else {
         None
     };
@@ -554,13 +562,13 @@ async fn new_requirement(
         project_id,
     };
 
-    // if parent is valid, assign, else 0
+    // if parent is valid, assign, else None
     if let Some(parent_id) = parent {
         new_requirement.parent_id = parents
             .iter()
             .find(|req| req["id"] == parent_id)
-            .map(|_| parent_id)
-            .unwrap_or(0);
+            .map(|_| Some(parent_id))
+            .unwrap_or(None);
     }
 
     // Default status to "Draft"
@@ -749,10 +757,10 @@ async fn show_requirements_tree(
     let mut roots: Vec<&Requirement> = Vec::new();
 
     for r in &reqs {
-        if r.parent_id == 0 {
+        if r.parent_id.is_none() || r.parent_id == Some(0) {
             roots.push(r);
-        } else {
-            children.entry(r.parent_id).or_default().push(r);
+        } else if let Some(parent_id) = r.parent_id {
+            children.entry(parent_id).or_default().push(r);
         }
     }
 
@@ -1029,7 +1037,7 @@ mod tests {
             reviewer_id: ADMIN_ID,
             reference_code: format!("REQ-SYS-{id}"),
             category_id: 1,
-            parent_id: 0,
+            parent_id: None,
             creation_date: timestamp(),
             update_date: timestamp(),
             deadline_date: timestamp(),
@@ -1403,7 +1411,7 @@ mod tests {
         let mut repo = base_repo();
         repo.requirements.insert(1, sample_requirement(1));
         let mut child = sample_requirement(2);
-        child.parent_id = 1;
+        child.parent_id = Some(1);
         repo.requirements.insert(2, child);
         let client = test_client(repo).await;
 
@@ -1666,7 +1674,7 @@ mod tests {
         repo.requirements.insert(1, parent);
 
         let mut child = sample_requirement(2);
-        child.parent_id = 1;
+        child.parent_id = Some(1);
         child.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, child);
 
@@ -1737,12 +1745,12 @@ mod tests {
         repo.requirements.insert(1, parent);
 
         let mut child = sample_requirement(2);
-        child.parent_id = 1;
+        child.parent_id = Some(1);
         child.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, child);
 
         let mut grandchild = sample_requirement(3);
-        grandchild.parent_id = 2;
+        grandchild.parent_id = Some(2);
         grandchild.reference_code = "REQ-SYS-3".into();
         repo.requirements.insert(3, grandchild);
 

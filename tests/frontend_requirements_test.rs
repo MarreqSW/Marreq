@@ -93,7 +93,8 @@ mod test_support {
                 id: 1,
                 title: "Draft".into(),
                 description: "".into(),
-                short_name: "D".into(),
+                tag: "D".into(),
+                project_id: 1,
             },
         );
 
@@ -103,7 +104,8 @@ mod test_support {
                 id: 2,
                 title: "Accepted".into(),
                 description: "".into(),
-                short_name: "A".into(),
+                tag: "A".into(),
+                project_id: 1,
             },
         );
 

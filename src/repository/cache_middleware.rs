@@ -558,7 +558,8 @@ mod tests {
             id: 1,
             title: "Open".into(),
             description: "".into(),
-            short_name: "O".into(),
+            tag: "O".into(),
+            project_id: 1,
         };
         let category = Category {
             id: 1,
@@ -978,7 +979,8 @@ mod tests {
         let ns = NewStatus {
             title: "Closed".into(),
             description: "".into(),
-            short_name: "C".into(),
+            tag: "C".into(),
+            project_id: 1,
         };
         let stid = repo.create_status(&ns).unwrap();
         assert!(cache.get(&keys::RequirementStatus::by_id(stid)).is_none());

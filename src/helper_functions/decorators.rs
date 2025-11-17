@@ -206,7 +206,8 @@ mod tests {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
-                short_name: String::new(),
+                tag: String::new(),
+                project_id: 1,
             },
         );
         repo.verifications.insert(
@@ -450,7 +451,8 @@ mod tests {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
-                short_name: String::new(),
+                tag: String::new(),
+                project_id: 1,
             },
         );
         repo.test_statuses.insert(

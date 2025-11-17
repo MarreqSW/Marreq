@@ -268,7 +268,8 @@ mod tests {
             id: id,
             title: title.into(),
             description: format!("{title} description"),
-            short_name: title.chars().take(3).collect(),
+            tag: title.chars().take(3).collect(),
+            project_id: 1,
         }
     }
 

@@ -185,7 +185,8 @@ mod tests {
                 id: 10,
                 title: "Approved".into(),
                 description: "Ready for release".into(),
-                short_name: "APR".into(),
+                tag: "APR".into(),
+                project_id: 1,
             },
         );
 

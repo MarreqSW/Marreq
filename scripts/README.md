@@ -33,13 +33,19 @@ This directory contains utility scripts for managing the ReqMan application data
 - Database service must be started: `docker compose up -d`
 - `init_complete.sql` file must exist in the project root (or set `INIT_SQL` environment variable)
 
-**Sample users created**:
-- `alice` (Admin) - Alice Johnson
-- `dr_smith` (Admin) - Dr. Sarah Smith
-- `eng_jones` - Engineer Mike Jones
-- `tech_lee` - Technician Lisa Lee
-- `qa_wilson` - QA Specialist Tom Wilson
-- `admin` (Admin) - System Administrator
+#### 👥 Pre-configured Users
+
+All users have password: `password`
+
+| Username | Name | Role | Project |
+|----------|------|------|---------|
+| `alice` | Alice Johnson | Admin | ReqMan Project |
+| `dr_smith` | Dr. Sarah Smith | Admin | Space Project |
+| `eng_jones` | Engineer Mike Jones | User | Space Project |
+| `tech_lee` | Technician Lisa Lee | User | Space Project |
+| `qa_wilson` | QA Specialist Tom Wilson | User | Space Project |
+| `admin` | System Administrator | Admin | ReqMan Project |
+
 
 ---
 

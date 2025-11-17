@@ -26,7 +26,7 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
 
     let (requirements, tests, categories) = get_details(project_id, &repo);
     let users_len = repo.get_users_all().unwrap_or_default().len();
-    let all_statuses = repo.get_status_all().unwrap_or_default();
+    let all_statuses = repo.get_requirement_status_all().unwrap_or_default();
 
     // group helpers (i32 counts)
     let requirements_by_status = requirements.iter().fold(HashMap::new(), |mut acc, req| {
@@ -166,7 +166,7 @@ pub fn routes() -> Vec<Route> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Category, Matrix, Project, ProjectMember, Requirement, Status, TestCase};
+    use crate::models::{Category, Matrix, Project, ProjectMember, Requirement, RequirementStatus, TestCase};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
         client_with_routes, get_with_session, timestamp,
@@ -199,12 +199,12 @@ mod tests {
         }
     }
 
-    fn sample_status(id: i32, title: &str) -> Status {
-        Status {
-            st_id: id,
-            st_title: title.to_string(),
-            st_description: format!("{title} status"),
-            st_short_name: title.chars().take(3).collect(),
+    fn sample_status(id: i32, title: &str) -> RequirementStatus {
+        RequirementStatus {
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} status"),
+            short_name: title.chars().take(3).collect(),
         }
     }
 
@@ -251,8 +251,8 @@ mod tests {
 
         repo.projects.insert(PROJECT_ID, sample_project());
         repo.categories.insert(1, sample_category());
-        repo.statuses.insert(1, sample_status(1, "Draft"));
-        repo.statuses.insert(2, sample_status(2, "In Review"));
+        repo.requirement_statuses.insert(1, sample_status(1, "Draft"));
+        repo.requirement_statuses.insert(2, sample_status(2, "In Review"));
         repo.requirements.insert(1, sample_requirement(1));
         repo.tests.insert(1, sample_test(1, 1, "System Validation"));
         repo.matrices.push(Matrix {

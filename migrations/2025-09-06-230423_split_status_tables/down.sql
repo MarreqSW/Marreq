@@ -1,13 +1,13 @@
 -- Recreate the original status table
 CREATE TABLE status (
-    st_id SERIAL PRIMARY KEY,
-    st_title VARCHAR NOT NULL,
-    st_description VARCHAR NOT NULL,
-    st_short_name VARCHAR NOT NULL
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    short_name VARCHAR NOT NULL
 );
 
 -- Insert all status values back into the unified table
-INSERT INTO status (st_title, st_description, st_short_name) VALUES
+INSERT INTO status (title, description, short_name) VALUES
     ('Draft', 'The requirement is still being edited', 'Drf'),
     ('Proposal', 'The requirement is still to be approved', 'Pro'),
     ('Accepted', 'The requirement is accepted and must be processed', 'Acc'),

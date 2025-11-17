@@ -1,9 +1,9 @@
-use crate::models::{Category, Status};
+use crate::models::{Category, RequirementStatus};
 use std::collections::HashMap;
 
 pub struct Metrics {
     pub categories: Vec<Category>,
-    pub statuses: Vec<Status>,
+    pub statuses: Vec<RequirementStatus>,
     pub users_len: usize,
 
     // totals

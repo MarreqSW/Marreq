@@ -10,77 +10,77 @@ use regex::Regex;
 /// Validate a requirement before creation or update
 pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError> {
     // Validate title
-    if req.req_title.trim().is_empty() {
+    if req.title.trim().is_empty() {
         return Err(ValidationError::Required {
-            field: "req_title".to_string(),
+            field: "title".to_string(),
         });
     }
 
-    if req.req_title.len() > 255 {
+    if req.title.len() > 255 {
         return Err(ValidationError::TooLong {
-            field: "req_title".to_string(),
+            field: "title".to_string(),
             max: 255,
         });
     }
 
-    if req.req_title.len() < 3 {
+    if req.title.len() < 3 {
         return Err(ValidationError::TooShort {
-            field: "req_title".to_string(),
+            field: "title".to_string(),
             min: 3,
         });
     }
 
     // Validate description
-    if req.req_description.trim().is_empty() {
+    if req.description.trim().is_empty() {
         return Err(ValidationError::Required {
-            field: "req_description".to_string(),
+            field: "description".to_string(),
         });
     }
 
-    if req.req_description.len() > 2000 {
+    if req.description.len() > 2000 {
         return Err(ValidationError::TooLong {
-            field: "req_description".to_string(),
+            field: "description".to_string(),
             max: 2000,
         });
     }
 
     // Validate reference format (should be like REQ-001, REQ-ABC-001, etc.)
-    if !req.req_reference.trim().is_empty() {
+    if !req.reference_code.trim().is_empty() {
         let ref_regex = Regex::new(r"^[A-Z]{2,4}(?:-[A-Z0-9]{1,6})+$").unwrap();
-        if !ref_regex.is_match(&req.req_reference) {
+        if !ref_regex.is_match(&req.reference_code) {
             return Err(ValidationError::InvalidFormat {
-                field: "req_reference".to_string(),
+                field: "reference_code".to_string(),
                 message: "Reference should be in format like REQ-001 or REQ-ABC-001".to_string(),
             });
         }
     }
 
     // Validate IDs are positive
-    if req.req_verification_method <= 0 {
+    if req.verification_method_id <= 0 {
         return Err(ValidationError::Custom(
             "Verification method ID must be positive".to_string(),
         ));
     }
 
-    if req.req_current_status <= 0 {
+    if req.current_status_id <= 0 {
         return Err(ValidationError::Custom(
             "Status ID must be positive".to_string(),
         ));
     }
 
-    if req.req_author <= 0 {
+    if req.author_id <= 0 {
         return Err(ValidationError::Custom(
             "Author ID must be positive".to_string(),
         ));
     }
 
-    if req.req_reviewer <= 0 {
+    if req.reviewer_id <= 0 {
         return Err(ValidationError::Custom(
             "Reviewer ID must be positive".to_string(),
         ));
     }
 
-    if req.req_category <= 0 {
+    if req.category_id <= 0 {
         return Err(ValidationError::Custom(
             "Category ID must be positive".to_string(),
         ));

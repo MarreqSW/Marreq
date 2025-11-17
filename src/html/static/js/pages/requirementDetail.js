@@ -431,7 +431,7 @@ function hydratePage(view, canonical) {
   }
 
   setText(getField(root, 'reference'), view.reference);
-  setText(getField(root, 'title'), canonical.requirement?.req_title);
+  setText(getField(root, 'title'), canonical.requirement?.title);
 
   renderBadge(getField(root, 'status-badge'), view.status_badge);
   renderSolidity(root, view.solidity);

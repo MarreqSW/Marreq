@@ -33,49 +33,49 @@ impl ApiClient {
 
     async fn import_requirement(&self, req: &RequirementData, project_id: i32) -> Result<String, String> {
         // First, resolve category ID
-        let category_id = self.resolve_category(&req.req_category).await
-            .map_err(|e| format!("Failed to resolve category '{}': {}", req.req_category, e))?;
+        let category_id = self.resolve_category(&req.category_id).await
+            .map_err(|e| format!("Failed to resolve category '{}': {}", req.category_id, e))?;
 
         // Resolve applicability ID
-        let applicability_id = self.resolve_applicability(&req.req_applicability).await
-            .map_err(|e| format!("Failed to resolve applicability '{}': {}", req.req_applicability, e))?;
+        let applicability_id = self.resolve_applicability(&req.applicability_id).await
+            .map_err(|e| format!("Failed to resolve applicability '{}': {}", req.applicability_id, e))?;
 
         // Resolve status ID
-        let status_id = self.resolve_status(&req.req_current_status).await
-            .map_err(|e| format!("Failed to resolve status '{}': {}", req.req_current_status, e))?;
+        let status_id = self.resolve_status(&req.current_status_id).await
+            .map_err(|e| format!("Failed to resolve status '{}': {}", req.current_status_id, e))?;
 
         // Resolve verification ID
-        let verification_id = self.resolve_verification(&req.req_verification_method).await
-            .map_err(|e| format!("Failed to resolve verification '{}': {}", req.req_verification_method, e))?;
+        let verification_id = self.resolve_verification(&req.verification_method_id).await
+            .map_err(|e| format!("Failed to resolve verification '{}': {}", req.verification_method_id, e))?;
 
         // Resolve author ID
-        let author_id = self.resolve_user(&req.req_author).await
-            .map_err(|e| format!("Failed to resolve author '{}': {}", req.req_author, e))?;
+        let author_id = self.resolve_user(&req.author_id).await
+            .map_err(|e| format!("Failed to resolve author '{}': {}", req.author_id, e))?;
 
         // Resolve reviewer ID
-        let reviewer_id = self.resolve_user(&req.req_reviewer).await
-            .map_err(|e| format!("Failed to resolve reviewer '{}': {}", req.req_reviewer, e))?;
+        let reviewer_id = self.resolve_user(&req.reviewer_id).await
+            .map_err(|e| format!("Failed to resolve reviewer '{}': {}", req.reviewer_id, e))?;
 
         // Resolve parent requirement ID if specified
         let parent_id = if req.req_parent_title != "None" && !req.req_parent_title.is_empty() {
             self.resolve_requirement_by_title(&req.req_parent_title).await.ok()
         } else {
-            req.req_parent
+            req.parent_id
         };
 
         let payload = json!({
-            "req_title": req.req_title,
-            "req_description": req.req_description,
-            "req_reference": req.req_reference,
-            "req_category": category_id,
-            "req_applicability": applicability_id,
-            "req_current_status": status_id,
-            "req_verification_method": verification_id,
-            "req_author": author_id,
-            "req_reviewer": reviewer_id,
-            "req_parent": parent_id.unwrap_or(0),
+            "title": req.title,
+            "description": req.description,
+            "reference_code": req.reference_code,
+            "category_id": category_id,
+            "applicability_id": applicability_id,
+            "current_status_id": status_id,
+            "verification_method_id": verification_id,
+            "author_id": author_id,
+            "reviewer_id": reviewer_id,
+            "parent_id": parent_id.unwrap_or(0),
             "req_link": req.req_link,
-            "req_justification": req.req_justification,
+            "justification": req.justification,
             "project_id": project_id
         });
 
@@ -89,10 +89,10 @@ impl ApiClient {
         if response.status().is_success() {
             let _response_text = response.text().await
                 .map_err(|e| format!("Failed to read response: {}", e))?;
-            Ok(format!("Requirement '{}' imported successfully", req.req_title))
+            Ok(format!("Requirement '{}' imported successfully", req.title))
         } else {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            Err(format!("Failed to import requirement '{}': {}", req.req_title, error_text))
+            Err(format!("Failed to import requirement '{}': {}", req.title, error_text))
         }
     }
 
@@ -254,8 +254,8 @@ impl ApiClient {
         let requirements: Vec<Value> = response.json().await?;
         
         for req in requirements {
-            if req["req_title"].as_str() == Some(title) {
-                return Ok(req["req_id"].as_i64().unwrap_or(0) as i32);
+            if req["title"].as_str() == Some(title) {
+                return Ok(req["id"].as_i64().unwrap_or(0) as i32);
             }
         }
 

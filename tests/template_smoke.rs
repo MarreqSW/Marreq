@@ -195,17 +195,17 @@ fn render_core_templates() {
                 ],
                 "requirements": [
                     {
-                        "req_id": 101,
+                        "id": 101,
                         "project_id": 1,
-                        "req_title": "Sample requirement",
-                        "req_reference": "REQ-101",
+                        "title": "Sample requirement",
+                        "reference_code": "REQ-101",
                         "req_category_id": 1,
                         "req_current_status_id": 1,
                         "req_verification_id": 1,
                         "req_author_id": 1,
                         "req_reviewer_id": 1,
-                        "req_creation_date": "2024-01-01",
-                        "req_deadline_date": "2024-02-01"
+                        "creation_date": "2024-01-01",
+                        "deadline_date": "2024-02-01"
                     }
                 ],
                 "current_status_filter": "",

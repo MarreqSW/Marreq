@@ -497,9 +497,9 @@ mod tests {
         test_status.insert("Passed".to_string(), 10);
         test_status.insert("Failed".to_string(), 2);
 
-        let mut req_category = HashMap::new();
-        req_category.insert("Functional".to_string(), 4);
-        req_category.insert("Performance".to_string(), 1);
+        let mut category_id = HashMap::new();
+        category_id.insert("Functional".to_string(), 4);
+        category_id.insert("Performance".to_string(), 1);
 
         let html = generate_pdf_content(&Metrics {
             categories: vec![],
@@ -510,7 +510,7 @@ mod tests {
             total_categories: 3,
             requirements_by_status: req_status.clone(),
             tests_by_status: test_status.clone(),
-            requirements_by_category: req_category.clone(),
+            requirements_by_category: category_id.clone(),
             recent_requirements: 0,
             recent_tests: 0,
             coverage_percentage: 75.0,

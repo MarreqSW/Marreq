@@ -56,7 +56,7 @@ pub fn create_matrix_workbook(
     let mut decorated_tests = decorators::decorate_tests(all_tests);
 
     // Sort requirements by ID
-    decorated_reqs.sort_by(|a, b| a.req_id.cmp(&b.req_id));
+    decorated_reqs.sort_by(|a, b| a.id.cmp(&b.id));
 
     // Sort tests by ID
     decorated_tests.sort_by(|a, b| a.test_id.cmp(&b.test_id));
@@ -83,10 +83,10 @@ pub fn create_matrix_workbook(
         let row = (row_idx + 1) as u32;
 
         // Write requirement info
-        sheet1.write_string(row, 0, &req.req_title, None)?;
-        sheet1.write_string(row, 1, &req.req_reference, None)?;
-        sheet1.write_string(row, 2, &req.req_category, None)?;
-        sheet1.write_string(row, 3, &req.req_current_status, None)?;
+        sheet1.write_string(row, 0, &req.title, None)?;
+        sheet1.write_string(row, 1, &req.reference_code, None)?;
+        sheet1.write_string(row, 2, &req.category_id, None)?;
+        sheet1.write_string(row, 3, &req.current_status_id, None)?;
 
         // Check matrix links for each test
         for (col_idx, test) in decorated_tests.iter().enumerate() {
@@ -94,7 +94,7 @@ pub fn create_matrix_workbook(
 
             // Check if this requirement is linked to this test
             let test_present: i64 = matrix
-                .filter(matrix_req_id.eq(req.req_id))
+                .filter(matrix_req_id.eq(req.id))
                 .filter(matrix_test_id.eq(test.test_id))
                 .count()
                 .get_result(connection.as_mut())
@@ -159,23 +159,23 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
     // Write data
     for (i, req) in decorated_requirements.iter().enumerate() {
         let row = (i + 1) as u32;
-        worksheet.write_number(row, 0, req.req_id as f64, None)?;
-        worksheet.write_string(row, 1, &req.req_title, None)?;
-        worksheet.write_string(row, 2, &req.req_description, None)?;
-        worksheet.write_string(row, 3, &req.req_reference, None)?;
-        worksheet.write_string(row, 4, &req.req_category, None)?;
-        worksheet.write_string(row, 5, &req.req_applicability, None)?;
-        worksheet.write_string(row, 6, &req.req_current_status, None)?;
-        worksheet.write_string(row, 7, &req.req_verification_method, None)?;
-        worksheet.write_string(row, 8, &req.req_author, None)?;
-        worksheet.write_string(row, 9, &req.req_reviewer, None)?;
-        worksheet.write_string(row, 10, &req.req_creation_date, None)?;
-        worksheet.write_string(row, 11, &req.req_update_date, None)?;
-        worksheet.write_string(row, 12, &req.req_deadline_date, None)?;
+        worksheet.write_number(row, 0, req.id as f64, None)?;
+        worksheet.write_string(row, 1, &req.title, None)?;
+        worksheet.write_string(row, 2, &req.description, None)?;
+        worksheet.write_string(row, 3, &req.reference_code, None)?;
+        worksheet.write_string(row, 4, &req.category_id, None)?;
+        worksheet.write_string(row, 5, &req.applicability_id, None)?;
+        worksheet.write_string(row, 6, &req.current_status_id, None)?;
+        worksheet.write_string(row, 7, &req.verification_method_id, None)?;
+        worksheet.write_string(row, 8, &req.author_id, None)?;
+        worksheet.write_string(row, 9, &req.reviewer_id, None)?;
+        worksheet.write_string(row, 10, &req.creation_date, None)?;
+        worksheet.write_string(row, 11, &req.update_date, None)?;
+        worksheet.write_string(row, 12, &req.deadline_date, None)?;
         worksheet.write_string(
             row,
             13,
-            &req.req_justification.as_deref().unwrap_or(""),
+            &req.justification.as_deref().unwrap_or(""),
             None,
         )?;
     }

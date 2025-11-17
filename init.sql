@@ -8,23 +8,23 @@ DROP TABLE verification;
 
 CREATE TABLE requirements
 (
-    req_id              SERIAL PRIMARY KEY,
-    req_title           VARCHAR NOT NULL DEFAULT ' ',
-    req_description     VARCHAR NOT NULL DEFAULT ' ',
-    req_verification_method    INTEGER NOT NULL DEFAULT 1,
-    req_current_status  INTEGER NOT NULL DEFAULT 1,
-    req_author          INTEGER NOT NULL DEFAULT 0,
-    req_reviewer        INTEGER NOT NULL DEFAULT 0,
+    id              SERIAL PRIMARY KEY,
+    title           VARCHAR NOT NULL DEFAULT ' ',
+    description     VARCHAR NOT NULL DEFAULT ' ',
+    verification_method_id    INTEGER NOT NULL DEFAULT 1,
+    current_status_id  INTEGER NOT NULL DEFAULT 1,
+    author_id          INTEGER NOT NULL DEFAULT 0,
+    reviewer_id        INTEGER NOT NULL DEFAULT 0,
     req_link            VARCHAR NOT NULL DEFAULT ' ',
-    req_reference       VARCHAR NOT NULL DEFAULT ' ',
-    req_category        INTEGER NOT NULL DEFAULT 1,
-    req_parent          INTEGER NOT NULL DEFAULT 0,
-    req_creation_date   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    req_update_date     timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    req_deadline_date   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    reference_code       VARCHAR NOT NULL DEFAULT ' ',
+    category_id        INTEGER NOT NULL DEFAULT 1,
+    parent_id          INTEGER NOT NULL DEFAULT 0,
+    creation_date   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_date     timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deadline_date   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO requirements (req_title, req_description, req_current_status, req_author, req_reference, req_category) VALUES
+INSERT INTO requirements (title, description, current_status_id, author_id, reference_code, category_id) VALUES
     ('Root management', '', 1, 1, '', 1);
 
 

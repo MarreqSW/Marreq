@@ -15,21 +15,21 @@ use std::fmt;
 /// existing requirements.
 #[derive(Serialize, Deserialize, Queryable, AsChangeset, Clone)]
 pub struct Requirement {
-    pub req_id: i32,
-    pub req_title: String,
-    pub req_description: String,
-    pub req_verification_method: i32,
-    pub req_current_status: i32,
-    pub req_author: i32,
-    pub req_reviewer: i32,
-    pub req_reference: String,
-    pub req_category: i32,
-    pub req_parent: i32,
-    pub req_creation_date: chrono::NaiveDateTime,
-    pub req_update_date: chrono::NaiveDateTime,
-    pub req_deadline_date: chrono::NaiveDateTime,
-    pub req_applicability: i32,
-    pub req_justification: Option<String>,
+    pub id: i32,
+    pub title: String,
+    pub description: String,
+    pub verification_method_id: i32,
+    pub current_status_id: i32,
+    pub author_id: i32,
+    pub reviewer_id: i32,
+    pub reference_code: String,
+    pub category_id: i32,
+    pub parent_id: i32,
+    pub creation_date: chrono::NaiveDateTime,
+    pub update_date: chrono::NaiveDateTime,
+    pub deadline_date: chrono::NaiveDateTime,
+    pub applicability_id: i32,
+    pub justification: Option<String>,
     pub project_id: i32,
 }
 
@@ -278,14 +278,14 @@ impl fmt::Display for Requirement {
             <div class='ReqParent'>Parent: {}</div>
         </div>",
             self.project_id,
-            self.req_id,
-            self.req_id,
-            self.req_title,
-            self.req_description,
-            self.req_author,
-            self.req_reference,
-            self.req_creation_date,
-            self.req_parent
+            self.id,
+            self.id,
+            self.title,
+            self.description,
+            self.author_id,
+            self.reference_code,
+            self.creation_date,
+            self.parent_id
         )
     }
 }
@@ -391,7 +391,7 @@ macro_rules! impl_loggable {
 }
 
 impl_loggable!(Project, EntityType::Project, project_id, project_name);
-impl_loggable!(Requirement, EntityType::Requirement, req_id, req_title);
+impl_loggable!(Requirement, EntityType::Requirement, id, title);
 impl_loggable!(Category, EntityType::Category, cat_id, cat_title);
 impl_loggable!(Applicability, EntityType::Applicability, app_id, app_title);
 impl_loggable!(TestCase, EntityType::Test, test_id, test_name);

@@ -14,12 +14,12 @@ ALTER SEQUENCE categories_cat_id_seq RESTART WITH 1;
 ALTER SEQUENCE applicability_app_id_seq RESTART WITH 1;
 
 -- Insert users
-INSERT INTO users (user_name, user_email, user_role) VALUES
+INSERT INTO users (name, email, user_role) VALUES
 ('Alice Johnson', 'alice@reqman.com', 'Requirements Engineer'),
 ('Bob Smith', 'bob@reqman.com', 'Test Engineer');
 
 -- Insert categories
-INSERT INTO categories (cat_title, cat_description, cat_tag) VALUES
+INSERT INTO categories (title, description, tag) VALUES
 ('Core Features', 'Essential functionality of the ReqMan system', 'CORE'),
 ('User Interface', 'Web interface and user experience features', 'UI'),
 ('Database', 'Database design and data management', 'DB'),
@@ -29,7 +29,7 @@ INSERT INTO categories (cat_title, cat_description, cat_tag) VALUES
 ('Performance', 'System performance and optimization', 'PERF');
 
 -- Insert applicability
-INSERT INTO applicability (app_title, app_description, app_tag) VALUES
+INSERT INTO applicability (title, description, tag) VALUES
 ('All Products', 'Applies to all product lines', 'ALL'),
 ('Enterprise', 'Enterprise-level deployments', 'ENT'),
 ('Small Teams', 'Small team implementations', 'SMB'),
@@ -75,7 +75,7 @@ INSERT INTO requirements (title, description, reference_code, category_id, appli
 ('REQ-PERF-002', 'The system shall support concurrent access by multiple users', 'The application must handle multiple simultaneous users without performance degradation or data corruption.', 'REQ-PERF-002', 1, 3, 1, 1, 2, 0, '', '2024-01-23', '2024-01-25', '2024-12-30');
 
 -- Insert tests
-INSERT INTO tests (test_title, test_description, test_status, test_source) VALUES
+INSERT INTO tests (test_title, description, status_id, source) VALUES
 -- Core System Tests
 ('TEST-SYS-001', 'Verify web interface loads correctly and displays requirements list', 1, 'Manual testing of web interface'),
 ('TEST-SYS-002', 'Verify hierarchical requirements can be created and linked', 1, 'Database integration testing'),
@@ -119,7 +119,7 @@ INSERT INTO tests (test_title, test_description, test_status, test_source) VALUE
 ('TEST-PERF-003', 'Verify database queries are optimized', 1, 'Database performance testing');
 
 -- Create traceability matrix links
-INSERT INTO matrix (matrix_req_id, matrix_test_id) VALUES
+INSERT INTO matrix (req_id, id) VALUES
 -- Core System Requirements -> Tests
 (1, 1), (1, 2), (1, 3),  -- REQ-SYS-001 -> UI and hierarchy tests
 (2, 2), (2, 3),          -- REQ-SYS-002 -> Hierarchy and matrix tests

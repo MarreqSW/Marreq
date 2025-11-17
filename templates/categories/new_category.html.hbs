@@ -11,7 +11,7 @@
     <strong>Available Projects:</strong>
     <ul class="mb-0 mt-2">
       {{#each projects}}
-        <li><strong>{{project_name}}</strong> (ID: {{project_id}})</li>
+        <li><strong>{{name}}</strong> (ID: {{project_id}})</li>
       {{/each}}
     </ul>
   </div>
@@ -26,18 +26,18 @@
     <div class="card-body c-card__body">
       <form method="post">
         <div class="form-group c-form-group">
-          <label for="cat_title" class="form-label c-form-label">Category Title</label>
-          <input type="text" name="cat_title" id="cat_title" class="form-control c-form-control" required>
+          <label for="title" class="form-label c-form-label">Category Title</label>
+          <input type="text" name="title" id="title" class="form-control c-form-control" required>
         </div>
 
         <div class="form-group c-form-group">
-          <label for="cat_description" class="form-label c-form-label">Description</label>
-          <textarea name="cat_description" id="cat_description" class="form-control c-form-control c-form-control--textarea" rows="4" required></textarea>
+          <label for="description" class="form-label c-form-label">Description</label>
+          <textarea name="description" id="description" class="form-control c-form-control c-form-control--textarea" rows="4" required></textarea>
         </div>
 
         <div class="form-group c-form-group">
-          <label for="cat_tag" class="form-label c-form-label">Tag</label>
-          <input type="text" name="cat_tag" id="cat_tag" class="form-control c-form-control" placeholder="e.g., FEATURE, BUG, ENHANCEMENT" required>
+          <label for="tag" class="form-label c-form-label">Tag</label>
+          <input type="text" name="tag" id="tag" class="form-control c-form-control" placeholder="e.g., FEATURE, BUG, ENHANCEMENT" required>
           <small class="text-secondary">A short identifier for the category</small>
         </div>
 

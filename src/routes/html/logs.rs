@@ -87,7 +87,7 @@ pub async fn export_logs(
     std::fs::write(&export_path, logs_json).map_err(|_| Redirect::to(uri!(show_logs)))?;
 
     if let Err(err) =
-        service.log_export_action(user.user_id, Some(format!("Exported logs to {filename}")))
+        service.log_export_action(user.id, Some(format!("Exported logs to {filename}")))
     {
         eprintln!("Failed to log export action: {err}");
     }
@@ -128,7 +128,7 @@ pub fn cleanup_logs(admin: AdminOnly, state: &State<AppState>) -> Result<Redirec
     let user = admin.into_inner();
     let service = LogService::new(state.inner());
 
-    match service.cleanup_old_logs(user.user_id, CLEANUP_DAYS) {
+    match service.cleanup_old_logs(user.id, CLEANUP_DAYS) {
         Ok(_) => Ok(Redirect::to(uri!(show_logs))),
         Err(err) => {
             eprintln!("Failed to clean up old logs: {err}");

@@ -88,7 +88,7 @@ mod tests {
         assert_eq!(response.status(), Status::Ok);
         let items: Vec<User> = response.into_json().await.unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].user_username, "alice");
+        assert_eq!(items[0].username, "alice");
     }
 
     #[rocket::async_test]
@@ -100,11 +100,11 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "user_id": null,
-                    "user_username": "bob",
-                    "user_name": "Bob",
-                    "user_email": "bob@example.com",
-                    "user_password": "secret",
+                    "id": null,
+                    "username": "bob",
+                    "name": "Bob",
+                    "email": "bob@example.com",
+                    "password_hash": "secret",
                     "is_admin": false
                 })
                 .to_string(),
@@ -127,11 +127,11 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "user_id": null,
-                    "user_username": "carol",
-                    "user_name": "Carol",
-                    "user_email": "carol@example.com",
-                    "user_password": "secret",
+                    "id": null,
+                    "username": "carol",
+                    "name": "Carol",
+                    "email": "carol@example.com",
+                    "password_hash": "secret",
                     "is_admin": false
                 })
                 .to_string(),

@@ -11,7 +11,7 @@ pub fn index(
 ) -> Result<Template, Redirect> {
     let user = session_user.into_inner();
     let projects = ProjectService::new(state.inner())
-        .get_by_user_id(user.user_id)
+        .get_by_user_id(user.id)
         .unwrap_or_default();
 
     let mut selected_project_id = cookies
@@ -60,7 +60,7 @@ pub fn show_status(state: &State<AppState>) -> content::RawHtml<String> {
             <div>Title: {}</div>
             <div>Description: {}</div>
         </div>",
-            out_str, st.req_st_id, st.req_st_title, st.req_st_description
+            out_str, st.id, st.title, st.description
         );
     }
 
@@ -108,8 +108,8 @@ mod tests {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
+    fn session_cookie(id: i32) -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, id.to_string());
         cookie.set_path("/");
         cookie.set_http_only(true);
         cookie
@@ -119,23 +119,23 @@ mod tests {
         let mut repo = DieselRepoMock::default();
 
         let user = DieselRepoMock::make_user(1, "jane", "");
-        repo.users.insert(user.user_id, user.clone());
+        repo.users.insert(user.id, user.clone());
 
         let project = Project {
             project_id: 7,
-            project_name: "Project Phoenix".into(),
-            project_description: Some("Mission critical".into()),
-            project_creation_date: None,
-            project_update_date: None,
-            project_status: Some("Active".into()),
-            project_owner_id: Some(user.user_id),
+            name: "Project Phoenix".into(),
+            description: Some("Mission critical".into()),
+            creation_date: None,
+            update_date: None,
+            status_id: Some("Active".into()),
+            owner_id: Some(user.id),
         };
         repo.projects.insert(project.project_id, project);
 
         let created = timestamp();
         repo.project_members.push(ProjectMember {
             project_id: 7,
-            user_id: user.user_id,
+            id: user.id,
             role: 2,
             created_at: created,
             updated_at: created,
@@ -164,13 +164,13 @@ mod tests {
 
         fn test_case(id: i32, project_id: i32) -> TestCase {
             TestCase {
-                test_id: id,
-                test_name: format!("Test {id}"),
-                test_description: "Covers core scenario".into(),
-                test_source: "manual".into(),
-                test_status: 1,
-                test_reference: format!("TST-{id}"),
-                test_parent: 0,
+                id: id,
+                name: format!("Test {id}"),
+                description: "Covers core scenario".into(),
+                source: "manual".into(),
+                status_id: 1,
+                reference_code: format!("TST-{id}"),
+                parent_id: 0,
                 project_id,
             }
         }
@@ -182,10 +182,10 @@ mod tests {
         repo.requirement_statuses.insert(
             10,
             RequirementStatus {
-                req_st_id: 10,
-                req_st_title: "Approved".into(),
-                req_st_description: "Ready for release".into(),
-                req_st_short_name: "APR".into(),
+                id: 10,
+                title: "Approved".into(),
+                description: "Ready for release".into(),
+                short_name: "APR".into(),
             },
         );
 
@@ -199,7 +199,7 @@ mod tests {
 
         let response = client
             .get("/")
-            .private_cookie(session_cookie(user.user_id))
+            .private_cookie(session_cookie(user.id))
             .dispatch()
             .await;
 

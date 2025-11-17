@@ -13,22 +13,22 @@
     <div class="card-body c-card__body">
       <form method="post">
         <div class="form-group c-form-group">
-          <label for="app_title" class="form-label c-form-label">Applicability Title</label>
-          <input type="text" name="app_title" id="app_title" value="{{applicability.app_title}}" class="form-control c-form-control" required>
+          <label for="title" class="form-label c-form-label">Applicability Title</label>
+          <input type="text" name="title" id="title" value="{{applicability.title}}" class="form-control c-form-control" required>
         </div>
 
         <div class="form-group c-form-group">
-          <label for="app_description" class="form-label c-form-label">Description</label>
-          <textarea name="app_description" id="app_description" class="form-control c-form-control c-form-control--textarea" rows="4" required>{{applicability.app_description}}</textarea>
+          <label for="description" class="form-label c-form-label">Description</label>
+          <textarea name="description" id="description" class="form-control c-form-control c-form-control--textarea" rows="4" required>{{applicability.description}}</textarea>
         </div>
 
         <div class="form-group c-form-group">
-          <label for="app_tag" class="form-label c-form-label">Tag</label>
-          <input type="text" name="app_tag" id="app_tag" value="{{applicability.app_tag}}" class="form-control c-form-control" placeholder="e.g., ALL, PROD_A, LEGACY" required>
+          <label for="tag" class="form-label c-form-label">Tag</label>
+          <input type="text" name="tag" id="tag" value="{{applicability.tag}}" class="form-control c-form-control" placeholder="e.g., ALL, PROD_A, LEGACY" required>
           <small class="text-secondary">A short identifier for the applicability</small>
         </div>
 
-        <input type="hidden" id="app_id" name="app_id" value="{{applicability.app_id}}">
+        <input type="hidden" id="id" name="id" value="{{applicability.id}}">
         <input type="hidden" id="project_id" name="project_id" value="{{applicability.project_id}}">
 
         <div class="mt-4">

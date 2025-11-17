@@ -125,7 +125,7 @@ After setup, verify the database is working:
 docker exec reqman_db_1 psql -U rust -d reqman -c "\dt"
 
 # Check users
-docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT user_username, user_name, is_admin FROM users;"
+docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT username, name, is_admin FROM users;"
 
 # Check sample data
 docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT COUNT(*) as requirements FROM requirements;"

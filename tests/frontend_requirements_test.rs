@@ -53,8 +53,8 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
+    pub fn session_cookie(id: i32) -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, id.to_string());
         cookie.set_path("/");
         cookie
     }
@@ -70,18 +70,18 @@ mod test_support {
             1,
             Project {
                 project_id: 1,
-                project_name: "Test Project".into(),
-                project_description: Some("Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(1),
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status_id: Some("Active".into()),
+                owner_id: Some(1),
             },
         );
 
         repo.project_members.push(ProjectMember {
             project_id: 1,
-            user_id: 1,
+            id: 1,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),
@@ -90,30 +90,30 @@ mod test_support {
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Draft".into(),
-                req_st_description: "".into(),
-                req_st_short_name: "D".into(),
+                id: 1,
+                title: "Draft".into(),
+                description: "".into(),
+                short_name: "D".into(),
             },
         );
 
         repo.requirement_statuses.insert(
             2,
             RequirementStatus {
-                req_st_id: 2,
-                req_st_title: "Accepted".into(),
-                req_st_description: "".into(),
-                req_st_short_name: "A".into(),
+                id: 2,
+                title: "Accepted".into(),
+                description: "".into(),
+                short_name: "A".into(),
             },
         );
 
         repo.categories.insert(
             1,
             Category {
-                cat_id: 1,
-                cat_title: "Systems".into(),
-                cat_description: "".into(),
-                cat_tag: "SYS".into(),
+                id: 1,
+                title: "Systems".into(),
+                description: "".into(),
+                tag: "SYS".into(),
                 project_id: 1,
             },
         );
@@ -121,9 +121,9 @@ mod test_support {
         repo.verifications.insert(
             1,
             VerificationMethod {
-                verification_id: 1,
-                verification_name: "Analysis".into(),
-                verification_description: "".into(),
+                id: 1,
+                name: "Analysis".into(),
+                description: "".into(),
                 project_id: 1,
             },
         );
@@ -131,10 +131,10 @@ mod test_support {
         repo.applicability.insert(
             1,
             Applicability {
-                app_id: 1,
-                app_title: "All".into(),
-                app_description: "".into(),
-                app_tag: "ALL".into(),
+                id: 1,
+                title: "All".into(),
+                description: "".into(),
+                tag: "ALL".into(),
                 project_id: 1,
             },
         );

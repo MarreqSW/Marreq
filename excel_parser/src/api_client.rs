@@ -45,7 +45,7 @@ impl ApiClient {
             .map_err(|e| format!("Failed to resolve status '{}': {}", req.current_status_id, e))?;
 
         // Resolve verification ID
-        let verification_id = self.resolve_verification(&req.verification_method_id).await
+        let id = self.resolve_verification(&req.verification_method_id).await
             .map_err(|e| format!("Failed to resolve verification '{}': {}", req.verification_method_id, e))?;
 
         // Resolve author ID
@@ -70,7 +70,7 @@ impl ApiClient {
             "category_id": category_id,
             "applicability_id": applicability_id,
             "current_status_id": status_id,
-            "verification_method_id": verification_id,
+            "verification_method_id": id,
             "author_id": author_id,
             "reviewer_id": reviewer_id,
             "parent_id": parent_id.unwrap_or(0),
@@ -98,22 +98,22 @@ impl ApiClient {
 
     async fn import_test(&self, test: &TestData, project_id: i32) -> Result<String, String> {
         // Resolve status ID
-        let status_id = self.resolve_status(&test.test_status).await
-            .map_err(|e| format!("Failed to resolve status '{}': {}", test.test_status, e))?;
+        let status_id = self.resolve_status(&test.status_id).await
+            .map_err(|e| format!("Failed to resolve status '{}': {}", test.status_id, e))?;
 
         // Resolve parent test ID if specified
         let parent_id = if test.test_parent_name != "None" && !test.test_parent_name.is_empty() {
             self.resolve_test_by_name(&test.test_parent_name).await.ok()
         } else {
-            test.test_parent
+            test.parent_id
         };
 
         let payload = json!({
-            "test_name": test.test_name,
-            "test_description": test.test_description,
-            "test_source": test.test_source,
-            "test_status": status_id,
-            "test_parent": parent_id.unwrap_or(0),
+            "name": test.name,
+            "description": test.description,
+            "source": test.source,
+            "status_id": status_id,
+            "parent_id": parent_id.unwrap_or(0),
             "project_id": project_id
         });
 
@@ -127,10 +127,10 @@ impl ApiClient {
         if response.status().is_success() {
             let _response_text = response.text().await
                 .map_err(|e| format!("Failed to read response: {}", e))?;
-            Ok(format!("Test '{}' imported successfully", test.test_name))
+            Ok(format!("Test '{}' imported successfully", test.name))
         } else {
             let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            Err(format!("Failed to import test '{}': {}", test.test_name, error_text))
+            Err(format!("Failed to import test '{}': {}", test.name, error_text))
         }
     }
 
@@ -143,16 +143,16 @@ impl ApiClient {
         let categories: Vec<Value> = response.json().await?;
         
         for category in categories {
-            if category["cat_title"].as_str() == Some(category_name) {
-                return Ok(category["cat_id"].as_i64().unwrap_or(0) as i32);
+            if category["title"].as_str() == Some(category_name) {
+                return Ok(category["id"].as_i64().unwrap_or(0) as i32);
             }
         }
 
         // If category doesn't exist, create it
         let payload = json!({
-            "cat_title": category_name,
-            "cat_description": format!("Imported category: {}", category_name),
-            "cat_tag": category_name.to_lowercase().replace(" ", "_")
+            "title": category_name,
+            "description": format!("Imported category: {}", category_name),
+            "tag": category_name.to_lowercase().replace(" ", "_")
         });
 
         let response = self.client
@@ -178,16 +178,16 @@ impl ApiClient {
         let applicability_list: Vec<Value> = response.json().await?;
         
         for app in applicability_list {
-            if app["app_title"].as_str() == Some(applicability_name) {
-                return Ok(app["app_id"].as_i64().unwrap_or(0) as i32);
+            if app["title"].as_str() == Some(applicability_name) {
+                return Ok(app["id"].as_i64().unwrap_or(0) as i32);
             }
         }
 
         // If applicability doesn't exist, create it
         let payload = json!({
-            "app_title": applicability_name,
-            "app_description": format!("Imported applicability: {}", applicability_name),
-            "app_tag": applicability_name.to_lowercase().replace(" ", "_")
+            "title": applicability_name,
+            "description": format!("Imported applicability: {}", applicability_name),
+            "tag": applicability_name.to_lowercase().replace(" ", "_")
         });
 
         let response = self.client
@@ -227,7 +227,7 @@ impl ApiClient {
         Ok(1)
     }
 
-    async fn resolve_user(&self, user_name: &str) -> Result<i32> {
+    async fn resolve_user(&self, name: &str) -> Result<i32> {
         let response = self.client
             .get(&format!("{}/api/v1/users", self.base_url))
             .send()
@@ -236,8 +236,8 @@ impl ApiClient {
         let users: Vec<Value> = response.json().await?;
         
         for user in users {
-            if user["user_name"].as_str() == Some(user_name) {
-                return Ok(user["user_id"].as_i64().unwrap_or(0) as i32);
+            if user["name"].as_str() == Some(name) {
+                return Ok(user["id"].as_i64().unwrap_or(0) as i32);
             }
         }
 
@@ -271,8 +271,8 @@ impl ApiClient {
         let tests: Vec<Value> = response.json().await?;
         
         for test in tests {
-            if test["test_name"].as_str() == Some(name) {
-                return Ok(test["test_id"].as_i64().unwrap_or(0) as i32);
+            if test["name"].as_str() == Some(name) {
+                return Ok(test["id"].as_i64().unwrap_or(0) as i32);
             }
         }
 

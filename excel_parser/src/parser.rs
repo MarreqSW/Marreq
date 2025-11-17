@@ -26,12 +26,12 @@ pub struct RequirementData {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TestData {
-    pub test_id: Option<i32>,
-    pub test_name: String,
-    pub test_description: String,
-    pub test_status: String,
-    pub test_source: String,
-    pub test_parent: Option<i32>,
+    pub id: Option<i32>,
+    pub name: String,
+    pub description: String,
+    pub status_id: String,
+    pub source: String,
+    pub parent_id: Option<i32>,
     pub test_parent_name: String,
 }
 
@@ -192,12 +192,12 @@ fn parse_requirement_row(row: &[DataType], headers: &[String]) -> Result<Require
 
 fn parse_test_row(row: &[DataType], headers: &[String]) -> Result<TestData> {
     let mut test = TestData {
-        test_id: None,
-        test_name: String::new(),
-        test_description: String::new(),
-        test_status: String::new(),
-        test_source: String::new(),
-        test_parent: None,
+        id: None,
+        name: String::new(),
+        description: String::new(),
+        status_id: String::new(),
+        source: String::new(),
+        parent_id: None,
         test_parent_name: String::new(),
     };
     
@@ -212,17 +212,17 @@ fn parse_test_row(row: &[DataType], headers: &[String]) -> Result<TestData> {
         match header.as_str() {
             "test id" => {
                 if let Ok(id) = value.parse::<i32>() {
-                    test.test_id = Some(id);
+                    test.id = Some(id);
                 }
             },
-            "name" => test.test_name = value,
-            "description" => test.test_description = value,
-            "status" => test.test_status = value,
-            "source" => test.test_source = value,
+            "name" => test.name = value,
+            "description" => test.description = value,
+            "status" => test.status_id = value,
+            "source" => test.source = value,
             "parent id" => {
                 if value != "None" && !value.is_empty() {
                     if let Ok(id) = value.parse::<i32>() {
-                        test.test_parent = Some(id);
+                        test.parent_id = Some(id);
                     }
                 }
             },

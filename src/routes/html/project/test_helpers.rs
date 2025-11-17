@@ -32,8 +32,8 @@ pub async fn client_with_routes(repo: DieselRepoMock, routes: Vec<Route>) -> Cli
     Client::tracked(rocket).await.expect("rocket instance")
 }
 
-pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-    let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
+pub fn session_cookie(id: i32) -> Cookie<'static> {
+    let mut cookie = Cookie::new(SESSION_COOKIE, id.to_string());
     cookie.set_path("/");
     cookie
 }
@@ -41,11 +41,11 @@ pub fn session_cookie(user_id: i32) -> Cookie<'static> {
 pub async fn get_with_session<'c>(
     client: &'c Client,
     path: &'c str,
-    user_id: i32,
+    id: i32,
 ) -> LocalResponse<'c> {
     client
         .get(path)
-        .private_cookie(session_cookie(user_id))
+        .private_cookie(session_cookie(id))
         .dispatch()
         .await
 }
@@ -54,12 +54,12 @@ pub async fn post_form_with_session<'c>(
     client: &'c Client,
     path: &'c str,
     body: &'c str,
-    user_id: i32,
+    id: i32,
 ) -> LocalResponse<'c> {
     client
         .post(path)
         .header(ContentType::Form)
-        .private_cookie(session_cookie(user_id))
+        .private_cookie(session_cookie(id))
         .body(body)
         .dispatch()
         .await
@@ -68,11 +68,11 @@ pub async fn post_form_with_session<'c>(
 pub async fn delete_with_session<'c>(
     client: &'c Client,
     path: &'c str,
-    user_id: i32,
+    id: i32,
 ) -> LocalResponse<'c> {
     client
         .delete(path)
-        .private_cookie(session_cookie(user_id))
+        .private_cookie(session_cookie(id))
         .dispatch()
         .await
 }

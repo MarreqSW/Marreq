@@ -9,10 +9,10 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<LegacyStatus>>>
         .list_requirement_statuses()?
         .into_iter()
         .map(|status: RequirementStatus| LegacyStatus {
-            st_id: status.req_st_id,
-            st_title: status.req_st_title,
-            st_description: status.req_st_description,
-            st_short_name: status.req_st_short_name,
+            st_id: status.id,
+            st_title: status.title,
+            st_description: status.description,
+            st_short_name: status.short_name,
         })
         .collect();
     Ok(Json(statuses))
@@ -24,10 +24,10 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Value>> {
     let status = service.get_requirement_status(id)?;
 
     Ok(Json(json!({
-        "id": status.req_st_id,
-        "title": status.req_st_title,
-        "description": status.req_st_description,
-        "short_name": status.req_st_short_name,
+        "id": status.id,
+        "title": status.title,
+        "description": status.description,
+        "short_name": status.short_name,
     })))
 }
 
@@ -75,10 +75,10 @@ mod tests {
         statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Draft".into(),
-                req_st_description: "Initial".into(),
-                req_st_short_name: "DR".into(),
+                id: 1,
+                title: "Draft".into(),
+                description: "Initial".into(),
+                short_name: "DR".into(),
             },
         );
         repo.requirement_statuses = statuses;
@@ -97,10 +97,10 @@ mod tests {
         repo.requirement_statuses.insert(
             5,
             RequirementStatus {
-                req_st_id: 5,
-                req_st_title: "Approved".into(),
-                req_st_description: "Ready".into(),
-                req_st_short_name: "AP".into(),
+                id: 5,
+                title: "Approved".into(),
+                description: "Ready".into(),
+                short_name: "AP".into(),
             },
         );
 
@@ -120,9 +120,9 @@ mod tests {
             .header(ContentType::JSON)
             .body(
                 json!({
-                    "req_st_title": "In Review",
-                    "req_st_description": "Under evaluation",
-                    "req_st_short_name": "IR"
+                    "title": "In Review",
+                    "description": "Under evaluation",
+                    "short_name": "IR"
                 })
                 .to_string(),
             )

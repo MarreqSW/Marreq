@@ -49,9 +49,9 @@ impl<'a> StatusService<'a> {
 
     /// Create a new requirement status entry.
     pub fn create_requirement_status(&self, mut payload: NewStatus) -> Result<i32, RepoError> {
-        sanitize_string(&mut payload.req_st_title);
-        sanitize_string(&mut payload.req_st_description);
-        sanitize_string(&mut payload.req_st_short_name);
+        sanitize_string(&mut payload.title);
+        sanitize_string(&mut payload.description);
+        sanitize_string(&mut payload.short_name);
 
         validate_requirement_status(&payload)
             .map_err(|err| RepoError::BadInput(err.to_string()))?;
@@ -91,19 +91,19 @@ mod tests {
         repo.requirement_statuses.insert(
             2,
             RequirementStatus {
-                req_st_id: 2,
-                req_st_title: "Draft".into(),
-                req_st_description: "draft".into(),
-                req_st_short_name: "DRT".into(),
+                id: 2,
+                title: "Draft".into(),
+                description: "draft".into(),
+                short_name: "DRT".into(),
             },
         );
         repo.test_statuses.insert(
             3,
             TestStatus {
-                test_st_id: 3,
-                test_st_title: "Ready".into(),
-                test_st_description: "ready".into(),
-                test_st_short_name: "RDY".into(),
+                id: 3,
+                title: "Ready".into(),
+                description: "ready".into(),
+                short_name: "RDY".into(),
             },
         );
         repo
@@ -119,10 +119,10 @@ mod tests {
         assert_eq!(service.list_requirement_statuses().unwrap().len(), 1);
         assert_eq!(service.list_test_statuses().unwrap().len(), 1);
         assert_eq!(
-            service.get_requirement_status(2).unwrap().req_st_title,
+            service.get_requirement_status(2).unwrap().title,
             "Draft"
         );
-        assert_eq!(service.get_test_status(3).unwrap().test_st_title, "Ready");
+        assert_eq!(service.get_test_status(3).unwrap().title, "Ready");
     }
 
     #[test]
@@ -132,9 +132,9 @@ mod tests {
         let service = StatusService::new(&state);
 
         let payload = NewStatus {
-            req_st_title: "  Verified  ".into(),
-            req_st_description: "  Description  ".into(),
-            req_st_short_name: "  VFD  ".into(),
+            title: "  Verified  ".into(),
+            description: "  Description  ".into(),
+            short_name: "  VFD  ".into(),
         };
 
         let id = service.create_requirement_status(payload).unwrap();
@@ -153,9 +153,9 @@ mod tests {
         let service = StatusService::new(&state);
 
         let payload = NewStatus {
-            req_st_title: " ".into(),
-            req_st_description: "Desc".into(),
-            req_st_short_name: "DRT".into(),
+            title: " ".into(),
+            description: "Desc".into(),
+            short_name: "DRT".into(),
         };
 
         let err = service.create_requirement_status(payload).unwrap_err();

@@ -58,7 +58,7 @@
               <select class="form-select" id="dup_req_category" name="category_id" required>
                 <option value="">Select category...</option>
                 {{#each categories}}
-                  <option value="{{cat_id}}">{{cat_title}}</option>
+                  <option value="{{id}}">{{title}}</option>
                 {{/each}}
               </select>
             </div>
@@ -68,7 +68,7 @@
               <select class="form-select" id="dup_req_current_status" name="current_status_id" required>
                 <option value="">Select status...</option>
                 {{#each statuses}}
-                  <option value="{{req_st_id}}">{{req_st_title}}</option>
+                  <option value="{{id}}">{{title}}</option>
                 {{/each}}
               </select>
             </div>
@@ -80,7 +80,7 @@
               <select class="form-select" id="dup_req_verification" name="verification_method_id" required>
                 <option value="">Select verification...</option>
                 {{#each verifications}}
-                  <option value="{{verification_id}}">{{verification_name}}</option>
+                  <option value="{{id}}">{{name}}</option>
                 {{/each}}
               </select>
             </div>
@@ -90,7 +90,7 @@
               <select class="form-select" id="dup_req_applicability" name="applicability_id" required>
                 <option value="">Select applicability...</option>
                 {{#each applicability}}
-                  <option value="{{app_id}}">{{app_title}}</option>
+                  <option value="{{id}}">{{title}}</option>
                 {{/each}}
               </select>
             </div>
@@ -102,7 +102,7 @@
               <select class="form-select" id="dup_req_reviewer" name="reviewer_id">
                 <option value="">Select reviewer...</option>
                 {{#each users}}
-                  <option value="{{user_id}}">{{user_name}}</option>
+                  <option value="{{id}}">{{name}}</option>
                 {{/each}}
               </select>
             </div>

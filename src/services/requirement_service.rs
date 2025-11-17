@@ -127,8 +127,8 @@ impl<'a> RequirementService<'a> {
             .filter(|req| {
                 let status_match =
                     status_filter.map_or(true, |status_id| req.current_status_id == status_id);
-                let verification_match = verification_filter.map_or(true, |verification_id| {
-                    req.verification_method_id == verification_id
+                let verification_match = verification_filter.map_or(true, |id| {
+                    req.verification_method_id == id
                 });
                 let category_match =
                     category_filter.map_or(true, |category_id| req.category_id == category_id);
@@ -174,7 +174,7 @@ impl<'a> RequirementService<'a> {
 
     fn log_created(&self, actor: &User, id: i32, entity: &NewRequirement) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.user_id);
+            let ctx = LogCtx::new(actor.id);
             if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!("Failed to log requirement creation {id}: {_err}");
@@ -184,7 +184,7 @@ impl<'a> RequirementService<'a> {
 
     fn log_updated(&self, actor: &User, before: &Requirement, after: &Requirement) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.user_id);
+            let ctx = LogCtx::new(actor.id);
             if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
                 #[cfg(debug_assertions)]
                 eprintln!(
@@ -197,7 +197,7 @@ impl<'a> RequirementService<'a> {
 
     fn log_deleted(&self, actor: &User, entity: &Requirement) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.user_id);
+            let ctx = LogCtx::new(actor.id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!(

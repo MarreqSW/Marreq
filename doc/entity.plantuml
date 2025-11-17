@@ -6,12 +6,12 @@ skinparam linetype ortho
 entity "Projects" as proj {
 * project_id
 ---
-* project_name
-project_description
-project_creation_date
-project_update_date
-project_status
-project_owner_id
+* name
+description
+creation_date
+update_date
+status_id
+owner_id
 }
 
 entity "Requirement" as req {
@@ -36,14 +36,14 @@ justification
 }
 
 entity "Users" as user {
-* user_id
+* id
 ---
-* user_username
-* user_name
-* user_email
-* user_creation_date
-* user_last_login
-* user_password
+* username
+* name
+* email
+* creation_date
+* last_login
+* password_hash
 is_admin
 }
 
@@ -56,47 +56,47 @@ entity "Status" as st {
 }
 
 entity "Categories" as cat {
-* cat_id
+* id
 ---
-* cat_title
-* cat_description
-* cat_tag
+* title
+* description
+* tag
 * project_id
 }
 
 entity "Applicability" as app {
-* app_id
+* id
 ---
-* app_title
-* app_description
-* app_tag
+* title
+* description
+* tag
 * project_id
 }
 
 entity "Tests" as test {
-* test_id
+* id
 ---
-* test_name
-* test_description
-* test_source
-* test_status
-* test_parent
+* name
+* description
+* source
+* status_id
+* parent_id
 * project_id
 }
 
 entity "Matrix" as matrix {
-* matrix_req_id
-* matrix_test_id
+* req_id
+* id
 ---
-* matrix_creation_date
+* creation_date
 * project_id
 }
 
 entity "Verification" as verification {
-* verification_id
+* id
 ---
-* verification_name
-* verification_description
+* name
+* description
 }
 
 proj ||--o{ req

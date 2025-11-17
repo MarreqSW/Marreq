@@ -24,7 +24,7 @@ pub fn show_project_id(
         }
     };
 
-    let selected_project_name = selected_project.project_name.clone();
+    let selected_project_name = selected_project.name.clone();
 
     let requirement_service = RequirementService::new(state.inner());
     let test_service = TestService::new(state.inner());
@@ -146,12 +146,12 @@ mod tests {
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
             project_id: id,
-            project_name: name.to_string(),
-            project_description: Some(format!("{name} project")),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("active".to_string()),
-            project_owner_id: Some(ADMIN_ID),
+            name: name.to_string(),
+            description: Some(format!("{name} project")),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status_id: Some("active".to_string()),
+            owner_id: Some(ADMIN_ID),
         }
     }
 
@@ -160,11 +160,11 @@ mod tests {
 
         let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
         admin.is_admin = true;
-        admin.user_name = "Admin User".into();
+        admin.name = "Admin User".into();
         repo.users.insert(ADMIN_ID, admin);
 
         let mut member = DieselRepoMock::make_user(MEMBER_ID, "member", "");
-        member.user_name = "Project Member".into();
+        member.name = "Project Member".into();
         repo.users.insert(MEMBER_ID, member);
 
         repo.projects
@@ -172,14 +172,14 @@ mod tests {
 
         repo.project_members.push(ProjectMember {
             project_id: PRIMARY_PROJECT,
-            user_id: ADMIN_ID,
+            id: ADMIN_ID,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),
         });
         repo.project_members.push(ProjectMember {
             project_id: PRIMARY_PROJECT,
-            user_id: MEMBER_ID,
+            id: MEMBER_ID,
             role: 2,
             created_at: timestamp(),
             updated_at: timestamp(),
@@ -240,7 +240,7 @@ mod tests {
     async fn show_project_id_redirects_non_member() {
         let mut repo = base_repo();
         let mut outsider = DieselRepoMock::make_user(OUTSIDER_ID, "outsider", "");
-        outsider.user_name = "Curious User".into();
+        outsider.name = "Curious User".into();
         repo.users.insert(OUTSIDER_ID, outsider);
 
         let client = project_client(repo).await;
@@ -282,7 +282,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/edit",
-            "project_name=Orbiter+II&project_description=Updated+mission+plan&project_status=inactive&project_owner_id=1",
+            "name=Orbiter+II&description=Updated+mission+plan&status_id=inactive&owner_id=1",
             ADMIN_ID,
         )
         .await;
@@ -295,13 +295,13 @@ mod tests {
         let project = repo
             .get_project_by_id(PRIMARY_PROJECT)
             .expect("project present");
-        assert_eq!(project.project_name, "Orbiter II");
+        assert_eq!(project.name, "Orbiter II");
         assert_eq!(
-            project.project_description.as_deref(),
+            project.description.as_deref(),
             Some("Updated mission plan")
         );
-        assert_eq!(project.project_status.as_deref(), Some("inactive"));
-        assert_eq!(project.project_owner_id, Some(ADMIN_ID));
+        assert_eq!(project.status_id.as_deref(), Some("inactive"));
+        assert_eq!(project.owner_id, Some(ADMIN_ID));
     }
 
     #[rocket::async_test]
@@ -310,7 +310,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/edit",
-            "project_name=&project_description=&project_status=active&project_owner_id=",
+            "name=&description=&status_id=active&owner_id=",
             ADMIN_ID,
         )
         .await;
@@ -323,7 +323,7 @@ mod tests {
         let project = repo
             .get_project_by_id(PRIMARY_PROJECT)
             .expect("project present");
-        assert_eq!(project.project_name, "Orbiter");
+        assert_eq!(project.name, "Orbiter");
     }
 
     #[rocket::async_test]

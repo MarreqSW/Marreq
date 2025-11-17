@@ -54,13 +54,13 @@ mod tests {
 
     fn sample_user() -> User {
         User {
-            user_id: 1,
-            user_username: "tester".into(),
-            user_name: "Tester".into(),
-            user_email: "tester@example.com".into(),
-            user_creation_date: timestamp(),
-            user_last_login: timestamp(),
-            user_password: "secret".into(),
+            id: 1,
+            username: "tester".into(),
+            name: "Tester".into(),
+            email: "tester@example.com".into(),
+            creation_date: timestamp(),
+            last_login: timestamp(),
+            password_hash: "secret".into(),
             is_admin: false,
         }
     }

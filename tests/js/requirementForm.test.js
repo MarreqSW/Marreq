@@ -761,9 +761,9 @@ describe('Requirement Form', () => {
         </form>
         <div id="categoryModal">
           <form id="inlineCategoryForm">
-            <input type="text" name="cat_title" />
-            <input type="text" name="cat_description" />
-            <input type="text" name="cat_tag" />
+            <input type="text" name="title" />
+            <input type="text" name="description" />
+            <input type="text" name="tag" />
             <button type="submit">Save</button>
           </form>
         </div>

@@ -265,9 +265,9 @@ function initInlineCreation(form) {
       dropdown: form.querySelector('[data-dropdown="category"]'),
       endpoint: `/p/${projectId}/requirements/inline/category`,
       serialize: (fd) => ({
-        title: (fd.get('cat_title') || '').toString().trim(),
-        description: (fd.get('cat_description') || '').toString().trim(),
-        tag: (fd.get('cat_tag') || '').toString().trim(),
+        title: (fd.get('title') || '').toString().trim(),
+        description: (fd.get('description') || '').toString().trim(),
+        tag: (fd.get('tag') || '').toString().trim(),
       }),
       apply: (data) => {
         const select = form.querySelector('#category_id');
@@ -344,9 +344,9 @@ function initInlineCreation(form) {
       dropdown: form.querySelector('[data-dropdown="applicability"]'),
       endpoint: `/p/${projectId}/requirements/inline/applicability`,
       serialize: (fd) => ({
-        title: (fd.get('app_title') || '').toString().trim(),
-        description: (fd.get('app_description') || '').toString().trim(),
-        tag: (fd.get('app_tag') || '').toString().trim(),
+        title: (fd.get('title') || '').toString().trim(),
+        description: (fd.get('description') || '').toString().trim(),
+        tag: (fd.get('tag') || '').toString().trim(),
       }),
       apply: (data) => {
         const select = form.querySelector('#applicability_id');
@@ -414,8 +414,8 @@ function initInlineCreation(form) {
       dropdown: form.querySelector('[data-dropdown="verification"]'),
       endpoint: `/p/${projectId}/requirements/inline/verification`,
       serialize: (fd) => ({
-        name: (fd.get('verification_name') || '').toString().trim(),
-        description: (fd.get('verification_description') || '').toString().trim(),
+        name: (fd.get('name') || '').toString().trim(),
+        description: (fd.get('description') || '').toString().trim(),
       }),
       apply: (data) => {
         const select = form.querySelector('#verification_method_id');

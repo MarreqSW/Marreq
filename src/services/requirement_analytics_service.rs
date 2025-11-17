@@ -102,9 +102,9 @@ impl<'a> RequirementAnalyticsService<'a> {
 
         // Execute the grouped aggregation with optional filters expressed as bind parameters.
         let query = diesel::sql_query(
-            "SELECT LOWER(TRIM(rs.req_st_title)) AS status, COUNT(*)::BIGINT AS total
+            "SELECT LOWER(TRIM(rs.title)) AS status, COUNT(*)::BIGINT AS total
              FROM requirements r
-             INNER JOIN requirement_status rs ON rs.req_st_id = r.current_status_id
+             INNER JOIN requirement_status rs ON rs.id = r.current_status_id
              WHERE r.project_id = $1
                AND ($2 IS NULL OR r.current_status_id = $2)
                AND ($3 IS NULL OR r.verification_method_id = $3)
@@ -142,7 +142,7 @@ impl<'a> RequirementAnalyticsService<'a> {
 
         let status_lookup: HashMap<i32, String> = statuses
             .into_iter()
-            .map(|status| (status.req_st_id, status.req_st_title))
+            .map(|status| (status.id, status.title))
             .collect();
 
         let mut counts: HashMap<String, i64> = HashMap::new();
@@ -240,14 +240,14 @@ mod tests {
         id: i32,
         project_id: i32,
         status_id: i32,
-        verification_id: i32,
+        verification_method_id: i32,
         category_id: i32,
     ) -> Requirement {
         Requirement {
             id,
             title: format!("Req {id}"),
             description: "desc".into(),
-            verification_method_id: verification_id,
+            verification_method_id,
             current_status_id: status_id,
             author_id: 1,
             reviewer_id: 1,
@@ -265,10 +265,10 @@ mod tests {
 
     fn status(id: i32, title: &str) -> RequirementStatus {
         RequirementStatus {
-            req_st_id: id,
-            req_st_title: title.into(),
-            req_st_description: format!("{title} description"),
-            req_st_short_name: title.chars().take(3).collect(),
+            id: id,
+            title: title.into(),
+            description: format!("{title} description"),
+            short_name: title.chars().take(3).collect(),
         }
     }
 

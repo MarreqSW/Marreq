@@ -17,28 +17,28 @@
                     <div class="card h-100 c-project-card c-card">
                         <div class="card-body c-card__body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title mb-0">{{project_name}}</h5>
+                                <h5 class="card-title mb-0">{{name}}</h5>
                                 <span class="badge {{project_status_badge}}">
-                                    {{project_status}}
+                                    {{status_id}}
                                 </span>
                             </div>
 
-                            {{#if project_description}}
-                                <p class="card-text text-muted c-card__text">{{project_description}}</p>
+                            {{#if description}}
+                                <p class="card-text text-muted c-card__text">{{description}}</p>
                             {{/if}}
 
                             <div class="c-project-card__meta">
                                 <small class="text-muted">
-                                    <i class="fas fa-calendar"></i> Created: {{project_creation_date}}
+                                    <i class="fas fa-calendar"></i> Created: {{creation_date}}
                                 </small>
                                 {{#if project_owner_name}}
                                     <br><small class="text-muted">
                                         <i class="fas fa-user"></i> Owner: {{project_owner_name}}
                                     </small>
                                 {{else}}
-                                    {{#if project_owner_id}}
+                                    {{#if owner_id}}
                                     <br><small class="text-muted">
-                                        <i class="fas fa-user"></i> Owner: {{project_owner_id}}
+                                        <i class="fas fa-user"></i> Owner: {{owner_id}}
                                     </small>
                                     {{/if}}
                                 {{/if}}
@@ -59,7 +59,7 @@
                                 <a href="/p/{{project_id}}/edit" class="btn btn-outline-secondary btn-sm c-project-card__action">
                                     <i class="fas fa-edit"></i> Edit
                                 </a>
-                                <button class="btn btn-outline-danger btn-sm js-delete-project c-project-card__action" type="button" data-project-id="{{project_id}}" data-project-name="{{project_name}}">
+                                <button class="btn btn-outline-danger btn-sm js-delete-project c-project-card__action" type="button" data-project-id="{{project_id}}" data-project-name="{{name}}">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                                 {{/if}}

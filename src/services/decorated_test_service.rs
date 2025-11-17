@@ -6,7 +6,7 @@
 
 use super::{RequirementService, StatusService, TestService};
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{DecoratedTest, NewTest, Test, User};
+use crate::models::{DecoratedTestCase, NewTestCase, TestCase, User};
 use crate::repository::errors::RepoError;
 
 /// High level operations for tests backed by the shared [`AppState`].
@@ -27,24 +27,24 @@ impl<'a> DecoratedTestService<'a> {
     }
 
     /// Retrieve all tests.
-    pub fn list_all(&self) -> Result<Vec<DecoratedTest>, RepoError> {
+    pub fn list_all(&self) -> Result<Vec<DecoratedTestCase>, RepoError> {
         self.decorate_vec(self.test_service.list_all()?)
     }
 
     /// Retrieve tests scoped to a project.
-    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<DecoratedTest>, RepoError> {
+    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<DecoratedTestCase>, RepoError> {
         self.decorate_vec(self.test_service.list_by_project(project_id)?)
     }
 
     /// Retrieve a single test by identifier.
-    pub fn get_by_id(&self, id: i32) -> Result<DecoratedTest, RepoError> {
+    pub fn get_by_id(&self, id: i32) -> Result<DecoratedTestCase, RepoError> {
         let test = self.test_service.get_by_id(id)?;
         self.decorate(&test)
     }
 
     /// Retrieve child tests for a given parent identifier.
-    pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<DecoratedTest>, RepoError> {
-        let children: Vec<Test> = self
+    pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<DecoratedTestCase>, RepoError> {
+        let children: Vec<TestCase> = self
             .test_service
             .list_all()?
             .into_iter()
@@ -57,30 +57,30 @@ impl<'a> DecoratedTestService<'a> {
     pub fn get_linked_to_requirement(
         &self,
         requirement_id: i32,
-    ) -> Result<Vec<DecoratedTest>, RepoError> {
+    ) -> Result<Vec<DecoratedTestCase>, RepoError> {
         self.decorate_vec(self.requirement_service.get_linked_tests(requirement_id)?)
     }
 
     /// Create a new test entry and log the action.
-    pub fn create(&self, actor: &User, payload: NewTest) -> Result<i32, RepoError> {
+    pub fn create(&self, actor: &User, payload: NewTestCase) -> Result<i32, RepoError> {
         self.test_service.create(actor, payload)
     }
 
     /// Update an existing test entry and log the change.
-    pub fn update(&self, actor: &User, id: i32, payload: NewTest) -> Result<Test, RepoError> {
+    pub fn update(&self, actor: &User, id: i32, payload: NewTestCase) -> Result<TestCase, RepoError> {
         self.test_service.update(actor, id, payload)
     }
 
     /// Delete a test entry and log the removal.
-    pub fn delete(&self, actor: &User, id: i32) -> Result<Test, RepoError> {
+    pub fn delete(&self, actor: &User, id: i32) -> Result<TestCase, RepoError> {
         self.test_service.delete(actor, id)
     }
 
-    fn decorate_vec(&self, tests: Vec<Test>) -> Result<Vec<DecoratedTest>, RepoError> {
+    fn decorate_vec(&self, tests: Vec<TestCase>) -> Result<Vec<DecoratedTestCase>, RepoError> {
         tests.iter().map(|t| self.decorate(t)).collect()
     }
 
-    fn decorate(&self, test: &Test) -> Result<DecoratedTest, RepoError> {
+    fn decorate(&self, test: &TestCase) -> Result<DecoratedTestCase, RepoError> {
         let status = self
             .status_service
             .get_test_status(test.test_status)
@@ -96,7 +96,7 @@ impl<'a> DecoratedTestService<'a> {
             String::new()
         };
 
-        Ok(DecoratedTest {
+        Ok(DecoratedTestCase {
             test_id: test.test_id,
             test_reference: test.test_reference.clone(),
             test_name: test.test_name.clone(),
@@ -114,7 +114,7 @@ impl<'a> DecoratedTestService<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Matrix, Requirement, TestStatus};
+    use crate::models::{Matrix, Requirement, TestCase, TestStatus};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -132,8 +132,8 @@ mod tests {
         }
     }
 
-    fn make_test(id: i32, parent: i32, status: i32) -> Test {
-        Test {
+    fn make_test(id: i32, parent: i32, status: i32) -> TestCase {
+        TestCase {
             test_id: id,
             test_name: format!("Test {id}"),
             test_description: "desc".into(),
@@ -200,7 +200,7 @@ mod tests {
                 req_id: 3,
                 req_title: "Req".into(),
                 req_description: String::new(),
-                req_verification: 0,
+                req_verification_method: 0,
                 req_current_status: 0,
                 req_author: 0,
                 req_reviewer: 0,

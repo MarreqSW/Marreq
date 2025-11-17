@@ -4,7 +4,7 @@ CREATE TABLE requirements
     req_id              SERIAL PRIMARY KEY,
     req_title           VARCHAR NOT NULL DEFAULT ' ',
     req_description     VARCHAR NOT NULL DEFAULT ' ',
-    req_verification    INTEGER NOT NULL DEFAULT 1,
+    req_verification_method    INTEGER NOT NULL DEFAULT 1,
     req_current_status  INTEGER NOT NULL DEFAULT 1,
     req_author          INTEGER NOT NULL DEFAULT 0,
     req_reviewer        INTEGER NOT NULL DEFAULT 0,

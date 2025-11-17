@@ -19,7 +19,7 @@ entity "Requirement" as req {
 ---
 * req_title
 * req_description
-* req_verification
+* req_verification_method
 * req_current_status
 * req_author
 * req_reviewer

@@ -2,7 +2,7 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{ActionType, EntityType, Matrix, NewMatrix, Requirement, Test, User};
+use crate::models::{ActionType, EntityType, Matrix, NewMatrix, Requirement, TestCase, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{
     MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsRepository,
@@ -340,7 +340,7 @@ pub enum SortOrder {
 /// Complete matrix view data ready for rendering
 pub struct MatrixView {
     pub requirements: Vec<Requirement>,
-    pub tests: Vec<Test>,
+    pub tests: Vec<TestCase>,
     pub links: HashSet<(i32, i32)>,
     pub total_requirements: i64,
     pub total_links: usize,
@@ -350,7 +350,7 @@ pub struct MatrixView {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::Test;
+    use crate::models::TestCase;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -431,7 +431,7 @@ mod tests {
                 req_id: 1,
                 req_title: "Test Requirement".to_string(),
                 req_description: String::new(),
-                req_verification: 1,
+                req_verification_method: 1,
                 req_current_status: 1,
                 req_author: 1,
                 req_reviewer: 1,
@@ -450,7 +450,7 @@ mod tests {
         // Add tests
         repo.tests.insert(
             10,
-            Test {
+            TestCase {
                 test_id: 10,
                 test_name: "Test 10".to_string(),
                 test_reference: "TST-10".to_string(),
@@ -463,7 +463,7 @@ mod tests {
         );
         repo.tests.insert(
             20,
-            Test {
+            TestCase {
                 test_id: 20,
                 test_name: "Test 20".to_string(),
                 test_reference: "TST-20".to_string(),
@@ -509,7 +509,7 @@ mod tests {
                 req_id: 1,
                 req_title: "Test, with \"quotes\"".to_string(),
                 req_description: String::new(),
-                req_verification: 1,
+                req_verification_method: 1,
                 req_current_status: 1,
                 req_author: 1,
                 req_reviewer: 1,
@@ -544,7 +544,7 @@ mod tests {
                 req_id: 1,
                 req_title: "Req 1".to_string(),
                 req_description: String::new(),
-                req_verification: 1,
+                req_verification_method: 1,
                 req_current_status: 1,
                 req_author: 1,
                 req_reviewer: 1,
@@ -563,7 +563,7 @@ mod tests {
         // Test with status 1
         repo.tests.insert(
             10,
-            Test {
+            TestCase {
                 test_id: 10,
                 test_name: "Test 10".to_string(),
                 test_reference: "TST-10".to_string(),
@@ -578,7 +578,7 @@ mod tests {
         // Test with status 2
         repo.tests.insert(
             20,
-            Test {
+            TestCase {
                 test_id: 20,
                 test_name: "Test 20".to_string(),
                 test_reference: "TST-20".to_string(),

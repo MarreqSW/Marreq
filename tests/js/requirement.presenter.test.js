@@ -276,7 +276,7 @@ describe('Requirement Presenter', () => {
           req_reference: 'REQ-001',
           req_description: 'Description',
           req_current_status: 'Draft',
-          req_verification: 'Analysis',
+          req_verification_method: 'Analysis',
           req_author: 'Admin',
           req_category: 'Systems',
           req_applicability: 'All Platforms',

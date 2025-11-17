@@ -642,7 +642,7 @@ function showDuplicateModal(requirement) {
   document.getElementById('dup_req_justification').value = requirement.req_justification || '';
   document.getElementById('dup_req_category').value = requirement.req_category || '';
   document.getElementById('dup_req_current_status').value = requirement.req_current_status || '';
-  document.getElementById('dup_req_verification').value = requirement.req_verification || '';
+  document.getElementById('dup_req_verification').value = requirement.req_verification_method || '';
   document.getElementById('dup_req_applicability').value = requirement.req_applicability || '';
   document.getElementById('dup_req_reviewer').value = requirement.req_reviewer || '';
   document.getElementById('dup_req_parent').value = requirement.req_parent || '0';
@@ -773,7 +773,7 @@ function initDuplicateForm() {
         req_justification: formData.get('req_justification') || '',
         req_category: parseInt(formData.get('req_category'), 10),
         req_current_status: parseInt(formData.get('req_current_status'), 10),
-        req_verification: parseInt(formData.get('req_verification'), 10),
+        req_verification_method: parseInt(formData.get('req_verification_method'), 10),
         req_applicability: parseInt(formData.get('req_applicability'), 10),
         req_reviewer: parseInt(formData.get('req_reviewer'), 10) || 0,
         req_parent: parseInt(formData.get('req_parent'), 10) || 0,

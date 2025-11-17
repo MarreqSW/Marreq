@@ -11,11 +11,11 @@ pub struct DieselRepoMock {
     pub statuses: HashMap<i32, Status>,
     pub requirement_statuses: HashMap<i32, RequirementStatus>,
     pub test_statuses: HashMap<i32, TestStatus>,
-    pub verifications: HashMap<i32, Verification>,
+    pub verifications: HashMap<i32, VerificationMethod>,
     pub categories: HashMap<i32, Category>,
     pub applicability: HashMap<i32, Applicability>,
     pub requirements: HashMap<i32, Requirement>,
-    pub tests: HashMap<i32, Test>,
+    pub tests: HashMap<i32, TestCase>,
     pub projects: HashMap<i32, Project>,
     pub matrices: Vec<Matrix>,
     pub project_members: Vec<ProjectMember>,
@@ -256,18 +256,18 @@ impl LookupRepository for DieselRepoMock {
             .collect())
     }
 
-    fn get_verification_all(&self) -> Result<Vec<Verification>, RepoError> {
+    fn get_verification_all(&self) -> Result<Vec<VerificationMethod>, RepoError> {
         Ok(self.verifications.values().cloned().collect())
     }
 
-    fn get_verification_by_id(&self, id: i32) -> Result<Verification, RepoError> {
+    fn get_verification_by_id(&self, id: i32) -> Result<VerificationMethod, RepoError> {
         self.verifications
             .get(&id)
             .cloned()
             .ok_or(RepoError::NotFound)
     }
 
-    fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<Verification>, RepoError> {
+    fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<VerificationMethod>, RepoError> {
         Ok(self
             .verifications
             .values()
@@ -276,11 +276,11 @@ impl LookupRepository for DieselRepoMock {
             .collect())
     }
 
-    fn insert_new_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
+    fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError> {
         let id = new
             .verification_id
             .unwrap_or_else(|| self.verifications.keys().max().map(|i| i + 1).unwrap_or(1));
-        let verification = Verification {
+        let verification = VerificationMethod {
             verification_id: id,
             verification_name: new.verification_name.clone(),
             verification_description: new.verification_description.clone(),
@@ -393,7 +393,7 @@ impl RequirementsRepository for DieselRepoMock {
             req_id: id,
             req_title: _new.req_title.clone(),
             req_description: _new.req_description.clone(),
-            req_verification: _new.req_verification,
+            req_verification_method: _new.req_verification_method,
             req_current_status: _new.req_current_status,
             req_author: _new.req_author,
             req_reviewer: _new.req_reviewer,
@@ -417,7 +417,7 @@ impl RequirementsRepository for DieselRepoMock {
             Some(req) => {
                 req.req_title = _new.req_title.clone();
                 req.req_description = _new.req_description.clone();
-                req.req_verification = _new.req_verification;
+                req.req_verification_method = _new.req_verification_method;
                 req.req_current_status = _new.req_current_status;
                 req.req_author = _new.req_author;
                 req.req_reviewer = _new.req_reviewer;
@@ -450,15 +450,15 @@ impl RequirementsRepository for DieselRepoMock {
 }
 
 impl TestsRepository for DieselRepoMock {
-    fn get_test_by_id(&self, id: i32) -> Result<Test, RepoError> {
+    fn get_test_by_id(&self, id: i32) -> Result<TestCase, RepoError> {
         self.tests.get(&id).cloned().ok_or(RepoError::NotFound)
     }
 
-    fn get_tests_all(&self) -> Result<Vec<Test>, RepoError> {
+    fn get_tests_all(&self) -> Result<Vec<TestCase>, RepoError> {
         Ok(self.tests.values().cloned().collect())
     }
 
-    fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<Test>, RepoError> {
+    fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<TestCase>, RepoError> {
         Ok(self
             .tests
             .values()
@@ -480,7 +480,7 @@ impl TestsRepository for DieselRepoMock {
             .collect())
     }
 
-    fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<Test>, RepoError> {
+    fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<TestCase>, RepoError> {
         let ids: Vec<i32> = self
             .matrices
             .iter()
@@ -493,11 +493,11 @@ impl TestsRepository for DieselRepoMock {
             .collect())
     }
 
-    fn insert_test(&mut self, _new: &NewTest) -> Result<i32, RepoError> {
+    fn insert_test(&mut self, _new: &NewTestCase) -> Result<i32, RepoError> {
         let id = _new
             .test_id
             .unwrap_or_else(|| self.tests.keys().max().map(|i| i + 1).unwrap_or(1));
-        let test = Test {
+        let test = TestCase {
             test_id: id,
             test_name: _new.test_name.clone(),
             test_description: _new.test_description.clone(),
@@ -511,7 +511,7 @@ impl TestsRepository for DieselRepoMock {
         Ok(id)
     }
 
-    fn edit_test(&mut self, _new: &NewTest) -> Result<bool, RepoError> {
+    fn edit_test(&mut self, _new: &NewTestCase) -> Result<bool, RepoError> {
         let id = _new.test_id.ok_or(RepoError::NotFound)?;
         match self.tests.get_mut(&id) {
             Some(test) => {
@@ -527,7 +527,7 @@ impl TestsRepository for DieselRepoMock {
         }
     }
 
-    fn delete_test(&mut self, id: i32) -> Result<Test, RepoError> {
+    fn delete_test(&mut self, id: i32) -> Result<TestCase, RepoError> {
         self.tests.remove(&id).ok_or(RepoError::NotFound)
     }
 

@@ -183,7 +183,7 @@ When using `-o` option, the parser generates a JSON file with the parsed data:
     "req_category": "Security",
     "req_applicability": "All Systems",
     "req_current_status": "Draft",
-    "req_verification": "Test",
+    "req_verification_method": "Test",
     "req_author": "Alice",
     "req_reviewer": "Bob",
     "req_parent": null,

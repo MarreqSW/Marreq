@@ -1,7 +1,7 @@
 //! Service for managing verification methods attached to requirements.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{NewVerification, Verification};
+use crate::models::{NewVerificationMethod, VerificationMethod};
 use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 
@@ -17,14 +17,14 @@ impl<'a> VerificationService<'a> {
     }
 
     /// List verification methods scoped to a project.
-    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Verification>, RepoError> {
+    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<VerificationMethod>, RepoError> {
         self.state
             .repo_read()
             .get_verification_by_project(project_id)
     }
 
     /// Retrieve a verification method by identifier.
-    pub fn get_by_id(&self, id: i32) -> Result<Verification, RepoError> {
+    pub fn get_by_id(&self, id: i32) -> Result<VerificationMethod, RepoError> {
         self.state.repo_read().get_verification_by_id(id)
     }
 
@@ -34,7 +34,7 @@ impl<'a> VerificationService<'a> {
     }
 
     /// Create a new verification entry.
-    pub fn create(&self, mut payload: NewVerification) -> Result<i32, RepoError> {
+    pub fn create(&self, mut payload: NewVerificationMethod) -> Result<i32, RepoError> {
         sanitize(&mut payload.verification_name);
         sanitize(&mut payload.verification_description);
 
@@ -53,7 +53,7 @@ fn sanitize(value: &mut String) {
     *value = value.trim().to_string();
 }
 
-fn validate(payload: &NewVerification) -> Result<(), RepoError> {
+fn validate(payload: &NewVerificationMethod) -> Result<(), RepoError> {
     if payload.verification_name.is_empty() {
         return Err(RepoError::BadInput(
             "verification_name is required".to_string(),
@@ -108,7 +108,7 @@ mod tests {
         let state = state_with_repo(repo);
         let service = VerificationService::new(&state);
 
-        let payload = NewVerification {
+        let payload = NewVerificationMethod {
             verification_id: None,
             verification_name: "  Analysis ".into(),
             verification_description: "  Evaluate expected metrics  ".into(),
@@ -126,7 +126,7 @@ mod tests {
     fn reject_empty_payload() {
         let state = state_with_repo(DieselRepoMock::default());
         let service = VerificationService::new(&state);
-        let payload = NewVerification {
+        let payload = NewVerificationMethod {
             verification_id: None,
             verification_name: "".into(),
             verification_description: "".into(),

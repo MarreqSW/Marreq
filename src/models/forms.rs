@@ -23,7 +23,7 @@ pub struct NewRequirement {
     pub req_id: Option<i32>,
     pub req_title: String,
     pub req_description: String,
-    pub req_verification: i32,
+    pub req_verification_method: i32,
     pub req_author: i32,
     pub req_category: i32,
     pub req_current_status: i32,
@@ -78,7 +78,7 @@ pub struct NewStatus {
 #[diesel(table_name = verification)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(verification_id))]
-pub struct NewVerification {
+pub struct NewVerificationMethod {
     pub verification_id: Option<i32>,
     pub verification_name: String,
     pub verification_description: String,
@@ -122,12 +122,12 @@ pub struct UpdateUser {
     pub is_admin: bool,
 }
 
-/// Form used to create or update a [`Test`].
+/// Form used to create or update a [`TestCase`].
 #[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = tests)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct NewTest {
+pub struct NewTestCase {
     pub test_id: Option<i32>,
     pub test_reference: String,
     pub test_name: String,
@@ -302,7 +302,7 @@ impl_loggable!(
     app_id?,
     app_title
 );
-impl_loggable!(NewTest, EntityType::Test, test_id?, test_name);
+impl_loggable!(NewTestCase, EntityType::Test, test_id?, test_name);
 impl_loggable!(
     NewUser,
     EntityType::User,

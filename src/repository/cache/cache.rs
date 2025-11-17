@@ -214,7 +214,7 @@ impl Cache {
         self.remove(&keys::Requirements::by_project(project_id));
         self.remove(&keys::Tests::by_project(project_id));
         self.remove(&keys::Matrix::by_project(project_id));
-        self.remove(&keys::Verification::by_project(project_id));
+        self.remove(&keys::VerificationMethod::by_project(project_id));
         self.remove(&keys::Categories::by_project(project_id));
         self.remove(&keys::Applicability::by_project(project_id));
         self.remove(&keys::Projects::by_id(project_id));
@@ -269,7 +269,7 @@ impl Cache {
 
     /// Invalidate all verification-related cache entries
     pub fn invalidate_verification(&self, verification_id: i32) {
-        self.remove(&keys::Verification::by_id(verification_id));
+        self.remove(&keys::VerificationMethod::by_id(verification_id));
         self.remove(keys::VERIFICATION_ALL);
     }
 
@@ -373,7 +373,7 @@ mod tests {
         cache.set(&keys::Requirements::by_project(pid), "r".to_string());
         cache.set(&keys::Tests::by_project(pid), "t".to_string());
         cache.set(&keys::Matrix::by_project(pid), "m".to_string());
-        cache.set(&keys::Verification::by_project(pid), "v".to_string());
+        cache.set(&keys::VerificationMethod::by_project(pid), "v".to_string());
         cache.set(&keys::Categories::by_project(pid), "c".to_string());
         cache.set(&keys::Applicability::by_project(pid), "a".to_string());
         cache.set(&keys::Projects::by_id(pid), "p".to_string());
@@ -384,7 +384,7 @@ mod tests {
         assert!(cache.get(&keys::Requirements::by_project(pid)).is_none());
         assert!(cache.get(&keys::Tests::by_project(pid)).is_none());
         assert!(cache.get(&keys::Matrix::by_project(pid)).is_none());
-        assert!(cache.get(&keys::Verification::by_project(pid)).is_none());
+        assert!(cache.get(&keys::VerificationMethod::by_project(pid)).is_none());
         assert!(cache.get(&keys::Categories::by_project(pid)).is_none());
         assert!(cache.get(&keys::Applicability::by_project(pid)).is_none());
         assert!(cache.get(&keys::Projects::by_id(pid)).is_none());
@@ -477,10 +477,10 @@ mod tests {
     fn test_invalidate_verification_removes_related_keys() {
         let cache = Cache::new(300);
         let vid = 4;
-        cache.set(&keys::Verification::by_id(vid), "v".to_string());
+        cache.set(&keys::VerificationMethod::by_id(vid), "v".to_string());
         cache.set(keys::VERIFICATION_ALL, "va".to_string());
         cache.invalidate_verification(vid);
-        assert!(cache.get(&keys::Verification::by_id(vid)).is_none());
+        assert!(cache.get(&keys::VerificationMethod::by_id(vid)).is_none());
         assert!(cache.get(keys::VERIFICATION_ALL).is_none());
     }
 

@@ -521,16 +521,16 @@ impl LookupRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_verification_all(&self) -> Result<Vec<Verification>, RepoError> {
+    fn get_verification_all(&self) -> Result<Vec<VerificationMethod>, RepoError> {
         use schema::verification::dsl::*;
         let mut conn = self.get_conn()?;
         verification
             .order(verification_id)
-            .load::<Verification>(conn.as_mut())
+            .load::<VerificationMethod>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_verification_by_id(&self, id: i32) -> Result<Verification, RepoError> {
+    fn get_verification_by_id(&self, id: i32) -> Result<VerificationMethod, RepoError> {
         use schema::verification::dsl::*;
         let mut conn = self.get_conn()?;
         verification
@@ -545,21 +545,21 @@ impl LookupRepository for DieselRepo {
             })
     }
 
-    fn get_verification_by_project(&self, pid: i32) -> Result<Vec<Verification>, RepoError> {
+    fn get_verification_by_project(&self, pid: i32) -> Result<Vec<VerificationMethod>, RepoError> {
         use schema::verification::dsl::*;
         let mut conn = self.get_conn()?;
         verification
             .filter(project_id.eq(pid))
             .order(verification_id)
-            .load::<Verification>(conn.as_mut())
+            .load::<VerificationMethod>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn insert_new_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
+    fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
         let result = diesel::insert_into(schema::verification::table)
             .values(new)
-            .get_result::<Verification>(conn.as_mut())?;
+            .get_result::<VerificationMethod>(conn.as_mut())?;
         Ok(result.verification_id)
     }
 
@@ -741,7 +741,7 @@ impl RequirementsRepository for DieselRepo {
 }
 
 impl TestsRepository for DieselRepo {
-    fn get_test_by_id(&self, id: i32) -> Result<Test, RepoError> {
+    fn get_test_by_id(&self, id: i32) -> Result<TestCase, RepoError> {
         use schema::tests::dsl::*;
         let mut conn = self.get_conn()?;
         tests
@@ -756,25 +756,25 @@ impl TestsRepository for DieselRepo {
             })
     }
 
-    fn get_tests_all(&self) -> Result<Vec<Test>, RepoError> {
+    fn get_tests_all(&self) -> Result<Vec<TestCase>, RepoError> {
         use schema::tests::dsl::*;
         let mut conn = self.get_conn()?;
         tests
             .order(test_id)
-            .load::<Test>(conn.as_mut())
+            .load::<TestCase>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_tests_by_project(&self, project: i32) -> Result<Vec<Test>, RepoError> {
+    fn get_tests_by_project(&self, project: i32) -> Result<Vec<TestCase>, RepoError> {
         use schema::tests::dsl::*;
         let mut conn = self.get_conn()?;
         tests
             .filter(schema::tests::project_id.eq(project))
-            .load::<Test>(conn.as_mut())
+            .load::<TestCase>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_tests_for_requirement(&self, rid: i32) -> Result<Vec<Test>, RepoError> {
+    fn get_tests_for_requirement(&self, rid: i32) -> Result<Vec<TestCase>, RepoError> {
         use schema::matrix::dsl::{matrix, matrix_req_id, matrix_test_id};
         use schema::tests::dsl as t;
         let mut conn = self.get_conn()?;
@@ -791,7 +791,7 @@ impl TestsRepository for DieselRepo {
                 t::test_parent,
                 t::project_id,
             ))
-            .load::<Test>(conn.as_mut())
+            .load::<TestCase>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
@@ -806,7 +806,7 @@ impl TestsRepository for DieselRepo {
                 req_id,
                 req_title,
                 req_description,
-                req_verification,
+                req_verification_method,
                 req_current_status,
                 req_author,
                 req_reviewer,
@@ -824,15 +824,15 @@ impl TestsRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn insert_test(&mut self, new: &NewTest) -> Result<i32, RepoError> {
+    fn insert_test(&mut self, new: &NewTestCase) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
-        let res: Test = diesel::insert_into(schema::tests::table)
+        let res: TestCase = diesel::insert_into(schema::tests::table)
             .values(new)
             .get_result(conn.as_mut())?;
         Ok(res.test_id)
     }
 
-    fn edit_test(&mut self, new: &NewTest) -> Result<bool, RepoError> {
+    fn edit_test(&mut self, new: &NewTestCase) -> Result<bool, RepoError> {
         use crate::schema::tests::dsl::*;
         let mut conn = self.get_conn()?;
         let test_id_value = new
@@ -851,12 +851,12 @@ impl TestsRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_test(&mut self, id: i32) -> Result<Test, RepoError> {
+    fn delete_test(&mut self, id: i32) -> Result<TestCase, RepoError> {
         use crate::schema::tests::dsl::*;
         let mut conn = self.get_conn()?;
         let test = tests
             .filter(test_id.eq(id))
-            .get_result::<Test>(conn.as_mut())
+            .get_result::<TestCase>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
                     RepoError::NotFound

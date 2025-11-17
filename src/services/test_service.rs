@@ -5,7 +5,7 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{NewTest, Test, User};
+use crate::models::{NewTestCase, TestCase, User};
 use crate::repository::errors::RepoError;
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::TestsRepository;
@@ -21,33 +21,33 @@ impl<'a> TestService<'a> {
         Self { state }
     }
 
-    /// Retrieve all Test entries.
-    pub fn list_all(&self) -> Result<Vec<Test>, RepoError> {
+    /// Retrieve all TestCase entries.
+    pub fn list_all(&self) -> Result<Vec<TestCase>, RepoError> {
         self.state.repo_read().get_tests_all()
     }
 
-    /// Retrieve Test entries scoped to a project.
-    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Test>, RepoError> {
+    /// Retrieve TestCase entries scoped to a project.
+    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<TestCase>, RepoError> {
         self.state.repo_read().get_tests_by_project(project_id)
     }
 
-    /// Retrieve a single Test by identifier.
-    pub fn get_by_id(&self, id: i32) -> Result<Test, RepoError> {
+    /// Retrieve a single TestCase by identifier.
+    pub fn get_by_id(&self, id: i32) -> Result<TestCase, RepoError> {
         self.state.repo_read().get_test_by_id(id)
     }
 
     /// Get tests by status
-    pub async fn get_by_status(&self, _status_id: i32) -> Result<Vec<Test>, RepoError> {
+    pub async fn get_by_status(&self, _status_id: i32) -> Result<Vec<TestCase>, RepoError> {
         todo!()
     }
 
     /// Get tests by parent (hierarchical structure)
-    pub async fn get_by_parent(&self, _parent_id: i32) -> Result<Vec<Test>, RepoError> {
+    pub async fn get_by_parent(&self, _parent_id: i32) -> Result<Vec<TestCase>, RepoError> {
         todo!()
     }
 
     /// Create a new test entry and log the action.
-    pub fn create(&self, user: &User, new_test: NewTest) -> Result<i32, RepoError> {
+    pub fn create(&self, user: &User, new_test: NewTestCase) -> Result<i32, RepoError> {
         let id = {
             let mut repo = self.state.repo_write();
             repo.insert_test(&new_test)?
@@ -62,8 +62,8 @@ impl<'a> TestService<'a> {
         &self,
         user: &User,
         id: i32,
-        mut updated_test: NewTest,
-    ) -> Result<Test, RepoError> {
+        mut updated_test: NewTestCase,
+    ) -> Result<TestCase, RepoError> {
         let before = self.get_by_id(id)?;
 
         updated_test.test_id = Some(id);
@@ -81,7 +81,7 @@ impl<'a> TestService<'a> {
     }
 
     /// Delete an test entry and log the removal.
-    pub fn delete(&self, user: &User, id: i32) -> Result<Test, RepoError> {
+    pub fn delete(&self, user: &User, id: i32) -> Result<TestCase, RepoError> {
         let deleted = {
             let mut repo = self.state.repo_write();
             repo.delete_test(id)?
@@ -95,7 +95,7 @@ impl<'a> TestService<'a> {
         self.state.repo_read().inner_repo().get_conn()
     }
 
-    fn log_created(&self, user: &User, id: i32, entity: &NewTest) {
+    fn log_created(&self, user: &User, id: i32, entity: &NewTestCase) {
         if let Ok(mut conn) = self.db_connection() {
             let ctx = LogCtx::new(user.user_id);
             if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
@@ -105,7 +105,7 @@ impl<'a> TestService<'a> {
         }
     }
 
-    fn log_updated(&self, user: &User, before: &Test, after: &Test) {
+    fn log_updated(&self, user: &User, before: &TestCase, after: &TestCase) {
         if let Ok(mut conn) = self.db_connection() {
             let ctx = LogCtx::new(user.user_id);
             if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
@@ -118,7 +118,7 @@ impl<'a> TestService<'a> {
         }
     }
 
-    fn log_deleted(&self, user: &User, entity: &Test) {
+    fn log_deleted(&self, user: &User, entity: &TestCase) {
         if let Ok(mut conn) = self.db_connection() {
             let ctx = LogCtx::new(user.user_id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
@@ -148,8 +148,8 @@ mod tests {
         DieselRepoMock::make_user(1, "actor", "")
     }
 
-    fn test_case(id: i32, project_id: i32, reference: &str) -> Test {
-        Test {
+    fn test_case(id: i32, project_id: i32, reference: &str) -> TestCase {
+        TestCase {
             test_id: id,
             test_name: format!("Test {id}"),
             test_description: "desc".into(),
@@ -161,8 +161,8 @@ mod tests {
         }
     }
 
-    fn new_payload(project_id: i32) -> NewTest {
-        NewTest {
+    fn new_payload(project_id: i32) -> NewTestCase {
+        NewTestCase {
             test_id: None,
             test_reference: "TEST-1".into(),
             test_name: "Case".into(),

@@ -30,8 +30,8 @@ struct RequirementCreateForm {
     req_title: String,
     #[field(name = uncased("req_description"))]
     req_description: String,
-    #[field(name = uncased("req_verification"))]
-    req_verification: i32,
+    #[field(name = uncased("req_verification_method"))]
+    req_verification_method: i32,
     #[field(name = uncased("req_category"))]
     req_category: i32,
     #[field(name = uncased("req_current_status"))]
@@ -54,7 +54,7 @@ impl RequirementCreateForm {
             intent,
             req_id,
             req_description,
-            req_verification,
+            req_verification_method,
             req_category,
             req_current_status,
             req_parent,
@@ -69,7 +69,7 @@ impl RequirementCreateForm {
             req_id,
             req_title,
             req_description,
-            req_verification,
+            req_verification_method,
             req_author: author_id,
             req_category,
             req_current_status,
@@ -313,7 +313,7 @@ async fn show_requirement_id(
         "linked_tests": linked_tests,
         "verification": {
             "tool_id": requirement.req_verification_id,
-            "tool_name": requirement.req_verification.clone(),
+            "tool_name": requirement.req_verification_method.clone(),
             "counts": {
                 "total": linked_tests.len() as i32,
                 "passed": tests_passed,
@@ -542,7 +542,7 @@ async fn new_requirement(
         req_id: None,
         req_title: tr.map(|r| r.req_title.clone()).unwrap_or_default(),
         req_description: tr.map(|r| r.req_description.clone()).unwrap_or_default(),
-        req_verification: tr.map(|r| r.req_verification).unwrap_or_default(),
+        req_verification_method: tr.map(|r| r.req_verification_method).unwrap_or_default(),
         req_author: user.user_id,
         req_category: tr.map(|r| r.req_category).unwrap_or_default(),
         req_current_status: 0, // Draft
@@ -880,7 +880,7 @@ async fn create_verification_inline(
     let data = payload.into_inner();
 
     let verification_service = VerificationService::new(state.inner());
-    let new_verification = NewVerification {
+    let new_verification = NewVerificationMethod {
         verification_id: None,
         verification_name: data.name,
         verification_description: data.description,
@@ -1006,7 +1006,7 @@ mod tests {
 
         repo.verifications.insert(
             1,
-            Verification {
+            VerificationMethod {
                 verification_id: 1,
                 verification_name: "Analysis".into(),
                 verification_description: "".into(),
@@ -1033,7 +1033,7 @@ mod tests {
             req_id: id,
             req_title: format!("Requirement {id}"),
             req_description: "Test requirement".into(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_current_status: 1,
             req_author: ADMIN_ID,
             req_reviewer: ADMIN_ID,
@@ -1232,7 +1232,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "req_title=Test&req_description=Description&req_verification=1&\
+            "req_title=Test&req_description=Description&req_verification_method=1&\
              req_current_status=1&req_reviewer=1&\
              req_category=1&req_parent=0&req_applicability=1&req_reference=&\
              req_justification=Testing",
@@ -1258,7 +1258,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "req_title=Next+Requirement&req_description=Body&req_verification=1&\
+            "req_title=Next+Requirement&req_description=Body&req_verification_method=1&\
              req_current_status=1&req_reviewer=1&\
              req_category=1&req_parent=0&req_applicability=1&req_reference=&\
              req_justification=&intent=add_another",
@@ -1348,7 +1348,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/edit/1",
-            "req_id=1&req_title=Updated&req_description=New+desc&req_verification=1&\
+            "req_id=1&req_title=Updated&req_description=New+desc&req_verification_method=1&\
              req_current_status=1&req_author=1&req_reviewer=1&\
              req_category=1&req_parent=0&req_applicability=1&\
              req_justification=Changed&project_id=1&req_reference=REQ-SYS-1",
@@ -1434,7 +1434,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "req_title=&req_description=Test&req_verification=1&\
+            "req_title=&req_description=Test&req_verification_method=1&\
              req_current_status=1&req_reviewer=1&\
              req_category=1&req_parent=0&req_applicability=1&req_reference=",
             ADMIN_ID,
@@ -1451,7 +1451,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "req_title=Test&req_description=Body&req_verification=1&\
+            "req_title=Test&req_description=Body&req_verification_method=1&\
              req_current_status=1&req_reviewer=1&\
              req_category=1&req_parent=0&req_applicability=1&\
              req_reference=INVALID-FORMAT",
@@ -1471,7 +1471,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "req_title=Custom&req_description=Test&req_verification=1&\
+            "req_title=Custom&req_description=Test&req_verification_method=1&\
              req_current_status=1&req_reviewer=1&\
              req_category=1&req_parent=0&req_applicability=1&\
              req_reference=REQ-SYS-999",
@@ -1596,7 +1596,7 @@ mod tests {
             &client,
             "/p/1/requirements/edit/1",
             "req_id=1&req_title=Updated+Title&req_description=Updated+Description&\
-             req_verification=1&req_current_status=1&req_author=1&req_reviewer=1&\
+             req_verification_method=1&req_current_status=1&req_author=1&req_reviewer=1&\
              req_category=1&req_parent=0&req_applicability=1&\
              req_justification=Updated+Justification&project_id=1&req_reference=REQ-SYS-1",
             ADMIN_ID,
@@ -1619,13 +1619,13 @@ mod tests {
         let mut req1 = sample_requirement(1);
         req1.req_current_status = 1;
         req1.req_category = 1;
-        req1.req_verification = 1;
+        req1.req_verification_method = 1;
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
         req2.req_current_status = 2;
         req2.req_category = 1;
-        req2.req_verification = 1;
+        req2.req_verification_method = 1;
         req2.req_reference = "REQ-SYS-2".into();
         repo.requirements.insert(2, req2);
 
@@ -1803,7 +1803,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/edit/1",
-            "req_id=1&req_title=Hack&req_description=Test&req_verification=1&\
+            "req_id=1&req_title=Hack&req_description=Test&req_verification_method=1&\
              req_current_status=1&req_author=1&req_reviewer=1&\
              req_category=1&req_parent=0&req_applicability=1&\
              req_justification=&project_id=1&req_reference=REQ-SYS-1",

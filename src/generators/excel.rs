@@ -37,11 +37,11 @@ pub fn create_matrix_workbook(
     let all_tests = if let Some(selected_pid) = selected_project_id {
         tests
             .filter(crate::schema::tests::project_id.eq(selected_pid))
-            .load::<Test>(connection.as_mut())
+            .load::<TestCase>(connection.as_mut())
             .map_err(|e| format!("Error querying tests by project: {:?}", e))?
     } else {
         tests
-            .load::<Test>(connection.as_mut())
+            .load::<TestCase>(connection.as_mut())
             .map_err(|e| format!("Error querying tests: {:?}", e))?
     };
 
@@ -166,7 +166,7 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
         worksheet.write_string(row, 4, &req.req_category, None)?;
         worksheet.write_string(row, 5, &req.req_applicability, None)?;
         worksheet.write_string(row, 6, &req.req_current_status, None)?;
-        worksheet.write_string(row, 7, &req.req_verification, None)?;
+        worksheet.write_string(row, 7, &req.req_verification_method, None)?;
         worksheet.write_string(row, 8, &req.req_author, None)?;
         worksheet.write_string(row, 9, &req.req_reviewer, None)?;
         worksheet.write_string(row, 10, &req.req_creation_date, None)?;
@@ -191,7 +191,7 @@ pub fn create_tests_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let mut connection = DieselRepo::new().get_conn()?;
 
     let all_tests = tests
-        .load::<Test>(connection.as_mut())
+        .load::<TestCase>(connection.as_mut())
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
     // Decorate tests to get real names instead of IDs

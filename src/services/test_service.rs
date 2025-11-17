@@ -8,7 +8,7 @@ use crate::logger::{LogCtx, Logger};
 use crate::models::{NewTestCase, TestCase, User};
 use crate::repository::errors::RepoError;
 use crate::repository::PooledConnectionWrapper;
-use crate::repository::TestsRepository;
+use crate::repository::TestsCaseRepository;
 
 /// Service wrapper that provides test operations backed by the shared AppState.
 pub struct TestService<'a> {

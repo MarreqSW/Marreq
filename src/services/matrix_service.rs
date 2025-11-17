@@ -5,7 +5,7 @@ use crate::logger::{LogCtx, Logger};
 use crate::models::{ActionType, EntityType, Matrix, NewMatrix, Requirement, TestCase, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsRepository,
+    MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository,
 };
 use diesel::prelude::*;
 use std::collections::HashSet;

@@ -4,7 +4,7 @@ use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
     LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository, Repository,
-    RequirementsRepository, TestsRepository, UserRepository,
+    RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -262,7 +262,7 @@ impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
     }
 }
 
-impl<R: Repository> TestsRepository for CacheRepository<R> {
+impl<R: Repository> TestsCaseRepository for CacheRepository<R> {
     fn get_test_by_id(&self, id: i32) -> Result<TestCase, RepoError> {
         let key = keys::Tests::by_id(id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {

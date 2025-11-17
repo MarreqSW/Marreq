@@ -9,7 +9,7 @@ use crate::models::forms::{
 };
 use crate::repository::{
     LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository,
-    RequirementsRepository, TestsRepository, UserRepository,
+    RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use crate::schema;
 use diesel::pg::{upsert::excluded, PgConnection};
@@ -722,7 +722,7 @@ impl RequirementsRepository for DieselRepo {
     }
 }
 
-impl TestsRepository for DieselRepo {
+impl TestsCaseRepository for DieselRepo {
     fn get_test_by_id(&self, id: i32) -> Result<TestCase, RepoError> {
         use schema::tests::dsl;
         let mut conn = self.get_conn()?;

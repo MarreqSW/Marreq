@@ -68,7 +68,7 @@ pub struct VerificationMethod {
 /// Link between a requirement and a test in the traceability matrix.
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Matrix {
+pub struct MatrixLink {
     pub req_id: i32,
     pub id: i32,
     pub creation_date: chrono::NaiveDateTime,
@@ -196,7 +196,7 @@ pub enum EntityType {
     Category,
     Applicability,
     User,
-    Matrix,
+    MatrixLink,
     Verification,
 }
 
@@ -209,7 +209,7 @@ impl std::fmt::Display for EntityType {
             EntityType::Category => write!(f, "CATEGORY"),
             EntityType::Applicability => write!(f, "APPLICABILITY"),
             EntityType::User => write!(f, "USER"),
-            EntityType::Matrix => write!(f, "MATRIX"),
+            EntityType::MatrixLink => write!(f, "MATRIX"),
             EntityType::Verification => write!(f, "VERIFICATION"),
         }
     }
@@ -225,7 +225,7 @@ impl EntityType {
             EntityType::Category => "category",
             EntityType::Applicability => "applicability",
             EntityType::User => "user",
-            EntityType::Matrix => "matrix",
+            EntityType::MatrixLink => "matrix",
             EntityType::Verification => "verification",
         }
     }
@@ -285,7 +285,7 @@ impl fmt::Display for RequirementStatus {
     }
 }
 
-impl fmt::Display for Matrix {
+impl fmt::Display for MatrixLink {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,

@@ -1,9 +1,9 @@
 use crate::api::prelude::*;
-use crate::models::Matrix;
+use crate::models::MatrixLink;
 use crate::services::MatrixService;
 
 #[get("/matrix")]
-pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<Matrix>>> {
+pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<MatrixLink>>> {
     let service = MatrixService::new(state.inner());
     let entries = service.list_all()?;
     Ok(Json(entries))
@@ -36,9 +36,11 @@ mod tests {
     }
 
     #[rocket::async_test]
-    async fn list_returns_error_without_database() {
+    async fn list_returns_empty_without_data() {
         let client = test_client().await;
         let response = client.get("/api/matrix").dispatch().await;
-        assert_eq!(response.status(), Status::InternalServerError);
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.unwrap();
+        assert_eq!(body, "[]");
     }
 }

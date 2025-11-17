@@ -2,12 +2,11 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{ActionType, EntityType, Matrix, NewMatrix, Requirement, TestCase, User};
+use crate::models::{ActionType, EntityType, MatrixLink, NewMatrix, Requirement, TestCase, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{
     MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository,
 };
-use diesel::prelude::*;
 use std::collections::HashSet;
 
 /// High level matrix operations backed by the shared [`AppState`].
@@ -22,17 +21,23 @@ impl<'a> MatrixService<'a> {
     }
 
     /// Retrieve every matrix entry.
-    pub fn list_all(&self) -> Result<Vec<Matrix>, RepoError> {
-        use crate::schema::matrix::dsl::matrix;
-
-        let mut conn = self.db_connection()?;
-        matrix
-            .load::<Matrix>(conn.as_mut())
-            .map_err(RepoError::from)
+    /// Note: This collects from all projects since there's no get_matrix_all in the MatrixRepository trait.
+    pub fn list_all(&self) -> Result<Vec<MatrixLink>, RepoError> {
+        use crate::repository::ProjectsRepository;
+        
+        let repo = self.state.repo_write();
+        // Collect matrix links from all projects
+        let projects = repo.get_projects_all()?;
+        let mut all_links = Vec::new();
+        for project in projects {
+            let links = repo.get_matrix_by_project(project.id)?;
+            all_links.extend(links);
+        }
+        Ok(all_links)
     }
 
     /// Retrieve matrix entries scoped to a project.
-    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
+    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<MatrixLink>, RepoError> {
         self.state.repo_read().get_matrix_by_project(project_id)
     }
 
@@ -137,7 +142,7 @@ impl<'a> MatrixService<'a> {
                 conn.as_mut(),
                 &ctx,
                 ActionType::Create,
-                EntityType::Matrix,
+                EntityType::MatrixLink,
                 None,
                 Some(entity.project_id),
                 None,
@@ -373,25 +378,26 @@ mod tests {
     }
 
     #[test]
-    fn list_all_propagates_connection_error() {
+    fn list_all_returns_empty_when_no_projects() {
         let repo = DieselRepoMock::default();
         let state = state_with_repo(repo);
         let service = MatrixService::new(&state);
 
         let result = service.list_all();
-        assert!(matches!(result, Err(RepoError::Pool(_))));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0);
     }
 
     #[test]
     fn list_by_project_filters_results() {
         let mut repo = DieselRepoMock::default();
-        repo.matrices.push(Matrix {
+        repo.matrices.push(MatrixLink {
             req_id: 1,
             id: 10,
             creation_date: timestamp(),
             project_id: 7,
         });
-        repo.matrices.push(Matrix {
+        repo.matrices.push(MatrixLink {
             req_id: 2,
             id: 20,
             creation_date: timestamp(),
@@ -476,7 +482,7 @@ mod tests {
         );
 
         // Add matrix link
-        repo.matrices.push(Matrix {
+        repo.matrices.push(MatrixLink {
             req_id: 1,
             id: 10,
             creation_date: timestamp(),

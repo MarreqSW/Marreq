@@ -496,7 +496,7 @@ mod tests {
         };
         repo.requirements.insert(1, req);
         repo.tests.insert(10, test);
-        repo.matrices.push(Matrix {
+        repo.matrices.push(MatrixLink {
             req_id: 1,
             id: 10,
             creation_date: now,
@@ -533,7 +533,7 @@ mod tests {
         };
         repo.requirements.insert(2, req);
         // matrix for different requirement
-        repo.matrices.push(Matrix {
+        repo.matrices.push(MatrixLink {
             req_id: 99,
             id: 50,
             creation_date: now,
@@ -574,7 +574,7 @@ mod tests {
             project_id: 1,
         };
         repo.requirements.insert(3, req);
-        repo.matrices.push(Matrix {
+        repo.matrices.push(MatrixLink {
             req_id: 3,
             id: 999,
             creation_date: now,

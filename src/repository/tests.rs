@@ -127,8 +127,8 @@ mod tests {
         }
     }
 
-    fn create_test_matrix() -> Matrix {
-        Matrix {
+    fn create_test_matrix() -> MatrixLink {
+        MatrixLink {
             req_id: 1,
             id: 1,
             creation_date: test_datetime(),

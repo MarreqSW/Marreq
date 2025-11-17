@@ -107,7 +107,7 @@ impl<'a> RequirementAnalyticsService<'a> {
              INNER JOIN requirement_status rs ON rs.req_st_id = r.req_current_status
              WHERE r.project_id = $1
                AND ($2 IS NULL OR r.req_current_status = $2)
-               AND ($3 IS NULL OR r.req_verification = $3)
+               AND ($3 IS NULL OR r.req_verification_method = $3)
                AND ($4 IS NULL OR r.req_category = $4)
                AND ($5 IS NULL OR r.req_applicability = $5)
              GROUP BY status",
@@ -155,7 +155,7 @@ impl<'a> RequirementAnalyticsService<'a> {
                 }
             }
             if let Some(filter) = verification_filter {
-                if requirement.req_verification != filter {
+                if requirement.req_verification_method != filter {
                     continue;
                 }
             }
@@ -247,7 +247,7 @@ mod tests {
             req_id,
             req_title: format!("Req {req_id}"),
             req_description: "desc".into(),
-            req_verification: verification_id,
+            req_verification_method: verification_id,
             req_current_status: status_id,
             req_author: 1,
             req_reviewer: 1,

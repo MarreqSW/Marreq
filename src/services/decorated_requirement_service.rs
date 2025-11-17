@@ -9,7 +9,7 @@ use super::{
     VerificationService,
 };
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{DecoratedRequirement, NewRequirement, Requirement, Test, User};
+use crate::models::{DecoratedRequirement, NewRequirement, Requirement, TestCase, User};
 use crate::repository::errors::RepoError;
 
 /// High level operations for requirements backed by the shared [`AppState`].
@@ -72,7 +72,7 @@ impl<'a> DecoratedRequirementService<'a> {
         self.decorate_vec(self.requirement_service.get_by_parent_id(parent_id)?)
     }
 
-    pub fn get_linked_tests(&self, id: i32) -> Result<Vec<Test>, RepoError> {
+    pub fn get_linked_tests(&self, id: i32) -> Result<Vec<TestCase>, RepoError> {
         self.requirement_service.get_linked_tests(id)
     }
 
@@ -103,9 +103,9 @@ impl<'a> DecoratedRequirementService<'a> {
     fn decorate(&self, req: &Requirement) -> Result<DecoratedRequirement, RepoError> {
         let verification = self
             .verification_service
-            .get_by_id(req.req_verification)
+            .get_by_id(req.req_verification_method)
             .map(|v| v.verification_name)
-            .unwrap_or_else(|_| format!("Unknown Verification ({})", req.req_verification));
+            .unwrap_or_else(|_| format!("Unknown Verification ({})", req.req_verification_method));
 
         let status = self
             .status_service
@@ -149,8 +149,8 @@ impl<'a> DecoratedRequirementService<'a> {
         Ok(DecoratedRequirement {
             req_id: req.req_id,
             req_title: req.req_title.clone(),
-            req_verification: verification,
-            req_verification_id: req.req_verification,
+            req_verification_method: verification,
+            req_verification_id: req.req_verification_method,
             req_description: req.req_description.clone(),
             req_current_status: status,
             req_current_status_id: req.req_current_status,

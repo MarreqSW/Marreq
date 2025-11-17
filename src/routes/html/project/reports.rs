@@ -1,7 +1,7 @@
 use super::helpers::*;
 use super::prelude::*;
 use crate::app::DieselCachedRepo;
-use crate::models::{Category, Requirement, Test, User};
+use crate::models::{Category, Requirement, TestCase, User};
 use std::collections::HashMap;
 
 fn round1(x: f64) -> f64 {
@@ -11,7 +11,7 @@ fn round1(x: f64) -> f64 {
 fn get_details(
     project_id: i32,
     repo: &DieselCachedRepo,
-) -> (Vec<Requirement>, Vec<Test>, Vec<Category>) {
+) -> (Vec<Requirement>, Vec<TestCase>, Vec<Category>) {
     (
         repo.get_requirements_by_project(project_id)
             .unwrap_or_default(),
@@ -166,7 +166,7 @@ pub fn routes() -> Vec<Route> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Category, Matrix, Project, ProjectMember, Requirement, Status, Test};
+    use crate::models::{Category, Matrix, Project, ProjectMember, Requirement, Status, TestCase};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
         client_with_routes, get_with_session, timestamp,
@@ -213,7 +213,7 @@ mod tests {
             req_id: id,
             req_title: format!("Requirement {id}"),
             req_description: "Test requirement".to_string(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_current_status: 1,
             req_author: ADMIN_ID,
             req_reviewer: ADMIN_ID,
@@ -229,8 +229,8 @@ mod tests {
         }
     }
 
-    fn sample_test(id: i32, status_id: i32, name: &str) -> Test {
-        Test {
+    fn sample_test(id: i32, status_id: i32, name: &str) -> TestCase {
+        TestCase {
             test_id: id,
             test_name: name.to_string(),
             test_description: "Validation test".to_string(),

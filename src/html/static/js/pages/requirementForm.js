@@ -408,7 +408,7 @@ function initInlineCreation(form) {
     },
     verification: {
       label: 'Verification method',
-      select: form.querySelector('#req_verification'),
+      select: form.querySelector('#req_verification_method'),
       modal: document.querySelector('#verificationModal'),
       form: document.querySelector('#inlineVerificationForm'),
       dropdown: form.querySelector('[data-dropdown="verification"]'),
@@ -418,7 +418,7 @@ function initInlineCreation(form) {
         description: (fd.get('verification_description') || '').toString().trim(),
       }),
       apply: (data) => {
-        const select = form.querySelector('#req_verification');
+        const select = form.querySelector('#req_verification_method');
         const dropdown = form.querySelector('[data-dropdown="verification"]');
         
         if (!select || !dropdown) {

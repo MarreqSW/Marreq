@@ -150,7 +150,7 @@ mod workflow_support {
 
         repo.verifications.insert(
             1,
-            Verification {
+            VerificationMethod {
                 verification_id: 1,
                 verification_name: "Analysis".into(),
                 verification_description: "".into(),
@@ -160,7 +160,7 @@ mod workflow_support {
 
         repo.verifications.insert(
             2,
-            Verification {
+            VerificationMethod {
                 verification_id: 2,
                 verification_name: "Testing".into(),
                 verification_description: "".into(),
@@ -225,7 +225,7 @@ async fn complete_requirement_lifecycle() {
         .private_cookie(session_cookie(1))
         .body(
             "req_title=System+Boot+Sequence&req_description=System+shall+boot+in+5+seconds&\
-               req_verification=1&req_current_status=1&req_reviewer=1&req_category=1&\
+               req_verification_method=1&req_current_status=1&req_reviewer=1&req_category=1&\
                req_parent=0&req_applicability=1&req_reference=&req_justification=Performance",
         )
         .dispatch()
@@ -275,7 +275,7 @@ async fn complete_requirement_lifecycle() {
         .private_cookie(session_cookie(1))
         .body(format!(
             "req_id={}&req_title=Updated+Boot+Sequence&req_description=System+shall+boot+in+3+seconds&\
-             req_verification=1&req_current_status=1&req_author=1&req_reviewer=1&req_category=1&\
+             req_verification_method=1&req_current_status=1&req_author=1&req_reviewer=1&req_category=1&\
              req_parent=0&req_applicability=1&req_justification=Updated+Performance&project_id=1&\
              req_reference=REQ-SYS-{:03}",
             req_id, req_id
@@ -334,7 +334,7 @@ async fn create_requirement_hierarchy() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=Parent+Requirement&req_description=Top+level&req_verification=1&\
+            "req_title=Parent+Requirement&req_description=Top+level&req_verification_method=1&\
                req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
                req_applicability=1&req_reference=&req_justification=",
         )
@@ -355,7 +355,7 @@ async fn create_requirement_hierarchy() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(format!(
-            "req_title=Child+Requirement&req_description=Derived&req_verification=1&\
+            "req_title=Child+Requirement&req_description=Derived&req_verification_method=1&\
              req_current_status=1&req_reviewer=1&req_category=1&req_parent={}&\
              req_applicability=1&req_reference=&req_justification=",
             parent_id
@@ -409,7 +409,7 @@ async fn filter_and_search_requirements() {
             req_id: i,
             req_title: format!("Requirement {}", i),
             req_description: format!("Description {}", i),
-            req_verification: if i % 2 == 0 { 1 } else { 2 },
+            req_verification_method: if i % 2 == 0 { 1 } else { 2 },
             req_current_status: if i <= 2 { 1 } else { 2 },
             req_author: 1,
             req_reviewer: 1,
@@ -503,7 +503,7 @@ async fn non_admin_cannot_delete_released_requirement() {
         req_id: 1,
         req_title: "Released Requirement".into(),
         req_description: "Cannot delete".into(),
-        req_verification: 1,
+        req_verification_method: 1,
         req_current_status: 3, // Released
         req_author: 1,
         req_reviewer: 1,
@@ -568,7 +568,7 @@ async fn create_requirement_with_inline_category() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(format!(
-            "req_title=Fast+Response&req_description=Response+time&req_verification=1&\
+            "req_title=Fast+Response&req_description=Response+time&req_verification_method=1&\
              req_current_status=1&req_reviewer=1&req_category={}&req_parent=0&\
              req_applicability=1&req_reference=&req_justification=",
             category_id
@@ -593,7 +593,7 @@ async fn create_multiple_requirements_with_add_another() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=First&req_description=First+req&req_verification=1&\
+            "req_title=First&req_description=First+req&req_verification_method=1&\
                req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
                req_applicability=1&req_reference=&req_justification=&intent=add_another",
         )
@@ -622,7 +622,7 @@ async fn create_multiple_requirements_with_add_another() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=Second&req_description=Second+req&req_verification=1&\
+            "req_title=Second&req_description=Second+req&req_verification_method=1&\
                req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
                req_applicability=1&req_reference=&req_justification=",
         )
@@ -658,7 +658,7 @@ async fn create_requirement_from_template() {
         req_id: 1,
         req_title: "Template Requirement".into(),
         req_description: "Template description with specific format".into(),
-        req_verification: 2,
+        req_verification_method: 2,
         req_current_status: 1,
         req_author: 1,
         req_reviewer: 1,
@@ -696,7 +696,7 @@ async fn create_requirement_from_template() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body("req_title=New+From+Template&req_description=Template+description+with+specific+format&\
-               req_verification=2&req_current_status=1&req_reviewer=1&req_category=2&req_parent=0&\
+               req_verification_method=2&req_current_status=1&req_reviewer=1&req_category=2&req_parent=0&\
                req_applicability=1&req_reference=&req_justification=Template+justification")
         .dispatch()
         .await;

@@ -15,7 +15,7 @@ pub struct DecoratedRequirement {
     pub req_id: i32,
     pub req_title: String,
     pub req_description: String,
-    pub req_verification: String,
+    pub req_verification_method: String,
     pub req_verification_id: i32,
     pub req_current_status: String,
     pub req_current_status_id: i32, // Add numeric status ID for access control
@@ -37,9 +37,9 @@ pub struct DecoratedRequirement {
     pub project_id: i32,
 }
 
-/// Test information with resolved foreign keys for presentation.
+/// Test case information with resolved foreign keys for presentation.
 #[derive(Serialize, Deserialize, Debug)]
-pub struct DecoratedTest {
+pub struct DecoratedTestCase {
     pub test_id: i32,
     pub test_reference: String,
     pub test_name: String,

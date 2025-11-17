@@ -45,8 +45,8 @@ impl ApiClient {
             .map_err(|e| format!("Failed to resolve status '{}': {}", req.req_current_status, e))?;
 
         // Resolve verification ID
-        let verification_id = self.resolve_verification(&req.req_verification).await
-            .map_err(|e| format!("Failed to resolve verification '{}': {}", req.req_verification, e))?;
+        let verification_id = self.resolve_verification(&req.req_verification_method).await
+            .map_err(|e| format!("Failed to resolve verification '{}': {}", req.req_verification_method, e))?;
 
         // Resolve author ID
         let author_id = self.resolve_user(&req.req_author).await
@@ -70,7 +70,7 @@ impl ApiClient {
             "req_category": category_id,
             "req_applicability": applicability_id,
             "req_current_status": status_id,
-            "req_verification": verification_id,
+            "req_verification_method": verification_id,
             "req_author": author_id,
             "req_reviewer": reviewer_id,
             "req_parent": parent_id.unwrap_or(0),

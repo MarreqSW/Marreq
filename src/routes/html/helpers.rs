@@ -9,7 +9,7 @@ use rocket::State;
 
 use crate::app::AppState;
 use crate::helper_functions::{decorators::decorate_tests_with_repo, get_selected_project_id};
-use crate::models::{Category, DecoratedTest, Project, ProjectMember, Requirement, Test, User};
+use crate::models::{Category, DecoratedTestCase, Project, ProjectMember, Requirement, TestCase, User};
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
     LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
@@ -217,7 +217,7 @@ pub(crate) fn decorate_projects_for_listing(
     decorated
 }
 
-pub(crate) fn decorate_tests_cached(state: &AppState, tests: Vec<Test>) -> Vec<DecoratedTest> {
+pub(crate) fn decorate_tests_cached(state: &AppState, tests: Vec<TestCase>) -> Vec<DecoratedTestCase> {
     let repo = state.repo_read();
     decorate_tests_with_repo(&*repo, tests)
 }

@@ -10,7 +10,7 @@ pub struct RequirementPatch {
     pub req_title: Option<String>,
     pub req_description: Option<String>,
     pub req_current_status: Option<i32>,
-    pub req_verification: Option<i32>,
+    pub req_verification_method: Option<i32>,
     pub req_author: Option<i32>,
     pub req_reviewer: Option<i32>,
     pub req_category: Option<i32>,
@@ -61,7 +61,7 @@ pub async fn patch_requirement(
     let any_updates = patch.req_title.is_some()
         || patch.req_description.is_some()
         || patch.req_current_status.is_some()
-        || patch.req_verification.is_some()
+        || patch.req_verification_method.is_some()
         || patch.req_author.is_some()
         || patch.req_reviewer.is_some()
         || patch.req_category.is_some()
@@ -83,8 +83,8 @@ pub async fn patch_requirement(
     if let Some(v) = patch.req_current_status {
         requirement.req_current_status = v;
     }
-    if let Some(v) = patch.req_verification {
-        requirement.req_verification = v;
+    if let Some(v) = patch.req_verification_method {
+        requirement.req_verification_method = v;
     }
     if let Some(v) = patch.req_author {
         requirement.req_author = v;
@@ -103,7 +103,7 @@ pub async fn patch_requirement(
         req_id: Some(requirement.req_id),
         req_title: requirement.req_title.clone(),
         req_description: requirement.req_description.clone(),
-        req_verification: requirement.req_verification,
+        req_verification_method: requirement.req_verification_method,
         req_author: requirement.req_author,
         req_category: requirement.req_category,
         req_current_status: requirement.req_current_status,
@@ -165,7 +165,7 @@ mod tests {
             "req_id": null,
             "req_title": title,
             "req_description": format!("{title} description"),
-            "req_verification": 1,
+            "req_verification_method": 1,
             "req_author": 1,
             "req_category": 1,
             "req_current_status": 1,

@@ -87,7 +87,7 @@ diesel::table! {
         req_id -> Int4,
         req_title -> Varchar,
         req_description -> Varchar,
-        req_verification -> Int4,
+        req_verification_method -> Int4,
         req_current_status -> Int4,
         req_author -> Int4,
         req_reviewer -> Int4,

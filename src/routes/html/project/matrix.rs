@@ -118,7 +118,7 @@ async fn get_matrix(
 /// Build matrix rows with linkage information
 fn build_matrix_rows(
     reqs: &[Requirement],
-    tests: &[Test],
+    tests: &[TestCase],
     links: &HashSet<(i32, i32)>,
 ) -> (Vec<serde_json::Value>, usize) {
     use serde_json::json;
@@ -160,7 +160,7 @@ fn build_matrix_rows(
 }
 
 /// Build tests list with status names
-fn build_tests_with_status(tests: &[Test], state: &State<AppState>) -> Vec<serde_json::Value> {
+fn build_tests_with_status(tests: &[TestCase], state: &State<AppState>) -> Vec<serde_json::Value> {
     use serde_json::json;
 
     tests
@@ -271,8 +271,8 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Applicability, Category, Project, ProjectMember, Requirement, Status, Test,
-        TestStatus, Verification,
+        Applicability, Category, Project, ProjectMember, Requirement, Status, TestCase,
+        TestStatus, VerificationMethod,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
@@ -335,8 +335,8 @@ mod tests {
         }
     }
 
-    fn sample_verification(id: i32, title: &str) -> Verification {
-        Verification {
+    fn sample_verification(id: i32, title: &str) -> VerificationMethod {
+        VerificationMethod {
             verification_id: id,
             verification_name: title.to_string(),
             verification_description: format!("{title} verification"),
@@ -349,7 +349,7 @@ mod tests {
             req_id: id,
             req_title: format!("Requirement {id}"),
             req_description: "Test requirement".into(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_current_status: 1,
             req_author: ADMIN_ID,
             req_reviewer: ADMIN_ID,
@@ -446,7 +446,7 @@ mod tests {
                     req_id: i,
                     req_title: format!("Req {}", i),
                     req_description: String::new(),
-                    req_verification: 1,
+                    req_verification_method: 1,
                     req_current_status: 1,
                     req_author: 1,
                     req_reviewer: 1,
@@ -498,7 +498,7 @@ mod tests {
                 req_id: 1,
                 req_title: "Authentication Requirement".to_string(),
                 req_description: String::new(),
-                req_verification: 1,
+                req_verification_method: 1,
                 req_current_status: 1,
                 req_author: 1,
                 req_reviewer: 1,
@@ -520,7 +520,7 @@ mod tests {
                 req_id: 2,
                 req_title: "Database Requirement".to_string(),
                 req_description: String::new(),
-                req_verification: 1,
+                req_verification_method: 1,
                 req_current_status: 1,
                 req_author: 1,
                 req_reviewer: 1,
@@ -566,7 +566,7 @@ mod tests {
                 req_id: 1,
                 req_title: "Test Requirement".to_string(),
                 req_description: String::new(),
-                req_verification: 1,
+                req_verification_method: 1,
                 req_current_status: 1,
                 req_author: 1,
                 req_reviewer: 1,
@@ -584,7 +584,7 @@ mod tests {
 
         repo.tests.insert(
             1,
-            Test {
+            TestCase {
                 test_id: 1,
                 test_name: "Test 1".to_string(),
                 test_reference: "TST-1".to_string(),
@@ -617,7 +617,7 @@ mod tests {
                 req_id: 1,
                 req_title: "Test, with \"quotes\"".to_string(),
                 req_description: String::new(),
-                req_verification: 1,
+                req_verification_method: 1,
                 req_current_status: 1,
                 req_author: 1,
                 req_reviewer: 1,
@@ -667,7 +667,7 @@ mod tests {
                 req_id: 1,
                 req_title: "Unlinked Requirement".to_string(),
                 req_description: String::new(),
-                req_verification: 1,
+                req_verification_method: 1,
                 req_current_status: 1,
                 req_author: 1,
                 req_reviewer: 1,
@@ -685,7 +685,7 @@ mod tests {
 
         repo.tests.insert(
             1,
-            Test {
+            TestCase {
                 test_id: 1,
                 test_name: "Test 1".to_string(),
                 test_reference: "TST-1".to_string(),

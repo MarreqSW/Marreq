@@ -116,7 +116,7 @@ CREATE TABLE requirements (
     req_id SERIAL PRIMARY KEY,
     req_title VARCHAR NOT NULL DEFAULT ' ',
     req_description VARCHAR NOT NULL DEFAULT ' ',
-    req_verification INTEGER NOT NULL DEFAULT 1,
+    req_verification_method INTEGER NOT NULL DEFAULT 1,
     req_current_status INTEGER NOT NULL DEFAULT 1,
     req_author INTEGER NOT NULL DEFAULT 0,
     req_reviewer INTEGER NOT NULL DEFAULT 0,
@@ -335,7 +335,7 @@ INSERT INTO verification (verification_name, verification_description, project_i
     ('Test', 'Controlled verification with predefined inputs and expected outputs', 1);
 
 -- Requirements for Space Project
-INSERT INTO requirements (req_title, req_description, req_reference, req_category, req_applicability, req_current_status, req_verification, req_author, req_reviewer, req_parent, req_link, req_creation_date, req_update_date, req_deadline_date, project_id) VALUES
+INSERT INTO requirements (req_title, req_description, req_reference, req_category, req_applicability, req_current_status, req_verification_method, req_author, req_reviewer, req_parent, req_link, req_creation_date, req_update_date, req_deadline_date, project_id) VALUES
     ('REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations under AM0 illumination conditions', 'REQ-PWR-001', 1, 1, 1, 1, 1, 2, 0, 'https://spacecorp.com/power-specs', '2024-01-15', '2024-01-15', '2024-06-30', 1),
     ('REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse periods', 'REQ-PWR-002', 1, 1, 2, 1, 1, 2, 0, '', '2024-01-15', '2024-01-20', '2024-07-15', 1),
     ('REQ-COMM-001', 'The satellite shall maintain continuous communication with ground stations during 90% of each orbit period', 'REQ-COMM-001', 2, 1, 3, 1, 1, 2, 0, '', '2024-01-16', '2024-01-16', '2024-08-15', 1),

@@ -120,7 +120,7 @@ mod test_support {
 
         repo.verifications.insert(
             1,
-            Verification {
+            VerificationMethod {
                 verification_id: 1,
                 verification_name: "Analysis".into(),
                 verification_description: "".into(),
@@ -147,7 +147,7 @@ mod test_support {
             req_id: id,
             req_title: format!("Requirement {id}"),
             req_description: "Test requirement".into(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_current_status: 1,
             req_author: 1,
             req_reviewer: 1,
@@ -332,7 +332,7 @@ async fn new_requirement_form_has_required_fields() {
         "Missing category field"
     );
     assert!(
-        html.contains("name=\"req_verification\""),
+        html.contains("name=\"req_verification_method\""),
         "Missing verification field"
     );
     assert!(
@@ -434,7 +434,7 @@ async fn create_requirement_redirects_to_detail_page() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=New+Req&req_description=Body&req_verification=1&\
+            "req_title=New+Req&req_description=Body&req_verification_method=1&\
                req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
                req_applicability=1&req_reference=&req_justification=",
         )
@@ -461,7 +461,7 @@ async fn create_requirement_with_add_another_redirects_to_form() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=Test&req_description=Body&req_verification=1&\
+            "req_title=Test&req_description=Body&req_verification_method=1&\
                req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
                req_applicability=1&req_reference=&req_justification=&intent=add_another",
         )
@@ -494,7 +494,7 @@ async fn edit_requirement_redirects_to_detail_page() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_id=1&req_title=Updated&req_description=Body&req_verification=1&\
+            "req_id=1&req_title=Updated&req_description=Body&req_verification_method=1&\
                req_current_status=1&req_author=1&req_reviewer=1&req_category=1&\
                req_parent=0&req_applicability=1&req_justification=&project_id=1&\
                req_reference=REQ-SYS-001",

@@ -263,20 +263,20 @@ impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
 }
 
 impl<R: Repository> TestsRepository for CacheRepository<R> {
-    fn get_test_by_id(&self, id: i32) -> Result<Test, RepoError> {
+    fn get_test_by_id(&self, id: i32) -> Result<TestCase, RepoError> {
         let key = keys::Tests::by_id(id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
             self.inner.get_test_by_id(id)
         })
     }
 
-    fn get_tests_all(&self) -> Result<Vec<Test>, RepoError> {
+    fn get_tests_all(&self) -> Result<Vec<TestCase>, RepoError> {
         self.get_or_fetch(keys::TESTS_ALL, Duration::from_secs(300), || {
             self.inner.get_tests_all()
         })
     }
 
-    fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<Test>, RepoError> {
+    fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<TestCase>, RepoError> {
         let key = keys::Tests::by_project(project_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
             self.inner.get_tests_by_project(project_id)
@@ -290,21 +290,21 @@ impl<R: Repository> TestsRepository for CacheRepository<R> {
         })
     }
 
-    fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<Test>, RepoError> {
+    fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<TestCase>, RepoError> {
         let key = keys::LinkedTests::for_requirement(req_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
             self.inner.get_tests_for_requirement(req_id)
         })
     }
 
-    fn insert_test(&mut self, new: &NewTest) -> Result<i32, RepoError> {
+    fn insert_test(&mut self, new: &NewTestCase) -> Result<i32, RepoError> {
         let id = self.inner.insert_test(new)?;
         self.cache.invalidate_test(id);
         self.cache.invalidate_project(new.project_id);
         Ok(id)
     }
 
-    fn edit_test(&mut self, new: &NewTest) -> Result<bool, RepoError> {
+    fn edit_test(&mut self, new: &NewTestCase) -> Result<bool, RepoError> {
         let res = self.inner.edit_test(new)?;
         if let Some(id) = new.test_id {
             self.cache.invalidate_test(id);
@@ -313,7 +313,7 @@ impl<R: Repository> TestsRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_test(&mut self, id: i32) -> Result<Test, RepoError> {
+    fn delete_test(&mut self, id: i32) -> Result<TestCase, RepoError> {
         let test = self.inner.delete_test(id)?;
         self.cache.invalidate_test(id);
         self.cache.invalidate_project(test.project_id);
@@ -421,21 +421,21 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         })
     }
 
-    fn get_verification_all(&self) -> Result<Vec<Verification>, RepoError> {
+    fn get_verification_all(&self) -> Result<Vec<VerificationMethod>, RepoError> {
         self.get_or_fetch(keys::VERIFICATION_ALL, Duration::from_secs(600), || {
             self.inner.get_verification_all()
         })
     }
 
-    fn get_verification_by_id(&self, id: i32) -> Result<Verification, RepoError> {
-        let key = keys::Verification::by_id(id);
+    fn get_verification_by_id(&self, id: i32) -> Result<VerificationMethod, RepoError> {
+        let key = keys::VerificationMethod::by_id(id);
         self.get_or_fetch(&key, Duration::from_secs(600), || {
             self.inner.get_verification_by_id(id)
         })
     }
 
-    fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<Verification>, RepoError> {
-        let key = keys::Verification::by_project(project_id);
+    fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<VerificationMethod>, RepoError> {
+        let key = keys::VerificationMethod::by_project(project_id);
         self.get_or_fetch(&key, Duration::from_secs(600), || {
             self.inner.get_verification_by_project(project_id)
         })
@@ -447,7 +447,7 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         Ok(id)
     }
 
-    fn insert_new_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
+    fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_verification(new)?;
         self.cache.invalidate_verification(id);
         self.cache.invalidate_project(new.project_id);
@@ -586,7 +586,7 @@ mod tests {
             app_tag: "A".into(),
             project_id: 1,
         };
-        let ver = Verification {
+        let ver = VerificationMethod {
             verification_id: 1,
             verification_name: "Ver".into(),
             verification_description: "".into(),
@@ -605,7 +605,7 @@ mod tests {
             req_id: 1,
             req_title: "Req".into(),
             req_description: "".into(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_current_status: 1,
             req_author: 1,
             req_reviewer: 1,
@@ -619,7 +619,7 @@ mod tests {
             req_justification: None,
             project_id: 1,
         };
-        let test = Test {
+        let test = TestCase {
             test_id: 1,
             test_name: "Test".into(),
             test_description: "".into(),
@@ -883,7 +883,7 @@ mod tests {
             req_id: None,
             req_title: "R2".into(),
             req_description: "".into(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_author: 1,
             req_category: 1,
             req_current_status: 1,
@@ -901,7 +901,7 @@ mod tests {
             req_id: Some(rid),
             req_title: "R2".into(),
             req_description: "".into(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_author: 1,
             req_category: 1,
             req_current_status: 1,
@@ -940,7 +940,7 @@ mod tests {
         let tests = repo.get_tests_for_requirement(1).unwrap();
         assert_eq!(tests.len(), 1);
 
-        let new_test = NewTest {
+        let new_test = NewTestCase {
             test_id: None,
             test_name: "T2".into(),
             test_description: "".into(),
@@ -953,7 +953,7 @@ mod tests {
         let tid = repo.insert_test(&new_test).unwrap();
         assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
 
-        let edit_test = NewTest {
+        let edit_test = NewTestCase {
             test_id: Some(tid),
             test_name: "T2".into(),
             test_description: "".into(),

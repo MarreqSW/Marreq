@@ -5,7 +5,7 @@ pub const PROJECTS_NAV: &str = "projects:nav";
 pub const PROJECTS_ALL: &str = "projects:all";
 pub const STATUS_ALL: &str = "status:all";
 pub const REQUIREMENT_STATUS_ALL: &str = "requirement_status:all";
-pub const TEST_STATUS_ALL: &str = "test_status:all";
+pub const TEST_STATUS_ALL: &str = "status_id:all";
 pub const CATEGORIES_ALL: &str = "categories:all";
 pub const APPLICABILITY_ALL: &str = "applicability:all";
 pub const VERIFICATION_ALL: &str = "verification:all";
@@ -45,8 +45,8 @@ pub trait Keyspace {
     }
 
     #[inline]
-    fn for_user<I: Display>(user_id: I) -> String {
-        format!("{}:user:{}", Self::PREFIX, user_id)
+    fn for_user<I: Display>(id: I) -> String {
+        format!("{}:user:{}", Self::PREFIX, id)
     }
 }
 
@@ -90,7 +90,7 @@ impl Keyspace for Tests {
     const PREFIX: &'static str = "test";
 }
 impl Keyspace for TestStatus {
-    const PREFIX: &'static str = "test_status";
+    const PREFIX: &'static str = "status_id";
 }
 impl Keyspace for Matrix {
     const PREFIX: &'static str = "matrix";
@@ -163,7 +163,7 @@ mod tests {
         check_keyspace!(Requirements, "requirement");
         check_keyspace!(RequirementTitle, "requirement_title");
         check_keyspace!(Tests, "test");
-        check_keyspace!(TestStatus, "test_status");
+        check_keyspace!(TestStatus, "status_id");
         check_keyspace!(Matrix, "matrix");
         check_keyspace!(LinkedRequirements, "linked_tests");
         check_keyspace!(LinkedTests, "linked_requirements");

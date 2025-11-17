@@ -43,7 +43,7 @@ pub trait TestsRepository {
     fn get_test_by_id(&self, id: i32) -> Result<TestCase, RepoError>;
     fn get_tests_all(&self) -> Result<Vec<TestCase>, RepoError>;
     fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<TestCase>, RepoError>;
-    fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError>;
+    fn get_requirements_for_test(&self, id: i32) -> Result<Vec<Requirement>, RepoError>;
     fn get_tests_for_requirement(&self, id: i32) -> Result<Vec<TestCase>, RepoError>;
 
     fn insert_test(&mut self, new: &NewTestCase) -> Result<i32, RepoError>;
@@ -51,7 +51,7 @@ pub trait TestsRepository {
     fn delete_test(&mut self, id: i32) -> Result<TestCase, RepoError>;
     fn update_test_requirement_links(
         &mut self,
-        test_id: i32,
+        id: i32,
         requirement_ids: &[i32],
     ) -> Result<(), RepoError>;
 }
@@ -104,16 +104,16 @@ pub trait ProjectsRepository {
 
 pub trait ProjectMembersRepository {
     fn get_members_by_project(&self, project_id: i32) -> Result<Vec<ProjectMember>, RepoError>;
-    fn get_projects_for_user(&self, user_id: i32) -> Result<Vec<ProjectMember>, RepoError>;
+    fn get_projects_for_user(&self, id: i32) -> Result<Vec<ProjectMember>, RepoError>;
 
     fn add_project_member(&mut self, new: &NewProjectMember) -> Result<(), RepoError>;
     fn update_project_member_role(
         &mut self,
         project_id: i32,
-        user_id: i32,
+        id: i32,
         role: i32,
     ) -> Result<(), RepoError>;
-    fn remove_project_member(&mut self, project_id: i32, user_id: i32) -> Result<(), RepoError>;
+    fn remove_project_member(&mut self, project_id: i32, id: i32) -> Result<(), RepoError>;
 }
 
 pub trait MatrixRepository {

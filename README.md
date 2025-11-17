@@ -223,7 +223,7 @@ curl http://localhost:8000/api/v1/requirements
 # Create a new category
 curl -X POST http://localhost:8000/api/v1/categories \
   -H "Content-Type: application/json" \
-  -d '{"cat_title": "API", "cat_description": "API requirements", "cat_tag": "API"}'
+  -d '{"title": "API", "description": "API requirements", "tag": "API"}'
 
 # Export requirements to Excel
 curl -O http://localhost:8000/requirements.xls
@@ -435,7 +435,7 @@ docker exec reqman_db_1 psql -U rust -d postgres -c "DROP DATABASE IF EXISTS req
 docker exec reqman_db_1 psql -U rust -d reqman -c "\dt"
 
 # Check user creation
-docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT user_username, user_name, is_admin FROM users;"
+docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT username, name, is_admin FROM users;"
 
 # Verify sample data
 docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT COUNT(*) as requirements FROM requirements;"

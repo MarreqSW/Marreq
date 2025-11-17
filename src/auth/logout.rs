@@ -10,20 +10,20 @@ use rocket::http::CookieJar;
 /// is given, RFC 6265 says the default is the request’s path up to the rightmost “/”.
 pub fn logout_user(cookies: &CookieJar<'_>) {
     // Get user info before clearing cookies
-    let user_id = read_session_user_id(cookies);
+    let id = read_session_user_id(cookies);
 
     // Remove the session cookie
     clear_session_cookie(cookies);
 
     // Remove legacy cookies from previous versions if they exist
-    for legacy in &["username", "user_name"] {
+    for legacy in &["username", "name"] {
         let mut cookie = rocket::http::Cookie::new(*legacy, "");
         cookie.set_path("/");
         cookies.remove_private(cookie);
     }
 
     // Log logout if possible
-    if let Some(uid) = user_id {
+    if let Some(uid) = id {
         if let Ok(mut conn) = DieselRepo::new().get_conn() {
             let ctx = LogCtx::new(uid);
             let _ = Logger::log_logout(&mut conn, &ctx);
@@ -39,9 +39,9 @@ mod tests {
 
     #[get("/")]
     fn set_basic(cookies: &CookieJar<'_>) {
-        cookies.add_private(rocket::http::Cookie::new("user_id", "not-an-int"));
+        cookies.add_private(rocket::http::Cookie::new("id", "not-an-int"));
         cookies.add_private(rocket::http::Cookie::new("username", "alice"));
-        cookies.add_private(rocket::http::Cookie::new("user_name", "Alice"));
+        cookies.add_private(rocket::http::Cookie::new("name", "Alice"));
     }
 
     #[test]
@@ -54,17 +54,17 @@ mod tests {
 
         logout_user(&jar);
 
-        assert!(jar.get_pending("user_id").is_none());
+        assert!(jar.get_pending("id").is_none());
         assert!(jar.get_pending("username").is_none());
-        assert!(jar.get_pending("user_name").is_none());
+        assert!(jar.get_pending("name").is_none());
     }
 
     #[get("/")]
     fn set_with_other(cookies: &CookieJar<'_>) {
         cookies.add(rocket::http::Cookie::new("other", "ok"));
-        cookies.add_private(rocket::http::Cookie::new("user_id", "bad"));
+        cookies.add_private(rocket::http::Cookie::new("id", "bad"));
         cookies.add_private(rocket::http::Cookie::new("username", "bob"));
-        cookies.add_private(rocket::http::Cookie::new("user_name", "Bob"));
+        cookies.add_private(rocket::http::Cookie::new("name", "Bob"));
     }
 
     #[test]
@@ -76,9 +76,9 @@ mod tests {
 
         logout_user(&jar);
 
-        assert!(jar.get_pending("user_id").is_none());
+        assert!(jar.get_pending("id").is_none());
         assert!(jar.get_pending("username").is_none());
-        assert!(jar.get_pending("user_name").is_none());
+        assert!(jar.get_pending("name").is_none());
         assert!(jar.get_pending("other").is_some());
     }
 }

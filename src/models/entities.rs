@@ -37,10 +37,10 @@ pub struct Requirement {
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Category {
-    pub cat_id: i32,
-    pub cat_title: String,
-    pub cat_description: String,
-    pub cat_tag: String,
+    pub id: i32,
+    pub title: String,
+    pub description: String,
+    pub tag: String,
     pub project_id: i32,
 }
 
@@ -48,10 +48,10 @@ pub struct Category {
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Applicability {
-    pub app_id: i32,
-    pub app_title: String,
-    pub app_description: String,
-    pub app_tag: String,
+    pub id: i32,
+    pub title: String,
+    pub description: String,
+    pub tag: String,
     pub project_id: i32,
 }
 
@@ -60,21 +60,21 @@ pub struct Applicability {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 #[diesel(table_name = requirement_status)]
 pub struct RequirementStatus {
-    pub req_st_id: i32,
-    pub req_st_title: String,
-    pub req_st_description: String,
-    pub req_st_short_name: String,
+    pub id: i32,
+    pub title: String,
+    pub description: String,
+    pub short_name: String,
 }
 
 /// Possible status values for tests.
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(table_name = test_status)]
+#[diesel(table_name = status_id)]
 pub struct TestStatus {
-    pub test_st_id: i32,
-    pub test_st_title: String,
-    pub test_st_description: String,
-    pub test_st_short_name: String,
+    pub id: i32,
+    pub title: String,
+    pub description: String,
+    pub short_name: String,
 }
 
 // Keep the old Status struct for backward compatibility
@@ -90,9 +90,9 @@ pub struct Status {
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct VerificationMethod {
-    pub verification_id: i32,
-    pub verification_name: String,
-    pub verification_description: String,
+    pub id: i32,
+    pub name: String,
+    pub description: String,
     pub project_id: i32,
 }
 
@@ -100,22 +100,22 @@ pub struct VerificationMethod {
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Matrix {
-    pub matrix_req_id: i32,
-    pub matrix_test_id: i32,
-    pub matrix_creation_date: chrono::NaiveDateTime,
+    pub req_id: i32,
+    pub id: i32,
+    pub creation_date: chrono::NaiveDateTime,
     pub project_id: i32,
 }
 
 /// A system user that can access projects and manage requirements.
 #[derive(Serialize, Deserialize, Queryable, AsChangeset, Debug, Clone)]
 pub struct User {
-    pub user_id: i32,
-    pub user_username: String,
-    pub user_name: String,
-    pub user_email: String,
-    pub user_creation_date: chrono::NaiveDateTime,
-    pub user_last_login: chrono::NaiveDateTime,
-    pub user_password: String,
+    pub id: i32,
+    pub username: String,
+    pub name: String,
+    pub email: String,
+    pub creation_date: chrono::NaiveDateTime,
+    pub last_login: chrono::NaiveDateTime,
+    pub password_hash: String, // TODO: decouple from entity (leakage of security detail)
     pub is_admin: bool,
 }
 
@@ -123,13 +123,13 @@ pub struct User {
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct TestCase {
-    pub test_id: i32,
-    pub test_name: String,
-    pub test_reference: String,
-    pub test_description: String,
-    pub test_source: String,
-    pub test_status: i32,
-    pub test_parent: i32,
+    pub id: i32,
+    pub name: String,
+    pub reference_code: String,
+    pub description: String,
+    pub source: String,
+    pub status_id: i32,
+    pub parent_id: i32,
     pub project_id: i32,
 }
 
@@ -137,21 +137,21 @@ pub struct TestCase {
 #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 pub struct Project {
     pub project_id: i32,
-    pub project_name: String,
-    pub project_description: Option<String>,
-    pub project_creation_date: Option<chrono::NaiveDateTime>,
-    pub project_update_date: Option<chrono::NaiveDateTime>,
-    pub project_status: Option<String>,
-    pub project_owner_id: Option<i32>,
+    pub name: String,
+    pub description: Option<String>,
+    pub creation_date: Option<chrono::NaiveDateTime>,
+    pub update_date: Option<chrono::NaiveDateTime>,
+    pub status_id: Option<String>,
+    pub owner_id: Option<i32>,
 }
 
 /// Membership that links a user to a project with a specific role.
 #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::project_members)]
-#[diesel(primary_key(project_id, user_id))]
+#[diesel(primary_key(project_id, id))]
 pub struct ProjectMember {
     pub project_id: i32,
-    pub user_id: i32,
+    pub id: i32,
     pub role: i32,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
@@ -161,7 +161,7 @@ pub struct ProjectMember {
 #[derive(Queryable, Serialize, Deserialize, Debug)]
 pub struct Log {
     pub log_id: i32,
-    pub user_id: i32,
+    pub id: i32,
     pub action_type: String,
     pub entity_type: String,
     pub entity_id: Option<i32>,
@@ -295,7 +295,7 @@ impl fmt::Display for Category {
         write!(
             f,
             "<div class='category'>Category: {}</div>",
-            self.cat_title
+            self.title
         )
     }
 }
@@ -305,7 +305,7 @@ impl fmt::Display for Applicability {
         write!(
             f,
             "<div class='applicability'>Applicability: {}</div>",
-            self.app_title
+            self.title
         )
     }
 }
@@ -323,7 +323,7 @@ impl fmt::Display for Matrix {
             "
         <div class='matrixID'>Req ID: {}</div>
         <div class='matrixID'>Test ID: {}</div>",
-            self.matrix_req_id, self.matrix_test_id
+            self.req_id, self.id
         )
     }
 }
@@ -341,12 +341,12 @@ impl fmt::Display for TestCase {
         <div class='testParent'>Parent: {}</div>
         </div>
         ",
-            self.test_id,
-            self.test_id,
-            self.test_name,
-            self.test_description,
-            self.test_source,
-            self.test_parent
+            self.id,
+            self.id,
+            self.name,
+            self.description,
+            self.source,
+            self.parent_id
         )
     }
 }
@@ -390,9 +390,9 @@ macro_rules! impl_loggable {
     };
 }
 
-impl_loggable!(Project, EntityType::Project, project_id, project_name);
+impl_loggable!(Project, EntityType::Project, project_id, name);
 impl_loggable!(Requirement, EntityType::Requirement, id, title);
-impl_loggable!(Category, EntityType::Category, cat_id, cat_title);
-impl_loggable!(Applicability, EntityType::Applicability, app_id, app_title);
-impl_loggable!(TestCase, EntityType::Test, test_id, test_name);
-impl_loggable!(User, EntityType::User, user_id, user_username, no_project);
+impl_loggable!(Category, EntityType::Category, id, title);
+impl_loggable!(Applicability, EntityType::Applicability, id, title);
+impl_loggable!(TestCase, EntityType::Test, id, name);
+impl_loggable!(User, EntityType::User, id, username, no_project);

@@ -10,31 +10,31 @@
       <h3>User Details</h3>
     </div>
     <div class="card-body c-card__body">
-      <form method="post" action="/user/edit/{{users.user_id}}">
+      <form method="post" action="/user/edit/{{users.id}}">
         <div class="o-grid o-grid--two">
           <div class="form-group c-form-group">
-            <label for="user_name" class="form-label c-form-label">Full Name</label>
-            <input type="text" name="user_name" id="user_name" value="{{users.user_name}}" class="form-control c-form-control" required>
+            <label for="name" class="form-label c-form-label">Full Name</label>
+            <input type="text" name="name" id="name" value="{{users.name}}" class="form-control c-form-control" required>
           </div>
 
           <div class="form-group c-form-group">
-            <label for="user_username" class="form-label c-form-label">Username</label>
-            <input type="text" name="user_username" id="user_username" value="{{users.user_username}}" class="form-control c-form-control" required>
+            <label for="username" class="form-label c-form-label">Username</label>
+            <input type="text" name="username" id="username" value="{{users.username}}" class="form-control c-form-control" required>
           </div>
         </div>
 
         <div class="form-group c-form-group">
-          <label for="user_email" class="form-label c-form-label">Email Address</label>
-          <input type="email" name="user_email" id="user_email" value="{{users.user_email}}" class="form-control c-form-control" required>
+          <label for="email" class="form-label c-form-label">Email Address</label>
+          <input type="email" name="email" id="email" value="{{users.email}}" class="form-control c-form-control" required>
         </div>
 
         <input type="hidden" id="is_admin" name="is_admin" value="{{#if users.is_admin}}true{{else}}false{{/if}}">
 
-        <input type="hidden" id="user_id" name="user_id" value="{{users.user_id}}">
+        <input type="hidden" id="id" name="id" value="{{users.id}}">
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary">Update User</button>
-          <a href="/user/{{users.user_id}}/show" class="btn btn-outline">Cancel</a>
+          <a href="/user/{{users.id}}/show" class="btn btn-outline">Cancel</a>
           <a href="/admin/users" class="btn btn-outline">Back to User Management</a>
         </div>
       </form>

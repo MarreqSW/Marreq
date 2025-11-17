@@ -30,15 +30,15 @@ INSERT INTO requirements (title, description, current_status_id, author_id, refe
 
 CREATE TABLE users
 (
-    user_id              SERIAL PRIMARY KEY,
-    user_username        VARCHAR NOT NULL,
-    user_name            VARCHAR NOT NULL,
-    user_email           VARCHAR NOT NULL DEFAULT ' ',
-    user_creation_date   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    user_last_login      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id              SERIAL PRIMARY KEY,
+    username        VARCHAR NOT NULL,
+    name            VARCHAR NOT NULL,
+    email           VARCHAR NOT NULL DEFAULT ' ',
+    creation_date   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_login      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO users (user_username, user_name, user_email) VALUES
+INSERT INTO users (username, name, email) VALUES
     ('marius', 'Màrius Montón', 'marius.monton@gmail.com');
 ;
 
@@ -62,13 +62,13 @@ INSERT INTO status (st_title, st_description, st_short_name) VALUES
 
 CREATE TABLE categories
 (
-    cat_id            SERIAL PRIMARY KEY,
-    cat_title         VARCHAR NOT NULL DEFAULT ' ',
-    cat_description   VARCHAR NOT NULL DEFAULT ' ',
-    cat_tag           VARCHAR NOT NULL DEFAULT ' '
+    id            SERIAL PRIMARY KEY,
+    title         VARCHAR NOT NULL DEFAULT ' ',
+    description   VARCHAR NOT NULL DEFAULT ' ',
+    tag           VARCHAR NOT NULL DEFAULT ' '
 );
 
-INSERT INTO categories (cat_title, cat_description, cat_tag) VALUES
+INSERT INTO categories (title, description, tag) VALUES
     ('General', '', 'G'),
     ('System', '', 'SYS'),
     ('HW', '', 'HW'),
@@ -77,12 +77,12 @@ INSERT INTO categories (cat_title, cat_description, cat_tag) VALUES
 
 CREATE TABLE verification
 (
-    verification_id             SERIAL PRIMARY KEY,
-    verification_name           VARCHAR NOT NULL DEFAULT ' ',
-    verification_description    VARCHAR NOT NULL DEFAULT ' '
+    id             SERIAL PRIMARY KEY,
+    name           VARCHAR NOT NULL DEFAULT ' ',
+    description    VARCHAR NOT NULL DEFAULT ' '
 );
 
-INSERT INTO verification (verification_name, verification_description) VALUES
+INSERT INTO verification (name, description) VALUES
     ('Inspection', 'Nondestructive examination of a system'),
     ('Analisys', 'Verification of a product or system using models, calculations and testing equipment'),
     ('Demonstration', 'The manipulation of the product or system as it is intended to be used to verify that the results are as planned or expected.'),
@@ -90,12 +90,12 @@ INSERT INTO verification (verification_name, verification_description) VALUES
 
 CREATE TABLE tests
 (
-    test_id             SERIAL PRIMARY KEY,
-    test_name           VARCHAR NOT NULL DEFAULT ' ',
-    test_reference      VARCHAR NOT NULL DEFAULT ' ',
-    test_description    VARCHAR NOT NULL DEFAULT ' ',
-    test_source         VARCHAR NOT NULL DEFAULT ' ',
-    test_status         INTEGER NOT NULL DEFAULT 0,
-    test_parent         INTEGER NOT NULL DEFAULT 0
+    id             SERIAL PRIMARY KEY,
+    name           VARCHAR NOT NULL DEFAULT ' ',
+    reference_code      VARCHAR NOT NULL DEFAULT ' ',
+    description    VARCHAR NOT NULL DEFAULT ' ',
+    source         VARCHAR NOT NULL DEFAULT ' ',
+    status_id         INTEGER NOT NULL DEFAULT 0,
+    parent_id         INTEGER NOT NULL DEFAULT 0
 );
 

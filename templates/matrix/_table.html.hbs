@@ -35,15 +35,15 @@
             </a>
           </th>
           {{#each tests}}
-            <th class="text-center sortable c-table-sortable c-matrix-col c-matrix-col--test u-text-center" data-sort="test_{{test_id}}" data-column-id="test-{{test_id}}" scope="col" role="columnheader" style="min-width: 120px;">
+            <th class="text-center sortable c-table-sortable c-matrix-col c-matrix-col--test u-text-center" data-sort="test_{{id}}" data-column-id="test-{{id}}" scope="col" role="columnheader" style="min-width: 120px;">
               <a
-                href="/p/{{@root.selected_project_id}}/matrix?sort_by=test_{{test_id}}&sort_order=desc{{#if @root.test_status_filter}}&test_status_filter={{@root.test_status_filter}}{{/if}}{{#if @root.search}}&search={{@root.search}}{{/if}}&page={{@root.page}}&per_page={{@root.per_page}}"
+                href="/p/{{@root.selected_project_id}}/matrix?sort_by=test_{{id}}&sort_order=desc{{#if @root.test_status_filter}}&test_status_filter={{@root.test_status_filter}}{{/if}}{{#if @root.search}}&search={{@root.search}}{{/if}}&page={{@root.page}}&per_page={{@root.per_page}}"
                 class="text-decoration-none"
                 data-matrix-sort-link
-                aria-label="Sort by test {{test_reference}} - linked requirements first"
-                title="{{test_name}} - {{test_status}} (Click to show linked requirements first)"
+                aria-label="Sort by test {{reference_code}} - linked requirements first"
+                title="{{name}} - {{status_id}} (Click to show linked requirements first)"
               >
-                <span style="font-weight: 600; font-size: 0.875rem;">{{test_reference}}</span>
+                <span style="font-weight: 600; font-size: 0.875rem;">{{reference_code}}</span>
               </a>
             </th>
           {{/each}}
@@ -67,20 +67,20 @@
                   role="cell" 
                   data-column-id="test-{{@index}}"
                   data-req-id="{{../id}}"
-                  data-test-id="{{#with (lookup @root.tests @index)}}{{test_id}}{{/with}}"
+                  data-test-id="{{#with (lookup @root.tests @index)}}{{id}}{{/with}}"
                   data-linked="{{this.linked}}"
-                  data-test-status="{{this.test_status}}">
+                  data-test-status="{{this.status_id}}">
                 {{#if this.linked}}
-                  <div class="c-matrix-link-indicator" data-tooltip="Linked - Status: {{#if (eq this.test_status 7)}}Passed{{else if (eq this.test_status 6)}}Approved{{else if (eq this.test_status 1)}}Passed{{else}}In Progress{{/if}}">
-                    {{#if (eq this.test_status 7)}}
+                  <div class="c-matrix-link-indicator" data-tooltip="Linked - Status: {{#if (eq this.status_id 7)}}Passed{{else if (eq this.status_id 6)}}Approved{{else if (eq this.status_id 1)}}Passed{{else}}In Progress{{/if}}">
+                    {{#if (eq this.status_id 7)}}
                       <span class="c-matrix-status-dot status-passed" aria-label="Test passed" title="Test Passed">●</span>
-                    {{else if (eq this.test_status 1)}}
+                    {{else if (eq this.status_id 1)}}
                       <span class="c-matrix-status-dot status-passed" aria-label="Test passed" title="Test Passed">●</span>
-                    {{else if (eq this.test_status 6)}}
+                    {{else if (eq this.status_id 6)}}
                       <span class="c-matrix-status-dot status-approved" aria-label="Test approved" title="Test Approved">●</span>
-                    {{else if (eq this.test_status 2)}}
+                    {{else if (eq this.status_id 2)}}
                       <span class="c-matrix-status-dot status-in-progress" aria-label="Test in progress" title="In Progress">◐</span>
-                    {{else if (eq this.test_status 3)}}
+                    {{else if (eq this.status_id 3)}}
                       <span class="c-matrix-status-dot status-failed" aria-label="Test failed" title="Test Failed">✕</span>
                     {{else}}
                       <span class="c-matrix-status-dot status-pending" aria-label="Test pending" title="Pending">○</span>

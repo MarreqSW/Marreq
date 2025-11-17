@@ -192,8 +192,8 @@
             required
           >
             {{#each categories}}
-              <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../req.req_category_id)}}selected{{/if}}>
-                {{cat_title}}
+              <option value="{{id}}" data-tag="{{tag}}" {{#if (eq id ../req.req_category_id)}}selected{{/if}}>
+                {{title}}
               </option>
             {{/each}}
           </select>
@@ -208,8 +208,8 @@
             required
           >
             {{#each applicability}}
-              <option value="{{app_id}}" {{#if (eq app_id ../req.req_applicability_id)}}selected{{/if}}>
-                {{app_title}}
+              <option value="{{id}}" {{#if (eq id ../req.req_applicability_id)}}selected{{/if}}>
+                {{title}}
               </option>
             {{/each}}
           </select>
@@ -224,8 +224,8 @@
             required
           >
             {{#each verification}}
-              <option value="{{verification_id}}" {{#if (eq verification_id ../req.req_verification_id)}}selected{{/if}}>
-                {{verification_name}}
+              <option value="{{id}}" {{#if (eq id ../req.req_verification_id)}}selected{{/if}}>
+                {{name}}
               </option>
             {{/each}}
           </select>
@@ -260,8 +260,8 @@
             required
           >
             {{#each users}}
-              <option value="{{user_id}}" {{#if (eq user_id ../req.req_reviewer_id)}}selected{{/if}}>
-                {{user_name}}
+              <option value="{{id}}" {{#if (eq id ../req.req_reviewer_id)}}selected{{/if}}>
+                {{name}}
               </option>
             {{/each}}
           </select>

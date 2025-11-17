@@ -36,7 +36,7 @@ impl<'r> FromRequest<'r> for SessionUser {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let cookies = request.cookies();
 
-        let user_id = match read_session_user_id(cookies) {
+        let id = match read_session_user_id(cookies) {
             Some(id) => id,
             None => {
                 clear_session_cookie(cookies);
@@ -52,7 +52,7 @@ impl<'r> FromRequest<'r> for SessionUser {
         let result = rocket::tokio::task::spawn_blocking(move || {
             repo.read()
                 .expect("repo lock poisoned")
-                .get_user_by_id(user_id)
+                .get_user_by_id(id)
         })
         .await;
 
@@ -139,7 +139,7 @@ impl<'r> FromRequest<'r> for ApiUser {
         match request.guard::<SessionUser>().await {
             Outcome::Success(session_user) => {
                 let user = session_user.into_inner();
-                let log_ctx = LogCtx::from_request(user.user_id, request);
+                let log_ctx = LogCtx::from_request(user.id, request);
                 Outcome::Success(ApiUser { user, log_ctx })
             }
             Outcome::Error((status, ())) => Outcome::Error((status, ())),
@@ -236,7 +236,7 @@ impl<'r> FromRequest<'r> for ProjectAccess {
                 }
 
                 let repo = state.repo_read();
-                match repo.get_projects_for_user(user.user_id) {
+                match repo.get_projects_for_user(user.id) {
                     Ok(memberships) => {
                         if memberships
                             .iter()

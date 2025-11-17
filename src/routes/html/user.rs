@@ -53,7 +53,7 @@ async fn post_edit_profile(
 ) -> Redirect {
     let actor = session_user.into_inner();
     let mut user_data = user_form.into_inner();
-    user_data.user_id = Some(actor.user_id);
+    user_data.id = Some(actor.id);
     user_data.is_admin = actor.is_admin;
 
     let service = UserService::new(state.inner());
@@ -67,37 +67,37 @@ async fn post_edit_profile(
     }
 }
 
-#[get("/<user_id>/show")]
+#[get("/<id>/show")]
 async fn show_user_id(
     admin: AdminOnly,
-    user_id: i32,
+    id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let current_user = admin.into_inner();
     let service = UserService::new(state.inner());
 
     let user = service
-        .get_by_id(user_id)
+        .get_by_id(id)
         .map_err(|_| Redirect::to(uri!("/dashboard")))?;
 
     let ctx = json!({
         "user": current_user,
-        "user_name": user.user_name,
-        "user_username": user.user_username,
-        "user_email": user.user_email,
-        "user_id": user.user_id,
-        "user_creation_date": user.user_creation_date,
-        "user_last_login": user.user_last_login,
+        "name": user.name,
+        "username": user.username,
+        "email": user.email,
+        "id": user.id,
+        "creation_date": user.creation_date,
+        "last_login": user.last_login,
         "is_admin": user.is_admin
     });
 
     Ok(Template::render("user_by_id", ctx))
 }
 
-#[get("/<user_id>/edit?<error>")]
+#[get("/<id>/edit?<error>")]
 async fn edit_user(
     admin: AdminOnly,
-    user_id: i32,
+    id: i32,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<Template, Redirect> {
@@ -105,7 +105,7 @@ async fn edit_user(
     let service = UserService::new(state.inner());
 
     let user = service
-        .get_by_id(user_id)
+        .get_by_id(id)
         .map_err(|_| Redirect::to(uri!("/dashboard")))?;
 
     let ctx = json!({
@@ -117,21 +117,21 @@ async fn edit_user(
     Ok(Template::render("edit_user_by_id", ctx))
 }
 
-#[post("/<user_id>/edit", data = "<user_form>")]
+#[post("/<id>/edit", data = "<user_form>")]
 async fn post_edit_user(
     admin: AdminOnly,
-    user_id: i32,
+    id: i32,
     user_form: Form<UpdateUser>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let mut user_data = user_form.into_inner();
-    user_data.user_id = Some(user_id);
+    user_data.id = Some(id);
     let service = UserService::new(state.inner());
 
     match service.update_without_password(&admin.into_inner(), &user_data) {
-        Ok(_) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
+        Ok(_) => Ok(Redirect::to(uri!(show_user_id(id)))),
         Err(_) => Ok(Redirect::to(uri!(edit_user(
-            user_id = user_id,
+            id = id,
             error = Some("Failed to update user".to_string())
         )))),
     }
@@ -164,11 +164,11 @@ async fn post_user(
     let service = UserService::new(state.inner());
     let mut user_data = new_user.into_inner();
 
-    match hash_password(&user_data.user_password) {
+    match hash_password(&user_data.password_hash) {
         Ok(hashed_password) => {
-            user_data.user_password = hashed_password;
+            user_data.password_hash = hashed_password;
             match service.create(&admin.into_inner(), user_data) {
-                Ok(user_id) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
+                Ok(id) => Ok(Redirect::to(uri!(show_user_id(id)))),
                 Err(_) => Ok(Redirect::to(uri!(new_user(
                     error = Some("Failed to create user".to_string())
                 )))),
@@ -212,15 +212,15 @@ mod tests {
     fn make_admin() -> crate::models::User {
         let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
         admin.is_admin = true;
-        admin.user_name = "Admin User".into();
-        admin.user_email = "admin@example.com".into();
+        admin.name = "Admin User".into();
+        admin.email = "admin@example.com".into();
         admin
     }
 
     fn make_standard_user() -> crate::models::User {
         let mut user = DieselRepoMock::make_user(USER_ID, "jane", "");
-        user.user_name = "Jane Doe".into();
-        user.user_email = "jane@example.com".into();
+        user.name = "Jane Doe".into();
+        user.email = "jane@example.com".into();
         user
     }
 
@@ -351,7 +351,7 @@ mod tests {
             .post("/user/profile/edit")
             .header(ContentType::Form)
             .body(
-                "user_name=Jane+Updated&user_username=jane_updated&user_email=jane_updated%40example.com&is_admin=false&user_id=2",
+                "name=Jane+Updated&username=jane_updated&email=jane_updated%40example.com&is_admin=false&id=2",
             )
             .private_cookie(user_cookie())
             .dispatch()
@@ -366,8 +366,8 @@ mod tests {
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo_read();
         let updated = repo.get_user_by_id(USER_ID).expect("user");
-        assert_eq!(updated.user_name, "Jane Updated");
-        assert_eq!(updated.user_username, "jane_updated");
-        assert_eq!(updated.user_email, "jane_updated@example.com");
+        assert_eq!(updated.name, "Jane Updated");
+        assert_eq!(updated.username, "jane_updated");
+        assert_eq!(updated.email, "jane_updated@example.com");
     }
 }

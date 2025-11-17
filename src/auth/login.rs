@@ -21,12 +21,12 @@ pub fn login_user<R: Repository>(
     let user = authenticate_user(repo, &login_form.username, &login_form.password)?;
 
     // Store session information
-    set_session_cookie(cookies, user.user_id);
+    set_session_cookie(cookies, user.id);
 
     let mut conn = DieselRepo::new()
         .get_conn()
         .map_err(|e| AuthError::Db(e.to_string()))?;
-    let ctx = LogCtx::new(user.user_id);
+    let ctx = LogCtx::new(user.id);
     Logger::log_login(&mut conn, &ctx).map_err(|e| AuthError::Audit(e.to_string()))?;
 
     Ok(())
@@ -46,7 +46,7 @@ fn authenticate_user<R: Repository>(
         None => return Err(AuthError::InvalidCredentials),
     };
 
-    match super::verify_password(password, &user.user_password) {
+    match super::verify_password(password, &user.password_hash) {
         Ok(true) => Ok(user),
         Ok(false) => Err(AuthError::InvalidCredentials),
         Err(e) => Err(AuthError::Verify(e.to_string())),
@@ -68,7 +68,7 @@ mod tests {
         let got = authenticate_user(&repo, "alice", "secret");
         assert!(got.is_ok());
         let user = got.unwrap();
-        assert_eq!(user.user_username, "alice");
+        assert_eq!(user.username, "alice");
     }
 
     #[test]

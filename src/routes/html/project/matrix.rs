@@ -27,7 +27,7 @@ async fn get_matrix(
 
     // Build filter and pagination parameters
     let filters = MatrixFilters {
-        test_status: test_status_filter,
+        status_id: test_status_filter,
         req_status: req_status_filter,
         category: category_filter,
         applicability: applicability_filter,
@@ -130,8 +130,8 @@ fn build_matrix_rows(
                 .iter()
                 .map(|test| {
                     json!({ 
-                        "linked": links.contains(&(req.id, test.test_id)), 
-                        "test_status": test.test_status 
+                        "linked": links.contains(&(req.id, test.id)), 
+                        "status_id": test.status_id 
                     })
                 })
                 .collect();
@@ -151,7 +151,7 @@ fn build_matrix_rows(
         .map(|req| {
             tests
                 .iter()
-                .filter(|test| links.contains(&(req.id, test.test_id)))
+                .filter(|test| links.contains(&(req.id, test.id)))
                 .count()
         })
         .sum();
@@ -167,10 +167,10 @@ fn build_tests_with_status(tests: &[TestCase], state: &State<AppState>) -> Vec<s
         .iter()
         .map(|t| {
             json!({
-                "test_id": t.test_id,
-                "test_name": t.test_name,
-                "test_reference": t.test_reference,
-                "test_status": get_status_name_by_id_cached(state, t.test_status)
+                "id": t.id,
+                "name": t.name,
+                "reference_code": t.reference_code,
+                "status_id": get_status_name_by_id_cached(state, t.status_id)
             })
         })
         .collect()
@@ -216,7 +216,7 @@ async fn get_matrix_xls(
 
     println!(
         "User {} (id:{}) requested matrix export for project {}",
-        user.user_username, user.user_id, project_id
+        user.username, user.id, project_id
     );
 
     excel::create_matrix_workbook(cookies).map_err(|e| {
@@ -249,7 +249,7 @@ async fn get_matrix_csv(
 
     println!(
         "User {} (id:{}) requested CSV export for project {} with test status filter: {:?}",
-        user.user_username, user.user_id, project_id, test_status_filter
+        user.username, user.id, project_id, test_status_filter
     );
 
     let service = MatrixService::new(state.inner());
@@ -288,21 +288,21 @@ mod tests {
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
             project_id: id,
-            project_name: name.to_string(),
-            project_description: Some(format!("{name} project")),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("Active".to_string()),
-            project_owner_id: Some(ADMIN_ID),
+            name: name.to_string(),
+            description: Some(format!("{name} project")),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status_id: Some("Active".to_string()),
+            owner_id: Some(ADMIN_ID),
         }
     }
 
     fn sample_category(id: i32, title: &str) -> Category {
         Category {
-            cat_id: id,
-            cat_title: title.to_string(),
-            cat_description: format!("{title} systems"),
-            cat_tag: title.to_ascii_uppercase(),
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} systems"),
+            tag: title.to_ascii_uppercase(),
             project_id: PRIMARY_PROJECT,
         }
     }
@@ -318,28 +318,28 @@ mod tests {
 
     fn sample_test_status(id: i32, title: &str) -> TestStatus {
         TestStatus {
-            test_st_id: id,
-            test_st_title: title.to_string(),
-            test_st_description: format!("{title} status"),
-            test_st_short_name: title.to_ascii_uppercase(),
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} status"),
+            short_name: title.to_ascii_uppercase(),
         }
     }
 
     fn sample_applicability(id: i32, title: &str) -> Applicability {
         Applicability {
-            app_id: id,
-            app_title: title.to_string(),
-            app_description: format!("{title} applicability"),
-            app_tag: title.to_ascii_uppercase(),
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} applicability"),
+            tag: title.to_ascii_uppercase(),
             project_id: PRIMARY_PROJECT,
         }
     }
 
     fn sample_verification(id: i32, title: &str) -> VerificationMethod {
         VerificationMethod {
-            verification_id: id,
-            verification_name: title.to_string(),
-            verification_description: format!("{title} verification"),
+            id: id,
+            name: title.to_string(),
+            description: format!("{title} verification"),
             project_id: PRIMARY_PROJECT,
         }
     }
@@ -381,14 +381,14 @@ mod tests {
 
         repo.project_members.push(ProjectMember {
             project_id: PRIMARY_PROJECT,
-            user_id: ADMIN_ID,
+            id: ADMIN_ID,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),
         });
         repo.project_members.push(ProjectMember {
             project_id: PRIMARY_PROJECT,
-            user_id: USER_ID,
+            id: USER_ID,
             role: 3,
             created_at: timestamp(),
             updated_at: timestamp(),
@@ -585,13 +585,13 @@ mod tests {
         repo.tests.insert(
             1,
             TestCase {
-                test_id: 1,
-                test_name: "Test 1".to_string(),
-                test_reference: "TST-1".to_string(),
-                test_description: String::new(),
-                test_source: String::new(),
-                test_status: 1,
-                test_parent: 0,
+                id: 1,
+                name: "Test 1".to_string(),
+                reference_code: "TST-1".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: 0,
                 project_id: 1,
             },
         );
@@ -686,13 +686,13 @@ mod tests {
         repo.tests.insert(
             1,
             TestCase {
-                test_id: 1,
-                test_name: "Test 1".to_string(),
-                test_reference: "TST-1".to_string(),
-                test_description: String::new(),
-                test_source: String::new(),
-                test_status: 1,
-                test_parent: 0,
+                id: 1,
+                name: "Test 1".to_string(),
+                reference_code: "TST-1".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: 0,
                 project_id: 1,
             },
         );

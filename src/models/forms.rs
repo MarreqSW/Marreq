@@ -40,12 +40,12 @@ pub struct NewRequirement {
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = categories)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(primary_key(cat_id))]
+#[diesel(primary_key(id))]
 pub struct NewCategory {
-    pub cat_id: Option<i32>,
-    pub cat_title: String,
-    pub cat_description: String,
-    pub cat_tag: String,
+    pub id: Option<i32>,
+    pub title: String,
+    pub description: String,
+    pub tag: String,
     pub project_id: i32,
 }
 
@@ -54,12 +54,12 @@ pub struct NewCategory {
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = applicability)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(primary_key(app_id))]
+#[diesel(primary_key(id))]
 pub struct NewApplicability {
-    pub app_id: Option<i32>,
-    pub app_title: String,
-    pub app_description: String,
-    pub app_tag: String,
+    pub id: Option<i32>,
+    pub title: String,
+    pub description: String,
+    pub tag: String,
     pub project_id: i32,
 }
 
@@ -68,20 +68,20 @@ pub struct NewApplicability {
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = requirement_status)]
 pub struct NewStatus {
-    pub req_st_title: String,
-    pub req_st_description: String,
-    pub req_st_short_name: String,
+    pub title: String,
+    pub description: String,
+    pub short_name: String,
 }
 
 #[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm, Clone)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = verification)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(primary_key(verification_id))]
+#[diesel(primary_key(id))]
 pub struct NewVerificationMethod {
-    pub verification_id: Option<i32>,
-    pub verification_name: String,
-    pub verification_description: String,
+    pub id: Option<i32>,
+    pub name: String,
+    pub description: String,
     pub project_id: i32,
 }
 
@@ -91,8 +91,8 @@ pub struct NewVerificationMethod {
 #[diesel(table_name = matrix)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewMatrix {
-    pub matrix_req_id: i32,
-    pub matrix_test_id: i32,
+    pub req_id: i32,
+    pub id: i32,
     pub project_id: i32,
 }
 
@@ -101,13 +101,13 @@ pub struct NewMatrix {
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = users)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(primary_key(user_id))]
+#[diesel(primary_key(id))]
 pub struct NewUser {
-    pub user_id: Option<i32>,
-    pub user_username: String,
-    pub user_name: String,
-    pub user_email: String,
-    pub user_password: String,
+    pub id: Option<i32>,
+    pub username: String,
+    pub name: String,
+    pub email: String,
+    pub password_hash: String,
     pub is_admin: bool,
 }
 
@@ -115,10 +115,10 @@ pub struct NewUser {
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
 pub struct UpdateUser {
-    pub user_id: Option<i32>,
-    pub user_username: String,
-    pub user_name: String,
-    pub user_email: String,
+    pub id: Option<i32>,
+    pub username: String,
+    pub name: String,
+    pub email: String,
     pub is_admin: bool,
 }
 
@@ -128,13 +128,13 @@ pub struct UpdateUser {
 #[diesel(table_name = tests)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewTestCase {
-    pub test_id: Option<i32>,
-    pub test_reference: String,
-    pub test_name: String,
-    pub test_description: String,
-    pub test_source: String,
-    pub test_status: i32,
-    pub test_parent: i32,
+    pub id: Option<i32>,
+    pub reference_code: String,
+    pub name: String,
+    pub description: String,
+    pub source: String,
+    pub status_id: i32,
+    pub parent_id: i32,
     pub project_id: i32,
 }
 
@@ -143,12 +143,12 @@ pub struct NewTestCase {
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
 pub struct NewTestForm {
-    pub test_name: String,
-    pub test_reference: String,
-    pub test_description: String,
-    pub test_source: String,
-    pub test_status: i32,
-    pub test_parent: i32,
+    pub name: String,
+    pub reference_code: String,
+    pub description: String,
+    pub source: String,
+    pub status_id: i32,
+    pub parent_id: i32,
     pub test_req: Vec<i32>,
     pub project_id: i32,
 }
@@ -157,13 +157,13 @@ pub struct NewTestForm {
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
 pub struct EditTestForm {
-    pub test_id: i32,
-    pub test_reference: String,
-    pub test_name: String,
-    pub test_description: String,
-    pub test_source: String,
-    pub test_status: i32,
-    pub test_parent: i32,
+    pub id: i32,
+    pub reference_code: String,
+    pub name: String,
+    pub description: String,
+    pub source: String,
+    pub status_id: i32,
+    pub parent_id: i32,
     pub linked_requirements: Vec<i32>,
     pub project_id: i32,
 }
@@ -190,20 +190,20 @@ pub struct ChangePasswordForm {
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::schema::projects)]
 pub struct NewProject {
-    pub project_name: String,
-    pub project_description: Option<String>,
-    pub project_status: String,
-    pub project_owner_id: Option<i32>,
+    pub name: String,
+    pub description: Option<String>,
+    pub status_id: String,
+    pub owner_id: Option<i32>,
 }
 
 /// Form used to update a project's metadata.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
 pub struct UpdateProject {
-    pub project_name: String,
-    pub project_description: Option<String>,
-    pub project_status: String,
-    pub project_owner_id: Option<i32>,
+    pub name: String,
+    pub description: Option<String>,
+    pub status_id: String,
+    pub owner_id: Option<i32>,
 }
 
 /// Data required to create or update a project membership entry.
@@ -212,7 +212,7 @@ pub struct UpdateProject {
 #[diesel(table_name = crate::schema::project_members)]
 pub struct NewProjectMember {
     pub project_id: i32,
-    pub user_id: i32,
+    pub id: i32,
     pub role: i32,
 }
 
@@ -229,7 +229,7 @@ pub struct ImportMappingForm {
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::schema::logs)]
 pub struct NewLog {
-    pub user_id: i32,
+    pub id: i32,
     pub action_type: String,
     pub entity_type: String,
     pub entity_id: Option<i32>,
@@ -295,18 +295,18 @@ macro_rules! impl_loggable {
 }
 
 impl_loggable!(NewRequirement, EntityType::Requirement, id?, title);
-impl_loggable!(NewCategory, EntityType::Category, cat_id?, cat_title);
+impl_loggable!(NewCategory, EntityType::Category, id?, title);
 impl_loggable!(
     NewApplicability,
     EntityType::Applicability,
-    app_id?,
-    app_title
+    id?,
+    title
 );
-impl_loggable!(NewTestCase, EntityType::Test, test_id?, test_name);
+impl_loggable!(NewTestCase, EntityType::Test, id?, name);
 impl_loggable!(
     NewUser,
     EntityType::User,
-    user_id?,
-    user_username,
+    id?,
+    username,
     no_project
 );

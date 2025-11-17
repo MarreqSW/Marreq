@@ -7,7 +7,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center c-card__header">
                     <div>
                         <h1 class="h4 mb-0">Project Members</h1>
-                        <p class="text-muted mb-0">{{project.project_name}}</p>
+                        <p class="text-muted mb-0">{{project.name}}</p>
                     </div>
                     <span class="badge bg-primary bg-gradient">{{member_count}} Members</span>
                 </div>
@@ -43,7 +43,7 @@
                                         {{#if ../can_manage_members}}
                                             <td class="text-end">
                                                 {{#if can_remove}}
-                                                    <form method="post" action="/p/{{../project_id}}/members/{{user_id}}/remove" class="d-inline">
+                                                    <form method="post" action="/p/{{../project_id}}/members/{{id}}/remove" class="d-inline">
                                                         <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Remove this member from the project?">
                                                             <i class="fas fa-user-minus me-1"></i>Remove
                                                         </button>
@@ -95,10 +95,10 @@
                         <form method="post" action="/p/{{project_id}}/members" class="vstack gap-3">
                             <div>
                                 <label for="member-user" class="form-label c-form-label">User</label>
-                                <select id="member-user" name="user_id" class="form-select c-form-select c-form-control c-form-control--select" required>
+                                <select id="member-user" name="id" class="form-select c-form-select c-form-control c-form-control--select" required>
                                     <option value="" disabled selected>Select a user</option>
                                     {{#each available_users}}
-                                        <option value="{{user_id}}">{{label}}</option>
+                                        <option value="{{id}}">{{label}}</option>
                                     {{/each}}
                                 </select>
                             </div>

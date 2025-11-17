@@ -186,7 +186,7 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
 
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError> {
         let res = self.inner.update_user(user_data)?;
-        if let Some(id) = user_data.user_id {
+        if let Some(id) = user_data.id {
             self.cache.invalidate_user(id);
         }
         Ok(res)
@@ -194,7 +194,7 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
 
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError> {
         let res = self.inner.update_user_without_password(user_data)?;
-        if let Some(id) = user_data.user_id {
+        if let Some(id) = user_data.id {
             self.cache.invalidate_user(id);
         }
         Ok(res)
@@ -221,43 +221,43 @@ impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
         })
     }
 
-    fn get_projects_for_user(&self, user_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
-        let key = keys::ProjectMembers::for_user(user_id);
+    fn get_projects_for_user(&self, id: i32) -> Result<Vec<ProjectMember>, RepoError> {
+        let key = keys::ProjectMembers::for_user(id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_projects_for_user(user_id)
+            self.inner.get_projects_for_user(id)
         })
     }
 
     fn add_project_member(&mut self, new: &NewProjectMember) -> Result<(), RepoError> {
         self.inner.add_project_member(new)?;
         self.cache
-            .invalidate_project_membership(new.project_id, new.user_id);
+            .invalidate_project_membership(new.project_id, new.id);
         self.cache.invalidate_project(new.project_id);
-        self.cache.invalidate_user(new.user_id);
+        self.cache.invalidate_user(new.id);
         Ok(())
     }
 
     fn update_project_member_role(
         &mut self,
         project_id: i32,
-        user_id: i32,
+        id: i32,
         role: i32,
     ) -> Result<(), RepoError> {
         self.inner
-            .update_project_member_role(project_id, user_id, role)?;
+            .update_project_member_role(project_id, id, role)?;
         self.cache
-            .invalidate_project_membership(project_id, user_id);
+            .invalidate_project_membership(project_id, id);
         self.cache.invalidate_project(project_id);
-        self.cache.invalidate_user(user_id);
+        self.cache.invalidate_user(id);
         Ok(())
     }
 
-    fn remove_project_member(&mut self, project_id: i32, user_id: i32) -> Result<(), RepoError> {
-        self.inner.remove_project_member(project_id, user_id)?;
+    fn remove_project_member(&mut self, project_id: i32, id: i32) -> Result<(), RepoError> {
+        self.inner.remove_project_member(project_id, id)?;
         self.cache
-            .invalidate_project_membership(project_id, user_id);
+            .invalidate_project_membership(project_id, id);
         self.cache.invalidate_project(project_id);
-        self.cache.invalidate_user(user_id);
+        self.cache.invalidate_user(id);
         Ok(())
     }
 }
@@ -283,10 +283,10 @@ impl<R: Repository> TestsRepository for CacheRepository<R> {
         })
     }
 
-    fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        let key = keys::LinkedRequirements::for_test(test_id);
+    fn get_requirements_for_test(&self, id: i32) -> Result<Vec<Requirement>, RepoError> {
+        let key = keys::LinkedRequirements::for_test(id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_requirements_for_test(test_id)
+            self.inner.get_requirements_for_test(id)
         })
     }
 
@@ -306,7 +306,7 @@ impl<R: Repository> TestsRepository for CacheRepository<R> {
 
     fn edit_test(&mut self, new: &NewTestCase) -> Result<bool, RepoError> {
         let res = self.inner.edit_test(new)?;
-        if let Some(id) = new.test_id {
+        if let Some(id) = new.id {
             self.cache.invalidate_test(id);
         }
         self.cache.invalidate_project(new.project_id);
@@ -323,12 +323,12 @@ impl<R: Repository> TestsRepository for CacheRepository<R> {
 
     fn update_test_requirement_links(
         &mut self,
-        test_id: i32,
+        id: i32,
         requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
         self.inner
-            .update_test_requirement_links(test_id, requirement_ids)?;
-        self.cache.invalidate_test(test_id);
+            .update_test_requirement_links(id, requirement_ids)?;
+        self.cache.invalidate_test(id);
         for &rid in requirement_ids {
             self.cache.invalidate_requirement(rid);
         }
@@ -463,7 +463,7 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
 
     fn edit_category(&mut self, new: &NewCategory) -> Result<bool, RepoError> {
         let res = self.inner.edit_category(new)?;
-        if let Some(id) = new.cat_id {
+        if let Some(id) = new.id {
             self.cache.invalidate_category(id);
         }
         self.cache.invalidate_project(new.project_id);
@@ -486,7 +486,7 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
 
     fn edit_applicability(&mut self, new: &NewApplicability) -> Result<bool, RepoError> {
         let res = self.inner.edit_applicability(new)?;
-        if let Some(id) = new.app_id {
+        if let Some(id) = new.id {
             self.cache.invalidate_applicability(id);
         }
         self.cache.invalidate_project(new.project_id);
@@ -573,33 +573,33 @@ mod tests {
             st_short_name: "O".into(),
         };
         let category = Category {
-            cat_id: 1,
-            cat_title: "Cat".into(),
-            cat_description: "".into(),
-            cat_tag: "C".into(),
+            id: 1,
+            title: "Cat".into(),
+            description: "".into(),
+            tag: "C".into(),
             project_id: 1,
         };
         let app = Applicability {
-            app_id: 1,
-            app_title: "App".into(),
-            app_description: "".into(),
-            app_tag: "A".into(),
+            id: 1,
+            title: "App".into(),
+            description: "".into(),
+            tag: "A".into(),
             project_id: 1,
         };
         let ver = VerificationMethod {
-            verification_id: 1,
-            verification_name: "Ver".into(),
-            verification_description: "".into(),
+            id: 1,
+            name: "Ver".into(),
+            description: "".into(),
             project_id: 1,
         };
         let project = Project {
             project_id: 1,
-            project_name: "Proj".into(),
-            project_description: Some("Desc".into()),
-            project_creation_date: Some(epoch()),
-            project_update_date: Some(epoch()),
-            project_status: Some("Active".into()),
-            project_owner_id: Some(1),
+            name: "Proj".into(),
+            description: Some("Desc".into()),
+            creation_date: Some(epoch()),
+            update_date: Some(epoch()),
+            status_id: Some("Active".into()),
+            owner_id: Some(1),
         };
         let requirement = Requirement {
             id: 1,
@@ -620,19 +620,19 @@ mod tests {
             project_id: 1,
         };
         let test = TestCase {
-            test_id: 1,
-            test_name: "Test".into(),
-            test_description: "".into(),
-            test_source: "src".into(),
-            test_status: 1,
-            test_reference: "TEST-1".into(),
-            test_parent: 0,
+            id: 1,
+            name: "Test".into(),
+            description: "".into(),
+            source: "src".into(),
+            status_id: 1,
+            reference_code: "TEST-1".into(),
+            parent_id: 0,
             project_id: 1,
         };
         let matrix = Matrix {
-            matrix_req_id: 1,
-            matrix_test_id: 1,
-            matrix_creation_date: epoch(),
+            req_id: 1,
+            id: 1,
+            creation_date: epoch(),
             project_id: 1,
         };
 
@@ -682,11 +682,11 @@ mod tests {
 
         // Mutate the underlying repo through the wrapper (which changes the inner)
         let new_user = NewUser {
-            user_id: None,
-            user_username: "eve".into(),
-            user_name: "Eve".into(),
-            user_email: "eve@example.com".into(),
-            user_password: "pw".into(),
+            id: None,
+            username: "eve".into(),
+            name: "Eve".into(),
+            email: "eve@example.com".into(),
+            password_hash: "pw".into(),
             is_admin: false,
         };
         let _new_id = repo.insert_user(&new_user).unwrap();
@@ -722,7 +722,7 @@ mod tests {
     fn test_get_user_by_id_is_cached() {
         let user = DieselRepoMock::make_user(1, "alice", "hash");
         let mut users = HashMap::new();
-        users.insert(user.user_id, user.clone());
+        users.insert(user.id, user.clone());
 
         let repo = CacheRepository::new(
             DieselRepoMock {
@@ -736,14 +736,14 @@ mod tests {
 
         // first call should miss cache and populate it
         let fetched = repo.get_user_by_id(1).unwrap();
-        assert_eq!(fetched.user_username, "alice");
+        assert_eq!(fetched.username, "alice");
         let stats = cache.stats();
         assert_eq!(stats.hits, 0);
         assert_eq!(stats.misses, 1);
 
         // second call should be served from cache
         let again = repo.get_user_by_id(1).unwrap();
-        assert_eq!(again.user_username, "alice");
+        assert_eq!(again.username, "alice");
         let stats = cache.stats();
         assert_eq!(stats.hits, 1);
         assert_eq!(stats.misses, 1);
@@ -753,7 +753,7 @@ mod tests {
     fn test_insert_user_invalidates_users_all_cache() {
         let user = DieselRepoMock::make_user(1, "bob", "hash");
         let mut users = HashMap::new();
-        users.insert(user.user_id, user);
+        users.insert(user.id, user);
         let mut repo = CacheRepository::new(
             DieselRepoMock {
                 users,
@@ -772,11 +772,11 @@ mod tests {
 
         // inserting a new user should invalidate USERS_ALL cache
         let new_user = NewUser {
-            user_id: None,
-            user_username: "charlie".into(),
-            user_name: "Charlie".into(),
-            user_email: "charlie@example.com".into(),
-            user_password: "pw".into(),
+            id: None,
+            username: "charlie".into(),
+            name: "Charlie".into(),
+            email: "charlie@example.com".into(),
+            password_hash: "pw".into(),
             is_admin: false,
         };
         repo.insert_user(&new_user).unwrap();
@@ -788,7 +788,7 @@ mod tests {
     fn test_update_user_password_invalidates_cache() {
         let user = DieselRepoMock::make_user(1, "dave", "old");
         let mut users = HashMap::new();
-        users.insert(user.user_id, user);
+        users.insert(user.id, user);
         let mut repo = CacheRepository::new(
             DieselRepoMock {
                 users,
@@ -815,7 +815,7 @@ mod tests {
         // Prepopulate invalid JSON to exercise removal path
         cache.set(&keys::Users::by_id(1), "not-json".into());
         let user = repo.get_user_by_id(1).unwrap();
-        assert_eq!(user.user_username, "alice");
+        assert_eq!(user.username, "alice");
         assert!(cache.get(&keys::Users::by_id(1)).unwrap().contains("alice"));
 
         // Username lookup is cached
@@ -826,11 +826,11 @@ mod tests {
         repo.get_users_all().unwrap();
         assert!(cache.get(keys::USERS_ALL).is_some());
         let new_user = NewUser {
-            user_id: None,
-            user_username: "bob".into(),
-            user_name: "Bob".into(),
-            user_email: "b@example.com".into(),
-            user_password: "pw".into(),
+            id: None,
+            username: "bob".into(),
+            name: "Bob".into(),
+            email: "b@example.com".into(),
+            password_hash: "pw".into(),
             is_admin: false,
         };
         let new_id = repo.insert_user(&new_user).unwrap();
@@ -841,21 +841,21 @@ mod tests {
         assert!(cache.get(&keys::Users::by_id(new_id)).is_none());
 
         let upd = NewUser {
-            user_id: Some(new_id),
-            user_username: "bob".into(),
-            user_name: "Bob".into(),
-            user_email: "b@example.com".into(),
-            user_password: "pw".into(),
+            id: Some(new_id),
+            username: "bob".into(),
+            name: "Bob".into(),
+            email: "b@example.com".into(),
+            password_hash: "pw".into(),
             is_admin: false,
         };
         repo.update_user(&upd).unwrap();
         assert!(cache.get(&keys::Users::by_id(new_id)).is_none());
 
         let upd2 = UpdateUser {
-            user_id: Some(new_id),
-            user_username: "b2".into(),
-            user_name: "B2".into(),
-            user_email: "b2@example.com".into(),
+            id: Some(new_id),
+            username: "b2".into(),
+            name: "B2".into(),
+            email: "b2@example.com".into(),
             is_admin: false,
         };
         repo.update_user_without_password(&upd2).unwrap();
@@ -941,26 +941,26 @@ mod tests {
         assert_eq!(tests.len(), 1);
 
         let new_test = NewTestCase {
-            test_id: None,
-            test_name: "T2".into(),
-            test_description: "".into(),
-            test_source: "s".into(),
-            test_status: 1,
-            test_reference: "TEST-2".into(),
-            test_parent: 0,
+            id: None,
+            name: "T2".into(),
+            description: "".into(),
+            source: "s".into(),
+            status_id: 1,
+            reference_code: "TEST-2".into(),
+            parent_id: 0,
             project_id: 1,
         };
         let tid = repo.insert_test(&new_test).unwrap();
         assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
 
         let edit_test = NewTestCase {
-            test_id: Some(tid),
-            test_name: "T2".into(),
-            test_description: "".into(),
-            test_source: "s".into(),
-            test_status: 1,
-            test_reference: "TEST-2".into(),
-            test_parent: 0,
+            id: Some(tid),
+            name: "T2".into(),
+            description: "".into(),
+            source: "s".into(),
+            status_id: 1,
+            reference_code: "TEST-2".into(),
+            parent_id: 0,
             project_id: 1,
         };
         repo.edit_test(&edit_test).unwrap();
@@ -986,9 +986,9 @@ mod tests {
         repo.get_status_by_id(1).unwrap();
         assert!(cache.get(&keys::Status::by_id(1)).is_some());
         let ns = NewStatus {
-            req_st_title: "Closed".into(),
-            req_st_description: "".into(),
-            req_st_short_name: "C".into(),
+            title: "Closed".into(),
+            description: "".into(),
+            short_name: "C".into(),
         };
         let stid = repo.create_status(&ns).unwrap();
         assert!(cache.get(&keys::Status::by_id(stid)).is_none());
@@ -998,18 +998,18 @@ mod tests {
         repo.get_category_by_id(1).unwrap();
         repo.get_categories_by_project(1).unwrap();
         let nc = NewCategory {
-            cat_id: None,
-            cat_title: "Cat2".into(),
-            cat_description: "".into(),
-            cat_tag: "C2".into(),
+            id: None,
+            title: "Cat2".into(),
+            description: "".into(),
+            tag: "C2".into(),
             project_id: 1,
         };
         let cid = repo.insert_new_category(&nc).unwrap();
         let ec = NewCategory {
-            cat_id: Some(cid),
-            cat_title: "Cat2".into(),
-            cat_description: "".into(),
-            cat_tag: "C2".into(),
+            id: Some(cid),
+            title: "Cat2".into(),
+            description: "".into(),
+            tag: "C2".into(),
             project_id: 1,
         };
         repo.edit_category(&ec).unwrap();
@@ -1020,18 +1020,18 @@ mod tests {
         repo.get_applicability_by_id(1).unwrap();
         repo.get_applicability_by_project(1).unwrap();
         let na = NewApplicability {
-            app_id: None,
-            app_title: "App2".into(),
-            app_description: "".into(),
-            app_tag: "A2".into(),
+            id: None,
+            title: "App2".into(),
+            description: "".into(),
+            tag: "A2".into(),
             project_id: 1,
         };
         let aid = repo.insert_new_applicability(&na).unwrap();
         let ea = NewApplicability {
-            app_id: Some(aid),
-            app_title: "App2".into(),
-            app_description: "".into(),
-            app_tag: "A2".into(),
+            id: Some(aid),
+            title: "App2".into(),
+            description: "".into(),
+            tag: "A2".into(),
             project_id: 1,
         };
         repo.edit_applicability(&ea).unwrap();
@@ -1046,17 +1046,17 @@ mod tests {
         repo.get_projects_all().unwrap();
         repo.get_project_by_id(1).unwrap();
         let np = NewProject {
-            project_name: "P2".into(),
-            project_description: Some("".into()),
-            project_status: "Active".into(),
-            project_owner_id: Some(1),
+            name: "P2".into(),
+            description: Some("".into()),
+            status_id: "Active".into(),
+            owner_id: Some(1),
         };
         let pid = repo.insert_new_project(&np).unwrap();
         let up = UpdateProject {
-            project_name: "P2a".into(),
-            project_description: Some("".into()),
-            project_status: "Active".into(),
-            project_owner_id: Some(1),
+            name: "P2a".into(),
+            description: Some("".into()),
+            status_id: "Active".into(),
+            owner_id: Some(1),
         };
         repo.edit_project(pid, &up).unwrap();
         repo.delete_project(pid).unwrap();
@@ -1065,8 +1065,8 @@ mod tests {
         repo.get_matrix_by_project(1).unwrap();
         assert!(cache.get(&keys::Matrix::by_project(1)).is_some());
         repo.insert_new_matrix_item(&NewMatrix {
-            matrix_req_id: 1,
-            matrix_test_id: 1,
+            req_id: 1,
+            id: 1,
             project_id: 1,
         })
         .unwrap();

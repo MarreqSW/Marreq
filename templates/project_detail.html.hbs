@@ -6,25 +6,25 @@
             <div class="card c-card">
                 <div class="card-header c-card__header">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="mb-0">{{project.project_name}}</h3>
-                        <span class="badge {{#if (eq project.project_status 'active')}}bg-success{{else}}bg-secondary{{/if}} fs-6">
-                            {{project.project_status}}
+                        <h3 class="mb-0">{{project.name}}</h3>
+                        <span class="badge {{#if (eq project.status_id 'active')}}bg-success{{else}}bg-secondary{{/if}} fs-6">
+                            {{project.status_id}}
                         </span>
                     </div>
                 </div>
                 <div class="card-body c-card__body">
-                    {{#if project.project_description}}
-                        <p class="card-text c-card__text">{{project.project_description}}</p>
+                    {{#if project.description}}
+                        <p class="card-text c-card__text">{{project.description}}</p>
                     {{/if}}
                     
                     <div class="row mt-4">
                         <div class="col-md-6">
                             <h5>Project Information</h5>
                             <ul class="list-unstyled c-project-info-list">
-                                <li class="c-project-info-list__item"><strong>Created:</strong> {{project.project_creation_date}}</li>
-                                <li class="c-project-info-list__item"><strong>Last Updated:</strong> {{project.project_update_date}}</li>
-                                {{#if project.project_owner_id}}
-                                    <li class="c-project-info-list__item"><strong>Owner:</strong> {{project.project_owner_id}}</li>
+                                <li class="c-project-info-list__item"><strong>Created:</strong> {{project.creation_date}}</li>
+                                <li class="c-project-info-list__item"><strong>Last Updated:</strong> {{project.update_date}}</li>
+                                {{#if project.owner_id}}
+                                    <li class="c-project-info-list__item"><strong>Owner:</strong> {{project.owner_id}}</li>
                                 {{/if}}
                             </ul>
                         </div>
@@ -80,8 +80,8 @@
                                 <li class="list-group-item c-project-member-list__item">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
-                                            <strong>{{user_name}}</strong>
-                                            <div class="text-muted small">@{{user_username}}</div>
+                                            <strong>{{name}}</strong>
+                                            <div class="text-muted small">@{{username}}</div>
                                         </div>
                                         <div class="text-end">
                                             <span class="badge bg-primary c-project-member-list__role">{{role_label}}</span>
@@ -90,9 +90,9 @@
                                             {{/if}}
                                         </div>
                                     </div>
-                                    {{#if user_email}}
+                                    {{#if email}}
                                         <div class="text-muted small mt-2">
-                                            <i class="fas fa-envelope"></i> {{user_email}}
+                                            <i class="fas fa-envelope"></i> {{email}}
                                         </div>
                                     {{/if}}
                                 </li>

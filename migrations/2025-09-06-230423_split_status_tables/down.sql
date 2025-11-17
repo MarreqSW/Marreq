@@ -30,8 +30,8 @@ UPDATE requirements SET current_status_id =
     END;
 
 -- Update tests table to use original status IDs
-UPDATE tests SET test_status = 
-    CASE test_status
+UPDATE tests SET status_id = 
+    CASE status_id
         WHEN 1 THEN 1  -- Draft
         WHEN 2 THEN 2  -- Proposal
         WHEN 3 THEN 3  -- Accepted
@@ -43,5 +43,5 @@ UPDATE tests SET test_status =
     END;
 
 -- Drop the separate status tables
-DROP TABLE test_status;
+DROP TABLE status_id;
 DROP TABLE requirement_status;

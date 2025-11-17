@@ -219,7 +219,7 @@ mod tests {
             reviewer_id: ADMIN_ID,
             reference_code: format!("REQ-{:03}", id),
             category_id: 1,
-            parent_id: 0,
+            parent_id: None,
             creation_date: timestamp(),
             update_date: timestamp(),
             deadline_date: timestamp(),
@@ -237,7 +237,7 @@ mod tests {
             source: "Spec".to_string(),
             status_id: status_id,
             reference_code: format!("TEST-{id:03}"),
-            parent_id: 0,
+            parent_id: None,
             project_id: PROJECT_ID,
         }
     }

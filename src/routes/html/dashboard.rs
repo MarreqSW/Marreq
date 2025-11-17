@@ -152,7 +152,7 @@ mod tests {
                 reviewer_id: 1,
                 reference_code: format!("REQ-{id}"),
                 category_id: 1,
-                parent_id: 0,
+                parent_id: None,
                 creation_date: created,
                 update_date: created,
                 deadline_date: created,
@@ -170,7 +170,7 @@ mod tests {
                 source: "manual".into(),
                 status_id: 1,
                 reference_code: format!("TST-{id}"),
-                parent_id: 0,
+                parent_id: None,
                 project_id,
             }
         }

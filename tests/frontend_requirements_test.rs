@@ -153,7 +153,7 @@ mod test_support {
             reviewer_id: 1,
             reference_code: format!("REQ-SYS-{id:03}"),
             category_id: 1,
-            parent_id: 0,
+            parent_id: None,
             creation_date: timestamp(),
             update_date: timestamp(),
             deadline_date: timestamp(),

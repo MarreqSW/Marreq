@@ -599,7 +599,7 @@ mod tests {
             reviewer_id: 1,
             reference_code: "ref".into(),
             category_id: 1,
-            parent_id: 0,
+            parent_id: None,
             creation_date: epoch(),
             update_date: epoch(),
             deadline_date: epoch(),
@@ -614,7 +614,7 @@ mod tests {
             source: "src".into(),
             status_id: 1,
             reference_code: "TEST-1".into(),
-            parent_id: 0,
+            parent_id: None,
             project_id: 1,
         };
         let matrix = Matrix {
@@ -877,7 +877,7 @@ mod tests {
             author_id: 1,
             category_id: 1,
             current_status_id: 1,
-            parent_id: 0,
+            parent_id: None,
             reference_code: "r2".into(),
             reviewer_id: 1,
             applicability_id: 1,
@@ -895,7 +895,7 @@ mod tests {
             author_id: 1,
             category_id: 1,
             current_status_id: 1,
-            parent_id: 0,
+            parent_id: None,
             reference_code: "r2".into(),
             reviewer_id: 1,
             applicability_id: 1,
@@ -937,7 +937,7 @@ mod tests {
             source: "s".into(),
             status_id: 1,
             reference_code: "TEST-2".into(),
-            parent_id: 0,
+            parent_id: None,
             project_id: 1,
         };
         let tid = repo.insert_test(&new_test).unwrap();
@@ -950,7 +950,7 @@ mod tests {
             source: "s".into(),
             status_id: 1,
             reference_code: "TEST-2".into(),
-            parent_id: 0,
+            parent_id: None,
             project_id: 1,
         };
         repo.edit_test(&edit_test).unwrap();

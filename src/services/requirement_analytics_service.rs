@@ -253,7 +253,7 @@ mod tests {
             reviewer_id: 1,
             reference_code: format!("REF-{id}"),
             category_id: category_id,
-            parent_id: 0,
+            parent_id: None,
             creation_date: naive_datetime(),
             update_date: naive_datetime(),
             deadline_date: naive_datetime(),

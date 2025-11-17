@@ -277,7 +277,7 @@ impl ExcelImporter {
             verification_method_id: 1, // Default verification
             author_id: author_id,
             reviewer_id: reviewer_id,
-            parent_id: parent_id.unwrap_or(0),
+            parent_id: parent_id,
             justification: req_data.get("justification").cloned(),
             project_id,
         };
@@ -348,7 +348,7 @@ impl ExcelImporter {
                 .unwrap_or(&format!("TEST-{}", chrono::Utc::now().timestamp()))
                 .clone(),
             status_id: status_id,
-            parent_id: parent_id.unwrap_or(0),
+            parent_id: parent_id,
             project_id,
         };
 

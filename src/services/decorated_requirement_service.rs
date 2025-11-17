@@ -137,8 +137,8 @@ impl<'a> DecoratedRequirementService<'a> {
             .map(|a| a.title)
             .unwrap_or_else(|_| format!("Unknown Applicability ({})", req.applicability_id));
 
-        let parent_title = if req.parent_id != 0 {
-            match self.requirement_service.get_by_id(req.parent_id) {
+        let parent_title = if let Some(parent_id) = req.parent_id {
+            match self.requirement_service.get_by_id(parent_id) {
                 Ok(parent_req) => parent_req.title,
                 Err(_) => "[Deleted Parent]".to_string(),
             }

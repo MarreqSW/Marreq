@@ -429,8 +429,14 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         })
     }
 
-    fn create_status(&mut self, new: &NewStatus) -> Result<i32, RepoError> {
-        let id = self.inner.create_status(new)?;
+    fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError> {
+        let id = self.inner.create_requirement_status(new)?;
+        self.cache.invalidate_status(id);
+        Ok(id)
+    }
+
+    fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError> {
+        let id = self.inner.create_test_status(new)?;
         self.cache.invalidate_status(id);
         Ok(id)
     }
@@ -976,13 +982,14 @@ mod tests {
         assert!(cache.get(keys::REQUIREMENT_STATUS_ALL).is_some());
         repo.get_requirement_status_by_id(1).unwrap();
         assert!(cache.get(&keys::RequirementStatus::by_id(1)).is_some());
-        let ns = NewStatus {
+        let ns = NewRequirementStatus {
+            id: None,
             title: "Closed".into(),
             description: "".into(),
             tag: "C".into(),
             project_id: 1,
         };
-        let stid = repo.create_status(&ns).unwrap();
+        let stid = repo.create_requirement_status(&ns).unwrap();
         assert!(cache.get(&keys::RequirementStatus::by_id(stid)).is_none());
 
         // Category operations

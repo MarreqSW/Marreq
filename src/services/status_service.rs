@@ -1,7 +1,7 @@
 //! Service exposing helpers for requirement and test statuses.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{NewStatus, RequirementStatus, TestStatus};
+use crate::models::{NewRequirementStatus, NewTestStatus, RequirementStatus, TestStatus};
 use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 use crate::validation::{sanitize_string, validate_requirement_status};
@@ -43,7 +43,7 @@ impl<'a> StatusService<'a> {
     }
 
     /// Create a new requirement status entry.
-    pub fn create_requirement_status(&self, mut payload: NewStatus) -> Result<i32, RepoError> {
+    pub fn create_requirement_status(&self, mut payload: NewRequirementStatus) -> Result<i32, RepoError> {
         sanitize_string(&mut payload.title);
         sanitize_string(&mut payload.description);
         sanitize_string(&mut payload.tag);
@@ -53,7 +53,31 @@ impl<'a> StatusService<'a> {
 
         let id = {
             let mut repo = self.state.repo_write();
-            repo.create_status(&payload)?
+            repo.create_requirement_status(&payload)?
+        };
+
+        Ok(id)
+    }
+
+    /// Create a new test status entry.
+    pub fn create_test_status(&self, mut payload: NewTestStatus) -> Result<i32, RepoError> {
+        sanitize_string(&mut payload.title);
+        sanitize_string(&mut payload.description);
+        sanitize_string(&mut payload.tag);
+
+        // Reusing validation logic
+        validate_requirement_status(&NewRequirementStatus {
+            id: payload.id,
+            title: payload.title.clone(),
+            description: payload.description.clone(),
+            tag: payload.tag.clone(),
+            project_id: payload.project_id,
+        })
+        .map_err(|err| RepoError::BadInput(err.to_string()))?;
+
+        let id = {
+            let mut repo = self.state.repo_write();
+            repo.create_test_status(&payload)?
         };
 
         Ok(id)
@@ -128,7 +152,8 @@ mod tests {
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        let payload = NewStatus {
+        let payload = NewRequirementStatus {
+            id: None,
             title: "  Verified  ".into(),
             description: "  Description  ".into(),
             tag: "  VFD  ".into(),
@@ -150,7 +175,8 @@ mod tests {
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        let payload = NewStatus {
+        let payload = NewRequirementStatus {
+            id: None,
             title: " ".into(),
             description: "Desc".into(),
             tag: "DRT".into(),

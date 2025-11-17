@@ -1,5 +1,5 @@
 use crate::api::prelude::*;
-use crate::models::{NewStatus, RequirementStatus};
+use crate::models::{NewRequirementStatus, RequirementStatus};
 use crate::services::StatusService;
 
 #[get("/status")]
@@ -26,7 +26,7 @@ pub async fn get_requirement_status(id: i32, state: &State<AppState>) -> ApiResu
 #[post("/status", data = "<payload>")]
 pub async fn create_requirement_status(
     state: &State<AppState>,
-    payload: Json<NewStatus>,
+    payload: Json<NewRequirementStatus>,
 ) -> ApiResult<(Status, Value)> {
     let service = StatusService::new(state.inner());
     let id = service.create_requirement_status(payload.into_inner())?;

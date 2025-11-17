@@ -343,16 +343,35 @@ impl LookupRepository for DieselRepoMock {
     fn delete_applicability(&mut self, id: i32) -> Result<Applicability, RepoError> {
         self.applicability.remove(&id).ok_or(RepoError::NotFound)
     }
-    fn create_status(&mut self, _new: &NewStatus) -> Result<i32, RepoError> {
-        let id = self.statuses.keys().max().map(|i| i + 1).unwrap_or(1);
+
+    fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError> {
+        let id = new.id.unwrap_or_else(|| {
+            self.requirement_statuses.keys().max().map(|i| i + 1).unwrap_or(1)
+        });
         let status = RequirementStatus {
-            id: id,
-            title: _new.title.clone(),
-            description: _new.description.clone(),
-            tag: _new.tag.clone(),
-            project_id: _new.project_id,
+            id,
+            title: new.title.clone(),
+            description: new.description.clone(),
+            tag: new.tag.clone(),
+            project_id: new.project_id,
         };
-        self.statuses.insert(id, status);
+        self.requirement_statuses.insert(id, status.clone());
+        self.statuses.insert(id, status); // Keep backward compat with legacy field
+        Ok(id)
+    }
+
+    fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError> {
+        let id = new.id.unwrap_or_else(|| {
+            self.test_statuses.keys().max().map(|i| i + 1).unwrap_or(1)
+        });
+        let status = TestStatus {
+            id,
+            title: new.title.clone(),
+            description: new.description.clone(),
+            tag: new.tag.clone(),
+            project_id: new.project_id,
+        };
+        self.test_statuses.insert(id, status);
         Ok(id)
     }
 }

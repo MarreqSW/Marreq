@@ -93,7 +93,8 @@ mod tests {
             id: 1,
             title: "Draft".to_string(),
             description: "Draft status".to_string(),
-            short_name: "DRAFT".to_string(),
+            tag: "DRAFT".to_string(),
+            project_id: 1,
         }
     }
 
@@ -787,19 +788,7 @@ mod tests {
         assert_eq!(result.unwrap(), 0); // DieselRepoMock returns 0
     }
 
-    #[test]
-    fn test_lookup_repository_create_test_status() {
-        let mut repo = DieselRepoMock::default();
-        let new_status = NewTestStatus {
-            title: "New Status".to_string(),
-            description: "New Status Description".to_string(),
-            short_name: "NEW".to_string(),
-        };
-        
-        let result = repo.create_test_status(&new_status);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 0); // DieselRepoMock returns 0
-    }
+    // Note: Test status creation uses the same NewStatus form as requirement status
 
     #[test]
     fn test_lookup_repository_insert_new_category() {

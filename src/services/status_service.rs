@@ -100,7 +100,8 @@ mod tests {
                 id: 3,
                 title: "Ready".into(),
                 description: "ready".into(),
-                short_name: "RDY".into(),
+                tag: "RDY".into(),
+                project_id: 1,
             },
         );
         repo

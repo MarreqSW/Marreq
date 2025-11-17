@@ -76,7 +76,7 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::auth::session::SESSION_COOKIE;
-    use crate::models::{Project, ProjectMember, Requirement, RequirementStatus, Test, User};
+    use crate::models::{Project, ProjectMember, Requirement, RequirementStatus, TestCase, User};
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use chrono::{NaiveDate, NaiveDateTime};
     use rocket::http::{Cookie, Status};
@@ -146,7 +146,7 @@ mod tests {
                 req_id: id,
                 req_title: format!("Requirement {id}"),
                 req_description: "Ensure feature works".into(),
-                req_verification: 1,
+                req_verification_method: 1,
                 req_current_status: 1,
                 req_author: 1,
                 req_reviewer: 1,
@@ -162,8 +162,8 @@ mod tests {
             }
         }
 
-        fn test_case(id: i32, project_id: i32) -> Test {
-            Test {
+        fn test_case(id: i32, project_id: i32) -> TestCase {
+            TestCase {
                 test_id: id,
                 test_name: format!("Test {id}"),
                 test_description: "Covers core scenario".into(),

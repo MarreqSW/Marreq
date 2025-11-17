@@ -6,7 +6,7 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{NewRequirement, Requirement, Test, User};
+use crate::models::{NewRequirement, Requirement, TestCase, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, RequirementsRepository, TestsRepository};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
@@ -62,7 +62,7 @@ impl<'a> RequirementService<'a> {
             .collect())
     }
 
-    pub fn get_linked_tests(&self, id: i32) -> Result<Vec<Test>, RepoError> {
+    pub fn get_linked_tests(&self, id: i32) -> Result<Vec<TestCase>, RepoError> {
         self.repo_read().get_tests_for_requirement(id)
     }
 
@@ -128,7 +128,7 @@ impl<'a> RequirementService<'a> {
                 let status_match =
                     status_filter.map_or(true, |status_id| req.req_current_status == status_id);
                 let verification_match = verification_filter.map_or(true, |verification_id| {
-                    req.req_verification == verification_id
+                    req.req_verification_method == verification_id
                 });
                 let category_match =
                     category_filter.map_or(true, |category_id| req.req_category == category_id);
@@ -238,7 +238,7 @@ mod tests {
             req_id: id,
             req_title: format!("Requirement {id}"),
             req_description: "Existing description".into(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_current_status: 1,
             req_author: 1,
             req_reviewer: 1,
@@ -259,7 +259,7 @@ mod tests {
             req_id: None,
             req_title: "  Title  ".into(),
             req_description: "  Description  ".into(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_author: 1,
             req_category: 1,
             req_current_status: 1,

@@ -1,4 +1,4 @@
-use crate::models::{Requirement, Test};
+use crate::models::{Requirement, TestCase};
 
 pub fn filter_requirements(
     requirements: Vec<Requirement>,
@@ -12,7 +12,7 @@ pub fn filter_requirements(
             let status_match =
                 status_filter.map_or(true, |status_id| req.req_current_status == status_id);
             let verification_match = verification_filter.map_or(true, |verification_id| {
-                req.req_verification == verification_id
+                req.req_verification_method == verification_id
             });
             let category_match =
                 category_filter.map_or(true, |category_id| req.req_category == category_id);
@@ -33,11 +33,11 @@ pub fn filter_requirements(
 }
 
 pub fn filter_tests(
-    tests: Vec<Test>,
+    tests: Vec<TestCase>,
     status_filter: Option<i32>,
     _verification_filter: Option<i32>,
     _category_filter: Option<i32>,
-) -> Vec<Test> {
+) -> Vec<TestCase> {
     tests
         .into_iter()
         .filter(|test| {
@@ -51,7 +51,7 @@ pub fn filter_tests(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Requirement, Test};
+    use crate::models::{Requirement, TestCase};
     use chrono::NaiveDate;
 
     fn dummy_datetime() -> chrono::NaiveDateTime {
@@ -72,7 +72,7 @@ mod tests {
             req_id: id,
             req_title: format!("Req {}", id),
             req_description: String::new(),
-            req_verification: verification,
+            req_verification_method: verification,
             req_current_status: status,
             req_author: 0,
             req_reviewer: 0,
@@ -115,7 +115,7 @@ mod tests {
     fn filter_tests_filters_by_status() {
         let only_status1 = filter_tests(
             vec![
-                Test {
+                TestCase {
                     test_id: 1,
                     test_name: "T1".into(),
                     test_description: String::new(),
@@ -125,7 +125,7 @@ mod tests {
                     test_parent: 0,
                     project_id: 0,
                 },
-                Test {
+                TestCase {
                     test_id: 2,
                     test_name: "T2".into(),
                     test_description: String::new(),
@@ -145,7 +145,7 @@ mod tests {
 
         let all = filter_tests(
             vec![
-                Test {
+                TestCase {
                     test_id: 1,
                     test_name: "T1".into(),
                     test_description: String::new(),
@@ -155,7 +155,7 @@ mod tests {
                     test_parent: 0,
                     project_id: 0,
                 },
-                Test {
+                TestCase {
                     test_id: 2,
                     test_name: "T2".into(),
                     test_description: String::new(),

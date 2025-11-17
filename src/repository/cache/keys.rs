@@ -55,7 +55,7 @@ pub struct Projects;
 pub struct Status;
 pub struct Categories;
 pub struct Applicability;
-pub struct Verification;
+pub struct VerificationMethod;
 pub struct Users;
 pub struct Requirements;
 pub struct RequirementTitle;
@@ -80,7 +80,7 @@ impl Keyspace for Categories {
 impl Keyspace for Applicability {
     const PREFIX: &'static str = "applicability";
 }
-impl Keyspace for Verification {
+impl Keyspace for VerificationMethod {
     const PREFIX: &'static str = "verification";
 }
 impl Keyspace for Users {
@@ -158,7 +158,7 @@ mod tests {
         check_keyspace!(Status, "status");
         check_keyspace!(Categories, "category");
         check_keyspace!(Applicability, "applicability");
-        check_keyspace!(Verification, "verification");
+        check_keyspace!(VerificationMethod, "verification");
         check_keyspace!(Users, "user");
         check_keyspace!(Requirements, "requirement");
         check_keyspace!(RequirementTitle, "requirement_title");

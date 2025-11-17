@@ -271,7 +271,7 @@ export function buildRequirementViewModel(canonical = {}) {
   const historyEntries = canonical.history?.entries ?? [];
 
   const badge = statusBadge(requirement.req_current_status);
-  const verification = verificationBadge(counts, requirement.req_verification);
+  const verification = verificationBadge(counts, requirement.req_verification_method);
   const solidityView = solidity(counts, requirement.req_current_status);
   const percent = verificationPercent(counts);
   const rationale =
@@ -331,7 +331,7 @@ export function buildRequirementViewModel(canonical = {}) {
       pending: safeNumber(counts.pending),
       percent,
       last_checked: requirement.req_update_date,
-      tool: normalise(canonical.verification?.tool_name || requirement.req_verification),
+      tool: normalise(canonical.verification?.tool_name || requirement.req_verification_method),
     },
     linked_tests: canonical.linked_tests ?? [],
     timeline: timelineEntries,

@@ -40,15 +40,15 @@ pub trait RequirementsRepository {
 }
 
 pub trait TestsRepository {
-    fn get_test_by_id(&self, id: i32) -> Result<Test, RepoError>;
-    fn get_tests_all(&self) -> Result<Vec<Test>, RepoError>;
-    fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<Test>, RepoError>;
+    fn get_test_by_id(&self, id: i32) -> Result<TestCase, RepoError>;
+    fn get_tests_all(&self) -> Result<Vec<TestCase>, RepoError>;
+    fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<TestCase>, RepoError>;
     fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError>;
-    fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<Test>, RepoError>;
+    fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<TestCase>, RepoError>;
 
-    fn insert_test(&mut self, new: &NewTest) -> Result<i32, RepoError>;
-    fn edit_test(&mut self, new: &NewTest) -> Result<bool, RepoError>;
-    fn delete_test(&mut self, id: i32) -> Result<Test, RepoError>;
+    fn insert_test(&mut self, new: &NewTestCase) -> Result<i32, RepoError>;
+    fn edit_test(&mut self, new: &NewTestCase) -> Result<bool, RepoError>;
+    fn delete_test(&mut self, id: i32) -> Result<TestCase, RepoError>;
     fn update_test_requirement_links(
         &mut self,
         test_id: i32,
@@ -77,13 +77,13 @@ pub trait LookupRepository {
         project_id: i32,
     ) -> Result<Vec<Applicability>, RepoError>;
 
-    fn get_verification_all(&self) -> Result<Vec<Verification>, RepoError>;
-    fn get_verification_by_id(&self, id: i32) -> Result<Verification, RepoError>;
-    fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<Verification>, RepoError>;
+    fn get_verification_all(&self) -> Result<Vec<VerificationMethod>, RepoError>;
+    fn get_verification_by_id(&self, id: i32) -> Result<VerificationMethod, RepoError>;
+    fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<VerificationMethod>, RepoError>;
 
     fn create_status(&mut self, new: &NewStatus) -> Result<i32, RepoError>;
 
-    fn insert_new_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError>;
+    fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError>;
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError>;
     fn edit_category(&mut self, new: &NewCategory) -> Result<bool, RepoError>;
     fn delete_category(&mut self, id: i32) -> Result<Category, RepoError>;

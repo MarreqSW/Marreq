@@ -1,7 +1,7 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::models::{NewTest, Test};
+use crate::models::{NewTestCase, TestCase};
 use crate::repository::errors::RepoError;
 use crate::services::TestService;
 
@@ -13,14 +13,14 @@ pub struct FieldUpdateRequest {
 }
 
 #[get("/tests")]
-pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Test>>> {
+pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<TestCase>>> {
     let service = TestService::new(state.inner());
     let tests = service.list_all()?;
     Ok(Json(tests))
 }
 
 #[get("/tests/<id>")]
-pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
+pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<TestCase>> {
     let service = TestService::new(state.inner());
     let test = service.get_by_id(id)?;
     Ok(Json(test))
@@ -30,7 +30,7 @@ pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<
 pub async fn create(
     user: ApiUser,
     state: &State<AppState>,
-    payload: Json<NewTest>,
+    payload: Json<NewTestCase>,
 ) -> ApiResult<Value> {
     let service = TestService::new(state.inner());
     let id = service.create(user.user(), payload.into_inner())?;
@@ -80,7 +80,7 @@ pub async fn update_field(
         }
     }
 
-    let payload = NewTest {
+    let payload = NewTestCase {
         test_id: Some(test.test_id),
         test_reference: test.test_reference.clone(),
         test_name: test.test_name.clone(),
@@ -155,7 +155,7 @@ mod tests {
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
-        let items: Vec<Test> = response.into_json().await.unwrap();
+        let items: Vec<TestCase> = response.into_json().await.unwrap();
         assert!(items.is_empty());
     }
 
@@ -212,7 +212,7 @@ mod tests {
             .private_cookie(auth_cookie())
             .dispatch()
             .await;
-        let test: Test = get_response.into_json().await.unwrap();
+        let test: TestCase = get_response.into_json().await.unwrap();
         assert_eq!(test.test_name, "Updated");
     }
 

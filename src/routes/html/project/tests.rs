@@ -202,7 +202,7 @@ async fn post_test(
     let user = project_access.into_user();
     let service = TestService::new(state.inner());
 
-    let my_new_test = NewTest {
+    let my_new_test = NewTestCase {
         test_id: None,
         test_name: new_test.test_name.clone(),
         test_description: new_test.test_description.clone(),
@@ -308,7 +308,7 @@ async fn post_edit_test(
     // Own the form to avoid cloning strings
     let f = edit_test_form.into_inner();
 
-    let new_test = NewTest {
+    let new_test = NewTestCase {
         test_id: Some(f.test_id),
         test_name: f.test_name,
         test_description: f.test_description,
@@ -445,8 +445,8 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Applicability, Category, Matrix, Project, ProjectMember, Requirement, Status, Test,
-        TestStatus, Verification,
+        Applicability, Category, Matrix, Project, ProjectMember, Requirement, Status, TestCase,
+        TestStatus, VerificationMethod,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
@@ -510,8 +510,8 @@ mod tests {
         }
     }
 
-    fn sample_verification(id: i32, title: &str) -> Verification {
-        Verification {
+    fn sample_verification(id: i32, title: &str) -> VerificationMethod {
+        VerificationMethod {
             verification_id: id,
             verification_name: title.to_string(),
             verification_description: format!("{title} verification"),
@@ -524,7 +524,7 @@ mod tests {
             req_id: id,
             req_title: format!("Requirement {id}"),
             req_description: "Test requirement".into(),
-            req_verification: 1,
+            req_verification_method: 1,
             req_current_status: 1,
             req_author: ADMIN_ID,
             req_reviewer: ADMIN_ID,
@@ -540,8 +540,8 @@ mod tests {
         }
     }
 
-    fn sample_test(id: i32, status: i32, name: &str) -> Test {
-        Test {
+    fn sample_test(id: i32, status: i32, name: &str) -> TestCase {
+        TestCase {
             test_id: id,
             test_name: name.to_string(),
             test_description: format!("{name} description"),

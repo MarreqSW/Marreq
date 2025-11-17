@@ -661,7 +661,7 @@ impl RequirementsRepository for DieselRepo {
         use schema::requirements::dsl::*;
         let mut conn = self.get_conn()?;
         requirements
-            .filter(req_id.eq(id))
+            .filter(id.eq(id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -676,7 +676,7 @@ impl RequirementsRepository for DieselRepo {
         use schema::requirements::dsl::*;
         let mut conn = self.get_conn()?;
         requirements
-            .order(req_id)
+            .order(id)
             .load::<Requirement>(conn.as_mut())
             .map_err(|e| e.into())
     }
@@ -695,16 +695,16 @@ impl RequirementsRepository for DieselRepo {
         let res: Requirement = diesel::insert_into(schema::requirements::table)
             .values(new)
             .get_result(conn.as_mut())?;
-        Ok(res.req_id)
+        Ok(res.id)
     }
 
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError> {
         use crate::schema::requirements::dsl::*;
         let mut conn = self.get_conn()?;
         let id_val = new
-            .req_id
+            .id
             .ok_or(RepoError::Db(diesel::result::Error::NotFound))?;
-        diesel::update(requirements.filter(req_id.eq(id_val)))
+        diesel::update(requirements.filter(id.eq(id_val)))
             .set(new)
             .execute(conn.as_mut())
             .map(|_| true)
@@ -715,7 +715,7 @@ impl RequirementsRepository for DieselRepo {
         use crate::schema::requirements::dsl::*;
         let mut conn = self.get_conn()?;
         let req = requirements
-            .filter(req_id.eq(id))
+            .filter(id.eq(id))
             .get_result::<Requirement>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -724,7 +724,7 @@ impl RequirementsRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(requirements.filter(req_id.eq(id))).execute(conn.as_mut())?;
+        diesel::delete(requirements.filter(id.eq(id))).execute(conn.as_mut())?;
         Ok(req)
     }
 
@@ -733,8 +733,8 @@ impl RequirementsRepository for DieselRepo {
         use diesel::dsl::now;
         let mut conn = self.get_conn()?;
         diesel::update(requirements)
-            .filter(req_id.eq(req))
-            .set(req_update_date.eq(now))
+            .filter(id.eq(req))
+            .set(update_date.eq(now))
             .execute(conn.as_mut())?;
         Ok(())
     }
@@ -801,23 +801,23 @@ impl TestsRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         matrix
             .filter(matrix_test_id.eq(tid))
-            .inner_join(requirements.on(matrix_req_id.eq(req_id)))
+            .inner_join(requirements.on(matrix_req_id.eq(id)))
             .select((
-                req_id,
-                req_title,
-                req_description,
-                req_verification_method,
-                req_current_status,
-                req_author,
-                req_reviewer,
-                req_reference,
-                req_category,
-                req_parent,
-                req_creation_date,
-                req_update_date,
-                req_deadline_date,
-                req_applicability,
-                req_justification,
+                id,
+                title,
+                description,
+                verification_method_id,
+                current_status_id,
+                author_id,
+                reviewer_id,
+                reference_code,
+                category_id,
+                parent_id,
+                creation_date,
+                update_date,
+                deadline_date,
+                applicability_id,
+                justification,
                 schema::requirements::project_id,
             ))
             .load::<Requirement>(conn.as_mut())
@@ -876,9 +876,9 @@ impl TestsRepository for DieselRepo {
         use schema::matrix::dsl::*;
         let mut conn = self.get_conn()?;
         diesel::delete(matrix.filter(matrix_test_id.eq(test_id_val))).execute(conn.as_mut())?;
-        for req_id in requirement_ids {
+        for id in requirement_ids {
             let matrix_item = NewMatrix {
-                matrix_req_id: *req_id,
+                matrix_req_id: *id,
                 matrix_test_id: test_id_val,
                 project_id: 1,
             };

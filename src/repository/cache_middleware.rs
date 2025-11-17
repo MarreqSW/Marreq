@@ -129,7 +129,7 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
 
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError> {
         let res = self.inner.edit_requirement(new)?;
-        if let Some(id) = new.req_id {
+        if let Some(id) = new.id {
             self.cache.invalidate_requirement(id);
         }
         self.cache.invalidate_project(new.project_id);
@@ -290,10 +290,10 @@ impl<R: Repository> TestsRepository for CacheRepository<R> {
         })
     }
 
-    fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<TestCase>, RepoError> {
-        let key = keys::LinkedTests::for_requirement(req_id);
+    fn get_tests_for_requirement(&self, id: i32) -> Result<Vec<TestCase>, RepoError> {
+        let key = keys::LinkedTests::for_requirement(id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_tests_for_requirement(req_id)
+            self.inner.get_tests_for_requirement(id)
         })
     }
 
@@ -602,21 +602,21 @@ mod tests {
             project_owner_id: Some(1),
         };
         let requirement = Requirement {
-            req_id: 1,
-            req_title: "Req".into(),
-            req_description: "".into(),
-            req_verification_method: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: "ref".into(),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: epoch(),
-            req_update_date: epoch(),
-            req_deadline_date: epoch(),
-            req_applicability: 1,
-            req_justification: None,
+            id: 1,
+            title: "Req".into(),
+            description: "".into(),
+            verification_method_id: 1,
+            current_status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: "ref".into(),
+            category_id: 1,
+            parent_id: 0,
+            creation_date: epoch(),
+            update_date: epoch(),
+            deadline_date: epoch(),
+            applicability_id: 1,
+            justification: None,
             project_id: 1,
         };
         let test = TestCase {
@@ -880,36 +880,36 @@ mod tests {
         assert!(cache.get(&keys::Requirements::by_project(1)).is_some());
 
         let new_req = NewRequirement {
-            req_id: None,
-            req_title: "R2".into(),
-            req_description: "".into(),
-            req_verification_method: 1,
-            req_author: 1,
-            req_category: 1,
-            req_current_status: 1,
-            req_parent: 0,
-            req_reference: "r2".into(),
-            req_reviewer: 1,
-            req_applicability: 1,
-            req_justification: None,
+            id: None,
+            title: "R2".into(),
+            description: "".into(),
+            verification_method_id: 1,
+            author_id: 1,
+            category_id: 1,
+            current_status_id: 1,
+            parent_id: 0,
+            reference_code: "r2".into(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: None,
             project_id: 1,
         };
         let rid = repo.insert_new_requirement(&new_req).unwrap();
         assert!(cache.get(&keys::Requirements::by_id(rid)).is_none());
 
         let edit_req = NewRequirement {
-            req_id: Some(rid),
-            req_title: "R2".into(),
-            req_description: "".into(),
-            req_verification_method: 1,
-            req_author: 1,
-            req_category: 1,
-            req_current_status: 1,
-            req_parent: 0,
-            req_reference: "r2".into(),
-            req_reviewer: 1,
-            req_applicability: 1,
-            req_justification: None,
+            id: Some(rid),
+            title: "R2".into(),
+            description: "".into(),
+            verification_method_id: 1,
+            author_id: 1,
+            category_id: 1,
+            current_status_id: 1,
+            parent_id: 0,
+            reference_code: "r2".into(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: None,
             project_id: 1,
         };
         repo.edit_requirement(&edit_req).unwrap();

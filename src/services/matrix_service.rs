@@ -47,7 +47,7 @@ impl<'a> MatrixService<'a> {
 
         // Load all requirements for the project
         let mut reqs = repo.get_requirements_by_project(project_id)?;
-        reqs.sort_by_key(|r| r.req_id);
+        reqs.sort_by_key(|r| r.id);
 
         // Load all tests for the project
         let mut all_tests = repo.get_tests_by_project(project_id)?;
@@ -75,12 +75,12 @@ impl<'a> MatrixService<'a> {
         for req in &reqs {
             csv.push_str(&format!(
                 "{},{}",
-                Self::csv_escape(&req.req_title),
-                Self::csv_escape(&req.req_reference)
+                Self::csv_escape(&req.title),
+                Self::csv_escape(&req.reference_code)
             ));
 
             for test in &all_tests {
-                let linked = links.contains(&(req.req_id, test.test_id));
+                let linked = links.contains(&(req.id, test.test_id));
                 csv.push_str(if linked { ",✓" } else { ",-" });
             }
             csv.push('\n');
@@ -221,7 +221,7 @@ impl<'a> MatrixService<'a> {
             .map(|req| {
                 all_tests
                     .iter()
-                    .filter(|t| links.contains(&(req.req_id, t.test_id)))
+                    .filter(|t| links.contains(&(req.id, t.test_id)))
                     .count()
             })
             .sum();
@@ -244,23 +244,23 @@ impl<'a> MatrixService<'a> {
         search: Option<&str>,
     ) {
         if let Some(status) = status_filter {
-            reqs.retain(|r| r.req_current_status == status);
+            reqs.retain(|r| r.current_status_id == status);
         }
 
         if let Some(category) = category_filter {
-            reqs.retain(|r| r.req_category == category);
+            reqs.retain(|r| r.category_id == category);
         }
 
         if let Some(applicability) = applicability_filter {
-            reqs.retain(|r| r.req_applicability == applicability);
+            reqs.retain(|r| r.applicability_id == applicability);
         }
 
         if let Some(search_term) = search {
             let search_lower = search_term.to_lowercase();
             reqs.retain(|r| {
-                r.req_title.to_lowercase().contains(&search_lower)
-                    || r.req_reference.to_lowercase().contains(&search_lower)
-                    || r.req_id.to_string().contains(&search_lower)
+                r.title.to_lowercase().contains(&search_lower)
+                    || r.reference_code.to_lowercase().contains(&search_lower)
+                    || r.id.to_string().contains(&search_lower)
             });
         }
     }
@@ -274,7 +274,7 @@ impl<'a> MatrixService<'a> {
         // Check if sorting by test column
         if let Some(test_id_str) = sort_by.strip_prefix("test_") {
             if let Ok(target_test_id) = test_id_str.parse::<i32>() {
-                reqs.sort_by_key(|r| links.contains(&(r.req_id, target_test_id)));
+                reqs.sort_by_key(|r| links.contains(&(r.id, target_test_id)));
                 if desc {
                     reqs.reverse();
                 }
@@ -284,14 +284,14 @@ impl<'a> MatrixService<'a> {
 
         // Sort by requirement fields
         match sort_by {
-            "req_title" => {
-                reqs.sort_by(|a, b| a.req_title.cmp(&b.req_title));
+            "title" => {
+                reqs.sort_by(|a, b| a.title.cmp(&b.title));
             }
-            "req_reference" => {
-                reqs.sort_by(|a, b| a.req_reference.cmp(&b.req_reference));
+            "reference_code" => {
+                reqs.sort_by(|a, b| a.reference_code.cmp(&b.reference_code));
             }
             _ => {
-                reqs.sort_by_key(|r| r.req_id);
+                reqs.sort_by_key(|r| r.id);
             }
         }
 
@@ -325,7 +325,7 @@ impl Default for MatrixPagination {
         Self {
             page: 1,
             per_page: 50,
-            sort_by: "req_id".to_string(),
+            sort_by: "id".to_string(),
             sort_order: SortOrder::Asc,
         }
     }
@@ -428,21 +428,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Test Requirement".to_string(),
-                req_description: String::new(),
-                req_verification_method: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Test Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                current_status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-001".to_string(),
+                category_id: 1,
+                parent_id: 0,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: timestamp(),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -506,21 +506,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Test, with \"quotes\"".to_string(),
-                req_description: String::new(),
-                req_verification_method: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Test, with \"quotes\"".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                current_status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-001".to_string(),
+                category_id: 1,
+                parent_id: 0,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: timestamp(),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -541,21 +541,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Req 1".to_string(),
-                req_description: String::new(),
-                req_verification_method: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-1".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Req 1".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                current_status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-1".to_string(),
+                category_id: 1,
+                parent_id: 0,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: timestamp(),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );

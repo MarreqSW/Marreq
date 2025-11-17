@@ -224,9 +224,9 @@ async fn complete_requirement_lifecycle() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=System+Boot+Sequence&req_description=System+shall+boot+in+5+seconds&\
-               req_verification_method=1&req_current_status=1&req_reviewer=1&req_category=1&\
-               req_parent=0&req_applicability=1&req_reference=&req_justification=Performance",
+            "title=System+Boot+Sequence&description=System+shall+boot+in+5+seconds&\
+               verification_method_id=1&current_status_id=1&reviewer_id=1&category_id=1&\
+               parent_id=0&applicability_id=1&reference_code=&justification=Performance",
         )
         .dispatch()
         .await;
@@ -236,7 +236,7 @@ async fn complete_requirement_lifecycle() {
     assert!(location.contains("/p/1/requirements/show/"));
 
     // Extract requirement ID from location
-    let req_id = location
+    let id = location
         .split('/')
         .last()
         .and_then(|s| s.parse::<i32>().ok())
@@ -244,7 +244,7 @@ async fn complete_requirement_lifecycle() {
 
     // 4. View created requirement
     let response = client
-        .get(format!("/p/1/requirements/show/{}", req_id))
+        .get(format!("/p/1/requirements/show/{}", id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -256,7 +256,7 @@ async fn complete_requirement_lifecycle() {
 
     // 5. Edit the requirement
     let response = client
-        .get(format!("/p/1/requirements/edit/{}", req_id))
+        .get(format!("/p/1/requirements/edit/{}", id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -270,15 +270,15 @@ async fn complete_requirement_lifecycle() {
 
     // 6. Save edited requirement
     let response = client
-        .post(format!("/p/1/requirements/edit/{}", req_id))
+        .post(format!("/p/1/requirements/edit/{}", id))
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(format!(
-            "req_id={}&req_title=Updated+Boot+Sequence&req_description=System+shall+boot+in+3+seconds&\
-             req_verification_method=1&req_current_status=1&req_author=1&req_reviewer=1&req_category=1&\
-             req_parent=0&req_applicability=1&req_justification=Updated+Performance&project_id=1&\
-             req_reference=REQ-SYS-{:03}",
-            req_id, req_id
+            "id={}&title=Updated+Boot+Sequence&description=System+shall+boot+in+3+seconds&\
+             verification_method_id=1&current_status_id=1&author_id=1&reviewer_id=1&category_id=1&\
+             parent_id=0&applicability_id=1&justification=Updated+Performance&project_id=1&\
+             reference_code=REQ-SYS-{:03}",
+            id, id
         ))
         .dispatch()
         .await;
@@ -287,7 +287,7 @@ async fn complete_requirement_lifecycle() {
 
     // 7. Verify update
     let response = client
-        .get(format!("/p/1/requirements/show/{}", req_id))
+        .get(format!("/p/1/requirements/show/{}", id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -299,7 +299,7 @@ async fn complete_requirement_lifecycle() {
 
     // 8. Delete the requirement
     let response = client
-        .delete(format!("/p/1/requirements/delete/{}", req_id))
+        .delete(format!("/p/1/requirements/delete/{}", id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -308,7 +308,7 @@ async fn complete_requirement_lifecycle() {
 
     // 9. Verify deletion
     let response = client
-        .get(format!("/p/1/requirements/show/{}", req_id))
+        .get(format!("/p/1/requirements/show/{}", id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -334,9 +334,9 @@ async fn create_requirement_hierarchy() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=Parent+Requirement&req_description=Top+level&req_verification_method=1&\
-               req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
-               req_applicability=1&req_reference=&req_justification=",
+            "title=Parent+Requirement&description=Top+level&verification_method_id=1&\
+               current_status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
+               applicability_id=1&reference_code=&justification=",
         )
         .dispatch()
         .await;
@@ -355,9 +355,9 @@ async fn create_requirement_hierarchy() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(format!(
-            "req_title=Child+Requirement&req_description=Derived&req_verification_method=1&\
-             req_current_status=1&req_reviewer=1&req_category=1&req_parent={}&\
-             req_applicability=1&req_reference=&req_justification=",
+            "title=Child+Requirement&description=Derived&verification_method_id=1&\
+             current_status_id=1&reviewer_id=1&category_id=1&parent_id={}&\
+             applicability_id=1&reference_code=&justification=",
             parent_id
         ))
         .dispatch()
@@ -406,21 +406,21 @@ async fn filter_and_search_requirements() {
     // Add multiple requirements with different attributes
     for i in 1..=5 {
         let req = Requirement {
-            req_id: i,
-            req_title: format!("Requirement {}", i),
-            req_description: format!("Description {}", i),
-            req_verification_method: if i % 2 == 0 { 1 } else { 2 },
-            req_current_status: if i <= 2 { 1 } else { 2 },
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: format!("REQ-SYS-{:03}", i),
-            req_category: if i <= 3 { 1 } else { 2 },
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some(format!("Justification {}", i)),
+            id: i,
+            title: format!("Requirement {}", i),
+            description: format!("Description {}", i),
+            verification_method_id: if i % 2 == 0 { 1 } else { 2 },
+            current_status_id: if i <= 2 { 1 } else { 2 },
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: format!("REQ-SYS-{:03}", i),
+            category_id: if i <= 3 { 1 } else { 2 },
+            parent_id: 0,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: timestamp(),
+            applicability_id: 1,
+            justification: Some(format!("Justification {}", i)),
             project_id: 1,
         };
         repo.requirements.insert(i, req);
@@ -500,21 +500,21 @@ async fn non_admin_cannot_delete_released_requirement() {
     let mut repo = base_repo();
 
     let req = Requirement {
-        req_id: 1,
-        req_title: "Released Requirement".into(),
-        req_description: "Cannot delete".into(),
-        req_verification_method: 1,
-        req_current_status: 3, // Released
-        req_author: 1,
-        req_reviewer: 1,
-        req_reference: "REQ-SYS-001".into(),
-        req_category: 1,
-        req_parent: 0,
-        req_creation_date: timestamp(),
-        req_update_date: timestamp(),
-        req_deadline_date: timestamp(),
-        req_applicability: 1,
-        req_justification: Some("Released".into()),
+        id: 1,
+        title: "Released Requirement".into(),
+        description: "Cannot delete".into(),
+        verification_method_id: 1,
+        current_status_id: 3, // Released
+        author_id: 1,
+        reviewer_id: 1,
+        reference_code: "REQ-SYS-001".into(),
+        category_id: 1,
+        parent_id: 0,
+        creation_date: timestamp(),
+        update_date: timestamp(),
+        deadline_date: timestamp(),
+        applicability_id: 1,
+        justification: Some("Released".into()),
         project_id: 1,
     };
     repo.requirements.insert(1, req);
@@ -568,9 +568,9 @@ async fn create_requirement_with_inline_category() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(format!(
-            "req_title=Fast+Response&req_description=Response+time&req_verification_method=1&\
-             req_current_status=1&req_reviewer=1&req_category={}&req_parent=0&\
-             req_applicability=1&req_reference=&req_justification=",
+            "title=Fast+Response&description=Response+time&verification_method_id=1&\
+             current_status_id=1&reviewer_id=1&category_id={}&parent_id=0&\
+             applicability_id=1&reference_code=&justification=",
             category_id
         ))
         .dispatch()
@@ -593,9 +593,9 @@ async fn create_multiple_requirements_with_add_another() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=First&req_description=First+req&req_verification_method=1&\
-               req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
-               req_applicability=1&req_reference=&req_justification=&intent=add_another",
+            "title=First&description=First+req&verification_method_id=1&\
+               current_status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
+               applicability_id=1&reference_code=&justification=&intent=add_another",
         )
         .dispatch()
         .await;
@@ -622,9 +622,9 @@ async fn create_multiple_requirements_with_add_another() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=Second&req_description=Second+req&req_verification_method=1&\
-               req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
-               req_applicability=1&req_reference=&req_justification=",
+            "title=Second&description=Second+req&verification_method_id=1&\
+               current_status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
+               applicability_id=1&reference_code=&justification=",
         )
         .dispatch()
         .await;
@@ -655,21 +655,21 @@ async fn create_requirement_from_template() {
     let mut repo = base_repo();
 
     let template_req = Requirement {
-        req_id: 1,
-        req_title: "Template Requirement".into(),
-        req_description: "Template description with specific format".into(),
-        req_verification_method: 2,
-        req_current_status: 1,
-        req_author: 1,
-        req_reviewer: 1,
-        req_reference: "REQ-SYS-001".into(),
-        req_category: 2,
-        req_parent: 0,
-        req_creation_date: timestamp(),
-        req_update_date: timestamp(),
-        req_deadline_date: timestamp(),
-        req_applicability: 1,
-        req_justification: Some("Template justification".into()),
+        id: 1,
+        title: "Template Requirement".into(),
+        description: "Template description with specific format".into(),
+        verification_method_id: 2,
+        current_status_id: 1,
+        author_id: 1,
+        reviewer_id: 1,
+        reference_code: "REQ-SYS-001".into(),
+        category_id: 2,
+        parent_id: 0,
+        creation_date: timestamp(),
+        update_date: timestamp(),
+        deadline_date: timestamp(),
+        applicability_id: 1,
+        justification: Some("Template justification".into()),
         project_id: 1,
     };
     repo.requirements.insert(1, template_req);
@@ -695,9 +695,9 @@ async fn create_requirement_from_template() {
         .post("/p/1/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
-        .body("req_title=New+From+Template&req_description=Template+description+with+specific+format&\
-               req_verification_method=2&req_current_status=1&req_reviewer=1&req_category=2&req_parent=0&\
-               req_applicability=1&req_reference=&req_justification=Template+justification")
+        .body("title=New+From+Template&description=Template+description+with+specific+format&\
+               verification_method_id=2&current_status_id=1&reviewer_id=1&category_id=2&parent_id=0&\
+               applicability_id=1&reference_code=&justification=Template+justification")
         .dispatch()
         .await;
 

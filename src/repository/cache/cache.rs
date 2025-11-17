@@ -236,10 +236,10 @@ impl Cache {
     }
 
     /// Invalidate all requirement-related cache entries
-    pub fn invalidate_requirement(&self, req_id: i32) {
-        self.remove(&keys::Requirements::by_id(req_id));
-        self.remove(&keys::LinkedTests::for_requirement(req_id));
-        self.remove(&keys::RequirementTitle::by_id(req_id));
+    pub fn invalidate_requirement(&self, id: i32) {
+        self.remove(&keys::Requirements::by_id(id));
+        self.remove(&keys::LinkedTests::for_requirement(id));
+        self.remove(&keys::RequirementTitle::by_id(id));
         // Also invalidate global lists and project-level caches
         self.remove(keys::REQUIREMENTS_ALL);
         // Note: In a real implementation, you'd need to track which project the requirement belongs to

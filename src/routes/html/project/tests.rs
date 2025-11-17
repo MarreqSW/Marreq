@@ -271,7 +271,7 @@ async fn get_edit_test(
     let test0 = &decorated[0];
 
     let linked_requirements = get_requirements_for_test_cached(state, test_id).unwrap_or_default();
-    let linked_req_ids: Vec<i32> = linked_requirements.iter().map(|r| r.req_id).collect();
+    let linked_req_ids: Vec<i32> = linked_requirements.iter().map(|r| r.id).collect();
 
     let ctx = json!({
         "tests": test0,
@@ -521,21 +521,21 @@ mod tests {
 
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Requirement {id}"),
-            req_description: "Test requirement".into(),
-            req_verification_method: 1,
-            req_current_status: 1,
-            req_author: ADMIN_ID,
-            req_reviewer: ADMIN_ID,
-            req_reference: format!("REQ-SYS-{id}"),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("For testing".into()),
+            id: id,
+            title: format!("Requirement {id}"),
+            description: "Test requirement".into(),
+            verification_method_id: 1,
+            current_status_id: 1,
+            author_id: ADMIN_ID,
+            reviewer_id: ADMIN_ID,
+            reference_code: format!("REQ-SYS-{id}"),
+            category_id: 1,
+            parent_id: 0,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: timestamp(),
+            applicability_id: 1,
+            justification: Some("For testing".into()),
             project_id: PRIMARY_PROJECT,
         }
     }

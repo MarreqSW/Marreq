@@ -27,17 +27,17 @@ pub fn decorate_tests_with_repo<R: Repository>(repo: &R, tests: Vec<TestCase>) -
 }
 
 /// Get linked tests for a requirement using the default Diesel repository.
-pub fn get_linked_tests_for_requirement(req_id: i32) -> Result<Vec<DecoratedTestCase>, RepoError> {
+pub fn get_linked_tests_for_requirement(id: i32) -> Result<Vec<DecoratedTestCase>, RepoError> {
     let repo = DieselRepo::new();
-    get_linked_tests_for_requirement_impl(&repo, req_id)
+    get_linked_tests_for_requirement_impl(&repo, id)
 }
 
 /// Retrieve linked tests using an explicitly provided repository.
 pub fn get_linked_tests_for_requirement_with_repo<R: Repository>(
     repo: &R,
-    req_id: i32,
+    id: i32,
 ) -> Result<Vec<DecoratedTestCase>, RepoError> {
-    get_linked_tests_for_requirement_impl(repo, req_id)
+    get_linked_tests_for_requirement_impl(repo, id)
 }
 
 /// Decorate a list of requirements using the provided repository for lookups.
@@ -48,25 +48,25 @@ fn decorate_requirements_impl<R: Repository>(
     reqs.into_iter()
         .map(|r| {
             let verification = repo
-                .get_verification_by_id(r.req_verification_method)
+                .get_verification_by_id(r.verification_method_id)
                 .map(|v| v.verification_name)
-                .unwrap_or_else(|_| format!("Unknown Verification ({})", r.req_verification_method));
+                .unwrap_or_else(|_| format!("Unknown Verification ({})", r.verification_method_id));
 
             let status = repo
-                .get_requirement_status_by_id(r.req_current_status)
+                .get_requirement_status_by_id(r.current_status_id)
                 .map(|s| s.req_st_title)
-                .unwrap_or_else(|_| format!("Unknown Status ({})", r.req_current_status));
+                .unwrap_or_else(|_| format!("Unknown Status ({})", r.current_status_id));
 
-            let author = if r.req_author != 0 {
-                repo.get_user_by_id(r.req_author)
+            let author = if r.author_id != 0 {
+                repo.get_user_by_id(r.author_id)
                     .map(|u| u.user_name)
                     .unwrap_or_default()
             } else {
                 String::new()
             };
 
-            let reviewer = if r.req_reviewer != 0 {
-                repo.get_user_by_id(r.req_reviewer)
+            let reviewer = if r.reviewer_id != 0 {
+                repo.get_user_by_id(r.reviewer_id)
                     .map(|u| u.user_name)
                     .unwrap_or_default()
             } else {
@@ -74,18 +74,18 @@ fn decorate_requirements_impl<R: Repository>(
             };
 
             let category = repo
-                .get_category_by_id(r.req_category)
+                .get_category_by_id(r.category_id)
                 .map(|c| c.cat_title)
-                .unwrap_or_else(|_| format!("Unknown Category ({})", r.req_category));
+                .unwrap_or_else(|_| format!("Unknown Category ({})", r.category_id));
 
             let applicability = repo
-                .get_applicability_by_id(r.req_applicability)
+                .get_applicability_by_id(r.applicability_id)
                 .map(|a| a.app_title)
-                .unwrap_or_else(|_| format!("Unknown Applicability ({})", r.req_applicability));
+                .unwrap_or_else(|_| format!("Unknown Applicability ({})", r.applicability_id));
 
-            let parent_title = if r.req_parent != 0 {
-                match repo.get_requirement_by_id(r.req_parent) {
-                    Ok(parent_req) => parent_req.req_title,
+            let parent_title = if r.parent_id != 0 {
+                match repo.get_requirement_by_id(r.parent_id) {
+                    Ok(parent_req) => parent_req.title,
                     Err(_) => "[Deleted Parent]".to_string(),
                 }
             } else {
@@ -93,28 +93,28 @@ fn decorate_requirements_impl<R: Repository>(
             };
 
             DecoratedRequirement {
-                req_id: r.req_id,
-                req_title: r.req_title,
-                req_verification_method: verification,
-                req_verification_id: r.req_verification_method,
-                req_description: r.req_description,
-                req_current_status: status,
-                req_current_status_id: r.req_current_status,
-                req_author: author,
-                req_author_id: r.req_author,
-                req_reviewer: reviewer,
-                req_reviewer_id: r.req_reviewer,
-                req_reference: r.req_reference,
-                req_category: category,
-                req_category_id: r.req_category,
-                req_applicability: applicability,
-                req_applicability_id: r.req_applicability,
-                req_parent_id: r.req_parent,
+                id: r.id,
+                title: r.title,
+                verification_method_id: verification,
+                req_verification_id: r.verification_method_id,
+                description: r.description,
+                current_status_id: status,
+                req_current_status_id: r.current_status_id,
+                author_id: author,
+                req_author_id: r.author_id,
+                reviewer_id: reviewer,
+                req_reviewer_id: r.reviewer_id,
+                reference_code: r.reference_code,
+                category_id: category,
+                req_category_id: r.category_id,
+                applicability_id: applicability,
+                req_applicability_id: r.applicability_id,
+                req_parent_id: r.parent_id,
                 req_parent_title: parent_title,
-                req_creation_date: r.req_creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
-                req_update_date: r.req_update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
-                req_deadline_date: r.req_deadline_date.format("%d-%m-%Y %H:%M:%S").to_string(),
-                req_justification: r.req_justification,
+                creation_date: r.creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+                update_date: r.update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+                deadline_date: r.deadline_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+                justification: r.justification,
                 project_id: r.project_id,
             }
         })
@@ -158,14 +158,14 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
 /// Retrieve tests linked to a requirement and return them decorated.
 fn get_linked_tests_for_requirement_impl<R: Repository>(
     repo: &R,
-    req_id: i32,
+    id: i32,
 ) -> Result<Vec<DecoratedTestCase>, RepoError> {
-    let requirement = repo.get_requirement_by_id(req_id)?;
+    let requirement = repo.get_requirement_by_id(id)?;
     let matrix = repo.get_matrix_by_project(requirement.project_id)?;
 
     let test_ids: Vec<i32> = matrix
         .into_iter()
-        .filter(|m| m.matrix_req_id == req_id)
+        .filter(|m| m.matrix_req_id == id)
         .map(|m| m.matrix_test_id)
         .collect();
 
@@ -270,79 +270,79 @@ mod tests {
         repo.requirements.insert(
             31,
             Requirement {
-                req_id: 31,
-                req_title: "Parent".into(),
-                req_description: String::new(),
-                req_verification_method: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 2,
-                req_reference: String::new(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: now,
-                req_update_date: now,
-                req_deadline_date: now,
-                req_applicability: 1,
-                req_justification: None,
+                id: 31,
+                title: "Parent".into(),
+                description: String::new(),
+                verification_method_id: 1,
+                current_status_id: 1,
+                author_id: 1,
+                reviewer_id: 2,
+                reference_code: String::new(),
+                category_id: 1,
+                parent_id: 0,
+                creation_date: now,
+                update_date: now,
+                deadline_date: now,
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
 
         let r1 = Requirement {
-            req_id: 1,
-            req_title: "R1".into(),
-            req_description: String::new(),
-            req_verification_method: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 2,
-            req_reference: String::new(),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: now,
-            req_update_date: now,
-            req_deadline_date: now,
-            req_applicability: 1,
-            req_justification: None,
+            id: 1,
+            title: "R1".into(),
+            description: String::new(),
+            verification_method_id: 1,
+            current_status_id: 1,
+            author_id: 1,
+            reviewer_id: 2,
+            reference_code: String::new(),
+            category_id: 1,
+            parent_id: 0,
+            creation_date: now,
+            update_date: now,
+            deadline_date: now,
+            applicability_id: 1,
+            justification: None,
             project_id: 1,
         };
 
         let r2 = Requirement {
-            req_id: 2,
-            req_title: "R2".into(),
-            req_description: String::new(),
-            req_verification_method: 1,
-            req_current_status: 1,
-            req_author: 0,
-            req_reviewer: 0,
-            req_reference: String::new(),
-            req_category: 1,
-            req_parent: 31,
-            req_creation_date: now,
-            req_update_date: now,
-            req_deadline_date: now,
-            req_applicability: 1,
-            req_justification: None,
+            id: 2,
+            title: "R2".into(),
+            description: String::new(),
+            verification_method_id: 1,
+            current_status_id: 1,
+            author_id: 0,
+            reviewer_id: 0,
+            reference_code: String::new(),
+            category_id: 1,
+            parent_id: 31,
+            creation_date: now,
+            update_date: now,
+            deadline_date: now,
+            applicability_id: 1,
+            justification: None,
             project_id: 1,
         };
 
         let r3 = Requirement {
-            req_id: 3,
-            req_title: "R3".into(),
-            req_description: String::new(),
-            req_verification_method: 99,
-            req_current_status: 99,
-            req_author: 99,
-            req_reviewer: 98,
-            req_reference: String::new(),
-            req_category: 99,
-            req_parent: 32,
-            req_creation_date: now,
-            req_update_date: now,
-            req_deadline_date: now,
-            req_applicability: 99,
-            req_justification: None,
+            id: 3,
+            title: "R3".into(),
+            description: String::new(),
+            verification_method_id: 99,
+            current_status_id: 99,
+            author_id: 99,
+            reviewer_id: 98,
+            reference_code: String::new(),
+            category_id: 99,
+            parent_id: 32,
+            creation_date: now,
+            update_date: now,
+            deadline_date: now,
+            applicability_id: 99,
+            justification: None,
             project_id: 1,
         };
 
@@ -350,26 +350,26 @@ mod tests {
 
         assert_eq!(decorated.len(), 3);
         let d1 = &decorated[0];
-        assert_eq!(d1.req_verification_method, "Analysis");
-        assert_eq!(d1.req_current_status, "Open");
-        assert_eq!(d1.req_author, "Author");
-        assert_eq!(d1.req_reviewer, "Reviewer");
-        assert_eq!(d1.req_category, "Cat");
-        assert_eq!(d1.req_applicability, "App");
+        assert_eq!(d1.verification_method_id, "Analysis");
+        assert_eq!(d1.current_status_id, "Open");
+        assert_eq!(d1.author_id, "Author");
+        assert_eq!(d1.reviewer_id, "Reviewer");
+        assert_eq!(d1.category_id, "Cat");
+        assert_eq!(d1.applicability_id, "App");
         assert_eq!(d1.req_parent_title, "");
 
         let d2 = &decorated[1];
-        assert_eq!(d2.req_author, "");
-        assert_eq!(d2.req_reviewer, "");
+        assert_eq!(d2.author_id, "");
+        assert_eq!(d2.reviewer_id, "");
         assert_eq!(d2.req_parent_title, "Parent");
 
         let d3 = &decorated[2];
-        assert!(d3.req_verification_method.starts_with("Unknown Verification"));
-        assert!(d3.req_current_status.starts_with("Unknown Status"));
-        assert_eq!(d3.req_author, "");
-        assert_eq!(d3.req_reviewer, "");
-        assert!(d3.req_category.starts_with("Unknown Category"));
-        assert!(d3.req_applicability.starts_with("Unknown Applicability"));
+        assert!(d3.verification_method_id.starts_with("Unknown Verification"));
+        assert!(d3.current_status_id.starts_with("Unknown Status"));
+        assert_eq!(d3.author_id, "");
+        assert_eq!(d3.reviewer_id, "");
+        assert!(d3.category_id.starts_with("Unknown Category"));
+        assert!(d3.applicability_id.starts_with("Unknown Applicability"));
         assert_eq!(d3.req_parent_title, "[Deleted Parent]");
     }
 
@@ -463,21 +463,21 @@ mod tests {
             },
         );
         let req = Requirement {
-            req_id: 1,
-            req_title: "R".into(),
-            req_description: String::new(),
-            req_verification_method: 0,
-            req_current_status: 0,
-            req_author: 0,
-            req_reviewer: 0,
-            req_reference: String::new(),
-            req_category: 0,
-            req_parent: 0,
-            req_creation_date: now,
-            req_update_date: now,
-            req_deadline_date: now,
-            req_applicability: 0,
-            req_justification: None,
+            id: 1,
+            title: "R".into(),
+            description: String::new(),
+            verification_method_id: 0,
+            current_status_id: 0,
+            author_id: 0,
+            reviewer_id: 0,
+            reference_code: String::new(),
+            category_id: 0,
+            parent_id: 0,
+            creation_date: now,
+            update_date: now,
+            deadline_date: now,
+            applicability_id: 0,
+            justification: None,
             project_id: 1,
         };
         let test = TestCase {
@@ -510,21 +510,21 @@ mod tests {
         let now = dt();
         let mut repo = DieselRepoMock::default();
         let req = Requirement {
-            req_id: 2,
-            req_title: "R".into(),
-            req_description: String::new(),
-            req_verification_method: 0,
-            req_current_status: 0,
-            req_author: 0,
-            req_reviewer: 0,
-            req_reference: String::new(),
-            req_category: 0,
-            req_parent: 0,
-            req_creation_date: now,
-            req_update_date: now,
-            req_deadline_date: now,
-            req_applicability: 0,
-            req_justification: None,
+            id: 2,
+            title: "R".into(),
+            description: String::new(),
+            verification_method_id: 0,
+            current_status_id: 0,
+            author_id: 0,
+            reviewer_id: 0,
+            reference_code: String::new(),
+            category_id: 0,
+            parent_id: 0,
+            creation_date: now,
+            update_date: now,
+            deadline_date: now,
+            applicability_id: 0,
+            justification: None,
             project_id: 1,
         };
         repo.requirements.insert(2, req);
@@ -552,21 +552,21 @@ mod tests {
         let now = dt();
         let mut repo = DieselRepoMock::default();
         let req = Requirement {
-            req_id: 3,
-            req_title: "R".into(),
-            req_description: String::new(),
-            req_verification_method: 0,
-            req_current_status: 0,
-            req_author: 0,
-            req_reviewer: 0,
-            req_reference: String::new(),
-            req_category: 0,
-            req_parent: 0,
-            req_creation_date: now,
-            req_update_date: now,
-            req_deadline_date: now,
-            req_applicability: 0,
-            req_justification: None,
+            id: 3,
+            title: "R".into(),
+            description: String::new(),
+            verification_method_id: 0,
+            current_status_id: 0,
+            author_id: 0,
+            reviewer_id: 0,
+            reference_code: String::new(),
+            category_id: 0,
+            parent_id: 0,
+            creation_date: now,
+            update_date: now,
+            deadline_date: now,
+            applicability_id: 0,
+            justification: None,
             project_id: 1,
         };
         repo.requirements.insert(3, req);

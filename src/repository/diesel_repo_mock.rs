@@ -386,25 +386,25 @@ impl RequirementsRepository for DieselRepoMock {
 
     fn insert_new_requirement(&mut self, _new: &NewRequirement) -> Result<i32, RepoError> {
         let id = _new
-            .req_id
+            .id
             .unwrap_or_else(|| self.requirements.keys().max().map(|i| i + 1).unwrap_or(1));
         let now = epoch();
         let req = Requirement {
-            req_id: id,
-            req_title: _new.req_title.clone(),
-            req_description: _new.req_description.clone(),
-            req_verification_method: _new.req_verification_method,
-            req_current_status: _new.req_current_status,
-            req_author: _new.req_author,
-            req_reviewer: _new.req_reviewer,
-            req_reference: _new.req_reference.clone(),
-            req_category: _new.req_category,
-            req_parent: _new.req_parent,
-            req_creation_date: now,
-            req_update_date: now,
-            req_deadline_date: now,
-            req_applicability: _new.req_applicability,
-            req_justification: _new.req_justification.clone(),
+            id: id,
+            title: _new.title.clone(),
+            description: _new.description.clone(),
+            verification_method_id: _new.verification_method_id,
+            current_status_id: _new.current_status_id,
+            author_id: _new.author_id,
+            reviewer_id: _new.reviewer_id,
+            reference_code: _new.reference_code.clone(),
+            category_id: _new.category_id,
+            parent_id: _new.parent_id,
+            creation_date: now,
+            update_date: now,
+            deadline_date: now,
+            applicability_id: _new.applicability_id,
+            justification: _new.justification.clone(),
             project_id: _new.project_id,
         };
         self.requirements.insert(id, req);
@@ -412,22 +412,22 @@ impl RequirementsRepository for DieselRepoMock {
     }
 
     fn edit_requirement(&mut self, _new: &NewRequirement) -> Result<bool, RepoError> {
-        let id = _new.req_id.ok_or(RepoError::NotFound)?;
+        let id = _new.id.ok_or(RepoError::NotFound)?;
         match self.requirements.get_mut(&id) {
             Some(req) => {
-                req.req_title = _new.req_title.clone();
-                req.req_description = _new.req_description.clone();
-                req.req_verification_method = _new.req_verification_method;
-                req.req_current_status = _new.req_current_status;
-                req.req_author = _new.req_author;
-                req.req_reviewer = _new.req_reviewer;
-                req.req_reference = _new.req_reference.clone();
-                req.req_category = _new.req_category;
-                req.req_parent = _new.req_parent;
-                req.req_applicability = _new.req_applicability;
-                req.req_justification = _new.req_justification.clone();
+                req.title = _new.title.clone();
+                req.description = _new.description.clone();
+                req.verification_method_id = _new.verification_method_id;
+                req.current_status_id = _new.current_status_id;
+                req.author_id = _new.author_id;
+                req.reviewer_id = _new.reviewer_id;
+                req.reference_code = _new.reference_code.clone();
+                req.category_id = _new.category_id;
+                req.parent_id = _new.parent_id;
+                req.applicability_id = _new.applicability_id;
+                req.justification = _new.justification.clone();
                 req.project_id = _new.project_id;
-                req.req_update_date = epoch();
+                req.update_date = epoch();
                 Ok(true)
             }
             None => Err(RepoError::NotFound),
@@ -441,7 +441,7 @@ impl RequirementsRepository for DieselRepoMock {
     fn update_requirement(&mut self, _req: i32) -> Result<(), RepoError> {
         match self.requirements.get_mut(&_req) {
             Some(req) => {
-                req.req_update_date = epoch();
+                req.update_date = epoch();
                 Ok(())
             }
             None => Err(RepoError::NotFound),
@@ -480,11 +480,11 @@ impl TestsRepository for DieselRepoMock {
             .collect())
     }
 
-    fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<TestCase>, RepoError> {
+    fn get_tests_for_requirement(&self, id: i32) -> Result<Vec<TestCase>, RepoError> {
         let ids: Vec<i32> = self
             .matrices
             .iter()
-            .filter(|m| m.matrix_req_id == req_id)
+            .filter(|m| m.matrix_req_id == id)
             .map(|m| m.matrix_test_id)
             .collect();
         Ok(ids
@@ -539,9 +539,9 @@ impl TestsRepository for DieselRepoMock {
         // Remove existing links for this test
         self.matrices.retain(|m| m.matrix_test_id != _test_id);
         let project_id = self.tests.get(&_test_id).map(|t| t.project_id).unwrap_or(0);
-        for &req_id in _requirement_ids {
+        for &id in _requirement_ids {
             self.matrices.push(Matrix {
-                matrix_req_id: req_id,
+                matrix_req_id: id,
                 matrix_test_id: _test_id,
                 matrix_creation_date: epoch(),
                 project_id,

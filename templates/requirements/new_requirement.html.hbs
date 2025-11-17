@@ -54,60 +54,60 @@
 
       <div class="c-create-card__body">
         <div class="c-create-field">
-          <label for="req_title" class="c-create-field__label">
+          <label for="title" class="c-create-field__label">
             Title <span class="c-create-field__required">*</span>
           </label>
           <input
             type="text"
-            name="req_title"
-            id="req_title"
+            name="title"
+            id="title"
             class="c-create-field__input"
-            value="{{template.req_title}}"
+            value="{{template.title}}"
             placeholder="Control system shall…"
             required
           >
         </div>
 
         <div class="c-create-field">
-          <label for="req_reference" class="c-create-field__label">
+          <label for="reference_code" class="c-create-field__label">
             Reference <span class="c-create-field__optional">(optional)</span>
           </label>
           <input
             type="text"
-            name="req_reference"
-            id="req_reference"
+            name="reference_code"
+            id="reference_code"
             class="c-create-field__input"
-            value="{{template.req_reference}}"
+            value="{{template.reference_code}}"
             placeholder="REQ-CAT-001 (auto-generated if left blank)"
           >
           <div id="reference-error" class="c-create-field__error" hidden></div>
         </div>
 
         <div class="c-create-field">
-          <label for="req_description" class="c-create-field__label">
+          <label for="description" class="c-create-field__label">
             Statement <span class="c-create-field__required">*</span>
           </label>
           <textarea
-            name="req_description"
-            id="req_description"
+            name="description"
+            id="description"
             class="c-create-field__textarea c-create-field__textarea--statement"
             rows="6"
             required
             placeholder="The system shall…"
-          >{{template.req_description}}</textarea>
+          >{{template.description}}</textarea>
         </div>
 
         <div class="c-create-field">
-          <label for="req_justification" class="c-create-field__label">
+          <label for="justification" class="c-create-field__label">
             Rationale <span class="c-create-field__optional">(optional)</span>
           </label>
           <textarea
-            name="req_justification"
-            id="req_justification"
+            name="justification"
+            id="justification"
             class="c-create-field__textarea"
             rows="4"
             placeholder="What evidence or reasoning supports this?"
-          >{{template.req_justification}}</textarea>
+          >{{template.justification}}</textarea>
         </div>
       </div>
     </section>
@@ -132,7 +132,7 @@
         </div>
 
         <div class="c-create-field">
-          <label for="req_reviewer" class="c-create-field__label">
+          <label for="reviewer_id" class="c-create-field__label">
             Reviewer <span class="c-create-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="reviewer">
@@ -149,16 +149,16 @@
                 {{/each}}
               </div>
             </div>
-            <select name="req_reviewer" id="req_reviewer" class="c-custom-dropdown__hidden" required hidden>
+            <select name="reviewer_id" id="reviewer_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each users}}
-                <option value="{{user_id}}" {{#if (eq user_id ../req_reviewer)}}selected{{/if}}>{{user_name}}</option>
+                <option value="{{user_id}}" {{#if (eq user_id ../reviewer_id)}}selected{{/if}}>{{user_name}}</option>
               {{/each}}
             </select>
           </div>
         </div>
 
         <div class="c-create-field">
-          <label for="req_category" class="c-create-field__label">
+          <label for="category_id" class="c-create-field__label">
             Category <span class="c-create-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="category">
@@ -180,16 +180,16 @@
                 </button>
               </div>
             </div>
-            <select name="req_category" id="req_category" class="c-custom-dropdown__hidden" required hidden>
+            <select name="category_id" id="category_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each categories}}
-                <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../req_category)}}selected{{/if}}>{{cat_title}}</option>
+                <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../category_id)}}selected{{/if}}>{{cat_title}}</option>
               {{/each}}
             </select>
           </div>
         </div>
 
         <div class="c-create-field">
-          <label for="req_applicability" class="c-create-field__label">
+          <label for="applicability_id" class="c-create-field__label">
             Applicability <span class="c-create-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="applicability">
@@ -211,16 +211,16 @@
                 </button>
               </div>
             </div>
-            <select name="req_applicability" id="req_applicability" class="c-custom-dropdown__hidden" required hidden>
+            <select name="applicability_id" id="applicability_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each applicability}}
-                <option value="{{app_id}}" {{#if (eq app_id ../req_applicability)}}selected{{/if}}>{{app_title}}</option>
+                <option value="{{app_id}}" {{#if (eq app_id ../applicability_id)}}selected{{/if}}>{{app_title}}</option>
               {{/each}}
             </select>
           </div>
         </div>
 
         <div class="c-create-field">
-          <label for="req_verification_method" class="c-create-field__label">
+          <label for="verification_method_id" class="c-create-field__label">
             Verification Method <span class="c-create-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="verification">
@@ -242,9 +242,9 @@
                 </button>
               </div>
             </div>
-            <select name="req_verification_method" id="req_verification_method" class="c-custom-dropdown__hidden" required hidden>
+            <select name="verification_method_id" id="verification_method_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each verification}}
-                <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification_method)}}selected{{/if}}>{{verification_name}}</option>
+                <option value="{{verification_id}}" {{#if (eq verification_id ../verification_method_id)}}selected{{/if}}>{{verification_name}}</option>
               {{/each}}
             </select>
           </div>
@@ -252,18 +252,18 @@
 
         {{#if is_admin_or_owner}}
         <div class="c-create-field">
-          <label for="req_current_status" class="c-create-field__label">
+          <label for="current_status_id" class="c-create-field__label">
             Status <span class="c-create-field__required">*</span>
           </label>
           <select
-            name="req_current_status"
-            id="req_current_status"
+            name="current_status_id"
+            id="current_status_id"
             class="c-create-field__select"
             required
           >
             {{#each status}}
               {{#if (or (eq req_st_title "Draft") (or (eq req_st_title "Accepted") (or (eq req_st_title "Rejected") (eq req_st_title "Deprecated"))))}}
-                <option value="{{req_st_id}}" {{#if (eq req_st_id ../req_current_status)}}selected{{/if}}>
+                <option value="{{req_st_id}}" {{#if (eq req_st_id ../current_status_id)}}selected{{/if}}>
                   {{req_st_title}}
                 </option>
               {{/if}}
@@ -273,7 +273,7 @@
         {{/if}}
 
         <div class="c-create-field">
-          <label for="req_parent" class="c-create-field__label">
+          <label for="parent_id" class="c-create-field__label">
             Parent Requirement <span class="c-create-field__optional">(optional)</span>
           </label>
           <div class="c-custom-dropdown c-custom-dropdown--searchable" data-dropdown="parent">
@@ -303,10 +303,10 @@
                 {{/each}}
               </div>
             </div>
-            <select name="req_parent" id="req_parent" class="c-custom-dropdown__hidden" hidden>
-              <option value="0" {{#if (not template.req_parent)}}selected{{/if}}>None</option>
+            <select name="parent_id" id="parent_id" class="c-custom-dropdown__hidden" hidden>
+              <option value="0" {{#if (not template.parent_id)}}selected{{/if}}>None</option>
               {{#each parent}}
-                <option value="{{id}}" {{#if (eq id ../template.req_parent)}}selected{{/if}}>{{reference}} - {{title}}</option>
+                <option value="{{id}}" {{#if (eq id ../template.parent_id)}}selected{{/if}}>{{reference}} - {{title}}</option>
               {{/each}}
             </select>
           </div>
@@ -315,7 +315,7 @@
     </aside>
   </div>
 
-  <input type="hidden" id="req_id" name="req_id" value="None">
+  <input type="hidden" id="id" name="id" value="None">
   <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
 </form>
 

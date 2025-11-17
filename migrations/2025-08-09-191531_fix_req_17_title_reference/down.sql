@@ -3,6 +3,6 @@
 
 UPDATE requirements 
 SET 
-    req_title = 'Adequate thrust is required for attitude control during various mission phases.',
-    req_reference = 'Adequate thrust is required for attitude control during various mission phases.'
-WHERE req_id = 17;
+    title = 'Adequate thrust is required for attitude control during various mission phases.',
+    reference_code = 'Adequate thrust is required for attitude control during various mission phases.'
+WHERE id = 17;

@@ -44,7 +44,7 @@ pub trait TestsRepository {
     fn get_tests_all(&self) -> Result<Vec<TestCase>, RepoError>;
     fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<TestCase>, RepoError>;
     fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError>;
-    fn get_tests_for_requirement(&self, req_id: i32) -> Result<Vec<TestCase>, RepoError>;
+    fn get_tests_for_requirement(&self, id: i32) -> Result<Vec<TestCase>, RepoError>;
 
     fn insert_test(&mut self, new: &NewTestCase) -> Result<i32, RepoError>;
     fn edit_test(&mut self, new: &NewTestCase) -> Result<bool, RepoError>;

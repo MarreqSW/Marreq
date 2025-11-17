@@ -104,12 +104,12 @@ impl<'a> RequirementAnalyticsService<'a> {
         let query = diesel::sql_query(
             "SELECT LOWER(TRIM(rs.req_st_title)) AS status, COUNT(*)::BIGINT AS total
              FROM requirements r
-             INNER JOIN requirement_status rs ON rs.req_st_id = r.req_current_status
+             INNER JOIN requirement_status rs ON rs.req_st_id = r.current_status_id
              WHERE r.project_id = $1
-               AND ($2 IS NULL OR r.req_current_status = $2)
-               AND ($3 IS NULL OR r.req_verification_method = $3)
-               AND ($4 IS NULL OR r.req_category = $4)
-               AND ($5 IS NULL OR r.req_applicability = $5)
+               AND ($2 IS NULL OR r.current_status_id = $2)
+               AND ($3 IS NULL OR r.verification_method_id = $3)
+               AND ($4 IS NULL OR r.category_id = $4)
+               AND ($5 IS NULL OR r.applicability_id = $5)
              GROUP BY status",
         );
 
@@ -150,30 +150,30 @@ impl<'a> RequirementAnalyticsService<'a> {
         // Apply the same filtering semantics as the SQL path.
         for requirement in requirements {
             if let Some(filter) = status_filter {
-                if requirement.req_current_status != filter {
+                if requirement.current_status_id != filter {
                     continue;
                 }
             }
             if let Some(filter) = verification_filter {
-                if requirement.req_verification_method != filter {
+                if requirement.verification_method_id != filter {
                     continue;
                 }
             }
             if let Some(filter) = category_filter {
-                if requirement.req_category != filter {
+                if requirement.category_id != filter {
                     continue;
                 }
             }
             if let Some(filter) = applicability_filter {
-                if requirement.req_applicability != filter {
+                if requirement.applicability_id != filter {
                     continue;
                 }
             }
 
             let title = status_lookup
-                .get(&requirement.req_current_status)
+                .get(&requirement.current_status_id)
                 .map(|name| name.trim().to_string())
-                .unwrap_or_else(|| format!("Unknown Status ({})", requirement.req_current_status));
+                .unwrap_or_else(|| format!("Unknown Status ({})", requirement.current_status_id));
 
             *counts.entry(title).or_insert(0) += 1;
         }
@@ -237,28 +237,28 @@ mod tests {
     }
 
     fn make_requirement(
-        req_id: i32,
+        id: i32,
         project_id: i32,
         status_id: i32,
         verification_id: i32,
         category_id: i32,
     ) -> Requirement {
         Requirement {
-            req_id,
-            req_title: format!("Req {req_id}"),
-            req_description: "desc".into(),
-            req_verification_method: verification_id,
-            req_current_status: status_id,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: format!("REF-{req_id}"),
-            req_category: category_id,
-            req_parent: 0,
-            req_creation_date: naive_datetime(),
-            req_update_date: naive_datetime(),
-            req_deadline_date: naive_datetime(),
-            req_applicability: 1,
-            req_justification: None,
+            id,
+            title: format!("Req {id}"),
+            description: "desc".into(),
+            verification_method_id: verification_id,
+            current_status_id: status_id,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: format!("REF-{id}"),
+            category_id: category_id,
+            parent_id: 0,
+            creation_date: naive_datetime(),
+            update_date: naive_datetime(),
+            deadline_date: naive_datetime(),
+            applicability_id: 1,
+            justification: None,
             project_id,
         }
     }

@@ -120,15 +120,15 @@
           <h5 class="mb-3">Linked Requirements</h5>
           <div class="list-group list-group-flush">
             {{#each linked_requirements}}
-            <a href="/p/{{project_id}}/requirements/show/{{req_id}}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <a href="/p/{{project_id}}/requirements/show/{{id}}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
               <div class="me-3">
-                <span class="fw-semibold">REQ-{{req_id}}</span>
-                <span class="small text-muted ms-2">{{req_title}}</span>
+                <span class="fw-semibold">REQ-{{id}}</span>
+                <span class="small text-muted ms-2">{{title}}</span>
               </div>
-              {{#if req_category}}
-                <span class="badge bg-secondary">{{req_category}}</span>
-              {{else if req_applicability}}
-                <span class="badge bg-info">{{req_applicability}}</span>
+              {{#if category_id}}
+                <span class="badge bg-secondary">{{category_id}}</span>
+              {{else if applicability_id}}
+                <span class="badge bg-info">{{applicability_id}}</span>
               {{else}}
                 <span class="badge bg-light text-dark border">—</span>
               {{/if}}

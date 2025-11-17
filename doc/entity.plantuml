@@ -48,11 +48,11 @@ is_admin
 }
 
 entity "Status" as st {
-* st_id
+* id
 ---
-* st_title
-* st_description
-* st_short_name
+* title
+* description
+* short_name
 }
 
 entity "Categories" as cat {

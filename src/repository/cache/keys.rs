@@ -3,7 +3,6 @@ use std::fmt::Display;
 // Navigation and overview data
 pub const PROJECTS_NAV: &str = "projects:nav";
 pub const PROJECTS_ALL: &str = "projects:all";
-pub const STATUS_ALL: &str = "status:all";
 pub const REQUIREMENT_STATUS_ALL: &str = "requirement_status:all";
 pub const TEST_STATUS_ALL: &str = "status_id:all";
 pub const CATEGORIES_ALL: &str = "categories:all";
@@ -140,7 +139,8 @@ mod tests {
     fn constants_are_correct() {
         assert_eq!(PROJECTS_NAV, "projects:nav");
         assert_eq!(PROJECTS_ALL, "projects:all");
-        assert_eq!(STATUS_ALL, "status:all");
+        assert_eq!(REQUIREMENT_STATUS_ALL, "requirement_status:all");
+        assert_eq!(TEST_STATUS_ALL, "status_id:all");
         assert_eq!(CATEGORIES_ALL, "categories:all");
         assert_eq!(APPLICABILITY_ALL, "applicability:all");
         assert_eq!(VERIFICATION_ALL, "verification:all");

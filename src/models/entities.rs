@@ -77,15 +77,6 @@ pub struct TestStatus {
     pub short_name: String,
 }
 
-// Keep the old Status struct for backward compatibility
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Status {
-    pub st_id: i32,
-    pub st_title: String,
-    pub st_description: String,
-    pub st_short_name: String,
-}
-
 /// Verification methods available for requirements.
 #[derive(Serialize, Deserialize, Queryable, Clone)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -310,9 +301,9 @@ impl fmt::Display for Applicability {
     }
 }
 
-impl fmt::Display for Status {
+impl fmt::Display for RequirementStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<div class='status'>Status: {}</div>", self.st_title)
+        write!(f, "<div class='status'>Status: {}</div>", self.title)
     }
 }
 

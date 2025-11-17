@@ -8,7 +8,7 @@ use std::collections::HashMap;
 #[derive(Default)]
 pub struct DieselRepoMock {
     pub users: HashMap<i32, User>,
-    pub statuses: HashMap<i32, Status>,
+    pub statuses: HashMap<i32, RequirementStatus>,
     pub requirement_statuses: HashMap<i32, RequirementStatus>,
     pub test_statuses: HashMap<i32, TestStatus>,
     pub verifications: HashMap<i32, VerificationMethod>,
@@ -186,13 +186,6 @@ impl UserRepository for DieselRepoMock {
 }
 
 impl LookupRepository for DieselRepoMock {
-    fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
-        Ok(self.statuses.values().cloned().collect())
-    }
-
-    fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError> {
-        self.statuses.get(&id).cloned().ok_or(RepoError::NotFound)
-    }
 
     fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
         Ok(self.requirement_statuses.values().cloned().collect())
@@ -352,11 +345,11 @@ impl LookupRepository for DieselRepoMock {
     }
     fn create_status(&mut self, _new: &NewStatus) -> Result<i32, RepoError> {
         let id = self.statuses.keys().max().map(|i| i + 1).unwrap_or(1);
-        let status = Status {
-            st_id: id,
-            st_title: _new.title.clone(),
-            st_description: _new.description.clone(),
-            st_short_name: _new.short_name.clone(),
+        let status = RequirementStatus {
+            id: id,
+            title: _new.title.clone(),
+            description: _new.description.clone(),
+            short_name: _new.short_name.clone(),
         };
         self.statuses.insert(id, status);
         Ok(id)

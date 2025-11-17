@@ -263,8 +263,9 @@ impl Cache {
 
     /// Invalidate all status-related cache entries
     pub fn invalidate_status(&self, status_id: i32) {
-        self.remove(&keys::Status::by_id(status_id));
-        self.remove(keys::STATUS_ALL);
+        self.remove(&keys::RequirementStatus::by_id(status_id));
+        self.remove(keys::REQUIREMENT_STATUS_ALL);
+        self.remove(keys::TEST_STATUS_ALL);
     }
 
     /// Invalidate all verification-related cache entries
@@ -466,11 +467,13 @@ mod tests {
     fn test_invalidate_status_removes_related_keys() {
         let cache = Cache::new(300);
         let sid = 9;
-        cache.set(&keys::Status::by_id(sid), "s".to_string());
-        cache.set(keys::STATUS_ALL, "sa".to_string());
+        cache.set(&keys::RequirementStatus::by_id(sid), "s".to_string());
+        cache.set(keys::REQUIREMENT_STATUS_ALL, "sa".to_string());
+        cache.set(keys::TEST_STATUS_ALL, "tsa".to_string());
         cache.invalidate_status(sid);
-        assert!(cache.get(&keys::Status::by_id(sid)).is_none());
-        assert!(cache.get(keys::STATUS_ALL).is_none());
+        assert!(cache.get(&keys::RequirementStatus::by_id(sid)).is_none());
+        assert!(cache.get(keys::REQUIREMENT_STATUS_ALL).is_none());
+        assert!(cache.get(keys::TEST_STATUS_ALL).is_none());
     }
 
     #[test]

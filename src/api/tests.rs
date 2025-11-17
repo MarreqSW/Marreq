@@ -68,10 +68,14 @@ pub async fn update_field(
         }
         "reference_code" => test.reference_code = update.value,
         "parent_id" => {
-            test.parent_id = update
-                .value
-                .parse()
-                .map_err(|_| RepoError::BadInput("invalid parent id".into()))?;
+            test.parent_id = if update.value.is_empty() || update.value == "0" {
+                None
+            } else {
+                Some(update
+                    .value
+                    .parse()
+                    .map_err(|_| RepoError::BadInput("invalid parent id".into()))?)
+            };
         }
         other => {
             return Err(ApiError::from(RepoError::BadInput(format!(
@@ -141,7 +145,7 @@ mod tests {
             "source": "manual",
             "status_id": 1,
             "reference_code": "T-1",
-            "parent_id": 0,
+            "parent_id": null,
             "project_id": 1
         })
     }

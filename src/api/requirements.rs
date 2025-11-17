@@ -169,7 +169,7 @@ mod tests {
             "author_id": 1,
             "category_id": 1,
             "current_status_id": 1,
-            "parent_id": 0,
+            "parent_id": null,
             "reference_code": "REF-1",
             "reviewer_id": 2,
             "applicability_id": 3,

@@ -93,7 +93,7 @@ diesel::table! {
         reviewer_id -> Int4,
         reference_code -> Varchar,
         category_id -> Int4,
-        parent_id -> Int4,
+        parent_id -> Nullable<Int4>,
         creation_date -> Timestamp,
         update_date -> Timestamp,
         deadline_date -> Timestamp,
@@ -120,7 +120,7 @@ diesel::table! {
         description -> Varchar,
         source -> Varchar,
         status_id -> Int4,
-        parent_id -> Int4,
+        parent_id -> Nullable<Int4>,
         project_id -> Int4,
     }
 }

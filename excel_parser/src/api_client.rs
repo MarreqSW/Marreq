@@ -73,7 +73,7 @@ impl ApiClient {
             "verification_method_id": id,
             "author_id": author_id,
             "reviewer_id": reviewer_id,
-            "parent_id": parent_id.unwrap_or(0),
+            "parent_id": parent_id,
             "req_link": req.req_link,
             "justification": req.justification,
             "project_id": project_id
@@ -113,7 +113,7 @@ impl ApiClient {
             "description": test.description,
             "source": test.source,
             "status_id": status_id,
-            "parent_id": parent_id.unwrap_or(0),
+            "parent_id": parent_id,
             "project_id": project_id
         });
 

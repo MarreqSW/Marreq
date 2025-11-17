@@ -48,7 +48,7 @@ impl<'a> DecoratedTestService<'a> {
             .test_service
             .list_all()?
             .into_iter()
-            .filter(|t| t.parent_id == parent_id)
+            .filter(|t| t.parent_id == Some(parent_id))
             .collect();
         self.decorate_vec(children)
     }
@@ -87,10 +87,10 @@ impl<'a> DecoratedTestService<'a> {
             .map(|s| s.title)
             .unwrap_or_else(|_| format!("Unknown Status ({})", test.status_id));
 
-        let parent_title = if test.parent_id != 0 {
-            match self.test_service.get_by_id(test.parent_id) {
-                Ok(parent) => parent.name,
-                Err(_) => String::new(),
+        let parent_title = if let Some(parent_id) = test.parent_id {
+            match self.test_service.get_by_id(parent_id) {
+                Ok(parent_test) => parent_test.name,
+                Err(_) => "[Deleted Parent]".to_string(),
             }
         } else {
             String::new()
@@ -140,7 +140,7 @@ mod tests {
             source: "manual".into(),
             status_id: status,
             reference_code: format!("TEST-{id}"),
-            parent_id: parent,
+            parent_id: Some(parent),
             project_id: 99,
         }
     }
@@ -178,7 +178,7 @@ mod tests {
 
         let decorated = service.get_by_id(1).unwrap();
         assert_eq!(decorated.status_id, "Unknown Status (77)");
-        assert_eq!(decorated.test_parent_title, "");
+        assert_eq!(decorated.test_parent_title, "[Deleted Parent]");
     }
 
     #[test]
@@ -206,7 +206,7 @@ mod tests {
                 reviewer_id: 0,
                 reference_code: String::new(),
                 category_id: 0,
-                parent_id: 0,
+                parent_id: None,
                 creation_date: ts(),
                 update_date: ts(),
                 deadline_date: ts(),

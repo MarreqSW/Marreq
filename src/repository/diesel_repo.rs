@@ -1,6 +1,6 @@
 use super::errors::RepoError;
 use crate::models::entities::{
-    Applicability, Category, Matrix, Project, ProjectMember, Requirement, RequirementStatus, Status,
+    Applicability, Category, Matrix, Project, ProjectMember, Requirement, RequirementStatus,
     TestCase, TestStatus, User, VerificationMethod,
 };
 use crate::models::forms::{
@@ -388,30 +388,6 @@ impl ProjectMembersRepository for DieselRepo {
 }
 
 impl LookupRepository for DieselRepo {
-    fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
-        // For backward compatibility, return requirement status as status
-        let req_statuses = self.get_requirement_status_all()?;
-        Ok(req_statuses
-            .into_iter()
-            .map(|rs| Status {
-                st_id: rs.id,
-                st_title: rs.title,
-                st_description: rs.description,
-                st_short_name: rs.short_name,
-            })
-            .collect())
-    }
-
-    fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError> {
-        // For backward compatibility, get from requirement status
-        let req_status = self.get_requirement_status_by_id(id)?;
-        Ok(Status {
-            st_id: req_status.id,
-            st_title: req_status.title,
-            st_description: req_status.description,
-            st_short_name: req_status.short_name,
-        })
-    }
 
     fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
         use schema::requirement_status::dsl;

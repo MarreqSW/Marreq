@@ -1,25 +1,16 @@
 use crate::api::prelude::*;
-use crate::models::{NewStatus, RequirementStatus, Status as LegacyStatus};
+use crate::models::{NewStatus, RequirementStatus};
 use crate::services::StatusService;
 
 #[get("/status")]
-pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<LegacyStatus>>> {
+pub async fn list_requirement_statuses(state: &State<AppState>) -> ApiResult<Json<Vec<RequirementStatus>>> {
     let service = StatusService::new(state.inner());
-    let statuses = service
-        .list_requirement_statuses()?
-        .into_iter()
-        .map(|status: RequirementStatus| LegacyStatus {
-            st_id: status.id,
-            st_title: status.title,
-            st_description: status.description,
-            st_short_name: status.short_name,
-        })
-        .collect();
+    let statuses = service.list_requirement_statuses()?;
     Ok(Json(statuses))
 }
 
 #[get("/status/<id>")]
-pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Value>> {
+pub async fn get_requirement_status(id: i32, state: &State<AppState>) -> ApiResult<Json<Value>> {
     let service = StatusService::new(state.inner());
     let status = service.get_requirement_status(id)?;
 
@@ -32,7 +23,7 @@ pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Value>> {
 }
 
 #[post("/status", data = "<payload>")]
-pub async fn create(
+pub async fn create_requirement_status(
     state: &State<AppState>,
     payload: Json<NewStatus>,
 ) -> ApiResult<(Status, Value)> {
@@ -64,7 +55,7 @@ mod tests {
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
         let rocket = rocket::build()
             .manage(state_from_repo(repo))
-            .mount("/api", routes![list, get, create]);
+            .mount("/api", routes![list_requirement_statuses, get_requirement_status, create_requirement_status]);
         Client::tracked(rocket).await.unwrap()
     }
 
@@ -86,9 +77,9 @@ mod tests {
         let client = client_with_repo(repo).await;
         let response = client.get("/api/status").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        let items: Vec<LegacyStatus> = response.into_json().await.unwrap();
+        let items: Vec<RequirementStatus> = response.into_json().await.unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].st_title, "Draft");
+        assert_eq!(items[0].title, "Draft");
     }
 
     #[rocket::async_test]

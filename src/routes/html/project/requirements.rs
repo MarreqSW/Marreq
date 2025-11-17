@@ -973,16 +973,6 @@ mod tests {
         });
 
         // Add lookups
-        repo.statuses.insert(
-            1,
-            crate::models::Status {
-                st_id: 1,
-                st_title: "Active".into(),
-                st_description: "".into(),
-                st_short_name: "A".into(),
-            },
-        );
-
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {

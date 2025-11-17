@@ -57,9 +57,6 @@ pub trait TestsRepository {
 }
 
 pub trait LookupRepository {
-    fn get_status_all(&self) -> Result<Vec<Status>, RepoError>;
-    fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError>;
-
     fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError>;
     fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError>;
 

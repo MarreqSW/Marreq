@@ -44,13 +44,13 @@ INSERT INTO users (username, name, email) VALUES
 
 CREATE TABLE status
 (
-    st_id            SERIAL PRIMARY KEY,
-    st_title         VARCHAR NOT NULL DEFAULT ' ',
-    st_description   VARCHAR NOT NULL DEFAULT ' ',
-    st_short_name    VARCHAR NOT NULL DEFAULT ' '
+    id            SERIAL PRIMARY KEY,
+    title         VARCHAR NOT NULL DEFAULT ' ',
+    description   VARCHAR NOT NULL DEFAULT ' ',
+    short_name    VARCHAR NOT NULL DEFAULT ' '
 );
 
-INSERT INTO status (st_title, st_description, st_short_name) VALUES
+INSERT INTO status (title, description, short_name) VALUES
     ('Draft', 'The requirement is still being edited', 'Drf'),
     ('Proposal', 'The requirement is still to be approved', 'Pro'),
     ('Accepted', 'The requirement is accepted and must be processed', 'Acc'),

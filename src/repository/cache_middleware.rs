@@ -66,10 +66,10 @@ impl<R: Repository> CacheRepository<R> {
         }
 
         // Warm up status cache
-        if let Ok(statuses) = self.inner.get_status_all() {
+        if let Ok(statuses) = self.inner.get_requirement_status_all() {
             if let Ok(json_data) = serde_json::to_string(&statuses) {
                 self.cache
-                    .set_with_ttl(keys::STATUS_ALL, json_data, Duration::from_secs(900));
+                    .set_with_ttl(keys::REQUIREMENT_STATUS_ALL, json_data, Duration::from_secs(900));
             }
         }
 
@@ -337,18 +337,6 @@ impl<R: Repository> TestsRepository for CacheRepository<R> {
 }
 
 impl<R: Repository> LookupRepository for CacheRepository<R> {
-    fn get_status_all(&self) -> Result<Vec<Status>, RepoError> {
-        self.get_or_fetch(keys::STATUS_ALL, Duration::from_secs(900), || {
-            self.inner.get_status_all()
-        })
-    }
-
-    fn get_status_by_id(&self, id: i32) -> Result<Status, RepoError> {
-        let key = keys::Status::by_id(id);
-        self.get_or_fetch(&key, Duration::from_secs(900), || {
-            self.inner.get_status_by_id(id)
-        })
-    }
 
     fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
         self.get_or_fetch(
@@ -566,11 +554,11 @@ mod tests {
 
     fn populated_repo() -> DieselRepoMock {
         let user = DieselRepoMock::make_user(1, "alice", "hash");
-        let status = Status {
-            st_id: 1,
-            st_title: "Open".into(),
-            st_description: "".into(),
-            st_short_name: "O".into(),
+        let status = RequirementStatus {
+            id: 1,
+            title: "Open".into(),
+            description: "".into(),
+            short_name: "O".into(),
         };
         let category = Category {
             id: 1,
@@ -638,6 +626,8 @@ mod tests {
 
         let mut users = HashMap::new();
         users.insert(1, user);
+        let mut requirement_statuses = HashMap::new();
+        requirement_statuses.insert(1, status.clone());
         let mut statuses = HashMap::new();
         statuses.insert(1, status);
         let mut categories = HashMap::new();
@@ -656,7 +646,7 @@ mod tests {
         DieselRepoMock {
             users,
             statuses,
-            requirement_statuses: HashMap::new(),
+            requirement_statuses,
             test_statuses: HashMap::new(),
             verifications,
             categories,
@@ -712,7 +702,7 @@ mod tests {
         repo.warm_cache();
 
         assert_eq!(cache.get(keys::PROJECTS_ALL), Some("[]".to_string()));
-        assert_eq!(cache.get(keys::STATUS_ALL), Some("[]".to_string()));
+        assert_eq!(cache.get(keys::REQUIREMENT_STATUS_ALL), Some("[]".to_string()));
         assert_eq!(cache.get(keys::CATEGORIES_ALL), Some("[]".to_string()));
         assert_eq!(cache.get(keys::USERS_ALL), Some("[]".to_string()));
         assert_eq!(cache.get(keys::PROJECTS_NAV), Some("[]".to_string()));
@@ -981,17 +971,17 @@ mod tests {
         let cache = repo.cache();
 
         // Status operations
-        repo.get_status_all().unwrap();
-        assert!(cache.get(keys::STATUS_ALL).is_some());
-        repo.get_status_by_id(1).unwrap();
-        assert!(cache.get(&keys::Status::by_id(1)).is_some());
+        repo.get_requirement_status_all().unwrap();
+        assert!(cache.get(keys::REQUIREMENT_STATUS_ALL).is_some());
+        repo.get_requirement_status_by_id(1).unwrap();
+        assert!(cache.get(&keys::RequirementStatus::by_id(1)).is_some());
         let ns = NewStatus {
             title: "Closed".into(),
             description: "".into(),
             short_name: "C".into(),
         };
         let stid = repo.create_status(&ns).unwrap();
-        assert!(cache.get(&keys::Status::by_id(stid)).is_none());
+        assert!(cache.get(&keys::RequirementStatus::by_id(stid)).is_none());
 
         // Category operations
         repo.get_categories_all().unwrap();

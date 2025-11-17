@@ -564,7 +564,7 @@ impl ProjectsRepository for DieselRepoMock {
         let id = self.projects.keys().max().map(|i| i + 1).unwrap_or(1);
         let now = epoch();
         let proj = Project {
-            project_id: id,
+            id: id,
             name: _new.name.clone(),
             description: _new.description.clone(),
             creation_date: Some(now),

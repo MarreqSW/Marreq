@@ -120,8 +120,8 @@
       <span class="h5 mb-0">Rationale</span>
     </summary>
     <div class="card-body">
-      {{#if requirement_data.requirement.req_justification}}
-      <p class="mb-0">{{requirement_data.requirement.req_justification}}</p>
+      {{#if requirement_data.requirement.justification}}
+      <p class="mb-0">{{requirement_data.requirement.justification}}</p>
       {{else}}
       <p class="mb-0 text-muted">No rationale documented yet.</p>
       {{/if}}
@@ -183,7 +183,7 @@
             <span class="badge rounded-pill text-bg-dark fs-5" data-field="reference"
               aria-label="Requirement reference">—</span>
             <h1 class="h4 mb-0 text-break" data-field="title">
-              {{requirement_data.requirement.req_title}}
+              {{requirement_data.requirement.title}}
             </h1>
           </div>
           <div class="d-flex flex-wrap align-items-center gap-2">
@@ -191,14 +191,14 @@
           </div>
           <nav class="ms-lg-auto" aria-label="Requirement actions">
             <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
-              <a href="/p/{{project_id}}/requirements/edit/{{requirement_data.requirement.req_id}}"
+              <a href="/p/{{project_id}}/requirements/edit/{{requirement_data.requirement.id}}"
                 class="btn btn-primary btn-sm" aria-label="Edit requirement">
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                   <use href="#icon-pencil" />
                 </svg>
                 <span class="ms-1">Edit</span>
               </a>
-              <a href="/logs/REQUIREMENT/{{requirement_data.requirement.req_id}}"
+              <a href="/logs/REQUIREMENT/{{requirement_data.requirement.id}}"
                 class="btn btn-outline-secondary btn-sm" aria-label="View requirement history">
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                   <use href="#icon-clock-history" />
@@ -213,7 +213,7 @@
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li>
                     <a class="dropdown-item"
-                      href="/p/{{project_id}}/requirements/new?parent={{requirement_data.requirement.req_id}}">
+                      href="/p/{{project_id}}/requirements/new?parent={{requirement_data.requirement.id}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-plus-circle" />
                       </svg>
@@ -222,7 +222,7 @@
                   </li>
                   <li>
                     <a class="dropdown-item"
-                      href="/p/{{project_id}}/requirements/new?template={{requirement_data.requirement.req_id}}">
+                      href="/p/{{project_id}}/requirements/new?template={{requirement_data.requirement.id}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-clipboard" />
                       </svg>
@@ -231,7 +231,7 @@
                   </li>
                   <li>
                     <button class="dropdown-item" type="button" data-action="copy-requirement-link"
-                      data-requirement-url="/p/{{project_id}}/requirements/show/{{requirement_data.requirement.req_id}}">
+                      data-requirement-url="/p/{{project_id}}/requirements/show/{{requirement_data.requirement.id}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-link" />
                       </svg>
@@ -243,8 +243,8 @@
                   </li>
                   <li>
                     <button class="dropdown-item text-danger" type="button" data-action="delete-requirement"
-                      data-project-id="{{project_id}}" data-requirement-id="{{requirement_data.requirement.req_id}}"
-                      data-requirement-title="{{requirement_data.requirement.req_title}}">
+                      data-project-id="{{project_id}}" data-requirement-id="{{requirement_data.requirement.id}}"
+                      data-requirement-title="{{requirement_data.requirement.title}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-trash" />
                       </svg>
@@ -260,8 +260,8 @@
         <section class="reqman-requirement-statement-card p-4 p-lg-5 rounded-4">
           <div class="text-uppercase small text-muted mb-2">Requirement Statement</div>
           <div class="reqman-requirement-header__statement fs-2 lh-base text-break fw-semibold mb-4">
-            {{#if requirement_data.requirement.req_description}}
-            <p class="mb-0">{{requirement_data.requirement.req_description}}</p>
+            {{#if requirement_data.requirement.description}}
+            <p class="mb-0">{{requirement_data.requirement.description}}</p>
             {{else}}
             <p class="mb-0 text-muted"><em>No requirement statement provided yet.</em></p>
             {{/if}}
@@ -279,8 +279,8 @@
                   <h2 class="h5 mb-0 fw-semibold">Rationale</h2>
                 </div>
                 <div class="text-muted lh-lg">
-                  {{#if requirement_data.requirement.req_justification}}
-                  <p class="mb-0">{{requirement_data.requirement.req_justification}}</p>
+                  {{#if requirement_data.requirement.justification}}
+                  <p class="mb-0">{{requirement_data.requirement.justification}}</p>
                   {{else}}
                   <p class="mb-0 fst-italic">No rationale documented yet.</p>
                   {{/if}}

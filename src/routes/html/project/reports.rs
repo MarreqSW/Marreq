@@ -30,7 +30,7 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
 
     // group helpers (i32 counts)
     let requirements_by_status = requirements.iter().fold(HashMap::new(), |mut acc, req| {
-        let status = get_status_name_by_id_cached(state, req.req_current_status);
+        let status = get_status_name_by_id_cached(state, req.current_status_id);
         *acc.entry(status).or_insert(0) += 1i32;
         acc
     });
@@ -42,7 +42,7 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
     });
 
     let requirements_by_category = requirements.iter().fold(HashMap::new(), |mut acc, req| {
-        let cat = get_category_by_id_cached(state, req.req_category);
+        let cat = get_category_by_id_cached(state, req.category_id);
         *acc.entry(cat.cat_title.clone()).or_insert(0) += 1i32;
         acc
     });
@@ -51,7 +51,7 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
     let mut covered = 0usize;
     let mut total_links = 0usize;
     for req in &requirements {
-        let links = get_requirements_for_test_cached(state, req.req_id).unwrap_or_default();
+        let links = get_requirements_for_test_cached(state, req.id).unwrap_or_default();
         if !links.is_empty() {
             covered += 1;
         }
@@ -210,21 +210,21 @@ mod tests {
 
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Requirement {id}"),
-            req_description: "Test requirement".to_string(),
-            req_verification_method: 1,
-            req_current_status: 1,
-            req_author: ADMIN_ID,
-            req_reviewer: ADMIN_ID,
-            req_reference: format!("REQ-{:03}", id),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("For testing".to_string()),
+            id: id,
+            title: format!("Requirement {id}"),
+            description: "Test requirement".to_string(),
+            verification_method_id: 1,
+            current_status_id: 1,
+            author_id: ADMIN_ID,
+            reviewer_id: ADMIN_ID,
+            reference_code: format!("REQ-{:03}", id),
+            category_id: 1,
+            parent_id: 0,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: timestamp(),
+            applicability_id: 1,
+            justification: Some("For testing".to_string()),
             project_id: PROJECT_ID,
         }
     }

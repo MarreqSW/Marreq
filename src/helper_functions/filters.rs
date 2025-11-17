@@ -10,22 +10,22 @@ pub fn filter_requirements(
         .into_iter()
         .filter(|req| {
             let status_match =
-                status_filter.map_or(true, |status_id| req.req_current_status == status_id);
+                status_filter.map_or(true, |status_id| req.current_status_id == status_id);
             let verification_match = verification_filter.map_or(true, |verification_id| {
-                req.req_verification_method == verification_id
+                req.verification_method_id == verification_id
             });
             let category_match =
-                category_filter.map_or(true, |category_id| req.req_category == category_id);
+                category_filter.map_or(true, |category_id| req.category_id == category_id);
             status_match && verification_match && category_match
         })
         .collect();
 
     filtered_requirements.sort_by(|a, b| {
-        match (a.req_reference.is_empty(), b.req_reference.is_empty()) {
-            (false, false) => a.req_reference.cmp(&b.req_reference),
+        match (a.reference_code.is_empty(), b.reference_code.is_empty()) {
+            (false, false) => a.reference_code.cmp(&b.reference_code),
             (false, true) => std::cmp::Ordering::Less,
             (true, false) => std::cmp::Ordering::Greater,
-            (true, true) => a.req_id.cmp(&b.req_id),
+            (true, true) => a.id.cmp(&b.id),
         }
     });
 
@@ -69,21 +69,21 @@ mod tests {
         reference: &str,
     ) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Req {}", id),
-            req_description: String::new(),
-            req_verification_method: verification,
-            req_current_status: status,
-            req_author: 0,
-            req_reviewer: 0,
-            req_reference: reference.to_string(),
-            req_category: category,
-            req_parent: 0,
-            req_creation_date: dummy_datetime(),
-            req_update_date: dummy_datetime(),
-            req_deadline_date: dummy_datetime(),
-            req_applicability: 0,
-            req_justification: None,
+            id: id,
+            title: format!("Req {}", id),
+            description: String::new(),
+            verification_method_id: verification,
+            current_status_id: status,
+            author_id: 0,
+            reviewer_id: 0,
+            reference_code: reference.to_string(),
+            category_id: category,
+            parent_id: 0,
+            creation_date: dummy_datetime(),
+            update_date: dummy_datetime(),
+            deadline_date: dummy_datetime(),
+            applicability_id: 0,
+            justification: None,
             project_id: 0,
         }
     }
@@ -98,17 +98,17 @@ mod tests {
 
         let filtered = filter_requirements(reqs.clone(), Some(1), None, None);
         assert_eq!(filtered.len(), 2);
-        assert_eq!(filtered[0].req_id, 1);
-        assert_eq!(filtered[1].req_id, 2);
+        assert_eq!(filtered[0].id, 1);
+        assert_eq!(filtered[1].id, 2);
 
         let filtered2 = filter_requirements(reqs.clone(), None, Some(1), Some(1));
         assert_eq!(filtered2.len(), 1);
-        assert_eq!(filtered2[0].req_id, 1);
+        assert_eq!(filtered2[0].id, 1);
 
         let filtered3 = filter_requirements(reqs, None, None, None);
-        assert_eq!(filtered3[0].req_id, 1);
-        assert_eq!(filtered3[1].req_id, 3);
-        assert_eq!(filtered3[2].req_id, 2);
+        assert_eq!(filtered3[0].id, 1);
+        assert_eq!(filtered3[1].id, 3);
+        assert_eq!(filtered3[2].id, 2);
     }
 
     #[test]

@@ -144,21 +144,21 @@ mod test_support {
 
     pub fn sample_requirement(id: i32, project_id: i32) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Requirement {id}"),
-            req_description: "Test requirement".into(),
-            req_verification_method: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: format!("REQ-SYS-{id:03}"),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("Test justification".into()),
+            id: id,
+            title: format!("Requirement {id}"),
+            description: "Test requirement".into(),
+            verification_method_id: 1,
+            current_status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: format!("REQ-SYS-{id:03}"),
+            category_id: 1,
+            parent_id: 0,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: timestamp(),
+            applicability_id: 1,
+            justification: Some("Test justification".into()),
             project_id,
         }
     }
@@ -318,33 +318,33 @@ async fn new_requirement_form_has_required_fields() {
     let html = response.into_string().await.expect("body");
 
     // Verify form fields
-    assert!(html.contains("name=\"req_title\""), "Missing title field");
+    assert!(html.contains("name=\"title\""), "Missing title field");
     assert!(
-        html.contains("name=\"req_description\""),
+        html.contains("name=\"description\""),
         "Missing description field"
     );
     assert!(
-        html.contains("name=\"req_reference\""),
+        html.contains("name=\"reference_code\""),
         "Missing reference field"
     );
     assert!(
-        html.contains("name=\"req_category\""),
+        html.contains("name=\"category_id\""),
         "Missing category field"
     );
     assert!(
-        html.contains("name=\"req_verification_method\""),
+        html.contains("name=\"verification_method_id\""),
         "Missing verification field"
     );
     assert!(
-        html.contains("name=\"req_current_status\""),
+        html.contains("name=\"current_status_id\""),
         "Missing status field"
     );
     assert!(
-        html.contains("name=\"req_applicability\""),
+        html.contains("name=\"applicability_id\""),
         "Missing applicability field"
     );
     assert!(
-        html.contains("name=\"req_justification\""),
+        html.contains("name=\"justification\""),
         "Missing justification field"
     );
     assert!(
@@ -396,7 +396,7 @@ async fn requirement_detail_page_shows_relationships() {
     repo.requirements.insert(1, parent);
 
     let mut child = sample_requirement(2, 1);
-    child.req_parent = 1;
+    child.parent_id = 1;
     repo.requirements.insert(2, child);
 
     let client = test_client(repo).await;
@@ -434,9 +434,9 @@ async fn create_requirement_redirects_to_detail_page() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=New+Req&req_description=Body&req_verification_method=1&\
-               req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
-               req_applicability=1&req_reference=&req_justification=",
+            "title=New+Req&description=Body&verification_method_id=1&\
+               current_status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
+               applicability_id=1&reference_code=&justification=",
         )
         .dispatch()
         .await;
@@ -461,9 +461,9 @@ async fn create_requirement_with_add_another_redirects_to_form() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=Test&req_description=Body&req_verification_method=1&\
-               req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
-               req_applicability=1&req_reference=&req_justification=&intent=add_another",
+            "title=Test&description=Body&verification_method_id=1&\
+               current_status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
+               applicability_id=1&reference_code=&justification=&intent=add_another",
         )
         .dispatch()
         .await;
@@ -494,10 +494,10 @@ async fn edit_requirement_redirects_to_detail_page() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_id=1&req_title=Updated&req_description=Body&req_verification_method=1&\
-               req_current_status=1&req_author=1&req_reviewer=1&req_category=1&\
-               req_parent=0&req_applicability=1&req_justification=&project_id=1&\
-               req_reference=REQ-SYS-001",
+            "id=1&title=Updated&description=Body&verification_method_id=1&\
+               current_status_id=1&author_id=1&reviewer_id=1&category_id=1&\
+               parent_id=0&applicability_id=1&justification=&project_id=1&\
+               reference_code=REQ-SYS-001",
         )
         .dispatch()
         .await;
@@ -645,7 +645,7 @@ async fn requirement_form_has_reference_validation_markers() {
         "Missing reference error element"
     );
     assert!(
-        html.contains("id=\"req_reference\""),
+        html.contains("id=\"reference_code\""),
         "Missing reference input"
     );
     assert!(

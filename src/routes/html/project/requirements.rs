@@ -24,60 +24,60 @@ use crate::status_enums::RequirementStatusEnum;
 struct RequirementCreateForm {
     #[field(name = uncased("intent"))]
     intent: Option<String>,
-    #[field(name = uncased("req_id"))]
-    req_id: Option<i32>,
-    #[field(name = uncased("req_title"))]
-    req_title: String,
-    #[field(name = uncased("req_description"))]
-    req_description: String,
-    #[field(name = uncased("req_verification_method"))]
-    req_verification_method: i32,
-    #[field(name = uncased("req_category"))]
-    req_category: i32,
-    #[field(name = uncased("req_current_status"))]
-    req_current_status: i32,
-    #[field(name = uncased("req_parent"))]
-    req_parent: i32,
-    #[field(name = uncased("req_reference"))]
-    req_reference: String,
-    #[field(name = uncased("req_reviewer"))]
-    req_reviewer: i32,
-    #[field(name = uncased("req_applicability"))]
-    req_applicability: i32,
-    #[field(name = uncased("req_justification"))]
-    req_justification: Option<String>,
+    #[field(name = uncased("id"))]
+    id: Option<i32>,
+    #[field(name = uncased("title"))]
+    title: String,
+    #[field(name = uncased("description"))]
+    description: String,
+    #[field(name = uncased("verification_method_id"))]
+    verification_method_id: i32,
+    #[field(name = uncased("category_id"))]
+    category_id: i32,
+    #[field(name = uncased("current_status_id"))]
+    current_status_id: i32,
+    #[field(name = uncased("parent_id"))]
+    parent_id: i32,
+    #[field(name = uncased("reference_code"))]
+    reference_code: String,
+    #[field(name = uncased("reviewer_id"))]
+    reviewer_id: i32,
+    #[field(name = uncased("applicability_id"))]
+    applicability_id: i32,
+    #[field(name = uncased("justification"))]
+    justification: Option<String>,
 }
 
 impl RequirementCreateForm {
     fn into_payload(self, author_id: i32, project_id: i32) -> (NewRequirement, Option<String>) {
         let RequirementCreateForm {
             intent,
-            req_id,
-            req_description,
-            req_verification_method,
-            req_category,
-            req_current_status,
-            req_parent,
-            req_reference,
-            req_reviewer,
-            req_applicability,
-            req_justification,
-            req_title,
+            id,
+            description,
+            verification_method_id,
+            category_id,
+            current_status_id,
+            parent_id,
+            reference_code,
+            reviewer_id,
+            applicability_id,
+            justification,
+            title,
         } = self;
 
         let requirement = NewRequirement {
-            req_id,
-            req_title,
-            req_description,
-            req_verification_method,
-            req_author: author_id,
-            req_category,
-            req_current_status,
-            req_parent,
-            req_reference,
-            req_reviewer,
-            req_applicability,
-            req_justification,
+            id,
+            title,
+            description,
+            verification_method_id,
+            author_id: author_id,
+            category_id,
+            current_status_id,
+            parent_id,
+            reference_code,
+            reviewer_id,
+            applicability_id,
+            justification,
             project_id,
         };
 
@@ -186,9 +186,9 @@ async fn show_requirements(
         }
     }
 
-    roots.sort_by_key(|r| r.req_id);
+    roots.sort_by_key(|r| r.id);
     for v in children.values_mut() {
-        v.sort_by_key(|r| r.req_id);
+        v.sort_by_key(|r| r.id);
     }
 
     fn build_node<'a>(
@@ -196,7 +196,7 @@ async fn show_requirements(
         idx: &HashMap<i32, Vec<&'a DecoratedRequirement>>,
     ) -> serde_json::Value {
         let kids = idx
-            .get(&req.req_id)
+            .get(&req.id)
             .map(|vs| vs.iter().map(|c| build_node(c, idx)).collect::<Vec<_>>())
             .unwrap_or_default();
 
@@ -248,11 +248,11 @@ async fn show_requirements(
     Ok(Template::render("requirements/requirements", ctx))
 }
 
-#[get("/<project_id>/requirements/show/<req_id>")]
+#[get("/<project_id>/requirements/show/<id>")]
 async fn show_requirement_id(
     project_access: ProjectAccess,
     project_id: i32,
-    req_id: i32,
+    id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
@@ -260,7 +260,7 @@ async fn show_requirement_id(
     let selected_project = ProjectService::new(state.inner()).get_by_id(project_id)?;
     let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
 
-    let requirement = decorated_requirement_service.get_by_id(req_id)?;
+    let requirement = decorated_requirement_service.get_by_id(id)?;
 
     if let Some(redir) = enforce_project_ownership(project_id, requirement.project_id) {
         return Err(redir);
@@ -273,11 +273,11 @@ async fn show_requirement_id(
     } else {
         None
     };
-    let child_requirements = decorated_requirement_service.get_by_parent_id(requirement.req_id)?;
+    let child_requirements = decorated_requirement_service.get_by_parent_id(requirement.id)?;
 
     // Linked verification artefacts
     let linked_tests =
-        DecoratedTestService::new(state.inner()).get_linked_to_requirement(req_id)?;
+        DecoratedTestService::new(state.inner()).get_linked_to_requirement(id)?;
 
     let (tests_passed, tests_failed, tests_pending) =
         linked_tests
@@ -300,7 +300,7 @@ async fn show_requirement_id(
             });
 
     let history_entries = LogService::new(state.inner())
-        .entity_logs(&EntityType::Requirement.to_string(), req_id)
+        .entity_logs(&EntityType::Requirement.to_string(), id)
         .unwrap_or_default();
 
     let canonical_data = json!({
@@ -313,7 +313,7 @@ async fn show_requirement_id(
         "linked_tests": linked_tests,
         "verification": {
             "tool_id": requirement.req_verification_id,
-            "tool_name": requirement.req_verification_method.clone(),
+            "tool_name": requirement.verification_method_id.clone(),
             "counts": {
                 "total": linked_tests.len() as i32,
                 "passed": tests_passed,
@@ -343,11 +343,11 @@ async fn show_requirement_id(
     Ok(Template::render("requirements/requirement", ctx))
 }
 
-#[get("/<project_id>/requirements/edit/<req_id>")]
+#[get("/<project_id>/requirements/edit/<id>")]
 async fn get_edit_requirement(
     project_access: ProjectAccess,
     project_id: i32,
-    req_id: i32,
+    id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
@@ -355,7 +355,7 @@ async fn get_edit_requirement(
         .get_by_id(project_id)?
         .project_name;
     let service = DecoratedRequirementService::new(state.inner());
-    let req = service.get_by_id(req_id)?;
+    let req = service.get_by_id(id)?;
 
     // Enforce project ownership; redirect if mismatched
     if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
@@ -369,7 +369,7 @@ async fn get_edit_requirement(
     };
 
     let history_entries = LogService::new(state.inner())
-        .entity_logs(&EntityType::Requirement.to_string(), req_id)
+        .entity_logs(&EntityType::Requirement.to_string(), id)
         .unwrap_or_default();
 
     let version_counter = history_entries.len().saturating_add(1);
@@ -379,10 +379,10 @@ async fn get_edit_requirement(
         .map(|entry| entry.username.clone())
         .filter(|name| !name.is_empty())
         .or_else(|| {
-            if !req.req_reviewer.trim().is_empty() {
-                Some(req.req_reviewer.clone())
-            } else if !req.req_author.trim().is_empty() {
-                Some(req.req_author.clone())
+            if !req.reviewer_id.trim().is_empty() {
+                Some(req.reviewer_id.clone())
+            } else if !req.author_id.trim().is_empty() {
+                Some(req.author_id.clone())
             } else {
                 None
             }
@@ -398,20 +398,20 @@ async fn get_edit_requirement(
     let linked_requirement_options = RequirementService::new(state.inner())
         .list_by_project(project_id)?
         .into_iter()
-        .filter(|candidate| candidate.req_id != req_id) // Don't allow self-reference
+        .filter(|candidate| candidate.id != id) // Don't allow self-reference
         .map(|candidate| {
             json!({
-                "id": candidate.req_id,
-                "title": candidate.req_title,
-                "reference": candidate.req_reference,
+                "id": candidate.id,
+                "title": candidate.title,
+                "reference": candidate.reference_code,
             })
         })
         .collect::<Vec<_>>();
 
-    let display_reference = if req.req_reference.trim().is_empty() {
-        format!("RM-{:03}", req.req_id)
+    let display_reference = if req.reference_code.trim().is_empty() {
+        format!("RM-{:03}", req.id)
     } else {
-        req.req_reference.clone()
+        req.reference_code.clone()
     };
 
     let ctx = json!({
@@ -428,7 +428,7 @@ async fn get_edit_requirement(
         "version": {
             "label": version_label,
             "last_editor": last_editor_name,
-            "updated_at": req.req_update_date,
+            "updated_at": req.update_date,
         },
         "autosave": {
             "enabled": true,
@@ -442,41 +442,41 @@ async fn get_edit_requirement(
     Ok(Template::render("requirements/edit_requirement", ctx))
 }
 
-#[post("/<project_id>/requirements/edit/<req_id>", data = "<new_req>")]
+#[post("/<project_id>/requirements/edit/<id>", data = "<new_req>")]
 async fn post_edit_requirement(
     project_access: ProjectAccess,
     project_id: i32,
-    req_id: i32,
+    id: i32,
     new_req: Form<NewRequirement>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let service = RequirementService::new(state.inner());
     if let Some(redir) =
-        enforce_project_ownership(project_id, service.get_by_id(req_id)?.project_id)
+        enforce_project_ownership(project_id, service.get_by_id(id)?.project_id)
     {
         return Err(redir);
     }
 
     let user = project_access.into_user();
-    service.update(&user, req_id, new_req.into_inner())?;
+    service.update(&user, id, new_req.into_inner())?;
     Ok(Redirect::to(uri!(
         "/p",
-        show_requirement_id(project_id, req_id)
+        show_requirement_id(project_id, id)
     )))
 }
 
-#[delete("/<project_id>/requirements/delete/<req_id>")]
+#[delete("/<project_id>/requirements/delete/<id>")]
 async fn delete_requirement_route(
     project_access: ProjectAccess,
     project_id: i32,
-    req_id: i32,
+    id: i32,
     state: &State<AppState>,
 ) -> Result<Redirect, rocket::http::Status> {
     let user = project_access.into_user();
 
     let service = RequirementService::new(state.inner());
     let req = service
-        .get_by_id(req_id)
+        .get_by_id(id)
         .map_err(|_| rocket::http::Status::NotFound)?;
 
     if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
@@ -485,7 +485,7 @@ async fn delete_requirement_route(
 
     // Permission gate: allow only Draft or Proposal status, or admin
     // Use the enum to check if the status is editable
-    let is_editable = RequirementStatusEnum::from_id(req.req_current_status)
+    let is_editable = RequirementStatusEnum::from_id(req.current_status_id)
         .map(|status| status.is_editable_by_user())
         .unwrap_or(false);
 
@@ -494,7 +494,7 @@ async fn delete_requirement_route(
     }
 
     service
-        .delete(&user, req_id)
+        .delete(&user, id)
         .map_err(|_| rocket::http::Status::InternalServerError)?;
 
     Ok(requirements_list_redirect(project_id))
@@ -526,9 +526,9 @@ async fn new_requirement(
         .into_iter()
         .map(|candidate| {
             json!({
-                "id": candidate.req_id,
-                "title": candidate.req_title,
-                "reference": candidate.req_reference,
+                "id": candidate.id,
+                "title": candidate.title,
+                "reference": candidate.reference_code,
             })
         })
         .collect::<Vec<_>>();
@@ -539,24 +539,24 @@ async fn new_requirement(
     let tr = template_requirement.as_ref(); // Option<&Requirement>
 
     let mut new_requirement = NewRequirement {
-        req_id: None,
-        req_title: tr.map(|r| r.req_title.clone()).unwrap_or_default(),
-        req_description: tr.map(|r| r.req_description.clone()).unwrap_or_default(),
-        req_verification_method: tr.map(|r| r.req_verification_method).unwrap_or_default(),
-        req_author: user.user_id,
-        req_category: tr.map(|r| r.req_category).unwrap_or_default(),
-        req_current_status: 0, // Draft
-        req_parent: tr.map(|r| r.req_parent).unwrap_or_default(),
-        req_reference: tr.map(|r| r.req_reference.clone()).unwrap_or_default(),
-        req_reviewer: tr.map(|r| r.req_reviewer).unwrap_or_default(),
-        req_applicability: tr.map(|r| r.req_applicability).unwrap_or_default(),
-        req_justification: tr.and_then(|r| r.req_justification.clone()),
+        id: None,
+        title: tr.map(|r| r.title.clone()).unwrap_or_default(),
+        description: tr.map(|r| r.description.clone()).unwrap_or_default(),
+        verification_method_id: tr.map(|r| r.verification_method_id).unwrap_or_default(),
+        author_id: user.user_id,
+        category_id: tr.map(|r| r.category_id).unwrap_or_default(),
+        current_status_id: 0, // Draft
+        parent_id: tr.map(|r| r.parent_id).unwrap_or_default(),
+        reference_code: tr.map(|r| r.reference_code.clone()).unwrap_or_default(),
+        reviewer_id: tr.map(|r| r.reviewer_id).unwrap_or_default(),
+        applicability_id: tr.map(|r| r.applicability_id).unwrap_or_default(),
+        justification: tr.and_then(|r| r.justification.clone()),
         project_id,
     };
 
     // if parent is valid, assign, else 0
     if let Some(parent_id) = parent {
-        new_requirement.req_parent = parents
+        new_requirement.parent_id = parents
             .iter()
             .find(|req| req["id"] == parent_id)
             .map(|_| parent_id)
@@ -564,7 +564,7 @@ async fn new_requirement(
     }
 
     // Default status to "Draft"
-    new_requirement.req_current_status = statuses
+    new_requirement.current_status_id = statuses
         .iter()
         .find(|st| st.req_st_title.eq_ignore_ascii_case("Draft"))
         .map(|st| st.req_st_id)
@@ -636,14 +636,14 @@ async fn post_requirement(
     // Take ownership and enforce project_id from the route
     let (mut req, intent) = new_req.into_inner().into_payload(user.user_id, project_id);
     req.project_id = project_id;
-    req.req_author = user.user_id;
+    req.author_id = user.user_id;
 
     // --- Reference validation / generation ---
-    if !req.req_reference.is_empty() {
+    if !req.reference_code.is_empty() {
         // Validate against the category's tag
-        let category = get_category_or_placeholder(state, req.req_category);
+        let category = get_category_or_placeholder(state, req.category_id);
         let expected_prefix = format!("REQ-{}-", category.cat_tag);
-        if !req.req_reference.starts_with(&expected_prefix) {
+        if !req.reference_code.starts_with(&expected_prefix) {
             return Err(Redirect::to(new_url));
         }
 
@@ -658,22 +658,22 @@ async fn post_requirement(
                 return Err(Redirect::to(new_url));
             }
         };
-        if !re.is_match(&req.req_reference) {
+        if !re.is_match(&req.reference_code) {
             return Err(Redirect::to(new_url));
         }
     } else {
         // Generate when missing
         let generated = {
             let repo = state.repo_read();
-            generate_requirement_reference(&*repo, req.req_category, req.project_id)
+            generate_requirement_reference(&*repo, req.category_id, req.project_id)
         };
 
         match generated {
-            Ok(reference) => req.req_reference = reference,
+            Ok(reference) => req.reference_code = reference,
             Err(_e) => {
                 #[cfg(debug_assertions)]
                 eprintln!("reference generation failed: {:?}", _e);
-                req.req_reference = format!("REQ-UNKNOWN-{}", chrono::Utc::now().timestamp());
+                req.reference_code = format!("REQ-UNKNOWN-{}", chrono::Utc::now().timestamp());
             }
         }
     }
@@ -691,7 +691,7 @@ async fn post_requirement(
 
     // --- Insert ---
     let service = RequirementService::new(state.inner());
-    let req_id = match service.create(&user, req) {
+    let id = match service.create(&user, req) {
         Ok(id) => id,
         Err(crate::repository::errors::RepoError::BadInput(_)) => {
             return Err(Redirect::to(new_url))
@@ -719,7 +719,7 @@ async fn post_requirement(
     // --- Success: show the new requirement ---
     Ok(Redirect::to(uri!(
         "/p",
-        show_requirement_id(project_id, req_id)
+        show_requirement_id(project_id, id)
     )))
 }
 
@@ -749,17 +749,17 @@ async fn show_requirements_tree(
     let mut roots: Vec<&Requirement> = Vec::new();
 
     for r in &reqs {
-        if r.req_parent == 0 {
+        if r.parent_id == 0 {
             roots.push(r);
         } else {
-            children.entry(r.req_parent).or_default().push(r);
+            children.entry(r.parent_id).or_default().push(r);
         }
     }
 
-    // Sort roots and each child list by req_id for deterministic output
-    roots.sort_by_key(|r| r.req_id);
+    // Sort roots and each child list by id for deterministic output
+    roots.sort_by_key(|r| r.id);
     for v in children.values_mut() {
-        v.sort_by_key(|r| r.req_id);
+        v.sort_by_key(|r| r.id);
     }
 
     // Recursive builder
@@ -768,7 +768,7 @@ async fn show_requirements_tree(
         idx: &HashMap<i32, Vec<&'a Requirement>>,
     ) -> serde_json::Value {
         let kids = idx
-            .get(&req.req_id)
+            .get(&req.id)
             .map(|vs| vs.iter().map(|c| build_node(c, idx)).collect::<Vec<_>>())
             .unwrap_or_default();
 
@@ -1030,21 +1030,21 @@ mod tests {
 
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Requirement {id}"),
-            req_description: "Test requirement".into(),
-            req_verification_method: 1,
-            req_current_status: 1,
-            req_author: ADMIN_ID,
-            req_reviewer: ADMIN_ID,
-            req_reference: format!("REQ-SYS-{id}"),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("For testing".into()),
+            id: id,
+            title: format!("Requirement {id}"),
+            description: "Test requirement".into(),
+            verification_method_id: 1,
+            current_status_id: 1,
+            author_id: ADMIN_ID,
+            reviewer_id: ADMIN_ID,
+            reference_code: format!("REQ-SYS-{id}"),
+            category_id: 1,
+            parent_id: 0,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: timestamp(),
+            applicability_id: 1,
+            justification: Some("For testing".into()),
             project_id: PRIMARY_PROJECT,
         }
     }
@@ -1071,12 +1071,12 @@ mod tests {
     async fn show_requirements_respects_status_filter() {
         let mut repo = base_repo();
         let mut req1 = sample_requirement(1);
-        req1.req_current_status = 1;
+        req1.current_status_id = 1;
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
-        req2.req_current_status = 2;
-        req2.req_reference = "REQ-SYS-2".into();
+        req2.current_status_id = 2;
+        req2.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, req2);
 
         let client = test_client(repo).await;
@@ -1094,12 +1094,12 @@ mod tests {
     async fn show_requirements_respects_filter_with_empty_values() {
         let mut repo = base_repo();
         let mut req1 = sample_requirement(1);
-        req1.req_current_status = 1;
+        req1.current_status_id = 1;
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
-        req2.req_current_status = 2;
-        req2.req_reference = "REQ-SYS-2".into();
+        req2.current_status_id = 2;
+        req2.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, req2);
 
         let client = test_client(repo).await;
@@ -1121,12 +1121,12 @@ mod tests {
     async fn show_requirements_ignores_search_query_when_filtering() {
         let mut repo = base_repo();
         let mut req1 = sample_requirement(1);
-        req1.req_current_status = 1;
+        req1.current_status_id = 1;
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
-        req2.req_current_status = 2;
-        req2.req_reference = "REQ-SYS-2".into();
+        req2.current_status_id = 2;
+        req2.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, req2);
 
         let client = test_client(repo).await;
@@ -1232,10 +1232,10 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "req_title=Test&req_description=Description&req_verification_method=1&\
-             req_current_status=1&req_reviewer=1&\
-             req_category=1&req_parent=0&req_applicability=1&req_reference=&\
-             req_justification=Testing",
+            "title=Test&description=Description&verification_method_id=1&\
+             current_status_id=1&reviewer_id=1&\
+             category_id=1&parent_id=0&applicability_id=1&reference_code=&\
+             justification=Testing",
             ADMIN_ID,
         )
         .await;
@@ -1247,9 +1247,9 @@ mod tests {
             .get_requirements_by_project(PRIMARY_PROJECT)
             .unwrap();
         assert_eq!(reqs.len(), 1);
-        assert_eq!(reqs[0].req_author, ADMIN_ID);
+        assert_eq!(reqs[0].author_id, ADMIN_ID);
         assert_eq!(reqs[0].project_id, PRIMARY_PROJECT);
-        assert!(reqs[0].req_reference.starts_with("REQ-SYS-"));
+        assert!(reqs[0].reference_code.starts_with("REQ-SYS-"));
     }
 
     #[rocket::async_test]
@@ -1258,10 +1258,10 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "req_title=Next+Requirement&req_description=Body&req_verification_method=1&\
-             req_current_status=1&req_reviewer=1&\
-             req_category=1&req_parent=0&req_applicability=1&req_reference=&\
-             req_justification=&intent=add_another",
+            "title=Next+Requirement&description=Body&verification_method_id=1&\
+             current_status_id=1&reviewer_id=1&\
+             category_id=1&parent_id=0&applicability_id=1&reference_code=&\
+             justification=&intent=add_another",
             ADMIN_ID,
         )
         .await;
@@ -1348,10 +1348,10 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/edit/1",
-            "req_id=1&req_title=Updated&req_description=New+desc&req_verification_method=1&\
-             req_current_status=1&req_author=1&req_reviewer=1&\
-             req_category=1&req_parent=0&req_applicability=1&\
-             req_justification=Changed&project_id=1&req_reference=REQ-SYS-1",
+            "id=1&title=Updated&description=New+desc&verification_method_id=1&\
+             current_status_id=1&author_id=1&reviewer_id=1&\
+             category_id=1&parent_id=0&applicability_id=1&\
+             justification=Changed&project_id=1&reference_code=REQ-SYS-1",
             ADMIN_ID,
         )
         .await;
@@ -1359,8 +1359,8 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         let state = client.rocket().state::<TestAppState>().expect("state");
         let req = state.repo_read().get_requirement_by_id(1).unwrap();
-        assert_eq!(req.req_title, "Updated");
-        assert_eq!(req.req_description, "New desc");
+        assert_eq!(req.title, "Updated");
+        assert_eq!(req.description, "New desc");
     }
 
     #[rocket::async_test]
@@ -1388,7 +1388,7 @@ mod tests {
     async fn delete_requirement_forbids_non_draft() {
         let mut repo = base_repo();
         let mut req = sample_requirement(1);
-        req.req_current_status = 3; // Released
+        req.current_status_id = 3; // Released
         repo.requirements.insert(1, req);
 
         // Use non-admin user
@@ -1413,7 +1413,7 @@ mod tests {
         let mut repo = base_repo();
         repo.requirements.insert(1, sample_requirement(1));
         let mut child = sample_requirement(2);
-        child.req_parent = 1;
+        child.parent_id = 1;
         repo.requirements.insert(2, child);
         let client = test_client(repo).await;
 
@@ -1434,9 +1434,9 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "req_title=&req_description=Test&req_verification_method=1&\
-             req_current_status=1&req_reviewer=1&\
-             req_category=1&req_parent=0&req_applicability=1&req_reference=",
+            "title=&description=Test&verification_method_id=1&\
+             current_status_id=1&reviewer_id=1&\
+             category_id=1&parent_id=0&applicability_id=1&reference_code=",
             ADMIN_ID,
         )
         .await;
@@ -1451,10 +1451,10 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "req_title=Test&req_description=Body&req_verification_method=1&\
-             req_current_status=1&req_reviewer=1&\
-             req_category=1&req_parent=0&req_applicability=1&\
-             req_reference=INVALID-FORMAT",
+            "title=Test&description=Body&verification_method_id=1&\
+             current_status_id=1&reviewer_id=1&\
+             category_id=1&parent_id=0&applicability_id=1&\
+             reference_code=INVALID-FORMAT",
             ADMIN_ID,
         )
         .await;
@@ -1471,10 +1471,10 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "req_title=Custom&req_description=Test&req_verification_method=1&\
-             req_current_status=1&req_reviewer=1&\
-             req_category=1&req_parent=0&req_applicability=1&\
-             req_reference=REQ-SYS-999",
+            "title=Custom&description=Test&verification_method_id=1&\
+             current_status_id=1&reviewer_id=1&\
+             category_id=1&parent_id=0&applicability_id=1&\
+             reference_code=REQ-SYS-999",
             ADMIN_ID,
         )
         .await;
@@ -1486,7 +1486,7 @@ mod tests {
             .get_requirements_by_project(PRIMARY_PROJECT)
             .unwrap();
         assert_eq!(reqs.len(), 1);
-        assert_eq!(reqs[0].req_reference, "REQ-SYS-999");
+        assert_eq!(reqs[0].reference_code, "REQ-SYS-999");
     }
 
     #[rocket::async_test]
@@ -1554,8 +1554,8 @@ mod tests {
     async fn new_requirement_with_template_parameter() {
         let mut repo = base_repo();
         let mut template_req = sample_requirement(1);
-        template_req.req_title = "Template Title".into();
-        template_req.req_description = "Template Description".into();
+        template_req.title = "Template Title".into();
+        template_req.description = "Template Description".into();
         repo.requirements.insert(1, template_req);
         let client = test_client(repo).await;
 
@@ -1571,7 +1571,7 @@ mod tests {
     async fn delete_requirement_admin_can_delete_released() {
         let mut repo = base_repo();
         let mut req = sample_requirement(1);
-        req.req_current_status = 5; // Released/higher status
+        req.current_status_id = 5; // Released/higher status
         repo.requirements.insert(1, req);
 
         let client = test_client(repo).await;
@@ -1595,10 +1595,10 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/edit/1",
-            "req_id=1&req_title=Updated+Title&req_description=Updated+Description&\
-             req_verification_method=1&req_current_status=1&req_author=1&req_reviewer=1&\
-             req_category=1&req_parent=0&req_applicability=1&\
-             req_justification=Updated+Justification&project_id=1&req_reference=REQ-SYS-1",
+            "id=1&title=Updated+Title&description=Updated+Description&\
+             verification_method_id=1&current_status_id=1&author_id=1&reviewer_id=1&\
+             category_id=1&parent_id=0&applicability_id=1&\
+             justification=Updated+Justification&project_id=1&reference_code=REQ-SYS-1",
             ADMIN_ID,
         )
         .await;
@@ -1606,9 +1606,9 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         let state = client.rocket().state::<TestAppState>().expect("state");
         let req = state.repo_read().get_requirement_by_id(1).unwrap();
-        assert_eq!(req.req_title, "Updated Title");
-        assert_eq!(req.req_description, "Updated Description");
-        assert_eq!(req.req_justification, Some("Updated Justification".into()));
+        assert_eq!(req.title, "Updated Title");
+        assert_eq!(req.description, "Updated Description");
+        assert_eq!(req.justification, Some("Updated Justification".into()));
     }
 
     #[rocket::async_test]
@@ -1617,16 +1617,16 @@ mod tests {
 
         // Add requirements with different statuses and categories
         let mut req1 = sample_requirement(1);
-        req1.req_current_status = 1;
-        req1.req_category = 1;
-        req1.req_verification_method = 1;
+        req1.current_status_id = 1;
+        req1.category_id = 1;
+        req1.verification_method_id = 1;
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
-        req2.req_current_status = 2;
-        req2.req_category = 1;
-        req2.req_verification_method = 1;
-        req2.req_reference = "REQ-SYS-2".into();
+        req2.current_status_id = 2;
+        req2.category_id = 1;
+        req2.verification_method_id = 1;
+        req2.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, req2);
 
         let client = test_client(repo).await;
@@ -1650,12 +1650,12 @@ mod tests {
 
         // Add requirements with different statuses
         let mut req1 = sample_requirement(1);
-        req1.req_current_status = 1; // Draft
+        req1.current_status_id = 1; // Draft
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
-        req2.req_current_status = 1; // Draft
-        req2.req_reference = "REQ-SYS-2".into();
+        req2.current_status_id = 1; // Draft
+        req2.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, req2);
 
         let client = test_client(repo).await;
@@ -1676,8 +1676,8 @@ mod tests {
         repo.requirements.insert(1, parent);
 
         let mut child = sample_requirement(2);
-        child.req_parent = 1;
-        child.req_reference = "REQ-SYS-2".into();
+        child.parent_id = 1;
+        child.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, child);
 
         let client = test_client(repo).await;
@@ -1747,13 +1747,13 @@ mod tests {
         repo.requirements.insert(1, parent);
 
         let mut child = sample_requirement(2);
-        child.req_parent = 1;
-        child.req_reference = "REQ-SYS-2".into();
+        child.parent_id = 1;
+        child.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, child);
 
         let mut grandchild = sample_requirement(3);
-        grandchild.req_parent = 2;
-        grandchild.req_reference = "REQ-SYS-3".into();
+        grandchild.parent_id = 2;
+        grandchild.reference_code = "REQ-SYS-3".into();
         repo.requirements.insert(3, grandchild);
 
         let client = test_client(repo).await;
@@ -1803,10 +1803,10 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/edit/1",
-            "req_id=1&req_title=Hack&req_description=Test&req_verification_method=1&\
-             req_current_status=1&req_author=1&req_reviewer=1&\
-             req_category=1&req_parent=0&req_applicability=1&\
-             req_justification=&project_id=1&req_reference=REQ-SYS-1",
+            "id=1&title=Hack&description=Test&verification_method_id=1&\
+             current_status_id=1&author_id=1&reviewer_id=1&\
+             category_id=1&parent_id=0&applicability_id=1&\
+             justification=&project_id=1&reference_code=REQ-SYS-1",
             ADMIN_ID,
         )
         .await;

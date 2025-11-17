@@ -37,8 +37,8 @@ INSERT INTO test_status (test_st_title, test_st_description, test_st_short_name)
 
 -- Update requirements table to use new requirement_status table
 -- Map old status IDs to new requirement status IDs
-UPDATE requirements SET req_current_status = 
-    CASE req_current_status
+UPDATE requirements SET current_status_id = 
+    CASE current_status_id
         WHEN 1 THEN 1  -- Draft
         WHEN 2 THEN 2  -- Proposal  
         WHEN 3 THEN 3  -- Accepted

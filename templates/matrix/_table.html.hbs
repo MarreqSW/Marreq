@@ -17,16 +17,16 @@
     <table class="table c-table c-matrix-table" id="matrixTable" role="table" style="margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0;">
       <thead role="rowgroup" class="c-matrix-thead">
         <tr role="row" class="c-matrix-header-row c-matrix-row">
-          <th class="sortable c-table-sortable c-matrix-col c-matrix-col--sticky c-matrix-col--reference" data-sort="req_reference" scope="col" role="columnheader" style="min-width: 200px; left: 0;">
+          <th class="sortable c-table-sortable c-matrix-col c-matrix-col--sticky c-matrix-col--reference" data-sort="reference_code" scope="col" role="columnheader" style="min-width: 200px; left: 0;">
             <a
-              href="/p/{{selected_project_id}}/matrix?sort_by=req_reference&sort_order={{#if (eq current_sort_by "req_reference")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
+              href="/p/{{selected_project_id}}/matrix?sort_by=reference_code&sort_order={{#if (eq current_sort_by "reference_code")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
               class="text-decoration-none d-flex align-items-center justify-content-between"
               data-matrix-sort-link
               aria-label="Sort by requirement reference"
             >
               <span>Requirement</span>
               <span class="sort-indicator c-table-sort-indicator" aria-hidden="true">
-                {{#if (eq current_sort_by "req_reference")}}
+                {{#if (eq current_sort_by "reference_code")}}
                   {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
                 {{else}}
                   ↕
@@ -51,14 +51,14 @@
       </thead>
       <tbody role="rowgroup" class="c-matrix-tbody" style="border-radius: 0;">
         {{#each requirements}}
-          <tr role="row" class="c-matrix-body-row c-matrix-row" data-req-id="{{req_id}}">
+          <tr role="row" class="c-matrix-body-row c-matrix-row" data-req-id="{{id}}">
             <td role="cell" class="c-matrix-col c-matrix-col--sticky c-matrix-col--reference" style="min-width: 200px; left: 0;">
               <div class="c-matrix-req-cell">
-                <a href="/p/{{@root.selected_project_id}}/requirements/show/{{req_id}}" 
+                <a href="/p/{{@root.selected_project_id}}/requirements/show/{{id}}" 
                    class="c-matrix-req-link font-medium u-font-medium" 
-                   aria-label="View requirement {{req_id}}"
-                   title="{{req_title}}">
-                  <span class="text-secondary c-matrix-req-reference">{{req_reference}}</span>
+                   aria-label="View requirement {{id}}"
+                   title="{{title}}">
+                  <span class="text-secondary c-matrix-req-reference">{{reference_code}}</span>
                 </a>
               </div>
             </td>
@@ -66,7 +66,7 @@
               <td class="text-center u-text-center c-matrix-cell c-matrix-col" 
                   role="cell" 
                   data-column-id="test-{{@index}}"
-                  data-req-id="{{../req_id}}"
+                  data-req-id="{{../id}}"
                   data-test-id="{{#with (lookup @root.tests @index)}}{{test_id}}{{/with}}"
                   data-linked="{{this.linked}}"
                   data-test-status="{{this.test_status}}">

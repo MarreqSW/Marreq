@@ -61,7 +61,7 @@
             <label for="test_req" class="form-label c-form-label">Related Requirements</label>
             <select name="test_req" id="test_req" class="form-control c-form-control c-form-control--select c-form-control--multiple" multiple>
               {{#each requirements}}
-                <option value="{{req_id}}">{{req_title}}</option>
+                <option value="{{id}}">{{title}}</option>
               {{/each}}
             </select>
             <small class="text-secondary">Hold Ctrl/Cmd to select multiple requirements</small>

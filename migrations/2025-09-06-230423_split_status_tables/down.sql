@@ -18,8 +18,8 @@ INSERT INTO status (st_title, st_description, st_short_name) VALUES
     ('Failed', 'The test has failed', 'Fail');
 
 -- Update requirements table to use original status IDs
-UPDATE requirements SET req_current_status = 
-    CASE req_current_status
+UPDATE requirements SET current_status_id = 
+    CASE current_status_id
         WHEN 1 THEN 1  -- Draft
         WHEN 2 THEN 2  -- Proposal
         WHEN 3 THEN 3  -- Accepted

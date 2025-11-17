@@ -640,10 +640,10 @@ describe('Requirements List Page', () => {
     it('should handle duplicate button click', async () => {
       const { jsonFetch } = await import('@core/net.js');
       jsonFetch.mockResolvedValue({
-        req_id: 1,
-        req_title: 'Original',
-        req_description: 'Description',
-        req_reference: 'REQ-001',
+        id: 1,
+        title: 'Original',
+        description: 'Description',
+        reference_code: 'REQ-001',
       });
 
       document.body.innerHTML = `

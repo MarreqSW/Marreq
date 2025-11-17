@@ -1,21 +1,21 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    applicability (app_id) {
-        app_id -> Int4,
-        app_title -> Varchar,
-        app_description -> Varchar,
-        app_tag -> Varchar,
+    applicability (id) {
+        id -> Int4,
+        title -> Varchar,
+        description -> Varchar,
+        tag -> Varchar,
         project_id -> Int4,
     }
 }
 
 diesel::table! {
-    categories (cat_id) {
-        cat_id -> Int4,
-        cat_title -> Varchar,
-        cat_description -> Varchar,
-        cat_tag -> Varchar,
+    categories (id) {
+        id -> Int4,
+        title -> Varchar,
+        description -> Varchar,
+        tag -> Varchar,
         project_id -> Int4,
     }
 }
@@ -23,7 +23,7 @@ diesel::table! {
 diesel::table! {
     logs (log_id) {
         log_id -> Int4,
-        user_id -> Int4,
+        id -> Int4,
         #[max_length = 50]
         action_type -> Varchar,
         #[max_length = 50]
@@ -41,18 +41,18 @@ diesel::table! {
 }
 
 diesel::table! {
-    matrix (matrix_req_id, matrix_test_id) {
-        matrix_req_id -> Int4,
-        matrix_test_id -> Int4,
-        matrix_creation_date -> Timestamp,
+    matrix (req_id, id) {
+        req_id -> Int4,
+        id -> Int4,
+        creation_date -> Timestamp,
         project_id -> Int4,
     }
 }
 
 diesel::table! {
-    project_members (project_id, user_id) {
+    project_members (project_id, id) {
         project_id -> Int4,
-        user_id -> Int4,
+        id -> Int4,
         role -> Int4,
         created_at -> Timestamp,
         updated_at -> Timestamp,
@@ -63,22 +63,22 @@ diesel::table! {
     projects (project_id) {
         project_id -> Int4,
         #[max_length = 255]
-        project_name -> Varchar,
-        project_description -> Nullable<Text>,
-        project_creation_date -> Nullable<Timestamp>,
-        project_update_date -> Nullable<Timestamp>,
+        name -> Varchar,
+        description -> Nullable<Text>,
+        creation_date -> Nullable<Timestamp>,
+        update_date -> Nullable<Timestamp>,
         #[max_length = 50]
-        project_status -> Nullable<Varchar>,
-        project_owner_id -> Nullable<Int4>,
+        status_id -> Nullable<Varchar>,
+        owner_id -> Nullable<Int4>,
     }
 }
 
 diesel::table! {
-    requirement_status (req_st_id) {
-        req_st_id -> Int4,
-        req_st_title -> Varchar,
-        req_st_description -> Varchar,
-        req_st_short_name -> Varchar,
+    requirement_status (id) {
+        id -> Int4,
+        title -> Varchar,
+        description -> Varchar,
+        short_name -> Varchar,
     }
 }
 
@@ -104,46 +104,46 @@ diesel::table! {
 }
 
 diesel::table! {
-    test_status (test_st_id) {
-        test_st_id -> Int4,
-        test_st_title -> Varchar,
-        test_st_description -> Varchar,
-        test_st_short_name -> Varchar,
+    status_id (id) {
+        id -> Int4,
+        title -> Varchar,
+        description -> Varchar,
+        short_name -> Varchar,
     }
 }
 
 diesel::table! {
-    tests (test_id) {
-        test_id -> Int4,
-        test_name -> Varchar,
-        test_reference -> Varchar,
-        test_description -> Varchar,
-        test_source -> Varchar,
-        test_status -> Int4,
-        test_parent -> Int4,
+    tests (id) {
+        id -> Int4,
+        name -> Varchar,
+        reference_code -> Varchar,
+        description -> Varchar,
+        source -> Varchar,
+        status_id -> Int4,
+        parent_id -> Int4,
         project_id -> Int4,
     }
 }
 
 diesel::table! {
-    users (user_id) {
-        user_id -> Int4,
-        user_username -> Varchar,
-        user_name -> Varchar,
-        user_email -> Varchar,
-        user_creation_date -> Timestamp,
-        user_last_login -> Timestamp,
+    users (id) {
+        id -> Int4,
+        username -> Varchar,
+        name -> Varchar,
+        email -> Varchar,
+        creation_date -> Timestamp,
+        last_login -> Timestamp,
         #[max_length = 255]
-        user_password -> Varchar,
+        password_hash -> Varchar,
         is_admin -> Bool,
     }
 }
 
 diesel::table! {
-    verification (verification_id) {
-        verification_id -> Int4,
-        verification_name -> Varchar,
-        verification_description -> Varchar,
+    verification (id) {
+        id -> Int4,
+        name -> Varchar,
+        description -> Varchar,
         project_id -> Int4,
     }
 }
@@ -151,17 +151,17 @@ diesel::table! {
 diesel::joinable!(applicability -> projects (project_id));
 diesel::joinable!(categories -> projects (project_id));
 diesel::joinable!(logs -> projects (project_id));
-diesel::joinable!(logs -> users (user_id));
+diesel::joinable!(logs -> users (id));
 diesel::joinable!(matrix -> projects (project_id));
-diesel::joinable!(matrix -> requirements (matrix_req_id));
-diesel::joinable!(matrix -> tests (matrix_test_id));
+diesel::joinable!(matrix -> requirements (req_id));
+diesel::joinable!(matrix -> tests (id));
 diesel::joinable!(project_members -> projects (project_id));
-diesel::joinable!(project_members -> users (user_id));
+diesel::joinable!(project_members -> users (id));
 diesel::joinable!(requirements -> applicability (applicability_id));
 diesel::joinable!(requirements -> projects (project_id));
 diesel::joinable!(requirements -> requirement_status (current_status_id));
 diesel::joinable!(tests -> projects (project_id));
-diesel::joinable!(tests -> test_status (test_status));
+diesel::joinable!(tests -> status_id (status_id));
 diesel::joinable!(verification -> projects (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -173,7 +173,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     projects,
     requirement_status,
     requirements,
-    test_status,
+    status_id,
     tests,
     users,
     verification,

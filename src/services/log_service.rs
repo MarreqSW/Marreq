@@ -156,7 +156,7 @@ impl<'a> LogService<'a> {
         let repo = self.state.repo_read();
         logs.into_iter()
             .map(|log| {
-                let username = repo.get_user_by_id(log.user_id)?.user_username;
+                let username = repo.get_user_by_id(log.id)?.username;
                 Ok(LogWithUser { log, username })
             })
             .collect()
@@ -184,10 +184,10 @@ mod tests {
         }
     }
 
-    fn sample_log(log_id: i32, user_id: i32) -> Log {
+    fn sample_log(log_id: i32, id: i32) -> Log {
         Log {
             log_id,
-            user_id,
+            id,
             action_type: "CREATE".into(),
             entity_type: "PROJECT".into(),
             entity_id: Some(1),

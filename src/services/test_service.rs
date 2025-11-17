@@ -66,7 +66,7 @@ impl<'a> TestService<'a> {
     ) -> Result<TestCase, RepoError> {
         let before = self.get_by_id(id)?;
 
-        updated_test.test_id = Some(id);
+        updated_test.id = Some(id);
         {
             let mut repo = self.state.repo_write();
             let updated = repo.edit_test(&updated_test)?;
@@ -97,7 +97,7 @@ impl<'a> TestService<'a> {
 
     fn log_created(&self, user: &User, id: i32, entity: &NewTestCase) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(user.id);
             if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!("Failed to log applicability creation {id}: {_err}");
@@ -107,12 +107,12 @@ impl<'a> TestService<'a> {
 
     fn log_updated(&self, user: &User, before: &TestCase, after: &TestCase) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(user.id);
             if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log applicability update {} -> {}: {_err}",
-                    before.test_id, after.test_id
+                    before.id, after.id
                 );
             }
         }
@@ -120,12 +120,12 @@ impl<'a> TestService<'a> {
 
     fn log_deleted(&self, user: &User, entity: &TestCase) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(user.id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log applicability deletion {}: {_err}",
-                    entity.test_id
+                    entity.id
                 );
             }
         }
@@ -150,26 +150,26 @@ mod tests {
 
     fn test_case(id: i32, project_id: i32, reference: &str) -> TestCase {
         TestCase {
-            test_id: id,
-            test_name: format!("Test {id}"),
-            test_description: "desc".into(),
-            test_source: "manual".into(),
-            test_status: 1,
-            test_reference: reference.into(),
-            test_parent: 1,
+            id: id,
+            name: format!("Test {id}"),
+            description: "desc".into(),
+            source: "manual".into(),
+            status_id: 1,
+            reference_code: reference.into(),
+            parent_id: 1,
             project_id,
         }
     }
 
     fn new_payload(project_id: i32) -> NewTestCase {
         NewTestCase {
-            test_id: None,
-            test_reference: "TEST-1".into(),
-            test_name: "Case".into(),
-            test_description: "Description".into(),
-            test_source: "manual".into(),
-            test_status: 1,
-            test_parent: 1,
+            id: None,
+            reference_code: "TEST-1".into(),
+            name: "Case".into(),
+            description: "Description".into(),
+            source: "manual".into(),
+            status_id: 1,
+            parent_id: 1,
             project_id,
         }
     }
@@ -184,7 +184,7 @@ mod tests {
         let id = service.create(&actor(), payload).unwrap();
 
         let stored = service.get_by_id(id).unwrap();
-        assert_eq!(stored.test_name, "Case");
+        assert_eq!(stored.name, "Case");
         assert_eq!(stored.project_id, 3);
     }
 
@@ -196,12 +196,12 @@ mod tests {
         let service = TestService::new(&state);
 
         let mut payload = new_payload(5);
-        payload.test_name = "Updated".into();
-        payload.test_description = "New".into();
+        payload.name = "Updated".into();
+        payload.description = "New".into();
 
         let updated = service.update(&actor(), 1, payload).unwrap();
-        assert_eq!(updated.test_name, "Updated");
-        assert_eq!(updated.test_description, "New");
+        assert_eq!(updated.name, "Updated");
+        assert_eq!(updated.description, "New");
         assert_eq!(updated.project_id, 5);
     }
 
@@ -213,7 +213,7 @@ mod tests {
         let service = TestService::new(&state);
 
         let removed = service.delete(&actor(), 2).unwrap();
-        assert_eq!(removed.test_id, 2);
+        assert_eq!(removed.id, 2);
         assert!(matches!(service.get_by_id(2), Err(RepoError::NotFound)));
     }
 
@@ -227,6 +227,6 @@ mod tests {
 
         let items = service.list_by_project(8).unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].test_reference, "TEST-1");
+        assert_eq!(items[0].reference_code, "TEST-1");
     }
 }

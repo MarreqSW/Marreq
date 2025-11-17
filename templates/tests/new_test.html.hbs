@@ -15,32 +15,32 @@
     <div class="card-body c-card__body">
       <form method="post">
         <div class="form-group c-form-group">
-          <label for="test_name" class="form-label c-form-label">Test Name</label>
-          <input type="text" name="test_name" id="test_name" class="form-control c-form-control" required>
+          <label for="name" class="form-label c-form-label">Test Name</label>
+          <input type="text" name="name" id="name" class="form-control c-form-control" required>
         </div>
 
         <div class="form-group c-form-group">
-          <label for="test_reference" class="form-label c-form-label">Test Reference</label>
-          <input type="text" name="test_reference" id="test_reference" class="form-control c-form-control" required>
+          <label for="reference_code" class="form-label c-form-label">Test Reference</label>
+          <input type="text" name="reference_code" id="reference_code" class="form-control c-form-control" required>
           <small class="text-secondary">Must follow format TEST-NUMBER (e.g., TEST-1, TEST-2)</small>
         </div>
 
         <div class="form-group c-form-group">
-          <label for="test_description" class="form-label c-form-label">Description</label>
-          <textarea name="test_description" id="test_description" class="form-control c-form-control c-form-control--textarea" rows="4" required></textarea>
+          <label for="description" class="form-label c-form-label">Description</label>
+          <textarea name="description" id="description" class="form-control c-form-control c-form-control--textarea" rows="4" required></textarea>
         </div>
 
         <div class="o-grid o-grid--two">
           <div class="form-group c-form-group">
-            <label for="test_source" class="form-label c-form-label">Source</label>
-            <input type="text" name="test_source" id="test_source" class="form-control c-form-control">
+            <label for="source" class="form-label c-form-label">Source</label>
+            <input type="text" name="source" id="source" class="form-control c-form-control">
           </div>
 
           <div class="form-group c-form-group">
-            <label for="test_status" class="form-label c-form-label">Status</label>
-            <select name="test_status" id="test_status" class="form-control c-form-control c-form-control--select" required>
+            <label for="status_id" class="form-label c-form-label">Status</label>
+            <select name="status_id" id="status_id" class="form-control c-form-control c-form-control--select" required>
               {{#each status }}
-                <option value="{{test_st_id}}">{{test_st_title}}</option>
+                <option value="{{id}}">{{title}}</option>
               {{/each}}
             </select>
           </div>
@@ -48,11 +48,11 @@
 
         <div class="o-grid o-grid--two">
           <div class="form-group c-form-group">
-            <label for="test_parent" class="form-label c-form-label">Parent Test</label>
-            <select name="test_parent" id="test_parent" class="form-control c-form-control c-form-control--select">
+            <label for="parent_id" class="form-label c-form-label">Parent Test</label>
+            <select name="parent_id" id="parent_id" class="form-control c-form-control c-form-control--select">
               <option value="0">None</option>
               {{#each parents}}
-                <option value="{{test_id}}">{{test_name}}</option>
+                <option value="{{id}}">{{name}}</option>
               {{/each}}
             </select>
           </div>

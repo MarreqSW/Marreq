@@ -104,37 +104,37 @@ impl<'a> DecoratedRequirementService<'a> {
         let verification = self
             .verification_service
             .get_by_id(req.verification_method_id)
-            .map(|v| v.verification_name)
+            .map(|v| v.name)
             .unwrap_or_else(|_| format!("Unknown Verification ({})", req.verification_method_id));
 
         let status = self
             .status_service
             .get_requirement_status(req.current_status_id)
-            .map(|s| s.req_st_title)
+            .map(|s| s.title)
             .unwrap_or_else(|_| format!("Unknown Status ({})", req.current_status_id));
 
         let author = self
             .user_service
             .get_by_id(req.author_id)
-            .map(|u| u.user_name)
+            .map(|u| u.name)
             .unwrap_or_else(|_| format!("Unknown User ({})", req.author_id));
 
         let reviewer = self
             .user_service
             .get_by_id(req.reviewer_id)
-            .map(|u| u.user_name)
+            .map(|u| u.name)
             .unwrap_or_else(|_| format!("Unknown User ({})", req.reviewer_id));
 
         let category = self
             .category_service
             .get_by_id(req.category_id)
-            .map(|c| c.cat_title)
+            .map(|c| c.title)
             .unwrap_or_else(|_| format!("Unknown Category ({})", req.category_id));
 
         let applicability = self
             .applicability_service
             .get_by_id(req.applicability_id)
-            .map(|a| a.app_title)
+            .map(|a| a.title)
             .unwrap_or_else(|_| format!("Unknown Applicability ({})", req.applicability_id));
 
         let parent_title = if req.parent_id != 0 {

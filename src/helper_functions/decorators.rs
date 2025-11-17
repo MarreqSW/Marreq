@@ -49,17 +49,17 @@ fn decorate_requirements_impl<R: Repository>(
         .map(|r| {
             let verification = repo
                 .get_verification_by_id(r.verification_method_id)
-                .map(|v| v.verification_name)
+                .map(|v| v.name)
                 .unwrap_or_else(|_| format!("Unknown Verification ({})", r.verification_method_id));
 
             let status = repo
                 .get_requirement_status_by_id(r.current_status_id)
-                .map(|s| s.req_st_title)
+                .map(|s| s.title)
                 .unwrap_or_else(|_| format!("Unknown Status ({})", r.current_status_id));
 
             let author = if r.author_id != 0 {
                 repo.get_user_by_id(r.author_id)
-                    .map(|u| u.user_name)
+                    .map(|u| u.name)
                     .unwrap_or_default()
             } else {
                 String::new()
@@ -67,7 +67,7 @@ fn decorate_requirements_impl<R: Repository>(
 
             let reviewer = if r.reviewer_id != 0 {
                 repo.get_user_by_id(r.reviewer_id)
-                    .map(|u| u.user_name)
+                    .map(|u| u.name)
                     .unwrap_or_default()
             } else {
                 String::new()
@@ -75,12 +75,12 @@ fn decorate_requirements_impl<R: Repository>(
 
             let category = repo
                 .get_category_by_id(r.category_id)
-                .map(|c| c.cat_title)
+                .map(|c| c.title)
                 .unwrap_or_else(|_| format!("Unknown Category ({})", r.category_id));
 
             let applicability = repo
                 .get_applicability_by_id(r.applicability_id)
-                .map(|a| a.app_title)
+                .map(|a| a.title)
                 .unwrap_or_else(|_| format!("Unknown Applicability ({})", r.applicability_id));
 
             let parent_title = if r.parent_id != 0 {
@@ -127,27 +127,27 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
         .into_iter()
         .map(|t| {
             let status = repo
-                .get_test_status_by_id(t.test_status)
-                .map(|s| s.test_st_title)
-                .unwrap_or_else(|_| format!("Unknown Status ({})", t.test_status));
+                .get_test_status_by_id(t.status_id)
+                .map(|s| s.title)
+                .unwrap_or_else(|_| format!("Unknown Status ({})", t.status_id));
 
-            let parent_title = if t.test_parent != 0 {
-                repo.get_test_by_id(t.test_parent)
-                    .map(|p| p.test_name)
+            let parent_title = if t.parent_id != 0 {
+                repo.get_test_by_id(t.parent_id)
+                    .map(|p| p.name)
                     .unwrap_or_default()
             } else {
                 String::new()
             };
 
             DecoratedTestCase {
-                test_id: t.test_id,
-                test_name: t.test_name,
-                test_description: t.test_description,
-                test_source: t.test_source,
-                test_reference: t.test_reference,
-                test_status: status,
-                test_status_id: t.test_status,
-                test_parent_id: t.test_parent,
+                id: t.id,
+                name: t.name,
+                description: t.description,
+                source: t.source,
+                reference_code: t.reference_code,
+                status_id: status,
+                test_status_id: t.status_id,
+                test_parent_id: t.parent_id,
                 test_parent_title: parent_title,
                 project_id: t.project_id,
             }
@@ -165,8 +165,8 @@ fn get_linked_tests_for_requirement_impl<R: Repository>(
 
     let test_ids: Vec<i32> = matrix
         .into_iter()
-        .filter(|m| m.matrix_req_id == id)
-        .map(|m| m.matrix_test_id)
+        .filter(|m| m.req_id == id)
+        .map(|m| m.id)
         .collect();
 
     if test_ids.is_empty() {
@@ -203,38 +203,38 @@ mod tests {
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Open".into(),
-                req_st_description: String::new(),
-                req_st_short_name: String::new(),
+                id: 1,
+                title: "Open".into(),
+                description: String::new(),
+                short_name: String::new(),
             },
         );
         repo.verifications.insert(
             1,
             VerificationMethod {
-                verification_id: 1,
-                verification_name: "Analysis".into(),
-                verification_description: String::new(),
+                id: 1,
+                name: "Analysis".into(),
+                description: String::new(),
                 project_id: 1,
             },
         );
         repo.categories.insert(
             1,
             Category {
-                cat_id: 1,
-                cat_title: "Cat".into(),
-                cat_description: String::new(),
-                cat_tag: String::new(),
+                id: 1,
+                title: "Cat".into(),
+                description: String::new(),
+                tag: String::new(),
                 project_id: 1,
             },
         );
         repo.applicability.insert(
             1,
             Applicability {
-                app_id: 1,
-                app_title: "App".into(),
-                app_description: String::new(),
-                app_tag: String::new(),
+                id: 1,
+                title: "App".into(),
+                description: String::new(),
+                tag: String::new(),
                 project_id: 1,
             },
         );
@@ -242,26 +242,26 @@ mod tests {
         repo.users.insert(
             1,
             User {
-                user_id: 1,
-                user_username: "a".into(),
-                user_name: "Author".into(),
-                user_email: String::new(),
-                user_creation_date: now,
-                user_last_login: now,
-                user_password: String::new(),
+                id: 1,
+                username: "a".into(),
+                name: "Author".into(),
+                email: String::new(),
+                creation_date: now,
+                last_login: now,
+                password_hash: String::new(),
                 is_admin: false,
             },
         );
         repo.users.insert(
             2,
             User {
-                user_id: 2,
-                user_username: "b".into(),
-                user_name: "Reviewer".into(),
-                user_email: String::new(),
-                user_creation_date: now,
-                user_last_login: now,
-                user_password: String::new(),
+                id: 2,
+                username: "b".into(),
+                name: "Reviewer".into(),
+                email: String::new(),
+                creation_date: now,
+                last_login: now,
+                password_hash: String::new(),
                 is_admin: false,
             },
         );
@@ -379,63 +379,63 @@ mod tests {
         repo.test_statuses.insert(
             1,
             TestStatus {
-                test_st_id: 1,
-                test_st_title: "Open".into(),
-                test_st_description: String::new(),
-                test_st_short_name: String::new(),
+                id: 1,
+                title: "Open".into(),
+                description: String::new(),
+                short_name: String::new(),
             },
         );
         // parent test for branch
         repo.tests.insert(
             10,
             TestCase {
-                test_id: 10,
-                test_name: "Parent".into(),
-                test_description: String::new(),
-                test_source: String::new(),
-                test_reference: "TEST-10".into(),
-                test_status: 1,
-                test_parent: 0,
+                id: 10,
+                name: "Parent".into(),
+                description: String::new(),
+                source: String::new(),
+                reference_code: "TEST-10".into(),
+                status_id: 1,
+                parent_id: 0,
                 project_id: 1,
             },
         );
 
         let t1 = TestCase {
-            test_id: 20,
-            test_name: "T1".into(),
-            test_description: String::new(),
-            test_source: String::new(),
-            test_reference: "TEST-20".into(),
-            test_status: 1,
-            test_parent: 0,
+            id: 20,
+            name: "T1".into(),
+            description: String::new(),
+            source: String::new(),
+            reference_code: "TEST-20".into(),
+            status_id: 1,
+            parent_id: 0,
             project_id: 1,
         };
         let t2 = TestCase {
-            test_id: 21,
-            test_name: "T2".into(),
-            test_description: String::new(),
-            test_source: String::new(),
-            test_reference: "TEST-21".into(),
-            test_status: 99,
-            test_parent: 10,
+            id: 21,
+            name: "T2".into(),
+            description: String::new(),
+            source: String::new(),
+            reference_code: "TEST-21".into(),
+            status_id: 99,
+            parent_id: 10,
             project_id: 1,
         };
         let t3 = TestCase {
-            test_id: 22,
-            test_name: "T3".into(),
-            test_description: String::new(),
-            test_source: String::new(),
-            test_reference: "TEST-22".into(),
-            test_status: 1,
-            test_parent: 999,
+            id: 22,
+            name: "T3".into(),
+            description: String::new(),
+            source: String::new(),
+            reference_code: "TEST-22".into(),
+            status_id: 1,
+            parent_id: 999,
             project_id: 1,
         };
 
         let decorated = decorate_tests_impl(&repo, vec![t1, t2, t3]);
         assert_eq!(decorated.len(), 3);
-        assert_eq!(decorated[0].test_status, "Open");
+        assert_eq!(decorated[0].status_id, "Open");
         assert_eq!(decorated[0].test_parent_title, "");
-        assert_eq!(decorated[1].test_status, "Unknown Status (99)");
+        assert_eq!(decorated[1].status_id, "Unknown Status (99)");
         assert_eq!(decorated[1].test_parent_title, "Parent");
         assert_eq!(decorated[2].test_parent_title, "");
     }
@@ -447,19 +447,19 @@ mod tests {
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Open".into(),
-                req_st_description: String::new(),
-                req_st_short_name: String::new(),
+                id: 1,
+                title: "Open".into(),
+                description: String::new(),
+                short_name: String::new(),
             },
         );
         repo.test_statuses.insert(
             1,
             TestStatus {
-                test_st_id: 1,
-                test_st_title: "Open".into(),
-                test_st_description: String::new(),
-                test_st_short_name: String::new(),
+                id: 1,
+                title: "Open".into(),
+                description: String::new(),
+                short_name: String::new(),
             },
         );
         let req = Requirement {
@@ -481,28 +481,28 @@ mod tests {
             project_id: 1,
         };
         let test = TestCase {
-            test_id: 10,
-            test_name: "T".into(),
-            test_description: String::new(),
-            test_source: String::new(),
-            test_reference: "TEST-10".into(),
-            test_status: 1,
-            test_parent: 0,
+            id: 10,
+            name: "T".into(),
+            description: String::new(),
+            source: String::new(),
+            reference_code: "TEST-10".into(),
+            status_id: 1,
+            parent_id: 0,
             project_id: 1,
         };
         repo.requirements.insert(1, req);
         repo.tests.insert(10, test);
         repo.matrices.push(Matrix {
-            matrix_req_id: 1,
-            matrix_test_id: 10,
-            matrix_creation_date: now,
+            req_id: 1,
+            id: 10,
+            creation_date: now,
             project_id: 1,
         });
 
         let result = get_linked_tests_for_requirement_impl(&repo, 1).unwrap();
         assert_eq!(result.len(), 1);
-        assert_eq!(result[0].test_name, "T");
-        assert_eq!(result[0].test_status, "Open");
+        assert_eq!(result[0].name, "T");
+        assert_eq!(result[0].status_id, "Open");
     }
 
     #[test]
@@ -530,9 +530,9 @@ mod tests {
         repo.requirements.insert(2, req);
         // matrix for different requirement
         repo.matrices.push(Matrix {
-            matrix_req_id: 99,
-            matrix_test_id: 50,
-            matrix_creation_date: now,
+            req_id: 99,
+            id: 50,
+            creation_date: now,
             project_id: 1,
         });
 
@@ -571,9 +571,9 @@ mod tests {
         };
         repo.requirements.insert(3, req);
         repo.matrices.push(Matrix {
-            matrix_req_id: 3,
-            matrix_test_id: 999,
-            matrix_creation_date: now,
+            req_id: 3,
+            id: 999,
+            creation_date: now,
             project_id: 1,
         });
 

@@ -30,13 +30,13 @@ impl<'a> VerificationService<'a> {
 
     pub fn get_verification_name(&self, id: i32) -> Result<String, RepoError> {
         let verification = self.state.repo_read().get_verification_by_id(id)?;
-        Ok(verification.verification_name)
+        Ok(verification.name)
     }
 
     /// Create a new verification entry.
     pub fn create(&self, mut payload: NewVerificationMethod) -> Result<i32, RepoError> {
-        sanitize(&mut payload.verification_name);
-        sanitize(&mut payload.verification_description);
+        sanitize(&mut payload.name);
+        sanitize(&mut payload.description);
 
         validate(&payload)?;
 
@@ -54,24 +54,24 @@ fn sanitize(value: &mut String) {
 }
 
 fn validate(payload: &NewVerificationMethod) -> Result<(), RepoError> {
-    if payload.verification_name.is_empty() {
+    if payload.name.is_empty() {
         return Err(RepoError::BadInput(
-            "verification_name is required".to_string(),
+            "name is required".to_string(),
         ));
     }
-    if payload.verification_name.len() > 120 {
+    if payload.name.len() > 120 {
         return Err(RepoError::BadInput(
-            "verification_name must be at most 120 characters".to_string(),
+            "name must be at most 120 characters".to_string(),
         ));
     }
-    if payload.verification_description.is_empty() {
+    if payload.description.is_empty() {
         return Err(RepoError::BadInput(
-            "verification_description is required".to_string(),
+            "description is required".to_string(),
         ));
     }
-    if payload.verification_description.len() > 500 {
+    if payload.description.len() > 500 {
         return Err(RepoError::BadInput(
-            "verification_description must be at most 500 characters".to_string(),
+            "description must be at most 500 characters".to_string(),
         ));
     }
     Ok(())
@@ -96,12 +96,12 @@ mod tests {
             1,
             crate::models::Project {
                 project_id: 1,
-                project_name: "Demo".into(),
-                project_description: None,
-                project_creation_date: None,
-                project_update_date: None,
-                project_status: None,
-                project_owner_id: None,
+                name: "Demo".into(),
+                description: None,
+                creation_date: None,
+                update_date: None,
+                status_id: None,
+                owner_id: None,
             },
         );
 
@@ -109,17 +109,17 @@ mod tests {
         let service = VerificationService::new(&state);
 
         let payload = NewVerificationMethod {
-            verification_id: None,
-            verification_name: "  Analysis ".into(),
-            verification_description: "  Evaluate expected metrics  ".into(),
+            id: None,
+            name: "  Analysis ".into(),
+            description: "  Evaluate expected metrics  ".into(),
             project_id: 1,
         };
 
         let id = service.create(payload).expect("created");
         let stored = service.get_by_id(id).expect("stored");
 
-        assert_eq!(stored.verification_name, "Analysis");
-        assert_eq!(stored.verification_description, "Evaluate expected metrics");
+        assert_eq!(stored.name, "Analysis");
+        assert_eq!(stored.description, "Evaluate expected metrics");
     }
 
     #[test]
@@ -127,9 +127,9 @@ mod tests {
         let state = state_with_repo(DieselRepoMock::default());
         let service = VerificationService::new(&state);
         let payload = NewVerificationMethod {
-            verification_id: None,
-            verification_name: "".into(),
-            verification_description: "".into(),
+            id: None,
+            name: "".into(),
+            description: "".into(),
             project_id: 1,
         };
 

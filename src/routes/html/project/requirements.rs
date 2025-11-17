@@ -240,7 +240,7 @@ async fn show_requirements(
         "current_view": current_view,
         "project": json!({
             "id": selected_project.project_id,
-            "name": selected_project.project_name,
+            "name": selected_project.name,
         }),
         "is_admin": user.is_admin,
     });
@@ -285,7 +285,7 @@ async fn show_requirement_id(
             .fold((0_i32, 0_i32, 0_i32), |mut acc, test| {
                 // Use enum to properly identify test status
                 if let Some(status_enum) =
-                    crate::status_enums::TestStatusEnum::from_title(&test.test_status)
+                    crate::status_enums::TestStatusEnum::from_title(&test.status_id)
                 {
                     match status_enum {
                         crate::status_enums::TestStatusEnum::Passed => acc.0 += 1,
@@ -334,7 +334,7 @@ async fn show_requirement_id(
         "project_id": project_id,
         "project": json!({
             "id": selected_project.project_id,
-            "name": selected_project.project_name,
+            "name": selected_project.name,
         }),
         "requirement_data": canonical_data,
         "requirement_data_json": serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string()),
@@ -351,9 +351,9 @@ async fn get_edit_requirement(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    let project_name = ProjectService::new(state.inner())
+    let name = ProjectService::new(state.inner())
         .get_by_id(project_id)?
-        .project_name;
+        .name;
     let service = DecoratedRequirementService::new(state.inner());
     let req = service.get_by_id(id)?;
 
@@ -424,7 +424,7 @@ async fn get_edit_requirement(
         "linked_requirement_options": linked_requirement_options,
         "user": user,
         "display_reference": display_reference,
-        "project_name": project_name,
+        "name": name,
         "version": {
             "label": version_label,
             "last_editor": last_editor_name,
@@ -543,7 +543,7 @@ async fn new_requirement(
         title: tr.map(|r| r.title.clone()).unwrap_or_default(),
         description: tr.map(|r| r.description.clone()).unwrap_or_default(),
         verification_method_id: tr.map(|r| r.verification_method_id).unwrap_or_default(),
-        author_id: user.user_id,
+        author_id: user.id,
         category_id: tr.map(|r| r.category_id).unwrap_or_default(),
         current_status_id: 0, // Draft
         parent_id: tr.map(|r| r.parent_id).unwrap_or_default(),
@@ -566,8 +566,8 @@ async fn new_requirement(
     // Default status to "Draft"
     new_requirement.current_status_id = statuses
         .iter()
-        .find(|st| st.req_st_title.eq_ignore_ascii_case("Draft"))
-        .map(|st| st.req_st_id)
+        .find(|st| st.title.eq_ignore_ascii_case("Draft"))
+        .map(|st| st.id)
         .unwrap_or(RequirementStatusEnum::Draft.id());
 
     let created_flash = created.and_then(|flag| {
@@ -586,8 +586,8 @@ async fn new_requirement(
     // Check if user is admin or project owner
     let is_admin_or_owner = user.is_admin
         || project
-            .project_owner_id
-            .map_or(false, |owner_id| owner_id == user.user_id);
+            .owner_id
+            .map_or(false, |owner_id| owner_id == user.id);
 
     let ctx = json!({
         "categories": categories,
@@ -599,7 +599,7 @@ async fn new_requirement(
         "project_id": project_id,
         "project": {
             "id": project.project_id,
-            "name": project.project_name,
+            "name": project.name,
         },
         "template": new_requirement,
         "created_timestamp": created_timestamp,
@@ -634,22 +634,22 @@ async fn post_requirement(
     );
 
     // Take ownership and enforce project_id from the route
-    let (mut req, intent) = new_req.into_inner().into_payload(user.user_id, project_id);
+    let (mut req, intent) = new_req.into_inner().into_payload(user.id, project_id);
     req.project_id = project_id;
-    req.author_id = user.user_id;
+    req.author_id = user.id;
 
     // --- Reference validation / generation ---
     if !req.reference_code.is_empty() {
         // Validate against the category's tag
         let category = get_category_or_placeholder(state, req.category_id);
-        let expected_prefix = format!("REQ-{}-", category.cat_tag);
+        let expected_prefix = format!("REQ-{}-", category.tag);
         if !req.reference_code.starts_with(&expected_prefix) {
             return Err(Redirect::to(new_url));
         }
 
         // Strict pattern: REQ-<CAT_TAG>-<NUMBER>
         // Escape the tag just in case and compile once.
-        let pat = format!(r"^REQ-{}-\d+$", regex::escape(&category.cat_tag));
+        let pat = format!(r"^REQ-{}-\d+$", regex::escape(&category.tag));
         let re = match regex::Regex::new(&pat) {
             Ok(r) => r,
             Err(_e) => {
@@ -810,10 +810,10 @@ async fn create_category_inline(
 
     let category_service = CategoryService::new(state.inner());
     let new_category = NewCategory {
-        cat_id: None,
-        cat_title: data.title,
-        cat_description: data.description,
-        cat_tag: data.tag,
+        id: None,
+        title: data.title,
+        description: data.description,
+        tag: data.tag,
         project_id,
     };
 
@@ -823,9 +823,9 @@ async fn create_category_inline(
     let stored = category_service.get_by_id(id).map_err(map_repo_error)?;
 
     Ok(Json(json!({
-        "id": stored.cat_id,
-        "label": stored.cat_title,
-        "tag": stored.cat_tag,
+        "id": stored.id,
+        "label": stored.title,
+        "tag": stored.tag,
     })))
 }
 
@@ -845,10 +845,10 @@ async fn create_applicability_inline(
 
     let applicability_service = ApplicabilityService::new(state.inner());
     let new_applicability = NewApplicability {
-        app_id: None,
-        app_title: data.title,
-        app_description: data.description,
-        app_tag: data.tag,
+        id: None,
+        title: data.title,
+        description: data.description,
+        tag: data.tag,
         project_id,
     };
 
@@ -860,9 +860,9 @@ async fn create_applicability_inline(
         .map_err(map_repo_error)?;
 
     Ok(Json(json!({
-        "id": stored.app_id,
-        "label": stored.app_title,
-        "tag": stored.app_tag,
+        "id": stored.id,
+        "label": stored.title,
+        "tag": stored.tag,
     })))
 }
 
@@ -881,9 +881,9 @@ async fn create_verification_inline(
 
     let verification_service = VerificationService::new(state.inner());
     let new_verification = NewVerificationMethod {
-        verification_id: None,
-        verification_name: data.name,
-        verification_description: data.description,
+        id: None,
+        name: data.name,
+        description: data.description,
         project_id,
     };
 
@@ -893,9 +893,9 @@ async fn create_verification_inline(
     let stored = verification_service.get_by_id(id).map_err(map_repo_error)?;
 
     Ok(Json(json!({
-        "id": stored.verification_id,
-        "label": stored.verification_name,
-        "description": stored.verification_description,
+        "id": stored.id,
+        "label": stored.name,
+        "description": stored.description,
     })))
 }
 
@@ -903,10 +903,10 @@ fn get_category_or_placeholder(state: &State<AppState>, category_id: i32) -> Cat
     CategoryService::new(state.inner())
         .get_by_id(category_id)
         .unwrap_or_else(|_| Category {
-            cat_id: category_id,
-            cat_title: format!("Unknown Category ({})", category_id),
-            cat_description: "Category not found".to_string(),
-            cat_tag: "unknown".to_string(),
+            id: category_id,
+            title: format!("Unknown Category ({})", category_id),
+            description: "Category not found".to_string(),
+            tag: "unknown".to_string(),
             project_id: 1,
         })
 }
@@ -954,19 +954,19 @@ mod tests {
             PRIMARY_PROJECT,
             Project {
                 project_id: PRIMARY_PROJECT,
-                project_name: "Test Project".into(),
-                project_description: Some("Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(ADMIN_ID),
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status_id: Some("Active".into()),
+                owner_id: Some(ADMIN_ID),
             },
         );
 
         // Add membership
         repo.project_members.push(ProjectMember {
             project_id: PRIMARY_PROJECT,
-            user_id: ADMIN_ID,
+            id: ADMIN_ID,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),
@@ -986,20 +986,20 @@ mod tests {
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Draft".into(),
-                req_st_description: "".into(),
-                req_st_short_name: "D".into(),
+                id: 1,
+                title: "Draft".into(),
+                description: "".into(),
+                short_name: "D".into(),
             },
         );
 
         repo.categories.insert(
             1,
             Category {
-                cat_id: 1,
-                cat_title: "Systems".into(),
-                cat_description: "".into(),
-                cat_tag: "SYS".into(),
+                id: 1,
+                title: "Systems".into(),
+                description: "".into(),
+                tag: "SYS".into(),
                 project_id: PRIMARY_PROJECT,
             },
         );
@@ -1007,9 +1007,9 @@ mod tests {
         repo.verifications.insert(
             1,
             VerificationMethod {
-                verification_id: 1,
-                verification_name: "Analysis".into(),
-                verification_description: "".into(),
+                id: 1,
+                name: "Analysis".into(),
+                description: "".into(),
                 project_id: PRIMARY_PROJECT,
             },
         );
@@ -1017,10 +1017,10 @@ mod tests {
         repo.applicability.insert(
             1,
             Applicability {
-                app_id: 1,
-                app_title: "All".into(),
-                app_description: "".into(),
-                app_tag: "ALL".into(),
+                id: 1,
+                title: "All".into(),
+                description: "".into(),
+                tag: "ALL".into(),
                 project_id: PRIMARY_PROJECT,
             },
         );
@@ -1153,18 +1153,18 @@ mod tests {
             2,
             Project {
                 project_id: 2,
-                project_name: "Other Project".into(),
-                project_description: Some("Alt".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(ADMIN_ID),
+                name: "Other Project".into(),
+                description: Some("Alt".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status_id: Some("Active".into()),
+                owner_id: Some(ADMIN_ID),
             },
         );
 
         repo.project_members.push(ProjectMember {
             project_id: 2,
-            user_id: ADMIN_ID,
+            id: ADMIN_ID,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),

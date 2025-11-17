@@ -33,7 +33,7 @@ impl DieselRepoMock {
     pub fn with_users(users: impl IntoIterator<Item = User>) -> Self {
         let mut map = HashMap::new();
         for u in users {
-            map.insert(u.user_id, u);
+            map.insert(u.id, u);
         }
         Self {
             users: map,
@@ -72,21 +72,21 @@ impl DieselRepoMock {
     pub fn with_admin_user(mut self) -> Self {
         let mut admin = Self::make_user(1, "admin", "");
         admin.is_admin = true;
-        if !self.users.contains_key(&admin.user_id) {
-            self.users.insert(admin.user_id, admin);
+        if !self.users.contains_key(&admin.id) {
+            self.users.insert(admin.id, admin);
         }
         self
     }
 
     pub fn make_user(id: i32, username: &str, stored_pw: &str) -> User {
         User {
-            user_id: id,
-            user_username: username.to_string(),
-            user_name: "name".into(),
-            user_email: "email@example.com".into(),
-            user_creation_date: epoch(),
-            user_last_login: epoch(),
-            user_password: stored_pw.into(),
+            id: id,
+            username: username.to_string(),
+            name: "name".into(),
+            email: "email@example.com".into(),
+            creation_date: epoch(),
+            last_login: epoch(),
+            password_hash: stored_pw.into(),
             is_admin: false,
         }
     }
@@ -114,7 +114,7 @@ impl UserRepository for DieselRepoMock {
         Ok(self
             .users
             .values()
-            .find(|u| u.user_username == uname)
+            .find(|u| u.username == uname)
             .cloned())
     }
 
@@ -124,7 +124,7 @@ impl UserRepository for DieselRepoMock {
         }
         match self.users.get_mut(&id) {
             Some(user) => {
-                user.user_password = new_hash.to_string();
+                user.password_hash = new_hash.to_string();
                 Ok(())
             }
             None => Err(RepoError::NotFound),
@@ -133,16 +133,16 @@ impl UserRepository for DieselRepoMock {
 
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
         let id = new
-            .user_id
+            .id
             .unwrap_or_else(|| self.users.keys().max().map(|i| i + 1).unwrap_or(1));
         let user = User {
-            user_id: id,
-            user_username: new.user_username.clone(),
-            user_name: new.user_name.clone(),
-            user_email: new.user_email.clone(),
-            user_creation_date: epoch(),
-            user_last_login: epoch(),
-            user_password: new.user_password.clone(),
+            id: id,
+            username: new.username.clone(),
+            name: new.name.clone(),
+            email: new.email.clone(),
+            creation_date: epoch(),
+            last_login: epoch(),
+            password_hash: new.password_hash.clone(),
             is_admin: new.is_admin,
         };
         self.users.insert(id, user);
@@ -150,13 +150,13 @@ impl UserRepository for DieselRepoMock {
     }
 
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError> {
-        let id = user_data.user_id.ok_or(RepoError::NotFound)?;
+        let id = user_data.id.ok_or(RepoError::NotFound)?;
         match self.users.get_mut(&id) {
             Some(user) => {
-                user.user_username = user_data.user_username.clone();
-                user.user_name = user_data.user_name.clone();
-                user.user_email = user_data.user_email.clone();
-                user.user_password = user_data.user_password.clone();
+                user.username = user_data.username.clone();
+                user.name = user_data.name.clone();
+                user.email = user_data.email.clone();
+                user.password_hash = user_data.password_hash.clone();
                 user.is_admin = user_data.is_admin;
                 Ok(true)
             }
@@ -165,12 +165,12 @@ impl UserRepository for DieselRepoMock {
     }
 
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError> {
-        let id = user_data.user_id.ok_or(RepoError::NotFound)?;
+        let id = user_data.id.ok_or(RepoError::NotFound)?;
         match self.users.get_mut(&id) {
             Some(user) => {
-                user.user_username = user_data.user_username.clone();
-                user.user_name = user_data.user_name.clone();
-                user.user_email = user_data.user_email.clone();
+                user.username = user_data.username.clone();
+                user.name = user_data.name.clone();
+                user.email = user_data.email.clone();
                 user.is_admin = user_data.is_admin;
                 Ok(true)
             }
@@ -180,7 +180,7 @@ impl UserRepository for DieselRepoMock {
 
     fn delete_user(&mut self, id: i32) -> Result<User, RepoError> {
         let user = self.users.remove(&id).ok_or(RepoError::NotFound)?;
-        self.project_members.retain(|pm| pm.user_id != id);
+        self.project_members.retain(|pm| pm.id != id);
         Ok(user)
     }
 }
@@ -278,12 +278,12 @@ impl LookupRepository for DieselRepoMock {
 
     fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError> {
         let id = new
-            .verification_id
+            .id
             .unwrap_or_else(|| self.verifications.keys().max().map(|i| i + 1).unwrap_or(1));
         let verification = VerificationMethod {
-            verification_id: id,
-            verification_name: new.verification_name.clone(),
-            verification_description: new.verification_description.clone(),
+            id: id,
+            name: new.name.clone(),
+            description: new.description.clone(),
             project_id: new.project_id,
         };
         self.verifications.insert(id, verification);
@@ -292,25 +292,25 @@ impl LookupRepository for DieselRepoMock {
 
     fn insert_new_category(&mut self, _new: &NewCategory) -> Result<i32, RepoError> {
         let id = _new
-            .cat_id
+            .id
             .unwrap_or_else(|| self.categories.keys().max().map(|i| i + 1).unwrap_or(1));
         let cat = Category {
-            cat_id: id,
-            cat_title: _new.cat_title.clone(),
-            cat_description: _new.cat_description.clone(),
-            cat_tag: _new.cat_tag.clone(),
+            id: id,
+            title: _new.title.clone(),
+            description: _new.description.clone(),
+            tag: _new.tag.clone(),
             project_id: _new.project_id,
         };
         self.categories.insert(id, cat);
         Ok(id)
     }
     fn edit_category(&mut self, _new: &NewCategory) -> Result<bool, RepoError> {
-        let id = _new.cat_id.ok_or(RepoError::NotFound)?;
+        let id = _new.id.ok_or(RepoError::NotFound)?;
         match self.categories.get_mut(&id) {
             Some(cat) => {
-                cat.cat_title = _new.cat_title.clone();
-                cat.cat_description = _new.cat_description.clone();
-                cat.cat_tag = _new.cat_tag.clone();
+                cat.title = _new.title.clone();
+                cat.description = _new.description.clone();
+                cat.tag = _new.tag.clone();
                 cat.project_id = _new.project_id;
                 Ok(true)
             }
@@ -322,25 +322,25 @@ impl LookupRepository for DieselRepoMock {
     }
     fn insert_new_applicability(&mut self, _new: &NewApplicability) -> Result<i32, RepoError> {
         let id = _new
-            .app_id
+            .id
             .unwrap_or_else(|| self.applicability.keys().max().map(|i| i + 1).unwrap_or(1));
         let app = Applicability {
-            app_id: id,
-            app_title: _new.app_title.clone(),
-            app_description: _new.app_description.clone(),
-            app_tag: _new.app_tag.clone(),
+            id: id,
+            title: _new.title.clone(),
+            description: _new.description.clone(),
+            tag: _new.tag.clone(),
             project_id: _new.project_id,
         };
         self.applicability.insert(id, app);
         Ok(id)
     }
     fn edit_applicability(&mut self, _new: &NewApplicability) -> Result<bool, RepoError> {
-        let id = _new.app_id.ok_or(RepoError::NotFound)?;
+        let id = _new.id.ok_or(RepoError::NotFound)?;
         match self.applicability.get_mut(&id) {
             Some(app) => {
-                app.app_title = _new.app_title.clone();
-                app.app_description = _new.app_description.clone();
-                app.app_tag = _new.app_tag.clone();
+                app.title = _new.title.clone();
+                app.description = _new.description.clone();
+                app.tag = _new.tag.clone();
                 app.project_id = _new.project_id;
                 Ok(true)
             }
@@ -354,9 +354,9 @@ impl LookupRepository for DieselRepoMock {
         let id = self.statuses.keys().max().map(|i| i + 1).unwrap_or(1);
         let status = Status {
             st_id: id,
-            st_title: _new.req_st_title.clone(),
-            st_description: _new.req_st_description.clone(),
-            st_short_name: _new.req_st_short_name.clone(),
+            st_title: _new.title.clone(),
+            st_description: _new.description.clone(),
+            st_short_name: _new.short_name.clone(),
         };
         self.statuses.insert(id, status);
         Ok(id)
@@ -467,12 +467,12 @@ impl TestsRepository for DieselRepoMock {
             .collect())
     }
 
-    fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError> {
+    fn get_requirements_for_test(&self, id: i32) -> Result<Vec<Requirement>, RepoError> {
         let ids: Vec<i32> = self
             .matrices
             .iter()
-            .filter(|m| m.matrix_test_id == test_id)
-            .map(|m| m.matrix_req_id)
+            .filter(|m| m.id == id)
+            .map(|m| m.req_id)
             .collect();
         Ok(ids
             .into_iter()
@@ -484,8 +484,8 @@ impl TestsRepository for DieselRepoMock {
         let ids: Vec<i32> = self
             .matrices
             .iter()
-            .filter(|m| m.matrix_req_id == id)
-            .map(|m| m.matrix_test_id)
+            .filter(|m| m.req_id == id)
+            .map(|m| m.id)
             .collect();
         Ok(ids
             .into_iter()
@@ -495,16 +495,16 @@ impl TestsRepository for DieselRepoMock {
 
     fn insert_test(&mut self, _new: &NewTestCase) -> Result<i32, RepoError> {
         let id = _new
-            .test_id
+            .id
             .unwrap_or_else(|| self.tests.keys().max().map(|i| i + 1).unwrap_or(1));
         let test = TestCase {
-            test_id: id,
-            test_name: _new.test_name.clone(),
-            test_description: _new.test_description.clone(),
-            test_source: _new.test_source.clone(),
-            test_status: _new.test_status,
-            test_reference: _new.test_reference.clone(),
-            test_parent: _new.test_parent,
+            id: id,
+            name: _new.name.clone(),
+            description: _new.description.clone(),
+            source: _new.source.clone(),
+            status_id: _new.status_id,
+            reference_code: _new.reference_code.clone(),
+            parent_id: _new.parent_id,
             project_id: _new.project_id,
         };
         self.tests.insert(id, test);
@@ -512,14 +512,14 @@ impl TestsRepository for DieselRepoMock {
     }
 
     fn edit_test(&mut self, _new: &NewTestCase) -> Result<bool, RepoError> {
-        let id = _new.test_id.ok_or(RepoError::NotFound)?;
+        let id = _new.id.ok_or(RepoError::NotFound)?;
         match self.tests.get_mut(&id) {
             Some(test) => {
-                test.test_name = _new.test_name.clone();
-                test.test_description = _new.test_description.clone();
-                test.test_source = _new.test_source.clone();
-                test.test_status = _new.test_status;
-                test.test_parent = _new.test_parent;
+                test.name = _new.name.clone();
+                test.description = _new.description.clone();
+                test.source = _new.source.clone();
+                test.status_id = _new.status_id;
+                test.parent_id = _new.parent_id;
                 test.project_id = _new.project_id;
                 Ok(true)
             }
@@ -537,13 +537,13 @@ impl TestsRepository for DieselRepoMock {
         _requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
         // Remove existing links for this test
-        self.matrices.retain(|m| m.matrix_test_id != _test_id);
+        self.matrices.retain(|m| m.id != _test_id);
         let project_id = self.tests.get(&_test_id).map(|t| t.project_id).unwrap_or(0);
         for &id in _requirement_ids {
             self.matrices.push(Matrix {
-                matrix_req_id: id,
-                matrix_test_id: _test_id,
-                matrix_creation_date: epoch(),
+                req_id: id,
+                id: _test_id,
+                creation_date: epoch(),
                 project_id,
             });
         }
@@ -565,12 +565,12 @@ impl ProjectsRepository for DieselRepoMock {
         let now = epoch();
         let proj = Project {
             project_id: id,
-            project_name: _new.project_name.clone(),
-            project_description: _new.project_description.clone(),
-            project_creation_date: Some(now),
-            project_update_date: Some(now),
-            project_status: Some(_new.project_status.clone()),
-            project_owner_id: _new.project_owner_id,
+            name: _new.name.clone(),
+            description: _new.description.clone(),
+            creation_date: Some(now),
+            update_date: Some(now),
+            status_id: Some(_new.status_id.clone()),
+            owner_id: _new.owner_id,
         };
         self.projects.insert(id, proj);
         Ok(id)
@@ -583,11 +583,11 @@ impl ProjectsRepository for DieselRepoMock {
     ) -> Result<bool, RepoError> {
         match self.projects.get_mut(&_project_id) {
             Some(proj) => {
-                proj.project_name = _update.project_name.clone();
-                proj.project_description = _update.project_description.clone();
-                proj.project_status = Some(_update.project_status.clone());
-                proj.project_owner_id = _update.project_owner_id;
-                proj.project_update_date = Some(epoch());
+                proj.name = _update.name.clone();
+                proj.description = _update.description.clone();
+                proj.status_id = Some(_update.status_id.clone());
+                proj.owner_id = _update.owner_id;
+                proj.update_date = Some(epoch());
                 Ok(true)
             }
             None => Err(RepoError::NotFound),
@@ -613,9 +613,9 @@ impl MatrixRepository for DieselRepoMock {
 
     fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError> {
         self.matrices.push(Matrix {
-            matrix_req_id: new.matrix_req_id,
-            matrix_test_id: new.matrix_test_id,
-            matrix_creation_date: epoch(),
+            req_id: new.req_id,
+            id: new.id,
+            creation_date: epoch(),
             project_id: new.project_id,
         });
         Ok(())
@@ -632,11 +632,11 @@ impl ProjectMembersRepository for DieselRepoMock {
             .collect())
     }
 
-    fn get_projects_for_user(&self, user_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
+    fn get_projects_for_user(&self, id: i32) -> Result<Vec<ProjectMember>, RepoError> {
         Ok(self
             .project_members
             .iter()
-            .filter(|pm| pm.user_id == user_id)
+            .filter(|pm| pm.id == id)
             .cloned()
             .collect())
     }
@@ -647,10 +647,10 @@ impl ProjectMembersRepository for DieselRepoMock {
         }
 
         self.project_members
-            .retain(|pm| !(pm.project_id == new.project_id && pm.user_id == new.user_id));
+            .retain(|pm| !(pm.project_id == new.project_id && pm.id == new.id));
         self.project_members.push(ProjectMember {
             project_id: new.project_id,
-            user_id: new.user_id,
+            id: new.id,
             role: new.role,
             created_at: epoch(),
             updated_at: epoch(),
@@ -661,7 +661,7 @@ impl ProjectMembersRepository for DieselRepoMock {
     fn update_project_member_role(
         &mut self,
         project_id: i32,
-        user_id: i32,
+        id: i32,
         role: i32,
     ) -> Result<(), RepoError> {
         if self.force_err {
@@ -671,7 +671,7 @@ impl ProjectMembersRepository for DieselRepoMock {
         match self
             .project_members
             .iter_mut()
-            .find(|pm| pm.project_id == project_id && pm.user_id == user_id)
+            .find(|pm| pm.project_id == project_id && pm.id == id)
         {
             Some(pm) => {
                 pm.role = role;
@@ -682,10 +682,10 @@ impl ProjectMembersRepository for DieselRepoMock {
         }
     }
 
-    fn remove_project_member(&mut self, project_id: i32, user_id: i32) -> Result<(), RepoError> {
+    fn remove_project_member(&mut self, project_id: i32, id: i32) -> Result<(), RepoError> {
         let len_before = self.project_members.len();
         self.project_members
-            .retain(|pm| !(pm.project_id == project_id && pm.user_id == user_id));
+            .retain(|pm| !(pm.project_id == project_id && pm.id == id));
         if self.project_members.len() == len_before {
             Err(RepoError::NotFound)
         } else {

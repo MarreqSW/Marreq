@@ -11,14 +11,14 @@ pub fn import_excel_page(
 
     // Get selected project ID and name
     let selected_project_id = get_selected_project_id(cookies);
-    let (project_id, project_name) = if let Some(pid) = selected_project_id {
+    let (project_id, name) = if let Some(pid) = selected_project_id {
         let project = get_project_by_id_pooled_safe(state, pid);
-        (pid, project.project_name)
+        (pid, project.name)
     } else {
         // Default to the first project if no project is selected
         let projects = state.repo_read().get_projects_all().unwrap_or_default();
         if let Some(first_project) = projects.first() {
-            (first_project.project_id, first_project.project_name.clone())
+            (first_project.project_id, first_project.name.clone())
         } else {
             (1, "Default Project".to_string())
         }
@@ -69,7 +69,7 @@ pub fn import_excel_page(
     </body>
     </html>
     "#,
-        project_name, project_id
+        name, project_id
     );
 
     Ok(content::RawHtml(html))
@@ -280,7 +280,7 @@ pub fn process_excel_import(
             state.repo_read().cache().clear();
 
             // Get project name for display
-            let project_name = get_project_by_id_pooled_safe(state, project_id).project_name;
+            let name = get_project_by_id_pooled_safe(state, project_id).name;
 
             format!(
                 r#"
@@ -321,12 +321,12 @@ pub fn process_excel_import(
             </body>
             </html>
             "#,
-                import_result.imported_count, mapping_data.import_type, project_name, project_id
+                import_result.imported_count, mapping_data.import_type, name, project_id
             )
         }
         Err(e) => {
             // Get project name for display
-            let project_name = get_project_by_id_pooled_safe(state, project_id).project_name;
+            let name = get_project_by_id_pooled_safe(state, project_id).name;
 
             format!(
                 r#"
@@ -366,7 +366,7 @@ pub fn process_excel_import(
             </body>
             </html>
             "#,
-                e, project_name, project_id
+                e, name, project_id
             )
         }
     };

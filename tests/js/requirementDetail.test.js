@@ -432,8 +432,8 @@ describe('Requirement Detail Page', () => {
         relationships: { parent: null, children: [], has_links: false },
         verification_summary: { total: 2, passed: 1, failed: 0, pending: 1, percent: 50 },
         linked_tests: [
-          { test_id: 1, test_name: 'Test 1', test_description: 'Desc 1', test_status: 'Passed' },
-          { test_id: 2, test_name: 'Test 2', test_description: 'Desc 2', test_status: 'Pending' },
+          { id: 1, name: 'Test 1', description: 'Desc 1', status_id: 'Passed' },
+          { id: 2, name: 'Test 2', description: 'Desc 2', status_id: 'Pending' },
         ],
       });
 
@@ -443,8 +443,8 @@ describe('Requirement Detail Page', () => {
             "requirement": {"id": 1},
             "project_id": 1,
             "linked_tests": [
-              {"test_id": 1, "test_name": "Test 1", "test_description": "Desc 1", "test_status": "Passed"},
-              {"test_id": 2, "test_name": "Test 2", "test_description": "Desc 2", "test_status": "Pending"}
+              {"id": 1, "name": "Test 1", "description": "Desc 1", "status_id": "Passed"},
+              {"id": 2, "name": "Test 2", "description": "Desc 2", "status_id": "Pending"}
             ]
           }
         </script>

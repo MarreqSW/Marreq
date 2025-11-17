@@ -2,22 +2,22 @@
 
 -- Create requirement_status table
 CREATE TABLE requirement_status (
-    req_st_id SERIAL PRIMARY KEY,
-    req_st_title VARCHAR NOT NULL,
-    req_st_description VARCHAR NOT NULL,
-    req_st_short_name VARCHAR NOT NULL
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    short_name VARCHAR NOT NULL
 );
 
--- Create test_status table  
-CREATE TABLE test_status (
-    test_st_id SERIAL PRIMARY KEY,
-    test_st_title VARCHAR NOT NULL,
-    test_st_description VARCHAR NOT NULL,
-    test_st_short_name VARCHAR NOT NULL
+-- Create status_id table  
+CREATE TABLE status_id (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    short_name VARCHAR NOT NULL
 );
 
 -- Insert requirement status values
-INSERT INTO requirement_status (req_st_title, req_st_description, req_st_short_name) VALUES
+INSERT INTO requirement_status (title, description, short_name) VALUES
     ('Draft', 'The requirement is still being edited', 'Drf'),
     ('Proposal', 'The requirement is still to be approved', 'Pro'),
     ('Accepted', 'The requirement is accepted and must be processed', 'Acc'),
@@ -26,7 +26,7 @@ INSERT INTO requirement_status (req_st_title, req_st_description, req_st_short_n
     ('Finished', 'The requirement is finished', 'Fsh');
 
 -- Insert test status values
-INSERT INTO test_status (test_st_title, test_st_description, test_st_short_name) VALUES
+INSERT INTO status_id (title, description, short_name) VALUES
     ('Draft', 'The test is still being edited', 'Drf'),
     ('Proposal', 'The test is still to be approved', 'Pro'),
     ('Accepted', 'The test is accepted and must be processed', 'Acc'),
@@ -48,10 +48,10 @@ UPDATE requirements SET current_status_id =
         ELSE 1         -- Default to Draft
     END;
 
--- Update tests table to use new test_status table
+-- Update tests table to use new status_id table
 -- Map old status IDs to new test status IDs
-UPDATE tests SET test_status = 
-    CASE test_status
+UPDATE tests SET status_id = 
+    CASE status_id
         WHEN 1 THEN 1  -- Draft
         WHEN 2 THEN 2  -- Proposal
         WHEN 3 THEN 3  -- Accepted

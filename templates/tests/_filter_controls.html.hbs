@@ -30,8 +30,8 @@
           data-filter-label="Status">
           <option value="">Status · All</option>
           {{#each statuses}}
-            <option value="{{test_st_id}}" {{#if (eq test_st_id ../current_status_filter)}}selected{{/if}}>
-              {{test_st_title}}
+            <option value="{{id}}" {{#if (eq id ../current_status_filter)}}selected{{/if}}>
+              {{title}}
             </option>
           {{/each}}
         </select>
@@ -45,8 +45,8 @@
           data-filter-label="Verification">
           <option value="">Verification · All</option>
           {{#each verifications}}
-            <option value="{{verification_id}}" {{#if (eq verification_id ../current_verification_filter)}}selected{{/if}}>
-              {{verification_name}}
+            <option value="{{id}}" {{#if (eq id ../current_verification_filter)}}selected{{/if}}>
+              {{name}}
             </option>
           {{/each}}
         </select>
@@ -60,8 +60,8 @@
           data-filter-label="Category">
           <option value="">Category · All</option>
           {{#each categories}}
-            <option value="{{cat_id}}" {{#if (eq cat_id ../current_category_filter)}}selected{{/if}}>
-              {{cat_title}}
+            <option value="{{id}}" {{#if (eq id ../current_category_filter)}}selected{{/if}}>
+              {{title}}
             </option>
           {{/each}}
         </select>

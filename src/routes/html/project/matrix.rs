@@ -322,7 +322,8 @@ mod tests {
             id: id,
             title: title.to_string(),
             description: format!("{title} status"),
-            short_name: title.to_ascii_uppercase(),
+            tag: title.to_ascii_uppercase(),
+            project_id: 1,
         }
     }
 

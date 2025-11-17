@@ -154,9 +154,11 @@ mod tests {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
-                short_name: String::new(),
+                tag: String::new(),
+                project_id: 1,
             },
         );
+        repo.tests.insert(1, make_test(1, 0, 1));
         repo.tests.insert(5, make_test(5, 0, 1));
         repo.tests.insert(6, make_test(6, 5, 1));
 
@@ -190,7 +192,8 @@ mod tests {
                 id: 1,
                 title: "Ready".into(),
                 description: String::new(),
-                short_name: String::new(),
+                tag: String::new(),
+                project_id: 1,
             },
         );
         repo.tests.insert(10, make_test(10, 0, 1));

@@ -109,7 +109,8 @@ diesel::table! {
         id -> Int4,
         title -> Varchar,
         description -> Varchar,
-        short_name -> Varchar,
+        tag -> Varchar,
+        project_id -> Int4,
     }
 }
 
@@ -162,6 +163,7 @@ diesel::joinable!(requirement_status -> projects (project_id));
 diesel::joinable!(requirements -> applicability (applicability_id));
 diesel::joinable!(requirements -> projects (project_id));
 diesel::joinable!(requirements -> requirement_status (current_status_id));
+diesel::joinable!(status_id -> projects (project_id));
 diesel::joinable!(tests -> projects (project_id));
 diesel::joinable!(tests -> status_id (status_id));
 diesel::joinable!(verification -> projects (project_id));

@@ -383,7 +383,8 @@ mod tests {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
-                short_name: String::new(),
+                tag: String::new(),
+                project_id: 1,
             },
         );
         // parent test for branch
@@ -461,7 +462,8 @@ mod tests {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
-                short_name: String::new(),
+                tag: String::new(),
+                project_id: 1,
             },
         );
         let req = Requirement {

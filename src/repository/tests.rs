@@ -83,7 +83,8 @@ mod tests {
             id: 1,
             title: "Draft".to_string(),
             description: "Draft status".to_string(),
-            short_name: "DRAFT".to_string(),
+            tag: "DRAFT".to_string(),
+            project_id: 1,
         }
     }
 
@@ -774,13 +775,14 @@ mod tests {
     #[test]
     fn test_lookup_repository_create_requirement_status() {
         let mut repo = DieselRepoMock::default();
-        let new_status = NewRequirementStatus {
+        let new_status = NewStatus {
             title: "New Status".to_string(),
             description: "New Status Description".to_string(),
-            short_name: "NEW".to_string(),
+            tag: "NEW".to_string(),
+            project_id: 1,
         };
         
-        let result = repo.create_requirement_status(&new_status);
+        let result = repo.create_status(&new_status);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 0); // DieselRepoMock returns 0
     }

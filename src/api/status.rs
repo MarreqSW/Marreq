@@ -18,7 +18,8 @@ pub async fn get_requirement_status(id: i32, state: &State<AppState>) -> ApiResu
         "id": status.id,
         "title": status.title,
         "description": status.description,
-        "short_name": status.short_name,
+        "tag": status.tag,
+        "project_id": status.project_id,
     })))
 }
 
@@ -69,7 +70,8 @@ mod tests {
                 id: 1,
                 title: "Draft".into(),
                 description: "Initial".into(),
-                short_name: "DR".into(),
+                tag: "DR".into(),
+                project_id: 1,
             },
         );
         repo.requirement_statuses = statuses;
@@ -91,7 +93,8 @@ mod tests {
                 id: 5,
                 title: "Approved".into(),
                 description: "Ready".into(),
-                short_name: "AP".into(),
+                tag: "AP".into(),
+                project_id: 1,
             },
         );
 
@@ -113,7 +116,8 @@ mod tests {
                 json!({
                     "title": "In Review",
                     "description": "Under evaluation",
-                    "short_name": "IR"
+                    "tag": "IR",
+                    "project_id": 1
                 })
                 .to_string(),
             )

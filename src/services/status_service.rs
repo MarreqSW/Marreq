@@ -46,7 +46,7 @@ impl<'a> StatusService<'a> {
     pub fn create_requirement_status(&self, mut payload: NewStatus) -> Result<i32, RepoError> {
         sanitize_string(&mut payload.title);
         sanitize_string(&mut payload.description);
-        sanitize_string(&mut payload.short_name);
+        sanitize_string(&mut payload.tag);
 
         validate_requirement_status(&payload)
             .map_err(|err| RepoError::BadInput(err.to_string()))?;
@@ -80,7 +80,8 @@ mod tests {
                 id: 1,
                 title: "Legacy".into(),
                 description: "legacy".into(),
-                short_name: "LEG".into(),
+                tag: "LEG".into(),
+                project_id: 1,
             },
         );
         repo.requirement_statuses.insert(
@@ -89,7 +90,8 @@ mod tests {
                 id: 2,
                 title: "Draft".into(),
                 description: "draft".into(),
-                short_name: "DRT".into(),
+                tag: "DRT".into(),
+                project_id: 1,
             },
         );
         repo.test_statuses.insert(
@@ -128,7 +130,8 @@ mod tests {
         let payload = NewStatus {
             title: "  Verified  ".into(),
             description: "  Description  ".into(),
-            short_name: "  VFD  ".into(),
+            tag: "  VFD  ".into(),
+            project_id: 1,
         };
 
         let id = service.create_requirement_status(payload).unwrap();
@@ -137,7 +140,7 @@ mod tests {
         let stored = repo_guard.inner_repo().statuses.get(&id).unwrap();
         assert_eq!(stored.title, "Verified");
         assert_eq!(stored.description, "Description");
-        assert_eq!(stored.short_name, "VFD");
+        assert_eq!(stored.tag, "VFD");
     }
 
     #[test]
@@ -149,7 +152,8 @@ mod tests {
         let payload = NewStatus {
             title: " ".into(),
             description: "Desc".into(),
-            short_name: "DRT".into(),
+            tag: "DRT".into(),
+            project_id: 1,
         };
 
         let err = service.create_requirement_status(payload).unwrap_err();

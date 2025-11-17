@@ -135,7 +135,7 @@ mod tests {
 
     fn project(id: i32, name: &str, owner_id: i32) -> Project {
         Project {
-            project_id: id,
+            id: id,
             name: name.into(),
             description: Some("Mission critical project".into()),
             creation_date: Some(timestamp()),
@@ -202,10 +202,10 @@ mod tests {
         repo.users.insert(owner_id, owner);
 
         let accessible = project(7, "Mars Lander", owner_id);
-        let accessible_id = accessible.project_id;
+        let accessible_id = accessible.id;
         let inaccessible = project(8, "Venus Rover", owner_id);
         repo.projects.insert(accessible_id, accessible);
-        repo.projects.insert(inaccessible.project_id, inaccessible);
+        repo.projects.insert(inaccessible.id, inaccessible);
 
         repo.project_members.push(ProjectMember {
             project_id: accessible_id,

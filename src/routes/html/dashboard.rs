@@ -20,10 +20,10 @@ pub fn index(
 
     // Auto-select first project if none selected and user has projects
     if selected_project_id.is_none() && !projects.is_empty() {
-        selected_project_id = Some(projects[0].project_id);
+        selected_project_id = Some(projects[0].id);
         cookies.add(Cookie::new(
             "selected_project_id",
-            projects[0].project_id.to_string(),
+            projects[0].id.to_string(),
         ));
     }
     let decorated_projects = decorate_projects_for_listing(state, &user, &projects);
@@ -122,7 +122,7 @@ mod tests {
         repo.users.insert(user.id, user.clone());
 
         let project = Project {
-            project_id: 7,
+            id: 7,
             name: "Project Phoenix".into(),
             description: Some("Mission critical".into()),
             creation_date: None,
@@ -130,7 +130,7 @@ mod tests {
             status_id: Some("Active".into()),
             owner_id: Some(user.id),
         };
-        repo.projects.insert(project.project_id, project);
+        repo.projects.insert(project.id, project);
 
         let created = timestamp();
         repo.project_members.push(ProjectMember {

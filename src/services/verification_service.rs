@@ -95,7 +95,7 @@ mod tests {
         repo.projects.insert(
             1,
             crate::models::Project {
-                project_id: 1,
+                id: 1,
                 name: "Demo".into(),
                 description: None,
                 creation_date: None,

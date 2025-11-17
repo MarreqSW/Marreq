@@ -211,7 +211,7 @@ mod tests {
 
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
-            project_id: id,
+            id: id,
             name: name.to_string(),
             description: Some(format!("{name} project")),
             creation_date: Some(timestamp()),

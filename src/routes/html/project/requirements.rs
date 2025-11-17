@@ -987,7 +987,8 @@ mod tests {
                 id: 1,
                 title: "Draft".into(),
                 description: "".into(),
-                short_name: "D".into(),
+                tag: "D".into(),
+                project_id: 1,
             },
         );
 

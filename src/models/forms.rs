@@ -70,7 +70,8 @@ pub struct NewApplicability {
 pub struct NewStatus {
     pub title: String,
     pub description: String,
-    pub short_name: String,
+    pub tag: String,
+    pub project_id: i32,
 }
 
 #[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm, Clone)]

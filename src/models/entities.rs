@@ -63,7 +63,8 @@ pub struct RequirementStatus {
     pub id: i32,
     pub title: String,
     pub description: String,
-    pub short_name: String,
+    pub tag: String,
+    pub project_id: i32,
 }
 
 /// Possible status values for tests.

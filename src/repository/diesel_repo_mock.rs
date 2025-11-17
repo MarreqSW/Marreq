@@ -349,7 +349,8 @@ impl LookupRepository for DieselRepoMock {
             id: id,
             title: _new.title.clone(),
             description: _new.description.clone(),
-            short_name: _new.short_name.clone(),
+            tag: _new.tag.clone(),
+            project_id: _new.project_id,
         };
         self.statuses.insert(id, status);
         Ok(id)

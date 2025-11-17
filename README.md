@@ -91,59 +91,18 @@ A comprehensive web-based requirements and test management system built with Rus
 
 ### Installation
 
-#### Option 1: Automated Setup (Recommended)
+#### Quick Start (Recommended)
 
-1. **Start the database**:
-```bash
-docker-compose up -d
-```
+For a fully initialized database with pre-configured users and sample data, use the helper script described in the [scripts README](scripts/README.md), in particular [`setup_database.sh`](scripts/setup_database.sh).
 
-2. **Run the automated database setup**:
-```bash
-./setup_database.sh
-```
+Typical flow:
+- Start database: `docker compose up -d db`
+- Initialize DB with sample data: `./scripts/setup_database.sh`
+- Start app: `cargo run --bin req_man`
 
-3. **Start the application**:
-```bash
-cargo run --bin req_man
-```
+Then open **http://localhost:8000** in your browser (all demo users use password `password`).
 
-4. **Access the application**:
-   - URL: http://localhost:8000
-   - Login with any user using password: `password`
-
-#### Option 2: Manual Setup
-
-1. **Install PostgreSQL dependencies** (if not using Docker):
-```bash
-sudo apt install libpq-dev libpq5 postgresql-client postgresql-client-common
-```
-
-2. **Install Diesel CLI**:
-```bash
-cargo install diesel_cli --no-default-features --features postgres
-```
-
-3. **Start the database**:
-```bash
-docker-compose up -d
-```
-
-4. **Create and initialize the database**:
-```bash
-# Create database
-docker exec reqman_db_1 psql -U rust -d postgres -c "CREATE DATABASE reqman;"
-
-# Run complete initialization
-docker exec -i reqman_db_1 psql -U rust -d reqman < init_complete.sql
-```
-
-5. **Start the application**:
-```bash
-cargo run --bin req_man
-```
-
-The application will be available at **http://localhost:8000**
+For detailed database setup options (automated, manual, reset, verification) see the [database setup guide](DATABASE_SETUP_README.md).
 
 ## 📖 Usage
 
@@ -248,70 +207,10 @@ See the entity diagram: ![ER Diagram](doc/ER%20diagram.png)
 
 ### Database Initialization System
 
-The project includes a comprehensive database initialization system that provides:
+A comprehensive database initialization system is provided, including SQL files, helper scripts, pre-configured users, and rich sample data.
 
-#### 📁 Initialization Files
-
-- **`init_complete.sql`**: Complete database setup with all tables, constraints, indexes, and sample data
-- **`init_simple.sql`**: Simplified version with basic schema and data
-- **`setup_database.sh`**: Automated setup script that handles the entire initialization process
-- **`DATABASE_SETUP_README.md`**: Detailed documentation for database setup
-
-#### 🔧 Features
-
-- **Complete Schema**: All tables, foreign key constraints, and performance indexes
-- **Working Authentication**: Pre-configured users with working bcrypt password hashes
-- **Sample Data**: Comprehensive Space Project with requirements, tests, and traceability
-- **Multi-Project Support**: Multiple projects with isolated data
-- **Audit Logging**: Sample audit trail entries
-- **Performance Optimization**: Strategic indexes for common queries
-
-#### 👥 Pre-configured Users
-
-All users have password: `password`
-
-| Username | Name | Role | Project |
-|----------|------|------|---------|
-| `alice` | Alice Johnson | Admin | ReqMan Project |
-| `dr_smith` | Dr. Sarah Smith | Admin | Space Project |
-| `eng_jones` | Engineer Mike Jones | User | Space Project |
-| `tech_lee` | Technician Lisa Lee | User | Space Project |
-| `qa_wilson` | QA Specialist Tom Wilson | User | Space Project |
-| `admin` | System Administrator | Admin | ReqMan Project |
-
-#### 🚀 Sample Data
-
-**Space Project** includes:
-- **8 Categories**: Power, Communication, Attitude Control, Thermal, etc.
-- **6 Applicability**: All Missions, Earth Observation, Communication, etc.
-- **4 Verification Methods**: Inspection, Analysis, Demonstration, Test
-- **5 Requirements**: Power, communication, and thermal requirements
-- **5 Tests**: Corresponding test cases for each requirement
-- **5 Matrix Links**: Complete traceability mapping
-
-#### 🔄 Setup Options
-
-**Automated Setup (Recommended)**:
-```bash
-# Start database and run complete setup
-docker-compose up -d
-./setup_database.sh
-```
-
-**Manual Setup**:
-```bash
-# Create database and run initialization script
-docker exec reqman_db_1 psql -U rust -d postgres -c "CREATE DATABASE reqman;"
-docker exec -i reqman_db_1 psql -U rust -d reqman < init_complete.sql
-```
-
-**Reset Database**:
-```bash
-# Complete reset
-docker exec reqman_db_1 psql -U rust -d postgres -c "DROP DATABASE IF EXISTS reqman;"
-docker exec reqman_db_1 psql -U rust -d postgres -c "CREATE DATABASE reqman;"
-./setup_database.sh
-```
+- For end-to-end database setup and reset via scripts, see the [scripts README](scripts/README.md) (section `setup_database.sh`).
+- For a full description of the schema, sample projects/users, and manual initialization commands, see the [database setup guide](DATABASE_SETUP_README.md).
 
 ### Migrations
 Database schema changes are managed through Diesel migrations:

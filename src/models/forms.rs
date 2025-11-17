@@ -63,11 +63,28 @@ pub struct NewApplicability {
     pub project_id: i32,
 }
 
-/// Form used to create a new [`Status`].
-#[derive(Serialize, Deserialize, Insertable, FromForm)]
+/// Form used to create a new requirement status.
+#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = requirement_status)]
-pub struct NewStatus {
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(primary_key(id))]
+pub struct NewRequirementStatus {
+    pub id: Option<i32>,
+    pub title: String,
+    pub description: String,
+    pub tag: String,
+    pub project_id: i32,
+}
+
+/// Form used to create a new test status.
+#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = status_id)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(primary_key(id))]
+pub struct NewTestStatus {
+    pub id: Option<i32>,
     pub title: String,
     pub description: String,
     pub tag: String,
@@ -311,3 +328,5 @@ impl_loggable!(
     username,
     no_project
 );
+impl_loggable!(NewRequirementStatus, EntityType::Requirement, id?, title);
+impl_loggable!(NewTestStatus, EntityType::Test, id?, title);

@@ -5,7 +5,8 @@ use crate::models::entities::{
 };
 use crate::models::forms::{
     NewApplicability, NewCategory, NewMatrix, NewProject, NewProjectMember, NewRequirement,
-    NewStatus, NewTestCase, NewUser, NewVerificationMethod, UpdateProject, UpdateUser,
+    NewRequirementStatus, NewTestCase, NewTestStatus, NewUser, NewVerificationMethod,
+    UpdateProject, UpdateUser,
 };
 use crate::repository::{
     LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository,
@@ -629,9 +630,17 @@ impl LookupRepository for DieselRepo {
         Ok(app)
     }
 
-    fn create_status(&mut self, new: &NewStatus) -> Result<i32, RepoError> {
+    fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
         let res: RequirementStatus = diesel::insert_into(schema::requirement_status::table)
+            .values(new)
+            .get_result(conn.as_mut())?;
+        Ok(res.id)
+    }
+
+    fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError> {
+        let mut conn = self.get_conn()?;
+        let res: TestStatus = diesel::insert_into(schema::status_id::table)
             .values(new)
             .get_result(conn.as_mut())?;
         Ok(res.id)

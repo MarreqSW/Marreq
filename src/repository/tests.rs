@@ -776,19 +776,34 @@ mod tests {
     #[test]
     fn test_lookup_repository_create_requirement_status() {
         let mut repo = DieselRepoMock::default();
-        let new_status = NewStatus {
+        let new_status = NewRequirementStatus {
+            id: None,
             title: "New Status".to_string(),
             description: "New Status Description".to_string(),
             tag: "NEW".to_string(),
             project_id: 1,
         };
         
-        let result = repo.create_status(&new_status);
+        let result = repo.create_requirement_status(&new_status);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 0); // DieselRepoMock returns 0
+        assert_eq!(result.unwrap(), 1); // DieselRepoMock returns next available ID
     }
 
-    // Note: Test status creation uses the same NewStatus form as requirement status
+    #[test]
+    fn test_lookup_repository_create_test_status() {
+        let mut repo = DieselRepoMock::default();
+        let new_status = NewTestStatus {
+            id: None,
+            title: "New Test Status".to_string(),
+            description: "Test Status Description".to_string(),
+            tag: "TST".to_string(),
+            project_id: 1,
+        };
+        
+        let result = repo.create_test_status(&new_status);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 1); // DieselRepoMock returns next available ID
+    }
 
     #[test]
     fn test_lookup_repository_insert_new_category() {

@@ -33,51 +33,27 @@ pub struct Requirement {
     pub project_id: i32,
 }
 
-/// A grouping category for requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Category {
-    pub id: i32,
-    pub title: String,
-    pub description: String,
-    pub tag: String,
-    pub project_id: i32,
+/// Macro to define tagged entities with common structure.
+macro_rules! define_tagged_entity {
+    (
+        $name:ident
+    ) => {
+        #[derive(Serialize, Deserialize, Queryable, Clone)]
+        #[diesel(check_for_backend(diesel::pg::Pg))]
+        pub struct $name {
+            pub id: i32,
+            pub title: String,
+            pub description: String,
+            pub tag: String,
+            pub project_id: i32,
+        }
+    };
 }
 
-/// Applicability tags limit where a requirement applies.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct Applicability {
-    pub id: i32,
-    pub title: String,
-    pub description: String,
-    pub tag: String,
-    pub project_id: i32,
-}
-
-/// Possible status values for requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(table_name = requirement_status)]
-pub struct RequirementStatus {
-    pub id: i32,
-    pub title: String,
-    pub description: String,
-    pub tag: String,
-    pub project_id: i32,
-}
-
-/// Possible status values for tests.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(table_name = status_id)]
-pub struct TestStatus {
-    pub id: i32,
-    pub title: String,
-    pub description: String,
-    pub tag: String,
-    pub project_id: i32,
-}
+define_tagged_entity!(Category);
+define_tagged_entity!(Applicability);
+define_tagged_entity!(RequirementStatus);
+define_tagged_entity!(TestStatus);
 
 /// Verification methods available for requirements.
 #[derive(Serialize, Deserialize, Queryable, Clone)]

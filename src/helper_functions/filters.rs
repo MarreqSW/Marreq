@@ -10,7 +10,7 @@ pub fn filter_requirements(
         .into_iter()
         .filter(|req| {
             let status_match =
-                status_filter.map_or(true, |status_id| req.current_status_id == status_id);
+                status_filter.map_or(true, |status_id| req.status_id == status_id);
             let verification_match =
                 verification_filter.map_or(true, |id| req.verification_method_id == id);
             let category_match =
@@ -71,7 +71,7 @@ mod tests {
             title: format!("Req {}", id),
             description: String::new(),
             verification_method_id: verification,
-            current_status_id: status,
+            status_id: status,
             author_id: 0,
             reviewer_id: 0,
             reference_code: reference.to_string(),

@@ -115,7 +115,7 @@ describe('Requirement Form', () => {
               <button type="button" data-status-id="2">Accepted</button>
             </div>
           </div>
-          <select id="current_status_id">
+          <select id="status_id">
             <option value="1">Draft</option>
             <option value="2">Accepted</option>
           </select>
@@ -151,7 +151,7 @@ describe('Requirement Form', () => {
               <button type="button" data-status-id="2">Accepted</button>
             </div>
           </div>
-          <select id="current_status_id">
+          <select id="status_id">
             <option value="1" selected>Draft</option>
             <option value="2">Accepted</option>
           </select>
@@ -166,7 +166,7 @@ describe('Requirement Form', () => {
 
       const toggle = document.querySelector('[data-role="status-toggle"]');
       const statusOption = document.querySelector('[data-status-id="2"]');
-      const select = document.getElementById('current_status_id');
+      const select = document.getElementById('status_id');
       const label = document.querySelector('.editor-status__label');
 
       toggle.click();

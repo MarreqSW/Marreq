@@ -19,7 +19,7 @@ pub struct Requirement {
     pub title: String,
     pub description: String,
     pub verification_method_id: i32,
-    pub current_status_id: i32,
+    pub status_id: i32,
     pub author_id: i32,
     pub reviewer_id: i32,
     pub reference_code: String,
@@ -33,28 +33,6 @@ pub struct Requirement {
     pub project_id: i32,
 }
 
-/// Macro to define tagged entities with common structure.
-macro_rules! define_tagged_entity {
-    (
-        $name:ident
-    ) => {
-        #[derive(Serialize, Deserialize, Queryable, Clone)]
-        #[diesel(check_for_backend(diesel::pg::Pg))]
-        pub struct $name {
-            pub id: i32,
-            pub title: String,
-            pub description: String,
-            pub tag: String,
-            pub project_id: i32,
-        }
-    };
-}
-
-define_tagged_entity!(Category);
-define_tagged_entity!(Applicability);
-define_tagged_entity!(RequirementStatus);
-define_tagged_entity!(TestStatus);
-define_tagged_entity!(VerificationMethod);
 
 /// Link between a requirement and a test in the traceability matrix.
 #[derive(Serialize, Deserialize, Queryable, Clone)]
@@ -133,6 +111,29 @@ pub struct Log {
     pub user_agent: Option<String>,
     pub created_at: chrono::NaiveDateTime,
 }
+
+/// Macro to define tagged entities with common structure.
+macro_rules! define_tagged_entity {
+    (
+        $name:ident
+    ) => {
+        #[derive(Serialize, Deserialize, Queryable, Clone)]
+        #[diesel(check_for_backend(diesel::pg::Pg))]
+        pub struct $name {
+            pub id: i32,
+            pub title: String,
+            pub description: String,
+            pub tag: String,
+            pub project_id: i32,
+        }
+    };
+}
+
+define_tagged_entity!(Category);
+define_tagged_entity!(Applicability);
+define_tagged_entity!(RequirementStatus);
+define_tagged_entity!(TestStatus);
+define_tagged_entity!(VerificationMethod);
 
 /// Different categories of actions that can appear in the audit log.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

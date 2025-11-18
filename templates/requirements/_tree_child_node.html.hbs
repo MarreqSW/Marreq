@@ -1,7 +1,7 @@
 <div class="c-tree__node c-tree__child-node" 
      data-node-id="{{requirement.id}}"
      data-requirement-id="{{requirement.id}}"
-     data-status="{{requirement.current_status_id}}"
+     data-status="{{requirement.status_id}}"
      data-category="{{requirement.category_id}}"
      data-verification="{{requirement.verification_method_id}}"
      data-search-text="{{requirement.reference_code}} {{requirement.title}} {{requirement.description}}"
@@ -58,10 +58,10 @@
           </a>
         </div>
         <div class="requirement-status">
-          <span class="reqman-requirements-status-badge reqman-requirements-status-badge--{{requirement.current_status_id}}"
-            data-status="{{requirement.current_status_id}}"
-            title="Status: {{requirement.current_status_id}}">
-            {{requirement.current_status_id}}
+          <span class="reqman-requirements-status-badge reqman-requirements-status-badge--{{requirement.status_id}}"
+            data-status="{{requirement.status_id}}"
+            title="Status: {{requirement.status_id}}">
+            {{requirement.status_id}}
           </span>
         </div>
       </div>

@@ -17,7 +17,7 @@ pub struct DecoratedRequirement {
     pub description: String,
     pub verification_method_id: String,
     pub req_verification_id: i32,
-    pub current_status_id: String,
+    pub status_id: String,
     pub req_current_status_id: i32, // Add numeric status ID for access control
     pub author_id: String,
     pub req_author_id: i32,

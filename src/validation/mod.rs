@@ -62,7 +62,7 @@ pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError>
         ));
     }
 
-    if req.current_status_id <= 0 {
+    if req.status_id <= 0 {
         return Err(ValidationError::Custom(
             "Status ID must be positive".to_string(),
         ));

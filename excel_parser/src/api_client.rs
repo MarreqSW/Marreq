@@ -41,8 +41,8 @@ impl ApiClient {
             .map_err(|e| format!("Failed to resolve applicability '{}': {}", req.applicability_id, e))?;
 
         // Resolve status ID
-        let status_id = self.resolve_status(&req.current_status_id).await
-            .map_err(|e| format!("Failed to resolve status '{}': {}", req.current_status_id, e))?;
+        let status_id = self.resolve_status(&req.status_id).await
+            .map_err(|e| format!("Failed to resolve status '{}': {}", req.status_id, e))?;
 
         // Resolve verification ID
         let id = self.resolve_verification(&req.verification_method_id).await
@@ -69,7 +69,7 @@ impl ApiClient {
             "reference_code": req.reference_code,
             "category_id": category_id,
             "applicability_id": applicability_id,
-            "current_status_id": status_id,
+            "status_id": status_id,
             "verification_method_id": id,
             "author_id": author_id,
             "reviewer_id": reviewer_id,

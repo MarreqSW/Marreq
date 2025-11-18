@@ -209,7 +209,7 @@ mod tests {
                 title: "Req".into(),
                 description: String::new(),
                 verification_method_id: 0,
-                current_status_id: 0,
+                status_id: 0,
                 author_id: 0,
                 reviewer_id: 0,
                 reference_code: String::new(),

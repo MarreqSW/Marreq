@@ -641,7 +641,7 @@ function showDuplicateModal(requirement) {
   document.getElementById('dup_req_description').value = requirement.description || '';
   document.getElementById('dup_req_justification').value = requirement.justification || '';
   document.getElementById('dup_req_category').value = requirement.category_id || '';
-  document.getElementById('dup_req_current_status').value = requirement.current_status_id || '';
+  document.getElementById('dup_req_current_status').value = requirement.status_id || '';
   document.getElementById('dup_req_verification').value = requirement.verification_method_id || '';
   document.getElementById('dup_req_applicability').value = requirement.applicability_id || '';
   document.getElementById('dup_req_reviewer').value = requirement.reviewer_id || '';
@@ -772,7 +772,7 @@ function initDuplicateForm() {
         reference_code: formData.get('reference_code') || '',
         justification: formData.get('justification') || '',
         category_id: parseInt(formData.get('category_id'), 10),
-        current_status_id: parseInt(formData.get('current_status_id'), 10),
+        status_id: parseInt(formData.get('status_id'), 10),
         verification_method_id: parseInt(formData.get('verification_method_id'), 10),
         applicability_id: parseInt(formData.get('applicability_id'), 10),
         reviewer_id: parseInt(formData.get('reviewer_id'), 10) || 0,

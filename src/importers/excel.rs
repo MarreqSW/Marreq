@@ -119,7 +119,7 @@ impl ExcelImporter {
                 "reference_code".to_string(),
                 "category_id".to_string(),
                 "applicability_id".to_string(),
-                "current_status_id".to_string(),
+                "status_id".to_string(),
                 "verification_method_id".to_string(),
                 "author_id".to_string(),
                 "reviewer_id".to_string(),
@@ -227,7 +227,7 @@ impl ExcelImporter {
             1 // Default applicability
         };
 
-        let status_id = if let Some(status_name) = req_data.get("current_status_id") {
+        let status_id = if let Some(status_name) = req_data.get("status_id") {
             self.resolve_requirement_status_id(status_name, conn)?
         } else {
             1 // Default status
@@ -273,7 +273,7 @@ impl ExcelImporter {
                 .clone(),
             category_id: category_id,
             applicability_id: applicability_id,
-            current_status_id: status_id,
+            status_id: status_id,
             verification_method_id: 1, // Default verification
             author_id: author_id,
             reviewer_id: reviewer_id,

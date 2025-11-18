@@ -30,7 +30,7 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
 
     // group helpers (i32 counts)
     let requirements_by_status = requirements.iter().fold(HashMap::new(), |mut acc, req| {
-        let status = get_status_name_by_id_cached(state, req.current_status_id);
+        let status = get_status_name_by_id_cached(state, req.status_id);
         *acc.entry(status).or_insert(0) += 1i32;
         acc
     });
@@ -217,7 +217,7 @@ mod tests {
             title: format!("Requirement {id}"),
             description: "Test requirement".to_string(),
             verification_method_id: 1,
-            current_status_id: 1,
+            status_id: 1,
             author_id: ADMIN_ID,
             reviewer_id: ADMIN_ID,
             reference_code: format!("REQ-{:03}", id),

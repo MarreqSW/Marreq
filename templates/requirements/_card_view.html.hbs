@@ -10,7 +10,7 @@
       class="reqman-requirement-card"
       data-requirement-id="{{id}}"
       data-status-id="{{req_current_status_id}}"
-      data-status-label="{{current_status_id}}"
+      data-status-label="{{status_id}}"
       data-verification="{{verification_method_id}}"
       data-category="{{category_id}}">
       
@@ -22,10 +22,10 @@
           </span>
         </div>
         <span
-          class="reqman-requirements-status-badge reqman-requirements-status-badge--{{current_status_id}}"
+          class="reqman-requirements-status-badge reqman-requirements-status-badge--{{status_id}}"
           data-status-id="{{req_current_status_id}}"
-          data-status="{{current_status_id}}">
-          {{current_status_id}}
+          data-status="{{status_id}}">
+          {{status_id}}
         </span>
       </header>
 

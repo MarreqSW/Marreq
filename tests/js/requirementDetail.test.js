@@ -160,7 +160,7 @@ describe('Requirement Detail Page', () => {
 
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
-          {"requirement": {"id": 1, "title": "Test", "current_status_id": "Accepted"}, "project_id": 1}
+          {"requirement": {"id": 1, "title": "Test", "status_id": "Accepted"}, "project_id": 1}
         </script>
         <div data-requirement-root>
           <span data-field="status-badge" class="badge"></span>
@@ -291,7 +291,7 @@ describe('Requirement Detail Page', () => {
             "requirement": {"id": 2, "parent_id": 1},
             "project_id": 1,
             "relationships": {
-              "parent": {"id": 1, "reference_code": "REQ-PARENT-001", "title": "Parent Req", "current_status_id": "Accepted"}
+              "parent": {"id": 1, "reference_code": "REQ-PARENT-001", "title": "Parent Req", "status_id": "Accepted"}
             }
           }
         </script>

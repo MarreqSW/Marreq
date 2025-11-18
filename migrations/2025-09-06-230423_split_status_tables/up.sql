@@ -37,8 +37,8 @@ INSERT INTO status_id (title, description, short_name) VALUES
 
 -- Update requirements table to use new requirement_status table
 -- Map old status IDs to new requirement status IDs
-UPDATE requirements SET current_status_id = 
-    CASE current_status_id
+UPDATE requirements SET status_id = 
+    CASE status_id
         WHEN 1 THEN 1  -- Draft
         WHEN 2 THEN 2  -- Proposal  
         WHEN 3 THEN 3  -- Accepted

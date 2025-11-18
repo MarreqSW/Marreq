@@ -230,7 +230,7 @@ async fn complete_requirement_lifecycle() {
         .private_cookie(session_cookie(1))
         .body(
             "title=System+Boot+Sequence&description=System+shall+boot+in+5+seconds&\
-               verification_method_id=1&current_status_id=1&reviewer_id=1&category_id=1&\
+               verification_method_id=1&status_id=1&reviewer_id=1&category_id=1&\
                parent_id=0&applicability_id=1&reference_code=&justification=Performance",
         )
         .dispatch()
@@ -280,7 +280,7 @@ async fn complete_requirement_lifecycle() {
         .private_cookie(session_cookie(1))
         .body(format!(
             "id={}&title=Updated+Boot+Sequence&description=System+shall+boot+in+3+seconds&\
-             verification_method_id=1&current_status_id=1&author_id=1&reviewer_id=1&category_id=1&\
+             verification_method_id=1&status_id=1&author_id=1&reviewer_id=1&category_id=1&\
              parent_id=0&applicability_id=1&justification=Updated+Performance&project_id=1&\
              reference_code=REQ-SYS-{:03}",
             id, id
@@ -340,7 +340,7 @@ async fn create_requirement_hierarchy() {
         .private_cookie(session_cookie(1))
         .body(
             "title=Parent+Requirement&description=Top+level&verification_method_id=1&\
-               current_status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
+               status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
                applicability_id=1&reference_code=&justification=",
         )
         .dispatch()
@@ -361,7 +361,7 @@ async fn create_requirement_hierarchy() {
         .private_cookie(session_cookie(1))
         .body(format!(
             "title=Child+Requirement&description=Derived&verification_method_id=1&\
-             current_status_id=1&reviewer_id=1&category_id=1&parent_id={}&\
+             status_id=1&reviewer_id=1&category_id=1&parent_id={}&\
              applicability_id=1&reference_code=&justification=",
             parent_id
         ))
@@ -415,7 +415,7 @@ async fn filter_and_search_requirements() {
             title: format!("Requirement {}", i),
             description: format!("Description {}", i),
             verification_method_id: if i % 2 == 0 { 1 } else { 2 },
-            current_status_id: if i <= 2 { 1 } else { 2 },
+            status_id: if i <= 2 { 1 } else { 2 },
             author_id: 1,
             reviewer_id: 1,
             reference_code: format!("REQ-SYS-{:03}", i),
@@ -509,7 +509,7 @@ async fn non_admin_cannot_delete_released_requirement() {
         title: "Released Requirement".into(),
         description: "Cannot delete".into(),
         verification_method_id: 1,
-        current_status_id: 3, // Released
+        status_id: 3, // Released
         author_id: 1,
         reviewer_id: 1,
         reference_code: "REQ-SYS-001".into(),
@@ -574,7 +574,7 @@ async fn create_requirement_with_inline_category() {
         .private_cookie(session_cookie(1))
         .body(format!(
             "title=Fast+Response&description=Response+time&verification_method_id=1&\
-             current_status_id=1&reviewer_id=1&category_id={}&parent_id=0&\
+             status_id=1&reviewer_id=1&category_id={}&parent_id=0&\
              applicability_id=1&reference_code=&justification=",
             category_id
         ))
@@ -599,7 +599,7 @@ async fn create_multiple_requirements_with_add_another() {
         .private_cookie(session_cookie(1))
         .body(
             "title=First&description=First+req&verification_method_id=1&\
-               current_status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
+               status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
                applicability_id=1&reference_code=&justification=&intent=add_another",
         )
         .dispatch()
@@ -628,7 +628,7 @@ async fn create_multiple_requirements_with_add_another() {
         .private_cookie(session_cookie(1))
         .body(
             "title=Second&description=Second+req&verification_method_id=1&\
-               current_status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
+               status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
                applicability_id=1&reference_code=&justification=",
         )
         .dispatch()
@@ -664,7 +664,7 @@ async fn create_requirement_from_template() {
         title: "Template Requirement".into(),
         description: "Template description with specific format".into(),
         verification_method_id: 2,
-        current_status_id: 1,
+        status_id: 1,
         author_id: 1,
         reviewer_id: 1,
         reference_code: "REQ-SYS-001".into(),
@@ -701,7 +701,7 @@ async fn create_requirement_from_template() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body("title=New+From+Template&description=Template+description+with+specific+format&\
-               verification_method_id=2&current_status_id=1&reviewer_id=1&category_id=2&parent_id=0&\
+               verification_method_id=2&status_id=1&reviewer_id=1&category_id=2&parent_id=0&\
                applicability_id=1&reference_code=&justification=Template+justification")
         .dispatch()
         .await;

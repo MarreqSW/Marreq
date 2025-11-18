@@ -37,7 +37,7 @@ mod tests {
             title: "Test Requirement".to_string(),
             description: "Test Description".to_string(),
             verification_method_id: 1,
-            current_status_id: 1,
+            status_id: 1,
             author_id: 1,
             reviewer_id: 1,
             req_link: "http://example.com".to_string(),
@@ -335,7 +335,7 @@ mod tests {
         assert!(result.is_ok());
         let requirements = result.unwrap();
         assert_eq!(requirements.len(), 1);
-        assert_eq!(requirements[0].current_status_id, 1);
+        assert_eq!(requirements[0].status_id, 1);
     }
 
     #[test]
@@ -349,7 +349,7 @@ mod tests {
             author_id: 1,
             req_link: "http://example.com".to_string(),
             category_id: 1,
-            current_status_id: 1,
+            status_id: 1,
             parent_id: None,
             reference_code: "REQ-NEW".to_string(),
             reviewer_id: 1,
@@ -374,7 +374,7 @@ mod tests {
             author_id: 1,
             req_link: "http://example.com".to_string(),
             category_id: 1,
-            current_status_id: 1,
+            status_id: 1,
             parent_id: None,
             reference_code: "REQ-UPDATED".to_string(),
             reviewer_id: 1,

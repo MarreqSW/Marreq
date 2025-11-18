@@ -24,7 +24,7 @@ impl<'a> MatrixService<'a> {
     /// Note: This collects from all projects since there's no get_matrix_all in the MatrixRepository trait.
     pub fn list_all(&self) -> Result<Vec<MatrixLink>, RepoError> {
         use crate::repository::ProjectsRepository;
-        
+
         let repo = self.state.repo_write();
         // Collect matrix links from all projects
         let projects = repo.get_projects_all()?;

@@ -129,9 +129,9 @@ fn build_matrix_rows(
             let row: Vec<_> = tests
                 .iter()
                 .map(|test| {
-                    json!({ 
-                        "linked": links.contains(&(req.id, test.id)), 
-                        "status_id": test.status_id 
+                    json!({
+                        "linked": links.contains(&(req.id, test.id)),
+                        "status_id": test.status_id
                     })
                 })
                 .collect();

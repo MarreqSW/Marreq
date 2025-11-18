@@ -3,7 +3,9 @@ use crate::models::{NewRequirementStatus, RequirementStatus};
 use crate::services::StatusService;
 
 #[get("/status")]
-pub async fn list_requirement_statuses(state: &State<AppState>) -> ApiResult<Json<Vec<RequirementStatus>>> {
+pub async fn list_requirement_statuses(
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<RequirementStatus>>> {
     let service = StatusService::new(state.inner());
     let statuses = service.list_requirement_statuses()?;
     Ok(Json(statuses))
@@ -54,9 +56,14 @@ mod tests {
     }
 
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
-        let rocket = rocket::build()
-            .manage(state_from_repo(repo))
-            .mount("/api", routes![list_requirement_statuses, get_requirement_status, create_requirement_status]);
+        let rocket = rocket::build().manage(state_from_repo(repo)).mount(
+            "/api",
+            routes![
+                list_requirement_statuses,
+                get_requirement_status,
+                create_requirement_status
+            ],
+        );
         Client::tracked(rocket).await.unwrap()
     }
 

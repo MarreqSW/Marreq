@@ -339,10 +339,7 @@ impl ExcelImporter {
                 .get("description")
                 .unwrap_or(&"".to_string())
                 .clone(),
-            source: test_data
-                .get("source")
-                .unwrap_or(&"".to_string())
-                .clone(),
+            source: test_data.get("source").unwrap_or(&"".to_string()).clone(),
             reference_code: test_data
                 .get("reference_code")
                 .unwrap_or(&format!("TEST-{}", chrono::Utc::now().timestamp()))

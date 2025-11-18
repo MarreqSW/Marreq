@@ -38,11 +38,7 @@ pub fn session_cookie(id: i32) -> Cookie<'static> {
     cookie
 }
 
-pub async fn get_with_session<'c>(
-    client: &'c Client,
-    path: &'c str,
-    id: i32,
-) -> LocalResponse<'c> {
+pub async fn get_with_session<'c>(client: &'c Client, path: &'c str, id: i32) -> LocalResponse<'c> {
     client
         .get(path)
         .private_cookie(session_cookie(id))

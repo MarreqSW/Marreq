@@ -296,10 +296,7 @@ mod tests {
             .get_project_by_id(PRIMARY_PROJECT)
             .expect("project present");
         assert_eq!(project.name, "Orbiter II");
-        assert_eq!(
-            project.description.as_deref(),
-            Some("Updated mission plan")
-        );
+        assert_eq!(project.description.as_deref(), Some("Updated mission plan"));
         assert_eq!(project.status_id.as_deref(), Some("inactive"));
         assert_eq!(project.owner_id, Some(ADMIN_ID));
     }

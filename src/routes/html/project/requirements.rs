@@ -268,9 +268,7 @@ async fn show_requirement_id(
 
     let parent_requirement = if let Some(parent_id) = requirement.req_parent_id {
         if parent_id != 0 {
-            decorated_requirement_service
-                .get_by_id(parent_id)
-                .ok()
+            decorated_requirement_service.get_by_id(parent_id).ok()
         } else {
             None
         }
@@ -280,8 +278,7 @@ async fn show_requirement_id(
     let child_requirements = decorated_requirement_service.get_by_parent_id(requirement.id)?;
 
     // Linked verification artefacts
-    let linked_tests =
-        DecoratedTestService::new(state.inner()).get_linked_to_requirement(id)?;
+    let linked_tests = DecoratedTestService::new(state.inner()).get_linked_to_requirement(id)?;
 
     let (tests_passed, tests_failed, tests_pending) =
         linked_tests
@@ -459,9 +456,7 @@ async fn post_edit_requirement(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let service = RequirementService::new(state.inner());
-    if let Some(redir) =
-        enforce_project_ownership(project_id, service.get_by_id(id)?.project_id)
-    {
+    if let Some(redir) = enforce_project_ownership(project_id, service.get_by_id(id)?.project_id) {
         return Err(redir);
     }
 

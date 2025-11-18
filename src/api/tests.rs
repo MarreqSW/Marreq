@@ -71,10 +71,12 @@ pub async fn update_field(
             test.parent_id = if update.value.is_empty() || update.value == "0" {
                 None
             } else {
-                Some(update
-                    .value
-                    .parse()
-                    .map_err(|_| RepoError::BadInput("invalid parent id".into()))?)
+                Some(
+                    update
+                        .value
+                        .parse()
+                        .map_err(|_| RepoError::BadInput("invalid parent id".into()))?,
+                )
             };
         }
         other => {

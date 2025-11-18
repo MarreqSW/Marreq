@@ -30,7 +30,7 @@ impl<'a> UserService<'a> {
             .repo_read()
             .get_members_by_project(id)?
             .into_iter()
-            .map(|member| self.get_by_id(member.id))
+            .map(|member| self.get_by_id(member.user_id))
             .collect()
     }
 

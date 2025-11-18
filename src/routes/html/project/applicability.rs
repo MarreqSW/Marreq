@@ -242,7 +242,7 @@ mod tests {
             .insert(1, sample_applicability(1, PRIMARY_PROJECT, "Flight"));
         repo.project_members.push(ProjectMember {
             project_id: PRIMARY_PROJECT,
-            id: ADMIN_ID,
+            user_id: ADMIN_ID,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),

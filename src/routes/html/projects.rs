@@ -205,7 +205,7 @@ mod tests {
 
         repo.project_members.push(ProjectMember {
             project_id: accessible_id,
-            id: USER_ID,
+            user_id: USER_ID,
             role: 2,
             created_at: timestamp(),
             updated_at: timestamp(),

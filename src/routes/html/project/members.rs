@@ -12,7 +12,7 @@ fn is_project_owner(state: &State<AppState>, project_id: i32, id: i32) -> bool {
     if let Ok(members) = state.repo_read().get_members_by_project(project_id) {
         members
             .into_iter()
-            .any(|member| member.id == id && member.role == 1)
+            .any(|member| member.user_id == id && member.role == 1)
     } else {
         false
     }
@@ -34,7 +34,7 @@ fn can_remove_member(
         return false;
     }
 
-    if member.id == current_user_id && is_owner && owner_count <= 1 {
+    if member.user_id == current_user_id && is_owner && owner_count <= 1 {
         return false;
     }
 
@@ -72,7 +72,7 @@ async fn show_project_members(
         .iter()
         .map(|membership| {
             let (name, username, email, is_admin) = user_lookup
-                .get(&membership.id)
+                .get(&membership.user_id)
                 .map(|member| {
                     (
                         member.name.clone(),
@@ -83,7 +83,7 @@ async fn show_project_members(
                 })
                 .unwrap_or_else(|| {
                     (
-                        format!("Unknown User #{}", membership.id),
+                        format!("Unknown User #{}", membership.user_id),
                         "unknown".to_string(),
                         String::new(),
                         false,
@@ -91,7 +91,7 @@ async fn show_project_members(
                 });
 
             json!({
-                "id": membership.id,
+                "id": membership.user_id,
                 "name": name,
                 "username": username,
                 "email": email,
@@ -110,7 +110,7 @@ async fn show_project_members(
 
     let member_count = decorated_members.len();
 
-    let member_ids: HashSet<i32> = memberships.iter().map(|membership| membership.id).collect();
+    let member_ids: HashSet<i32> = memberships.iter().map(|membership| membership.user_id).collect();
 
     let available_users: Vec<Value> = if can_manage_members {
         users
@@ -203,7 +203,7 @@ async fn remove_project_member(
 
         !members
             .iter()
-            .any(|member| member.id == member_id && member.role == 1 && owner_count <= 1)
+            .any(|member| member.user_id == member_id && member.role == 1 && owner_count <= 1)
     };
 
     if !allow_removal {
@@ -285,14 +285,14 @@ mod tests {
         repo.projects.insert(PROJECT_ID, sample_project());
         repo.project_members.push(ProjectMember {
             project_id: PROJECT_ID,
-            id: OWNER_ID,
+            user_id: OWNER_ID,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),
         });
         repo.project_members.push(ProjectMember {
             project_id: PROJECT_ID,
-            id: MEMBER_ID,
+            user_id: MEMBER_ID,
             role: 2,
             created_at: timestamp(),
             updated_at: timestamp(),
@@ -302,7 +302,7 @@ mod tests {
 
     fn repo_with_single_owner() -> DieselRepoMock {
         let mut repo = base_repo();
-        repo.project_members.retain(|member| member.id != MEMBER_ID);
+        repo.project_members.retain(|member| member.user_id != MEMBER_ID);
         repo
     }
 
@@ -357,7 +357,7 @@ mod tests {
         let members = repo
             .get_members_by_project(PROJECT_ID)
             .expect("project members");
-        assert!(members.iter().any(|member| member.id == CANDIDATE_ID));
+        assert!(members.iter().any(|member| member.user_id == CANDIDATE_ID));
     }
 
     #[rocket::async_test]
@@ -381,7 +381,7 @@ mod tests {
                 .count(),
             2
         );
-        assert!(members.iter().all(|member| member.id != CANDIDATE_ID));
+        assert!(members.iter().all(|member| member.user_id != CANDIDATE_ID));
     }
 
     #[rocket::async_test]
@@ -397,7 +397,7 @@ mod tests {
         let members = repo
             .get_members_by_project(PROJECT_ID)
             .expect("project members");
-        assert!(members.iter().all(|member| member.id != MEMBER_ID));
+        assert!(members.iter().all(|member| member.user_id != MEMBER_ID));
     }
 
     #[rocket::async_test]
@@ -413,7 +413,7 @@ mod tests {
         let members = repo
             .get_members_by_project(PROJECT_ID)
             .expect("project members");
-        assert!(members.iter().any(|member| member.id == OWNER_ID));
+        assert!(members.iter().any(|member| member.user_id == OWNER_ID));
         assert_eq!(members.len(), 1);
     }
 }

@@ -176,7 +176,7 @@ impl UserRepository for DieselRepoMock {
 
     fn delete_user(&mut self, id: i32) -> Result<User, RepoError> {
         let user = self.users.remove(&id).ok_or(RepoError::NotFound)?;
-        self.project_members.retain(|pm| pm.id != id);
+        self.project_members.retain(|pm| pm.user_id != id);
         Ok(user)
     }
 }
@@ -652,7 +652,7 @@ impl ProjectMembersRepository for DieselRepoMock {
         Ok(self
             .project_members
             .iter()
-            .filter(|pm| pm.id == id)
+            .filter(|pm| pm.user_id == id)
             .cloned()
             .collect())
     }
@@ -663,10 +663,10 @@ impl ProjectMembersRepository for DieselRepoMock {
         }
 
         self.project_members
-            .retain(|pm| !(pm.project_id == new.project_id && pm.id == new.id));
+            .retain(|pm| !(pm.project_id == new.project_id && pm.user_id == new.id));
         self.project_members.push(ProjectMember {
             project_id: new.project_id,
-            id: new.id,
+            user_id: new.id,
             role: new.role,
             created_at: epoch(),
             updated_at: epoch(),
@@ -687,7 +687,7 @@ impl ProjectMembersRepository for DieselRepoMock {
         match self
             .project_members
             .iter_mut()
-            .find(|pm| pm.project_id == project_id && pm.id == id)
+            .find(|pm| pm.project_id == project_id && pm.user_id == id)
         {
             Some(pm) => {
                 pm.role = role;
@@ -701,7 +701,7 @@ impl ProjectMembersRepository for DieselRepoMock {
     fn remove_project_member(&mut self, project_id: i32, id: i32) -> Result<(), RepoError> {
         let len_before = self.project_members.len();
         self.project_members
-            .retain(|pm| !(pm.project_id == project_id && pm.id == id));
+            .retain(|pm| !(pm.project_id == project_id && pm.user_id == id));
         if self.project_members.len() == len_before {
             Err(RepoError::NotFound)
         } else {

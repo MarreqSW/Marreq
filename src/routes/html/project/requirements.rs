@@ -971,7 +971,7 @@ mod tests {
         // Add membership
         repo.project_members.push(ProjectMember {
             project_id: PRIMARY_PROJECT,
-            id: ADMIN_ID,
+            user_id: ADMIN_ID,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),
@@ -1161,7 +1161,7 @@ mod tests {
 
         repo.project_members.push(ProjectMember {
             project_id: 2,
-            id: ADMIN_ID,
+            user_id: ADMIN_ID,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),

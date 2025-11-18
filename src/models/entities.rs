@@ -70,7 +70,7 @@ pub struct VerificationMethod {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct MatrixLink {
     pub req_id: i32,
-    pub id: i32,
+    pub test_id: i32,
     pub creation_date: chrono::NaiveDateTime,
     pub project_id: i32,
 }
@@ -292,7 +292,7 @@ impl fmt::Display for MatrixLink {
             "
         <div class='matrixID'>Req ID: {}</div>
         <div class='matrixID'>Test ID: {}</div>",
-            self.req_id, self.id
+            self.req_id, self.test_id
         )
     }
 }

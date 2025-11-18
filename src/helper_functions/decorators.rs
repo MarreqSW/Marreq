@@ -166,7 +166,7 @@ fn get_linked_tests_for_requirement_impl<R: Repository>(
     let test_ids: Vec<i32> = matrix
         .into_iter()
         .filter(|m| m.req_id == id)
-        .map(|m| m.id)
+        .map(|m| m.test_id)
         .collect();
 
     if test_ids.is_empty() {
@@ -498,7 +498,7 @@ mod tests {
         repo.tests.insert(10, test);
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            id: 10,
+            test_id: 10,
             creation_date: now,
             project_id: 1,
         });
@@ -535,7 +535,7 @@ mod tests {
         // matrix for different requirement
         repo.matrices.push(MatrixLink {
             req_id: 99,
-            id: 50,
+            test_id: 50,
             creation_date: now,
             project_id: 1,
         });
@@ -576,7 +576,7 @@ mod tests {
         repo.requirements.insert(3, req);
         repo.matrices.push(MatrixLink {
             req_id: 3,
-            id: 999,
+            test_id: 999,
             creation_date: now,
             project_id: 1,
         });

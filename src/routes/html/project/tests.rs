@@ -605,7 +605,7 @@ mod tests {
         repo.tests.insert(1, sample_test(1, 1, "Baseline Test"));
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            id: 1,
+            test_id: 1,
             creation_date: timestamp(),
             project_id: PRIMARY_PROJECT,
         });
@@ -708,7 +708,7 @@ mod tests {
         let links: Vec<_> = inner
             .matrices
             .iter()
-            .filter(|m| m.id == 1)
+            .filter(|m| m.test_id == 1)
             .collect();
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].req_id, 1);
@@ -756,7 +756,7 @@ mod tests {
         let links: Vec<_> = inner
             .matrices
             .iter()
-            .filter(|m| m.id == 1)
+            .filter(|m| m.test_id == 1)
             .collect();
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].req_id, 1);

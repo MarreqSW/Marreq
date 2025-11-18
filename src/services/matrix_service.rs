@@ -67,7 +67,7 @@ impl<'a> MatrixService<'a> {
         let all_links = repo.get_matrix_by_project(project_id)?;
         let links: HashSet<(i32, i32)> = all_links
             .into_iter()
-            .map(|m| (m.req_id, m.id))
+            .map(|m| (m.req_id, m.test_id))
             .collect();
 
         // Build CSV
@@ -192,7 +192,7 @@ impl<'a> MatrixService<'a> {
         let matrix_links = repo.get_matrix_by_project(project_id)?;
         let links: HashSet<(i32, i32)> = matrix_links
             .into_iter()
-            .map(|m| (m.req_id, m.id))
+            .map(|m| (m.req_id, m.test_id))
             .collect();
 
         let total_requirements = all_reqs.len() as i64;
@@ -393,13 +393,13 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            id: 10,
+            test_id: 10,
             creation_date: timestamp(),
             project_id: 7,
         });
         repo.matrices.push(MatrixLink {
             req_id: 2,
-            id: 20,
+            test_id: 20,
             creation_date: timestamp(),
             project_id: 99,
         });
@@ -409,7 +409,7 @@ mod tests {
 
         let results = service.list_by_project(7).unwrap();
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].id, 10);
+        assert_eq!(results[0].test_id, 10);
     }
 
     #[test]
@@ -423,7 +423,7 @@ mod tests {
         let entries = service.list_by_project(42).unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].req_id, 5);
-        assert_eq!(entries[0].id, 6);
+        assert_eq!(entries[0].test_id, 6);
     }
 
     #[test]
@@ -484,7 +484,7 @@ mod tests {
         // Add matrix link
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            id: 10,
+            test_id: 10,
             creation_date: timestamp(),
             project_id: 1,
         });

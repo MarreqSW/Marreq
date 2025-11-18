@@ -104,9 +104,9 @@ impl<'a> RequirementAnalyticsService<'a> {
         let query = diesel::sql_query(
             "SELECT LOWER(TRIM(rs.title)) AS status, COUNT(*)::BIGINT AS total
              FROM requirements r
-             INNER JOIN requirement_status rs ON rs.id = r.current_status_id
+             INNER JOIN requirement_status rs ON rs.id = r.status_id
              WHERE r.project_id = $1
-               AND ($2 IS NULL OR r.current_status_id = $2)
+               AND ($2 IS NULL OR r.status_id = $2)
                AND ($3 IS NULL OR r.verification_method_id = $3)
                AND ($4 IS NULL OR r.category_id = $4)
                AND ($5 IS NULL OR r.applicability_id = $5)
@@ -150,7 +150,7 @@ impl<'a> RequirementAnalyticsService<'a> {
         // Apply the same filtering semantics as the SQL path.
         for requirement in requirements {
             if let Some(filter) = status_filter {
-                if requirement.current_status_id != filter {
+                if requirement.status_id != filter {
                     continue;
                 }
             }
@@ -171,9 +171,9 @@ impl<'a> RequirementAnalyticsService<'a> {
             }
 
             let title = status_lookup
-                .get(&requirement.current_status_id)
+                .get(&requirement.status_id)
                 .map(|name| name.trim().to_string())
-                .unwrap_or_else(|| format!("Unknown Status ({})", requirement.current_status_id));
+                .unwrap_or_else(|| format!("Unknown Status ({})", requirement.status_id));
 
             *counts.entry(title).or_insert(0) += 1;
         }
@@ -248,7 +248,7 @@ mod tests {
             title: format!("Req {id}"),
             description: "desc".into(),
             verification_method_id,
-            current_status_id: status_id,
+            status_id: status_id,
             author_id: 1,
             reviewer_id: 1,
             reference_code: format!("REF-{id}"),

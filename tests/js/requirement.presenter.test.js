@@ -220,7 +220,7 @@ describe('Requirement Presenter', () => {
     it('should create current version entry', () => {
       const result = timeline({
         requirement: {
-          current_status_id: 'Draft',
+          status_id: 'Draft',
           update_date: '2024-01-01',
           author_id: 'Admin',
         },
@@ -234,7 +234,7 @@ describe('Requirement Presenter', () => {
 
     it('should include history entries', () => {
       const result = timeline({
-        requirement: { current_status_id: 'Draft', author_id: 'Admin' },
+        requirement: { status_id: 'Draft', author_id: 'Admin' },
         historyEntries: [
           {
             username: 'User1',
@@ -254,7 +254,7 @@ describe('Requirement Presenter', () => {
 
     it('should calculate version numbers correctly', () => {
       const result = timeline({
-        requirement: { current_status_id: 'Draft', author_id: 'Admin' },
+        requirement: { status_id: 'Draft', author_id: 'Admin' },
         historyEntries: [
           { username: 'User1', log: { action_type: 'UPDATE', created_at: '2024-01-02' } },
           { username: 'User2', log: { action_type: 'UPDATE', created_at: '2024-01-01' } },
@@ -275,7 +275,7 @@ describe('Requirement Presenter', () => {
           title: 'Test Requirement',
           reference_code: 'REQ-001',
           description: 'Description',
-          current_status_id: 'Draft',
+          status_id: 'Draft',
           verification_method_id: 'Analysis',
           author_id: 'Admin',
           category_id: 'Systems',

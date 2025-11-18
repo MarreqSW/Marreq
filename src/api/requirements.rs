@@ -9,7 +9,7 @@ use crate::services::RequirementService;
 pub struct RequirementPatch {
     pub title: Option<String>,
     pub description: Option<String>,
-    pub current_status_id: Option<i32>,
+    pub status_id: Option<i32>,
     pub verification_method_id: Option<i32>,
     pub author_id: Option<i32>,
     pub reviewer_id: Option<i32>,
@@ -60,7 +60,7 @@ pub async fn patch_requirement(
     let patch = patch.into_inner();
     let any_updates = patch.title.is_some()
         || patch.description.is_some()
-        || patch.current_status_id.is_some()
+        || patch.status_id.is_some()
         || patch.verification_method_id.is_some()
         || patch.author_id.is_some()
         || patch.reviewer_id.is_some()
@@ -80,8 +80,8 @@ pub async fn patch_requirement(
     if let Some(v) = patch.description {
         requirement.description = v;
     }
-    if let Some(v) = patch.current_status_id {
-        requirement.current_status_id = v;
+    if let Some(v) = patch.status_id {
+        requirement.status_id = v;
     }
     if let Some(v) = patch.verification_method_id {
         requirement.verification_method_id = v;
@@ -106,7 +106,7 @@ pub async fn patch_requirement(
         verification_method_id: requirement.verification_method_id,
         author_id: requirement.author_id,
         category_id: requirement.category_id,
-        current_status_id: requirement.current_status_id,
+        status_id: requirement.status_id,
         parent_id: requirement.parent_id,
         reference_code: requirement.reference_code.clone(),
         reviewer_id: requirement.reviewer_id,
@@ -168,7 +168,7 @@ mod tests {
             "verification_method_id": 1,
             "author_id": 1,
             "category_id": 1,
-            "current_status_id": 1,
+            "status_id": 1,
             "parent_id": null,
             "reference_code": "REF-1",
             "reviewer_id": 2,

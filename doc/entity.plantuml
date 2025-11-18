@@ -20,7 +20,7 @@ entity "Requirement" as req {
 * title
 * description
 * verification_method_id
-* current_status_id
+* status_id
 * author_id
 * reviewer_id
 * req_link

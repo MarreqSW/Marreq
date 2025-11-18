@@ -56,9 +56,9 @@ fn decorate_requirements_impl<R: Repository>(
                 .unwrap_or_else(|_| format!("Unknown Verification ({})", r.verification_method_id));
 
             let status = repo
-                .get_requirement_status_by_id(r.current_status_id)
+                .get_requirement_status_by_id(r.status_id)
                 .map(|s| s.title)
-                .unwrap_or_else(|_| format!("Unknown Status ({})", r.current_status_id));
+                .unwrap_or_else(|_| format!("Unknown Status ({})", r.status_id));
 
             let author = if r.author_id != 0 {
                 repo.get_user_by_id(r.author_id)
@@ -101,8 +101,8 @@ fn decorate_requirements_impl<R: Repository>(
                 verification_method_id: verification,
                 req_verification_id: r.verification_method_id,
                 description: r.description,
-                current_status_id: status,
-                req_current_status_id: r.current_status_id,
+                status_id: status,
+                req_current_status_id: r.status_id,
                 author_id: author,
                 req_author_id: r.author_id,
                 reviewer_id: reviewer,
@@ -279,7 +279,7 @@ mod tests {
                 title: "Parent".into(),
                 description: String::new(),
                 verification_method_id: 1,
-                current_status_id: 1,
+                status_id: 1,
                 author_id: 1,
                 reviewer_id: 2,
                 reference_code: String::new(),
@@ -299,7 +299,7 @@ mod tests {
             title: "R1".into(),
             description: String::new(),
             verification_method_id: 1,
-            current_status_id: 1,
+            status_id: 1,
             author_id: 1,
             reviewer_id: 2,
             reference_code: String::new(),
@@ -318,7 +318,7 @@ mod tests {
             title: "R2".into(),
             description: String::new(),
             verification_method_id: 1,
-            current_status_id: 1,
+            status_id: 1,
             author_id: 0,
             reviewer_id: 0,
             reference_code: String::new(),
@@ -337,7 +337,7 @@ mod tests {
             title: "R3".into(),
             description: String::new(),
             verification_method_id: 99,
-            current_status_id: 99,
+            status_id: 99,
             author_id: 99,
             reviewer_id: 98,
             reference_code: String::new(),
@@ -356,7 +356,7 @@ mod tests {
         assert_eq!(decorated.len(), 3);
         let d1 = &decorated[0];
         assert_eq!(d1.verification_method_id, "Analysis");
-        assert_eq!(d1.current_status_id, "Open");
+        assert_eq!(d1.status_id, "Open");
         assert_eq!(d1.author_id, "Author");
         assert_eq!(d1.reviewer_id, "Reviewer");
         assert_eq!(d1.category_id, "Cat");
@@ -372,7 +372,7 @@ mod tests {
         assert!(d3
             .verification_method_id
             .starts_with("Unknown Verification"));
-        assert!(d3.current_status_id.starts_with("Unknown Status"));
+        assert!(d3.status_id.starts_with("Unknown Status"));
         assert_eq!(d3.author_id, "");
         assert_eq!(d3.reviewer_id, "");
         assert!(d3.category_id.starts_with("Unknown Category"));
@@ -477,7 +477,7 @@ mod tests {
             title: "R".into(),
             description: String::new(),
             verification_method_id: 0,
-            current_status_id: 0,
+            status_id: 0,
             author_id: 0,
             reviewer_id: 0,
             reference_code: String::new(),
@@ -524,7 +524,7 @@ mod tests {
             title: "R".into(),
             description: String::new(),
             verification_method_id: 0,
-            current_status_id: 0,
+            status_id: 0,
             author_id: 0,
             reviewer_id: 0,
             reference_code: String::new(),
@@ -566,7 +566,7 @@ mod tests {
             title: "R".into(),
             description: String::new(),
             verification_method_id: 0,
-            current_status_id: 0,
+            status_id: 0,
             author_id: 0,
             reviewer_id: 0,
             reference_code: String::new(),

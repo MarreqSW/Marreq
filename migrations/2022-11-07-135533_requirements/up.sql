@@ -5,7 +5,7 @@ CREATE TABLE requirements
     title           VARCHAR NOT NULL DEFAULT ' ',
     description     VARCHAR NOT NULL DEFAULT ' ',
     verification_method_id    INTEGER NOT NULL DEFAULT 1,
-    current_status_id  INTEGER NOT NULL DEFAULT 1,
+    status_id  INTEGER NOT NULL DEFAULT 1,
     author_id          INTEGER NOT NULL DEFAULT 0,
     reviewer_id        INTEGER NOT NULL DEFAULT 0,
     req_link            VARCHAR NOT NULL DEFAULT ' ',
@@ -17,7 +17,7 @@ CREATE TABLE requirements
     deadline_date   timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO requirements (title, description, current_status_id, author_id, reference_code, category_id) VALUES
+INSERT INTO requirements (title, description, status_id, author_id, reference_code, category_id) VALUES
     ('The SW must manage requirements', 'Blablabla', 3, 1, 'REQ-SYS-010', 1),
     ('The SW must implement an API REST', 'API REST, blablabla', 3, 1, 'REQ-API-010' , 5),
     ('The SW must implement a Web app', 'Web app', 3, 1, 'REQ-SYS-020', 2),

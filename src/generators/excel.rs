@@ -86,7 +86,7 @@ pub fn create_matrix_workbook(
         sheet1.write_string(row, 0, &req.title, None)?;
         sheet1.write_string(row, 1, &req.reference_code, None)?;
         sheet1.write_string(row, 2, &req.category_id, None)?;
-        sheet1.write_string(row, 3, &req.current_status_id, None)?;
+        sheet1.write_string(row, 3, &req.status_id, None)?;
 
         // Check matrix links for each test
         for (col_idx, test) in decorated_tests.iter().enumerate() {
@@ -165,7 +165,7 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
         worksheet.write_string(row, 3, &req.reference_code, None)?;
         worksheet.write_string(row, 4, &req.category_id, None)?;
         worksheet.write_string(row, 5, &req.applicability_id, None)?;
-        worksheet.write_string(row, 6, &req.current_status_id, None)?;
+        worksheet.write_string(row, 6, &req.status_id, None)?;
         worksheet.write_string(row, 7, &req.verification_method_id, None)?;
         worksheet.write_string(row, 8, &req.author_id, None)?;
         worksheet.write_string(row, 9, &req.reviewer_id, None)?;

@@ -165,15 +165,9 @@ impl<'a> DecoratedRequirementService<'a> {
             req_applicability_id: req.applicability_id,
             req_parent_id: req.parent_id,
             req_parent_title: parent_title,
-            creation_date: req
-                .creation_date
-                .format("%d-%m-%Y %H:%M:%S")
-                .to_string(),
+            creation_date: req.creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
             update_date: req.update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
-            deadline_date: req
-                .deadline_date
-                .format("%d-%m-%Y %H:%M:%S")
-                .to_string(),
+            deadline_date: req.deadline_date.format("%d-%m-%Y %H:%M:%S").to_string(),
             justification: req.justification.clone(),
             project_id: req.project_id,
         })

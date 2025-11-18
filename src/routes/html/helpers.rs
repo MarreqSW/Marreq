@@ -9,7 +9,9 @@ use rocket::State;
 
 use crate::app::AppState;
 use crate::helper_functions::{decorators::decorate_tests_with_repo, get_selected_project_id};
-use crate::models::{Category, DecoratedTestCase, Project, ProjectMember, Requirement, TestCase, User};
+use crate::models::{
+    Category, DecoratedTestCase, Project, ProjectMember, Requirement, TestCase, User,
+};
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
     LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
@@ -33,11 +35,7 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
 
     if user.is_admin {
         let mut projects = repo.get_projects_all().unwrap_or_default();
-        projects.sort_by(|a, b| {
-            a.name
-                .to_lowercase()
-                .cmp(&b.name.to_lowercase())
-        });
+        projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
         return projects;
     }
 
@@ -52,11 +50,7 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
         .filter_map(|membership| repo.get_project_by_id(membership.project_id).ok())
         .collect();
 
-    projects.sort_by(|a, b| {
-        a.name
-            .to_lowercase()
-            .cmp(&b.name.to_lowercase())
-    });
+    projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     projects
 }
 
@@ -65,11 +59,7 @@ pub(crate) fn resolve_selected_project_id(
     projects: &[Project],
 ) -> Option<i32> {
     match requested {
-        Some(project_id)
-            if projects
-                .iter()
-                .any(|project| project.id == project_id) =>
-        {
+        Some(project_id) if projects.iter().any(|project| project.id == project_id) => {
             Some(project_id)
         }
         _ => projects.first().map(|project| project.id),
@@ -217,7 +207,10 @@ pub(crate) fn decorate_projects_for_listing(
     decorated
 }
 
-pub(crate) fn decorate_tests_cached(state: &AppState, tests: Vec<TestCase>) -> Vec<DecoratedTestCase> {
+pub(crate) fn decorate_tests_cached(
+    state: &AppState,
+    tests: Vec<TestCase>,
+) -> Vec<DecoratedTestCase> {
     let repo = state.repo_read();
     decorate_tests_with_repo(&*repo, tests)
 }

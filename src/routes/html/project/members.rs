@@ -66,10 +66,7 @@ async fn show_project_members(
     let owner_count = memberships.iter().filter(|member| member.role == 1).count();
     let can_manage_members = is_project_owner(state, project_id, user.id);
 
-    let user_lookup: HashMap<i32, &User> = users
-        .iter()
-        .map(|member| (member.id, member))
-        .collect();
+    let user_lookup: HashMap<i32, &User> = users.iter().map(|member| (member.id, member)).collect();
 
     let decorated_members: Vec<Value> = memberships
         .iter()
@@ -113,10 +110,7 @@ async fn show_project_members(
 
     let member_count = decorated_members.len();
 
-    let member_ids: HashSet<i32> = memberships
-        .iter()
-        .map(|membership| membership.id)
-        .collect();
+    let member_ids: HashSet<i32> = memberships.iter().map(|membership| membership.id).collect();
 
     let available_users: Vec<Value> = if can_manage_members {
         users
@@ -308,8 +302,7 @@ mod tests {
 
     fn repo_with_single_owner() -> DieselRepoMock {
         let mut repo = base_repo();
-        repo.project_members
-            .retain(|member| member.id != MEMBER_ID);
+        repo.project_members.retain(|member| member.id != MEMBER_ID);
         repo
     }
 

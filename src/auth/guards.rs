@@ -50,9 +50,7 @@ impl<'r> FromRequest<'r> for SessionUser {
         };
 
         let result = rocket::tokio::task::spawn_blocking(move || {
-            repo.read()
-                .expect("repo lock poisoned")
-                .get_user_by_id(id)
+            repo.read().expect("repo lock poisoned").get_user_by_id(id)
         })
         .await;
 

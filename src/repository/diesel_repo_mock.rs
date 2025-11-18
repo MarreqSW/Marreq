@@ -111,11 +111,7 @@ impl UserRepository for DieselRepoMock {
         if self.force_err {
             return Err(RepoError::Pool("forced test error".into()));
         }
-        Ok(self
-            .users
-            .values()
-            .find(|u| u.username == uname)
-            .cloned())
+        Ok(self.users.values().find(|u| u.username == uname).cloned())
     }
 
     fn update_user_password(&mut self, id: i32, new_hash: &str) -> Result<(), RepoError> {
@@ -186,7 +182,6 @@ impl UserRepository for DieselRepoMock {
 }
 
 impl LookupRepository for DieselRepoMock {
-
     fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
         Ok(self.requirement_statuses.values().cloned().collect())
     }
@@ -260,7 +255,10 @@ impl LookupRepository for DieselRepoMock {
             .ok_or(RepoError::NotFound)
     }
 
-    fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<VerificationMethod>, RepoError> {
+    fn get_verification_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<VerificationMethod>, RepoError> {
         Ok(self
             .verifications
             .values()
@@ -346,7 +344,11 @@ impl LookupRepository for DieselRepoMock {
 
     fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError> {
         let id = new.id.unwrap_or_else(|| {
-            self.requirement_statuses.keys().max().map(|i| i + 1).unwrap_or(1)
+            self.requirement_statuses
+                .keys()
+                .max()
+                .map(|i| i + 1)
+                .unwrap_or(1)
         });
         let status = RequirementStatus {
             id,
@@ -361,9 +363,9 @@ impl LookupRepository for DieselRepoMock {
     }
 
     fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError> {
-        let id = new.id.unwrap_or_else(|| {
-            self.test_statuses.keys().max().map(|i| i + 1).unwrap_or(1)
-        });
+        let id = new
+            .id
+            .unwrap_or_else(|| self.test_statuses.keys().max().map(|i| i + 1).unwrap_or(1));
         let status = TestStatus {
             id,
             title: new.title.clone(),

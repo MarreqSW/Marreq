@@ -127,9 +127,8 @@ impl<'a> RequirementService<'a> {
             .filter(|req| {
                 let status_match =
                     status_filter.map_or(true, |status_id| req.current_status_id == status_id);
-                let verification_match = verification_filter.map_or(true, |id| {
-                    req.verification_method_id == id
-                });
+                let verification_match =
+                    verification_filter.map_or(true, |id| req.verification_method_id == id);
                 let category_match =
                     category_filter.map_or(true, |category_id| req.category_id == category_id);
                 let applicability_match = applicability_filter.map_or(true, |applicability_id| {
@@ -200,10 +199,7 @@ impl<'a> RequirementService<'a> {
             let ctx = LogCtx::new(actor.id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log requirement deletion {}: {_err}",
-                    entity.id
-                );
+                eprintln!("Failed to log requirement deletion {}: {_err}", entity.id);
             }
         }
     }

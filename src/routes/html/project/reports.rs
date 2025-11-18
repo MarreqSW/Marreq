@@ -166,7 +166,9 @@ pub fn routes() -> Vec<Route> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Category, MatrixLink, Project, ProjectMember, Requirement, RequirementStatus, TestCase};
+    use crate::models::{
+        Category, MatrixLink, Project, ProjectMember, Requirement, RequirementStatus, TestCase,
+    };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
         client_with_routes, get_with_session, timestamp,
@@ -252,8 +254,10 @@ mod tests {
 
         repo.projects.insert(PROJECT_ID, sample_project());
         repo.categories.insert(1, sample_category());
-        repo.requirement_statuses.insert(1, sample_status(1, "Draft"));
-        repo.requirement_statuses.insert(2, sample_status(2, "In Review"));
+        repo.requirement_statuses
+            .insert(1, sample_status(1, "Draft"));
+        repo.requirement_statuses
+            .insert(2, sample_status(2, "In Review"));
         repo.requirements.insert(1, sample_requirement(1));
         repo.tests.insert(1, sample_test(1, 1, "System Validation"));
         repo.matrices.push(MatrixLink {

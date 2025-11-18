@@ -123,10 +123,7 @@ impl<'a> TestService<'a> {
             let ctx = LogCtx::new(user.id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log applicability deletion {}: {_err}",
-                    entity.id
-                );
+                eprintln!("Failed to log applicability deletion {}: {_err}", entity.id);
             }
         }
     }

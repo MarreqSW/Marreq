@@ -68,8 +68,11 @@ impl<R: Repository> CacheRepository<R> {
         // Warm up status cache
         if let Ok(statuses) = self.inner.get_requirement_status_all() {
             if let Ok(json_data) = serde_json::to_string(&statuses) {
-                self.cache
-                    .set_with_ttl(keys::REQUIREMENT_STATUS_ALL, json_data, Duration::from_secs(900));
+                self.cache.set_with_ttl(
+                    keys::REQUIREMENT_STATUS_ALL,
+                    json_data,
+                    Duration::from_secs(900),
+                );
             }
         }
 
@@ -245,8 +248,7 @@ impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
     ) -> Result<(), RepoError> {
         self.inner
             .update_project_member_role(project_id, id, role)?;
-        self.cache
-            .invalidate_project_membership(project_id, id);
+        self.cache.invalidate_project_membership(project_id, id);
         self.cache.invalidate_project(project_id);
         self.cache.invalidate_user(id);
         Ok(())
@@ -254,8 +256,7 @@ impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
 
     fn remove_project_member(&mut self, project_id: i32, id: i32) -> Result<(), RepoError> {
         self.inner.remove_project_member(project_id, id)?;
-        self.cache
-            .invalidate_project_membership(project_id, id);
+        self.cache.invalidate_project_membership(project_id, id);
         self.cache.invalidate_project(project_id);
         self.cache.invalidate_user(id);
         Ok(())
@@ -337,7 +338,6 @@ impl<R: Repository> TestsCaseRepository for CacheRepository<R> {
 }
 
 impl<R: Repository> LookupRepository for CacheRepository<R> {
-
     fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
         self.get_or_fetch(
             keys::REQUIREMENT_STATUS_ALL,
@@ -422,7 +422,10 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         })
     }
 
-    fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<VerificationMethod>, RepoError> {
+    fn get_verification_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<VerificationMethod>, RepoError> {
         let key = keys::VerificationMethod::by_project(project_id);
         self.get_or_fetch(&key, Duration::from_secs(600), || {
             self.inner.get_verification_by_project(project_id)
@@ -709,7 +712,10 @@ mod tests {
         repo.warm_cache();
 
         assert_eq!(cache.get(keys::PROJECTS_ALL), Some("[]".to_string()));
-        assert_eq!(cache.get(keys::REQUIREMENT_STATUS_ALL), Some("[]".to_string()));
+        assert_eq!(
+            cache.get(keys::REQUIREMENT_STATUS_ALL),
+            Some("[]".to_string())
+        );
         assert_eq!(cache.get(keys::CATEGORIES_ALL), Some("[]".to_string()));
         assert_eq!(cache.get(keys::USERS_ALL), Some("[]".to_string()));
         assert_eq!(cache.get(keys::PROJECTS_NAV), Some("[]".to_string()));

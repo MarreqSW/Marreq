@@ -52,7 +52,7 @@ fn decorate_requirements_impl<R: Repository>(
         .map(|r| {
             let verification = repo
                 .get_verification_by_id(r.verification_method_id)
-                .map(|v| v.name)
+                .map(|v| v.title)
                 .unwrap_or_else(|_| format!("Unknown Verification ({})", r.verification_method_id));
 
             let status = repo
@@ -217,8 +217,9 @@ mod tests {
             1,
             VerificationMethod {
                 id: 1,
-                name: "Analysis".into(),
+                title: "Analysis".into(),
                 description: String::new(),
+                tag: "ANALYSIS".into(),
                 project_id: 1,
             },
         );

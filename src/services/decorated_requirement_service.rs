@@ -104,7 +104,7 @@ impl<'a> DecoratedRequirementService<'a> {
         let verification = self
             .verification_service
             .get_by_id(req.verification_method_id)
-            .map(|v| v.name)
+            .map(|v| v.title)
             .unwrap_or_else(|_| format!("Unknown Verification ({})", req.verification_method_id));
 
         let status = self

@@ -414,8 +414,9 @@ function initInlineCreation(form) {
       dropdown: form.querySelector('[data-dropdown="verification"]'),
       endpoint: `/p/${projectId}/requirements/inline/verification`,
       serialize: (fd) => ({
-        name: (fd.get('name') || '').toString().trim(),
+        title: (fd.get('title') || '').toString().trim(),
         description: (fd.get('description') || '').toString().trim(),
+        tag: (fd.get('tag') || '').toString().trim(),
       }),
       apply: (data) => {
         const select = form.querySelector('#verification_method_id');

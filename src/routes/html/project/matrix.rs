@@ -340,8 +340,9 @@ mod tests {
     fn sample_verification(id: i32, title: &str) -> VerificationMethod {
         VerificationMethod {
             id: id,
-            name: title.to_string(),
+            title: title.to_string(),
             description: format!("{title} verification"),
+            tag: title.to_uppercase().replace(" ", "_"),
             project_id: PRIMARY_PROJECT,
         }
     }

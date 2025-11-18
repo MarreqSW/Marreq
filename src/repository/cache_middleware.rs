@@ -586,8 +586,9 @@ mod tests {
         };
         let ver = VerificationMethod {
             id: 1,
-            name: "Ver".into(),
+            title: "Ver".into(),
             description: "".into(),
+            tag: "VER".into(),
             project_id: 1,
         };
         let project = Project {

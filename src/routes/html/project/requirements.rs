@@ -139,8 +139,9 @@ struct InlineApplicabilityPayload {
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
 struct InlineVerificationPayload {
-    name: String,
+    title: String,
     description: String,
+    tag: String,
 }
 
 #[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<applicability_filter>&<view>")]
@@ -885,8 +886,9 @@ async fn create_verification_inline(
     let verification_service = VerificationService::new(state.inner());
     let new_verification = NewVerificationMethod {
         id: None,
-        name: data.name,
+        title: data.title,
         description: data.description,
+        tag: data.tag,
         project_id,
     };
 
@@ -897,7 +899,7 @@ async fn create_verification_inline(
 
     Ok(Json(json!({
         "id": stored.id,
-        "label": stored.name,
+        "label": stored.title,
         "description": stored.description,
     })))
 }
@@ -1002,8 +1004,9 @@ mod tests {
             1,
             VerificationMethod {
                 id: 1,
-                name: "Analysis".into(),
+                title: "Analysis".into(),
                 description: "".into(),
+                tag: "ANALYSIS".into(),
                 project_id: PRIMARY_PROJECT,
             },
         );
@@ -1309,7 +1312,7 @@ mod tests {
             .post("/p/1/requirements/inline/verification")
             .header(ContentType::JSON)
             .private_cookie(session_cookie(ADMIN_ID))
-            .body(r#"{"name":"Inspection","description":"Visual inspection"}"#)
+            .body(r#"{"title":"Inspection","description":"Visual inspection","tag":"INSPECTION"}"#)
             .dispatch()
             .await;
 

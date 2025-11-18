@@ -121,8 +121,9 @@ mod tests {
     fn create_test_verification() -> VerificationMethod {
         VerificationMethod {
             id: 1,
-            name: "Test Verification".to_string(),
+            title: "Test Verification".to_string(),
             description: "Test Verification Description".to_string(),
+            tag: "TEST_VERIFICATION".to_string(),
             project_id: 1,
         }
     }
@@ -736,7 +737,7 @@ mod tests {
         assert!(result.is_ok());
         let verifications = result.unwrap();
         assert_eq!(verifications.len(), 1);
-        assert_eq!(verifications[0].name, "Test Verification");
+        assert_eq!(verifications[0].title, "Test Verification");
     }
 
     #[test]
@@ -748,7 +749,7 @@ mod tests {
         let result = repo.get_verification_by_id(1);
         assert!(result.is_ok());
         let found_verification = result.unwrap();
-        assert_eq!(found_verification.name, "Test Verification");
+        assert_eq!(found_verification.title, "Test Verification");
     }
 
     #[test]

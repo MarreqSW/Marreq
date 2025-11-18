@@ -98,8 +98,9 @@ pub struct NewTestStatus {
 #[diesel(primary_key(id))]
 pub struct NewVerificationMethod {
     pub id: Option<i32>,
-    pub name: String,
+    pub title: String,
     pub description: String,
+    pub tag: String,
     pub project_id: i32,
 }
 
@@ -315,6 +316,7 @@ macro_rules! impl_loggable {
 impl_loggable!(NewRequirement, EntityType::Requirement, id?, title);
 impl_loggable!(NewCategory, EntityType::Category, id?, title);
 impl_loggable!(NewApplicability, EntityType::Applicability, id?, title);
+impl_loggable!(NewVerificationMethod, EntityType::Verification, id?, title);
 impl_loggable!(NewTestCase, EntityType::Test, id?, name);
 impl_loggable!(NewUser, EntityType::User, id?, username, no_project);
 impl_loggable!(NewRequirementStatus, EntityType::Requirement, id?, title);

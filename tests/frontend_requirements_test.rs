@@ -124,8 +124,9 @@ mod test_support {
             1,
             VerificationMethod {
                 id: 1,
-                name: "Analysis".into(),
+                title: "Analysis".into(),
                 description: "".into(),
+                tag: "ANALYSIS".into(),
                 project_id: 1,
             },
         );

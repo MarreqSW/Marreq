@@ -104,7 +104,7 @@ These changes ensure delete buttons only appear for "Passed" or "Failed" tests (
 use crate::status_enums::{RequirementStatusEnum, TestStatusEnum};
 
 // Check if requirement is editable
-let status = RequirementStatusEnum::from_id(req.current_status_id);
+let status = RequirementStatusEnum::from_id(req.status_id);
 if status.map(|s| s.is_editable_by_user()).unwrap_or(false) {
     // Allow editing
 }

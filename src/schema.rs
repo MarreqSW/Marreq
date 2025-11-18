@@ -89,7 +89,7 @@ diesel::table! {
         title -> Varchar,
         description -> Varchar,
         verification_method_id -> Int4,
-        current_status_id -> Int4,
+        status_id -> Int4,
         author_id -> Int4,
         reviewer_id -> Int4,
         reference_code -> Varchar,
@@ -163,7 +163,7 @@ diesel::joinable!(project_members -> users (id));
 diesel::joinable!(requirement_status -> projects (project_id));
 diesel::joinable!(requirements -> applicability (applicability_id));
 diesel::joinable!(requirements -> projects (project_id));
-diesel::joinable!(requirements -> requirement_status (current_status_id));
+diesel::joinable!(requirements -> requirement_status (status_id));
 diesel::joinable!(status_id -> projects (project_id));
 diesel::joinable!(tests -> projects (project_id));
 diesel::joinable!(tests -> status_id (status_id));

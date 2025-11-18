@@ -34,8 +34,8 @@ struct RequirementCreateForm {
     verification_method_id: i32,
     #[field(name = uncased("category_id"))]
     category_id: i32,
-    #[field(name = uncased("current_status_id"))]
-    current_status_id: i32,
+    #[field(name = uncased("status_id"))]
+    status_id: i32,
     #[field(name = uncased("parent_id"))]
     parent_id: i32,
     #[field(name = uncased("reference_code"))]
@@ -56,7 +56,7 @@ impl RequirementCreateForm {
             description,
             verification_method_id,
             category_id,
-            current_status_id,
+            status_id,
             parent_id,
             reference_code,
             reviewer_id,
@@ -72,7 +72,7 @@ impl RequirementCreateForm {
             verification_method_id,
             author_id: author_id,
             category_id,
-            current_status_id,
+            status_id,
             parent_id: Some(parent_id),
             reference_code,
             reviewer_id,
@@ -489,7 +489,7 @@ async fn delete_requirement_route(
 
     // Permission gate: allow only Draft or Proposal status, or admin
     // Use the enum to check if the status is editable
-    let is_editable = RequirementStatusEnum::from_id(req.current_status_id)
+    let is_editable = RequirementStatusEnum::from_id(req.status_id)
         .map(|status| status.is_editable_by_user())
         .unwrap_or(false);
 
@@ -549,7 +549,7 @@ async fn new_requirement(
         verification_method_id: tr.map(|r| r.verification_method_id).unwrap_or_default(),
         author_id: user.id,
         category_id: tr.map(|r| r.category_id).unwrap_or_default(),
-        current_status_id: 0, // Draft
+        status_id: 0, // Draft
         parent_id: tr.map(|r| r.parent_id).unwrap_or_default(),
         reference_code: tr.map(|r| r.reference_code.clone()).unwrap_or_default(),
         reviewer_id: tr.map(|r| r.reviewer_id).unwrap_or_default(),
@@ -568,7 +568,7 @@ async fn new_requirement(
     }
 
     // Default status to "Draft"
-    new_requirement.current_status_id = statuses
+    new_requirement.status_id = statuses
         .iter()
         .find(|st| st.title.eq_ignore_ascii_case("Draft"))
         .map(|st| st.id)
@@ -1031,7 +1031,7 @@ mod tests {
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
             verification_method_id: 1,
-            current_status_id: 1,
+            status_id: 1,
             author_id: ADMIN_ID,
             reviewer_id: ADMIN_ID,
             reference_code: format!("REQ-SYS-{id}"),
@@ -1068,11 +1068,11 @@ mod tests {
     async fn show_requirements_respects_status_filter() {
         let mut repo = base_repo();
         let mut req1 = sample_requirement(1);
-        req1.current_status_id = 1;
+        req1.status_id = 1;
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
-        req2.current_status_id = 2;
+        req2.status_id = 2;
         req2.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, req2);
 
@@ -1091,11 +1091,11 @@ mod tests {
     async fn show_requirements_respects_filter_with_empty_values() {
         let mut repo = base_repo();
         let mut req1 = sample_requirement(1);
-        req1.current_status_id = 1;
+        req1.status_id = 1;
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
-        req2.current_status_id = 2;
+        req2.status_id = 2;
         req2.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, req2);
 
@@ -1118,11 +1118,11 @@ mod tests {
     async fn show_requirements_ignores_search_query_when_filtering() {
         let mut repo = base_repo();
         let mut req1 = sample_requirement(1);
-        req1.current_status_id = 1;
+        req1.status_id = 1;
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
-        req2.current_status_id = 2;
+        req2.status_id = 2;
         req2.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, req2);
 
@@ -1230,7 +1230,7 @@ mod tests {
             &client,
             "/p/1/requirements/new",
             "title=Test&description=Description&verification_method_id=1&\
-             current_status_id=1&reviewer_id=1&\
+             status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&reference_code=&\
              justification=Testing",
             ADMIN_ID,
@@ -1256,7 +1256,7 @@ mod tests {
             &client,
             "/p/1/requirements/new",
             "title=Next+Requirement&description=Body&verification_method_id=1&\
-             current_status_id=1&reviewer_id=1&\
+             status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&reference_code=&\
              justification=&intent=add_another",
             ADMIN_ID,
@@ -1346,7 +1346,7 @@ mod tests {
             &client,
             "/p/1/requirements/edit/1",
             "id=1&title=Updated&description=New+desc&verification_method_id=1&\
-             current_status_id=1&author_id=1&reviewer_id=1&\
+             status_id=1&author_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
              justification=Changed&project_id=1&reference_code=REQ-SYS-1",
             ADMIN_ID,
@@ -1385,7 +1385,7 @@ mod tests {
     async fn delete_requirement_forbids_non_draft() {
         let mut repo = base_repo();
         let mut req = sample_requirement(1);
-        req.current_status_id = 3; // Released
+        req.status_id = 3; // Released
         repo.requirements.insert(1, req);
 
         // Use non-admin user
@@ -1432,7 +1432,7 @@ mod tests {
             &client,
             "/p/1/requirements/new",
             "title=&description=Test&verification_method_id=1&\
-             current_status_id=1&reviewer_id=1&\
+             status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&reference_code=",
             ADMIN_ID,
         )
@@ -1449,7 +1449,7 @@ mod tests {
             &client,
             "/p/1/requirements/new",
             "title=Test&description=Body&verification_method_id=1&\
-             current_status_id=1&reviewer_id=1&\
+             status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
              reference_code=INVALID-FORMAT",
             ADMIN_ID,
@@ -1469,7 +1469,7 @@ mod tests {
             &client,
             "/p/1/requirements/new",
             "title=Custom&description=Test&verification_method_id=1&\
-             current_status_id=1&reviewer_id=1&\
+             status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
              reference_code=REQ-SYS-999",
             ADMIN_ID,
@@ -1568,7 +1568,7 @@ mod tests {
     async fn delete_requirement_admin_can_delete_released() {
         let mut repo = base_repo();
         let mut req = sample_requirement(1);
-        req.current_status_id = 5; // Released/higher status
+        req.status_id = 5; // Released/higher status
         repo.requirements.insert(1, req);
 
         let client = test_client(repo).await;
@@ -1593,7 +1593,7 @@ mod tests {
             &client,
             "/p/1/requirements/edit/1",
             "id=1&title=Updated+Title&description=Updated+Description&\
-             verification_method_id=1&current_status_id=1&author_id=1&reviewer_id=1&\
+             verification_method_id=1&status_id=1&author_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
              justification=Updated+Justification&project_id=1&reference_code=REQ-SYS-1",
             ADMIN_ID,
@@ -1614,13 +1614,13 @@ mod tests {
 
         // Add requirements with different statuses and categories
         let mut req1 = sample_requirement(1);
-        req1.current_status_id = 1;
+        req1.status_id = 1;
         req1.category_id = 1;
         req1.verification_method_id = 1;
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
-        req2.current_status_id = 2;
+        req2.status_id = 2;
         req2.category_id = 1;
         req2.verification_method_id = 1;
         req2.reference_code = "REQ-SYS-2".into();
@@ -1647,11 +1647,11 @@ mod tests {
 
         // Add requirements with different statuses
         let mut req1 = sample_requirement(1);
-        req1.current_status_id = 1; // Draft
+        req1.status_id = 1; // Draft
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
-        req2.current_status_id = 1; // Draft
+        req2.status_id = 1; // Draft
         req2.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, req2);
 
@@ -1801,7 +1801,7 @@ mod tests {
             &client,
             "/p/1/requirements/edit/1",
             "id=1&title=Hack&description=Test&verification_method_id=1&\
-             current_status_id=1&author_id=1&reviewer_id=1&\
+             status_id=1&author_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
              justification=&project_id=1&reference_code=REQ-SYS-1",
             ADMIN_ID,

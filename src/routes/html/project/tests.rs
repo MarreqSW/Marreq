@@ -523,7 +523,7 @@ mod tests {
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
             verification_method_id: 1,
-            current_status_id: 1,
+            status_id: 1,
             author_id: ADMIN_ID,
             reviewer_id: ADMIN_ID,
             reference_code: format!("REQ-SYS-{id}"),

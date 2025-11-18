@@ -252,18 +252,18 @@
 
         {{#if is_admin_or_owner}}
         <div class="c-create-field">
-          <label for="current_status_id" class="c-create-field__label">
+          <label for="status_id" class="c-create-field__label">
             Status <span class="c-create-field__required">*</span>
           </label>
           <select
-            name="current_status_id"
-            id="current_status_id"
+            name="status_id"
+            id="status_id"
             class="c-create-field__select"
             required
           >
             {{#each status}}
               {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title "Deprecated"))))}}
-                <option value="{{id}}" {{#if (eq id ../current_status_id)}}selected{{/if}}>
+                <option value="{{id}}" {{#if (eq id ../status_id)}}selected{{/if}}>
                   {{title}}
                 </option>
               {{/if}}

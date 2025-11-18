@@ -117,7 +117,7 @@ CREATE TABLE requirements (
     title VARCHAR NOT NULL DEFAULT ' ',
     description VARCHAR NOT NULL DEFAULT ' ',
     verification_method_id INTEGER NOT NULL DEFAULT 1,
-    current_status_id INTEGER NOT NULL DEFAULT 1,
+    status_id INTEGER NOT NULL DEFAULT 1,
     author_id INTEGER NOT NULL DEFAULT 0,
     reviewer_id INTEGER NOT NULL DEFAULT 0,
     req_link VARCHAR NOT NULL DEFAULT ' ',
@@ -189,7 +189,7 @@ ALTER TABLE requirements ADD CONSTRAINT fk_requirements_applicability
     FOREIGN KEY (applicability_id) REFERENCES applicability(id);
 
 ALTER TABLE requirements ADD CONSTRAINT fk_requirements_status 
-    FOREIGN KEY (current_status_id) REFERENCES requirement_status(id);
+    FOREIGN KEY (status_id) REFERENCES requirement_status(id);
 
 ALTER TABLE tests ADD CONSTRAINT fk_tests_project 
     FOREIGN KEY (project_id) REFERENCES projects(project_id);
@@ -229,7 +229,7 @@ CREATE INDEX idx_logs_action_type ON logs(action_type);
 -- Requirements indexes
 CREATE INDEX idx_requirements_project_id ON requirements(project_id);
 CREATE INDEX idx_requirements_category ON requirements(category_id);
-CREATE INDEX idx_requirements_status ON requirements(current_status_id);
+CREATE INDEX idx_requirements_status ON requirements(status_id);
 CREATE INDEX idx_requirements_author ON requirements(author_id);
 CREATE INDEX idx_requirements_reviewer ON requirements(reviewer_id);
 CREATE INDEX idx_requirements_parent ON requirements(parent_id);
@@ -335,7 +335,7 @@ INSERT INTO verification (name, description, project_id) VALUES
     ('Test', 'Controlled verification with predefined inputs and expected outputs', 1);
 
 -- Requirements for Space Project
-INSERT INTO requirements (title, description, reference_code, category_id, applicability_id, current_status_id, verification_method_id, author_id, reviewer_id, parent_id, req_link, creation_date, update_date, deadline_date, project_id) VALUES
+INSERT INTO requirements (title, description, reference_code, category_id, applicability_id, status_id, verification_method_id, author_id, reviewer_id, parent_id, req_link, creation_date, update_date, deadline_date, project_id) VALUES
     ('REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations under AM0 illumination conditions', 'REQ-PWR-001', 1, 1, 1, 1, 1, 2, 0, 'https://spacecorp.com/power-specs', '2024-01-15', '2024-01-15', '2024-06-30', 1),
     ('REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse periods', 'REQ-PWR-002', 1, 1, 2, 1, 1, 2, 0, '', '2024-01-15', '2024-01-20', '2024-07-15', 1),
     ('REQ-COMM-001', 'The satellite shall maintain continuous communication with ground stations during 90% of each orbit period', 'REQ-COMM-001', 2, 1, 3, 1, 1, 2, 0, '', '2024-01-16', '2024-01-16', '2024-08-15', 1),

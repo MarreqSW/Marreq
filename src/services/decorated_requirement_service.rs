@@ -109,9 +109,9 @@ impl<'a> DecoratedRequirementService<'a> {
 
         let status = self
             .status_service
-            .get_requirement_status(req.current_status_id)
+            .get_requirement_status(req.status_id)
             .map(|s| s.title)
-            .unwrap_or_else(|_| format!("Unknown Status ({})", req.current_status_id));
+            .unwrap_or_else(|_| format!("Unknown Status ({})", req.status_id));
 
         let author = self
             .user_service
@@ -152,8 +152,8 @@ impl<'a> DecoratedRequirementService<'a> {
             verification_method_id: verification,
             req_verification_id: req.verification_method_id,
             description: req.description.clone(),
-            current_status_id: status,
-            req_current_status_id: req.current_status_id,
+            status_id: status,
+            req_current_status_id: req.status_id,
             author_id: author,
             req_author_id: req.author_id,
             reviewer_id: reviewer,

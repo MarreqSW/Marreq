@@ -249,7 +249,7 @@ impl<'a> MatrixService<'a> {
         search: Option<&str>,
     ) {
         if let Some(status) = status_filter {
-            reqs.retain(|r| r.current_status_id == status);
+            reqs.retain(|r| r.status_id == status);
         }
 
         if let Some(category) = category_filter {
@@ -438,7 +438,7 @@ mod tests {
                 title: "Test Requirement".to_string(),
                 description: String::new(),
                 verification_method_id: 1,
-                current_status_id: 1,
+                status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
                 reference_code: "REF-001".to_string(),
@@ -516,7 +516,7 @@ mod tests {
                 title: "Test, with \"quotes\"".to_string(),
                 description: String::new(),
                 verification_method_id: 1,
-                current_status_id: 1,
+                status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
                 reference_code: "REF-001".to_string(),
@@ -551,7 +551,7 @@ mod tests {
                 title: "Req 1".to_string(),
                 description: String::new(),
                 verification_method_id: 1,
-                current_status_id: 1,
+                status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
                 reference_code: "REF-1".to_string(),

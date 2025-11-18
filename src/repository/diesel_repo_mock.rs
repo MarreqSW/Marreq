@@ -410,7 +410,7 @@ impl RequirementsRepository for DieselRepoMock {
             title: _new.title.clone(),
             description: _new.description.clone(),
             verification_method_id: _new.verification_method_id,
-            current_status_id: _new.current_status_id,
+            status_id: _new.status_id,
             author_id: _new.author_id,
             reviewer_id: _new.reviewer_id,
             reference_code: _new.reference_code.clone(),
@@ -434,7 +434,7 @@ impl RequirementsRepository for DieselRepoMock {
                 req.title = _new.title.clone();
                 req.description = _new.description.clone();
                 req.verification_method_id = _new.verification_method_id;
-                req.current_status_id = _new.current_status_id;
+                req.status_id = _new.status_id;
                 req.author_id = _new.author_id;
                 req.reviewer_id = _new.reviewer_id;
                 req.reference_code = _new.reference_code.clone();

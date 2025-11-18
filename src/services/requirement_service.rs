@@ -126,7 +126,7 @@ impl<'a> RequirementService<'a> {
             .into_iter()
             .filter(|req| {
                 let status_match =
-                    status_filter.map_or(true, |status_id| req.current_status_id == status_id);
+                    status_filter.map_or(true, |status_id| req.status_id == status_id);
                 let verification_match =
                     verification_filter.map_or(true, |id| req.verification_method_id == id);
                 let category_match =
@@ -235,7 +235,7 @@ mod tests {
             title: format!("Requirement {id}"),
             description: "Existing description".into(),
             verification_method_id: 1,
-            current_status_id: 1,
+            status_id: 1,
             author_id: 1,
             reviewer_id: 1,
             reference_code: reference.into(),
@@ -258,7 +258,7 @@ mod tests {
             verification_method_id: 1,
             author_id: 1,
             category_id: 1,
-            current_status_id: 1,
+            status_id: 1,
             parent_id: None,
             reference_code: "  REQ-123  ".into(),
             reviewer_id: 1,

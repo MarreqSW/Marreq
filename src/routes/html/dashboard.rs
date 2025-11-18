@@ -147,7 +147,7 @@ mod tests {
                 title: format!("Requirement {id}"),
                 description: "Ensure feature works".into(),
                 verification_method_id: 1,
-                current_status_id: 1,
+                status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
                 reference_code: format!("REQ-{id}"),

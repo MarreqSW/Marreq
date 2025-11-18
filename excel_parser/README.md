@@ -182,7 +182,7 @@ When using `-o` option, the parser generates a JSON file with the parsed data:
     "reference_code": "REQ-001",
     "category_id": "Security",
     "applicability_id": "All Systems",
-    "current_status_id": "Draft",
+    "status_id": "Draft",
     "verification_method_id": "Test",
     "author_id": "Alice",
     "reviewer_id": "Bob",

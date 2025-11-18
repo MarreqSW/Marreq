@@ -37,7 +37,7 @@ function initStatusControls(form) {
   const toggle = form.querySelector('[data-role="status-toggle"]');
   const menu = form.querySelector('[data-role="status-menu"]');
   const statusLabel = toggle?.querySelector('.editor-status__label');
-  const select = form.querySelector('#current_status_id');
+  const select = form.querySelector('#status_id');
 
   if (!toggle || !menu || !statusLabel || !select) {
     return;

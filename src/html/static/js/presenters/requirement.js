@@ -194,7 +194,7 @@ export function timeline({ requirement = {}, historyEntries = [] } = {}) {
   const entries = [
     {
       version: `v${totalVersions}`,
-      summary: `Current revision — ${normalise(requirement.current_status_id)}`,
+      summary: `Current revision — ${normalise(requirement.status_id)}`,
       actor,
       timestamp: updateDate,
       action: 'CURRENT',
@@ -221,7 +221,7 @@ function relationships(rawRelationships = {}) {
       id: item.id,
       reference: reference(item),
       title: normalise(item.title),
-      status: normalise(item.current_status_id ?? item.req_current_status_id),
+      status: normalise(item.status_id ?? item.req_current_status_id),
     };
   };
 
@@ -270,9 +270,9 @@ export function buildRequirementViewModel(canonical = {}) {
   const counts = canonical.verification?.counts ?? {};
   const historyEntries = canonical.history?.entries ?? [];
 
-  const badge = statusBadge(requirement.current_status_id);
+  const badge = statusBadge(requirement.status_id);
   const verification = verificationBadge(counts, requirement.verification_method_id);
-  const solidityView = solidity(counts, requirement.current_status_id);
+  const solidityView = solidity(counts, requirement.status_id);
   const percent = verificationPercent(counts);
   const rationale =
     normalise(requirement.justification) || 'No rationale documented yet.';
@@ -335,6 +335,6 @@ export function buildRequirementViewModel(canonical = {}) {
     },
     linked_tests: canonical.linked_tests ?? [],
     timeline: timelineEntries,
-    comments: commentsView(canonical.comments?.items ?? [], requirement.current_status_id),
+    comments: commentsView(canonical.comments?.items ?? [], requirement.status_id),
   };
 }

@@ -798,7 +798,7 @@ impl TestsCaseRepository for DieselRepo {
                 requirements::dsl::title,
                 requirements::dsl::description,
                 requirements::dsl::verification_method_id,
-                requirements::dsl::current_status_id,
+                requirements::dsl::status_id,
                 requirements::dsl::author_id,
                 requirements::dsl::reviewer_id,
                 requirements::dsl::reference_code,

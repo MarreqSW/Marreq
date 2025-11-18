@@ -43,7 +43,10 @@ impl<'a> StatusService<'a> {
     }
 
     /// Create a new requirement status entry.
-    pub fn create_requirement_status(&self, mut payload: NewRequirementStatus) -> Result<i32, RepoError> {
+    pub fn create_requirement_status(
+        &self,
+        mut payload: NewRequirementStatus,
+    ) -> Result<i32, RepoError> {
         sanitize_string(&mut payload.title);
         sanitize_string(&mut payload.description);
         sanitize_string(&mut payload.tag);
@@ -139,10 +142,7 @@ mod tests {
 
         assert_eq!(service.list_requirement_statuses().unwrap().len(), 1);
         assert_eq!(service.list_test_statuses().unwrap().len(), 1);
-        assert_eq!(
-            service.get_requirement_status(2).unwrap().title,
-            "Draft"
-        );
+        assert_eq!(service.get_requirement_status(2).unwrap().title, "Draft");
         assert_eq!(service.get_test_status(3).unwrap().title, "Ready");
     }
 

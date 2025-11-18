@@ -385,7 +385,9 @@ mod tests {
         assert!(cache.get(&keys::Requirements::by_project(pid)).is_none());
         assert!(cache.get(&keys::Tests::by_project(pid)).is_none());
         assert!(cache.get(&keys::Matrix::by_project(pid)).is_none());
-        assert!(cache.get(&keys::VerificationMethod::by_project(pid)).is_none());
+        assert!(cache
+            .get(&keys::VerificationMethod::by_project(pid))
+            .is_none());
         assert!(cache.get(&keys::Categories::by_project(pid)).is_none());
         assert!(cache.get(&keys::Applicability::by_project(pid)).is_none());
         assert!(cache.get(&keys::Projects::by_id(pid)).is_none());

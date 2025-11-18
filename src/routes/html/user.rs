@@ -144,7 +144,10 @@ async fn new_user(
     error: Option<String>,
 ) -> Result<Template, Redirect> {
     let user = admin.into_inner();
-    let status = state.repo_read().get_requirement_status_all().unwrap_or_default();
+    let status = state
+        .repo_read()
+        .get_requirement_status_all()
+        .unwrap_or_default();
     let status_json = json!(status);
 
     let ctx = json!({

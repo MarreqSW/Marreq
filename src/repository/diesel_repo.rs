@@ -389,7 +389,6 @@ impl ProjectMembersRepository for DieselRepo {
 }
 
 impl LookupRepository for DieselRepo {
-
     fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError> {
         use schema::requirement_status::dsl;
         let mut conn = self.get_conn()?;
@@ -787,12 +786,13 @@ impl TestsCaseRepository for DieselRepo {
     }
 
     fn get_requirements_for_test(&self, tid: i32) -> Result<Vec<Requirement>, RepoError> {
-        use schema::{requirements, matrix};
+        use schema::{matrix, requirements};
         let mut conn = self.get_conn()?;
         matrix::dsl::matrix
             .filter(matrix::dsl::id.eq(tid))
-            .inner_join(requirements::dsl::requirements.on(
-                matrix::dsl::req_id.eq(requirements::dsl::id)))
+            .inner_join(
+                requirements::dsl::requirements.on(matrix::dsl::req_id.eq(requirements::dsl::id)),
+            )
             .select((
                 requirements::dsl::id,
                 requirements::dsl::title,
@@ -946,7 +946,8 @@ impl ProjectsRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::projects.filter(dsl::project_id.eq(project_id_param))).execute(conn.as_mut())?;
+        diesel::delete(dsl::projects.filter(dsl::project_id.eq(project_id_param)))
+            .execute(conn.as_mut())?;
         Ok(proj)
     }
 }

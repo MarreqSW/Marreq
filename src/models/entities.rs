@@ -261,11 +261,7 @@ impl fmt::Display for Requirement {
 
 impl fmt::Display for Category {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "<div class='category'>Category: {}</div>",
-            self.title
-        )
+        write!(f, "<div class='category'>Category: {}</div>", self.title)
     }
 }
 
@@ -315,7 +311,9 @@ impl fmt::Display for TestCase {
             self.name,
             self.description,
             self.source,
-            self.parent_id.map(|id| id.to_string()).unwrap_or_else(|| "None".to_string())
+            self.parent_id
+                .map(|id| id.to_string())
+                .unwrap_or_else(|| "None".to_string())
         )
     }
 }

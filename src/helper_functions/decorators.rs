@@ -22,7 +22,10 @@ pub fn decorate_tests(tests: Vec<TestCase>) -> Vec<DecoratedTestCase> {
 }
 
 /// Decorate tests using an explicitly provided repository.
-pub fn decorate_tests_with_repo<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<DecoratedTestCase> {
+pub fn decorate_tests_with_repo<R: Repository>(
+    repo: &R,
+    tests: Vec<TestCase>,
+) -> Vec<DecoratedTestCase> {
     decorate_tests_impl(repo, tests)
 }
 
@@ -365,7 +368,9 @@ mod tests {
         assert_eq!(d2.req_parent_title, "Parent");
 
         let d3 = &decorated[2];
-        assert!(d3.verification_method_id.starts_with("Unknown Verification"));
+        assert!(d3
+            .verification_method_id
+            .starts_with("Unknown Verification"));
         assert!(d3.current_status_id.starts_with("Unknown Status"));
         assert_eq!(d3.author_id, "");
         assert_eq!(d3.reviewer_id, "");

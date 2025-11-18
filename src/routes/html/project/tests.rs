@@ -263,9 +263,7 @@ async fn get_edit_test(
     let user = project_access.into_user();
     let repo = state.repo_read();
 
-    let test = repo
-        .get_test_by_id(id)
-        .expect("Error reading table Tests");
+    let test = repo.get_test_by_id(id).expect("Error reading table Tests");
 
     let decorated = decorate_tests_cached(state, vec![test]);
     let test0 = &decorated[0];
@@ -332,10 +330,7 @@ async fn post_edit_test(
             to_list()
         })?;
 
-    Ok(Redirect::to(uri!(
-        "/p",
-        show_test_id(project_id, f.id)
-    )))
+    Ok(Redirect::to(uri!("/p", show_test_id(project_id, f.id))))
 }
 
 #[delete("/<project_id>/tests/delete/<id>")]
@@ -445,8 +440,8 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Applicability, Category, MatrixLink, Project, ProjectMember, Requirement, RequirementStatus, TestCase,
-        TestStatus, VerificationMethod,
+        Applicability, Category, MatrixLink, Project, ProjectMember, Requirement,
+        RequirementStatus, TestCase, TestStatus, VerificationMethod,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
@@ -705,11 +700,7 @@ mod tests {
         assert_eq!(test.name, "Thermal Check");
         assert_eq!(test.status_id, 1);
 
-        let links: Vec<_> = inner
-            .matrices
-            .iter()
-            .filter(|m| m.test_id == 1)
-            .collect();
+        let links: Vec<_> = inner.matrices.iter().filter(|m| m.test_id == 1).collect();
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].req_id, 1);
     }
@@ -753,11 +744,7 @@ mod tests {
         assert_eq!(test.name, "Updated Test");
         assert_eq!(test.status_id, 2);
 
-        let links: Vec<_> = inner
-            .matrices
-            .iter()
-            .filter(|m| m.test_id == 1)
-            .collect();
+        let links: Vec<_> = inner.matrices.iter().filter(|m| m.test_id == 1).collect();
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].req_id, 1);
     }

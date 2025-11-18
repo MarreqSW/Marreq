@@ -314,19 +314,8 @@ macro_rules! impl_loggable {
 
 impl_loggable!(NewRequirement, EntityType::Requirement, id?, title);
 impl_loggable!(NewCategory, EntityType::Category, id?, title);
-impl_loggable!(
-    NewApplicability,
-    EntityType::Applicability,
-    id?,
-    title
-);
+impl_loggable!(NewApplicability, EntityType::Applicability, id?, title);
 impl_loggable!(NewTestCase, EntityType::Test, id?, name);
-impl_loggable!(
-    NewUser,
-    EntityType::User,
-    id?,
-    username,
-    no_project
-);
+impl_loggable!(NewUser, EntityType::User, id?, username, no_project);
 impl_loggable!(NewRequirementStatus, EntityType::Requirement, id?, title);
 impl_loggable!(NewTestStatus, EntityType::Test, id?, title);

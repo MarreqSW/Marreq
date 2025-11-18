@@ -43,11 +43,7 @@ impl<'a> ProjectService<'a> {
             }
         }
 
-        projects.sort_by(|a, b| {
-            a.name
-                .to_lowercase()
-                .cmp(&b.name.to_lowercase())
-        });
+        projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
 
         Ok(projects)
     }
@@ -160,10 +156,7 @@ impl<'a> ProjectService<'a> {
             let ctx = LogCtx::new(actor.id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log project deletion {}: {_err}",
-                    entity.id
-                );
+                eprintln!("Failed to log project deletion {}: {_err}", entity.id);
             }
         }
     }
@@ -260,10 +253,7 @@ mod tests {
 
         let updated = service.update(&actor(), 1, payload).unwrap();
         assert_eq!(updated.name, "Modernized");
-        assert_eq!(
-            updated.description.as_deref(),
-            Some("Updated description")
-        );
+        assert_eq!(updated.description.as_deref(), Some("Updated description"));
         assert_eq!(updated.status_id.as_deref(), Some("  done  "));
         assert_eq!(updated.owner_id, Some(2));
     }

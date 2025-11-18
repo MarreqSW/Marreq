@@ -172,12 +172,7 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
         worksheet.write_string(row, 10, &req.creation_date, None)?;
         worksheet.write_string(row, 11, &req.update_date, None)?;
         worksheet.write_string(row, 12, &req.deadline_date, None)?;
-        worksheet.write_string(
-            row,
-            13,
-            &req.justification.as_deref().unwrap_or(""),
-            None,
-        )?;
+        worksheet.write_string(row, 13, &req.justification.as_deref().unwrap_or(""), None)?;
     }
 
     workbook.close()?;

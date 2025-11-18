@@ -11,9 +11,8 @@ pub fn filter_requirements(
         .filter(|req| {
             let status_match =
                 status_filter.map_or(true, |status_id| req.current_status_id == status_id);
-            let verification_match = verification_filter.map_or(true, |id| {
-                req.verification_method_id == id
-            });
+            let verification_match =
+                verification_filter.map_or(true, |id| req.verification_method_id == id);
             let category_match =
                 category_filter.map_or(true, |category_id| req.category_id == category_id);
             status_match && verification_match && category_match
@@ -41,8 +40,7 @@ pub fn filter_tests(
     tests
         .into_iter()
         .filter(|test| {
-            let status_match =
-                status_filter.map_or(true, |status_id| test.status_id == status_id);
+            let status_match = status_filter.map_or(true, |status_id| test.status_id == status_id);
             status_match
         })
         .collect()

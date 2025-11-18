@@ -55,9 +55,7 @@ fn sanitize(value: &mut String) {
 
 fn validate(payload: &NewVerificationMethod) -> Result<(), RepoError> {
     if payload.name.is_empty() {
-        return Err(RepoError::BadInput(
-            "name is required".to_string(),
-        ));
+        return Err(RepoError::BadInput("name is required".to_string()));
     }
     if payload.name.len() > 120 {
         return Err(RepoError::BadInput(
@@ -65,9 +63,7 @@ fn validate(payload: &NewVerificationMethod) -> Result<(), RepoError> {
         ));
     }
     if payload.description.is_empty() {
-        return Err(RepoError::BadInput(
-            "description is required".to_string(),
-        ));
+        return Err(RepoError::BadInput("description is required".to_string()));
     }
     if payload.description.len() > 500 {
         return Err(RepoError::BadInput(

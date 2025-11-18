@@ -135,7 +135,7 @@ mod tests {
         let created = timestamp();
         repo.project_members.push(ProjectMember {
             project_id: 7,
-            id: user.id,
+            user_id: user.id,
             role: 2,
             created_at: created,
             updated_at: created,

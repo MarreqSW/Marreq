@@ -326,28 +326,28 @@ mod tests {
         let now = timestamp();
         repo.project_members.push(ProjectMember {
             project_id: 1,
-            id: 42,
+            user_id: 42,
             role: 1,
             created_at: now,
             updated_at: now,
         });
         repo.project_members.push(ProjectMember {
             project_id: 2,
-            id: 42,
+            user_id: 42,
             role: 2,
             created_at: now,
             updated_at: now,
         });
         repo.project_members.push(ProjectMember {
             project_id: 3,
-            id: 7,
+            user_id: 7,
             role: 1,
             created_at: now,
             updated_at: now,
         });
         repo.project_members.push(ProjectMember {
             project_id: 99,
-            id: 42,
+            user_id: 42,
             role: 1,
             created_at: now,
             updated_at: now,
@@ -410,21 +410,21 @@ mod tests {
         let now = timestamp();
         repo.project_members.push(ProjectMember {
             project_id: 1,
-            id: 42,
+            user_id: 42,
             role: 1,
             created_at: now,
             updated_at: now,
         });
         repo.project_members.push(ProjectMember {
             project_id: 2,
-            id: 42,
+            user_id: 42,
             role: 2,
             created_at: now,
             updated_at: now,
         });
         repo.project_members.push(ProjectMember {
             project_id: 3,
-            id: 99,
+            user_id: 99,
             role: 1,
             created_at: now,
             updated_at: now,
@@ -449,21 +449,21 @@ mod tests {
         let now = timestamp();
         repo.project_members.push(ProjectMember {
             project_id: 1,
-            id: 42,
+            user_id: 42,
             role: 1,
             created_at: now,
             updated_at: now,
         });
         repo.project_members.push(ProjectMember {
             project_id: 2,
-            id: 42,
+            user_id: 42,
             role: 2,
             created_at: now,
             updated_at: now,
         });
         repo.project_members.push(ProjectMember {
             project_id: 3,
-            id: 42,
+            user_id: 42,
             role: 3,
             created_at: now,
             updated_at: now,
@@ -487,14 +487,14 @@ mod tests {
         let now = timestamp();
         repo.project_members.push(ProjectMember {
             project_id: 1,
-            id: 42,
+            user_id: 42,
             role: 1,
             created_at: now,
             updated_at: now,
         });
         repo.project_members.push(ProjectMember {
             project_id: 99,
-            id: 42,
+            user_id: 42,
             role: 2,
             created_at: now,
             updated_at: now,
@@ -531,7 +531,7 @@ mod tests {
         for project_id in [1, 2, 3] {
             repo.project_members.push(ProjectMember {
                 project_id,
-                id: 42,
+                user_id: 42,
                 role: 1,
                 created_at: now,
                 updated_at: now,

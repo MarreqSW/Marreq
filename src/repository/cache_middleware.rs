@@ -626,7 +626,7 @@ mod tests {
         };
         let matrix = MatrixLink {
             req_id: 1,
-            id: 1,
+            test_id: 1,
             creation_date: epoch(),
             project_id: 1,
         };

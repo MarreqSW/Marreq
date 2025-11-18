@@ -258,7 +258,7 @@ mod tests {
         repo.tests.insert(1, sample_test(1, 1, "System Validation"));
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            id: 1,
+            test_id: 1,
             creation_date: timestamp(),
             project_id: PROJECT_ID,
         });

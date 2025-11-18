@@ -484,7 +484,7 @@ impl TestsCaseRepository for DieselRepoMock {
         let ids: Vec<i32> = self
             .matrices
             .iter()
-            .filter(|m| m.id == id)
+            .filter(|m| m.test_id == id)
             .map(|m| m.req_id)
             .collect();
         Ok(ids
@@ -498,7 +498,7 @@ impl TestsCaseRepository for DieselRepoMock {
             .matrices
             .iter()
             .filter(|m| m.req_id == id)
-            .map(|m| m.id)
+            .map(|m| m.test_id)
             .collect();
         Ok(ids
             .into_iter()
@@ -550,12 +550,12 @@ impl TestsCaseRepository for DieselRepoMock {
         _requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
         // Remove existing links for this test
-        self.matrices.retain(|m| m.id != _test_id);
+        self.matrices.retain(|m| m.test_id != _test_id);
         let project_id = self.tests.get(&_test_id).map(|t| t.project_id).unwrap_or(0);
         for &id in _requirement_ids {
             self.matrices.push(MatrixLink {
                 req_id: id,
-                id: _test_id,
+                test_id: _test_id,
                 creation_date: epoch(),
                 project_id,
             });
@@ -627,7 +627,7 @@ impl MatrixRepository for DieselRepoMock {
     fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError> {
         self.matrices.push(MatrixLink {
             req_id: new.req_id,
-            id: new.id,
+            test_id: new.id,
             creation_date: epoch(),
             project_id: new.project_id,
         });

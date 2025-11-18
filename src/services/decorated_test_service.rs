@@ -220,7 +220,7 @@ mod tests {
         );
         repo.matrices.push(MatrixLink {
             req_id: 3,
-            id: 10,
+            test_id: 10,
             creation_date: ts(),
             project_id: 99,
         });

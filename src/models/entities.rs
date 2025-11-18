@@ -54,16 +54,7 @@ define_tagged_entity!(Category);
 define_tagged_entity!(Applicability);
 define_tagged_entity!(RequirementStatus);
 define_tagged_entity!(TestStatus);
-
-/// Verification methods available for requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct VerificationMethod {
-    pub id: i32,
-    pub name: String,
-    pub description: String,
-    pub project_id: i32,
-}
+define_tagged_entity!(VerificationMethod);
 
 /// Link between a requirement and a test in the traceability matrix.
 #[derive(Serialize, Deserialize, Queryable, Clone)]

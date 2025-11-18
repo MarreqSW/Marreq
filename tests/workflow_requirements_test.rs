@@ -155,8 +155,9 @@ mod workflow_support {
             1,
             VerificationMethod {
                 id: 1,
-                name: "Analysis".into(),
+                title: "Analysis".into(),
                 description: "".into(),
+                tag: "ANALYSIS".into(),
                 project_id: 1,
             },
         );
@@ -165,8 +166,9 @@ mod workflow_support {
             2,
             VerificationMethod {
                 id: 2,
-                name: "Testing".into(),
+                title: "Testing".into(),
                 description: "".into(),
+                tag: "TESTING".into(),
                 project_id: 1,
             },
         );

@@ -144,8 +144,9 @@ diesel::table! {
 diesel::table! {
     verification (id) {
         id -> Int4,
-        name -> Varchar,
+        title -> Varchar,
         description -> Varchar,
+        tag -> Varchar,
         project_id -> Int4,
     }
 }

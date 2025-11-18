@@ -30,12 +30,12 @@ impl<'a> VerificationService<'a> {
 
     pub fn get_verification_name(&self, id: i32) -> Result<String, RepoError> {
         let verification = self.state.repo_read().get_verification_by_id(id)?;
-        Ok(verification.name)
+        Ok(verification.title)
     }
 
     /// Create a new verification entry.
     pub fn create(&self, mut payload: NewVerificationMethod) -> Result<i32, RepoError> {
-        sanitize(&mut payload.name);
+        sanitize(&mut payload.title);
         sanitize(&mut payload.description);
 
         validate(&payload)?;
@@ -54,12 +54,12 @@ fn sanitize(value: &mut String) {
 }
 
 fn validate(payload: &NewVerificationMethod) -> Result<(), RepoError> {
-    if payload.name.is_empty() {
-        return Err(RepoError::BadInput("name is required".to_string()));
+    if payload.title.is_empty() {
+        return Err(RepoError::BadInput("title is required".to_string()));
     }
-    if payload.name.len() > 120 {
+    if payload.title.len() > 120 {
         return Err(RepoError::BadInput(
-            "name must be at most 120 characters".to_string(),
+            "title must be at most 120 characters".to_string(),
         ));
     }
     if payload.description.is_empty() {
@@ -106,15 +106,16 @@ mod tests {
 
         let payload = NewVerificationMethod {
             id: None,
-            name: "  Analysis ".into(),
+            title: "  Analysis ".into(),
             description: "  Evaluate expected metrics  ".into(),
+            tag: "ANALYSIS".into(),
             project_id: 1,
         };
 
         let id = service.create(payload).expect("created");
         let stored = service.get_by_id(id).expect("stored");
 
-        assert_eq!(stored.name, "Analysis");
+        assert_eq!(stored.title, "Analysis");
         assert_eq!(stored.description, "Evaluate expected metrics");
     }
 
@@ -124,8 +125,9 @@ mod tests {
         let service = VerificationService::new(&state);
         let payload = NewVerificationMethod {
             id: None,
-            name: "".into(),
+            title: "".into(),
             description: "".into(),
+            tag: "".into(),
             project_id: 1,
         };
 

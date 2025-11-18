@@ -232,7 +232,7 @@
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each verification}}
                   <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
-                    {{name}}
+                    {{title}}
                   </button>
                 {{/each}}
               </div>
@@ -244,7 +244,7 @@
             </div>
             <select name="verification_method_id" id="verification_method_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each verification}}
-                <option value="{{id}}" {{#if (eq id ../verification_method_id)}}selected{{/if}}>{{name}}</option>
+                <option value="{{id}}" {{#if (eq id ../verification_method_id)}}selected{{/if}}>{{title}}</option>
               {{/each}}
             </select>
           </div>
@@ -411,12 +411,22 @@
       <form id="inlineVerificationForm" data-entity="verification">
         <div class="modal-body">
           <div class="mb-3">
-            <label for="inline_verification_name" class="form-label">Name</label>
+            <label for="inline_verification_title" class="form-label">Title</label>
             <input
               type="text"
               class="form-control"
-              id="inline_verification_name"
-              name="name"
+              id="inline_verification_title"
+              name="title"
+              required
+            >
+          </div>
+          <div class="mb-3">
+            <label for="inline_verification_tag" class="form-label">Tag</label>
+            <input
+              type="text"
+              class="form-control"
+              id="inline_verification_tag"
+              name="tag"
               required
             >
           </div>

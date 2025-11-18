@@ -273,8 +273,9 @@ impl LookupRepository for DieselRepoMock {
             .unwrap_or_else(|| self.verifications.keys().max().map(|i| i + 1).unwrap_or(1));
         let verification = VerificationMethod {
             id: id,
-            name: new.name.clone(),
+            title: new.title.clone(),
             description: new.description.clone(),
+            tag: new.tag.clone(),
             project_id: new.project_id,
         };
         self.verifications.insert(id, verification);

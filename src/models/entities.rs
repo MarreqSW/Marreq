@@ -86,7 +86,7 @@ pub struct Project {
 /// Membership that links a user to a project with a specific role.
 #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 #[diesel(table_name = crate::schema::project_members)]
-#[diesel(primary_key(project_id, id))]
+#[diesel(primary_key(project_id, user_id))]
 pub struct ProjectMember {
     pub project_id: i32,
     pub user_id: i32,

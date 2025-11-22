@@ -1,5 +1,5 @@
 use crate::api::prelude::*;
-use crate::models::{NewUser, User};
+use crate::models::{User, UserCreateRequest};
 use crate::services::UserService;
 
 #[get("/users")]
@@ -20,7 +20,7 @@ pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<
 pub async fn create(
     caller: ApiUser,
     state: &State<AppState>,
-    payload: Json<NewUser>,
+    payload: Json<UserCreateRequest>,
 ) -> ApiResult<Value> {
     let service = UserService::new(state.inner());
     let id = service.create(caller.user(), payload.into_inner())?;
@@ -100,11 +100,10 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "id": null,
                     "username": "bob",
                     "name": "Bob",
                     "email": "bob@example.com",
-                    "password_hash": "secret",
+                    "password": "secret",
                     "is_admin": false
                 })
                 .to_string(),
@@ -127,11 +126,10 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "id": null,
                     "username": "carol",
                     "name": "Carol",
                     "email": "carol@example.com",
-                    "password_hash": "secret",
+                    "password": "secret",
                     "is_admin": false
                 })
                 .to_string(),

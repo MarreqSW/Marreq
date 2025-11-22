@@ -310,7 +310,7 @@ impl ProjectMembersRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         dsl::project_members
             .filter(dsl::project_id.eq(pid))
-            .order(dsl::id)
+            .order(dsl::user_id)
             .load::<ProjectMember>(conn.as_mut())
             .map_err(|e| e.into())
     }
@@ -320,7 +320,7 @@ impl ProjectMembersRepository for DieselRepo {
 
         let mut conn = self.get_conn()?;
         dsl::project_members
-            .filter(dsl::id.eq(uid))
+            .filter(dsl::user_id.eq(uid))
             .order(dsl::project_id)
             .load::<ProjectMember>(conn.as_mut())
             .map_err(|e| e.into())
@@ -332,7 +332,7 @@ impl ProjectMembersRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         diesel::insert_into(dsl::project_members)
             .values(new)
-            .on_conflict((dsl::project_id, dsl::id))
+            .on_conflict((dsl::project_id, dsl::user_id))
             .do_update()
             .set((
                 dsl::role.eq(excluded(dsl::role)),
@@ -354,7 +354,7 @@ impl ProjectMembersRepository for DieselRepo {
         let affected = diesel::update(
             dsl::project_members
                 .filter(dsl::project_id.eq(pid))
-                .filter(dsl::id.eq(uid)),
+                .filter(dsl::user_id.eq(uid)),
         )
         .set((
             dsl::role.eq(new_role),
@@ -376,7 +376,7 @@ impl ProjectMembersRepository for DieselRepo {
         let affected = diesel::delete(
             dsl::project_members
                 .filter(dsl::project_id.eq(pid))
-                .filter(dsl::id.eq(uid)),
+                .filter(dsl::user_id.eq(uid)),
         )
         .execute(conn.as_mut())?;
 

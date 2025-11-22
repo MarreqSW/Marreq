@@ -172,7 +172,7 @@ async fn add_project_member(
     let payload = form.into_inner();
     let new_member = NewProjectMember {
         project_id,
-        id: payload.id,
+        user_id: payload.id,
         role: payload.role,
     };
 

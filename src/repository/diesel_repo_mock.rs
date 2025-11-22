@@ -627,10 +627,10 @@ impl MatrixRepository for DieselRepoMock {
             .collect())
     }
 
-    fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError> {
+    fn insert_new_matrix_item(&mut self, new: &NewMatrixLink) -> Result<(), RepoError> {
         self.matrices.push(MatrixLink {
             req_id: new.req_id,
-            test_id: new.id,
+            test_id: new.test_id,
             creation_date: epoch(),
             project_id: new.project_id,
         });

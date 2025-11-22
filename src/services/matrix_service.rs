@@ -2,7 +2,7 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{ActionType, EntityType, MatrixLink, NewMatrix, Requirement, TestCase, User};
+use crate::models::{ActionType, EntityType, MatrixLink, NewMatrixLink, Requirement, TestCase, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{
     MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository,
@@ -111,9 +111,9 @@ impl<'a> MatrixService<'a> {
         id: i32,
         project_id: i32,
     ) -> Result<(), RepoError> {
-        let payload = NewMatrix {
+        let payload = NewMatrixLink {
             req_id: requirement_id,
-            id: id,
+            test_id: id,
             project_id,
         };
 
@@ -130,12 +130,12 @@ impl<'a> MatrixService<'a> {
         self.state.repo_read().inner_repo().get_conn()
     }
 
-    fn log_link_created(&self, actor: &User, entity: &NewMatrix) {
+    fn log_link_created(&self, actor: &User, entity: &NewMatrixLink) {
         if let Ok(mut conn) = self.db_connection() {
             let ctx = LogCtx::new(actor.id);
             let description = format!(
                 "Linked requirement {} with test {}",
-                entity.req_id, entity.id
+                entity.req_id, entity.test_id
             );
 
             if let Err(_err) = Logger::log_custom(
@@ -152,7 +152,7 @@ impl<'a> MatrixService<'a> {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log matrix link {} -> {}: {_err}",
-                    entity.req_id, entity.id
+                    entity.req_id, entity.test_id
                 );
             }
         }

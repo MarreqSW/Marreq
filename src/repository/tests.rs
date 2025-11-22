@@ -990,9 +990,9 @@ mod tests {
     #[test]
     fn test_matrix_repository_insert_new_matrix_item() {
         let mut repo = DieselRepoMock::default();
-        let new_matrix = NewMatrix {
+        let new_matrix = NewMatrixLink {
             req_id: 1,
-            id: 1,
+            test_id: 1,
             project_id: 1,
         };
         

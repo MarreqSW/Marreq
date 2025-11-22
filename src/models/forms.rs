@@ -64,9 +64,9 @@ define_tagged_form!(NewVerificationMethod, verification);
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = matrix)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct NewMatrix {
+pub struct NewMatrixLink {
     pub req_id: i32,
-    pub id: i32,
+    pub test_id: i32,
     pub project_id: i32,
 }
 

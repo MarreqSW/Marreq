@@ -1,8 +1,9 @@
 //! Service encapsulating user related operations.
 
 use crate::app::{AppState, DieselCachedRepo};
+use crate::auth::password::hash_password;
 use crate::logger::{LogCtx, Logger};
-use crate::models::{NewUser, UpdateUser, User};
+use crate::models::{NewUser, UpdateUser, User, UserCreateRequest};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, UserRepository};
 use crate::validation::sanitize_string;
@@ -39,8 +40,27 @@ impl<'a> UserService<'a> {
         self.state.repo_read().get_user_by_id(id)
     }
 
-    /// Create a new user entry and log the action.
-    pub fn create(&self, actor: &User, mut payload: NewUser) -> Result<i32, RepoError> {
+    /// Create a new user from a request containing a plain password.
+    /// 
+    /// This method sanitizes input, hashes the password, and creates the user.
+    /// Always provide plain text passwords - they will be hashed with bcrypt.
+    pub fn create(
+        &self,
+        actor: &User,
+        request: UserCreateRequest,
+    ) -> Result<i32, RepoError> {
+        let password_hash = hash_password(&request.password)
+            .map_err(|e| RepoError::BadInput(format!("Password hashing failed: {}", e)))?;
+
+        let mut payload = NewUser {
+            id: None,
+            username: request.username,
+            name: request.name,
+            email: request.email,
+            password_hash,
+            is_admin: request.is_admin,
+        };
+
         sanitize_string(&mut payload.username);
         sanitize_string(&mut payload.name);
         sanitize_string(&mut payload.email);
@@ -138,13 +158,12 @@ mod tests {
         DieselRepoMock::make_user(99, "admin", "")
     }
 
-    fn new_user_payload() -> NewUser {
-        NewUser {
-            id: None,
+    fn new_user_payload() -> UserCreateRequest {
+        UserCreateRequest {
             username: "  alice  ".into(),
             name: "  Alice Example  ".into(),
             email: "  alice@example.com  ".into(),
-            password_hash: "secret".into(),
+            password: "secret".into(),
             is_admin: false,
         }
     }
@@ -250,5 +269,30 @@ mod tests {
         assert_eq!(stored.name, "Carol Updated");
         assert_eq!(stored.email, "carol.updated@example.com");
         assert!(stored.is_admin);
+    }
+
+    #[test]
+    fn create_hashes_password_and_creates_user() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let request = UserCreateRequest {
+            username: "  bob  ".into(),
+            name: "  Bob Example  ".into(),
+            email: "  bob@example.com  ".into(),
+            password: "plaintext_password".into(),
+            is_admin: false,
+        };
+
+        let id = service.create(&actor(), request).unwrap();
+        let stored = service.get_by_id(id).unwrap();
+
+        assert_eq!(stored.username, "bob");
+        assert_eq!(stored.name, "Bob Example");
+        assert_eq!(stored.email, "bob@example.com");
+        // Password should be hashed (bcrypt hashes start with $2)
+        assert!(stored.password_hash.starts_with("$2"));
+        assert_ne!(stored.password_hash, "plaintext_password");
     }
 }

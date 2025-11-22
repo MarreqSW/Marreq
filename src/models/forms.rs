@@ -283,17 +283,11 @@ pub struct NewLog {
 }
 
 // Display implementations for form types
+// These provide minimal, text-based representations suitable for logging
+// and debugging. HTML rendering should be handled by templates.
 impl fmt::Display for NewRequirement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "
-        <div class='requirement'>
-            <div class='ReqTitle'>Title: {}</div><div class='ReqDesc'>Description: {}</div>
-            <div class='ReqAuthor'>Author: {}</div>
-        </div>",
-            self.title, self.description, self.author_id
-        )
+        write!(f, "New Requirement: {}", self.title)
     }
 }
 

@@ -26,8 +26,20 @@ fi
 echo "🔎 Checking for running 'db' service..."
 DB_CID=$($DC ps -q db || true)
 if [[ -z "${DB_CID}" ]]; then
-  echo "❌ Error: The 'db' service isn't running."
-  echo "   Start it with: $DC up -d"
+  echo "⚠️  The 'db' service isn't running. Attempting to start it..."
+  if ! $DC up -d db >/dev/null; then
+    echo "❌ Error: Failed to start the 'db' service using '$DC up -d db'."
+    echo "   Please start it manually and re-run this script."
+    exit 1
+  fi
+  # Give Docker a brief moment to report the container as running
+  sleep 2
+  DB_CID=$($DC ps -q db || true)
+fi
+
+if [[ -z "${DB_CID}" ]]; then
+  echo "❌ Error: The 'db' service still isn't running after attempting to start it."
+  echo "   Check 'docker compose logs db' for details."
   exit 1
 fi
 echo "✅ Database container is running: ${DB_CID}"
@@ -57,13 +69,36 @@ done
 echo "✅ PostgreSQL is ready to accept connections"
 echo ""
 
+# Determine the script's directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+
 # Make sure the init file exists (so the redirect won't silently pass an empty stream)
-INIT_SQL="${INIT_SQL:-init_complete.sql}"
+# Try multiple locations in order of preference
+if [[ -z "${INIT_SQL:-}" ]]; then
+  if [[ -f "${SCRIPT_DIR}/init_complete.sql" ]]; then
+    INIT_SQL="${SCRIPT_DIR}/init_complete.sql"
+  elif [[ -f "${PROJECT_ROOT}/init_complete.sql" ]]; then
+    INIT_SQL="${PROJECT_ROOT}/init_complete.sql"
+  elif [[ -f "${PROJECT_ROOT}/sql/init_complete.sql" ]]; then
+    INIT_SQL="${PROJECT_ROOT}/sql/init_complete.sql"
+  else
+    INIT_SQL="init_complete.sql"
+  fi
+fi
+
 if [[ ! -f "${INIT_SQL}" ]]; then
-  echo "❌ Error: '${INIT_SQL}' not found in $(pwd)."
-  echo "   Set INIT_SQL=/path/to/file.sql or place init_complete.sql here."
+  echo "❌ Error: '${INIT_SQL}' not found."
+  echo "   Searched in:"
+  echo "   - ${SCRIPT_DIR}/init_complete.sql"
+  echo "   - ${PROJECT_ROOT}/init_complete.sql"
+  echo "   - ${PROJECT_ROOT}/sql/init_complete.sql"
+  echo "   Set INIT_SQL=/path/to/file.sql or place init_complete.sql in one of the above locations."
   exit 1
 fi
+
+echo "📄 Using SQL file: ${INIT_SQL}"
+echo ""
 
 # Helper to run psql inside the container
 psqlc() {

@@ -1,11 +1,10 @@
-use req_man::models::{NewProject, Project, User, ProjectMember};
+use req_man::models::{Project, ProjectMember};
 use req_man::repository::diesel_repo_mock::DieselRepoMock;
 use req_man::routes::html::projects;
 use req_man::routes::html::project;
 use req_man::auth::session::SESSION_COOKIE;
 use rocket::http::{Cookie, Status};
 use rocket::local::asynchronous::Client;
-use rocket::State;
 use req_man::app::AppState;
 use req_man::repository::CacheRepository;
 use std::sync::{Arc, RwLock};

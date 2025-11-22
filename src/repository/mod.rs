@@ -2,7 +2,7 @@ pub mod cache;
 pub mod cache_middleware;
 pub mod diesel_repo;
 // Make mock available for both unit tests and integration tests
-#[cfg(any(test, feature = "test-helpers"))]
+// This module is only used in test code and does not affect production builds
 pub mod diesel_repo_mock;
 pub mod errors;
 

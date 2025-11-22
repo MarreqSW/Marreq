@@ -894,7 +894,7 @@ impl ProjectsRepository for DieselRepo {
         use schema::projects::dsl;
         let mut conn = self.get_conn()?;
         dsl::projects
-            .filter(dsl::project_id.eq(id))
+            .filter(dsl::id.eq(id))
             .first::<Project>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -921,7 +921,7 @@ impl ProjectsRepository for DieselRepo {
     ) -> Result<bool, RepoError> {
         use schema::projects::dsl;
         let mut conn = self.get_conn()?;
-        let updated = diesel::update(dsl::projects.filter(dsl::project_id.eq(project_id_param)))
+        let updated = diesel::update(dsl::projects.filter(dsl::id.eq(project_id_param)))
             .set((
                 dsl::name.eq(&update.name),
                 dsl::description.eq(&update.description),
@@ -937,7 +937,7 @@ impl ProjectsRepository for DieselRepo {
         use schema::projects::dsl;
         let mut conn = self.get_conn()?;
         let proj = dsl::projects
-            .filter(dsl::project_id.eq(project_id_param))
+            .filter(dsl::id.eq(project_id_param))
             .get_result::<Project>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -946,7 +946,7 @@ impl ProjectsRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::projects.filter(dsl::project_id.eq(project_id_param)))
+        diesel::delete(dsl::projects.filter(dsl::id.eq(project_id_param)))
             .execute(conn.as_mut())?;
         Ok(proj)
     }

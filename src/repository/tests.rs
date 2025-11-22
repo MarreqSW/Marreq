@@ -68,7 +68,7 @@ mod tests {
 
     fn create_test_project() -> Project {
         Project {
-            project_id: 1,
+            id: 1,
             name: "Test Project".to_string(),
             description: Some("Test Project Description".to_string()),
             creation_date: Some(test_datetime()),

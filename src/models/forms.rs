@@ -208,7 +208,7 @@ pub struct UpdateProject {
 #[diesel(table_name = crate::schema::project_members)]
 pub struct NewProjectMember {
     pub project_id: i32,
-    pub id: i32,
+    pub user_id: i32,
     pub role: i32,
 }
 

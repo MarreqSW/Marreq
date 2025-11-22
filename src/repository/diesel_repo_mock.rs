@@ -663,10 +663,10 @@ impl ProjectMembersRepository for DieselRepoMock {
         }
 
         self.project_members
-            .retain(|pm| !(pm.project_id == new.project_id && pm.user_id == new.id));
+            .retain(|pm| !(pm.project_id == new.project_id && pm.user_id == new.user_id));
         self.project_members.push(ProjectMember {
             project_id: new.project_id,
-            user_id: new.id,
+            user_id: new.user_id,
             role: new.role,
             created_at: epoch(),
             updated_at: epoch(),

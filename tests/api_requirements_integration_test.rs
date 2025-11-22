@@ -239,7 +239,7 @@ async fn get_requirements_returns_all_requirements() {
     assert_eq!(response.status(), Status::Ok);
     let requirements: Vec<Requirement> = response.into_json().await.expect("json");
     assert_eq!(requirements.len(), 3);
-    
+
     // Check all requirements are present (order may vary)
     let titles: Vec<&str> = requirements.iter().map(|r| r.req_title.as_str()).collect();
     assert!(titles.contains(&"Requirement 1"));
@@ -247,15 +247,11 @@ async fn get_requirements_returns_all_requirements() {
     assert!(titles.contains(&"Requirement 3"));
 }
 
-
 #[rocket::async_test]
 async fn get_requirements_requires_authentication() {
     let client = test_client(base_repo()).await;
 
-    let response = client
-        .get("/api/requirements")
-        .dispatch()
-        .await;
+    let response = client.get("/api/requirements").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
@@ -306,10 +302,7 @@ async fn get_requirement_requires_authentication() {
 
     let client = test_client(repo).await;
 
-    let response = client
-        .get("/api/requirements/1")
-        .dispatch()
-        .await;
+    let response = client.get("/api/requirements/1").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
@@ -384,7 +377,6 @@ async fn post_requirement_with_invalid_json_returns_error() {
 
     assert_eq!(response.status(), Status::BadRequest);
 }
-
 
 // ============================================================================
 // PATCH /api/requirements/{id} - Partial Update Requirement
@@ -551,10 +543,7 @@ async fn delete_requirement_requires_authentication() {
 
     let client = test_client(repo).await;
 
-    let response = client
-        .delete("/api/requirements/1")
-        .dispatch()
-        .await;
+    let response = client.delete("/api/requirements/1").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
@@ -581,7 +570,7 @@ async fn get_requirements_returns_requirements_from_all_projects() {
 
     assert_eq!(response.status(), Status::Ok);
     let requirements: Vec<Requirement> = response.into_json().await.expect("json");
-    
+
     // Should return both projects' requirements
     assert_eq!(requirements.len(), 2);
 }
@@ -606,9 +595,7 @@ async fn create_requirement_with_very_long_title() {
         .await;
 
     // Should either accept or reject gracefully
-    assert!(
-        response.status() == Status::Ok || response.status() == Status::BadRequest
-    );
+    assert!(response.status() == Status::Ok || response.status() == Status::BadRequest);
 }
 
 #[rocket::async_test]

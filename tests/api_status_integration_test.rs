@@ -37,7 +37,7 @@ mod test_support {
 
     pub fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
-        
+
         // Add some default statuses
         repo.requirement_statuses.insert(
             1,
@@ -48,7 +48,7 @@ mod test_support {
                 req_st_short_name: "DR".into(),
             },
         );
-        
+
         repo.requirement_statuses.insert(
             2,
             RequirementStatus {
@@ -78,7 +78,7 @@ async fn get_status_returns_all_statuses() {
     assert_eq!(response.status(), Status::Ok);
     let statuses: Vec<Value> = response.into_json().await.expect("json");
     assert_eq!(statuses.len(), 2);
-    
+
     // Verify content
     let titles: Vec<&str> = statuses
         .iter()
@@ -138,10 +138,10 @@ async fn post_status_creates_new_status() {
     assert_eq!(response.status(), Status::Created);
     let result: Value = response.into_json().await.expect("json");
     assert_eq!(result["status"], "ok");
-    assert_eq!(result["id"], 1); // Mock repo IDs start at 1 for new items if not specified? Or maybe 3 since we inserted 1 and 2 manually? 
-    // Actually DieselRepoMock usually uses a counter or max id + 1. 
-    // Let's check the implementation of create_requirement_status in DieselRepoMock if possible, 
-    // but usually it's safe to just check it returns an ID.
+    assert_eq!(result["id"], 1); // Mock repo IDs start at 1 for new items if not specified? Or maybe 3 since we inserted 1 and 2 manually?
+                                 // Actually DieselRepoMock usually uses a counter or max id + 1.
+                                 // Let's check the implementation of create_requirement_status in DieselRepoMock if possible,
+                                 // but usually it's safe to just check it returns an ID.
     assert!(result["id"].as_i64().is_some());
 }
 

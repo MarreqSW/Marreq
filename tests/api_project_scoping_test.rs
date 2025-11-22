@@ -285,14 +285,14 @@ async fn list_requirements_returns_only_user_projects() {
 
     assert_eq!(response.status(), Status::Ok);
     let requirements: Vec<Value> = response.into_json().await.expect("json");
-    
+
     // Note: The API doesn't filter by project membership
     // It returns all requirements the user has access to (which is all if authenticated)
     let req_ids: Vec<i32> = requirements
         .iter()
         .map(|r| r["req_id"].as_i64().unwrap() as i32)
         .collect();
-    
+
     // API returns all requirements, not filtered by project membership
     assert!(req_ids.contains(&1));
     assert!(req_ids.contains(&2));
@@ -474,12 +474,12 @@ async fn list_tests_returns_only_user_projects() {
 
     assert_eq!(response.status(), Status::Ok);
     let tests: Vec<Value> = response.into_json().await.expect("json");
-    
+
     let test_ids: Vec<i32> = tests
         .iter()
         .map(|t| t["test_id"].as_i64().unwrap() as i32)
         .collect();
-    
+
     // API returns all tests, not filtered by project membership
     assert!(test_ids.contains(&1));
     assert!(test_ids.contains(&2));
@@ -535,12 +535,12 @@ async fn list_categories_returns_only_user_projects() {
 
     assert_eq!(response.status(), Status::Ok);
     let categories: Vec<Value> = response.into_json().await.expect("json");
-    
+
     let cat_ids: Vec<i32> = categories
         .iter()
         .map(|c| c["cat_id"].as_i64().unwrap() as i32)
         .collect();
-    
+
     assert!(cat_ids.contains(&1));
     assert!(cat_ids.contains(&2));
 }
@@ -604,12 +604,12 @@ async fn list_applicability_returns_only_user_projects() {
 
     assert_eq!(response.status(), Status::Ok);
     let items: Vec<Value> = response.into_json().await.expect("json");
-    
+
     let app_ids: Vec<i32> = items
         .iter()
         .map(|a| a["app_id"].as_i64().unwrap() as i32)
         .collect();
-    
+
     assert!(app_ids.contains(&1));
     assert!(app_ids.contains(&2));
 }
@@ -671,4 +671,3 @@ async fn admin_can_access_all_projects() {
 
     assert_eq!(response.status(), Status::Ok);
 }
-

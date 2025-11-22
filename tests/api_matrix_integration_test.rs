@@ -241,7 +241,7 @@ fn list_by_project_returns_empty_for_nonexistent_project() {
 #[test]
 fn list_by_project_filters_correctly() {
     let mut repo = base_repo();
-    
+
     // Add links for different projects
     repo.matrices.push(sample_matrix_link(1, 1, 1));
     repo.matrices.push(sample_matrix_link(2, 2, 1));
@@ -265,8 +265,9 @@ fn list_by_project_filters_correctly() {
 #[test]
 fn export_csv_generates_correct_header_row() {
     let mut repo = base_repo();
-    
-    repo.requirements.insert(1, sample_requirement(1, 1, "Req 1"));
+
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Req 1"));
     repo.tests.insert(1, sample_test(1, 1, "Test 1"));
     repo.tests.insert(2, sample_test(2, 1, "Test 2"));
 
@@ -284,9 +285,11 @@ fn export_csv_generates_correct_header_row() {
 #[test]
 fn export_csv_shows_linked_requirements() {
     let mut repo = base_repo();
-    
-    repo.requirements.insert(1, sample_requirement(1, 1, "Linked Req"));
-    repo.requirements.insert(2, sample_requirement(2, 1, "Unlinked Req"));
+
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Linked Req"));
+    repo.requirements
+        .insert(2, sample_requirement(2, 1, "Unlinked Req"));
     repo.tests.insert(1, sample_test(1, 1, "Test 1"));
 
     // Link only req 1
@@ -299,11 +302,11 @@ fn export_csv_shows_linked_requirements() {
 
     let lines: Vec<&str> = csv.lines().collect();
     assert_eq!(lines.len(), 3); // Header + 2 requirements
-    
+
     // First requirement should show checkmark
     assert!(lines[1].contains("Linked Req"));
     assert!(lines[1].contains(",✓"));
-    
+
     // Second requirement should show dash
     assert!(lines[2].contains("Unlinked Req"));
     assert!(lines[2].contains(",-"));
@@ -312,7 +315,7 @@ fn export_csv_shows_linked_requirements() {
 #[test]
 fn export_csv_escapes_special_characters() {
     let mut repo = base_repo();
-    
+
     let mut req = sample_requirement(1, 1, "Quote Test");
     req.req_title = "Test, with \"quotes\"".to_string();
     repo.requirements.insert(1, req);
@@ -329,13 +332,14 @@ fn export_csv_escapes_special_characters() {
 #[test]
 fn export_csv_filters_tests_by_status() {
     let mut repo = base_repo();
-    
-    repo.requirements.insert(1, sample_requirement(1, 1, "Req 1"));
-    
+
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Req 1"));
+
     let mut test1 = sample_test(1, 1, "Test 1");
     test1.test_status = 1; // Not Run
     repo.tests.insert(1, test1);
-    
+
     let mut test2 = sample_test(2, 1, "Test 2");
     test2.test_status = 2; // Passed
     repo.tests.insert(2, test2);
@@ -359,10 +363,12 @@ fn export_csv_filters_tests_by_status() {
 #[test]
 fn matrix_view_returns_all_requirements_and_tests() {
     let mut repo = base_repo();
-    
+
     for i in 1..=3 {
-        repo.requirements.insert(i, sample_requirement(i, 1, &format!("Req {}", i)));
-        repo.tests.insert(i, sample_test(i, 1, &format!("Test {}", i)));
+        repo.requirements
+            .insert(i, sample_requirement(i, 1, &format!("Req {}", i)));
+        repo.tests
+            .insert(i, sample_test(i, 1, &format!("Test {}", i)));
     }
 
     let state = managed_state(repo);
@@ -381,11 +387,13 @@ fn matrix_view_returns_all_requirements_and_tests() {
 #[test]
 fn matrix_view_includes_links() {
     let mut repo = base_repo();
-    
-    repo.requirements.insert(1, sample_requirement(1, 1, "Req 1"));
-    repo.requirements.insert(2, sample_requirement(2, 1, "Req 2"));
+
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Req 1"));
+    repo.requirements
+        .insert(2, sample_requirement(2, 1, "Req 2"));
     repo.tests.insert(1, sample_test(1, 1, "Test 1"));
-    
+
     repo.matrices.push(sample_matrix_link(1, 1, 1));
     repo.matrices.push(sample_matrix_link(2, 1, 1));
 
@@ -405,7 +413,7 @@ fn matrix_view_includes_links() {
 #[test]
 fn matrix_view_filters_by_requirement_status() {
     let mut repo = base_repo();
-    
+
     repo.requirement_statuses.insert(
         2,
         RequirementStatus {
@@ -419,7 +427,7 @@ fn matrix_view_filters_by_requirement_status() {
     let mut req1 = sample_requirement(1, 1, "Draft Req");
     req1.req_current_status = 1; // Draft
     repo.requirements.insert(1, req1);
-    
+
     let mut req2 = sample_requirement(2, 1, "Accepted Req");
     req2.req_current_status = 2; // Accepted
     repo.requirements.insert(2, req2);
@@ -440,13 +448,14 @@ fn matrix_view_filters_by_requirement_status() {
 #[test]
 fn matrix_view_filters_by_test_status() {
     let mut repo = base_repo();
-    
-    repo.requirements.insert(1, sample_requirement(1, 1, "Req 1"));
-    
+
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Req 1"));
+
     let mut test1 = sample_test(1, 1, "Not Run Test");
     test1.test_status = 1;
     repo.tests.insert(1, test1);
-    
+
     let mut test2 = sample_test(2, 1, "Passed Test");
     test2.test_status = 2;
     repo.tests.insert(2, test2);
@@ -467,10 +476,13 @@ fn matrix_view_filters_by_test_status() {
 #[test]
 fn matrix_view_searches_requirements() {
     let mut repo = base_repo();
-    
-    repo.requirements.insert(1, sample_requirement(1, 1, "Authentication Feature"));
-    repo.requirements.insert(2, sample_requirement(2, 1, "Database Connection"));
-    repo.requirements.insert(3, sample_requirement(3, 1, "User Authentication"));
+
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Authentication Feature"));
+    repo.requirements
+        .insert(2, sample_requirement(2, 1, "Database Connection"));
+    repo.requirements
+        .insert(3, sample_requirement(3, 1, "User Authentication"));
 
     let state = managed_state(repo);
     let service = MatrixService::new(&state);
@@ -489,10 +501,11 @@ fn matrix_view_searches_requirements() {
 #[test]
 fn matrix_view_paginates_results() {
     let mut repo = base_repo();
-    
+
     // Create 25 requirements
     for i in 1..=25 {
-        repo.requirements.insert(i, sample_requirement(i, 1, &format!("Req {}", i)));
+        repo.requirements
+            .insert(i, sample_requirement(i, 1, &format!("Req {}", i)));
     }
 
     let state = managed_state(repo);
@@ -513,10 +526,13 @@ fn matrix_view_paginates_results() {
 #[test]
 fn matrix_view_sorts_by_title() {
     let mut repo = base_repo();
-    
-    repo.requirements.insert(1, sample_requirement(1, 1, "Zebra"));
-    repo.requirements.insert(2, sample_requirement(2, 1, "Alpha"));
-    repo.requirements.insert(3, sample_requirement(3, 1, "Beta"));
+
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Zebra"));
+    repo.requirements
+        .insert(2, sample_requirement(2, 1, "Alpha"));
+    repo.requirements
+        .insert(3, sample_requirement(3, 1, "Beta"));
 
     let state = managed_state(repo);
     let service = MatrixService::new(&state);
@@ -536,9 +552,10 @@ fn matrix_view_sorts_by_title() {
 #[test]
 fn matrix_view_sorts_descending() {
     let mut repo = base_repo();
-    
+
     for i in 1..=5 {
-        repo.requirements.insert(i, sample_requirement(i, 1, &format!("Req {}", i)));
+        repo.requirements
+            .insert(i, sample_requirement(i, 1, &format!("Req {}", i)));
     }
 
     let state = managed_state(repo);
@@ -562,10 +579,11 @@ fn matrix_view_sorts_descending() {
 #[test]
 fn can_calculate_coverage_percentage() {
     let mut repo = base_repo();
-    
+
     // 4 requirements, 2 tests
     for i in 1..=4 {
-        repo.requirements.insert(i, sample_requirement(i, 1, &format!("Req {}", i)));
+        repo.requirements
+            .insert(i, sample_requirement(i, 1, &format!("Req {}", i)));
     }
     repo.tests.insert(1, sample_test(1, 1, "Test 1"));
     repo.tests.insert(2, sample_test(2, 1, "Test 2"));
@@ -580,20 +598,21 @@ fn can_calculate_coverage_percentage() {
     let service = MatrixService::new(&state);
 
     let links = service.list_by_project(1).unwrap();
-    
+
     // Calculate coverage
     let covered_reqs: HashSet<i32> = links.iter().map(|l| l.matrix_req_id).collect();
     let coverage_percentage = (covered_reqs.len() as f32 / 4.0) * 100.0;
-    
+
     assert_eq!(coverage_percentage, 75.0); // 3 out of 4 = 75%
 }
 
 #[test]
 fn identifies_requirements_without_tests() {
     let mut repo = base_repo();
-    
+
     for i in 1..=5 {
-        repo.requirements.insert(i, sample_requirement(i, 1, &format!("Req {}", i)));
+        repo.requirements
+            .insert(i, sample_requirement(i, 1, &format!("Req {}", i)));
     }
     repo.tests.insert(1, sample_test(1, 1, "Test 1"));
 
@@ -607,7 +626,7 @@ fn identifies_requirements_without_tests() {
 
     let links = service.list_by_project(1).unwrap();
     let covered_reqs: HashSet<i32> = links.iter().map(|l| l.matrix_req_id).collect();
-    
+
     // Requirements 4 and 5 are not covered
     assert!(!covered_reqs.contains(&4));
     assert!(!covered_reqs.contains(&5));
@@ -616,10 +635,12 @@ fn identifies_requirements_without_tests() {
 #[test]
 fn identifies_tests_without_requirements() {
     let mut repo = base_repo();
-    
-    repo.requirements.insert(1, sample_requirement(1, 1, "Req 1"));
+
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Req 1"));
     for i in 1..=5 {
-        repo.tests.insert(i, sample_test(i, 1, &format!("Test {}", i)));
+        repo.tests
+            .insert(i, sample_test(i, 1, &format!("Test {}", i)));
     }
 
     // Link only tests 1, 2, and 3 to the requirement
@@ -632,7 +653,7 @@ fn identifies_tests_without_requirements() {
 
     let links = service.list_by_project(1).unwrap();
     let linked_tests: HashSet<i32> = links.iter().map(|l| l.matrix_test_id).collect();
-    
+
     // Tests 4 and 5 are orphaned
     assert!(!linked_tests.contains(&4));
     assert!(!linked_tests.contains(&5));

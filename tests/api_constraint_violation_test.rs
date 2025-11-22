@@ -754,7 +754,7 @@ async fn create_category_without_required_fields_returns_error() {
 #[rocket::async_test]
 async fn delete_category_that_has_requirements_handles_gracefully() {
     let mut repo = base_repo();
-    
+
     // Create a requirement that uses category 1
     repo.requirements.insert(
         1,
@@ -791,16 +791,14 @@ async fn delete_category_that_has_requirements_handles_gracefully() {
     // The mock doesn't enforce this, but real DB would
     let status = response.status();
     assert!(
-        status == Status::NoContent
-            || status == Status::BadRequest
-            || status == Status::NotFound
+        status == Status::NoContent || status == Status::BadRequest || status == Status::NotFound
     );
 }
 
 #[rocket::async_test]
 async fn delete_applicability_that_has_requirements_handles_gracefully() {
     let mut repo = base_repo();
-    
+
     // Create a requirement that uses applicability 1
     repo.requirements.insert(
         1,
@@ -835,16 +833,14 @@ async fn delete_applicability_that_has_requirements_handles_gracefully() {
 
     let status = response.status();
     assert!(
-        status == Status::NoContent
-            || status == Status::BadRequest
-            || status == Status::NotFound
+        status == Status::NoContent || status == Status::BadRequest || status == Status::NotFound
     );
 }
 
 #[rocket::async_test]
 async fn delete_status_that_has_requirements_handles_gracefully() {
     let mut repo = base_repo();
-    
+
     // Create a requirement that uses status 1
     repo.requirements.insert(
         1,
@@ -1104,4 +1100,3 @@ async fn constraint_violation_returns_proper_error_format() {
         }
     }
 }
-

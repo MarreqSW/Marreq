@@ -87,12 +87,7 @@ mod test_support {
         repo
     }
 
-    pub fn sample_applicability(
-        id: i32,
-        project_id: i32,
-        title: &str,
-        tag: &str,
-    ) -> Applicability {
+    pub fn sample_applicability(id: i32, project_id: i32, title: &str, tag: &str) -> Applicability {
         Applicability {
             app_id: id,
             app_title: title.to_string(),
@@ -463,12 +458,8 @@ async fn create_multiple_applicability_items_sequentially() {
             .header(ContentType::JSON)
             .private_cookie(session_cookie(1))
             .body(
-                new_applicability_json(
-                    &format!("Applicability {}", i),
-                    &format!("APP{}", i),
-                    1,
-                )
-                .to_string(),
+                new_applicability_json(&format!("Applicability {}", i), &format!("APP{}", i), 1)
+                    .to_string(),
             )
             .dispatch()
             .await;

@@ -3,8 +3,8 @@ use super::cache::{keys, Cache};
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository, Repository,
-    RequirementsRepository, TestsRepository, UserRepository, LogRepository,
+    LogRepository, LookupRepository, MatrixRepository, ProjectMembersRepository,
+    ProjectsRepository, Repository, RequirementsRepository, TestsRepository, UserRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;

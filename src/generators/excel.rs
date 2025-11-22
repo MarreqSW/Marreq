@@ -95,7 +95,7 @@ pub fn create_matrix_workbook(
             // Check if this requirement is linked to this test
             let test_present: i64 = matrix
                 .filter(req_id.eq(req.id))
-                .filter(crate::schema::matrix::dsl::id.eq(test.id))
+                .filter(crate::schema::matrix::dsl::test_id.eq(test.id))
                 .count()
                 .get_result(connection.as_mut())
                 .map_err(|e| format!("Error checking matrix link: {:?}", e))?;

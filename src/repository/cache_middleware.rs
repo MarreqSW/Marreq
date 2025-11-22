@@ -234,9 +234,9 @@ impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
     fn add_project_member(&mut self, new: &NewProjectMember) -> Result<(), RepoError> {
         self.inner.add_project_member(new)?;
         self.cache
-            .invalidate_project_membership(new.project_id, new.id);
+            .invalidate_project_membership(new.project_id, new.user_id);
         self.cache.invalidate_project(new.project_id);
-        self.cache.invalidate_user(new.id);
+        self.cache.invalidate_user(new.user_id);
         Ok(())
     }
 

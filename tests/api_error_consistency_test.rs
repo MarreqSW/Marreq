@@ -163,16 +163,20 @@ async fn not_found_errors_return_404_status() {
 
     for (method, endpoint) in endpoints {
         let response = match method {
-            "GET" => client
-                .get(endpoint)
-                .private_cookie(session_cookie(1))
-                .dispatch()
-                .await,
-            "DELETE" => client
-                .delete(endpoint)
-                .private_cookie(session_cookie(1))
-                .dispatch()
-                .await,
+            "GET" => {
+                client
+                    .get(endpoint)
+                    .private_cookie(session_cookie(1))
+                    .dispatch()
+                    .await
+            }
+            "DELETE" => {
+                client
+                    .delete(endpoint)
+                    .private_cookie(session_cookie(1))
+                    .dispatch()
+                    .await
+            }
             _ => continue,
         };
 
@@ -292,7 +296,7 @@ async fn bad_request_has_error_message() {
         .await;
 
     assert_eq!(response.status(), Status::BadRequest);
-    
+
     let body: Option<Value> = response.into_json().await;
     if let Some(error) = body {
         // Should have error message
@@ -400,7 +404,7 @@ async fn error_messages_are_clear_and_actionable() {
         .await;
 
     assert_eq!(response.status(), Status::BadRequest);
-    
+
     let body: Option<Value> = response.into_json().await;
     if let Some(error) = body {
         let error_str = error.to_string();
@@ -444,4 +448,3 @@ async fn same_error_conditions_return_same_status_codes() {
         );
     }
 }
-

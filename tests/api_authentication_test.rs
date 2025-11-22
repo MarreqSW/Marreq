@@ -8,8 +8,8 @@
 //! - Expired sessions are handled
 //! - Admin vs regular user permissions
 
-use req_man::models::*;
 use req_man::auth::session::SESSION_COOKIE;
+use req_man::models::*;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::json;
@@ -675,4 +675,3 @@ async fn regular_user_can_access_endpoints() {
 
     assert_eq!(response.status(), Status::Ok);
 }
-

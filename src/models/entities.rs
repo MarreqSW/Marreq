@@ -13,7 +13,7 @@ use std::fmt;
 ///
 /// Mirrors the database representation and is used when fetching or updating
 /// existing requirements.
-#[derive(Serialize, Deserialize, Queryable, AsChangeset, Clone)]
+#[derive(Serialize, Deserialize, Queryable, AsChangeset, Clone, Debug)]
 pub struct Requirement {
     pub id: i32,
     pub title: String,
@@ -35,7 +35,7 @@ pub struct Requirement {
 
 
 /// Link between a requirement and a test in the traceability matrix.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct MatrixLink {
     pub req_id: i32,
@@ -67,7 +67,7 @@ pub struct User {
 }
 
 /// A test case that can verify one or more requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct TestCase {
     pub id: i32,
@@ -105,7 +105,7 @@ pub struct ProjectMember {
 }
 
 /// A single audit log entry describing a user action.
-#[derive(Queryable, Serialize, Deserialize, Debug)]
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 pub struct Log {
     pub log_id: i32,
     pub id: i32,

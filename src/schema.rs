@@ -41,9 +41,9 @@ diesel::table! {
 }
 
 diesel::table! {
-    matrix (req_id, id) {
+    matrix (req_id, test_id) {
         req_id -> Int4,
-        id -> Int4,
+        test_id -> Int4,
         creation_date -> Timestamp,
         project_id -> Int4,
     }
@@ -157,7 +157,7 @@ diesel::joinable!(logs -> projects (project_id));
 diesel::joinable!(logs -> users (id));
 diesel::joinable!(matrix -> projects (project_id));
 diesel::joinable!(matrix -> requirements (req_id));
-diesel::joinable!(matrix -> tests (id));
+diesel::joinable!(matrix -> tests (test_id));
 diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (id));
 diesel::joinable!(requirement_status -> projects (project_id));

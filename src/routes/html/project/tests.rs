@@ -228,9 +228,9 @@ async fn post_test(
     #[cfg(debug_assertions)]
     println!("NewTestForm requirements: {:#?}", new_test.test_req);
     for req in new_test.test_req.iter() {
-        let matrix_item = NewMatrix {
+        let matrix_item = NewMatrixLink {
             req_id: *req,
-            id: id,
+            test_id: id,
             project_id: new_test.project_id,
         };
         state

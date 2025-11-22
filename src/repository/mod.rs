@@ -119,7 +119,7 @@ pub trait ProjectMembersRepository {
 
 pub trait MatrixRepository {
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<MatrixLink>, RepoError>;
-    fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError>;
+    fn insert_new_matrix_item(&mut self, new: &NewMatrixLink) -> Result<(), RepoError>;
 }
 
 pub trait Repository:

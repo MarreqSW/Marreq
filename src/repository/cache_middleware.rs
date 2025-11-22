@@ -539,7 +539,7 @@ impl<R: Repository> MatrixRepository for CacheRepository<R> {
         })
     }
 
-    fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError> {
+    fn insert_new_matrix_item(&mut self, new: &NewMatrixLink) -> Result<(), RepoError> {
         self.inner.insert_new_matrix_item(new)?;
         let key = keys::Matrix::by_project(new.project_id);
         self.cache.remove(&key);
@@ -1070,9 +1070,9 @@ mod tests {
         // Matrix operations
         repo.get_matrix_by_project(1).unwrap();
         assert!(cache.get(&keys::Matrix::by_project(1)).is_some());
-        repo.insert_new_matrix_item(&NewMatrix {
+        repo.insert_new_matrix_item(&NewMatrixLink {
             req_id: 1,
-            id: 1,
+            test_id: 1,
             project_id: 1,
         })
         .unwrap();

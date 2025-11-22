@@ -4,7 +4,7 @@ use crate::models::entities::{
     TestCase, TestStatus, User, VerificationMethod,
 };
 use crate::models::forms::{
-    NewApplicability, NewCategory, NewMatrix, NewProject, NewProjectMember, NewRequirement,
+    NewApplicability, NewCategory, NewMatrixLink, NewProject, NewProjectMember, NewRequirement,
     NewRequirementStatus, NewTestCase, NewTestStatus, NewUser, NewVerificationMethod,
     UpdateProject, UpdateUser,
 };
@@ -770,7 +770,7 @@ impl TestsCaseRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         dsl::matrix
             .filter(dsl::req_id.eq(rid))
-            .inner_join(t::tests.on(dsl::id.eq(t::id)))
+            .inner_join(t::tests.on(dsl::test_id.eq(t::id)))
             .select((
                 t::id,
                 t::name,
@@ -789,7 +789,7 @@ impl TestsCaseRepository for DieselRepo {
         use schema::{matrix, requirements};
         let mut conn = self.get_conn()?;
         matrix::dsl::matrix
-            .filter(matrix::dsl::id.eq(tid))
+            .filter(matrix::dsl::test_id.eq(tid))
             .inner_join(
                 requirements::dsl::requirements.on(matrix::dsl::req_id.eq(requirements::dsl::id)),
             )
@@ -866,11 +866,11 @@ impl TestsCaseRepository for DieselRepo {
     ) -> Result<(), RepoError> {
         use schema::matrix::dsl;
         let mut conn = self.get_conn()?;
-        diesel::delete(dsl::matrix.filter(dsl::id.eq(test_id_val))).execute(conn.as_mut())?;
+        diesel::delete(dsl::matrix.filter(dsl::test_id.eq(test_id_val))).execute(conn.as_mut())?;
         for id in requirement_ids {
-            let matrix_item = NewMatrix {
+            let matrix_item = NewMatrixLink {
                 req_id: *id,
-                id: test_id_val,
+                test_id: test_id_val,
                 project_id: 1,
             };
             diesel::insert_into(schema::matrix::table)
@@ -962,7 +962,7 @@ impl MatrixRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError> {
+    fn insert_new_matrix_item(&mut self, new: &NewMatrixLink) -> Result<(), RepoError> {
         let mut conn = self.get_conn()?;
         diesel::insert_into(schema::matrix::table)
             .values(new)

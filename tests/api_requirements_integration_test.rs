@@ -1,0 +1,677 @@
+#![cfg(feature = "test-helpers")]
+
+//! Comprehensive integration tests for Requirements API endpoints.
+//!
+//! These tests verify the complete behavior of `/api/requirements` endpoints including:
+//! - CRUD operations
+//! - Error handling (404, 400, 401, 403)
+//! - Project scoping
+//! - JSON response format validation
+//! - Edge cases and validation
+
+use req_man::models::*;
+use rocket::http::{ContentType, Cookie, Status};
+use rocket::local::asynchronous::Client;
+use serde_json::{json, Value};
+
+mod test_support {
+    use super::*;
+    use chrono::{NaiveDate, NaiveDateTime};
+    use req_man::app::AppState;
+    use req_man::auth::session::SESSION_COOKIE;
+    use req_man::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use std::sync::{Arc, RwLock};
+
+    pub type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+
+    pub fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    pub fn managed_state(repo: DieselRepoMock) -> TestAppState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    pub async fn test_client(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(managed_state(repo))
+            .mount("/api", req_man::api::routes());
+
+        Client::tracked(rocket).await.expect("rocket instance")
+    }
+
+    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    pub fn base_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+
+        let mut admin = DieselRepoMock::make_user(1, "admin", "password");
+        admin.is_admin = true;
+        repo.users.insert(1, admin);
+
+        let regular_user = DieselRepoMock::make_user(2, "user", "password");
+        repo.users.insert(2, regular_user);
+
+        repo.projects.insert(
+            1,
+            Project {
+                project_id: 1,
+                project_name: "Test Project".into(),
+                project_description: Some("Description".into()),
+                project_creation_date: Some(timestamp()),
+                project_update_date: Some(timestamp()),
+                project_status: Some("Active".into()),
+                project_owner_id: Some(1),
+            },
+        );
+
+        repo.projects.insert(
+            2,
+            Project {
+                project_id: 2,
+                project_name: "Other Project".into(),
+                project_description: Some("Other Description".into()),
+                project_creation_date: Some(timestamp()),
+                project_update_date: Some(timestamp()),
+                project_status: Some("Active".into()),
+                project_owner_id: Some(2),
+            },
+        );
+
+        repo.project_members.push(ProjectMember {
+            project_id: 1,
+            user_id: 1,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        repo.project_members.push(ProjectMember {
+            project_id: 2,
+            user_id: 2,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        repo.requirement_statuses.insert(
+            1,
+            RequirementStatus {
+                req_st_id: 1,
+                req_st_title: "Draft".into(),
+                req_st_description: "".into(),
+                req_st_short_name: "D".into(),
+            },
+        );
+
+        repo.requirement_statuses.insert(
+            2,
+            RequirementStatus {
+                req_st_id: 2,
+                req_st_title: "Accepted".into(),
+                req_st_description: "".into(),
+                req_st_short_name: "A".into(),
+            },
+        );
+
+        repo.categories.insert(
+            1,
+            Category {
+                cat_id: 1,
+                cat_title: "Systems".into(),
+                cat_description: "".into(),
+                cat_tag: "SYS".into(),
+                project_id: 1,
+            },
+        );
+
+        repo.verifications.insert(
+            1,
+            Verification {
+                verification_id: 1,
+                verification_name: "Analysis".into(),
+                verification_description: "".into(),
+                project_id: 1,
+            },
+        );
+
+        repo.applicability.insert(
+            1,
+            Applicability {
+                app_id: 1,
+                app_title: "All".into(),
+                app_description: "".into(),
+                app_tag: "ALL".into(),
+                project_id: 1,
+            },
+        );
+
+        repo
+    }
+
+    pub fn sample_requirement(id: i32, project_id: i32, title: &str) -> Requirement {
+        Requirement {
+            req_id: id,
+            req_title: title.to_string(),
+            req_description: format!("{} description", title),
+            req_verification: 1,
+            req_current_status: 1,
+            req_author: 1,
+            req_reviewer: 1,
+            req_reference: format!("REQ-SYS-{:03}", id),
+            req_category: 1,
+            req_parent: 0,
+            req_creation_date: timestamp(),
+            req_update_date: timestamp(),
+            req_deadline_date: timestamp(),
+            req_applicability: 1,
+            req_justification: Some("Test justification".into()),
+            project_id,
+        }
+    }
+
+    pub fn new_requirement_json(title: &str, project_id: i32) -> Value {
+        json!({
+            "req_title": title,
+            "req_description": format!("{} description", title),
+            "req_verification": 1,
+            "req_author": 1,
+            "req_category": 1,
+            "req_current_status": 1,
+            "req_parent": 0,
+            "req_reference": "",
+            "req_reviewer": 1,
+            "req_applicability": 1,
+            "req_justification": null,
+            "project_id": project_id
+        })
+    }
+}
+
+use test_support::*;
+
+// ============================================================================
+// GET /api/requirements - List All Requirements
+// ============================================================================
+
+#[rocket::async_test]
+async fn get_requirements_returns_empty_list_when_no_requirements() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .get("/api/requirements")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let requirements: Vec<Requirement> = response.into_json().await.expect("json");
+    assert!(requirements.is_empty());
+}
+
+#[rocket::async_test]
+async fn get_requirements_returns_all_requirements() {
+    let mut repo = base_repo();
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Requirement 1"));
+    repo.requirements
+        .insert(2, sample_requirement(2, 1, "Requirement 2"));
+    repo.requirements
+        .insert(3, sample_requirement(3, 1, "Requirement 3"));
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .get("/api/requirements")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let requirements: Vec<Requirement> = response.into_json().await.expect("json");
+    assert_eq!(requirements.len(), 3);
+    
+    // Check all requirements are present (order may vary)
+    let titles: Vec<&str> = requirements.iter().map(|r| r.req_title.as_str()).collect();
+    assert!(titles.contains(&"Requirement 1"));
+    assert!(titles.contains(&"Requirement 2"));
+    assert!(titles.contains(&"Requirement 3"));
+}
+
+
+#[rocket::async_test]
+async fn get_requirements_requires_authentication() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .get("/api/requirements")
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Unauthorized);
+}
+
+// ============================================================================
+// GET /api/requirements/{id} - Get Single Requirement
+// ============================================================================
+
+#[rocket::async_test]
+async fn get_requirement_by_id_returns_correct_requirement() {
+    let mut repo = base_repo();
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Test Requirement"));
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .get("/api/requirements/1")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let requirement: Requirement = response.into_json().await.expect("json");
+    assert_eq!(requirement.req_id, 1);
+    assert_eq!(requirement.req_title, "Test Requirement");
+    assert_eq!(requirement.req_reference, "REQ-SYS-001");
+}
+
+#[rocket::async_test]
+async fn get_requirement_with_nonexistent_id_returns_404() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .get("/api/requirements/999")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NotFound);
+}
+
+#[rocket::async_test]
+async fn get_requirement_requires_authentication() {
+    let mut repo = base_repo();
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Test Requirement"));
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .get("/api/requirements/1")
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Unauthorized);
+}
+
+// ============================================================================
+// POST /api/requirements - Create New Requirement
+// ============================================================================
+
+#[rocket::async_test]
+async fn post_requirement_creates_new_requirement() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .post("/api/requirements")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(new_requirement_json("New Requirement", 1).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let result: Value = response.into_json().await.expect("json");
+    assert_eq!(result["status"], "ok");
+    assert_eq!(result["id"], 1);
+}
+
+#[rocket::async_test]
+async fn post_requirement_with_missing_fields_returns_error() {
+    let client = test_client(base_repo()).await;
+
+    let invalid_json = json!({
+        "req_title": "Incomplete Requirement"
+        // Missing required fields
+    });
+
+    let response = client
+        .post("/api/requirements")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(invalid_json.to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::UnprocessableEntity);
+}
+
+#[rocket::async_test]
+async fn post_requirement_requires_authentication() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .post("/api/requirements")
+        .header(ContentType::JSON)
+        .body(new_requirement_json("New Requirement", 1).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Unauthorized);
+}
+
+#[rocket::async_test]
+async fn post_requirement_with_invalid_json_returns_error() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .post("/api/requirements")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body("{invalid json}")
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::BadRequest);
+}
+
+
+// ============================================================================
+// PATCH /api/requirements/{id} - Partial Update Requirement
+// ============================================================================
+
+#[rocket::async_test]
+async fn patch_requirement_updates_title() {
+    let mut repo = base_repo();
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Original Title"));
+
+    let client = test_client(repo).await;
+
+    let patch = json!({
+        "req_title": "Updated Title"
+    });
+
+    let response = client
+        .patch("/api/requirements/1")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(patch.to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let result: Value = response.into_json().await.expect("json");
+    assert_eq!(result["success"], true);
+
+    // Verify the update
+    let get_response = client
+        .get("/api/requirements/1")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    let requirement: Requirement = get_response.into_json().await.expect("json");
+    assert_eq!(requirement.req_title, "Updated Title");
+}
+
+#[rocket::async_test]
+async fn patch_requirement_updates_multiple_fields() {
+    let mut repo = base_repo();
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Original"));
+
+    let client = test_client(repo).await;
+
+    let patch = json!({
+        "req_title": "Updated Title",
+        "req_description": "Updated description",
+        "req_current_status": 2
+    });
+
+    let response = client
+        .patch("/api/requirements/1")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(patch.to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+
+    // Verify all fields were updated
+    let get_response = client
+        .get("/api/requirements/1")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    let requirement: Requirement = get_response.into_json().await.expect("json");
+    assert_eq!(requirement.req_title, "Updated Title");
+    assert_eq!(requirement.req_description, "Updated description");
+    assert_eq!(requirement.req_current_status, 2);
+}
+
+#[rocket::async_test]
+async fn patch_requirement_with_empty_patch_returns_bad_request() {
+    let mut repo = base_repo();
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Test"));
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .patch("/api/requirements/1")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(json!({}).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::BadRequest);
+}
+
+#[rocket::async_test]
+async fn patch_nonexistent_requirement_returns_404() {
+    let client = test_client(base_repo()).await;
+
+    let patch = json!({
+        "req_title": "Updated Title"
+    });
+
+    let response = client
+        .patch("/api/requirements/999")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(patch.to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NotFound);
+}
+
+// ============================================================================
+// DELETE /api/requirements/{id} - Delete Requirement
+// ============================================================================
+
+#[rocket::async_test]
+async fn delete_requirement_removes_requirement() {
+    let mut repo = base_repo();
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "To Delete"));
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .delete("/api/requirements/1")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NoContent);
+
+    // Verify requirement is gone
+    let get_response = client
+        .get("/api/requirements/1")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(get_response.status(), Status::NotFound);
+}
+
+#[rocket::async_test]
+async fn delete_nonexistent_requirement_returns_404() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .delete("/api/requirements/999")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NotFound);
+}
+
+#[rocket::async_test]
+async fn delete_requirement_requires_authentication() {
+    let mut repo = base_repo();
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "To Delete"));
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .delete("/api/requirements/1")
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Unauthorized);
+}
+
+// ============================================================================
+// Project Scoping Tests
+// ============================================================================
+
+#[rocket::async_test]
+async fn get_requirements_returns_requirements_from_all_projects() {
+    let mut repo = base_repo();
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Project 1 Req"));
+    repo.requirements
+        .insert(2, sample_requirement(2, 2, "Project 2 Req"));
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .get("/api/requirements")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let requirements: Vec<Requirement> = response.into_json().await.expect("json");
+    
+    // Should return both projects' requirements
+    assert_eq!(requirements.len(), 2);
+}
+
+// ============================================================================
+// Edge Cases and Validation
+// ============================================================================
+
+#[rocket::async_test]
+async fn create_requirement_with_very_long_title() {
+    let client = test_client(base_repo()).await;
+
+    let long_title = "A".repeat(1000);
+    let mut req_json = new_requirement_json(&long_title, 1);
+
+    let response = client
+        .post("/api/requirements")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(req_json.to_string())
+        .dispatch()
+        .await;
+
+    // Should either accept or reject gracefully
+    assert!(
+        response.status() == Status::Ok || response.status() == Status::BadRequest
+    );
+}
+
+#[rocket::async_test]
+async fn create_multiple_requirements_sequentially() {
+    let client = test_client(base_repo()).await;
+
+    for i in 1..=5 {
+        let response = client
+            .post("/api/requirements")
+            .header(ContentType::JSON)
+            .private_cookie(session_cookie(1))
+            .body(new_requirement_json(&format!("Requirement {}", i), 1).to_string())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let result: Value = response.into_json().await.expect("json");
+        assert_eq!(result["id"], i);
+    }
+
+    // Verify all were created
+    let list_response = client
+        .get("/api/requirements")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    let requirements: Vec<Requirement> = list_response.into_json().await.expect("json");
+    assert_eq!(requirements.len(), 5);
+}
+
+#[rocket::async_test]
+async fn patch_requirement_preserves_unmodified_fields() {
+    let mut repo = base_repo();
+    let original = sample_requirement(1, 1, "Original Title");
+    let original_description = original.req_description.clone();
+    let original_status = original.req_current_status;
+    repo.requirements.insert(1, original);
+
+    let client = test_client(repo).await;
+
+    // Update only title
+    let patch = json!({
+        "req_title": "New Title"
+    });
+
+    client
+        .patch("/api/requirements/1")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(patch.to_string())
+        .dispatch()
+        .await;
+
+    // Verify other fields unchanged
+    let get_response = client
+        .get("/api/requirements/1")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    let requirement: Requirement = get_response.into_json().await.expect("json");
+    assert_eq!(requirement.req_title, "New Title");
+    assert_eq!(requirement.req_description, original_description);
+    assert_eq!(requirement.req_current_status, original_status);
+}

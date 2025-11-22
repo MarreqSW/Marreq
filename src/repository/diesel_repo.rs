@@ -870,32 +870,30 @@ impl TestsRepository for DieselRepo {
         use crate::schema::matrix::dsl::*;
         let mut conn = self.get_conn()?;
 
-        conn.as_mut().transaction::<_, diesel::result::Error, _>(|conn| {
-            // Delete existing links
-            diesel::delete(matrix.filter(matrix_test_id.eq(tid))).execute(conn)?;
+        conn.as_mut()
+            .transaction::<_, diesel::result::Error, _>(|conn| {
+                // Delete existing links
+                diesel::delete(matrix.filter(matrix_test_id.eq(tid))).execute(conn)?;
 
-            // Insert new links
-            for rid in requirement_ids {
-                // We need to get the project_id from the test to maintain consistency
-                // This is a bit inefficient but correct
-                use crate::schema::tests::dsl::tests;
-                use crate::schema::tests::dsl::{project_id as t_pid, test_id};
-                let pid: i32 = tests
-                    .filter(test_id.eq(tid))
-                    .select(t_pid)
-                    .first(conn)?;
+                // Insert new links
+                for rid in requirement_ids {
+                    // We need to get the project_id from the test to maintain consistency
+                    // This is a bit inefficient but correct
+                    use crate::schema::tests::dsl::tests;
+                    use crate::schema::tests::dsl::{project_id as t_pid, test_id};
+                    let pid: i32 = tests.filter(test_id.eq(tid)).select(t_pid).first(conn)?;
 
-                let new_matrix = NewMatrix {
-                    matrix_req_id: *rid,
-                    matrix_test_id: tid,
-                    project_id: pid,
-                };
-                diesel::insert_into(matrix)
-                    .values(&new_matrix)
-                    .execute(conn)?;
-            }
-            Ok(())
-        })?;
+                    let new_matrix = NewMatrix {
+                        matrix_req_id: *rid,
+                        matrix_test_id: tid,
+                        project_id: pid,
+                    };
+                    diesel::insert_into(matrix)
+                        .values(&new_matrix)
+                        .execute(conn)?;
+                }
+                Ok(())
+            })?;
         Ok(())
     }
 }
@@ -932,8 +930,7 @@ impl crate::repository::LogRepository for DieselRepo {
         use schema::logs::dsl::*;
         let mut conn = self.get_conn()?;
         let cutoff = chrono::Utc::now().naive_utc() - chrono::Duration::days(days);
-        let count = diesel::delete(logs.filter(created_at.lt(cutoff)))
-            .execute(conn.as_mut())?;
+        let count = diesel::delete(logs.filter(created_at.lt(cutoff))).execute(conn.as_mut())?;
         Ok(count)
     }
 }

@@ -287,7 +287,7 @@ async fn password_field_is_present() {
         .await;
 
     let user: User = response.into_json().await.expect("json");
-    
+
     // Mock repository includes password field (in production it would be hashed)
     // This test just verifies the field exists in the User model
     assert!(!user.user_password.is_empty());
@@ -306,9 +306,7 @@ async fn create_multiple_users_sequentially() {
             .post("/api/users")
             .header(ContentType::JSON)
             .private_cookie(session_cookie(1))
-            .body(
-                new_user_json(&format!("user{}", i), &format!("User {}", i), false).to_string(),
-            )
+            .body(new_user_json(&format!("user{}", i), &format!("User {}", i), false).to_string())
             .dispatch()
             .await;
 
@@ -337,12 +335,18 @@ async fn list_users_shows_admin_flag() {
         .await;
 
     let users: Vec<User> = response.into_json().await.expect("json");
-    
+
     // Find admin user
-    let admin = users.iter().find(|u| u.user_username == "admin").expect("admin user");
+    let admin = users
+        .iter()
+        .find(|u| u.user_username == "admin")
+        .expect("admin user");
     assert_eq!(admin.is_admin, true);
-    
+
     // Find regular user
-    let regular = users.iter().find(|u| u.user_username == "user").expect("regular user");
+    let regular = users
+        .iter()
+        .find(|u| u.user_username == "user")
+        .expect("regular user");
     assert_eq!(regular.is_admin, false);
 }

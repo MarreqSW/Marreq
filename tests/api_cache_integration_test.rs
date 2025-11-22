@@ -50,7 +50,7 @@ async fn get_stats_returns_cache_statistics() {
 
     assert_eq!(response.status(), Status::Ok);
     let stats: Value = response.into_json().await.expect("json");
-    
+
     assert!(stats["hits"].is_number());
     assert!(stats["misses"].is_number());
     assert!(stats["cache_size_bytes"].is_number());
@@ -157,5 +157,8 @@ async fn post_reset_counters_resets_metrics() {
 
     assert_eq!(response.status(), Status::Ok);
     let result: Value = response.into_json().await.expect("json");
-    assert_eq!(result["message"], "Cache performance counters reset successfully");
+    assert_eq!(
+        result["message"],
+        "Cache performance counters reset successfully"
+    );
 }

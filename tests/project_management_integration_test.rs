@@ -1,12 +1,12 @@
+use req_man::app::AppState;
+use req_man::auth::session::SESSION_COOKIE;
 use req_man::models::{Project, ProjectMember};
 use req_man::repository::diesel_repo_mock::DieselRepoMock;
-use req_man::routes::html::projects;
+use req_man::repository::CacheRepository;
 use req_man::routes::html::project;
-use req_man::auth::session::SESSION_COOKIE;
+use req_man::routes::html::projects;
 use rocket::http::{Cookie, Status};
 use rocket::local::asynchronous::Client;
-use req_man::app::AppState;
-use req_man::repository::CacheRepository;
 use std::sync::{Arc, RwLock};
 
 // Helper to create a test client with a populated mock repository
@@ -24,10 +24,7 @@ async fn test_client(repo: DieselRepoMock) -> Client {
                 projects::post_project,
             ],
         )
-        .mount(
-            "/p",
-            project::routes(),
-        )
+        .mount("/p", project::routes())
         .register(
             "/",
             rocket::catchers![
@@ -55,7 +52,7 @@ fn session_cookie(user_id: i32) -> Cookie<'static> {
 async fn projects_page_requires_authentication() {
     let client = test_client(DieselRepoMock::default()).await;
     let response = client.get("/projects").dispatch().await;
-    
+
     assert_eq!(response.status(), Status::Unauthorized);
     let body = response.into_string().await.unwrap();
     // Check for the error message set in catchers.rs
@@ -76,7 +73,7 @@ async fn projects_page_lists_user_projects() {
         project_owner_id: Some(1),
     };
     repo.projects.insert(10, project);
-    
+
     // Add membership
     repo.project_members.push(ProjectMember {
         project_id: 10,
@@ -132,7 +129,7 @@ async fn access_project_details_as_owner() {
         project_owner_id: Some(1),
     };
     repo.projects.insert(30, project);
-    
+
     // Add membership
     repo.project_members.push(ProjectMember {
         project_id: 30,

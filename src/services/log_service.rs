@@ -1,8 +1,8 @@
 use crate::app::{AppState, DieselCachedRepo};
-use crate::logger::{LogCtx, Logger, LoggerError};
-use crate::models::{ActionType, EntityType, Log};
+use crate::logger::LoggerError;
+use crate::models::Log;
 use crate::repository::errors::RepoError;
-use crate::repository::{LogRepository, PooledConnectionWrapper, UserRepository};
+use crate::repository::{LogRepository, UserRepository};
 use serde::Serialize;
 use thiserror::Error;
 
@@ -151,10 +151,6 @@ impl<'a> LogService<'a> {
             last_30_days,
             last_90_days,
         })
-    }
-
-    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
-        self.state.repo_read().inner_repo().get_conn()
     }
 
     fn enrich_with_usernames(&self, logs: Vec<Log>) -> Result<Vec<LogWithUser>, RepoError> {

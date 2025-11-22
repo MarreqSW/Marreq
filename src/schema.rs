@@ -60,8 +60,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    projects (project_id) {
-        project_id -> Int4,
+    projects (id) {
+        id -> Int4,
         #[max_length = 255]
         name -> Varchar,
         description -> Nullable<Text>,

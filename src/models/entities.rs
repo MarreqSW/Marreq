@@ -233,98 +233,52 @@ impl EntityType {
 }
 
 // Display implementations for entities.
-// These are intentionally simple, HTML-ish summaries and avoid
-// hardcoding the deployment host so they can be reused across
-// environments.
+// These provide minimal, text-based representations suitable for logging,
+// debugging, or simple text output. HTML rendering should be handled by
+// templates or view-layer helpers for better separation of concerns.
 impl fmt::Display for Requirement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "
-        <div class='requirement'>
-            <div class='ReqNum'>Num: <a href='/p/{}/requirements/show/{}'>{}</a></div>
-            <div class='ReqTitle'>Title: {}</div>
-            <div class='ReqDesc'>Description: {}</div>
-            <div class='ReqAuthor'>Author: {}</div>
-            <div class='ReqRef'>Reference {}</div>
-            <div class='ReqDate'>Date: {}</div>
-            <div class='ReqParent'>Parent: {}</div>
-        </div>",
-            self.project_id,
-            self.id,
-            self.id,
-            self.title,
-            self.description,
-            self.author_id,
-            self.reference_code,
-            self.creation_date,
-            self.parent_id.map(|id| id.to_string()).unwrap_or_else(|| "None".to_string())
-        )
+        write!(f, "Requirement #{}: {}", self.id, self.title)
     }
 }
 
 impl fmt::Display for Category {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<div class='category'>Category: {}</div>", self.title)
+        write!(f, "Category: {}", self.title)
     }
 }
 
 impl fmt::Display for Applicability {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "<div class='applicability'>Applicability: {}</div>",
-            self.title
-        )
+        write!(f, "Applicability: {}", self.title)
     }
 }
 
 impl fmt::Display for RequirementStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<div class='status'>Status: {}</div>", self.title)
+        write!(f, "Status: {}", self.title)
     }
 }
 
 impl fmt::Display for MatrixLink {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "
-        <div class='matrixID'>Req ID: {}</div>
-        <div class='matrixID'>Test ID: {}</div>",
-            self.req_id, self.test_id
-        )
+        write!(f, "Matrix: Req {} <-> Test {}", self.req_id, self.test_id)
     }
 }
 
 impl fmt::Display for TestCase {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "
-        <div class='TestDiv'>
-        <div class='testID'>Test ID: <a href='http://localhost:8000/tests/{}'>{}</a></div>
-        <div class='testName'>Name: {}</div>
-        <div class='testDescription'>Description: {}</div>
-        <div class='testSource'>Source: {}</div>
-        <div class='testParent'>Parent: {}</div>
-        </div>
-        ",
-            self.id,
-            self.id,
-            self.name,
-            self.description,
-            self.source,
-            self.parent_id
-                .map(|id| id.to_string())
-                .unwrap_or_else(|| "None".to_string())
-        )
+        write!(f, "Test #{}: {}", self.id, self.name)
     }
 }
 
 // Loggable implementations
+// This macro provides Loggable trait implementations for entity types.
+// It handles two cases: entities with project_id (most common) and entities
+// without project_id (only User and NewUser). The macro is kept simple since
+// there are only these two patterns and they're unlikely to grow.
 macro_rules! impl_loggable {
-    // Special case: no project_id
+    // Special case: no project_id (used only for User entities)
     ($ty:ty, $entity:expr, $name:ident, no_project) => {
         impl Loggable for $ty {
             fn entity_type() -> EntityType {

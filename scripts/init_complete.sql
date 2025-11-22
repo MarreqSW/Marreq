@@ -72,17 +72,19 @@ CREATE TABLE project_members (
 -- Requirement Status table
 CREATE TABLE requirement_status (
     id SERIAL PRIMARY KEY,
-    title VARCHAR NOT NULL DEFAULT ' ',
-    description VARCHAR NOT NULL DEFAULT ' ',
-    short_name VARCHAR NOT NULL DEFAULT ' '
+    title VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    tag VARCHAR NOT NULL,
+    project_id INTEGER NOT NULL
 );
 
 -- Test Status table
 CREATE TABLE status_id (
     id SERIAL PRIMARY KEY,
-    title VARCHAR NOT NULL DEFAULT ' ',
-    description VARCHAR NOT NULL DEFAULT ' ',
-    short_name VARCHAR NOT NULL DEFAULT ' '
+    title VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    tag VARCHAR NOT NULL,
+    project_id INTEGER NOT NULL
 );
 
 -- Categories table
@@ -106,8 +108,9 @@ CREATE TABLE applicability (
 -- Verification table
 CREATE TABLE verification (
     id SERIAL PRIMARY KEY,
-    name VARCHAR NOT NULL DEFAULT ' ',
-    description VARCHAR NOT NULL DEFAULT ' ',
+    title VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    tag VARCHAR NOT NULL,
     project_id INTEGER NOT NULL
 );
 
@@ -120,10 +123,9 @@ CREATE TABLE requirements (
     status_id INTEGER NOT NULL DEFAULT 1,
     author_id INTEGER NOT NULL DEFAULT 0,
     reviewer_id INTEGER NOT NULL DEFAULT 0,
-    req_link VARCHAR NOT NULL DEFAULT ' ',
     reference_code VARCHAR NOT NULL DEFAULT ' ',
     category_id INTEGER NOT NULL DEFAULT 1,
-    parent_id INTEGER NOT NULL DEFAULT 0,
+    parent_id INTEGER,
     creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deadline_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -140,7 +142,7 @@ CREATE TABLE tests (
     description VARCHAR NOT NULL DEFAULT ' ',
     source VARCHAR NOT NULL DEFAULT ' ',
     status_id INTEGER NOT NULL DEFAULT 0,
-    parent_id INTEGER NOT NULL DEFAULT 0,
+    parent_id INTEGER,
     project_id INTEGER NOT NULL
 );
 
@@ -180,6 +182,12 @@ ALTER TABLE applicability ADD CONSTRAINT fk_applicability_project
     FOREIGN KEY (project_id) REFERENCES projects(project_id);
 
 ALTER TABLE verification ADD CONSTRAINT fk_verification_project 
+    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+
+ALTER TABLE requirement_status ADD CONSTRAINT fk_requirement_status_project
+    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+
+ALTER TABLE status_id ADD CONSTRAINT fk_status_id_project
     FOREIGN KEY (project_id) REFERENCES projects(project_id);
 
 ALTER TABLE requirements ADD CONSTRAINT fk_requirements_project 
@@ -267,20 +275,20 @@ INSERT INTO projects (project_id, name, description, creation_date, status_id) V
     (3, 'Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 'Active');
 
 -- Requirement Status definitions
-INSERT INTO requirement_status (title, description, short_name) VALUES
-    ('Draft', 'The requirement is still being edited and developed', 'Drf'),
-    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro'),
-    ('Accepted', 'The requirement is accepted and must be processed', 'Acc'),
-    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej'),
-    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can'),
-    ('Finished', 'The requirement is finished and completed', 'Fsh');
+INSERT INTO requirement_status (title, description, tag, project_id) VALUES
+    ('Draft', 'The requirement is still being edited and developed', 'Drf', 1),
+    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', 1),
+    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', 1),
+    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', 1),
+    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', 1),
+    ('Finished', 'The requirement is finished and completed', 'Fsh', 1);
 
 -- Test Status definitions
-INSERT INTO status_id (title, description, short_name) VALUES
-    ('Passed', 'The test has passed all criteria', 'Pass'),
-    ('Failed', 'The test has failed one or more criteria', 'Fail'),
-    ('Pending', 'The test is pending execution', 'Pend'),
-    ('In Progress', 'The test is currently being executed', 'Prog');
+INSERT INTO status_id (title, description, tag, project_id) VALUES
+    ('Passed', 'The test has passed all criteria', 'Pass', 1),
+    ('Failed', 'The test has failed one or more criteria', 'Fail', 1),
+    ('Pending', 'The test is pending execution', 'Pend', 1),
+    ('In Progress', 'The test is currently being executed', 'Prog', 1);
 
 -- Users with working passwords (all users have password: 'password')
 -- Password hash: $2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m
@@ -328,19 +336,19 @@ INSERT INTO applicability (title, description, tag, project_id) VALUES
     ('CubeSat', 'Small satellite missions and CubeSat platforms', 'CUBE', 1);
 
 -- Verification methods
-INSERT INTO verification (name, description, project_id) VALUES
-    ('Inspection', 'Nondestructive examination of a system or component', 1),
-    ('Analysis', 'Verification using mathematical models and calculations', 1),
-    ('Demonstration', 'Manipulation of the product as intended in its operational environment', 1),
-    ('Test', 'Controlled verification with predefined inputs and expected outputs', 1);
+INSERT INTO verification (title, description, tag, project_id) VALUES
+    ('Inspection', 'Nondestructive examination of a system or component', 'INSP', 1),
+    ('Analysis', 'Verification using mathematical models and calculations', 'ANALYSIS', 1),
+    ('Demonstration', 'Manipulation of the product as intended in its operational environment', 'DEMO', 1),
+    ('Test', 'Controlled verification with predefined inputs and expected outputs', 'TEST', 1);
 
 -- Requirements for Space Project
-INSERT INTO requirements (title, description, reference_code, category_id, applicability_id, status_id, verification_method_id, author_id, reviewer_id, parent_id, req_link, creation_date, update_date, deadline_date, project_id) VALUES
-    ('REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations under AM0 illumination conditions', 'REQ-PWR-001', 1, 1, 1, 1, 1, 2, 0, 'https://spacecorp.com/power-specs', '2024-01-15', '2024-01-15', '2024-06-30', 1),
-    ('REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse periods', 'REQ-PWR-002', 1, 1, 2, 1, 1, 2, 0, '', '2024-01-15', '2024-01-20', '2024-07-15', 1),
-    ('REQ-COMM-001', 'The satellite shall maintain continuous communication with ground stations during 90% of each orbit period', 'REQ-COMM-001', 2, 1, 3, 1, 1, 2, 0, '', '2024-01-16', '2024-01-16', '2024-08-15', 1),
-    ('REQ-ACS-001', 'The satellite shall maintain pointing accuracy of ±0.1 degrees in all three axes during normal operations', 'REQ-ACS-001', 3, 1, 2, 1, 1, 2, 0, '', '2024-01-17', '2024-01-17', '2024-06-15', 1),
-    ('REQ-THERM-001', 'All electronic components shall operate within -20°C to +60°C temperature range throughout the mission', 'REQ-THERM-001', 4, 1, 2, 1, 1, 2, 0, '', '2024-01-18', '2024-01-18', '2024-07-15', 1);
+INSERT INTO requirements (title, description, reference_code, category_id, applicability_id, status_id, verification_method_id, author_id, reviewer_id, parent_id, creation_date, update_date, deadline_date, project_id) VALUES
+    ('REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations under AM0 illumination conditions', 'REQ-PWR-001', 1, 1, 1, 1, 1, 2, NULL, '2024-01-15', '2024-01-15', '2024-06-30', 1),
+    ('REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse periods', 'REQ-PWR-002', 1, 1, 2, 1, 1, 2, NULL, '2024-01-15', '2024-01-20', '2024-07-15', 1),
+    ('REQ-COMM-001', 'The satellite shall maintain continuous communication with ground stations during 90% of each orbit period', 'REQ-COMM-001', 2, 1, 3, 1, 1, 2, NULL, '2024-01-16', '2024-01-16', '2024-08-15', 1),
+    ('REQ-ACS-001', 'The satellite shall maintain pointing accuracy of ±0.1 degrees in all three axes during normal operations', 'REQ-ACS-001', 3, 1, 2, 1, 1, 2, NULL, '2024-01-17', '2024-01-17', '2024-06-15', 1),
+    ('REQ-THERM-001', 'All electronic components shall operate within -20°C to +60°C temperature range throughout the mission', 'REQ-THERM-001', 4, 1, 2, 1, 1, 2, NULL, '2024-01-18', '2024-01-18', '2024-07-15', 1);
 
 -- Tests for Space Project
 INSERT INTO tests (reference_code, name, description, status_id, source, project_id) VALUES

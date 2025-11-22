@@ -595,7 +595,7 @@ async fn create_requirement_with_very_long_title() {
     let client = test_client(base_repo()).await;
 
     let long_title = "A".repeat(1000);
-    let mut req_json = new_requirement_json(&long_title, 1);
+    let req_json = new_requirement_json(&long_title, 1);
 
     let response = client
         .post("/api/requirements")

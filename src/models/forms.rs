@@ -35,74 +35,29 @@ pub struct NewRequirement {
     pub project_id: i32,
 }
 
-/// Form used to insert or update a [`Category`].
-#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
-#[serde(crate = "rocket::serde")]
-#[diesel(table_name = categories)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(primary_key(id))]
-pub struct NewCategory {
-    pub id: Option<i32>,
-    pub title: String,
-    pub description: String,
-    pub tag: String,
-    pub project_id: i32,
+/// Macro to define tagged form entities with common structure.
+macro_rules! define_tagged_form {
+    ($name:ident, $table:ident) => {
+        #[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
+        #[serde(crate = "rocket::serde")]
+        #[diesel(table_name = $table)]
+        #[diesel(check_for_backend(diesel::pg::Pg))]
+        #[diesel(primary_key(id))]
+        pub struct $name {
+            pub id: Option<i32>,
+            pub title: String,
+            pub description: String,
+            pub tag: String,
+            pub project_id: i32,
+        }
+    };
 }
 
-/// Form used to insert or update an [`Applicability`].
-#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
-#[serde(crate = "rocket::serde")]
-#[diesel(table_name = applicability)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(primary_key(id))]
-pub struct NewApplicability {
-    pub id: Option<i32>,
-    pub title: String,
-    pub description: String,
-    pub tag: String,
-    pub project_id: i32,
-}
-
-/// Form used to create a new requirement status.
-#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
-#[serde(crate = "rocket::serde")]
-#[diesel(table_name = requirement_status)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(primary_key(id))]
-pub struct NewRequirementStatus {
-    pub id: Option<i32>,
-    pub title: String,
-    pub description: String,
-    pub tag: String,
-    pub project_id: i32,
-}
-
-/// Form used to create a new test status.
-#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
-#[serde(crate = "rocket::serde")]
-#[diesel(table_name = status_id)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(primary_key(id))]
-pub struct NewTestStatus {
-    pub id: Option<i32>,
-    pub title: String,
-    pub description: String,
-    pub tag: String,
-    pub project_id: i32,
-}
-
-#[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm, Clone)]
-#[serde(crate = "rocket::serde")]
-#[diesel(table_name = verification)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(primary_key(id))]
-pub struct NewVerificationMethod {
-    pub id: Option<i32>,
-    pub title: String,
-    pub description: String,
-    pub tag: String,
-    pub project_id: i32,
-}
+define_tagged_form!(NewCategory, categories);
+define_tagged_form!(NewApplicability, applicability);
+define_tagged_form!(NewRequirementStatus, requirement_status);
+define_tagged_form!(NewTestStatus, status_id);
+define_tagged_form!(NewVerificationMethod, verification);
 
 /// Form used to create a new [`MatrixLink`] entry tying a requirement to a test.
 #[derive(Serialize, Deserialize, Insertable)]
@@ -294,13 +249,13 @@ impl fmt::Display for NewRequirement {
 // Loggable implementations for form types
 macro_rules! impl_loggable {
     // For types with `Option` id
-    ($ty:ty, $entity:expr, $id:ident?, $name:ident) => {
+    ($ty:ty, $entity:expr, $name:ident) => {
         impl Loggable for $ty {
             fn entity_type() -> EntityType {
                 $entity
             }
             fn id(&self) -> i32 {
-                self.$id.unwrap_or_default()
+                self.id.unwrap_or_default()
             }
             fn project_id(&self) -> Option<i32> {
                 Some(self.project_id)
@@ -311,13 +266,13 @@ macro_rules! impl_loggable {
         }
     };
 
-    ($ty:ty, $entity:expr, $id:ident?, $name:ident, no_project) => {
+    ($ty:ty, $entity:expr, $name:ident, no_project) => {
         impl Loggable for $ty {
             fn entity_type() -> EntityType {
                 $entity
             }
             fn id(&self) -> i32 {
-                self.$id.unwrap_or_default()
+                self.id.unwrap_or_default()
             }
             fn project_id(&self) -> Option<i32> {
                 None
@@ -329,11 +284,11 @@ macro_rules! impl_loggable {
     };
 }
 
-impl_loggable!(NewRequirement, EntityType::Requirement, id?, title);
-impl_loggable!(NewCategory, EntityType::Category, id?, title);
-impl_loggable!(NewApplicability, EntityType::Applicability, id?, title);
-impl_loggable!(NewVerificationMethod, EntityType::Verification, id?, title);
-impl_loggable!(NewTestCase, EntityType::Test, id?, name);
-impl_loggable!(NewUser, EntityType::User, id?, username, no_project);
-impl_loggable!(NewRequirementStatus, EntityType::Requirement, id?, title);
-impl_loggable!(NewTestStatus, EntityType::Test, id?, title);
+impl_loggable!(NewRequirement, EntityType::Requirement, title);
+impl_loggable!(NewCategory, EntityType::Category, title);
+impl_loggable!(NewApplicability, EntityType::Applicability, title);
+impl_loggable!(NewVerificationMethod, EntityType::Verification, title);
+impl_loggable!(NewTestCase, EntityType::Test, name);
+impl_loggable!(NewUser, EntityType::User, username, no_project);
+impl_loggable!(NewRequirementStatus, EntityType::Requirement, title);
+impl_loggable!(NewTestStatus, EntityType::Test, title);

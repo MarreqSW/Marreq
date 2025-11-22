@@ -121,6 +121,13 @@ pub trait MatrixRepository {
     fn insert_new_matrix_item(&mut self, new: &NewMatrix) -> Result<(), RepoError>;
 }
 
+pub trait LogRepository {
+    fn insert_log(&mut self, new: &NewLog) -> Result<(), RepoError>;
+    fn get_logs_recent(&self, limit: i64) -> Result<Vec<Log>, RepoError>;
+    fn get_logs_by_entity(&self, entity_type: &str, entity_id: i32) -> Result<Vec<Log>, RepoError>;
+    fn cleanup_logs(&mut self, days: i64) -> Result<usize, RepoError>;
+}
+
 pub trait Repository:
     UserRepository
     + LookupRepository
@@ -129,6 +136,7 @@ pub trait Repository:
     + ProjectsRepository
     + ProjectMembersRepository
     + MatrixRepository
+    + LogRepository
 {
 }
 
@@ -140,6 +148,7 @@ impl<T> Repository for T where
         + ProjectsRepository
         + ProjectMembersRepository
         + MatrixRepository
+        + LogRepository
 {
 }
 

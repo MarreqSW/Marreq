@@ -522,7 +522,7 @@ pub struct ImportMappingForm {
 
 // Logging models
 /// A single audit log entry describing a user action.
-#[derive(Queryable, Serialize, Deserialize, Debug)]
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 pub struct Log {
     pub log_id: i32,
     pub user_id: i32,

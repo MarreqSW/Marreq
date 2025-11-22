@@ -165,20 +165,21 @@ async fn post_user(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let service = UserService::new(state.inner());
-    let mut user_data = new_user.into_inner();
+    let user_data = new_user.into_inner();
 
-    match hash_password(&user_data.password_hash) {
-        Ok(hashed_password) => {
-            user_data.password_hash = hashed_password;
-            match service.create(&admin.into_inner(), user_data) {
-                Ok(id) => Ok(Redirect::to(uri!(show_user_id(id)))),
-                Err(_) => Ok(Redirect::to(uri!(new_user(
-                    error = Some("Failed to create user".to_string())
-                )))),
-            }
-        }
+    // Convert NewUser form to UserCreateRequest for password hashing
+    let request = UserCreateRequest {
+        username: user_data.username,
+        name: user_data.name,
+        email: user_data.email,
+        password: user_data.password_hash, // HTML form uses this field for plain password
+        is_admin: user_data.is_admin,
+    };
+
+    match service.create(&admin.into_inner(), request) {
+        Ok(id) => Ok(Redirect::to(uri!(show_user_id(id)))),
         Err(_) => Ok(Redirect::to(uri!(new_user(
-            error = Some("Password hashing failed".to_string())
+            error = Some("Failed to create user".to_string())
         )))),
     }
 }

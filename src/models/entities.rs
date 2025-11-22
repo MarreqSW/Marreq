@@ -45,6 +45,14 @@ pub struct MatrixLink {
 }
 
 /// A system user that can access projects and manage requirements.
+///
+/// # Security Note
+/// The `password_hash` field is protected with `#[serde(skip_serializing)]` to prevent
+/// accidental exposure in API responses. Never remove this attribute without creating a
+/// dedicated public DTO type that excludes sensitive fields.
+///
+/// When creating users via API, use [`UserCreateRequest`](crate::models::UserCreateRequest)
+/// which accepts plain passwords and hashes them server-side.
 #[derive(Serialize, Deserialize, Queryable, AsChangeset, Debug, Clone)]
 pub struct User {
     pub id: i32,
@@ -53,7 +61,8 @@ pub struct User {
     pub email: String,
     pub creation_date: chrono::NaiveDateTime,
     pub last_login: chrono::NaiveDateTime,
-    pub password_hash: String, // TODO: decouple from entity (leakage of security detail)
+    #[serde(skip_serializing, default)]
+    pub password_hash: String,
     pub is_admin: bool,
 }
 
@@ -223,14 +232,17 @@ impl EntityType {
     }
 }
 
-// Display implementations for entities
+// Display implementations for entities.
+// These are intentionally simple, HTML-ish summaries and avoid
+// hardcoding the deployment host so they can be reused across
+// environments.
 impl fmt::Display for Requirement {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
             "
         <div class='requirement'>
-            <div class='ReqNum'>Num: <a href='http://localhost:8000/p/{}/requirements/show/{}'>{}</a></div>
+            <div class='ReqNum'>Num: <a href='/p/{}/requirements/show/{}'>{}</a></div>
             <div class='ReqTitle'>Title: {}</div>
             <div class='ReqDesc'>Description: {}</div>
             <div class='ReqAuthor'>Author: {}</div>
@@ -312,32 +324,14 @@ impl fmt::Display for TestCase {
 
 // Loggable implementations
 macro_rules! impl_loggable {
-    // For types with direct `id`
-    ($ty:ty, $entity:expr, $id:ident, $name:ident) => {
-        impl Loggable for $ty {
-            fn entity_type() -> EntityType {
-                $entity
-            }
-            fn id(&self) -> i32 {
-                self.$id
-            }
-            fn project_id(&self) -> Option<i32> {
-                Some(self.id)
-            }
-            fn display_name(&self) -> String {
-                self.$name.clone()
-            }
-        }
-    };
-
     // Special case: no project_id
-    ($ty:ty, $entity:expr, $id:ident, $name:ident, no_project) => {
+    ($ty:ty, $entity:expr, $name:ident, no_project) => {
         impl Loggable for $ty {
             fn entity_type() -> EntityType {
                 $entity
             }
             fn id(&self) -> i32 {
-                self.$id
+                self.id
             }
             fn project_id(&self) -> Option<i32> {
                 None
@@ -347,11 +341,29 @@ macro_rules! impl_loggable {
             }
         }
     };
+
+    // For types with a distinct `id` and `project_id` field
+    ($ty:ty, $entity:expr, $project:ident, $name:ident) => {
+        impl Loggable for $ty {
+            fn entity_type() -> EntityType {
+                $entity
+            }
+            fn id(&self) -> i32 {
+                self.id
+            }
+            fn project_id(&self) -> Option<i32> {
+                Some(self.$project)
+            }
+            fn display_name(&self) -> String {
+                self.$name.clone()
+            }
+        }
+    };
 }
 
 impl_loggable!(Project, EntityType::Project, id, name);
-impl_loggable!(Requirement, EntityType::Requirement, id, title);
-impl_loggable!(Category, EntityType::Category, id, title);
-impl_loggable!(Applicability, EntityType::Applicability, id, title);
-impl_loggable!(TestCase, EntityType::Test, id, name);
-impl_loggable!(User, EntityType::User, id, username, no_project);
+impl_loggable!(Requirement, EntityType::Requirement, project_id, title);
+impl_loggable!(Category, EntityType::Category, project_id, title);
+impl_loggable!(Applicability, EntityType::Applicability, project_id, title);
+impl_loggable!(TestCase, EntityType::Test, project_id, name);
+impl_loggable!(User, EntityType::User, username, no_project);

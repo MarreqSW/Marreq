@@ -116,6 +116,12 @@ pub struct NewMatrix {
 }
 
 /// Form used to insert or update [`User`] records.
+///
+/// # Security Note
+/// The `password_hash` field stores the bcrypt hash and is protected with
+/// `#[serde(skip_serializing)]` to prevent accidental exposure in responses.
+/// This struct is for internal use after password hashing. API endpoints should
+/// use [`UserCreateRequest`] which accepts plain passwords.
 #[derive(Serialize, Deserialize, Queryable, Insertable, AsChangeset, FromForm)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = users)]
@@ -126,6 +132,7 @@ pub struct NewUser {
     pub username: String,
     pub name: String,
     pub email: String,
+    #[serde(skip_serializing, default)]
     pub password_hash: String,
     pub is_admin: bool,
 }
@@ -202,6 +209,21 @@ pub struct ChangePasswordForm {
     pub current_password: String,
     pub new_password: String,
     pub confirm_password: String,
+}
+
+/// API request DTO for creating a new user with plain password.
+/// 
+/// Unlike [`NewUser`], this accepts a plain `password` field which is hashed
+/// server-side before being stored. This is the secure way to handle user
+/// creation via API endpoints.
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct UserCreateRequest {
+    pub username: String,
+    pub name: String,
+    pub email: String,
+    pub password: String,
+    pub is_admin: bool,
 }
 
 /// Data required to create a new [`Project`].

@@ -8,8 +8,8 @@
 //! - Error handling
 //! - Project filtering (if applicable)
 
-use req_man::models::*;
 use req_man::auth::session::SESSION_COOKIE;
+use req_man::models::*;
 use req_man::repository::diesel_repo_mock::DieselRepoMock;
 use rocket::http::{Cookie, Status};
 use rocket::local::asynchronous::Client;
@@ -110,7 +110,7 @@ async fn get_matrix_does_not_require_authentication() {
 async fn get_matrix_with_valid_session_returns_ok() {
     let mut repo = base_repo();
     repo.matrices.push(sample_matrix_link(1, 1, 1));
-    
+
     let client = test_client(repo).await;
 
     let response = client
@@ -153,7 +153,7 @@ async fn get_matrix_returns_json_array() {
     let mut repo = base_repo();
     repo.matrices.push(sample_matrix_link(1, 1, 1));
     repo.matrices.push(sample_matrix_link(2, 2, 1));
-    
+
     let client = test_client(repo).await;
 
     let response = client
@@ -215,4 +215,3 @@ async fn get_matrix_returns_empty_array_when_no_links() {
         assert_eq!(matrix.len(), 0);
     }
 }
-

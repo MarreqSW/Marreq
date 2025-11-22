@@ -40,7 +40,7 @@ mod test_support {
 
     pub fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
-        
+
         // Create a user with known password hash
         // "secret" -> hashed
         let pwd_hash = hash_password("secret").expect("hash");
@@ -77,17 +77,16 @@ async fn login_success_redirects_to_dashboard() {
     assert_eq!(response.status(), Status::SeeOther);
     // Dashboard is at root "/"
     assert_eq!(response.headers().get_one("Location"), Some("/"));
-    
+
     // Verify session cookie is set
-    let cookie = response.cookies().get(req_man::auth::session::SESSION_COOKIE);
+    let cookie = response
+        .cookies()
+        .get(req_man::auth::session::SESSION_COOKIE);
     assert!(cookie.is_some());
-    
+
     // Verify session works by making an authenticated request
-    let user_response = client
-        .get("/api/users/1")
-        .dispatch()
-        .await;
-    
+    let user_response = client.get("/api/users/1").dispatch().await;
+
     assert_eq!(user_response.status(), Status::Ok);
 }
 
@@ -106,9 +105,11 @@ async fn login_failure_redirects_with_error() {
     let location = response.headers().get_one("Location").unwrap();
     assert!(location.contains("/login"));
     assert!(location.contains("error=Invalid%20username%20or%20password"));
-    
+
     // Verify no session cookie
-    let cookie = response.cookies().get(req_man::auth::session::SESSION_COOKIE);
+    let cookie = response
+        .cookies()
+        .get(req_man::auth::session::SESSION_COOKIE);
     assert!(cookie.is_none());
 }
 
@@ -144,10 +145,16 @@ async fn logout_clears_session() {
         .await;
 
     assert_eq!(response.status(), Status::SeeOther);
-    assert!(response.headers().get_one("Location").unwrap().contains("/login"));
-    
+    assert!(response
+        .headers()
+        .get_one("Location")
+        .unwrap()
+        .contains("/login"));
+
     // Verify session cookie is cleared (expired)
-    let cookie = response.cookies().get(req_man::auth::session::SESSION_COOKIE);
+    let cookie = response
+        .cookies()
+        .get(req_man::auth::session::SESSION_COOKIE);
     assert!(cookie.is_some());
     // Rocket sets expiration to past to clear it
     assert!(cookie.unwrap().expires().is_some());
@@ -172,18 +179,18 @@ async fn change_password_success() {
     assert_eq!(response.status(), Status::SeeOther);
     let location = response.headers().get_one("Location").unwrap();
     assert!(location.contains("success=Password%20changed%20successfully"));
-    
+
     // Verify login with new password works (requires checking repo or logging in again)
     // Since we use mock repo, the change is in memory in the app state
     // Let's try to login with new password
-    
+
     let login_response = client
         .post("/login")
         .header(ContentType::Form)
         .body("username=alice&password=newsecret123")
         .dispatch()
         .await;
-        
+
     assert_eq!(login_response.status(), Status::SeeOther);
     assert_eq!(login_response.headers().get_one("Location"), Some("/"));
 }
@@ -252,11 +259,11 @@ async fn change_password_requires_login() {
 
     // Should redirect to login or return error depending on guard
     // The route handler takes cookies and state, but calls change_user_password which checks auth
-    // If the guard fails (if used), it might be 401. 
+    // If the guard fails (if used), it might be 401.
     // But here the route signature is:
     // pub fn change_password(password_form: Form<ChangePasswordForm>, cookies: &CookieJar<'_>, state: &State<AppState>)
     // It doesn't use ApiUser guard, so it executes and change_user_password returns NotLoggedIn
-    
+
     assert_eq!(response.status(), Status::SeeOther);
     let location = response.headers().get_one("Location").unwrap();
     assert!(location.contains("error=Not%20logged%20in"));

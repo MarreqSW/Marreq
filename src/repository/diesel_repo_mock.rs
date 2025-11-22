@@ -718,7 +718,13 @@ impl LogRepository for DieselRepoMock {
     }
 
     fn get_logs_recent(&self, limit: i64) -> Result<Vec<Log>, RepoError> {
-        Ok(self.logs.iter().rev().take(limit as usize).cloned().collect())
+        Ok(self
+            .logs
+            .iter()
+            .rev()
+            .take(limit as usize)
+            .cloned()
+            .collect())
     }
 
     fn get_logs_by_entity(&self, entity_type: &str, entity_id: i32) -> Result<Vec<Log>, RepoError> {

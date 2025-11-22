@@ -112,7 +112,7 @@ impl<'a> LogService<'a> {
     /// Clean up logs older than the provided number of days and record the outcome.
     pub fn cleanup_old_logs(&self, actor_id: i32, days: i64) -> Result<usize, LogServiceError> {
         let count = self.state.repo_write().cleanup_logs(days)?;
-        
+
         let new_log = crate::models::NewLog {
             user_id: actor_id,
             action_type: "CLEANUP".to_string(),
@@ -126,7 +126,7 @@ impl<'a> LogService<'a> {
             user_agent: None,
         };
         let _ = self.state.repo_write().insert_log(&new_log);
-        
+
         Ok(count)
     }
 
@@ -134,17 +134,29 @@ impl<'a> LogService<'a> {
     pub fn analytics(&self) -> Result<LogAnalytics, LogServiceError> {
         // This is a bit inefficient with the current trait, but works for now.
         // Ideally we'd add a count_logs method to the trait.
-        let last_7_days = self.state.repo_read().get_logs_recent(10000)?.iter().filter(|l| {
-            l.created_at > chrono::Utc::now().naive_utc() - chrono::Duration::days(7)
-        }).count() as i64;
-        
-        let last_30_days = self.state.repo_read().get_logs_recent(10000)?.iter().filter(|l| {
-            l.created_at > chrono::Utc::now().naive_utc() - chrono::Duration::days(30)
-        }).count() as i64;
-        
-        let last_90_days = self.state.repo_read().get_logs_recent(10000)?.iter().filter(|l| {
-            l.created_at > chrono::Utc::now().naive_utc() - chrono::Duration::days(90)
-        }).count() as i64;
+        let last_7_days = self
+            .state
+            .repo_read()
+            .get_logs_recent(10000)?
+            .iter()
+            .filter(|l| l.created_at > chrono::Utc::now().naive_utc() - chrono::Duration::days(7))
+            .count() as i64;
+
+        let last_30_days = self
+            .state
+            .repo_read()
+            .get_logs_recent(10000)?
+            .iter()
+            .filter(|l| l.created_at > chrono::Utc::now().naive_utc() - chrono::Duration::days(30))
+            .count() as i64;
+
+        let last_90_days = self
+            .state
+            .repo_read()
+            .get_logs_recent(10000)?
+            .iter()
+            .filter(|l| l.created_at > chrono::Utc::now().naive_utc() - chrono::Duration::days(90))
+            .count() as i64;
 
         Ok(LogAnalytics {
             last_7_days,

@@ -33,21 +33,24 @@ mod test_support {
         let rocket = rocket::build()
             .manage(managed_state(repo))
             .attach(rocket_dyn_templates::Template::fairing())
-            .mount("/", rocket::routes![
-                req_man::routes::html::admin::admin_dashboard,
-                req_man::routes::html::admin::admin_users_page,
-                req_man::routes::html::admin::admin_backup_page,
-                req_man::routes::html::logs::show_logs,
-                req_man::routes::html::logs::export_logs,
-                req_man::routes::html::logs::cleanup_logs
-            ]);
+            .mount(
+                "/",
+                rocket::routes![
+                    req_man::routes::html::admin::admin_dashboard,
+                    req_man::routes::html::admin::admin_users_page,
+                    req_man::routes::html::admin::admin_backup_page,
+                    req_man::routes::html::logs::show_logs,
+                    req_man::routes::html::logs::export_logs,
+                    req_man::routes::html::logs::cleanup_logs
+                ],
+            );
 
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
     pub fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
-        
+
         // Admin user
         let mut admin = DieselRepoMock::make_user(1, "admin", "hash");
         admin.is_admin = true;
@@ -114,7 +117,7 @@ async fn admin_dashboard_forbidden_for_non_admin() {
         .dispatch()
         .await;
 
-    // The AdminOnly guard redirects to login or returns error. 
+    // The AdminOnly guard redirects to login or returns error.
     // In current implementation it likely returns 401 or redirects.
     // Let's check the guard implementation or assume standard behavior.
     // Based on `src/auth/guards.rs` (implied), it usually forwards or fails.
@@ -124,7 +127,7 @@ async fn admin_dashboard_forbidden_for_non_admin() {
     // or it might return a specific error status.
     // Let's assume it returns 401 Unauthorized or 403 Forbidden.
     // If it redirects to login, it would be 303.
-    
+
     assert_ne!(response.status(), Status::Ok);
 }
 
@@ -182,7 +185,7 @@ async fn export_logs_returns_json() {
 
     assert_eq!(response.status(), Status::Ok);
     assert_eq!(response.content_type(), Some(ContentType::JSON));
-    
+
     let logs: Value = response.into_json().await.unwrap();
     assert!(logs.is_array());
     let array = logs.as_array().unwrap();

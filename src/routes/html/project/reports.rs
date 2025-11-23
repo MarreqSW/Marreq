@@ -186,7 +186,7 @@ mod tests {
             description: Some("Orbiter project".to_string()),
             creation_date: Some(timestamp()),
             update_date: Some(timestamp()),
-            status_id: Some("Active".to_string()),
+            status_id: Some(1),
             owner_id: Some(ADMIN_ID),
         }
     }
@@ -225,7 +225,7 @@ mod tests {
             parent_id: None,
             creation_date: timestamp(),
             update_date: timestamp(),
-            deadline_date: timestamp(),
+            deadline_date: Some(timestamp()),
             applicability_id: 1,
             justification: Some("For testing".to_string()),
             project_id: PROJECT_ID,

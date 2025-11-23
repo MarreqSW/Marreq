@@ -615,7 +615,7 @@ mod tests {
             description: Some("Desc".into()),
             creation_date: Some(epoch()),
             update_date: Some(epoch()),
-            status_id: Some("Active".into()),
+            status_id: Some(1),
             owner_id: Some(1),
         };
         let requirement = Requirement {
@@ -631,7 +631,7 @@ mod tests {
             parent_id: None,
             creation_date: epoch(),
             update_date: epoch(),
-            deadline_date: epoch(),
+            deadline_date: Some(epoch()),
             applicability_id: 1,
             justification: None,
             project_id: 1,
@@ -1073,14 +1073,14 @@ mod tests {
         let np = NewProject {
             name: "P2".into(),
             description: Some("".into()),
-            status_id: "Active".into(),
+            status_id: Some(1),
             owner_id: Some(1),
         };
         let pid = repo.insert_new_project(&np).unwrap();
         let up = UpdateProject {
             name: "P2a".into(),
             description: Some("".into()),
-            status_id: "Active".into(),
+            status_id: Some(1),
             owner_id: Some(1),
         };
         repo.edit_project(pid, &up).unwrap();

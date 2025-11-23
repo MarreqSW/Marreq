@@ -256,7 +256,7 @@ mod tests {
             parent_id: None,
             creation_date: naive_datetime(),
             update_date: naive_datetime(),
-            deadline_date: naive_datetime(),
+            deadline_date: Some(naive_datetime()),
             applicability_id: 1,
             justification: None,
             project_id,

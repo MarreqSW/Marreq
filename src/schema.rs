@@ -23,7 +23,7 @@ diesel::table! {
 diesel::table! {
     logs (log_id) {
         log_id -> Int4,
-        id -> Int4,
+        user_id -> Int4,
         #[max_length = 50]
         action_type -> Varchar,
         #[max_length = 50]
@@ -67,9 +67,8 @@ diesel::table! {
         description -> Nullable<Text>,
         creation_date -> Nullable<Timestamp>,
         update_date -> Nullable<Timestamp>,
-        #[max_length = 50]
-        status_id -> Nullable<Varchar>,
         owner_id -> Nullable<Int4>,
+        status_id -> Nullable<Int4>,
     }
 }
 
@@ -97,7 +96,7 @@ diesel::table! {
         parent_id -> Nullable<Int4>,
         creation_date -> Timestamp,
         update_date -> Timestamp,
-        deadline_date -> Timestamp,
+        deadline_date -> Nullable<Timestamp>,
         applicability_id -> Int4,
         justification -> Nullable<Text>,
         project_id -> Int4,
@@ -105,7 +104,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    status_id (id) {
+    test_status (id) {
         id -> Int4,
         title -> Varchar,
         description -> Varchar,
@@ -154,19 +153,22 @@ diesel::table! {
 diesel::joinable!(applicability -> projects (project_id));
 diesel::joinable!(categories -> projects (project_id));
 diesel::joinable!(logs -> projects (project_id));
-diesel::joinable!(logs -> users (id));
+diesel::joinable!(logs -> users (user_id));
 diesel::joinable!(matrix -> projects (project_id));
 diesel::joinable!(matrix -> requirements (req_id));
 diesel::joinable!(matrix -> tests (test_id));
 diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (user_id));
+diesel::joinable!(projects -> users (owner_id));
 diesel::joinable!(requirement_status -> projects (project_id));
 diesel::joinable!(requirements -> applicability (applicability_id));
+diesel::joinable!(requirements -> categories (category_id));
 diesel::joinable!(requirements -> projects (project_id));
 diesel::joinable!(requirements -> requirement_status (status_id));
-diesel::joinable!(status_id -> projects (project_id));
+diesel::joinable!(requirements -> verification (verification_method_id));
+diesel::joinable!(test_status -> projects (project_id));
 diesel::joinable!(tests -> projects (project_id));
-diesel::joinable!(tests -> status_id (status_id));
+diesel::joinable!(tests -> test_status (status_id));
 diesel::joinable!(verification -> projects (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -178,7 +180,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     projects,
     requirement_status,
     requirements,
-    status_id,
+    test_status,
     tests,
     users,
     verification,

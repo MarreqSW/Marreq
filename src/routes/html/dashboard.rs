@@ -127,7 +127,7 @@ mod tests {
             description: Some("Mission critical".into()),
             creation_date: None,
             update_date: None,
-            status_id: Some("Active".into()),
+            status_id: Some(1),
             owner_id: Some(user.id),
         };
         repo.projects.insert(project.id, project);
@@ -155,7 +155,7 @@ mod tests {
                 parent_id: None,
                 creation_date: created,
                 update_date: created,
-                deadline_date: created,
+                deadline_date: Some(created),
                 applicability_id: 1,
                 justification: None,
                 project_id,

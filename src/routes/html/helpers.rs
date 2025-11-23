@@ -148,16 +148,13 @@ pub(crate) fn decorate_projects_for_listing(
             .owner_id
             .and_then(|owner_id| owner_lookup.get(&owner_id).cloned());
 
-        let status_original = project
+        let status_display = project
             .status_id
-            .as_ref()
-            .map(|status| status.trim().to_string());
-        let status_display = status_original
-            .clone()
+            .map(|id| id.to_string())
             .unwrap_or_else(|| "Unknown".to_string());
-        let status_normalized = status_original
-            .as_ref()
-            .map(|status| status.to_ascii_lowercase())
+        let status_normalized = project
+            .status_id
+            .map(|id| id.to_string().to_ascii_lowercase())
             .unwrap_or_else(|| "unknown".to_string());
         let status_badge = project_status_badge(status_display.as_str());
         let project_initial = project
@@ -276,7 +273,7 @@ pub(crate) fn get_project_by_id_pooled_safe(state: &State<AppState>, project_id:
             description: Some("Unknown project".to_string()),
             creation_date: Some(Utc::now().naive_utc()),
             update_date: Some(Utc::now().naive_utc()),
-            status_id: Some("Unknown".to_string()),
             owner_id: Some(0),
+            status_id: None,
         })
 }

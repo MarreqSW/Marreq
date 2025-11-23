@@ -56,7 +56,7 @@ macro_rules! define_tagged_form {
 define_tagged_form!(NewCategory, categories);
 define_tagged_form!(NewApplicability, applicability);
 define_tagged_form!(NewRequirementStatus, requirement_status);
-define_tagged_form!(NewTestStatus, status_id);
+define_tagged_form!(NewTestStatus, test_status);
 define_tagged_form!(NewVerificationMethod, verification);
 
 /// Form used to create a new [`MatrixLink`] entry tying a requirement to a test.
@@ -188,8 +188,8 @@ pub struct UserCreateRequest {
 pub struct NewProject {
     pub name: String,
     pub description: Option<String>,
-    pub status_id: String,
     pub owner_id: Option<i32>,
+    pub status_id: Option<i32>,
 }
 
 /// Form used to update a project's metadata.
@@ -198,8 +198,8 @@ pub struct NewProject {
 pub struct UpdateProject {
     pub name: String,
     pub description: Option<String>,
-    pub status_id: String,
     pub owner_id: Option<i32>,
+    pub status_id: Option<i32>,
 }
 
 /// Data required to create or update a project membership entry.
@@ -225,7 +225,6 @@ pub struct ImportMappingForm {
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::schema::logs)]
 pub struct NewLog {
-    #[diesel(column_name = id)]
     pub user_id: i32,
     pub action_type: String,
     pub entity_type: String,

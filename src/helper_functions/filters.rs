@@ -79,7 +79,7 @@ mod tests {
             parent_id: None,
             creation_date: dummy_datetime(),
             update_date: dummy_datetime(),
-            deadline_date: dummy_datetime(),
+            deadline_date: Some(dummy_datetime()),
             applicability_id: 0,
             justification: None,
             project_id: 0,

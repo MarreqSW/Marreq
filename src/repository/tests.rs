@@ -73,7 +73,7 @@ mod tests {
             description: Some("Test Project Description".to_string()),
             creation_date: Some(test_datetime()),
             update_date: Some(test_datetime()),
-            status_id: Some("Active".to_string()),
+            status_id: Some(1),
             owner_id: Some(1),
         }
     }

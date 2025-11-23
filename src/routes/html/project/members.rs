@@ -251,7 +251,7 @@ mod tests {
             description: Some("Exploration program".into()),
             creation_date: Some(timestamp()),
             update_date: Some(timestamp()),
-            status_id: Some("Active".into()),
+            status_id: Some(1),
             owner_id: Some(OWNER_ID),
         }
     }

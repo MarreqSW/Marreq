@@ -194,7 +194,7 @@ mod tests {
             description: Some("Existing description".into()),
             creation_date: Some(timestamp()),
             update_date: Some(timestamp()),
-            status_id: Some("open".into()),
+            status_id: Some(1),
             owner_id: Some(1),
         }
     }
@@ -208,7 +208,7 @@ mod tests {
         let payload = NewProject {
             name: "  Project Phoenix  ".into(),
             description: Some("   ".into()),
-            status_id: "  active  ".into(),
+            status_id: Some(1),
             owner_id: Some(1),
         };
 
@@ -217,7 +217,7 @@ mod tests {
 
         assert_eq!(stored.name, "Project Phoenix");
         assert_eq!(stored.description, None);
-        assert_eq!(stored.status_id.as_deref(), Some("  active  "));
+        assert_eq!(stored.status_id, Some(1));
     }
 
     #[test]
@@ -229,7 +229,7 @@ mod tests {
         let payload = NewProject {
             name: " ".into(),
             description: None,
-            status_id: "planned".into(),
+            status_id: Some(2),
             owner_id: None,
         };
 
@@ -247,14 +247,14 @@ mod tests {
         let payload = UpdateProject {
             name: "  Modernized  ".into(),
             description: Some("  Updated description  ".into()),
-            status_id: "  done  ".into(),
+            status_id: Some(3),
             owner_id: Some(2),
         };
 
         let updated = service.update(&actor(), 1, payload).unwrap();
         assert_eq!(updated.name, "Modernized");
         assert_eq!(updated.description.as_deref(), Some("Updated description"));
-        assert_eq!(updated.status_id.as_deref(), Some("  done  "));
+        assert_eq!(updated.status_id, Some(3));
         assert_eq!(updated.owner_id, Some(2));
     }
 
@@ -267,7 +267,7 @@ mod tests {
         let payload = UpdateProject {
             name: "Valid".into(),
             description: Some("Desc".into()),
-            status_id: "active".into(),
+            status_id: Some(1),
             owner_id: None,
         };
 
@@ -285,7 +285,7 @@ mod tests {
         let payload = UpdateProject {
             name: "Legacy".into(),
             description: Some("Still around".into()),
-            status_id: "active".into(),
+            status_id: Some(1),
             owner_id: None,
         };
 
@@ -308,7 +308,7 @@ mod tests {
         let payload = UpdateProject {
             name: "Orphaned".into(),
             description: Some("Needs owner".into()),
-            status_id: "active".into(),
+            status_id: Some(1),
             owner_id: None,
         };
 

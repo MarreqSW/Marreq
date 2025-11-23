@@ -140,7 +140,7 @@ mod tests {
             description: Some("Mission critical project".into()),
             creation_date: Some(timestamp()),
             update_date: Some(timestamp()),
-            status_id: Some("active".into()),
+            status_id: Some(1),
             owner_id: Some(owner_id),
         }
     }
@@ -248,7 +248,7 @@ mod tests {
         let response = post_with_session(
             &client,
             "/new_project",
-            "name=New+Initiative&description=Launch+prep&status_id=active&owner_id=1",
+            "name=New+Initiative&description=Launch+prep&status_id=1&owner_id=1",
             ADMIN_ID,
         )
         .await;
@@ -263,7 +263,7 @@ mod tests {
         let project = inner.projects.values().next().expect("project stored");
         assert_eq!(project.name, "New Initiative");
         assert_eq!(project.description.as_deref(), Some("Launch prep"));
-        assert_eq!(project.status_id.as_deref(), Some("active"));
+        assert_eq!(project.status_id, Some(1));
         assert_eq!(project.owner_id, Some(ADMIN_ID));
     }
 

@@ -69,8 +69,8 @@ async fn projects_page_lists_user_projects() {
         description: Some("Description".into()),
         creation_date: None,
         update_date: None,
-        status_id: Some("Active".into()),
         owner_id: Some(1),
+        status_id: Some(1),
     };
     repo.projects.insert(10, project);
 
@@ -125,7 +125,7 @@ async fn access_project_details_as_owner() {
         description: None,
         creation_date: None,
         update_date: None,
-        status_id: Some("Active".into()),
+        status_id: Some(1),
         owner_id: Some(1),
     };
     repo.projects.insert(30, project);
@@ -160,7 +160,7 @@ async fn access_project_details_forbidden_for_non_member() {
         description: None,
         creation_date: None,
         update_date: None,
-        status_id: Some("Active".into()),
+        status_id: Some(1),
         owner_id: Some(1), // Owned by User 1
     };
     repo.projects.insert(40, project);

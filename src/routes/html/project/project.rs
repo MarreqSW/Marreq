@@ -150,7 +150,7 @@ mod tests {
             description: Some(format!("{name} project")),
             creation_date: Some(timestamp()),
             update_date: Some(timestamp()),
-            status_id: Some("active".to_string()),
+            status_id: Some(1),
             owner_id: Some(ADMIN_ID),
         }
     }
@@ -282,7 +282,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/edit",
-            "name=Orbiter+II&description=Updated+mission+plan&status_id=inactive&owner_id=1",
+            "name=Orbiter+II&description=Updated+mission+plan&status_id=0&owner_id=1",
             ADMIN_ID,
         )
         .await;
@@ -297,7 +297,7 @@ mod tests {
             .expect("project present");
         assert_eq!(project.name, "Orbiter II");
         assert_eq!(project.description.as_deref(), Some("Updated mission plan"));
-        assert_eq!(project.status_id.as_deref(), Some("inactive"));
+        assert_eq!(project.status_id, Some(0));
         assert_eq!(project.owner_id, Some(ADMIN_ID));
     }
 
@@ -307,7 +307,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/edit",
-            "name=&description=&status_id=active&owner_id=",
+            "name=&description=&status_id=1&owner_id=",
             ADMIN_ID,
         )
         .await;

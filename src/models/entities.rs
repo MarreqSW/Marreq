@@ -27,7 +27,7 @@ pub struct Requirement {
     pub parent_id: Option<i32>,
     pub creation_date: chrono::NaiveDateTime,
     pub update_date: chrono::NaiveDateTime,
-    pub deadline_date: chrono::NaiveDateTime,
+    pub deadline_date: Option<chrono::NaiveDateTime>,
     pub applicability_id: i32,
     pub justification: Option<String>,
     pub project_id: i32,
@@ -88,8 +88,8 @@ pub struct Project {
     pub description: Option<String>,
     pub creation_date: Option<chrono::NaiveDateTime>,
     pub update_date: Option<chrono::NaiveDateTime>,
-    pub status_id: Option<String>,
     pub owner_id: Option<i32>,
+    pub status_id: Option<i32>,
 }
 
 /// Membership that links a user to a project with a specific role.

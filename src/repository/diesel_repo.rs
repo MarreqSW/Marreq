@@ -414,18 +414,18 @@ impl LookupRepository for DieselRepo {
     }
 
     fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
-        use schema::status_id::dsl;
+        use schema::test_status::dsl;
         let mut conn = self.get_conn()?;
-        dsl::status_id
+        dsl::test_status
             .order(dsl::id)
             .load::<TestStatus>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
     fn get_test_status_by_id(&self, id: i32) -> Result<TestStatus, RepoError> {
-        use schema::status_id::dsl;
+        use schema::test_status::dsl;
         let mut conn = self.get_conn()?;
-        dsl::status_id
+        dsl::test_status
             .filter(dsl::id.eq(id))
             .get_result(conn.as_mut())
             .map_err(|e| {
@@ -639,7 +639,7 @@ impl LookupRepository for DieselRepo {
 
     fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
-        let res: TestStatus = diesel::insert_into(schema::status_id::table)
+        let res: TestStatus = diesel::insert_into(schema::test_status::table)
             .values(new)
             .get_result(conn.as_mut())?;
         Ok(res.id)

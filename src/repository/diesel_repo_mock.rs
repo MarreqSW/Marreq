@@ -421,7 +421,7 @@ impl RequirementsRepository for DieselRepoMock {
             parent_id: _new.parent_id,
             creation_date: now,
             update_date: now,
-            deadline_date: now,
+            deadline_date: Some(now),
             applicability_id: _new.applicability_id,
             justification: _new.justification.clone(),
             project_id: _new.project_id,
@@ -588,8 +588,8 @@ impl ProjectsRepository for DieselRepoMock {
             description: _new.description.clone(),
             creation_date: Some(now),
             update_date: Some(now),
-            status_id: Some(_new.status_id.clone()),
             owner_id: _new.owner_id,
+            status_id: _new.status_id,
         };
         self.projects.insert(id, proj);
         Ok(id)
@@ -604,8 +604,8 @@ impl ProjectsRepository for DieselRepoMock {
             Some(proj) => {
                 proj.name = _update.name.clone();
                 proj.description = _update.description.clone();
-                proj.status_id = Some(_update.status_id.clone());
                 proj.owner_id = _update.owner_id;
+                proj.status_id = _update.status_id;
                 proj.update_date = Some(epoch());
                 Ok(true)
             }

@@ -1,3 +1,5 @@
+#![cfg(feature = "test-helpers")]
+
 use req_man::app::AppState;
 use req_man::auth::session::SESSION_COOKIE;
 use req_man::models::{Project, ProjectMember};
@@ -9,12 +11,17 @@ use rocket::http::{Cookie, Status};
 use rocket::local::asynchronous::Client;
 use std::sync::{Arc, RwLock};
 
+type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+
+fn managed_state(repo: DieselRepoMock) -> TestAppState {
+    AppState {
+        repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+    }
+}
+
 // Helper to create a test client with a populated mock repository
 async fn test_client(repo: DieselRepoMock) -> Client {
     let rocket = rocket::build()
-        .manage(AppState {
-            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
-        })
         .attach(rocket_dyn_templates::Template::fairing())
         .mount(
             "/",
@@ -31,9 +38,12 @@ async fn test_client(repo: DieselRepoMock) -> Client {
                 req_man::routes::catchers::unauthorized,
                 req_man::routes::catchers::forbidden
             ],
-        );
+        )
+        .manage(managed_state(repo));
 
-    Client::tracked(rocket).await.expect("rocket instance")
+    Client::tracked(rocket)
+        .await
+        .expect("rocket instance")
 }
 
 // Helper to create a basic user and session

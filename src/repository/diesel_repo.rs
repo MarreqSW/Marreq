@@ -1,12 +1,12 @@
 use super::errors::RepoError;
 use crate::models::entities::{
-    Applicability, Category, MatrixLink, Project, ProjectMember, Requirement, RequirementStatus,
-    TestCase, TestStatus, User, VerificationMethod,
+    Applicability, Category, Log, MatrixLink, Project, ProjectMember, Requirement,
+    RequirementStatus, TestCase, TestStatus, User, VerificationMethod,
 };
 use crate::models::forms::{
-    NewApplicability, NewCategory, NewMatrixLink, NewProject, NewProjectMember, NewRequirement,
-    NewRequirementStatus, NewTestCase, NewTestStatus, NewUser, NewVerificationMethod,
-    UpdateProject, UpdateUser,
+    NewApplicability, NewCategory, NewLog, NewMatrixLink, NewProject, NewProjectMember,
+    NewRequirement, NewRequirementStatus, NewTestCase, NewTestStatus, NewUser,
+    NewVerificationMethod, UpdateProject, UpdateUser,
 };
 use crate::repository::{
     LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository,
@@ -861,23 +861,73 @@ impl TestsCaseRepository for DieselRepo {
 
     fn update_test_requirement_links(
         &mut self,
-        test_id_val: i32,
+        tid: i32,
         requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
         use schema::matrix::dsl;
         let mut conn = self.get_conn()?;
-        diesel::delete(dsl::matrix.filter(dsl::test_id.eq(test_id_val))).execute(conn.as_mut())?;
-        for id in requirement_ids {
-            let matrix_item = NewMatrixLink {
-                req_id: *id,
-                test_id: test_id_val,
-                project_id: 1,
-            };
-            diesel::insert_into(schema::matrix::table)
-                .values(&matrix_item)
-                .execute(conn.as_mut())?;
-        }
+
+        conn.as_mut()
+            .transaction::<_, diesel::result::Error, _>(|conn| {
+                // Delete existing links
+                diesel::delete(dsl::matrix.filter(dsl::test_id.eq(tid))).execute(conn)?;
+
+                // Insert new links
+                for rid in requirement_ids {
+                    // Get the project_id from the test to maintain consistency
+                    use crate::schema::tests::dsl::tests;
+                    use crate::schema::tests::dsl::{project_id as t_pid, id as test_id_col};
+                    let pid: i32 = tests.filter(test_id_col.eq(tid)).select(t_pid).first(conn)?;
+
+                    let new_matrix = NewMatrixLink {
+                        req_id: *rid,
+                        test_id: tid,
+                        project_id: pid,
+                    };
+                    diesel::insert_into(schema::matrix::table)
+                        .values(&new_matrix)
+                        .execute(conn)?;
+                }
+                Ok(())
+            })?;
         Ok(())
+    }
+}
+
+impl crate::repository::LogRepository for DieselRepo {
+    fn insert_log(&mut self, new: &NewLog) -> Result<(), RepoError> {
+        let mut conn = self.get_conn()?;
+        diesel::insert_into(schema::logs::table)
+            .values(new)
+            .execute(conn.as_mut())?;
+        Ok(())
+    }
+
+    fn get_logs_recent(&self, limit: i64) -> Result<Vec<Log>, RepoError> {
+        use schema::logs::dsl::*;
+        let mut conn = self.get_conn()?;
+        logs.order(created_at.desc())
+            .limit(limit)
+            .load::<Log>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn get_logs_by_entity(&self, etype: &str, eid: i32) -> Result<Vec<Log>, RepoError> {
+        use schema::logs::dsl::*;
+        let mut conn = self.get_conn()?;
+        logs.filter(entity_type.eq(etype))
+            .filter(entity_id.eq(eid))
+            .order(created_at.desc())
+            .load::<Log>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn cleanup_logs(&mut self, days: i64) -> Result<usize, RepoError> {
+        use schema::logs::dsl::*;
+        let mut conn = self.get_conn()?;
+        let cutoff = chrono::Utc::now().naive_utc() - chrono::Duration::days(days);
+        let count = diesel::delete(logs.filter(created_at.lt(cutoff))).execute(conn.as_mut())?;
+        Ok(count)
     }
 }
 

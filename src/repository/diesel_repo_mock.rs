@@ -19,6 +19,7 @@ pub struct DieselRepoMock {
     pub projects: HashMap<i32, Project>,
     pub matrices: Vec<MatrixLink>,
     pub project_members: Vec<ProjectMember>,
+    pub logs: Vec<Log>,
     pub force_err: bool,
 }
 
@@ -48,6 +49,7 @@ impl DieselRepoMock {
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
+            logs: Vec::new(),
             force_err: false,
         }
     }
@@ -65,6 +67,7 @@ impl DieselRepoMock {
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
+            logs: Vec::new(),
             force_err: true,
         }
     }
@@ -707,5 +710,52 @@ impl ProjectMembersRepository for DieselRepoMock {
         } else {
             Ok(())
         }
+    }
+}
+
+impl LogRepository for DieselRepoMock {
+    fn insert_log(&mut self, new_log: &NewLog) -> Result<(), RepoError> {
+        let id = self.logs.len() as i32 + 1;
+        self.logs.push(Log {
+            log_id: id,
+            created_at: epoch(),
+            user_id: new_log.user_id,
+            entity_type: new_log.entity_type.clone(),
+            entity_id: new_log.entity_id,
+            action_type: new_log.action_type.clone(),
+            description: new_log.description.clone(),
+            project_id: new_log.project_id,
+            old_values: new_log.old_values.clone(),
+            new_values: new_log.new_values.clone(),
+            ip_address: new_log.ip_address.clone(),
+            user_agent: new_log.user_agent.clone(),
+        });
+        Ok(())
+    }
+
+    fn get_logs_recent(&self, limit: i64) -> Result<Vec<Log>, RepoError> {
+        Ok(self
+            .logs
+            .iter()
+            .rev()
+            .take(limit as usize)
+            .cloned()
+            .collect())
+    }
+
+    fn get_logs_by_entity(&self, entity_type: &str, entity_id: i32) -> Result<Vec<Log>, RepoError> {
+        Ok(self
+            .logs
+            .iter()
+            .filter(|l| l.entity_type == entity_type && l.entity_id == Some(entity_id))
+            .cloned()
+            .collect())
+    }
+
+    fn cleanup_logs(&mut self, _days: i64) -> Result<usize, RepoError> {
+        let len_before = self.logs.len();
+        // In mock, we just clear everything for simplicity or keep it all
+        // Let's say we remove nothing as dates are all epoch
+        Ok(len_before - self.logs.len())
     }
 }

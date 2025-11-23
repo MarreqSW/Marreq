@@ -187,7 +187,7 @@ impl Logger {
 
     pub fn log_unauthorized(conn: &mut PgConnection, ctx: &LogCtx) -> Result<(), LoggerError> {
         let new_log = NewLog {
-            id: ctx.id(),
+            user_id: ctx.id(),
             action_type: "ILLEGAL_ACCESS".to_string(),
             entity_type: "entity_type".to_string(),
             project_id: None,
@@ -259,7 +259,7 @@ impl Logger {
         description: Option<String>,
     ) -> Result<(), LoggerError> {
         let new_log = NewLog {
-            id: ctx.id(),
+            user_id: ctx.id(),
             action_type: action_type.to_string(),
             // If None, default to empty string
             entity_type: entity_type

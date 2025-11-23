@@ -3,8 +3,8 @@ use super::cache::{keys, Cache};
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository, Repository,
-    RequirementsRepository, TestsCaseRepository, UserRepository,
+    LogRepository, LookupRepository, MatrixRepository, ProjectMembersRepository,
+    ProjectsRepository, Repository, RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -547,6 +547,24 @@ impl<R: Repository> MatrixRepository for CacheRepository<R> {
     }
 }
 
+impl<R: LogRepository> LogRepository for CacheRepository<R> {
+    fn insert_log(&mut self, new: &NewLog) -> Result<(), RepoError> {
+        self.inner.insert_log(new)
+    }
+
+    fn get_logs_recent(&self, limit: i64) -> Result<Vec<Log>, RepoError> {
+        self.inner.get_logs_recent(limit)
+    }
+
+    fn get_logs_by_entity(&self, entity_type: &str, entity_id: i32) -> Result<Vec<Log>, RepoError> {
+        self.inner.get_logs_by_entity(entity_type, entity_id)
+    }
+
+    fn cleanup_logs(&mut self, days: i64) -> Result<usize, RepoError> {
+        self.inner.cleanup_logs(days)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -655,6 +673,7 @@ mod tests {
         projects.insert(1, project);
 
         DieselRepoMock {
+            logs: Vec::new(),
             users,
             statuses,
             requirement_statuses,

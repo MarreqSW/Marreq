@@ -119,6 +119,7 @@ DROP TABLE IF EXISTS matrix CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;
 DROP TABLE IF EXISTS requirements CASCADE;
 DROP TABLE IF EXISTS tests CASCADE;
+DROP TABLE IF EXISTS project_members CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS applicability CASCADE;
@@ -150,14 +151,14 @@ echo ""
 
 echo "📁 Projects created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c \
-  "SELECT project_id, name, status_id FROM projects ORDER BY project_id;"
+  "SELECT id, name, status_id FROM projects ORDER BY id;"
 echo ""
 
 echo "🤝 Project memberships:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman <<'SQL'
 SELECT pm.project_id,
        p.name,
-       pm.id,
+       pm.user_id,
        u.username,
        pm.role,
        CASE pm.role
@@ -168,9 +169,9 @@ SELECT pm.project_id,
            ELSE 'Member'
        END AS role_name
   FROM project_members pm
-  JOIN projects p ON p.project_id = pm.project_id
-  JOIN users u ON u.id = pm.id
- ORDER BY pm.project_id, pm.id;
+  JOIN projects p ON p.id = pm.project_id
+  JOIN users u ON u.id = pm.user_id
+ ORDER BY pm.project_id, pm.user_id;
 SQL
 echo ""
 
@@ -188,7 +189,7 @@ SELECT 'Applicability', COUNT(*) FROM applicability
 UNION ALL
 SELECT 'Requirement Status', COUNT(*) FROM requirement_status
 UNION ALL
-SELECT 'Test Status', COUNT(*) FROM status_id
+SELECT 'Test Status', COUNT(*) FROM test_status
 UNION ALL
 SELECT 'Logs', COUNT(*) FROM logs;
 "

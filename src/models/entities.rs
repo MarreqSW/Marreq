@@ -108,7 +108,9 @@ pub struct ProjectMember {
 #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 pub struct Log {
     pub log_id: i32,
-    pub id: i32,
+    #[serde(rename = "id")]
+    #[diesel(column_name = id)]
+    pub user_id: i32,
     pub action_type: String,
     pub entity_type: String,
     pub entity_id: Option<i32>,

@@ -225,7 +225,8 @@ pub struct ImportMappingForm {
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = crate::schema::logs)]
 pub struct NewLog {
-    pub id: i32,
+    #[diesel(column_name = id)]
+    pub user_id: i32,
     pub action_type: String,
     pub entity_type: String,
     pub entity_id: Option<i32>,

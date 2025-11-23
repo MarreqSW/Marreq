@@ -60,6 +60,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    project_status (id) {
+        id -> Int4,
+        #[max_length = 50]
+        name -> Varchar,
+        description -> Nullable<Text>,
+        created_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     projects (id) {
         id -> Int4,
         #[max_length = 255]
@@ -67,8 +77,8 @@ diesel::table! {
         description -> Nullable<Text>,
         creation_date -> Nullable<Timestamp>,
         update_date -> Nullable<Timestamp>,
-        owner_id -> Nullable<Int4>,
         status_id -> Nullable<Int4>,
+        owner_id -> Nullable<Int4>,
     }
 }
 
@@ -159,13 +169,11 @@ diesel::joinable!(matrix -> requirements (req_id));
 diesel::joinable!(matrix -> tests (test_id));
 diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (user_id));
-diesel::joinable!(projects -> users (owner_id));
+diesel::joinable!(projects -> project_status (status_id));
 diesel::joinable!(requirement_status -> projects (project_id));
 diesel::joinable!(requirements -> applicability (applicability_id));
-diesel::joinable!(requirements -> categories (category_id));
 diesel::joinable!(requirements -> projects (project_id));
 diesel::joinable!(requirements -> requirement_status (status_id));
-diesel::joinable!(requirements -> verification (verification_method_id));
 diesel::joinable!(test_status -> projects (project_id));
 diesel::joinable!(tests -> projects (project_id));
 diesel::joinable!(tests -> test_status (status_id));
@@ -177,6 +185,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     logs,
     matrix,
     project_members,
+    project_status,
     projects,
     requirement_status,
     requirements,

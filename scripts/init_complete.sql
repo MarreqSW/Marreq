@@ -39,12 +39,12 @@ $$ LANGUAGE plpgsql;
 
 -- Projects table
 CREATE TABLE projects (
-    project_id SERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     description TEXT,
     creation_date TIMESTAMP,
     update_date TIMESTAMP,
-    status_id VARCHAR(50),
+    status_id INTEGER,
     owner_id INTEGER
 );
 
@@ -61,12 +61,12 @@ CREATE TABLE users (
 );
 
 CREATE TABLE project_members (
-    project_id INTEGER NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
-    id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role INTEGER NOT NULL DEFAULT 2,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (project_id, id)
+    PRIMARY KEY (project_id, user_id)
 );
 
 -- Requirement Status table
@@ -79,12 +79,20 @@ CREATE TABLE requirement_status (
 );
 
 -- Test Status table
-CREATE TABLE status_id (
+CREATE TABLE test_status (
     id SERIAL PRIMARY KEY,
     title VARCHAR NOT NULL,
     description VARCHAR NOT NULL,
     tag VARCHAR NOT NULL,
     project_id INTEGER NOT NULL
+);
+
+-- Project Status table
+CREATE TABLE project_status (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Categories table
@@ -128,7 +136,7 @@ CREATE TABLE requirements (
     parent_id INTEGER,
     creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deadline_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deadline_date TIMESTAMP,
     applicability_id INTEGER NOT NULL DEFAULT 1,
     justification TEXT,
     project_id INTEGER NOT NULL
@@ -149,16 +157,16 @@ CREATE TABLE tests (
 -- Matrix table (traceability between requirements and tests)
 CREATE TABLE matrix (
     req_id INTEGER NOT NULL,
-    id INTEGER NOT NULL,
+    test_id INTEGER NOT NULL,
     creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     project_id INTEGER NOT NULL,
-    PRIMARY KEY (req_id, id)
+    PRIMARY KEY (req_id, test_id)
 );
 
 -- Logs table (audit trail)
 CREATE TABLE logs (
     log_id SERIAL PRIMARY KEY,
-    id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
     action_type VARCHAR(50) NOT NULL,
     entity_type VARCHAR(50) NOT NULL,
     entity_id INTEGER,
@@ -176,22 +184,22 @@ CREATE TABLE logs (
 -- =============================================================================
 
 ALTER TABLE categories ADD CONSTRAINT fk_categories_project
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE applicability ADD CONSTRAINT fk_applicability_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE verification ADD CONSTRAINT fk_verification_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE requirement_status ADD CONSTRAINT fk_requirement_status_project
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
-ALTER TABLE status_id ADD CONSTRAINT fk_status_id_project
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+ALTER TABLE test_status ADD CONSTRAINT fk_test_status_project
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE requirements ADD CONSTRAINT fk_requirements_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE requirements ADD CONSTRAINT fk_requirements_applicability 
     FOREIGN KEY (applicability_id) REFERENCES applicability(id);
@@ -200,34 +208,37 @@ ALTER TABLE requirements ADD CONSTRAINT fk_requirements_status
     FOREIGN KEY (status_id) REFERENCES requirement_status(id);
 
 ALTER TABLE tests ADD CONSTRAINT fk_tests_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE tests ADD CONSTRAINT fk_tests_status 
-    FOREIGN KEY (status_id) REFERENCES status_id(id);
+    FOREIGN KEY (status_id) REFERENCES test_status(id);
 
 ALTER TABLE matrix ADD CONSTRAINT fk_matrix_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE matrix ADD CONSTRAINT fk_matrix_requirements 
     FOREIGN KEY (req_id) REFERENCES requirements(id) ON DELETE CASCADE;
 
 ALTER TABLE matrix ADD CONSTRAINT fk_matrix_tests 
-    FOREIGN KEY (id) REFERENCES tests(id) ON DELETE CASCADE;
+    FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE;
 
 ALTER TABLE logs ADD CONSTRAINT fk_logs_user_id 
-    FOREIGN KEY (id) REFERENCES users(id) ON DELETE CASCADE;
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 ALTER TABLE logs ADD CONSTRAINT fk_logs_project_id 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE;
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
 
-CREATE INDEX project_members_user_idx ON project_members(id);
+ALTER TABLE projects ADD CONSTRAINT fk_projects_status
+    FOREIGN KEY (status_id) REFERENCES project_status(id);
+
+CREATE INDEX project_members_user_idx ON project_members(user_id);
 
 -- =============================================================================
 -- INDEXES FOR PERFORMANCE
 -- =============================================================================
 
 -- Logs indexes
-CREATE INDEX idx_logs_user_id ON logs(id);
+CREATE INDEX idx_logs_user_id ON logs(user_id);
 CREATE INDEX idx_logs_entity_type ON logs(entity_type);
 CREATE INDEX idx_logs_entity_id ON logs(entity_id);
 CREATE INDEX idx_logs_project_id ON logs(project_id);
@@ -250,7 +261,7 @@ CREATE INDEX idx_tests_parent ON tests(parent_id);
 -- Matrix indexes
 CREATE INDEX idx_matrix_project_id ON matrix(project_id);
 CREATE INDEX idx_matrix_req_id ON matrix(req_id);
-CREATE INDEX idx_matrix_test_id ON matrix(id);
+CREATE INDEX idx_matrix_test_id ON matrix(test_id);
 
 -- Users indexes
 CREATE INDEX idx_users_username ON users(username);
@@ -268,11 +279,18 @@ CREATE INDEX idx_applicability_tag ON applicability(tag);
 -- DEFAULT DATA
 -- =============================================================================
 
+-- Project Status definitions
+INSERT INTO project_status (id, name, description) VALUES
+    (1, 'Active', 'Project is currently active and in progress'),
+    (2, 'Completed', 'Project has been completed successfully'),
+    (3, 'On Hold', 'Project is temporarily paused'),
+    (4, 'Cancelled', 'Project has been cancelled');
+
 -- Projects
-INSERT INTO projects (project_id, name, description, creation_date, status_id) VALUES
-    (1, 'Space Project', 'Space exploration satellite requirements and test management system for advanced satellite missions', NOW(), 'Active'),
-    (2, 'ReqMan Project', 'Requirements management system development and testing', NOW(), 'Active'),
-    (3, 'Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 'Active');
+INSERT INTO projects (id, name, description, creation_date, status_id) VALUES
+    (1, 'Space Project', 'Space exploration satellite requirements and test management system for advanced satellite missions', NOW(), 1),
+    (2, 'ReqMan Project', 'Requirements management system development and testing', NOW(), 1),
+    (3, 'Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 1);
 
 -- Requirement Status definitions
 INSERT INTO requirement_status (title, description, tag, project_id) VALUES
@@ -284,7 +302,7 @@ INSERT INTO requirement_status (title, description, tag, project_id) VALUES
     ('Finished', 'The requirement is finished and completed', 'Fsh', 1);
 
 -- Test Status definitions
-INSERT INTO status_id (title, description, tag, project_id) VALUES
+INSERT INTO test_status (title, description, tag, project_id) VALUES
     ('Passed', 'The test has passed all criteria', 'Pass', 1),
     ('Failed', 'The test has failed one or more criteria', 'Fail', 1),
     ('Pending', 'The test is pending execution', 'Pend', 1),
@@ -301,7 +319,7 @@ INSERT INTO users (username, name, email, is_admin, password_hash) VALUES
     ('admin', 'System Administrator', 'admin@reqman.com', true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m');
 
 -- Project membership assignments (role: 1=Owner, 2=Manager, 3=Contributor, 4=Viewer)
-INSERT INTO project_members (project_id, id, role) VALUES
+INSERT INTO project_members (project_id, user_id, role) VALUES
     -- Space Project team
     (1, 2, 1),  -- Dr. Smith owns the Space Project
     (1, 3, 3),  -- Engineer Jones contributes to Space Project
@@ -359,7 +377,7 @@ INSERT INTO tests (reference_code, name, description, status_id, source, project
     ('TEST-THERM-001', 'Thermal Vacuum Performance Test', 'Verify thermal control system performance in vacuum environment', 1, 'Thermal vacuum testing and temperature cycling', 1);
 
 -- Traceability Matrix (requirements to tests mapping)
-INSERT INTO matrix (req_id, id, project_id) VALUES
+INSERT INTO matrix (req_id, test_id, project_id) VALUES
     (1, 1, 1),  -- REQ-PWR-001 -> TEST-PWR-001
     (2, 2, 1),  -- REQ-PWR-002 -> TEST-PWR-002
     (3, 3, 1),  -- REQ-COMM-001 -> TEST-COMM-001
@@ -367,7 +385,7 @@ INSERT INTO matrix (req_id, id, project_id) VALUES
     (5, 5, 1);  -- REQ-THERM-001 -> TEST-THERM-001
 
 -- Sample audit logs
-INSERT INTO logs (id, action_type, entity_type, entity_id, project_id, description, created_at) VALUES
+INSERT INTO logs (user_id, action_type, entity_type, entity_id, project_id, description, created_at) VALUES
     (1, 'CREATE', 'PROJECT', 1, 1, 'Space Project created by system administrator', NOW() - INTERVAL '1 day'),
     (1, 'CREATE', 'REQUIREMENT', 1, 1, 'Power requirement REQ-PWR-001 created by Dr. Smith', NOW() - INTERVAL '12 hours'),
     (2, 'UPDATE', 'REQUIREMENT', 2, 1, 'Power requirement REQ-PWR-002 status updated to Proposal', NOW() - INTERVAL '6 hours'),

@@ -243,7 +243,7 @@ mod tests {
             parent_id: Some(1),
             creation_date: timestamp(),
             update_date: timestamp(),
-            deadline_date: timestamp(),
+            deadline_date: Some(timestamp()),
             applicability_id: 1,
             justification: Some("because".into()),
             project_id,

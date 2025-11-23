@@ -75,7 +75,7 @@ mod workflow_support {
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some("Active".into()),
+                status_id: Some(1),
                 owner_id: Some(1),
             },
         );

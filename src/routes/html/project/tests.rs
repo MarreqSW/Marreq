@@ -462,7 +462,7 @@ mod tests {
             description: Some(format!("{name} project")),
             creation_date: Some(timestamp()),
             update_date: Some(timestamp()),
-            status_id: Some("Active".to_string()),
+            status_id: Some(1),
             owner_id: Some(ADMIN_ID),
         }
     }
@@ -531,7 +531,7 @@ mod tests {
             parent_id: None,
             creation_date: timestamp(),
             update_date: timestamp(),
-            deadline_date: timestamp(),
+            deadline_date: Some(timestamp()),
             applicability_id: 1,
             justification: Some("For testing".into()),
             project_id: PRIMARY_PROJECT,

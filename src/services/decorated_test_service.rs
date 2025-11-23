@@ -217,7 +217,7 @@ mod tests {
                 parent_id: None,
                 creation_date: ts(),
                 update_date: ts(),
-                deadline_date: ts(),
+                deadline_date: Some(ts()),
                 applicability_id: 0,
                 justification: None,
                 project_id: 99,

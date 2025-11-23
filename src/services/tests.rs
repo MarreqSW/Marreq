@@ -27,7 +27,7 @@ mod tests {
             parent_id: None,
             creation_date: timestamp(),
             update_date: timestamp(),
-            deadline_date: timestamp(),
+            deadline_date: Some(timestamp()),
             applicability_id: 1,
             justification: None,
             project_id: 1,

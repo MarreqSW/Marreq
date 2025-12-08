@@ -9,8 +9,7 @@ pub fn filter_requirements(
     let mut filtered_requirements: Vec<Requirement> = requirements
         .into_iter()
         .filter(|req| {
-            let status_match =
-                status_filter.map_or(true, |status_id| req.status_id == status_id);
+            let status_match = status_filter.map_or(true, |status_id| req.status_id == status_id);
             let verification_match =
                 verification_filter.map_or(true, |id| req.verification_method_id == id);
             let category_match =

@@ -199,11 +199,11 @@ fn render_core_templates() {
                         "project_id": 1,
                         "title": "Sample requirement",
                         "reference_code": "REQ-101",
-                        "req_category_id": 1,
-                        "req_current_status_id": 1,
-                        "req_verification_id": 1,
-                        "req_author_id": 1,
-                        "req_reviewer_id": 1,
+                        "category_id": 1,
+                        "status_id": 1,
+                        "verification_method_id": 1,
+                        "author_id": 1,
+                        "reviewer_id": 1,
                         "creation_date": "2024-01-01",
                         "deadline_date": "2024-02-01"
                     }

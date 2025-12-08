@@ -49,63 +49,67 @@ mod test_support {
         repo.projects.insert(
             1,
             Project {
-                project_id: 1,
-                project_name: "Test Project".into(),
-                project_description: Some("Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(1),
+                id: 1,
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status_id: Some(1),
+                owner_id: Some(1),
             },
         );
 
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Draft".into(),
-                req_st_description: "".into(),
-                req_st_short_name: "D".into(),
+                id: 1,
+                title: "Draft".into(),
+                description: "".into(),
+                tag: "D".into(),
+                project_id: 1,
             },
         );
 
         repo.test_statuses.insert(
             1,
             TestStatus {
-                test_st_id: 1,
-                test_st_title: "Not Run".into(),
-                test_st_description: "".into(),
-                test_st_short_name: "NR".into(),
+                id: 1,
+                title: "Not Run".into(),
+                description: "".into(),
+                tag: "NR".into(),
+                project_id: 1,
             },
         );
 
         repo.test_statuses.insert(
             2,
             TestStatus {
-                test_st_id: 2,
-                test_st_title: "Passed".into(),
-                test_st_description: "".into(),
-                test_st_short_name: "P".into(),
+                id: 2,
+                title: "Passed".into(),
+                description: "".into(),
+                tag: "P".into(),
+                project_id: 1,
             },
         );
 
         repo.categories.insert(
             1,
             Category {
-                cat_id: 1,
-                cat_title: "Systems".into(),
-                cat_description: "".into(),
-                cat_tag: "SYS".into(),
+                id: 1,
+                title: "Systems".into(),
+                description: "".into(),
+                tag: "SYS".into(),
                 project_id: 1,
             },
         );
 
         repo.verifications.insert(
             1,
-            Verification {
-                verification_id: 1,
-                verification_name: "Analysis".into(),
-                verification_description: "".into(),
+            VerificationMethod {
+                id: 1,
+                title: "Analysis".into(),
+                description: "".into(),
+                tag: "ANALYSIS".into(),
                 project_id: 1,
             },
         );
@@ -113,10 +117,10 @@ mod test_support {
         repo.applicability.insert(
             1,
             Applicability {
-                app_id: 1,
-                app_title: "All".into(),
-                app_description: "".into(),
-                app_tag: "ALL".into(),
+                id: 1,
+                title: "All".into(),
+                description: "".into(),
+                tag: "ALL".into(),
                 project_id: 1,
             },
         );
@@ -126,43 +130,43 @@ mod test_support {
 
     pub fn sample_requirement(id: i32, project_id: i32, title: &str) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: title.to_string(),
-            req_description: format!("{} description", title),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: format!("REQ-SYS-{:03}", id),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("Test justification".into()),
+            id: id,
+            title: title.to_string(),
+            description: format!("{} description", title),
+            verification_method_id: 1,
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: format!("REQ-SYS-{:03}", id),
+            category_id: 1,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            applicability_id: 1,
+            justification: Some("Test justification".into()),
             project_id,
         }
     }
 
-    pub fn sample_test(id: i32, project_id: i32, name: &str) -> Test {
-        Test {
-            test_id: id,
-            test_name: name.to_string(),
-            test_reference: format!("TST-{:03}", id),
-            test_description: format!("{} description", name),
-            test_source: "automated".into(),
-            test_status: 1,
-            test_parent: 0,
+    pub fn sample_test(id: i32, project_id: i32, name: &str) -> TestCase {
+        TestCase {
+            id: id,
+            name: name.to_string(),
+            reference_code: format!("TST-{:03}", id),
+            description: format!("{} description", name),
+            source: "automated".into(),
+            status_id: 1,
+            parent_id: None,
             project_id,
         }
     }
 
-    pub fn sample_matrix_link(req_id: i32, test_id: i32, project_id: i32) -> Matrix {
-        Matrix {
-            matrix_req_id: req_id,
-            matrix_test_id: test_id,
-            matrix_creation_date: timestamp(),
+    pub fn sample_matrix_link(req_id: i32, test_id: i32, project_id: i32) -> MatrixLink {
+        MatrixLink {
+            req_id: req_id,
+            test_id: test_id,
+            creation_date: timestamp(),
             project_id,
         }
     }
@@ -191,8 +195,8 @@ fn link_creates_new_matrix_entry() {
     // Verify the link was created
     let links = service.list_by_project(1).unwrap();
     assert_eq!(links.len(), 1);
-    assert_eq!(links[0].matrix_req_id, 5);
-    assert_eq!(links[0].matrix_test_id, 10);
+    assert_eq!(links[0].project_id, 5);
+    assert_eq!(links[0].test_id, 10);
     assert_eq!(links[0].project_id, 1);
 }
 
@@ -317,7 +321,7 @@ fn export_csv_escapes_special_characters() {
     let mut repo = base_repo();
 
     let mut req = sample_requirement(1, 1, "Quote Test");
-    req.req_title = "Test, with \"quotes\"".to_string();
+    req.title = "Test, with \"quotes\"".to_string();
     repo.requirements.insert(1, req);
 
     let state = managed_state(repo);
@@ -337,11 +341,11 @@ fn export_csv_filters_tests_by_status() {
         .insert(1, sample_requirement(1, 1, "Req 1"));
 
     let mut test1 = sample_test(1, 1, "Test 1");
-    test1.test_status = 1; // Not Run
+    test1.status_id = 1; // Not Run
     repo.tests.insert(1, test1);
 
     let mut test2 = sample_test(2, 1, "Test 2");
-    test2.test_status = 2; // Passed
+    test2.status_id = 2; // Passed
     repo.tests.insert(2, test2);
 
     let state = managed_state(repo);
@@ -417,19 +421,20 @@ fn matrix_view_filters_by_requirement_status() {
     repo.requirement_statuses.insert(
         2,
         RequirementStatus {
-            req_st_id: 2,
-            req_st_title: "Accepted".into(),
-            req_st_description: "".into(),
-            req_st_short_name: "A".into(),
+            id: 2,
+            project_id: 1,
+            title: "Accepted".into(),
+            description: "".into(),
+            tag: "A".into(),
         },
     );
 
     let mut req1 = sample_requirement(1, 1, "Draft Req");
-    req1.req_current_status = 1; // Draft
+    req1.status_id = 1; // Draft
     repo.requirements.insert(1, req1);
 
     let mut req2 = sample_requirement(2, 1, "Accepted Req");
-    req2.req_current_status = 2; // Accepted
+    req2.status_id = 2; // Accepted
     repo.requirements.insert(2, req2);
 
     let state = managed_state(repo);
@@ -442,7 +447,7 @@ fn matrix_view_filters_by_requirement_status() {
     let view = service.get_matrix_view(1, filters, pagination).unwrap();
 
     assert_eq!(view.requirements.len(), 1);
-    assert_eq!(view.requirements[0].req_title, "Accepted Req");
+    assert_eq!(view.requirements[0].title, "Accepted Req");
 }
 
 #[test]
@@ -453,24 +458,24 @@ fn matrix_view_filters_by_test_status() {
         .insert(1, sample_requirement(1, 1, "Req 1"));
 
     let mut test1 = sample_test(1, 1, "Not Run Test");
-    test1.test_status = 1;
+    test1.status_id = 1;
     repo.tests.insert(1, test1);
 
     let mut test2 = sample_test(2, 1, "Passed Test");
-    test2.test_status = 2;
+    test2.status_id = 2;
     repo.tests.insert(2, test2);
 
     let state = managed_state(repo);
     let service = MatrixService::new(&state);
 
     let mut filters = MatrixFilters::default();
-    filters.test_status = Some(2); // Filter for Passed
+    filters.status_id = Some(2); // Filter for Passed
     let pagination = MatrixPagination::default();
 
     let view = service.get_matrix_view(1, filters, pagination).unwrap();
 
     assert_eq!(view.tests.len(), 1);
-    assert_eq!(view.tests[0].test_name, "Passed Test");
+    assert_eq!(view.tests[0].name, "Passed Test");
 }
 
 #[test]
@@ -544,9 +549,9 @@ fn matrix_view_sorts_by_title() {
 
     let view = service.get_matrix_view(1, filters, pagination).unwrap();
 
-    assert_eq!(view.requirements[0].req_title, "Alpha");
-    assert_eq!(view.requirements[1].req_title, "Beta");
-    assert_eq!(view.requirements[2].req_title, "Zebra");
+    assert_eq!(view.requirements[0].title, "Alpha");
+    assert_eq!(view.requirements[1].title, "Beta");
+    assert_eq!(view.requirements[2].title, "Zebra");
 }
 
 #[test]
@@ -568,8 +573,8 @@ fn matrix_view_sorts_descending() {
 
     let view = service.get_matrix_view(1, filters, pagination).unwrap();
 
-    assert_eq!(view.requirements[0].req_id, 5);
-    assert_eq!(view.requirements[4].req_id, 1);
+    assert_eq!(view.requirements[0].id, 5);
+    assert_eq!(view.requirements[4].id, 1);
 }
 
 // ============================================================================
@@ -600,7 +605,7 @@ fn can_calculate_coverage_percentage() {
     let links = service.list_by_project(1).unwrap();
 
     // Calculate coverage
-    let covered_reqs: HashSet<i32> = links.iter().map(|l| l.matrix_req_id).collect();
+    let covered_reqs: HashSet<i32> = links.iter().map(|l| l.project_id).collect();
     let coverage_percentage = (covered_reqs.len() as f32 / 4.0) * 100.0;
 
     assert_eq!(coverage_percentage, 75.0); // 3 out of 4 = 75%
@@ -625,7 +630,7 @@ fn identifies_requirements_without_tests() {
     let service = MatrixService::new(&state);
 
     let links = service.list_by_project(1).unwrap();
-    let covered_reqs: HashSet<i32> = links.iter().map(|l| l.matrix_req_id).collect();
+    let covered_reqs: HashSet<i32> = links.iter().map(|l| l.project_id).collect();
 
     // Requirements 4 and 5 are not covered
     assert!(!covered_reqs.contains(&4));
@@ -652,7 +657,7 @@ fn identifies_tests_without_requirements() {
     let service = MatrixService::new(&state);
 
     let links = service.list_by_project(1).unwrap();
-    let linked_tests: HashSet<i32> = links.iter().map(|l| l.matrix_test_id).collect();
+    let linked_tests: HashSet<i32> = links.iter().map(|l| l.test_id).collect();
 
     // Tests 4 and 5 are orphaned
     assert!(!linked_tests.contains(&4));

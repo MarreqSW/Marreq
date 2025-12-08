@@ -64,26 +64,26 @@ mod test_support {
         repo.projects.insert(
             1,
             Project {
-                project_id: 1,
-                project_name: "Test Project".into(),
-                project_description: Some("Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(1),
+                id: 1,
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status_id: Some(1),
+                owner_id: Some(1),
             },
         );
 
         repo.projects.insert(
             2,
             Project {
-                project_id: 2,
-                project_name: "Other Project".into(),
-                project_description: Some("Other Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(2),
+                id: 2,
+                name: "Other Project".into(),
+                description: Some("Other Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status_id: Some(1),
+                owner_id: Some(2),
             },
         );
 
@@ -96,7 +96,7 @@ mod test_support {
         });
 
         repo.project_members.push(ProjectMember {
-            project_id: 2,
+            project_id: 1,
             user_id: 2,
             role: 1,
             created_at: timestamp(),
@@ -106,40 +106,43 @@ mod test_support {
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Draft".into(),
-                req_st_description: "".into(),
-                req_st_short_name: "D".into(),
+                id: 1,
+                title: "Draft".into(),
+                description: "".into(),
+                tag: "D".into(),
+                project_id: 1,
             },
         );
 
         repo.requirement_statuses.insert(
             2,
             RequirementStatus {
-                req_st_id: 2,
-                req_st_title: "Accepted".into(),
-                req_st_description: "".into(),
-                req_st_short_name: "A".into(),
+                id: 2,
+                title: "Accepted".into(),
+                description: "".into(),
+                tag: "A".into(),
+                project_id: 1,
             },
         );
 
         repo.categories.insert(
             1,
             Category {
-                cat_id: 1,
-                cat_title: "Systems".into(),
-                cat_description: "".into(),
-                cat_tag: "SYS".into(),
+                id: 1,
+                title: "Systems".into(),
+                description: "".into(),
+                tag: "SYS".into(),
                 project_id: 1,
             },
         );
 
         repo.verifications.insert(
             1,
-            Verification {
-                verification_id: 1,
-                verification_name: "Analysis".into(),
-                verification_description: "".into(),
+            VerificationMethod {
+                id: 1,
+                title: "Analysis".into(),
+                description: "".into(),
+                tag: "ANALYSIS".into(),
                 project_id: 1,
             },
         );
@@ -147,10 +150,10 @@ mod test_support {
         repo.applicability.insert(
             1,
             Applicability {
-                app_id: 1,
-                app_title: "All".into(),
-                app_description: "".into(),
-                app_tag: "ALL".into(),
+                id: 1,
+                title: "All".into(),
+                description: "".into(),
+                tag: "ALL".into(),
                 project_id: 1,
             },
         );
@@ -160,38 +163,38 @@ mod test_support {
 
     pub fn sample_requirement(id: i32, project_id: i32, title: &str) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: title.to_string(),
-            req_description: format!("{} description", title),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: format!("REQ-SYS-{:03}", id),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("Test justification".into()),
+            id: id,
+            title: title.to_string(),
+            description: format!("{} description", title),
+            verification_method_id: 1,
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: format!("REQ-SYS-{:03}", id),
+            category_id: 1,
+            parent_id: Some(0),
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            applicability_id: 1,
+            justification: Some("Test justification".into()),
             project_id,
         }
     }
 
     pub fn new_requirement_json(title: &str, project_id: i32) -> Value {
         json!({
-            "req_title": title,
-            "req_description": format!("{} description", title),
-            "req_verification": 1,
-            "req_author": 1,
-            "req_category": 1,
-            "req_current_status": 1,
-            "req_parent": 0,
-            "req_reference": "",
-            "req_reviewer": 1,
-            "req_applicability": 1,
-            "req_justification": null,
+            "title": title,
+            "description": format!("{} description", title),
+            "verification_method_id": 1,
+            "author_id": 1,
+            "category_id": 1,
+            "status_id": 1,
+            "parent_id": 0,
+            "reference_code": "",
+            "reviewer_id": 1,
+            "applicability_id": 1,
+            "justification": null,
             "project_id": project_id
         })
     }
@@ -241,7 +244,7 @@ async fn get_requirements_returns_all_requirements() {
     assert_eq!(requirements.len(), 3);
 
     // Check all requirements are present (order may vary)
-    let titles: Vec<&str> = requirements.iter().map(|r| r.req_title.as_str()).collect();
+    let titles: Vec<&str> = requirements.iter().map(|r| r.title.as_str()).collect();
     assert!(titles.contains(&"Requirement 1"));
     assert!(titles.contains(&"Requirement 2"));
     assert!(titles.contains(&"Requirement 3"));
@@ -276,9 +279,9 @@ async fn get_requirement_by_id_returns_correct_requirement() {
 
     assert_eq!(response.status(), Status::Ok);
     let requirement: Requirement = response.into_json().await.expect("json");
-    assert_eq!(requirement.req_id, 1);
-    assert_eq!(requirement.req_title, "Test Requirement");
-    assert_eq!(requirement.req_reference, "REQ-SYS-001");
+    assert_eq!(requirement.id, 1);
+    assert_eq!(requirement.title, "Test Requirement");
+    assert_eq!(requirement.reference_code, "REQ-SYS-001");
 }
 
 #[rocket::async_test]
@@ -414,7 +417,7 @@ async fn patch_requirement_updates_title() {
         .await;
 
     let requirement: Requirement = get_response.into_json().await.expect("json");
-    assert_eq!(requirement.req_title, "Updated Title");
+    assert_eq!(requirement.title, "Updated Title");
 }
 
 #[rocket::async_test]
@@ -449,9 +452,9 @@ async fn patch_requirement_updates_multiple_fields() {
         .await;
 
     let requirement: Requirement = get_response.into_json().await.expect("json");
-    assert_eq!(requirement.req_title, "Updated Title");
-    assert_eq!(requirement.req_description, "Updated description");
-    assert_eq!(requirement.req_current_status, 2);
+    assert_eq!(requirement.title, "Updated Title");
+    assert_eq!(requirement.description, "Updated description");
+    assert_eq!(requirement.status_id, 2);
 }
 
 #[rocket::async_test]
@@ -631,8 +634,8 @@ async fn create_multiple_requirements_sequentially() {
 async fn patch_requirement_preserves_unmodified_fields() {
     let mut repo = base_repo();
     let original = sample_requirement(1, 1, "Original Title");
-    let original_description = original.req_description.clone();
-    let original_status = original.req_current_status;
+    let original_description = original.description.clone();
+    let original_status = original.status_id;
     repo.requirements.insert(1, original);
 
     let client = test_client(repo).await;
@@ -658,7 +661,7 @@ async fn patch_requirement_preserves_unmodified_fields() {
         .await;
 
     let requirement: Requirement = get_response.into_json().await.expect("json");
-    assert_eq!(requirement.req_title, "New Title");
-    assert_eq!(requirement.req_description, original_description);
-    assert_eq!(requirement.req_current_status, original_status);
+    assert_eq!(requirement.title, "New Title");
+    assert_eq!(requirement.description, original_description);
+    assert_eq!(requirement.status_id, original_status);
 }

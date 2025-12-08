@@ -70,7 +70,7 @@ mod workflow_support {
         repo.projects.insert(
             1,
             Project {
-                project_id: 1,
+                id: 1,
                 name: "Test Project".into(),
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
@@ -82,7 +82,7 @@ mod workflow_support {
 
         repo.project_members.push(ProjectMember {
             project_id: 1,
-            id: 1,
+            user_id: 1,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),
@@ -90,7 +90,7 @@ mod workflow_support {
 
         repo.project_members.push(ProjectMember {
             project_id: 1,
-            id: 2,
+            user_id: 2,
             role: 2,
             created_at: timestamp(),
             updated_at: timestamp(),
@@ -423,7 +423,7 @@ async fn filter_and_search_requirements() {
             parent_id: None,
             creation_date: timestamp(),
             update_date: timestamp(),
-            deadline_date: timestamp(),
+            deadline_date: Some(timestamp()),
             applicability_id: 1,
             justification: Some(format!("Justification {}", i)),
             project_id: 1,
@@ -517,7 +517,7 @@ async fn non_admin_cannot_delete_released_requirement() {
         parent_id: None,
         creation_date: timestamp(),
         update_date: timestamp(),
-        deadline_date: timestamp(),
+        deadline_date: Some(timestamp()),
         applicability_id: 1,
         justification: Some("Released".into()),
         project_id: 1,
@@ -672,7 +672,7 @@ async fn create_requirement_from_template() {
         parent_id: None,
         creation_date: timestamp(),
         update_date: timestamp(),
-        deadline_date: timestamp(),
+        deadline_date: Some(timestamp()),
         applicability_id: 1,
         justification: Some("Template justification".into()),
         project_id: 1,
@@ -700,9 +700,11 @@ async fn create_requirement_from_template() {
         .post("/p/1/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
-        .body("title=New+From+Template&description=Template+description+with+specific+format&\
+        .body(
+            "title=New+From+Template&description=Template+description+with+specific+format&\
                verification_method_id=2&status_id=1&reviewer_id=1&category_id=2&parent_id=0&\
-               applicability_id=1&reference_code=&justification=Template+justification")
+               applicability_id=1&reference_code=&justification=Template+justification",
+        )
         .dispatch()
         .await;
 

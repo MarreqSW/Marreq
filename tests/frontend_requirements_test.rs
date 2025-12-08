@@ -69,7 +69,7 @@ mod test_support {
         repo.projects.insert(
             1,
             Project {
-                project_id: 1,
+                id: 1,
                 name: "Test Project".into(),
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
@@ -81,7 +81,7 @@ mod test_support {
 
         repo.project_members.push(ProjectMember {
             project_id: 1,
-            id: 1,
+            user_id: 1,
             role: 1,
             created_at: timestamp(),
             updated_at: timestamp(),
@@ -159,7 +159,7 @@ mod test_support {
             parent_id: None,
             creation_date: timestamp(),
             update_date: timestamp(),
-            deadline_date: timestamp(),
+            deadline_date: Some(timestamp()),
             applicability_id: 1,
             justification: Some("Test justification".into()),
             project_id,
@@ -338,10 +338,7 @@ async fn new_requirement_form_has_required_fields() {
         html.contains("name=\"verification_method_id\""),
         "Missing verification field"
     );
-    assert!(
-        html.contains("name=\"status_id\""),
-        "Missing status field"
-    );
+    assert!(html.contains("name=\"status_id\""), "Missing status field");
     assert!(
         html.contains("name=\"applicability_id\""),
         "Missing applicability field"
@@ -399,7 +396,7 @@ async fn requirement_detail_page_shows_relationships() {
     repo.requirements.insert(1, parent);
 
     let mut child = sample_requirement(2, 1);
-    child.parent_id = 1;
+    child.parent_id = Some(1);
     repo.requirements.insert(2, child);
 
     let client = test_client(repo).await;

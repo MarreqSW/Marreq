@@ -116,7 +116,10 @@ fn decorate_requirements_impl<R: Repository>(
                 req_parent_title: parent_title,
                 creation_date: r.creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
                 update_date: r.update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
-                deadline_date: r.deadline_date.map(|d| d.format("%d-%m-%Y %H:%M:%S").to_string()).unwrap_or_default(),
+                deadline_date: r
+                    .deadline_date
+                    .map(|d| d.format("%d-%m-%Y %H:%M:%S").to_string())
+                    .unwrap_or_default(),
                 justification: r.justification,
                 project_id: r.project_id,
             }

@@ -42,20 +42,22 @@ mod test_support {
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Draft".into(),
-                req_st_description: "Initial draft".into(),
-                req_st_short_name: "DR".into(),
+                id: 1,
+                title: "Draft".into(),
+                description: "Initial draft".into(),
+                tag: "DR".into(),
+                project_id: 1,
             },
         );
 
         repo.requirement_statuses.insert(
             2,
             RequirementStatus {
-                req_st_id: 2,
-                req_st_title: "Approved".into(),
-                req_st_description: "Approved for implementation".into(),
-                req_st_short_name: "AP".into(),
+                id: 2,
+                title: "Approved".into(),
+                description: "Approved for implementation".into(),
+                tag: "AP".into(),
+                project_id: 1,
             },
         );
 
@@ -123,9 +125,9 @@ async fn post_status_creates_new_status() {
     let client = test_client(base_repo()).await;
 
     let new_status = json!({
-        "req_st_title": "In Review",
-        "req_st_description": "Under review",
-        "req_st_short_name": "REV"
+        "title": "In Review",
+        "description": "Under review",
+        "tag": "REV"
     });
 
     let response = client
@@ -150,7 +152,7 @@ async fn post_status_with_missing_fields_returns_error() {
     let client = test_client(base_repo()).await;
 
     let invalid_json = json!({
-        "req_st_title": "Incomplete"
+        "title": "Incomplete"
         // Missing short_name
     });
 

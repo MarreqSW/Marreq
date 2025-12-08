@@ -41,14 +41,10 @@ impl<'a> UserService<'a> {
     }
 
     /// Create a new user from a request containing a plain password.
-    /// 
+    ///
     /// This method sanitizes input, hashes the password, and creates the user.
     /// Always provide plain text passwords - they will be hashed with bcrypt.
-    pub fn create(
-        &self,
-        actor: &User,
-        request: UserCreateRequest,
-    ) -> Result<i32, RepoError> {
+    pub fn create(&self, actor: &User, request: UserCreateRequest) -> Result<i32, RepoError> {
         let password_hash = hash_password(&request.password)
             .map_err(|e| RepoError::BadInput(format!("Password hashing failed: {}", e)))?;
 

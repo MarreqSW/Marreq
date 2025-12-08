@@ -61,26 +61,26 @@ mod test_support {
         repo.projects.insert(
             1,
             Project {
-                project_id: 1,
-                project_name: "Test Project".into(),
-                project_description: Some("Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(1),
+                id: 1,
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status_id: Some(1),
+                owner_id: Some(1),
             },
         );
 
         repo.projects.insert(
             2,
             Project {
-                project_id: 2,
-                project_name: "Other Project".into(),
-                project_description: Some("Other Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(2),
+                id: 2,
+                name: "Other Project".into(),
+                description: Some("Other Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status_id: Some(1),
+                owner_id: Some(2),
             },
         );
 
@@ -89,19 +89,19 @@ mod test_support {
 
     pub fn sample_category(id: i32, project_id: i32, title: &str, tag: &str) -> Category {
         Category {
-            cat_id: id,
-            cat_title: title.to_string(),
-            cat_description: format!("{} description", title),
-            cat_tag: tag.to_string(),
+            id: id,
+            title: title.to_string(),
+            description: format!("{} description", title),
+            tag: tag.to_string(),
             project_id,
         }
     }
 
     pub fn new_category_json(title: &str, tag: &str, project_id: i32) -> Value {
         json!({
-            "cat_title": title,
-            "cat_description": format!("{} description", title),
-            "cat_tag": tag,
+            "title": title,
+            "description": format!("{} description", title),
+            "tag": tag,
             "project_id": project_id
         })
     }
@@ -180,9 +180,9 @@ async fn get_category_by_id_returns_correct_category() {
 
     assert_eq!(response.status(), Status::Ok);
     let category: Category = response.into_json().await.expect("json");
-    assert_eq!(category.cat_id, 1);
-    assert_eq!(category.cat_title, "System Requirements");
-    assert_eq!(category.cat_tag, "SYS");
+    assert_eq!(category.id, 1);
+    assert_eq!(category.title, "System Requirements");
+    assert_eq!(category.tag, "SYS");
 }
 
 #[rocket::async_test]
@@ -238,7 +238,7 @@ async fn post_category_with_missing_fields_returns_error() {
     let client = test_client(base_repo()).await;
 
     let invalid_json = json!({
-        "cat_title": "Incomplete Category"
+        "title": "Incomplete Category"
         // Missing required fields
     });
 
@@ -280,9 +280,9 @@ async fn put_category_updates_category() {
     let client = test_client(repo).await;
 
     let update = json!({
-        "cat_title": "Updated Title",
-        "cat_description": "Updated description",
-        "cat_tag": "UPDATED",
+        "title": "Updated Title",
+        "description": "Updated description",
+        "tag": "UPDATED",
         "project_id": 1
     });
 
@@ -306,8 +306,8 @@ async fn put_category_updates_category() {
         .await;
 
     let category: Category = get_response.into_json().await.expect("json");
-    assert_eq!(category.cat_title, "Updated Title");
-    assert_eq!(category.cat_tag, "UPDATED");
+    assert_eq!(category.title, "Updated Title");
+    assert_eq!(category.tag, "UPDATED");
 }
 
 #[rocket::async_test]
@@ -315,9 +315,9 @@ async fn put_nonexistent_category_returns_404() {
     let client = test_client(base_repo()).await;
 
     let update = json!({
-        "cat_title": "Updated",
-        "cat_description": "Desc",
-        "cat_tag": "TAG",
+        "title": "Updated",
+        "description": "Desc",
+        "tag": "TAG",
         "project_id": 1
     });
 
@@ -488,9 +488,9 @@ async fn update_preserves_category_id() {
     let client = test_client(repo).await;
 
     let update = json!({
-        "cat_title": "Updated",
-        "cat_description": "Updated desc",
-        "cat_tag": "NEW",
+        "title": "Updated",
+        "description": "Updated desc",
+        "tag": "NEW",
         "project_id": 1
     });
 
@@ -509,5 +509,5 @@ async fn update_preserves_category_id() {
         .await;
 
     let category: Category = get_response.into_json().await.expect("json");
-    assert_eq!(category.cat_id, 1); // ID should remain the same
+    assert_eq!(category.id, 1); // ID should remain the same
 }

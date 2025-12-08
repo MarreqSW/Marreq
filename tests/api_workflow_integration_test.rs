@@ -46,13 +46,13 @@ mod test_support {
 
         // Setup project
         let project = Project {
-            project_id: 1,
-            project_name: "Workflow Project".into(),
-            project_description: None,
-            project_creation_date: None,
-            project_update_date: None,
-            project_status: Some("Active".into()),
-            project_owner_id: Some(1),
+            id: 1,
+            name: "Workflow Project".into(),
+            description: None,
+            creation_date: None,
+            update_date: None,
+            status_id: Some(1),
+            owner_id: Some(1),
         };
         repo.projects.insert(1, project);
 
@@ -93,16 +93,16 @@ async fn workflow_traceability_lifecycle() {
         .private_cookie(auth.clone())
         .body(
             json!({
-                "req_title": "Login Feature",
-                "req_description": "User must be able to login",
-                "req_verification": 1,
-                "req_current_status": 1,
-                "req_reference": "REQ-001",
-                "req_category": 1,
-                "req_applicability": 1,
-                "req_author": 1,
-                "req_reviewer": 1,
-                "req_parent": 0,
+                "title": "Login Feature",
+                "description": "User must be able to login",
+                "verification_method_id": 1,
+                "status_id": 1,
+                "reference_code": "REQ-001",
+                "category_id": 1,
+                "applicability_id": 1,
+                "author_id": 1,
+                "reviewer_id": 1,
+                "parent_id": 0,
                 "project_id": 1
             })
             .to_string(),
@@ -210,13 +210,13 @@ async fn workflow_project_isolation() {
     repo.projects.insert(
         2,
         Project {
-            project_id: 2,
-            project_name: "Secret Project".into(),
-            project_description: None,
-            project_creation_date: None,
-            project_update_date: None,
-            project_status: Some("Active".into()),
-            project_owner_id: Some(2), // Different owner
+            id: 2,
+            name: "Secret Project".into(),
+            description: None,
+            creation_date: None,
+            update_date: None,
+            status_id: Some(1),
+            owner_id: Some(2), // Different owner
         },
     );
 
@@ -232,13 +232,13 @@ async fn workflow_project_isolation() {
         .private_cookie(auth.clone())
         .body(
             json!({
-                "req_title": "Secret Feature",
-                "req_description": "Should fail",
-                "req_verification": 1,
-                "req_current_status": 1,
-                "req_reference": "SEC-001",
-                "req_category": 1,
-                "req_applicability": 1,
+                "title": "Secret Feature",
+                "description": "Should fail",
+                "verification_method_id": 1,
+                "status_id": 1,
+                "reference_code": "SEC-001",
+                "category_id": 1,
+                "applicability_id": 1,
                 "project_id": 2
             })
             .to_string(),

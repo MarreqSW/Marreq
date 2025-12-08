@@ -110,7 +110,10 @@ async fn show_project_members(
 
     let member_count = decorated_members.len();
 
-    let member_ids: HashSet<i32> = memberships.iter().map(|membership| membership.user_id).collect();
+    let member_ids: HashSet<i32> = memberships
+        .iter()
+        .map(|membership| membership.user_id)
+        .collect();
 
     let available_users: Vec<Value> = if can_manage_members {
         users
@@ -302,7 +305,8 @@ mod tests {
 
     fn repo_with_single_owner() -> DieselRepoMock {
         let mut repo = base_repo();
-        repo.project_members.retain(|member| member.user_id != MEMBER_ID);
+        repo.project_members
+            .retain(|member| member.user_id != MEMBER_ID);
         repo
     }
 

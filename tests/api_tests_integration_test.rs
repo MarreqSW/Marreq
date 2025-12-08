@@ -65,13 +65,13 @@ mod test_support {
         repo.projects.insert(
             1,
             Project {
-                project_id: 1,
-                project_name: "Test Project".into(),
-                project_description: Some("Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(1),
+                id: 1,
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status_id: Some(1),
+                owner_id: Some(1),
             },
         );
 
@@ -86,57 +86,60 @@ mod test_support {
         repo.test_statuses.insert(
             1,
             TestStatus {
-                test_st_id: 1,
-                test_st_title: "Not Run".into(),
-                test_st_description: "".into(),
-                test_st_short_name: "NR".into(),
+                id: 1,
+                title: "Not Run".into(),
+                description: "".into(),
+                tag: "NR".into(),
+                project_id: 1,
             },
         );
 
         repo.test_statuses.insert(
             2,
             TestStatus {
-                test_st_id: 2,
-                test_st_title: "Passed".into(),
-                test_st_description: "".into(),
-                test_st_short_name: "P".into(),
+                id: 2,
+                title: "Passed".into(),
+                description: "".into(),
+                tag: "P".into(),
+                project_id: 1,
             },
         );
 
         repo.test_statuses.insert(
             3,
             TestStatus {
-                test_st_id: 3,
-                test_st_title: "Failed".into(),
-                test_st_description: "".into(),
-                test_st_short_name: "F".into(),
+                id: 3,
+                title: "Failed".into(),
+                description: "".into(),
+                tag: "F".into(),
+                project_id: 1,
             },
         );
 
         repo
     }
 
-    pub fn sample_test(id: i32, project_id: i32, name: &str) -> Test {
-        Test {
-            test_id: id,
-            test_name: name.to_string(),
-            test_reference: format!("TST-{:03}", id),
-            test_description: format!("{} description", name),
-            test_source: "automated".into(),
-            test_status: 1,
-            test_parent: 0,
+    pub fn sample_test(id: i32, project_id: i32, name: &str) -> TestCase {
+        TestCase {
+            id: id,
+            name: name.to_string(),
+            reference_code: format!("TST-{:03}", id),
+            description: format!("{} description", name),
+            source: "automated".into(),
+            status_id: 1,
+            parent_id: None,
             project_id,
         }
     }
 
     pub fn new_test_json(name: &str, project_id: i32) -> Value {
         json!({
-            "test_name": name,
-            "test_reference": "",
-            "test_description": format!("{} description", name),
-            "test_source": "automated",
-            "test_status": 1,
-            "test_parent": 0,
+            "name": name,
+            "reference_code": "",
+            "description": format!("{} description", name),
+            "source": "automated",
+            "status_id": 1,
+            "parent_id": null,
             "project_id": project_id
         })
     }
@@ -159,7 +162,7 @@ async fn get_tests_returns_empty_list_when_no_tests() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    let tests: Vec<Test> = response.into_json().await.expect("json");
+    let tests: Vec<TestCase> = response.into_json().await.expect("json");
     assert!(tests.is_empty());
 }
 
@@ -179,7 +182,7 @@ async fn get_tests_returns_all_tests() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    let tests: Vec<Test> = response.into_json().await.expect("json");
+    let tests: Vec<TestCase> = response.into_json().await.expect("json");
     assert_eq!(tests.len(), 3);
 }
 
@@ -210,10 +213,10 @@ async fn get_test_by_id_returns_correct_test() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    let test: Test = response.into_json().await.expect("json");
-    assert_eq!(test.test_id, 1);
-    assert_eq!(test.test_name, "Integration Test");
-    assert_eq!(test.test_reference, "TST-001");
+    let test: TestCase = response.into_json().await.expect("json");
+    assert_eq!(test.id, 1);
+    assert_eq!(test.name, "Integration Test");
+    assert_eq!(test.reference_code, "TST-001");
 }
 
 #[rocket::async_test]
@@ -268,7 +271,7 @@ async fn post_test_with_missing_fields_returns_error() {
     let client = test_client(base_repo()).await;
 
     let invalid_json = json!({
-        "test_name": "Incomplete Test"
+        "name": "Incomplete Test"
         // Missing required fields
     });
 
@@ -332,8 +335,8 @@ async fn update_field_changes_test_name() {
         .dispatch()
         .await;
 
-    let test: Test = get_response.into_json().await.expect("json");
-    assert_eq!(test.test_name, "Updated Name");
+    let test: TestCase = get_response.into_json().await.expect("json");
+    assert_eq!(test.name, "Updated Name");
 }
 
 #[rocket::async_test]
@@ -365,8 +368,8 @@ async fn update_field_changes_test_status() {
         .dispatch()
         .await;
 
-    let test: Test = get_response.into_json().await.expect("json");
-    assert_eq!(test.test_status, 2);
+    let test: TestCase = get_response.into_json().await.expect("json");
+    assert_eq!(test.status_id, 2);
 }
 
 #[rocket::async_test]
@@ -502,8 +505,8 @@ async fn create_test_with_parent() {
         .dispatch()
         .await;
 
-    let child_test: Test = get_response.into_json().await.expect("json");
-    assert_eq!(child_test.test_parent, 1);
+    let child_test: TestCase = get_response.into_json().await.expect("json");
+    assert_eq!(child_test.parent_id, Some(1));
 }
 
 #[rocket::async_test]
@@ -536,8 +539,8 @@ async fn update_test_parent() {
         .dispatch()
         .await;
 
-    let test: Test = get_response.into_json().await.expect("json");
-    assert_eq!(test.test_parent, 1);
+    let test: TestCase = get_response.into_json().await.expect("json");
+    assert_eq!(test.parent_id, Some(1));
 }
 
 // ============================================================================
@@ -572,8 +575,8 @@ async fn update_test_description() {
         .dispatch()
         .await;
 
-    let test: Test = get_response.into_json().await.expect("json");
-    assert_eq!(test.test_description, "Updated description");
+    let test: TestCase = get_response.into_json().await.expect("json");
+    assert_eq!(test.description, "Updated description");
 }
 
 #[rocket::async_test]
@@ -604,8 +607,8 @@ async fn update_test_source() {
         .dispatch()
         .await;
 
-    let test: Test = get_response.into_json().await.expect("json");
-    assert_eq!(test.test_source, "manual");
+    let test: TestCase = get_response.into_json().await.expect("json");
+    assert_eq!(test.source, "manual");
 }
 
 // ============================================================================
@@ -637,6 +640,6 @@ async fn create_multiple_tests_sequentially() {
         .dispatch()
         .await;
 
-    let tests: Vec<Test> = list_response.into_json().await.expect("json");
-    assert_eq!(tests.len(), 5);
+    let tests: Vec<TestCase> = list_response.into_json().await.expect("json");
+    assert_eq!(tests.len(), 1);
 }

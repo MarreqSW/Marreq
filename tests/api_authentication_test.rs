@@ -64,33 +64,34 @@ mod test_support {
         repo.projects.insert(
             1,
             Project {
-                project_id: 1,
-                project_name: "Test Project".into(),
-                project_description: Some("Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(1),
+                id: 1,
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status_id: Some(1),
+                owner_id: Some(1),
             },
         );
 
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Draft".into(),
-                req_st_description: "".into(),
-                req_st_short_name: "D".into(),
+                id: 1,
+                title: "Draft".into(),
+                description: "".into(),
+                tag: "D".into(),
+                project_id: 1,
             },
         );
 
         repo.categories.insert(
             1,
             Category {
-                cat_id: 1,
-                cat_title: "Test Category".into(),
-                cat_description: "".into(),
-                cat_tag: "TEST".into(),
+                id: 1,
+                title: "Test Category".into(),
+                description: "".into(),
+                tag: "TEST".into(),
                 project_id: 1,
             },
         );
@@ -98,10 +99,10 @@ mod test_support {
         repo.applicability.insert(
             1,
             Applicability {
-                app_id: 1,
-                app_title: "All".into(),
-                app_description: "".into(),
-                app_tag: "ALL".into(),
+                id: 1,
+                title: "All".into(),
+                description: "".into(),
+                tag: "ALL".into(),
                 project_id: 1,
             },
         );
@@ -286,9 +287,9 @@ async fn categories_create_requires_authentication() {
     let client = test_client(base_repo()).await;
 
     let payload = json!({
-        "cat_title": "New Category",
-        "cat_description": "Description",
-        "cat_tag": "NEW",
+        "title": "New Category",
+        "description": "Description",
+        "tag": "NEW",
         "project_id": 1
     });
 
@@ -307,9 +308,9 @@ async fn categories_update_requires_authentication() {
     let client = test_client(base_repo()).await;
 
     let payload = json!({
-        "cat_title": "Updated Category",
-        "cat_description": "Updated",
-        "cat_tag": "UPD",
+        "title": "Updated Category",
+        "description": "Updated",
+        "tag": "UPD",
         "project_id": 1
     });
 
@@ -359,9 +360,9 @@ async fn applicability_create_requires_authentication() {
     let client = test_client(base_repo()).await;
 
     let payload = json!({
-        "app_title": "New Applicability",
-        "app_description": "Description",
-        "app_tag": "NEW",
+        "title": "New Applicability",
+        "description": "Description",
+        "tag": "NEW",
         "project_id": 1
     });
 
@@ -380,9 +381,9 @@ async fn applicability_update_requires_authentication() {
     let client = test_client(base_repo()).await;
 
     let payload = json!({
-        "app_title": "Updated Applicability",
-        "app_description": "Updated",
-        "app_tag": "UPD",
+        "title": "Updated Applicability",
+        "description": "Updated",
+        "tag": "UPD",
         "project_id": 1
     });
 
@@ -491,9 +492,9 @@ async fn status_create_does_not_require_authentication() {
     let client = test_client(base_repo()).await;
 
     let payload = json!({
-        "req_st_title": "New Status",
-        "req_st_description": "Description",
-        "req_st_short_name": "NEW"
+        "title": "New Status",
+        "description": "Description",
+        "tag": "NEW"
     });
 
     let response = client
@@ -608,21 +609,21 @@ async fn admin_can_access_all_endpoints() {
     repo.requirements.insert(
         1,
         Requirement {
-            req_id: 1,
-            req_title: "Test".into(),
-            req_description: "Test".into(),
-            req_reference: "REQ-001".into(),
-            req_category: 1,
-            req_applicability: 1,
-            req_current_status: 1,
-            req_verification: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_justification: None,
+            id: 1,
+            title: "Test".into(),
+            description: "Test".into(),
+            reference_code: "REQ-001".into(),
+            category_id: 1,
+            applicability_id: 1,
+            status_id: 1,
+            verification_method_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            parent_id: Some(0),
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            justification: None,
             project_id: 1,
         },
     );
@@ -645,21 +646,21 @@ async fn regular_user_can_access_endpoints() {
     repo.requirements.insert(
         1,
         Requirement {
-            req_id: 1,
-            req_title: "Test".into(),
-            req_description: "Test".into(),
-            req_reference: "REQ-001".into(),
-            req_category: 1,
-            req_applicability: 1,
-            req_current_status: 1,
-            req_verification: 1,
-            req_author: 2,
-            req_reviewer: 2,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_justification: None,
+            id: 1,
+            title: "Test".into(),
+            description: "Test".into(),
+            reference_code: "REQ-001".into(),
+            category_id: 1,
+            applicability_id: 1,
+            status_id: 1,
+            verification_method_id: 1,
+            author_id: 2,
+            reviewer_id: 2,
+            parent_id: Some(0),
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            justification: None,
             project_id: 1,
         },
     );

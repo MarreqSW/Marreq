@@ -58,10 +58,10 @@ mod test_support {
 
     pub fn new_user_json(username: &str, name: &str, is_admin: bool) -> Value {
         json!({
-            "user_username": username,
-            "user_name": name,
-            "user_email": format!("{}@example.com", username),
-            "user_password": "password123",
+            "username": username,
+            "name": name,
+            "email": format!("{}@example.com", username),
+            "password": "password123",
             "is_admin": is_admin
         })
     }
@@ -113,8 +113,8 @@ async fn get_user_by_id_returns_correct_user() {
 
     assert_eq!(response.status(), Status::Ok);
     let user: User = response.into_json().await.expect("json");
-    assert_eq!(user.user_id, 1);
-    assert_eq!(user.user_username, "admin");
+    assert_eq!(user.id, 1);
+    assert_eq!(user.username, "admin");
     assert_eq!(user.is_admin, true);
 }
 
@@ -290,7 +290,7 @@ async fn password_field_is_present() {
 
     // Mock repository includes password field (in production it would be hashed)
     // This test just verifies the field exists in the User model
-    assert!(!user.user_password.is_empty());
+    assert!(!user.password_hash.is_empty());
 }
 
 // ============================================================================
@@ -339,14 +339,14 @@ async fn list_users_shows_admin_flag() {
     // Find admin user
     let admin = users
         .iter()
-        .find(|u| u.user_username == "admin")
+        .find(|u| u.username == "admin")
         .expect("admin user");
     assert_eq!(admin.is_admin, true);
 
     // Find regular user
     let regular = users
         .iter()
-        .find(|u| u.user_username == "user")
+        .find(|u| u.username == "user")
         .expect("regular user");
     assert_eq!(regular.is_admin, false);
 }

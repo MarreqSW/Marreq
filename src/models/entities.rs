@@ -33,7 +33,6 @@ pub struct Requirement {
     pub project_id: i32,
 }
 
-
 /// Link between a requirement and a test in the traceability matrix.
 #[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(check_for_backend(diesel::pg::Pg))]

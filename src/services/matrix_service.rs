@@ -2,7 +2,9 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{ActionType, EntityType, MatrixLink, NewMatrixLink, Requirement, TestCase, User};
+use crate::models::{
+    ActionType, EntityType, MatrixLink, NewMatrixLink, Requirement, TestCase, User,
+};
 use crate::repository::errors::RepoError;
 use crate::repository::{
     MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository,

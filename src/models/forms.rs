@@ -167,7 +167,7 @@ pub struct ChangePasswordForm {
 }
 
 /// API request DTO for creating a new user with plain password.
-/// 
+///
 /// Unlike [`NewUser`], this accepts a plain `password` field which is hashed
 /// server-side before being stored. This is the secure way to handle user
 /// creation via API endpoints.

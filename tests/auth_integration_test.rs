@@ -258,11 +258,11 @@ async fn change_password_requires_login() {
         .await;
 
     // Should redirect to login or return error depending on guard
-    // The route handler takes cookies and state, but calls change_user_password which checks auth
+    // The route handler takes cookies and state, but calls change_password_hash which checks auth
     // If the guard fails (if used), it might be 401.
     // But here the route signature is:
     // pub fn change_password(password_form: Form<ChangePasswordForm>, cookies: &CookieJar<'_>, state: &State<AppState>)
-    // It doesn't use ApiUser guard, so it executes and change_user_password returns NotLoggedIn
+    // It doesn't use ApiUser guard, so it executes and change_password_hash returns NotLoggedIn
 
     assert_eq!(response.status(), Status::SeeOther);
     let location = response.headers().get_one("Location").unwrap();

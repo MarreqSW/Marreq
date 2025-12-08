@@ -876,8 +876,11 @@ impl TestsCaseRepository for DieselRepo {
                 for rid in requirement_ids {
                     // Get the project_id from the test to maintain consistency
                     use crate::schema::tests::dsl::tests;
-                    use crate::schema::tests::dsl::{project_id as t_pid, id as test_id_col};
-                    let pid: i32 = tests.filter(test_id_col.eq(tid)).select(t_pid).first(conn)?;
+                    use crate::schema::tests::dsl::{id as test_id_col, project_id as t_pid};
+                    let pid: i32 = tests
+                        .filter(test_id_col.eq(tid))
+                        .select(t_pid)
+                        .first(conn)?;
 
                     let new_matrix = NewMatrixLink {
                         req_id: *rid,

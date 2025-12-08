@@ -41,9 +41,7 @@ async fn test_client(repo: DieselRepoMock) -> Client {
         )
         .manage(managed_state(repo));
 
-    Client::tracked(rocket)
-        .await
-        .expect("rocket instance")
+    Client::tracked(rocket).await.expect("rocket instance")
 }
 
 // Helper to create a basic user and session

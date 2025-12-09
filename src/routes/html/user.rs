@@ -67,17 +67,17 @@ async fn post_edit_profile(
     }
 }
 
-#[get("/<id>/show")]
+#[get("/<user_id>/show")]
 async fn show_user_id(
     admin: AdminOnly,
-    id: i32,
+    user_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let current_user = admin.into_inner();
     let service = UserService::new(state.inner());
 
     let user = service
-        .get_by_id(id)
+        .get_by_id(user_id)
         .map_err(|_| Redirect::to(uri!("/dashboard")))?;
 
     let ctx = json!({
@@ -94,10 +94,10 @@ async fn show_user_id(
     Ok(Template::render("user_by_id", ctx))
 }
 
-#[get("/<id>/edit?<error>")]
+#[get("/<user_id>/edit?<error>")]
 async fn edit_user(
     admin: AdminOnly,
-    id: i32,
+    user_id: i32,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<Template, Redirect> {
@@ -105,7 +105,7 @@ async fn edit_user(
     let service = UserService::new(state.inner());
 
     let user = service
-        .get_by_id(id)
+        .get_by_id(user_id)
         .map_err(|_| Redirect::to(uri!("/dashboard")))?;
 
     let ctx = json!({
@@ -117,21 +117,21 @@ async fn edit_user(
     Ok(Template::render("edit_user_by_id", ctx))
 }
 
-#[post("/<id>/edit", data = "<user_form>")]
+#[post("/<user_id>/edit", data = "<user_form>")]
 async fn post_edit_user(
     admin: AdminOnly,
-    id: i32,
+    user_id: i32,
     user_form: Form<UpdateUser>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let mut user_data = user_form.into_inner();
-    user_data.id = Some(id);
+    user_data.id = Some(user_id);
     let service = UserService::new(state.inner());
 
     match service.update_without_password(&admin.into_inner(), &user_data) {
-        Ok(_) => Ok(Redirect::to(uri!(show_user_id(id)))),
+        Ok(_) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
         Err(_) => Ok(Redirect::to(uri!(edit_user(
-            id = id,
+            user_id = user_id,
             error = Some("Failed to update user".to_string())
         )))),
     }

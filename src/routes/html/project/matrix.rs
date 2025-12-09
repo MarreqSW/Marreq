@@ -278,6 +278,7 @@ mod tests {
     use crate::routes::html::project::test_helpers::{
         client_with_routes, get_with_session, timestamp,
     };
+    use crate::status_enums::ProjectStatus;
     use rocket::http::Status as HttpStatus;
     use rocket::local::asynchronous::Client;
 
@@ -292,7 +293,7 @@ mod tests {
             description: Some(format!("{name} project")),
             creation_date: Some(timestamp()),
             update_date: Some(timestamp()),
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(ADMIN_ID),
         }
     }

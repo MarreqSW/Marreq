@@ -263,7 +263,9 @@ async fn get_edit_test(
     let user = project_access.into_user();
     let repo = state.repo_read();
 
-    let test = repo.get_test_by_id(test_id).expect("Error reading table Tests");
+    let test = repo
+        .get_test_by_id(test_id)
+        .expect("Error reading table Tests");
 
     let decorated = decorate_tests_cached(state, vec![test]);
     let test0 = &decorated[0];
@@ -448,6 +450,7 @@ mod tests {
         client_with_routes, delete_with_session, get_with_session, post_form_with_session,
         timestamp, TestAppState,
     };
+    use crate::status_enums::ProjectStatus;
     use rocket::http::Status as HttpStatus;
     use rocket::local::asynchronous::Client;
 
@@ -462,7 +465,7 @@ mod tests {
             description: Some(format!("{name} project")),
             creation_date: Some(timestamp()),
             update_date: Some(timestamp()),
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(ADMIN_ID),
         }
     }

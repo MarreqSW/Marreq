@@ -279,7 +279,8 @@ async fn show_requirement_id(
     let child_requirements = decorated_requirement_service.get_by_parent_id(requirement.id)?;
 
     // Linked verification artefacts
-    let linked_tests = DecoratedTestService::new(state.inner()).get_linked_to_requirement(requirement_id)?;
+    let linked_tests =
+        DecoratedTestService::new(state.inner()).get_linked_to_requirement(requirement_id)?;
 
     let (tests_passed, tests_failed, tests_pending) =
         linked_tests
@@ -457,7 +458,9 @@ async fn post_edit_requirement(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let service = RequirementService::new(state.inner());
-    if let Some(redir) = enforce_project_ownership(project_id, service.get_by_id(requirement_id)?.project_id) {
+    if let Some(redir) =
+        enforce_project_ownership(project_id, service.get_by_id(requirement_id)?.project_id)
+    {
         return Err(redir);
     }
 
@@ -941,6 +944,7 @@ mod tests {
         client_with_routes, delete_with_session, get_with_session, post_form_with_session,
         session_cookie, timestamp, TestAppState,
     };
+    use crate::status_enums::ProjectStatus;
     use rocket::http::{ContentType, Cookie, Status};
     use rocket::local::asynchronous::Client;
     use rocket::serde::json::{serde_json, Value as JsonValue};
@@ -963,7 +967,7 @@ mod tests {
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(ADMIN_ID),
             },
         );
@@ -1154,7 +1158,7 @@ mod tests {
                 description: Some("Alt".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(ADMIN_ID),
             },
         );

@@ -212,7 +212,10 @@ impl LookupRepository for DieselRepoMock {
     }
 
     fn get_category_by_id(&self, category_id: i32) -> Result<Category, RepoError> {
-        self.categories.get(&category_id).cloned().ok_or(RepoError::NotFound)
+        self.categories
+            .get(&category_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
     }
 
     fn get_categories_by_project(&self, project_id: i32) -> Result<Vec<Category>, RepoError> {
@@ -251,7 +254,10 @@ impl LookupRepository for DieselRepoMock {
         Ok(self.verifications.values().cloned().collect())
     }
 
-    fn get_verification_by_id(&self, verification_id: i32) -> Result<VerificationMethod, RepoError> {
+    fn get_verification_by_id(
+        &self,
+        verification_id: i32,
+    ) -> Result<VerificationMethod, RepoError> {
         self.verifications
             .get(&verification_id)
             .cloned()
@@ -313,7 +319,9 @@ impl LookupRepository for DieselRepoMock {
         }
     }
     fn delete_category(&mut self, category_id: i32) -> Result<Category, RepoError> {
-        self.categories.remove(&category_id).ok_or(RepoError::NotFound)
+        self.categories
+            .remove(&category_id)
+            .ok_or(RepoError::NotFound)
     }
     fn insert_new_applicability(&mut self, _new: &NewApplicability) -> Result<i32, RepoError> {
         let id = _new
@@ -343,7 +351,9 @@ impl LookupRepository for DieselRepoMock {
         }
     }
     fn delete_applicability(&mut self, applicability_id: i32) -> Result<Applicability, RepoError> {
-        self.applicability.remove(&applicability_id).ok_or(RepoError::NotFound)
+        self.applicability
+            .remove(&applicability_id)
+            .ok_or(RepoError::NotFound)
     }
 
     fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError> {
@@ -454,7 +464,9 @@ impl RequirementsRepository for DieselRepoMock {
     }
 
     fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError> {
-        self.requirements.remove(&requirement_id).ok_or(RepoError::NotFound)
+        self.requirements
+            .remove(&requirement_id)
+            .ok_or(RepoError::NotFound)
     }
 
     fn update_requirement(&mut self, _req: i32) -> Result<(), RepoError> {
@@ -589,7 +601,7 @@ impl ProjectsRepository for DieselRepoMock {
             creation_date: Some(now),
             update_date: Some(now),
             owner_id: _new.owner_id,
-            status_id: _new.status_id,
+            status: _new.status.clone(),
         };
         self.projects.insert(id, proj);
         Ok(id)
@@ -605,7 +617,9 @@ impl ProjectsRepository for DieselRepoMock {
                 proj.name = _update.name.clone();
                 proj.description = _update.description.clone();
                 proj.owner_id = _update.owner_id;
-                proj.status_id = _update.status_id;
+                if let Some(status) = _update.status {
+                    proj.status = status;
+                }
                 proj.update_date = Some(epoch());
                 Ok(true)
             }

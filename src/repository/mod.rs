@@ -75,7 +75,8 @@ pub trait LookupRepository {
     ) -> Result<Vec<Applicability>, RepoError>;
 
     fn get_verification_all(&self) -> Result<Vec<VerificationMethod>, RepoError>;
-    fn get_verification_by_id(&self, verification_id: i32) -> Result<VerificationMethod, RepoError>;
+    fn get_verification_by_id(&self, verification_id: i32)
+        -> Result<VerificationMethod, RepoError>;
     fn get_verification_by_project(
         &self,
         project_id: i32,

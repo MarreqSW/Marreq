@@ -494,7 +494,8 @@ async fn status_create_does_not_require_authentication() {
     let payload = json!({
         "title": "New Status",
         "description": "Description",
-        "tag": "NEW"
+        "tag": "NEW",
+        "project_id": 1
     });
 
     let response = client

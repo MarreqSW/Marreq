@@ -818,7 +818,7 @@ impl TestsRepository for DieselRepo {
                 req_deadline_date,
                 req_applicability,
                 req_justification,
-                schema::requirements::project_id,
+                schema::requirements::dsl::project_id,
             ))
             .load::<Requirement>(conn.as_mut())
             .map_err(|e| e.into())
@@ -835,20 +835,14 @@ impl TestsRepository for DieselRepo {
     fn edit_test(&mut self, new: &NewTest) -> Result<bool, RepoError> {
         use crate::schema::tests::dsl::*;
         let mut conn = self.get_conn()?;
-        let test_id_value = new
+        let id_val = new
             .test_id
             .ok_or(RepoError::Db(diesel::result::Error::NotFound))?;
-        let updated = diesel::update(tests.filter(test_id.eq(test_id_value)))
-            .set((
-                test_name.eq(&new.test_name),
-                test_description.eq(&new.test_description),
-                test_source.eq(&new.test_source),
-                test_reference.eq(&new.test_reference),
-                test_status.eq(&new.test_status),
-                test_parent.eq(&new.test_parent),
-            ))
-            .execute(conn.as_mut())?;
-        Ok(updated > 0)
+        diesel::update(tests.filter(test_id.eq(id_val)))
+            .set(new)
+            .execute(conn.as_mut())
+            .map(|_| true)
+            .map_err(|e| e.into())
     }
 
     fn delete_test(&mut self, id: i32) -> Result<Test, RepoError> {
@@ -870,23 +864,74 @@ impl TestsRepository for DieselRepo {
 
     fn update_test_requirement_links(
         &mut self,
-        test_id_val: i32,
+        tid: i32,
         requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
-        use schema::matrix::dsl::*;
+        use crate::schema::matrix::dsl::*;
         let mut conn = self.get_conn()?;
-        diesel::delete(matrix.filter(matrix_test_id.eq(test_id_val))).execute(conn.as_mut())?;
-        for req_id in requirement_ids {
-            let matrix_item = NewMatrix {
-                matrix_req_id: *req_id,
-                matrix_test_id: test_id_val,
-                project_id: 1,
-            };
-            diesel::insert_into(schema::matrix::table)
-                .values(&matrix_item)
-                .execute(conn.as_mut())?;
-        }
+
+        conn.as_mut()
+            .transaction::<_, diesel::result::Error, _>(|conn| {
+                // Delete existing links
+                diesel::delete(matrix.filter(matrix_test_id.eq(tid))).execute(conn)?;
+
+                // Insert new links
+                for rid in requirement_ids {
+                    // We need to get the project_id from the test to maintain consistency
+                    // This is a bit inefficient but correct
+                    use crate::schema::tests::dsl::tests;
+                    use crate::schema::tests::dsl::{project_id as t_pid, test_id};
+                    let pid: i32 = tests.filter(test_id.eq(tid)).select(t_pid).first(conn)?;
+
+                    let new_matrix = NewMatrix {
+                        matrix_req_id: *rid,
+                        matrix_test_id: tid,
+                        project_id: pid,
+                    };
+                    diesel::insert_into(matrix)
+                        .values(&new_matrix)
+                        .execute(conn)?;
+                }
+                Ok(())
+            })?;
         Ok(())
+    }
+}
+
+impl crate::repository::LogRepository for DieselRepo {
+    fn insert_log(&mut self, new: &NewLog) -> Result<(), RepoError> {
+        let mut conn = self.get_conn()?;
+        diesel::insert_into(schema::logs::table)
+            .values(new)
+            .execute(conn.as_mut())?;
+        Ok(())
+    }
+
+    fn get_logs_recent(&self, limit: i64) -> Result<Vec<Log>, RepoError> {
+        use schema::logs::dsl::*;
+        let mut conn = self.get_conn()?;
+        logs.order(created_at.desc())
+            .limit(limit)
+            .load::<Log>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn get_logs_by_entity(&self, etype: &str, eid: i32) -> Result<Vec<Log>, RepoError> {
+        use schema::logs::dsl::*;
+        let mut conn = self.get_conn()?;
+        logs.filter(entity_type.eq(etype))
+            .filter(entity_id.eq(eid))
+            .order(created_at.desc())
+            .load::<Log>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn cleanup_logs(&mut self, days: i64) -> Result<usize, RepoError> {
+        use schema::logs::dsl::*;
+        let mut conn = self.get_conn()?;
+        let cutoff = chrono::Utc::now().naive_utc() - chrono::Duration::days(days);
+        let count = diesel::delete(logs.filter(created_at.lt(cutoff))).execute(conn.as_mut())?;
+        Ok(count)
     }
 }
 

@@ -112,11 +112,11 @@ async fn show_tests(
     Ok(Template::render("tests/tests", ctx))
 }
 
-#[get("/<project_id>/tests/show/<id>")]
+#[get("/<project_id>/tests/show/<test_id>")]
 async fn show_test_id(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    test_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     use serde_json::json;
@@ -124,7 +124,7 @@ async fn show_test_id(
     let user = project_access.into_user();
     let service = TestService::new(state.inner());
 
-    let test = match service.get_by_id(id) {
+    let test = match service.get_by_id(test_id) {
         Ok(t) => t,
         Err(details) => {
             let ctx = json!({
@@ -140,7 +140,7 @@ async fn show_test_id(
     let decorated = decorate_tests_cached(state, vec![test]);
     let test = &decorated[0];
 
-    let linked_requirements = get_requirements_for_test_cached(state, id).unwrap_or_default();
+    let linked_requirements = get_requirements_for_test_cached(state, test_id).unwrap_or_default();
     let repo = state.repo_read();
     let decorated_requirements = decorate_requirements_with_repo(&*repo, linked_requirements);
 
@@ -251,11 +251,11 @@ async fn post_test(
     Ok(Redirect::to(uri!("/p", show_test_id(project_id, id))))
 }
 
-#[get("/<project_id>/tests/edit/<id>")]
+#[get("/<project_id>/tests/edit/<test_id>")]
 async fn get_edit_test(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    test_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     use serde_json::json;
@@ -263,12 +263,12 @@ async fn get_edit_test(
     let user = project_access.into_user();
     let repo = state.repo_read();
 
-    let test = repo.get_test_by_id(id).expect("Error reading table Tests");
+    let test = repo.get_test_by_id(test_id).expect("Error reading table Tests");
 
     let decorated = decorate_tests_cached(state, vec![test]);
     let test0 = &decorated[0];
 
-    let linked_requirements = get_requirements_for_test_cached(state, id).unwrap_or_default();
+    let linked_requirements = get_requirements_for_test_cached(state, test_id).unwrap_or_default();
     let linked_req_ids: Vec<i32> = linked_requirements.iter().map(|r| r.id).collect();
 
     let ctx = json!({
@@ -291,11 +291,11 @@ async fn get_edit_test(
     Ok(Template::render("tests/edit_test", ctx))
 }
 
-#[post("/<project_id>/tests/edit/<id>", data = "<edit_test_form>")]
+#[post("/<project_id>/tests/edit/<test_id>", data = "<edit_test_form>")]
 async fn post_edit_test(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    test_id: i32,
     edit_test_form: Form<EditTestForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
@@ -317,7 +317,7 @@ async fn post_edit_test(
         project_id: f.project_id,
     };
 
-    service.update(&user, id, new_test).map_err(|e| {
+    service.update(&user, test_id, new_test).map_err(|e| {
         eprintln!("Error editing test: {e:?}");
         to_list()
     })?;
@@ -333,11 +333,11 @@ async fn post_edit_test(
     Ok(Redirect::to(uri!("/p", show_test_id(project_id, f.id))))
 }
 
-#[delete("/<project_id>/tests/delete/<id>")]
+#[delete("/<project_id>/tests/delete/<test_id>")]
 async fn delete_test_route(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    test_id: i32,
     state: &State<AppState>,
 ) -> Result<Redirect, rocket::http::Status> {
     use rocket::http::Status;
@@ -345,7 +345,7 @@ async fn delete_test_route(
     let user = project_access.into_user();
     let service = TestService::new(state.inner());
 
-    let test = service.get_by_id(id).map_err(|_| Status::NotFound)?;
+    let test = service.get_by_id(test_id).map_err(|_| Status::NotFound)?;
 
     // Permission gate: only allow deletion of tests in Passed or Failed status, or if admin
     // Using enum to check if the test is in a deletable state
@@ -357,7 +357,7 @@ async fn delete_test_route(
         return Err(Status::Forbidden);
     }
 
-    service.delete(&user, id).map_err(|e| match e {
+    service.delete(&user, test_id).map_err(|e| match e {
         crate::repository::errors::RepoError::NotFound => Status::NotFound,
         _ => Status::InternalServerError,
     })?;

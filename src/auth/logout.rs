@@ -10,7 +10,7 @@ use rocket::http::CookieJar;
 /// is given, RFC 6265 says the default is the request’s path up to the rightmost “/”.
 pub fn logout_user(cookies: &CookieJar<'_>) {
     // Get user info before clearing cookies
-    let id = read_session_user_id(cookies);
+    let user_id = read_session_user_id(cookies);
 
     // Remove the session cookie
     clear_session_cookie(cookies);
@@ -23,7 +23,7 @@ pub fn logout_user(cookies: &CookieJar<'_>) {
     }
 
     // Log logout if possible
-    if let Some(uid) = id {
+    if let Some(uid) = user_id {
         if let Ok(mut conn) = DieselRepo::new().get_conn() {
             let ctx = LogCtx::new(uid);
             let _ = Logger::log_logout(&mut conn, &ctx);

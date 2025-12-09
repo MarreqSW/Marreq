@@ -4,8 +4,8 @@ use rocket::http::{Cookie, CookieJar};
 pub const SESSION_COOKIE: &str = "id";
 
 /// Store the authenticated user's id in a private cookie.
-pub fn set_session_cookie(cookies: &CookieJar<'_>, id: i32) {
-    let mut cookie = Cookie::new(SESSION_COOKIE, id.to_string());
+pub fn set_session_cookie(cookies: &CookieJar<'_>, user_id: i32) {
+    let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
     cookie.set_path("/");
     cookie.set_http_only(true);
     cookies.add_private(cookie);

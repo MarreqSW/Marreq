@@ -129,9 +129,9 @@ fn build_matrix_rows(
             let row: Vec<_> = tests
                 .iter()
                 .map(|test| {
-                    json!({ 
-                        "linked": links.contains(&(req.req_id, test.test_id)), 
-                        "test_status": test.test_status 
+                    json!({
+                        "linked": links.contains(&(req.req_id, test.test_id)),
+                        "test_status": test.test_status
                     })
                 })
                 .collect();
@@ -271,8 +271,8 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Applicability, Category, Project, ProjectMember, Requirement, Status, Test,
-        TestStatus, Verification,
+        Applicability, Category, Project, ProjectMember, Requirement, Status, Test, TestStatus,
+        Verification,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{

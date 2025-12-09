@@ -36,8 +36,8 @@ impl<'r> FromRequest<'r> for SessionUser {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let cookies = request.cookies();
 
-        let id = match read_session_user_id(cookies) {
-            Some(id) => id,
+        let user_id = match read_session_user_id(cookies) {
+            Some(user_id) => user_id,
             None => {
                 clear_session_cookie(cookies);
                 return Outcome::Error((Status::Unauthorized, ()));
@@ -50,7 +50,7 @@ impl<'r> FromRequest<'r> for SessionUser {
         };
 
         let result = rocket::tokio::task::spawn_blocking(move || {
-            repo.read().expect("repo lock poisoned").get_user_by_id(id)
+            repo.read().expect("repo lock poisoned").get_user_by_id(user_id)
         })
         .await;
 

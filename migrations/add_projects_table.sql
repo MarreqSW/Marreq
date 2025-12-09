@@ -4,12 +4,12 @@
 -- Create projects table
 CREATE TABLE projects (
     project_id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    update_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status_id VARCHAR(50) DEFAULT 'active',
-    owner_id INTEGER REFERENCES users(id)
+    project_name VARCHAR(255) NOT NULL,
+    project_description TEXT,
+    project_creation_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    project_update_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    project_status VARCHAR(50) DEFAULT 'active',
+    project_owner_id INTEGER REFERENCES users(user_id)
 );
 
 -- Add project_id column to requirements table
@@ -39,16 +39,16 @@ CREATE INDEX idx_applicability_project_id ON applicability(project_id);
 CREATE INDEX idx_matrix_project_id ON matrix(project_id);
 
 -- Insert a default project for existing data
-INSERT INTO projects (name, description, creation_date, status_id)
+INSERT INTO projects (project_name, project_description, project_creation_date, project_status)
 VALUES ('Default Project', 'Default project for existing data', CURRENT_TIMESTAMP, 'active');
 
 -- Update existing data to belong to the default project
-UPDATE requirements SET project_id = (SELECT project_id FROM projects WHERE name = 'Default Project') WHERE project_id IS NULL;
-UPDATE tests SET project_id = (SELECT project_id FROM projects WHERE name = 'Default Project') WHERE project_id IS NULL;
-UPDATE users SET project_id = (SELECT project_id FROM projects WHERE name = 'Default Project') WHERE project_id IS NULL;
-UPDATE categories SET project_id = (SELECT project_id FROM projects WHERE name = 'Default Project') WHERE project_id IS NULL;
-UPDATE applicability SET project_id = (SELECT project_id FROM projects WHERE name = 'Default Project') WHERE project_id IS NULL;
-UPDATE matrix SET project_id = (SELECT project_id FROM projects WHERE name = 'Default Project') WHERE project_id IS NULL;
+UPDATE requirements SET project_id = (SELECT project_id FROM projects WHERE project_name = 'Default Project') WHERE project_id IS NULL;
+UPDATE tests SET project_id = (SELECT project_id FROM projects WHERE project_name = 'Default Project') WHERE project_id IS NULL;
+UPDATE users SET project_id = (SELECT project_id FROM projects WHERE project_name = 'Default Project') WHERE project_id IS NULL;
+UPDATE categories SET project_id = (SELECT project_id FROM projects WHERE project_name = 'Default Project') WHERE project_id IS NULL;
+UPDATE applicability SET project_id = (SELECT project_id FROM projects WHERE project_name = 'Default Project') WHERE project_id IS NULL;
+UPDATE matrix SET project_id = (SELECT project_id FROM projects WHERE project_name = 'Default Project') WHERE project_id IS NULL;
 
 -- Make project_id NOT NULL after setting default values
 ALTER TABLE requirements ALTER COLUMN project_id SET NOT NULL;

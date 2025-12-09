@@ -1,13 +1,13 @@
 -- Recreate the original status table
 CREATE TABLE status (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR NOT NULL,
-    description VARCHAR NOT NULL,
-    short_name VARCHAR NOT NULL
+    st_id SERIAL PRIMARY KEY,
+    st_title VARCHAR NOT NULL,
+    st_description VARCHAR NOT NULL,
+    st_short_name VARCHAR NOT NULL
 );
 
 -- Insert all status values back into the unified table
-INSERT INTO status (title, description, short_name) VALUES
+INSERT INTO status (st_title, st_description, st_short_name) VALUES
     ('Draft', 'The requirement is still being edited', 'Drf'),
     ('Proposal', 'The requirement is still to be approved', 'Pro'),
     ('Accepted', 'The requirement is accepted and must be processed', 'Acc'),
@@ -18,8 +18,8 @@ INSERT INTO status (title, description, short_name) VALUES
     ('Failed', 'The test has failed', 'Fail');
 
 -- Update requirements table to use original status IDs
-UPDATE requirements SET status_id = 
-    CASE status_id
+UPDATE requirements SET req_current_status = 
+    CASE req_current_status
         WHEN 1 THEN 1  -- Draft
         WHEN 2 THEN 2  -- Proposal
         WHEN 3 THEN 3  -- Accepted
@@ -30,8 +30,8 @@ UPDATE requirements SET status_id =
     END;
 
 -- Update tests table to use original status IDs
-UPDATE tests SET status_id = 
-    CASE status_id
+UPDATE tests SET test_status = 
+    CASE test_status
         WHEN 1 THEN 1  -- Draft
         WHEN 2 THEN 2  -- Proposal
         WHEN 3 THEN 3  -- Accepted
@@ -43,5 +43,5 @@ UPDATE tests SET status_id =
     END;
 
 -- Drop the separate status tables
-DROP TABLE status_id;
+DROP TABLE test_status;
 DROP TABLE requirement_status;

@@ -44,7 +44,7 @@ CREATE TABLE projects (
     description TEXT,
     creation_date TIMESTAMP,
     update_date TIMESTAMP,
-    status_id INTEGER,
+    status VARCHAR(50),
     owner_id INTEGER
 );
 
@@ -85,14 +85,6 @@ CREATE TABLE test_status (
     description VARCHAR NOT NULL,
     tag VARCHAR NOT NULL,
     project_id INTEGER NOT NULL
-);
-
--- Project Status table
-CREATE TABLE project_status (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50) NOT NULL,
-    description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Categories table
@@ -228,9 +220,6 @@ ALTER TABLE logs ADD CONSTRAINT fk_logs_user_id
 ALTER TABLE logs ADD CONSTRAINT fk_logs_project_id 
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
 
-ALTER TABLE projects ADD CONSTRAINT fk_projects_status
-    FOREIGN KEY (status_id) REFERENCES project_status(id);
-
 CREATE INDEX project_members_user_idx ON project_members(user_id);
 
 -- =============================================================================
@@ -276,21 +265,14 @@ CREATE INDEX idx_applicability_project_id ON applicability(project_id);
 CREATE INDEX idx_applicability_tag ON applicability(tag);
 
 -- =============================================================================
--- DEFAULT DATA
+-- INITIAL DATA
 -- =============================================================================
 
--- Project Status definitions
-INSERT INTO project_status (id, name, description) VALUES
-    (1, 'Active', 'Project is currently active and in progress'),
-    (2, 'Completed', 'Project has been completed successfully'),
-    (3, 'On Hold', 'Project is temporarily paused'),
-    (4, 'Cancelled', 'Project has been cancelled');
-
 -- Projects
-INSERT INTO projects (id, name, description, creation_date, status_id) VALUES
-    (1, 'Space Project', 'Space exploration satellite requirements and test management system for advanced satellite missions', NOW(), 1),
-    (2, 'ReqMan Project', 'Requirements management system development and testing', NOW(), 1),
-    (3, 'Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 1);
+INSERT INTO projects (id, name, description, creation_date, status) VALUES
+    (1, 'Space Project', 'Space exploration satellite requirements and test management system for advanced satellite missions', NOW(), 'active'),
+    (2, 'ReqMan Project', 'Requirements management system development and testing', NOW(), 'active'),
+    (3, 'Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 'active');
 
 -- Requirement Status definitions
 INSERT INTO requirement_status (title, description, tag, project_id) VALUES

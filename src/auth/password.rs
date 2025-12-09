@@ -43,12 +43,12 @@ pub fn change_user_password<R: Repository>(
     let user_id_cookie = cookies
         .get_private(super::session::SESSION_COOKIE)
         .ok_or(AuthError::NotLoggedIn)?;
-    let id = user_id_cookie
+    let user_id = user_id_cookie
         .value()
         .parse::<i32>()
         .map_err(|_| AuthError::InvalidSession)?;
 
-    change_user_password_impl(repo, id, current_password, new_password)
+    change_user_password_impl(repo, user_id, current_password, new_password)
 }
 
 #[cfg(test)]

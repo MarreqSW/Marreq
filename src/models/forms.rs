@@ -6,6 +6,7 @@
 use crate::logger::Loggable;
 use crate::models::entities::EntityType;
 use crate::schema::*;
+use crate::status_enums::ProjectStatus;
 use diesel::prelude::*;
 use rocket::form::FromForm;
 use serde::{Deserialize, Serialize};
@@ -189,7 +190,9 @@ pub struct NewProject {
     pub name: String,
     pub description: Option<String>,
     pub owner_id: Option<i32>,
-    pub status_id: Option<i32>,
+    #[serde(default)]
+    #[field(default = ProjectStatus::Active)]
+    pub status: ProjectStatus,
 }
 
 /// Form used to update a project's metadata.
@@ -199,7 +202,7 @@ pub struct UpdateProject {
     pub name: String,
     pub description: Option<String>,
     pub owner_id: Option<i32>,
-    pub status_id: Option<i32>,
+    pub status: Option<ProjectStatus>,
 }
 
 /// Data required to create or update a project membership entry.

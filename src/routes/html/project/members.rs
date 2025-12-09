@@ -239,6 +239,7 @@ mod tests {
     use crate::routes::html::project::test_helpers::{
         client_with_routes, get_with_session, post_form_with_session, timestamp, TestAppState,
     };
+    use crate::status_enums::ProjectStatus;
     use rocket::http::Status as HttpStatus;
     use rocket::local::asynchronous::Client;
 
@@ -254,7 +255,7 @@ mod tests {
             description: Some("Exploration program".into()),
             creation_date: Some(timestamp()),
             update_date: Some(timestamp()),
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(OWNER_ID),
         }
     }

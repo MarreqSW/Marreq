@@ -118,7 +118,7 @@ impl<'a> ProjectService<'a> {
         let mut clone = NewProject {
             name: payload.name.clone(),
             description: payload.description.clone(),
-            status_id: payload.status_id.clone(),
+            status: payload.status.unwrap_or_default(),
             owner_id: payload.owner_id,
         };
         self.prepare_new_payload(&mut clone)
@@ -167,6 +167,7 @@ mod tests {
     use super::*;
     use crate::models::ProjectMember;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
 
@@ -194,7 +195,7 @@ mod tests {
             description: Some("Existing description".into()),
             creation_date: Some(timestamp()),
             update_date: Some(timestamp()),
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(1),
         }
     }
@@ -208,7 +209,7 @@ mod tests {
         let payload = NewProject {
             name: "  Project Phoenix  ".into(),
             description: Some("   ".into()),
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(1),
         };
 
@@ -217,7 +218,7 @@ mod tests {
 
         assert_eq!(stored.name, "Project Phoenix");
         assert_eq!(stored.description, None);
-        assert_eq!(stored.status_id, Some(1));
+        assert_eq!(stored.status, ProjectStatus::Active);
     }
 
     #[test]
@@ -229,7 +230,7 @@ mod tests {
         let payload = NewProject {
             name: " ".into(),
             description: None,
-            status_id: Some(2),
+            status: ProjectStatus::Completed,
             owner_id: None,
         };
 
@@ -247,14 +248,14 @@ mod tests {
         let payload = UpdateProject {
             name: "  Modernized  ".into(),
             description: Some("  Updated description  ".into()),
-            status_id: Some(3),
+            status: Some(ProjectStatus::OnHold),
             owner_id: Some(2),
         };
 
         let updated = service.update(&actor(), 1, payload).unwrap();
         assert_eq!(updated.name, "Modernized");
         assert_eq!(updated.description.as_deref(), Some("Updated description"));
-        assert_eq!(updated.status_id, Some(3));
+        assert_eq!(updated.status, ProjectStatus::OnHold);
         assert_eq!(updated.owner_id, Some(2));
     }
 
@@ -267,7 +268,7 @@ mod tests {
         let payload = UpdateProject {
             name: "Valid".into(),
             description: Some("Desc".into()),
-            status_id: Some(1),
+            status: Some(ProjectStatus::Active),
             owner_id: None,
         };
 
@@ -285,7 +286,7 @@ mod tests {
         let payload = UpdateProject {
             name: "Legacy".into(),
             description: Some("Still around".into()),
-            status_id: Some(1),
+            status: Some(ProjectStatus::Active),
             owner_id: None,
         };
 
@@ -308,7 +309,7 @@ mod tests {
         let payload = UpdateProject {
             name: "Orphaned".into(),
             description: Some("Needs owner".into()),
-            status_id: Some(1),
+            status: Some(ProjectStatus::Active),
             owner_id: None,
         };
 

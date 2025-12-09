@@ -7,6 +7,7 @@ mod tests {
         UserRepository, RequirementsRepository, TestsCaseRepository, LookupRepository,
         ProjectsRepository, MatrixRepository
     };
+    use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
 
     fn test_datetime() -> NaiveDateTime {
@@ -73,7 +74,7 @@ mod tests {
             description: Some("Test Project Description".to_string()),
             creation_date: Some(test_datetime()),
             update_date: Some(test_datetime()),
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(1),
         }
     }

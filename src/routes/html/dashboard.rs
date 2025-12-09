@@ -78,6 +78,7 @@ mod tests {
     use crate::auth::session::SESSION_COOKIE;
     use crate::models::{Project, ProjectMember, Requirement, RequirementStatus, TestCase, User};
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
     use rocket::http::{Cookie, Status};
     use rocket::local::asynchronous::Client;
@@ -127,7 +128,7 @@ mod tests {
             description: Some("Mission critical".into()),
             creation_date: None,
             update_date: None,
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(user.id),
         };
         repo.projects.insert(project.id, project);

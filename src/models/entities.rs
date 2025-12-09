@@ -5,6 +5,7 @@
 
 use crate::logger::Loggable;
 use crate::schema::*;
+use crate::status_enums::ProjectStatus;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -87,8 +88,8 @@ pub struct Project {
     pub description: Option<String>,
     pub creation_date: Option<chrono::NaiveDateTime>,
     pub update_date: Option<chrono::NaiveDateTime>,
+    pub status: ProjectStatus,
     pub owner_id: Option<i32>,
-    pub status_id: Option<i32>,
 }
 
 /// Membership that links a user to a project with a specific role.

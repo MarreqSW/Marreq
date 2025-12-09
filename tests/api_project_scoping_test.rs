@@ -293,7 +293,7 @@ async fn list_requirements_returns_only_user_projects() {
     // It returns all requirements the user has access to (which is all if authenticated)
     let req_ids: Vec<i32> = requirements
         .iter()
-        .map(|r| r["req_id"].as_i64().unwrap() as i32)
+        .map(|r| r["id"].as_i64().unwrap() as i32)
         .collect();
 
     // API returns all requirements, not filtered by project membership
@@ -351,16 +351,16 @@ async fn create_requirement_works_for_any_authenticated_user() {
 
     // User 3 tries to create requirement in project 1 (not a member, but API allows it)
     let payload = json!({
-        "req_title": "New Requirement",
-        "req_description": "Description",
-        "req_reference": "REQ-999",
-        "req_category": 1,
-        "req_applicability": 1,
-        "req_current_status": 1,
-        "req_verification": 1,
-        "req_author": 3,
-        "req_reviewer": 3,
-        "req_parent": 0,
+        "title": "New Requirement",
+        "description": "Description",
+        "reference_code": "REQ-999",
+        "category_id": 1,
+        "applicability_id": 1,
+        "status_id": 1,
+        "verification_method_id": 1,
+        "author_id": 3,
+        "reviewer_id": 3,
+        "parent_id": null,
         "project_id": 1
     });
 
@@ -480,7 +480,7 @@ async fn list_tests_returns_only_user_projects() {
 
     let test_ids: Vec<i32> = tests
         .iter()
-        .map(|t| t["test_id"].as_i64().unwrap() as i32)
+        .map(|t| t["id"].as_i64().unwrap() as i32)
         .collect();
 
     // API returns all tests, not filtered by project membership
@@ -541,7 +541,7 @@ async fn list_categories_returns_only_user_projects() {
 
     let cat_ids: Vec<i32> = categories
         .iter()
-        .map(|c| c["cat_id"].as_i64().unwrap() as i32)
+        .map(|c| c["id"].as_i64().unwrap() as i32)
         .collect();
 
     assert!(cat_ids.contains(&1));
@@ -610,7 +610,7 @@ async fn list_applicability_returns_only_user_projects() {
 
     let app_ids: Vec<i32> = items
         .iter()
-        .map(|a| a["app_id"].as_i64().unwrap() as i32)
+        .map(|a| a["id"].as_i64().unwrap() as i32)
         .collect();
 
     assert!(app_ids.contains(&1));

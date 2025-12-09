@@ -1,5 +1,5 @@
--- Add reference_code column to tests table
-ALTER TABLE tests ADD COLUMN reference_code VARCHAR NOT NULL DEFAULT 'TEST-0';
+-- Add test_reference column to tests table
+ALTER TABLE tests ADD COLUMN test_reference VARCHAR NOT NULL DEFAULT 'TEST-0';
 
 -- Update existing tests with proper references
-UPDATE tests SET reference_code = 'TEST-' || id::text WHERE reference_code = 'TEST-0';
+UPDATE tests SET test_reference = 'TEST-' || test_id::text WHERE test_reference = 'TEST-0';

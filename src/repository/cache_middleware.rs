@@ -103,10 +103,10 @@ impl<R: Repository> CacheRepository<R> {
 }
 
 impl<R: Repository> RequirementsRepository for CacheRepository<R> {
-    fn get_requirement_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
-        let key = keys::Requirements::by_id(id);
+    fn get_requirement_by_id(&self, requirement_id: i32) -> Result<Requirement, RepoError> {
+        let key = keys::Requirements::by_id(requirement_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_requirement_by_id(id)
+            self.inner.get_requirement_by_id(requirement_id)
         })
     }
 
@@ -139,17 +139,17 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_requirement(&mut self, id: i32) -> Result<Requirement, RepoError> {
-        let req = self.inner.delete_requirement(id)?;
-        self.cache.invalidate_requirement(id);
+    fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError> {
+        let req = self.inner.delete_requirement(requirement_id)?;
+        self.cache.invalidate_requirement(requirement_id);
         self.cache.invalidate_project(req.project_id);
         self.cache.remove(super::cache::keys::REQUIREMENTS_ALL);
         Ok(req)
     }
 
-    fn update_requirement(&mut self, req: i32) -> Result<(), RepoError> {
-        self.inner.update_requirement(req)?;
-        self.cache.invalidate_requirement(req);
+    fn update_requirement(&mut self, requirement_id: i32) -> Result<(), RepoError> {
+        self.inner.update_requirement(requirement_id)?;
+        self.cache.invalidate_requirement(requirement_id);
         Ok(())
     }
 }
@@ -161,10 +161,10 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         })
     }
 
-    fn get_user_by_id(&self, id: i32) -> Result<User, RepoError> {
-        let key = keys::Users::by_id(id);
+    fn get_user_by_id(&self, user_id: i32) -> Result<User, RepoError> {
+        let key = keys::Users::by_id(user_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_user_by_id(id)
+            self.inner.get_user_by_id(user_id)
         })
     }
 
@@ -181,9 +181,9 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         Ok(id)
     }
 
-    fn update_user_password(&mut self, id: i32, new_hash: &str) -> Result<(), RepoError> {
-        self.inner.update_user_password(id, new_hash)?;
-        self.cache.invalidate_user(id);
+    fn update_user_password(&mut self, user_id: i32, new_hash: &str) -> Result<(), RepoError> {
+        self.inner.update_user_password(user_id, new_hash)?;
+        self.cache.invalidate_user(user_id);
         Ok(())
     }
 
@@ -203,13 +203,13 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_user(&mut self, id: i32) -> Result<User, RepoError> {
-        let memberships = self.inner.get_projects_for_user(id)?;
-        let user = self.inner.delete_user(id)?;
-        self.cache.invalidate_user(id);
+    fn delete_user(&mut self, user_id: i32) -> Result<User, RepoError> {
+        let memberships = self.inner.get_projects_for_user(user_id)?;
+        let user = self.inner.delete_user(user_id)?;
+        self.cache.invalidate_user(user_id);
         for membership in memberships {
             self.cache
-                .invalidate_project_membership(membership.project_id, id);
+                .invalidate_project_membership(membership.project_id, user_id);
             self.cache.invalidate_project(membership.project_id);
         }
         Ok(user)
@@ -224,10 +224,10 @@ impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
         })
     }
 
-    fn get_projects_for_user(&self, id: i32) -> Result<Vec<ProjectMember>, RepoError> {
-        let key = keys::ProjectMembers::for_user(id);
+    fn get_projects_for_user(&self, user_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
+        let key = keys::ProjectMembers::for_user(user_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_projects_for_user(id)
+            self.inner.get_projects_for_user(user_id)
         })
     }
 
@@ -264,10 +264,10 @@ impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
 }
 
 impl<R: Repository> TestsCaseRepository for CacheRepository<R> {
-    fn get_test_by_id(&self, id: i32) -> Result<TestCase, RepoError> {
-        let key = keys::Tests::by_id(id);
+    fn get_test_by_id(&self, test_id: i32) -> Result<TestCase, RepoError> {
+        let key = keys::Tests::by_id(test_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_test_by_id(id)
+            self.inner.get_test_by_id(test_id)
         })
     }
 
@@ -284,17 +284,17 @@ impl<R: Repository> TestsCaseRepository for CacheRepository<R> {
         })
     }
 
-    fn get_requirements_for_test(&self, id: i32) -> Result<Vec<Requirement>, RepoError> {
-        let key = keys::LinkedRequirements::for_test(id);
+    fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        let key = keys::LinkedRequirements::for_test(test_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_requirements_for_test(id)
+            self.inner.get_requirements_for_test(test_id)
         })
     }
 
-    fn get_tests_for_requirement(&self, id: i32) -> Result<Vec<TestCase>, RepoError> {
-        let key = keys::LinkedTests::for_requirement(id);
+    fn get_tests_for_requirement(&self, requirement_id: i32) -> Result<Vec<TestCase>, RepoError> {
+        let key = keys::LinkedTests::for_requirement(requirement_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_tests_for_requirement(id)
+            self.inner.get_tests_for_requirement(requirement_id)
         })
     }
 
@@ -314,9 +314,9 @@ impl<R: Repository> TestsCaseRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_test(&mut self, id: i32) -> Result<TestCase, RepoError> {
-        let test = self.inner.delete_test(id)?;
-        self.cache.invalidate_test(id);
+    fn delete_test(&mut self, test_id: i32) -> Result<TestCase, RepoError> {
+        let test = self.inner.delete_test(test_id)?;
+        self.cache.invalidate_test(test_id);
         self.cache.invalidate_project(test.project_id);
         self.cache.remove(super::cache::keys::TESTS_ALL);
         Ok(test)
@@ -324,14 +324,14 @@ impl<R: Repository> TestsCaseRepository for CacheRepository<R> {
 
     fn update_test_requirement_links(
         &mut self,
-        id: i32,
+        test_id: i32,
         requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
         self.inner
-            .update_test_requirement_links(id, requirement_ids)?;
-        self.cache.invalidate_test(id);
-        for &rid in requirement_ids {
-            self.cache.invalidate_requirement(rid);
+            .update_test_requirement_links(test_id, requirement_ids)?;
+        self.cache.invalidate_test(test_id);
+        for &requirement_id in requirement_ids {
+            self.cache.invalidate_requirement(requirement_id);
         }
         Ok(())
     }
@@ -346,10 +346,10 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         )
     }
 
-    fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError> {
-        let key = keys::RequirementStatus::by_id(id);
+    fn get_requirement_status_by_id(&self, status_id: i32) -> Result<RequirementStatus, RepoError> {
+        let key = keys::RequirementStatus::by_id(status_id);
         self.get_or_fetch(&key, Duration::from_secs(900), || {
-            self.inner.get_requirement_status_by_id(id)
+            self.inner.get_requirement_status_by_id(status_id)
         })
     }
 
@@ -359,10 +359,10 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         })
     }
 
-    fn get_test_status_by_id(&self, id: i32) -> Result<TestStatus, RepoError> {
-        let key = keys::TestStatus::by_id(id);
+    fn get_test_status_by_id(&self, status_id: i32) -> Result<TestStatus, RepoError> {
+        let key = keys::TestStatus::by_id(status_id);
         self.get_or_fetch(&key, Duration::from_secs(900), || {
-            self.inner.get_test_status_by_id(id)
+            self.inner.get_test_status_by_id(status_id)
         })
     }
 
@@ -379,10 +379,10 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         })
     }
 
-    fn get_category_by_id(&self, id: i32) -> Result<Category, RepoError> {
-        let key = keys::Categories::by_id(id);
+    fn get_category_by_id(&self, category_id: i32) -> Result<Category, RepoError> {
+        let key = keys::Categories::by_id(category_id);
         self.get_or_fetch(&key, Duration::from_secs(600), || {
-            self.inner.get_category_by_id(id)
+            self.inner.get_category_by_id(category_id)
         })
     }
 
@@ -392,10 +392,10 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         })
     }
 
-    fn get_applicability_by_id(&self, id: i32) -> Result<Applicability, RepoError> {
-        let key = keys::Applicability::by_id(id);
+    fn get_applicability_by_id(&self, applicability_id: i32) -> Result<Applicability, RepoError> {
+        let key = keys::Applicability::by_id(applicability_id);
         self.get_or_fetch(&key, Duration::from_secs(600), || {
-            self.inner.get_applicability_by_id(id)
+            self.inner.get_applicability_by_id(applicability_id)
         })
     }
 
@@ -415,10 +415,10 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         })
     }
 
-    fn get_verification_by_id(&self, id: i32) -> Result<VerificationMethod, RepoError> {
-        let key = keys::VerificationMethod::by_id(id);
+    fn get_verification_by_id(&self, verification_id: i32) -> Result<VerificationMethod, RepoError> {
+        let key = keys::VerificationMethod::by_id(verification_id);
         self.get_or_fetch(&key, Duration::from_secs(600), || {
-            self.inner.get_verification_by_id(id)
+            self.inner.get_verification_by_id(verification_id)
         })
     }
 
@@ -467,9 +467,9 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_category(&mut self, id: i32) -> Result<Category, RepoError> {
-        let cat = self.inner.delete_category(id)?;
-        self.cache.invalidate_category(id);
+    fn delete_category(&mut self, category_id: i32) -> Result<Category, RepoError> {
+        let cat = self.inner.delete_category(category_id)?;
+        self.cache.invalidate_category(category_id);
         self.cache.invalidate_project(cat.project_id);
         Ok(cat)
     }
@@ -490,9 +490,9 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_applicability(&mut self, id: i32) -> Result<Applicability, RepoError> {
-        let app = self.inner.delete_applicability(id)?;
-        self.cache.invalidate_applicability(id);
+    fn delete_applicability(&mut self, applicability_id: i32) -> Result<Applicability, RepoError> {
+        let app = self.inner.delete_applicability(applicability_id)?;
+        self.cache.invalidate_applicability(applicability_id);
         self.cache.invalidate_project(app.project_id);
         Ok(app)
     }
@@ -505,10 +505,10 @@ impl<R: Repository> ProjectsRepository for CacheRepository<R> {
         })
     }
 
-    fn get_project_by_id(&self, id: i32) -> Result<Project, RepoError> {
-        let key = keys::Projects::by_id(id);
+    fn get_project_by_id(&self, project_id: i32) -> Result<Project, RepoError> {
+        let key = keys::Projects::by_id(project_id);
         self.get_or_fetch(&key, Duration::from_secs(900), || {
-            self.inner.get_project_by_id(id)
+            self.inner.get_project_by_id(project_id)
         })
     }
 

@@ -189,12 +189,12 @@ impl UserRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_user_by_id(&self, idv: i32) -> Result<User, RepoError> {
+    fn get_user_by_id(&self, user_id: i32) -> Result<User, RepoError> {
         use schema::users::dsl;
         let mut conn = self.get_conn()?;
 
         dsl::users
-            .filter(dsl::id.eq(idv))
+            .filter(dsl::id.eq(user_id))
             .first::<User>(conn.as_mut()) // <-- use inner PgConnection
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -216,11 +216,11 @@ impl UserRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn update_user_password(&mut self, id: i32, new_hash: &str) -> Result<(), RepoError> {
+    fn update_user_password(&mut self, user_id: i32, new_hash: &str) -> Result<(), RepoError> {
         use crate::schema::users::dsl;
         let mut conn = self.get_conn()?;
 
-        let affected = diesel::update(dsl::users.filter(dsl::id.eq(id)))
+        let affected = diesel::update(dsl::users.filter(dsl::id.eq(user_id)))
             .set(dsl::password_hash.eq(new_hash))
             .execute(conn.as_mut())?;
 
@@ -231,7 +231,7 @@ impl UserRepository for DieselRepo {
         } else {
             Err(RepoError::Db(diesel::result::Error::DatabaseError(
                 diesel::result::DatabaseErrorKind::Unknown,
-                Box::new(format!("updated {} rows for id={}", affected, id)),
+                Box::new(format!("updated {} rows for id={}", affected, user_id)),
             )))
         }
     }
@@ -285,11 +285,11 @@ impl UserRepository for DieselRepo {
         Ok(result > 0)
     }
 
-    fn delete_user(&mut self, id: i32) -> Result<User, RepoError> {
+    fn delete_user(&mut self, user_id: i32) -> Result<User, RepoError> {
         use crate::schema::users::dsl;
         let mut conn = self.get_conn()?;
         let user = dsl::users
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(user_id))
             .get_result::<User>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -298,29 +298,29 @@ impl UserRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::users.filter(dsl::id.eq(id))).execute(conn.as_mut())?;
+        diesel::delete(dsl::users.filter(dsl::id.eq(user_id))).execute(conn.as_mut())?;
         Ok(user)
     }
 }
 
 impl ProjectMembersRepository for DieselRepo {
-    fn get_members_by_project(&self, pid: i32) -> Result<Vec<ProjectMember>, RepoError> {
+    fn get_members_by_project(&self, project_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
         use crate::schema::project_members::dsl;
 
         let mut conn = self.get_conn()?;
         dsl::project_members
-            .filter(dsl::project_id.eq(pid))
+            .filter(dsl::project_id.eq(project_id))
             .order(dsl::user_id)
             .load::<ProjectMember>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_projects_for_user(&self, uid: i32) -> Result<Vec<ProjectMember>, RepoError> {
+    fn get_projects_for_user(&self, user_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
         use crate::schema::project_members::dsl;
 
         let mut conn = self.get_conn()?;
         dsl::project_members
-            .filter(dsl::user_id.eq(uid))
+            .filter(dsl::user_id.eq(user_id))
             .order(dsl::project_id)
             .load::<ProjectMember>(conn.as_mut())
             .map_err(|e| e.into())
@@ -344,8 +344,8 @@ impl ProjectMembersRepository for DieselRepo {
 
     fn update_project_member_role(
         &mut self,
-        pid: i32,
-        uid: i32,
+        project_id: i32,
+        user_id: i32,
         new_role: i32,
     ) -> Result<(), RepoError> {
         use crate::schema::project_members::dsl;
@@ -353,8 +353,8 @@ impl ProjectMembersRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         let affected = diesel::update(
             dsl::project_members
-                .filter(dsl::project_id.eq(pid))
-                .filter(dsl::user_id.eq(uid)),
+                .filter(dsl::project_id.eq(project_id))
+                .filter(dsl::user_id.eq(user_id)),
         )
         .set((
             dsl::role.eq(new_role),
@@ -369,14 +369,14 @@ impl ProjectMembersRepository for DieselRepo {
         }
     }
 
-    fn remove_project_member(&mut self, pid: i32, uid: i32) -> Result<(), RepoError> {
+    fn remove_project_member(&mut self, project_id: i32, user_id: i32) -> Result<(), RepoError> {
         use crate::schema::project_members::dsl;
 
         let mut conn = self.get_conn()?;
         let affected = diesel::delete(
             dsl::project_members
-                .filter(dsl::project_id.eq(pid))
-                .filter(dsl::user_id.eq(uid)),
+                .filter(dsl::project_id.eq(project_id))
+                .filter(dsl::user_id.eq(user_id)),
         )
         .execute(conn.as_mut())?;
 
@@ -398,11 +398,11 @@ impl LookupRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_requirement_status_by_id(&self, id: i32) -> Result<RequirementStatus, RepoError> {
+    fn get_requirement_status_by_id(&self, status_id: i32) -> Result<RequirementStatus, RepoError> {
         use schema::requirement_status::dsl;
         let mut conn = self.get_conn()?;
         dsl::requirement_status
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(status_id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -422,11 +422,11 @@ impl LookupRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_test_status_by_id(&self, id: i32) -> Result<TestStatus, RepoError> {
+    fn get_test_status_by_id(&self, status_id: i32) -> Result<TestStatus, RepoError> {
         use schema::test_status::dsl;
         let mut conn = self.get_conn()?;
         dsl::test_status
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(status_id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -446,11 +446,11 @@ impl LookupRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_category_by_id(&self, id: i32) -> Result<Category, RepoError> {
+    fn get_category_by_id(&self, category_id: i32) -> Result<Category, RepoError> {
         use schema::categories::dsl;
         let mut conn = self.get_conn()?;
         dsl::categories
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(category_id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -461,11 +461,11 @@ impl LookupRepository for DieselRepo {
             })
     }
 
-    fn get_categories_by_project(&self, pid: i32) -> Result<Vec<Category>, RepoError> {
+    fn get_categories_by_project(&self, project_id: i32) -> Result<Vec<Category>, RepoError> {
         use schema::categories::dsl;
         let mut conn = self.get_conn()?;
         dsl::categories
-            .filter(dsl::project_id.eq(pid))
+            .filter(dsl::project_id.eq(project_id))
             .load::<Category>(conn.as_mut())
             .map_err(|e| e.into())
     }
@@ -479,11 +479,11 @@ impl LookupRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_applicability_by_id(&self, id: i32) -> Result<Applicability, RepoError> {
+    fn get_applicability_by_id(&self, applicability_id: i32) -> Result<Applicability, RepoError> {
         use schema::applicability::dsl;
         let mut conn = self.get_conn()?;
         dsl::applicability
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(applicability_id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -494,11 +494,11 @@ impl LookupRepository for DieselRepo {
             })
     }
 
-    fn get_applicability_by_project(&self, pid: i32) -> Result<Vec<Applicability>, RepoError> {
+    fn get_applicability_by_project(&self, project_id: i32) -> Result<Vec<Applicability>, RepoError> {
         use schema::applicability::dsl;
         let mut conn = self.get_conn()?;
         dsl::applicability
-            .filter(dsl::project_id.eq(pid))
+            .filter(dsl::project_id.eq(project_id))
             .load::<Applicability>(conn.as_mut())
             .map_err(|e| e.into())
     }
@@ -512,11 +512,11 @@ impl LookupRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_verification_by_id(&self, id: i32) -> Result<VerificationMethod, RepoError> {
+    fn get_verification_by_id(&self, verification_id: i32) -> Result<VerificationMethod, RepoError> {
         use schema::verification::dsl;
         let mut conn = self.get_conn()?;
         dsl::verification
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(verification_id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -527,11 +527,11 @@ impl LookupRepository for DieselRepo {
             })
     }
 
-    fn get_verification_by_project(&self, pid: i32) -> Result<Vec<VerificationMethod>, RepoError> {
+    fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<VerificationMethod>, RepoError> {
         use schema::verification::dsl;
         let mut conn = self.get_conn()?;
         dsl::verification
-            .filter(dsl::project_id.eq(pid))
+            .filter(dsl::project_id.eq(project_id))
             .order(dsl::id)
             .load::<VerificationMethod>(conn.as_mut())
             .map_err(|e| e.into())
@@ -570,11 +570,11 @@ impl LookupRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_category(&mut self, id: i32) -> Result<Category, RepoError> {
+    fn delete_category(&mut self, category_id: i32) -> Result<Category, RepoError> {
         use schema::categories::dsl;
         let mut conn = self.get_conn()?;
         let cat = dsl::categories
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(category_id))
             .get_result::<Category>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -583,7 +583,7 @@ impl LookupRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::categories.filter(dsl::id.eq(id))).execute(conn.as_mut())?;
+        diesel::delete(dsl::categories.filter(dsl::id.eq(category_id))).execute(conn.as_mut())?;
         Ok(cat)
     }
 
@@ -612,11 +612,11 @@ impl LookupRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_applicability(&mut self, id: i32) -> Result<Applicability, RepoError> {
+    fn delete_applicability(&mut self, applicability_id: i32) -> Result<Applicability, RepoError> {
         use schema::applicability::dsl;
         let mut conn = self.get_conn()?;
         let app = dsl::applicability
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(applicability_id))
             .get_result::<Applicability>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -625,7 +625,7 @@ impl LookupRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::applicability.filter(dsl::id.eq(id))).execute(conn.as_mut())?;
+        diesel::delete(dsl::applicability.filter(dsl::id.eq(applicability_id))).execute(conn.as_mut())?;
         Ok(app)
     }
 
@@ -647,11 +647,11 @@ impl LookupRepository for DieselRepo {
 }
 
 impl RequirementsRepository for DieselRepo {
-    fn get_requirement_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
+    fn get_requirement_by_id(&self, requirement_id: i32) -> Result<Requirement, RepoError> {
         use schema::requirements::dsl;
         let mut conn = self.get_conn()?;
         dsl::requirements
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(requirement_id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -671,11 +671,11 @@ impl RequirementsRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_requirements_by_project(&self, project: i32) -> Result<Vec<Requirement>, RepoError> {
+    fn get_requirements_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError> {
         use schema::requirements::dsl;
         let mut conn = self.get_conn()?;
         dsl::requirements
-            .filter(dsl::project_id.eq(project))
+            .filter(dsl::project_id.eq(project_id))
             .load::<Requirement>(conn.as_mut())
             .map_err(|e| e.into())
     }
@@ -701,11 +701,11 @@ impl RequirementsRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn delete_requirement(&mut self, id: i32) -> Result<Requirement, RepoError> {
+    fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError> {
         use crate::schema::requirements::dsl;
         let mut conn = self.get_conn()?;
         let req = dsl::requirements
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(requirement_id))
             .get_result::<Requirement>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -714,16 +714,16 @@ impl RequirementsRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::requirements.filter(dsl::id.eq(id))).execute(conn.as_mut())?;
+        diesel::delete(dsl::requirements.filter(dsl::id.eq(requirement_id))).execute(conn.as_mut())?;
         Ok(req)
     }
 
-    fn update_requirement(&mut self, req: i32) -> Result<(), RepoError> {
+    fn update_requirement(&mut self, requirement_id: i32) -> Result<(), RepoError> {
         use crate::schema::requirements::dsl;
         use diesel::dsl::now;
         let mut conn = self.get_conn()?;
         diesel::update(dsl::requirements)
-            .filter(dsl::id.eq(req))
+            .filter(dsl::id.eq(requirement_id))
             .set(dsl::update_date.eq(now))
             .execute(conn.as_mut())?;
         Ok(())
@@ -731,11 +731,11 @@ impl RequirementsRepository for DieselRepo {
 }
 
 impl TestsCaseRepository for DieselRepo {
-    fn get_test_by_id(&self, id: i32) -> Result<TestCase, RepoError> {
+    fn get_test_by_id(&self, test_id: i32) -> Result<TestCase, RepoError> {
         use schema::tests::dsl;
         let mut conn = self.get_conn()?;
         dsl::tests
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(test_id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -764,12 +764,12 @@ impl TestsCaseRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_tests_for_requirement(&self, rid: i32) -> Result<Vec<TestCase>, RepoError> {
+    fn get_tests_for_requirement(&self, requirement_id: i32) -> Result<Vec<TestCase>, RepoError> {
         use schema::matrix::dsl;
         use schema::tests::dsl as t;
         let mut conn = self.get_conn()?;
         dsl::matrix
-            .filter(dsl::req_id.eq(rid))
+            .filter(dsl::req_id.eq(requirement_id))
             .inner_join(t::tests.on(dsl::test_id.eq(t::id)))
             .select((
                 t::id,
@@ -785,11 +785,11 @@ impl TestsCaseRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_requirements_for_test(&self, tid: i32) -> Result<Vec<Requirement>, RepoError> {
+    fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError> {
         use schema::{matrix, requirements};
         let mut conn = self.get_conn()?;
         matrix::dsl::matrix
-            .filter(matrix::dsl::test_id.eq(tid))
+            .filter(matrix::dsl::test_id.eq(test_id))
             .inner_join(
                 requirements::dsl::requirements.on(matrix::dsl::req_id.eq(requirements::dsl::id)),
             )
@@ -842,11 +842,11 @@ impl TestsCaseRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_test(&mut self, id: i32) -> Result<TestCase, RepoError> {
+    fn delete_test(&mut self, test_id: i32) -> Result<TestCase, RepoError> {
         use crate::schema::tests::dsl;
         let mut conn = self.get_conn()?;
         let test = dsl::tests
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(test_id))
             .get_result::<TestCase>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -855,13 +855,13 @@ impl TestsCaseRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::tests.filter(dsl::id.eq(id))).execute(conn.as_mut())?;
+        diesel::delete(dsl::tests.filter(dsl::id.eq(test_id))).execute(conn.as_mut())?;
         Ok(test)
     }
 
     fn update_test_requirement_links(
         &mut self,
-        tid: i32,
+        test_id: i32,
         requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
         use schema::matrix::dsl;
@@ -870,22 +870,22 @@ impl TestsCaseRepository for DieselRepo {
         conn.as_mut()
             .transaction::<_, diesel::result::Error, _>(|conn| {
                 // Delete existing links
-                diesel::delete(dsl::matrix.filter(dsl::test_id.eq(tid))).execute(conn)?;
+                diesel::delete(dsl::matrix.filter(dsl::test_id.eq(test_id))).execute(conn)?;
 
                 // Insert new links
-                for rid in requirement_ids {
+                for requirement_id in requirement_ids {
                     // Get the project_id from the test to maintain consistency
                     use crate::schema::tests::dsl::tests;
                     use crate::schema::tests::dsl::{id as test_id_col, project_id as t_pid};
-                    let pid: i32 = tests
-                        .filter(test_id_col.eq(tid))
+                    let project_id: i32 = tests
+                        .filter(test_id_col.eq(test_id))
                         .select(t_pid)
                         .first(conn)?;
 
                     let new_matrix = NewMatrixLink {
-                        req_id: *rid,
-                        test_id: tid,
-                        project_id: pid,
+                        req_id: *requirement_id,
+                        test_id: test_id,
+                        project_id: project_id,
                     };
                     diesel::insert_into(schema::matrix::table)
                         .values(&new_matrix)
@@ -943,11 +943,11 @@ impl ProjectsRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_project_by_id(&self, id: i32) -> Result<Project, RepoError> {
+    fn get_project_by_id(&self, project_id: i32) -> Result<Project, RepoError> {
         use schema::projects::dsl;
         let mut conn = self.get_conn()?;
         dsl::projects
-            .filter(dsl::id.eq(id))
+            .filter(dsl::id.eq(project_id))
             .first::<Project>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {

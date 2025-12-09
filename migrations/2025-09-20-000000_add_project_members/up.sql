@@ -11,21 +11,21 @@ BEGIN;
 -- 1) Create the project_members table
 CREATE TABLE IF NOT EXISTS project_members (
     project_id INTEGER NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
-    id    INTEGER NOT NULL REFERENCES users(id)     ON DELETE CASCADE,
+    user_id    INTEGER NOT NULL REFERENCES users(user_id)     ON DELETE CASCADE,
     role       INTEGER NOT NULL DEFAULT 2, -- 1=Owner, 2=Manager, 3=Contributor, 4=Viewer
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (project_id, id)
+    PRIMARY KEY (project_id, user_id)
 );
 
 -- 2) Backfill: migrate memberships from the old users.project_id
 --    Avoid duplicates if re-run.
-INSERT INTO project_members (project_id, id, role, created_at, updated_at)
+INSERT INTO project_members (project_id, user_id, role, created_at, updated_at)
 SELECT
     u.project_id,
-    u.id,
+    u.user_id,
     CASE WHEN u.is_admin IS TRUE THEN 1 ELSE 2 END AS role,
-    u.creation_date,
+    u.user_creation_date,
     CURRENT_TIMESTAMP
 FROM users u
 WHERE u.project_id IS NOT NULL
@@ -33,7 +33,7 @@ WHERE u.project_id IS NOT NULL
       SELECT 1
       FROM project_members pm
       WHERE pm.project_id = u.project_id
-        AND pm.id    = u.id
+        AND pm.user_id    = u.user_id
   );
 
 -- 3) Drop old columns from the users table

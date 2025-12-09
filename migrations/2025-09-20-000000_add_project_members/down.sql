@@ -16,11 +16,11 @@ ALTER TABLE users
 -- 2) Rehydrate project_id choosing the “best” membership for each user
 WITH ranked AS (
   SELECT
-    pm.id,
+    pm.user_id,
     pm.project_id,
     pm.role,
     ROW_NUMBER() OVER (
-      PARTITION BY pm.id
+      PARTITION BY pm.user_id
       ORDER BY
         CASE pm.role
           WHEN 1 THEN 1  -- Owner
@@ -36,7 +36,7 @@ WITH ranked AS (
 UPDATE users u
 SET project_id = r.project_id
 FROM ranked r
-WHERE r.id = u.id
+WHERE r.user_id = u.user_id
   AND r.rn = 1;
 
 -- 3) Optionally drop the project_members table if you want a full rollback
@@ -45,4 +45,4 @@ WHERE r.id = u.id
 COMMIT;
 
 -- Verification:
--- SELECT id, project_id FROM users ORDER BY id LIMIT 50;
+-- SELECT user_id, project_id FROM users ORDER BY user_id LIMIT 50;

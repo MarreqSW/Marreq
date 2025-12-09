@@ -77,11 +77,11 @@ pub async fn post_applicability(
     Ok(Redirect::to(show_url))
 }
 
-#[get("/<project_id>/applicability/edit/<id>?<error>")]
+#[get("/<project_id>/applicability/edit/<applicability_id>?<error>")]
 pub async fn get_edit_applicability(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    applicability_id: i32,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<Template, Redirect> {
@@ -89,7 +89,7 @@ pub async fn get_edit_applicability(
     let projects = get_accessible_projects(state, &user);
     let service = ApplicabilityService::new(state.inner());
     let applicability = service
-        .get_by_id(id)
+        .get_by_id(applicability_id)
         .map_err(|_| Redirect::to(uri!("/p", show_applicability(project_id = project_id))))?;
 
     if applicability.project_id != project_id {
@@ -109,11 +109,11 @@ pub async fn get_edit_applicability(
     Ok(Template::render("applicability/edit_applicability", ctx))
 }
 
-#[post("/<project_id>/applicability/edit/<id>", data = "<form>")]
+#[post("/<project_id>/applicability/edit/<applicability_id>", data = "<form>")]
 pub async fn post_edit_applicability(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    applicability_id: i32,
     form: Form<NewApplicability>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
@@ -124,14 +124,14 @@ pub async fn post_edit_applicability(
         "/p",
         get_edit_applicability(
             project_id = project_id,
-            id = id,
+            applicability_id = applicability_id,
             error = Some("Failed to update applicability".to_string())
         )
     );
     let show_url = uri!("/p", show_applicability(project_id = project_id));
 
     let old = service
-        .get_by_id(id)
+        .get_by_id(applicability_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
     if old.project_id != project_id {
         return Err(Redirect::to(uri!(
@@ -145,27 +145,27 @@ pub async fn post_edit_applicability(
         ..form.into_inner()
     };
 
-    if let Err(_err) = service.update(&user, id, new) {
+    if let Err(_err) = service.update(&user, applicability_id, new) {
         #[cfg(debug_assertions)]
-        eprintln!("Error updating applicability {id}: {_err:?}");
+        eprintln!("Error updating applicability {applicability_id}: {_err:?}");
         return Ok(Redirect::to(edit_url));
     }
 
     Ok(Redirect::to(show_url))
 }
 
-#[delete("/<project_id>/applicability/delete/<id>")]
+#[delete("/<project_id>/applicability/delete/<applicability_id>")]
 pub async fn delete_applicability_route(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    applicability_id: i32,
     state: &State<AppState>,
 ) -> Result<Status, Redirect> {
     let user = project_access.into_user();
     let show_url = uri!("/p", show_applicability(project_id = project_id));
     let service = ApplicabilityService::new(state.inner());
     let applicability = service
-        .get_by_id(id)
+        .get_by_id(applicability_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
     if applicability.project_id != project_id {
         return Err(Redirect::to(uri!(
@@ -174,11 +174,11 @@ pub async fn delete_applicability_route(
         )));
     }
 
-    match service.delete(&user, id) {
+    match service.delete(&user, applicability_id) {
         Ok(_) => Ok(Status::Ok),
         Err(_err) => {
             #[cfg(debug_assertions)]
-            eprintln!("Error deleting applicability {id}: {_err:?}");
+            eprintln!("Error deleting applicability {applicability_id}: {_err:?}");
             Ok(Status::InternalServerError)
         }
     }

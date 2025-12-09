@@ -249,11 +249,11 @@ async fn show_requirements(
     Ok(Template::render("requirements/requirements", ctx))
 }
 
-#[get("/<project_id>/requirements/show/<id>")]
+#[get("/<project_id>/requirements/show/<requirement_id>")]
 async fn show_requirement_id(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    requirement_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
@@ -261,7 +261,7 @@ async fn show_requirement_id(
     let selected_project = ProjectService::new(state.inner()).get_by_id(project_id)?;
     let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
 
-    let requirement = decorated_requirement_service.get_by_id(id)?;
+    let requirement = decorated_requirement_service.get_by_id(requirement_id)?;
 
     if let Some(redir) = enforce_project_ownership(project_id, requirement.project_id) {
         return Err(redir);
@@ -279,7 +279,7 @@ async fn show_requirement_id(
     let child_requirements = decorated_requirement_service.get_by_parent_id(requirement.id)?;
 
     // Linked verification artefacts
-    let linked_tests = DecoratedTestService::new(state.inner()).get_linked_to_requirement(id)?;
+    let linked_tests = DecoratedTestService::new(state.inner()).get_linked_to_requirement(requirement_id)?;
 
     let (tests_passed, tests_failed, tests_pending) =
         linked_tests
@@ -302,7 +302,7 @@ async fn show_requirement_id(
             });
 
     let history_entries = LogService::new(state.inner())
-        .entity_logs(&EntityType::Requirement.to_string(), id)
+        .entity_logs(&EntityType::Requirement.to_string(), requirement_id)
         .unwrap_or_default();
 
     let canonical_data = json!({
@@ -333,7 +333,7 @@ async fn show_requirement_id(
 
     let ctx = json!({
         "user": user,
-        "project_id": id,
+        "project_id": project_id,
         "project": json!({
             "id": selected_project.id,
             "name": selected_project.name,
@@ -345,11 +345,11 @@ async fn show_requirement_id(
     Ok(Template::render("requirements/requirement", ctx))
 }
 
-#[get("/<project_id>/requirements/edit/<id>")]
+#[get("/<project_id>/requirements/edit/<requirement_id>")]
 async fn get_edit_requirement(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    requirement_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
@@ -357,7 +357,7 @@ async fn get_edit_requirement(
         .get_by_id(project_id)?
         .name;
     let service = DecoratedRequirementService::new(state.inner());
-    let req = service.get_by_id(id)?;
+    let req = service.get_by_id(requirement_id)?;
 
     // Enforce project ownership; redirect if mismatched
     if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
@@ -375,7 +375,7 @@ async fn get_edit_requirement(
     };
 
     let history_entries = LogService::new(state.inner())
-        .entity_logs(&EntityType::Requirement.to_string(), id)
+        .entity_logs(&EntityType::Requirement.to_string(), requirement_id)
         .unwrap_or_default();
 
     let version_counter = history_entries.len().saturating_add(1);
@@ -404,7 +404,7 @@ async fn get_edit_requirement(
     let linked_requirement_options = RequirementService::new(state.inner())
         .list_by_project(project_id)?
         .into_iter()
-        .filter(|candidate| candidate.id != id) // Don't allow self-reference
+        .filter(|candidate| candidate.id != requirement_id) // Don't allow self-reference
         .map(|candidate| {
             json!({
                 "id": candidate.id,
@@ -448,39 +448,39 @@ async fn get_edit_requirement(
     Ok(Template::render("requirements/edit_requirement", ctx))
 }
 
-#[post("/<project_id>/requirements/edit/<id>", data = "<new_req>")]
+#[post("/<project_id>/requirements/edit/<requirement_id>", data = "<new_req>")]
 async fn post_edit_requirement(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    requirement_id: i32,
     new_req: Form<NewRequirement>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let service = RequirementService::new(state.inner());
-    if let Some(redir) = enforce_project_ownership(project_id, service.get_by_id(id)?.project_id) {
+    if let Some(redir) = enforce_project_ownership(project_id, service.get_by_id(requirement_id)?.project_id) {
         return Err(redir);
     }
 
     let user = project_access.into_user();
-    service.update(&user, id, new_req.into_inner())?;
+    service.update(&user, requirement_id, new_req.into_inner())?;
     Ok(Redirect::to(uri!(
         "/p",
-        show_requirement_id(project_id, id)
+        show_requirement_id(project_id, requirement_id)
     )))
 }
 
-#[delete("/<project_id>/requirements/delete/<id>")]
+#[delete("/<project_id>/requirements/delete/<requirement_id>")]
 async fn delete_requirement_route(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    requirement_id: i32,
     state: &State<AppState>,
 ) -> Result<Redirect, rocket::http::Status> {
     let user = project_access.into_user();
 
     let service = RequirementService::new(state.inner());
     let req = service
-        .get_by_id(id)
+        .get_by_id(requirement_id)
         .map_err(|_| rocket::http::Status::NotFound)?;
 
     if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
@@ -498,7 +498,7 @@ async fn delete_requirement_route(
     }
 
     service
-        .delete(&user, id)
+        .delete(&user, requirement_id)
         .map_err(|_| rocket::http::Status::InternalServerError)?;
 
     Ok(requirements_list_redirect(project_id))

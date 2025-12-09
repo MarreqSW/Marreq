@@ -65,18 +65,18 @@ async fn post_category(
     Ok(Redirect::to(show_url))
 }
 
-#[get("/<project_id>/categories/edit/<id>")]
+#[get("/<project_id>/categories/edit/<category_id>")]
 async fn get_edit_category(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    category_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
     let service = CategoryService::new(state.inner());
 
     let category = service
-        .get_by_id(id)
+        .get_by_id(category_id)
         .map_err(|_| Redirect::to(uri!("/p", show_categories(project_id))))?;
 
     if category.project_id != project_id {
@@ -98,22 +98,22 @@ async fn get_edit_category(
     Ok(Template::render("categories/edit_category", ctx))
 }
 
-#[post("/<project_id>/categories/edit/<id>", data = "<category>")]
+#[post("/<project_id>/categories/edit/<category_id>", data = "<category>")]
 async fn post_edit_category(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    category_id: i32,
     category: Form<NewCategory>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
     let service = CategoryService::new(state.inner());
 
-    let edit_url = uri!("/p", get_edit_category(project_id, id));
+    let edit_url = uri!("/p", get_edit_category(project_id, category_id));
     let show_url = uri!("/p", show_categories(project_id));
 
     let old = service
-        .get_by_id(id)
+        .get_by_id(category_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
 
     if old.project_id != project_id {
@@ -124,10 +124,10 @@ async fn post_edit_category(
     }
 
     let mut edited = category.into_inner();
-    edited.id = Some(id);
+    edited.id = Some(category_id);
     edited.project_id = project_id;
 
-    if let Err(_e) = service.update(&user, id, edited) {
+    if let Err(_e) = service.update(&user, category_id, edited) {
         #[cfg(debug_assertions)]
         eprintln!("edit_category error: {:?}", _e);
         return Ok(Redirect::to(edit_url.clone()));
@@ -136,17 +136,17 @@ async fn post_edit_category(
     Ok(Redirect::to(show_url))
 }
 
-#[delete("/<project_id>/categories/delete/<id>")]
+#[delete("/<project_id>/categories/delete/<category_id>")]
 async fn delete_category_route(
     project_access: ProjectAccess,
     project_id: i32,
-    id: i32,
+    category_id: i32,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, Redirect> {
     let user = project_access.into_user();
     let service = CategoryService::new(state.inner());
 
-    let category = match service.get_by_id(id) {
+    let category = match service.get_by_id(category_id) {
         Ok(c) => c,
         Err(_) => return Ok(rocket::http::Status::NotFound),
     };
@@ -158,7 +158,7 @@ async fn delete_category_route(
         )));
     }
 
-    match service.delete(&user, id) {
+    match service.delete(&user, category_id) {
         Ok(_) => Ok(rocket::http::Status::Ok),
         Err(_e) => {
             #[cfg(debug_assertions)]

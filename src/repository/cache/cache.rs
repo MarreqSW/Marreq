@@ -224,40 +224,40 @@ impl Cache {
     }
 
     /// Invalidate all user-related cache entries
-    pub fn invalidate_user(&self, id: i32) {
-        self.remove(&keys::Users::by_id(id));
+    pub fn invalidate_user(&self, user_id: i32) {
+        self.remove(&keys::Users::by_id(user_id));
         self.remove(keys::USERS_ALL);
     }
 
     /// Invalidate cache entries related to a user/project membership tuple
-    pub fn invalidate_project_membership(&self, project_id: i32, id: i32) {
+    pub fn invalidate_project_membership(&self, project_id: i32, user_id: i32) {
         self.remove(&keys::ProjectMembers::by_project(project_id));
-        self.remove(&keys::ProjectMembers::for_user(id));
+        self.remove(&keys::ProjectMembers::for_user(user_id));
     }
 
     /// Invalidate all requirement-related cache entries
-    pub fn invalidate_requirement(&self, id: i32) {
-        self.remove(&keys::Requirements::by_id(id));
-        self.remove(&keys::LinkedTests::for_requirement(id));
-        self.remove(&keys::RequirementTitle::by_id(id));
+    pub fn invalidate_requirement(&self, requirement_id: i32) {
+        self.remove(&keys::Requirements::by_id(requirement_id));
+        self.remove(&keys::LinkedTests::for_requirement(requirement_id));
+        self.remove(&keys::RequirementTitle::by_id(requirement_id));
         // Also invalidate global lists and project-level caches
         self.remove(keys::REQUIREMENTS_ALL);
         // Note: In a real implementation, you'd need to track which project the requirement belongs to
     }
 
     /// Invalidate all test-related cache entries
-    pub fn invalidate_test(&self, id: i32) {
-        self.remove(&keys::Tests::by_id(id));
-        self.remove(&keys::LinkedRequirements::for_test(id));
-        self.remove(&keys::TestStatus::by_id(id));
+    pub fn invalidate_test(&self, test_id: i32) {
+        self.remove(&keys::Tests::by_id(test_id));
+        self.remove(&keys::LinkedRequirements::for_test(test_id));
+        self.remove(&keys::TestStatus::by_id(test_id));
         // Also invalidate global lists and project-level caches
         self.remove(keys::TESTS_ALL);
         // Note: In a real implementation, you'd need to track which project the test belongs to
     }
 
     /// Invalidate all category-related cache entries
-    pub fn invalidate_category(&self, id: i32) {
-        self.remove(&keys::Categories::by_id(id));
+    pub fn invalidate_category(&self, category_id: i32) {
+        self.remove(&keys::Categories::by_id(category_id));
         self.remove(keys::CATEGORIES_ALL);
     }
 
@@ -269,8 +269,8 @@ impl Cache {
     }
 
     /// Invalidate all verification-related cache entries
-    pub fn invalidate_verification(&self, id: i32) {
-        self.remove(&keys::VerificationMethod::by_id(id));
+    pub fn invalidate_verification(&self, verification_id: i32) {
+        self.remove(&keys::VerificationMethod::by_id(verification_id));
         self.remove(keys::VERIFICATION_ALL);
     }
 

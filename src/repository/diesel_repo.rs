@@ -494,7 +494,10 @@ impl LookupRepository for DieselRepo {
             })
     }
 
-    fn get_applicability_by_project(&self, project_id: i32) -> Result<Vec<Applicability>, RepoError> {
+    fn get_applicability_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<Applicability>, RepoError> {
         use schema::applicability::dsl;
         let mut conn = self.get_conn()?;
         dsl::applicability
@@ -512,7 +515,10 @@ impl LookupRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_verification_by_id(&self, verification_id: i32) -> Result<VerificationMethod, RepoError> {
+    fn get_verification_by_id(
+        &self,
+        verification_id: i32,
+    ) -> Result<VerificationMethod, RepoError> {
         use schema::verification::dsl;
         let mut conn = self.get_conn()?;
         dsl::verification
@@ -527,7 +533,10 @@ impl LookupRepository for DieselRepo {
             })
     }
 
-    fn get_verification_by_project(&self, project_id: i32) -> Result<Vec<VerificationMethod>, RepoError> {
+    fn get_verification_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<VerificationMethod>, RepoError> {
         use schema::verification::dsl;
         let mut conn = self.get_conn()?;
         dsl::verification
@@ -625,7 +634,8 @@ impl LookupRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::applicability.filter(dsl::id.eq(applicability_id))).execute(conn.as_mut())?;
+        diesel::delete(dsl::applicability.filter(dsl::id.eq(applicability_id)))
+            .execute(conn.as_mut())?;
         Ok(app)
     }
 
@@ -714,7 +724,8 @@ impl RequirementsRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::requirements.filter(dsl::id.eq(requirement_id))).execute(conn.as_mut())?;
+        diesel::delete(dsl::requirements.filter(dsl::id.eq(requirement_id)))
+            .execute(conn.as_mut())?;
         Ok(req)
     }
 
@@ -974,15 +985,28 @@ impl ProjectsRepository for DieselRepo {
     ) -> Result<bool, RepoError> {
         use schema::projects::dsl;
         let mut conn = self.get_conn()?;
-        let updated = diesel::update(dsl::projects.filter(dsl::id.eq(project_id_param)))
-            .set((
-                dsl::name.eq(&update.name),
-                dsl::description.eq(&update.description),
-                dsl::status_id.eq(&update.status_id),
-                dsl::owner_id.eq(&update.owner_id),
-                dsl::update_date.eq(chrono::Utc::now().naive_utc()),
-            ))
-            .execute(conn.as_mut())?;
+
+        // Build update statement conditionally based on whether status is provided
+        let updated = if let Some(status) = update.status {
+            diesel::update(dsl::projects.filter(dsl::id.eq(project_id_param)))
+                .set((
+                    dsl::name.eq(&update.name),
+                    dsl::description.eq(&update.description),
+                    dsl::status.eq(status),
+                    dsl::owner_id.eq(&update.owner_id),
+                    dsl::update_date.eq(chrono::Utc::now().naive_utc()),
+                ))
+                .execute(conn.as_mut())?
+        } else {
+            diesel::update(dsl::projects.filter(dsl::id.eq(project_id_param)))
+                .set((
+                    dsl::name.eq(&update.name),
+                    dsl::description.eq(&update.description),
+                    dsl::owner_id.eq(&update.owner_id),
+                    dsl::update_date.eq(chrono::Utc::now().naive_utc()),
+                ))
+                .execute(conn.as_mut())?
+        };
         Ok(updated > 0)
     }
 

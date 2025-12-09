@@ -415,7 +415,10 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         })
     }
 
-    fn get_verification_by_id(&self, verification_id: i32) -> Result<VerificationMethod, RepoError> {
+    fn get_verification_by_id(
+        &self,
+        verification_id: i32,
+    ) -> Result<VerificationMethod, RepoError> {
         let key = keys::VerificationMethod::by_id(verification_id);
         self.get_or_fetch(&key, Duration::from_secs(600), || {
             self.inner.get_verification_by_id(verification_id)
@@ -569,6 +572,7 @@ impl<R: LogRepository> LogRepository for CacheRepository<R> {
 mod tests {
     use super::*;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::collections::HashMap;
 
@@ -615,7 +619,7 @@ mod tests {
             description: Some("Desc".into()),
             creation_date: Some(epoch()),
             update_date: Some(epoch()),
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(1),
         };
         let requirement = Requirement {
@@ -1073,14 +1077,14 @@ mod tests {
         let np = NewProject {
             name: "P2".into(),
             description: Some("".into()),
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(1),
         };
         let pid = repo.insert_new_project(&np).unwrap();
         let up = UpdateProject {
             name: "P2a".into(),
             description: Some("".into()),
-            status_id: Some(1),
+            status: Some(ProjectStatus::Active),
             owner_id: Some(1),
         };
         repo.edit_project(pid, &up).unwrap();

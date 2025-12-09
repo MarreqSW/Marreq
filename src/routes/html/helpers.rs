@@ -18,6 +18,7 @@ use crate::repository::{
     TestsCaseRepository, UserRepository,
 };
 use crate::services::project_service::ProjectService;
+use crate::status_enums::ProjectStatus;
 
 /// Helper function to get a database connection with proper error handling
 pub(crate) fn get_db_connection(
@@ -148,15 +149,12 @@ pub(crate) fn decorate_projects_for_listing(
             .owner_id
             .and_then(|owner_id| owner_lookup.get(&owner_id).cloned());
 
-        let status_display = project
-            .status_id
-            .map(|id| id.to_string())
-            .unwrap_or_else(|| "Unknown".to_string());
-        let status_normalized = project
-            .status_id
-            .map(|id| id.to_string().to_ascii_lowercase())
-            .unwrap_or_else(|| "unknown".to_string());
-        let status_badge = project_status_badge(status_display.as_str());
+        let status = project.status;
+
+        let status_display = status.title();
+        let status_normalized = status.to_db_string();
+        let status_badge = status.badge_class();
+
         let project_initial = project
             .name
             .chars()
@@ -222,16 +220,6 @@ pub(crate) fn describe_project_role(role: i32) -> &'static str {
     }
 }
 
-pub(crate) fn project_status_badge(status: &str) -> &'static str {
-    let normalized = status.trim().to_ascii_lowercase();
-    match normalized.as_str() {
-        "active" => "bg-success",
-        "archived" | "inactive" => "bg-secondary",
-        "on hold" | "paused" | "maintenance" => "bg-warning",
-        _ => "bg-secondary",
-    }
-}
-
 pub(crate) fn get_category_by_id_cached(state: &AppState, id: i32) -> Category {
     state
         .repo_read()
@@ -274,6 +262,6 @@ pub(crate) fn get_project_by_id_pooled_safe(state: &State<AppState>, project_id:
             creation_date: Some(Utc::now().naive_utc()),
             update_date: Some(Utc::now().naive_utc()),
             owner_id: Some(0),
-            status_id: None,
+            status: ProjectStatus::Active,
         })
 }

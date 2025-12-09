@@ -134,6 +134,7 @@ mod tests {
     use crate::routes::html::project::test_helpers::{
         delete_with_session, get_with_session, post_form_with_session, timestamp, TestAppState,
     };
+    use crate::status_enums::ProjectStatus;
     use rocket::http::Status;
     use rocket::local::asynchronous::Client;
     use rocket::Request;
@@ -150,7 +151,7 @@ mod tests {
             description: Some(format!("{name} project")),
             creation_date: Some(timestamp()),
             update_date: Some(timestamp()),
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(ADMIN_ID),
         }
     }
@@ -297,7 +298,7 @@ mod tests {
             .expect("project present");
         assert_eq!(project.name, "Orbiter II");
         assert_eq!(project.description.as_deref(), Some("Updated mission plan"));
-        assert_eq!(project.status_id, Some(0));
+        assert_eq!(project.status, ProjectStatus::Active);
         assert_eq!(project.owner_id, Some(ADMIN_ID));
     }
 

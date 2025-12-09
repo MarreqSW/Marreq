@@ -85,6 +85,8 @@ mod tests {
         }
     }
 
+    use crate::status_enums::ProjectStatus;
+
     #[test]
     fn create_trim_and_persists() {
         let mut repo = DieselRepoMock::default();
@@ -96,7 +98,7 @@ mod tests {
                 description: None,
                 creation_date: None,
                 update_date: None,
-                status_id: None,
+                status: ProjectStatus::Active,
                 owner_id: None,
             },
         );

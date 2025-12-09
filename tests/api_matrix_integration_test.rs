@@ -195,7 +195,7 @@ fn link_creates_new_matrix_entry() {
     // Verify the link was created
     let links = service.list_by_project(1).unwrap();
     assert_eq!(links.len(), 1);
-    assert_eq!(links[0].project_id, 5);
+    assert_eq!(links[0].req_id, 5);
     assert_eq!(links[0].test_id, 10);
     assert_eq!(links[0].project_id, 1);
 }
@@ -544,7 +544,7 @@ fn matrix_view_sorts_by_title() {
 
     let filters = MatrixFilters::default();
     let mut pagination = MatrixPagination::default();
-    pagination.sort_by = "req_title".to_string();
+    pagination.sort_by = "title".to_string();
     pagination.sort_order = SortOrder::Asc;
 
     let view = service.get_matrix_view(1, filters, pagination).unwrap();
@@ -605,7 +605,7 @@ fn can_calculate_coverage_percentage() {
     let links = service.list_by_project(1).unwrap();
 
     // Calculate coverage
-    let covered_reqs: HashSet<i32> = links.iter().map(|l| l.project_id).collect();
+    let covered_reqs: HashSet<i32> = links.iter().map(|l| l.req_id).collect();
     let coverage_percentage = (covered_reqs.len() as f32 / 4.0) * 100.0;
 
     assert_eq!(coverage_percentage, 75.0); // 3 out of 4 = 75%
@@ -630,7 +630,7 @@ fn identifies_requirements_without_tests() {
     let service = MatrixService::new(&state);
 
     let links = service.list_by_project(1).unwrap();
-    let covered_reqs: HashSet<i32> = links.iter().map(|l| l.project_id).collect();
+    let covered_reqs: HashSet<i32> = links.iter().map(|l| l.req_id).collect();
 
     // Requirements 4 and 5 are not covered
     assert!(!covered_reqs.contains(&4));

@@ -15,6 +15,7 @@
 
 use req_man::models::*;
 use req_man::services::{MatrixFilters, MatrixPagination, MatrixService, SortOrder};
+use req_man::status_enums::ProjectStatus;
 use std::collections::HashSet;
 
 mod test_support {
@@ -54,7 +55,7 @@ mod test_support {
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(1),
             },
         );

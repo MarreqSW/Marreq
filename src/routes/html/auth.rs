@@ -15,10 +15,10 @@ pub fn login(
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let repo = state.repo_read();
+    let mut repo = state.repo_write();
     let form = login_form.into_inner();
 
-    match login_user(&*repo, &form, cookies) {
+    match login_user(&mut *repo, &form, cookies) {
         Ok(()) => Ok(Redirect::to(uri!(crate::routes::html::dashboard::index))),
         Err(err) => {
             let error_msg = match err {
@@ -38,8 +38,9 @@ pub fn login(
 }
 
 #[get("/logout")]
-pub fn logout(cookies: &CookieJar<'_>) -> Redirect {
-    logout_user(cookies);
+pub fn logout(cookies: &CookieJar<'_>, state: &State<AppState>) -> Redirect {
+    let mut repo = state.repo_write();
+    logout_user(cookies, &mut *repo);
     Redirect::to(uri!(login_page(error = Option::<String>::None)))
 }
 

@@ -1,8 +1,6 @@
 use super::errors::AuthError;
 use crate::auth::set_session_cookie;
-use crate::logger::{LogCtx, Logger};
 use crate::models::*;
-use crate::repository::DieselRepo;
 use crate::repository::Repository;
 use rocket::http::CookieJar;
 
@@ -14,20 +12,29 @@ use rocket::http::CookieJar;
 /// Ok is returned. On failure a rendered `Template` with the corresponding
 /// error is returned.
 pub fn login_user<R: Repository>(
-    repo: &R,
+    repo: &mut R,
     login_form: &LoginForm,
     cookies: &CookieJar<'_>,
 ) -> Result<(), AuthError> {
-    let user = authenticate_user(repo, &login_form.username, &login_form.password)?;
+    let user = authenticate_user(&*repo, &login_form.username, &login_form.password)?;
 
     // Store session information
     set_session_cookie(cookies, user.id);
 
-    let mut conn = DieselRepo::new()
-        .get_conn()
-        .map_err(|e| AuthError::Db(e.to_string()))?;
-    let ctx = LogCtx::new(user.id);
-    Logger::log_login(&mut conn, &ctx).map_err(|e| AuthError::Audit(e.to_string()))?;
+    // Log the login - don't fail auth if logging fails
+    let log = NewLog {
+        user_id: user.id,
+        action_type: "LOGIN".to_string(),
+        entity_type: "User".to_string(),
+        project_id: None,
+        entity_id: Some(user.id),
+        old_values: None,
+        new_values: None,
+        description: Some("User logged in".to_string()),
+        ip_address: None,
+        user_agent: None,
+    };
+    let _ = repo.insert_log(&log);
 
     Ok(())
 }

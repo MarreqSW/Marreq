@@ -10,6 +10,7 @@
 //! - Error handling
 
 use req_man::models::*;
+use req_man::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::{json, Value};
@@ -66,7 +67,7 @@ mod test_support {
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(1),
             },
         );
@@ -79,7 +80,7 @@ mod test_support {
                 description: Some("Other Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(2),
             },
         );

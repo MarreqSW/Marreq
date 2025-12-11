@@ -277,7 +277,7 @@ async fn delete_user_requires_authentication() {
 // ============================================================================
 
 #[rocket::async_test]
-async fn password_field_is_present() {
+async fn password_field_is_not_present() {
     let client = test_client(base_repo()).await;
 
     let response = client
@@ -287,10 +287,7 @@ async fn password_field_is_present() {
         .await;
 
     let user: User = response.into_json().await.expect("json");
-
-    // Mock repository includes password field (in production it would be hashed)
-    // This test just verifies the field exists in the User model
-    assert!(!user.password_hash.is_empty());
+    assert!(user.password_hash.is_empty());
 }
 
 // ============================================================================

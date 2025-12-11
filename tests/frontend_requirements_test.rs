@@ -1,6 +1,7 @@
 #![cfg(feature = "test-helpers")]
 
 use req_man::models::*;
+use req_man::status_enums::ProjectStatus;
 /// Frontend integration tests for requirements pages.
 ///
 /// These tests verify:
@@ -74,7 +75,7 @@ mod test_support {
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(1),
             },
         );

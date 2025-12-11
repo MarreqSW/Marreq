@@ -151,7 +151,7 @@ echo ""
 
 echo "📁 Projects created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c \
-  "SELECT id, name, status_id FROM projects ORDER BY id;"
+  "SELECT id, name, status FROM projects ORDER BY id;"
 echo ""
 
 echo "🤝 Project memberships:"

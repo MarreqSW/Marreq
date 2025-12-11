@@ -1,6 +1,7 @@
 #![cfg(feature = "test-helpers")]
 
 use req_man::models::*;
+use req_man::status_enums::ProjectStatus;
 /// End-to-end workflow tests for requirements management.
 ///
 /// These tests verify complete user workflows including:
@@ -75,7 +76,7 @@ mod workflow_support {
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(1),
             },
         );

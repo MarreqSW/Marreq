@@ -10,6 +10,7 @@
 
 use req_man::auth::session::SESSION_COOKIE;
 use req_man::models::*;
+use req_man::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::json;
@@ -69,7 +70,7 @@ mod test_support {
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(1),
             },
         );

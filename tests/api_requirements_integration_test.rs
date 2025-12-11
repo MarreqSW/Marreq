@@ -10,6 +10,7 @@
 //! - Edge cases and validation
 
 use req_man::models::*;
+use req_man::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::{json, Value};
@@ -69,7 +70,7 @@ mod test_support {
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(1),
             },
         );
@@ -82,7 +83,7 @@ mod test_support {
                 description: Some("Other Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(2),
             },
         );
@@ -394,7 +395,7 @@ async fn patch_requirement_updates_title() {
     let client = test_client(repo).await;
 
     let patch = json!({
-        "req_title": "Updated Title"
+        "title": "Updated Title"
     });
 
     let response = client
@@ -429,9 +430,9 @@ async fn patch_requirement_updates_multiple_fields() {
     let client = test_client(repo).await;
 
     let patch = json!({
-        "req_title": "Updated Title",
-        "req_description": "Updated description",
-        "req_current_status": 2
+        "title": "Updated Title",
+        "description": "Updated description",
+        "status_id": 2
     });
 
     let response = client
@@ -481,7 +482,7 @@ async fn patch_nonexistent_requirement_returns_404() {
     let client = test_client(base_repo()).await;
 
     let patch = json!({
-        "req_title": "Updated Title"
+        "title": "Updated Title"
     });
 
     let response = client
@@ -642,7 +643,7 @@ async fn patch_requirement_preserves_unmodified_fields() {
 
     // Update only title
     let patch = json!({
-        "req_title": "New Title"
+        "title": "New Title"
     });
 
     client

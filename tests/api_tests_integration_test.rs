@@ -11,6 +11,7 @@
 //! - Authentication
 
 use req_man::models::*;
+use req_man::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::{json, Value};
@@ -70,7 +71,7 @@ mod test_support {
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(1),
             },
         );
@@ -312,7 +313,7 @@ async fn update_field_changes_test_name() {
     let client = test_client(repo).await;
 
     let update = json!({
-        "field": "test_name",
+        "field": "name",
         "value": "Updated Name"
     });
 
@@ -347,7 +348,7 @@ async fn update_field_changes_test_status() {
     let client = test_client(repo).await;
 
     let update = json!({
-        "field": "test_status",
+        "field": "status_id",
         "value": "2"
     });
 
@@ -484,7 +485,7 @@ async fn create_test_with_parent() {
     let client = test_client(repo).await;
 
     let mut child_json = new_test_json("Child Test", 1);
-    child_json["test_parent"] = json!(1);
+    child_json["parent_id"] = json!(1);
 
     let response = client
         .post("/api/tests")
@@ -518,7 +519,7 @@ async fn update_test_parent() {
     let client = test_client(repo).await;
 
     let update = json!({
-        "field": "test_parent",
+        "field": "parent_id",
         "value": "1"
     });
 
@@ -555,7 +556,7 @@ async fn update_test_description() {
     let client = test_client(repo).await;
 
     let update = json!({
-        "field": "test_description",
+        "field": "description",
         "value": "Updated description"
     });
 
@@ -587,7 +588,7 @@ async fn update_test_source() {
     let client = test_client(repo).await;
 
     let update = json!({
-        "field": "test_source",
+        "field": "source",
         "value": "manual"
     });
 
@@ -641,5 +642,5 @@ async fn create_multiple_tests_sequentially() {
         .await;
 
     let tests: Vec<TestCase> = list_response.into_json().await.expect("json");
-    assert_eq!(tests.len(), 1);
+    assert_eq!(tests.len(), 5);
 }

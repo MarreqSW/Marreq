@@ -11,6 +11,7 @@
 //! - XSS attempts are handled
 
 use req_man::models::*;
+use req_man::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::json;
@@ -67,7 +68,7 @@ mod test_support {
                 description: Some("Description".into()),
                 creation_date: Some(timestamp()),
                 update_date: Some(timestamp()),
-                status_id: Some(1),
+                status: ProjectStatus::Active,
                 owner_id: Some(1),
             },
         );
@@ -176,7 +177,7 @@ async fn create_requirement_with_type_mismatch_returns_error() {
         "req_reference": "REQ-001",
         "req_category": 1,
         "req_applicability": 1,
-        "req_current_status": 1,
+        "status_id": 1,
         "req_verification": 1,
         "project_id": "not-a-number"
     });
@@ -204,7 +205,7 @@ async fn create_requirement_with_very_long_string_handles_gracefully() {
         "req_reference": "REQ-001",
         "req_category": 1,
         "req_applicability": 1,
-        "req_current_status": 1,
+        "status_id": 1,
         "req_verification": 1,
         "project_id": 1
     });
@@ -237,7 +238,7 @@ async fn create_requirement_with_negative_id_returns_error() {
         "req_reference": "REQ-001",
         "req_category": -1,
         "req_applicability": 1,
-        "req_current_status": 1,
+        "status_id": 1,
         "req_verification": 1,
         "project_id": 1
     });
@@ -326,9 +327,9 @@ async fn patch_requirement_with_invalid_field_type_returns_error() {
 
     let client = test_client(repo).await;
 
-    // req_current_status should be number, not string
+    // status_id should be number, not string
     let patch = json!({
-        "req_current_status": "not-a-number"
+        "status_id": "not-a-number"
     });
 
     let response = client
@@ -425,9 +426,9 @@ async fn update_test_field_with_invalid_status_value_returns_error() {
 
     let client = test_client(repo).await;
 
-    // test_status should be parseable as i32
+    // status_id should be parseable as i32
     let update = json!({
-        "field": "test_status",
+        "field": "status_id",
         "value": "not-a-number"
     });
 
@@ -595,7 +596,7 @@ async fn sql_injection_in_requirement_title_is_handled_safely() {
         "req_reference": "REQ-001",
         "req_category": 1,
         "req_applicability": 1,
-        "req_current_status": 1,
+        "status_id": 1,
         "req_verification": 1,
         "project_id": 1
     });
@@ -677,7 +678,7 @@ async fn xss_attempt_in_requirement_title_is_handled_safely() {
         "req_reference": "REQ-001",
         "req_category": 1,
         "req_applicability": 1,
-        "req_current_status": 1,
+        "status_id": 1,
         "req_verification": 1,
         "project_id": 1
     });

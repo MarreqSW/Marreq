@@ -7,6 +7,7 @@ use req_man::repository::diesel_repo_mock::DieselRepoMock;
 use req_man::repository::CacheRepository;
 use req_man::routes::html::project;
 use req_man::routes::html::projects;
+use req_man::status_enums::ProjectStatus;
 use rocket::http::{Cookie, Status};
 use rocket::local::asynchronous::Client;
 use std::sync::{Arc, RwLock};
@@ -78,7 +79,7 @@ async fn projects_page_lists_user_projects() {
         creation_date: None,
         update_date: None,
         owner_id: Some(1),
-        status_id: Some(1),
+        status: ProjectStatus::Active,
     };
     repo.projects.insert(10, project);
 
@@ -116,7 +117,7 @@ async fn create_project_success() {
         .post("/new_project")
         .private_cookie(session_cookie(1))
         .header(rocket::http::ContentType::Form)
-        .body("project_name=New+Project&project_description=Test+Description&project_status=active&project_owner_id=1")
+        .body("name=New+Project&description=Test+Description&status=active&owner_id=1")
         .dispatch()
         .await;
 
@@ -133,7 +134,7 @@ async fn access_project_details_as_owner() {
         description: None,
         creation_date: None,
         update_date: None,
-        status_id: Some(1),
+        status: ProjectStatus::Active,
         owner_id: Some(1),
     };
     repo.projects.insert(30, project);
@@ -168,7 +169,7 @@ async fn access_project_details_forbidden_for_non_member() {
         description: None,
         creation_date: None,
         update_date: None,
-        status_id: Some(1),
+        status: ProjectStatus::Active,
         owner_id: Some(1), // Owned by User 1
     };
     repo.projects.insert(40, project);

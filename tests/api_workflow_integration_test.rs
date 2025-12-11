@@ -9,6 +9,7 @@
 //! - Full lifecycle scenarios
 
 use req_man::models::*;
+use req_man::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::{json, Value};
@@ -51,7 +52,7 @@ mod test_support {
             description: None,
             creation_date: None,
             update_date: None,
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(1),
         };
         repo.projects.insert(1, project);
@@ -121,12 +122,12 @@ async fn workflow_traceability_lifecycle() {
         .private_cookie(auth.clone())
         .body(
             json!({
-                "test_name": "Verify Login",
-                "test_description": "Enter valid credentials",
-                "test_source": "manual",
-                "test_status": 1,
-                "test_reference": "TST-001",
-                "test_parent": 0,
+                "name": "Verify Login",
+                "description": "Enter valid credentials",
+                "source": "manual",
+                "status_id": 1,
+                "reference_code": "TST-001",
+                "parent_id": 0,
                 "project_id": 1
             })
             .to_string(),
@@ -215,7 +216,7 @@ async fn workflow_project_isolation() {
             description: None,
             creation_date: None,
             update_date: None,
-            status_id: Some(1),
+            status: ProjectStatus::Active,
             owner_id: Some(2), // Different owner
         },
     );

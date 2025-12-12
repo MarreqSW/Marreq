@@ -78,10 +78,10 @@ fn render_new_project_form(
 
 fn default_new_project_form() -> Value {
     json!({
-        "project_name": "",
-        "project_description": "",
-        "project_status": "active",
-        "project_owner_id": null,
+        "name": "",
+        "description": "",
+        "status_id": "active",
+        "owner_id": null,
     })
 }
 
@@ -92,6 +92,7 @@ mod tests {
     use crate::auth::session::SESSION_COOKIE;
     use crate::models::ProjectMember;
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
     use rocket::http::{ContentType, Cookie, Status};
     use rocket::local::asynchronous::{Client, LocalResponse};
@@ -114,34 +115,34 @@ mod tests {
     fn admin_user() -> User {
         let mut user = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
         user.is_admin = true;
-        user.user_name = "Admin User".into();
-        user.user_email = "admin@example.com".into();
+        user.name = "Admin User".into();
+        user.email = "admin@example.com".into();
         user
     }
 
     fn standard_user() -> User {
         let mut user = DieselRepoMock::make_user(USER_ID, "jane", "");
-        user.user_name = "Jane Doe".into();
-        user.user_email = "jane@example.com".into();
+        user.name = "Jane Doe".into();
+        user.email = "jane@example.com".into();
         user
     }
 
     fn owner_user() -> User {
         let mut user = DieselRepoMock::make_user(OWNER_ID, "owner", "");
-        user.user_name = "Mission Owner".into();
-        user.user_email = "owner@example.com".into();
+        user.name = "Mission Owner".into();
+        user.email = "owner@example.com".into();
         user
     }
 
     fn project(id: i32, name: &str, owner_id: i32) -> Project {
         Project {
-            project_id: id,
-            project_name: name.into(),
-            project_description: Some("Mission critical project".into()),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("active".into()),
-            project_owner_id: Some(owner_id),
+            id: id,
+            name: name.into(),
+            description: Some("Mission critical project".into()),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status: ProjectStatus::Active,
+            owner_id: Some(owner_id),
         }
     }
 
@@ -159,21 +160,17 @@ mod tests {
         Client::tracked(rocket).await.expect("client")
     }
 
-    fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
+    fn session_cookie(id: i32) -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, id.to_string());
         cookie.set_path("/");
         cookie.set_http_only(true);
         cookie
     }
 
-    async fn get_with_session<'c>(
-        client: &'c Client,
-        path: &'c str,
-        user_id: i32,
-    ) -> LocalResponse<'c> {
+    async fn get_with_session<'c>(client: &'c Client, path: &'c str, id: i32) -> LocalResponse<'c> {
         client
             .get(path)
-            .private_cookie(session_cookie(user_id))
+            .private_cookie(session_cookie(id))
             .dispatch()
             .await
     }
@@ -182,13 +179,13 @@ mod tests {
         client: &'c Client,
         path: &'c str,
         body: &'c str,
-        user_id: i32,
+        id: i32,
     ) -> LocalResponse<'c> {
         client
             .post(path)
             .header(ContentType::Form)
             .body(body)
-            .private_cookie(session_cookie(user_id))
+            .private_cookie(session_cookie(id))
             .dispatch()
             .await
     }
@@ -198,14 +195,14 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         repo.users.insert(USER_ID, standard_user());
         let owner = owner_user();
-        let owner_id = owner.user_id;
+        let owner_id = owner.id;
         repo.users.insert(owner_id, owner);
 
         let accessible = project(7, "Mars Lander", owner_id);
-        let accessible_id = accessible.project_id;
+        let accessible_id = accessible.id;
         let inaccessible = project(8, "Venus Rover", owner_id);
         repo.projects.insert(accessible_id, accessible);
-        repo.projects.insert(inaccessible.project_id, inaccessible);
+        repo.projects.insert(inaccessible.id, inaccessible);
 
         repo.project_members.push(ProjectMember {
             project_id: accessible_id,
@@ -252,7 +249,7 @@ mod tests {
         let response = post_with_session(
             &client,
             "/new_project",
-            "project_name=New+Initiative&project_description=Launch+prep&project_status=active&project_owner_id=1",
+            "name=New+Initiative&description=Launch+prep&owner_id=1",
             ADMIN_ID,
         )
         .await;
@@ -265,10 +262,10 @@ mod tests {
         let inner = repo_guard.inner_repo();
         assert_eq!(inner.projects.len(), 1);
         let project = inner.projects.values().next().expect("project stored");
-        assert_eq!(project.project_name, "New Initiative");
-        assert_eq!(project.project_description.as_deref(), Some("Launch prep"));
-        assert_eq!(project.project_status.as_deref(), Some("active"));
-        assert_eq!(project.project_owner_id, Some(ADMIN_ID));
+        assert_eq!(project.name, "New Initiative");
+        assert_eq!(project.description.as_deref(), Some("Launch prep"));
+        assert_eq!(project.status, ProjectStatus::Active);
+        assert_eq!(project.owner_id, Some(ADMIN_ID));
     }
 
     #[rocket::async_test]
@@ -280,7 +277,7 @@ mod tests {
         let response = post_with_session(
             &client,
             "/new_project",
-            "project_name=&project_description=&project_status=active&project_owner_id=",
+            "name=&description=&owner_id=",
             ADMIN_ID,
         )
         .await;
@@ -288,7 +285,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/new_project?error=Field%20'project_name'%20is%20required")
+            Some("/new_project?error=Field%20'name'%20is%20required")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");

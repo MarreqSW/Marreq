@@ -53,7 +53,7 @@ async fn post_edit_profile(
 ) -> Redirect {
     let actor = session_user.into_inner();
     let mut user_data = user_form.into_inner();
-    user_data.user_id = Some(actor.user_id);
+    user_data.id = Some(actor.id);
     user_data.is_admin = actor.is_admin;
 
     let service = UserService::new(state.inner());
@@ -82,12 +82,12 @@ async fn show_user_id(
 
     let ctx = json!({
         "user": current_user,
-        "user_name": user.user_name,
-        "user_username": user.user_username,
-        "user_email": user.user_email,
-        "user_id": user.user_id,
-        "user_creation_date": user.user_creation_date,
-        "user_last_login": user.user_last_login,
+        "name": user.name,
+        "username": user.username,
+        "email": user.email,
+        "id": user.id,
+        "creation_date": user.creation_date,
+        "last_login": user.last_login,
         "is_admin": user.is_admin
     });
 
@@ -125,7 +125,7 @@ async fn post_edit_user(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let mut user_data = user_form.into_inner();
-    user_data.user_id = Some(user_id);
+    user_data.id = Some(user_id);
     let service = UserService::new(state.inner());
 
     match service.update_without_password(&admin.into_inner(), &user_data) {
@@ -144,7 +144,10 @@ async fn new_user(
     error: Option<String>,
 ) -> Result<Template, Redirect> {
     let user = admin.into_inner();
-    let status = state.repo_read().get_status_all().unwrap_or_default();
+    let status = state
+        .repo_read()
+        .get_requirement_status_all()
+        .unwrap_or_default();
     let status_json = json!(status);
 
     let ctx = json!({
@@ -162,20 +165,21 @@ async fn post_user(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let service = UserService::new(state.inner());
-    let mut user_data = new_user.into_inner();
+    let user_data = new_user.into_inner();
 
-    match hash_password(&user_data.user_password) {
-        Ok(hashed_password) => {
-            user_data.user_password = hashed_password;
-            match service.create(&admin.into_inner(), user_data) {
-                Ok(user_id) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
-                Err(_) => Ok(Redirect::to(uri!(new_user(
-                    error = Some("Failed to create user".to_string())
-                )))),
-            }
-        }
+    // Convert NewUser form to UserCreateRequest for password hashing
+    let request = UserCreateRequest {
+        username: user_data.username,
+        name: user_data.name,
+        email: user_data.email,
+        password: user_data.password_hash, // HTML form uses this field for plain password
+        is_admin: user_data.is_admin,
+    };
+
+    match service.create(&admin.into_inner(), request) {
+        Ok(id) => Ok(Redirect::to(uri!(show_user_id(id)))),
         Err(_) => Ok(Redirect::to(uri!(new_user(
-            error = Some("Password hashing failed".to_string())
+            error = Some("Failed to create user".to_string())
         )))),
     }
 }
@@ -212,15 +216,15 @@ mod tests {
     fn make_admin() -> crate::models::User {
         let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
         admin.is_admin = true;
-        admin.user_name = "Admin User".into();
-        admin.user_email = "admin@example.com".into();
+        admin.name = "Admin User".into();
+        admin.email = "admin@example.com".into();
         admin
     }
 
     fn make_standard_user() -> crate::models::User {
         let mut user = DieselRepoMock::make_user(USER_ID, "jane", "");
-        user.user_name = "Jane Doe".into();
-        user.user_email = "jane@example.com".into();
+        user.name = "Jane Doe".into();
+        user.email = "jane@example.com".into();
         user
     }
 
@@ -351,7 +355,7 @@ mod tests {
             .post("/user/profile/edit")
             .header(ContentType::Form)
             .body(
-                "user_name=Jane+Updated&user_username=jane_updated&user_email=jane_updated%40example.com&is_admin=false&user_id=2",
+                "name=Jane+Updated&username=jane_updated&email=jane_updated%40example.com&is_admin=false&id=2",
             )
             .private_cookie(user_cookie())
             .dispatch()
@@ -366,8 +370,8 @@ mod tests {
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo_read();
         let updated = repo.get_user_by_id(USER_ID).expect("user");
-        assert_eq!(updated.user_name, "Jane Updated");
-        assert_eq!(updated.user_username, "jane_updated");
-        assert_eq!(updated.user_email, "jane_updated@example.com");
+        assert_eq!(updated.name, "Jane Updated");
+        assert_eq!(updated.username, "jane_updated");
+        assert_eq!(updated.email, "jane_updated@example.com");
     }
 }

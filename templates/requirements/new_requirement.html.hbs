@@ -54,60 +54,60 @@
 
       <div class="c-create-card__body">
         <div class="c-create-field">
-          <label for="req_title" class="c-create-field__label">
+          <label for="title" class="c-create-field__label">
             Title <span class="c-create-field__required">*</span>
           </label>
           <input
             type="text"
-            name="req_title"
-            id="req_title"
+            name="title"
+            id="title"
             class="c-create-field__input"
-            value="{{template.req_title}}"
+            value="{{template.title}}"
             placeholder="Control system shall…"
             required
           >
         </div>
 
         <div class="c-create-field">
-          <label for="req_reference" class="c-create-field__label">
+          <label for="reference_code" class="c-create-field__label">
             Reference <span class="c-create-field__optional">(optional)</span>
           </label>
           <input
             type="text"
-            name="req_reference"
-            id="req_reference"
+            name="reference_code"
+            id="reference_code"
             class="c-create-field__input"
-            value="{{template.req_reference}}"
+            value="{{template.reference_code}}"
             placeholder="REQ-CAT-001 (auto-generated if left blank)"
           >
           <div id="reference-error" class="c-create-field__error" hidden></div>
         </div>
 
         <div class="c-create-field">
-          <label for="req_description" class="c-create-field__label">
+          <label for="description" class="c-create-field__label">
             Statement <span class="c-create-field__required">*</span>
           </label>
           <textarea
-            name="req_description"
-            id="req_description"
+            name="description"
+            id="description"
             class="c-create-field__textarea c-create-field__textarea--statement"
             rows="6"
             required
             placeholder="The system shall…"
-          >{{template.req_description}}</textarea>
+          >{{template.description}}</textarea>
         </div>
 
         <div class="c-create-field">
-          <label for="req_justification" class="c-create-field__label">
+          <label for="justification" class="c-create-field__label">
             Rationale <span class="c-create-field__optional">(optional)</span>
           </label>
           <textarea
-            name="req_justification"
-            id="req_justification"
+            name="justification"
+            id="justification"
             class="c-create-field__textarea"
             rows="4"
             placeholder="What evidence or reasoning supports this?"
-          >{{template.req_justification}}</textarea>
+          >{{template.justification}}</textarea>
         </div>
       </div>
     </section>
@@ -126,13 +126,13 @@
             type="text"
             id="req_author_display"
             class="c-create-field__input c-create-field__input--readonly"
-            value="{{user.user_name}}"
+            value="{{user.name}}"
             readonly
           >
         </div>
 
         <div class="c-create-field">
-          <label for="req_reviewer" class="c-create-field__label">
+          <label for="reviewer_id" class="c-create-field__label">
             Reviewer <span class="c-create-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="reviewer">
@@ -143,22 +143,22 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each users}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{user_id}}">
-                    {{user_name}}
+                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
+                    {{name}}
                   </button>
                 {{/each}}
               </div>
             </div>
-            <select name="req_reviewer" id="req_reviewer" class="c-custom-dropdown__hidden" required hidden>
+            <select name="reviewer_id" id="reviewer_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each users}}
-                <option value="{{user_id}}" {{#if (eq user_id ../req_reviewer)}}selected{{/if}}>{{user_name}}</option>
+                <option value="{{id}}" {{#if (eq id ../reviewer_id)}}selected{{/if}}>{{name}}</option>
               {{/each}}
             </select>
           </div>
         </div>
 
         <div class="c-create-field">
-          <label for="req_category" class="c-create-field__label">
+          <label for="category_id" class="c-create-field__label">
             Category <span class="c-create-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="category">
@@ -169,8 +169,8 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each categories}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{cat_id}}" data-tag="{{cat_tag}}">
-                    {{cat_title}}
+                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}" data-tag="{{tag}}">
+                    {{title}}
                   </button>
                 {{/each}}
               </div>
@@ -180,16 +180,16 @@
                 </button>
               </div>
             </div>
-            <select name="req_category" id="req_category" class="c-custom-dropdown__hidden" required hidden>
+            <select name="category_id" id="category_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each categories}}
-                <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../req_category)}}selected{{/if}}>{{cat_title}}</option>
+                <option value="{{id}}" data-tag="{{tag}}" {{#if (eq id ../category_id)}}selected{{/if}}>{{title}}</option>
               {{/each}}
             </select>
           </div>
         </div>
 
         <div class="c-create-field">
-          <label for="req_applicability" class="c-create-field__label">
+          <label for="applicability_id" class="c-create-field__label">
             Applicability <span class="c-create-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="applicability">
@@ -200,8 +200,8 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each applicability}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{app_id}}">
-                    {{app_title}}
+                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
+                    {{title}}
                   </button>
                 {{/each}}
               </div>
@@ -211,16 +211,16 @@
                 </button>
               </div>
             </div>
-            <select name="req_applicability" id="req_applicability" class="c-custom-dropdown__hidden" required hidden>
+            <select name="applicability_id" id="applicability_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each applicability}}
-                <option value="{{app_id}}" {{#if (eq app_id ../req_applicability)}}selected{{/if}}>{{app_title}}</option>
+                <option value="{{id}}" {{#if (eq id ../applicability_id)}}selected{{/if}}>{{title}}</option>
               {{/each}}
             </select>
           </div>
         </div>
 
         <div class="c-create-field">
-          <label for="req_verification" class="c-create-field__label">
+          <label for="verification_method_id" class="c-create-field__label">
             Verification Method <span class="c-create-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="verification">
@@ -231,8 +231,8 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each verification}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{verification_id}}">
-                    {{verification_name}}
+                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
+                    {{title}}
                   </button>
                 {{/each}}
               </div>
@@ -242,9 +242,9 @@
                 </button>
               </div>
             </div>
-            <select name="req_verification" id="req_verification" class="c-custom-dropdown__hidden" required hidden>
+            <select name="verification_method_id" id="verification_method_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each verification}}
-                <option value="{{verification_id}}" {{#if (eq verification_id ../req_verification)}}selected{{/if}}>{{verification_name}}</option>
+                <option value="{{id}}" {{#if (eq id ../verification_method_id)}}selected{{/if}}>{{title}}</option>
               {{/each}}
             </select>
           </div>
@@ -252,19 +252,19 @@
 
         {{#if is_admin_or_owner}}
         <div class="c-create-field">
-          <label for="req_current_status" class="c-create-field__label">
+          <label for="status_id" class="c-create-field__label">
             Status <span class="c-create-field__required">*</span>
           </label>
           <select
-            name="req_current_status"
-            id="req_current_status"
+            name="status_id"
+            id="status_id"
             class="c-create-field__select"
             required
           >
             {{#each status}}
-              {{#if (or (eq req_st_title "Draft") (or (eq req_st_title "Accepted") (or (eq req_st_title "Rejected") (eq req_st_title "Deprecated"))))}}
-                <option value="{{req_st_id}}" {{#if (eq req_st_id ../req_current_status)}}selected{{/if}}>
-                  {{req_st_title}}
+              {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title "Deprecated"))))}}
+                <option value="{{id}}" {{#if (eq id ../status_id)}}selected{{/if}}>
+                  {{title}}
                 </option>
               {{/if}}
             {{/each}}
@@ -273,7 +273,7 @@
         {{/if}}
 
         <div class="c-create-field">
-          <label for="req_parent" class="c-create-field__label">
+          <label for="parent_id" class="c-create-field__label">
             Parent Requirement <span class="c-create-field__optional">(optional)</span>
           </label>
           <div class="c-custom-dropdown c-custom-dropdown--searchable" data-dropdown="parent">
@@ -303,10 +303,10 @@
                 {{/each}}
               </div>
             </div>
-            <select name="req_parent" id="req_parent" class="c-custom-dropdown__hidden" hidden>
-              <option value="0" {{#if (not template.req_parent)}}selected{{/if}}>None</option>
+            <select name="parent_id" id="parent_id" class="c-custom-dropdown__hidden" hidden>
+              <option value="0" {{#if (not template.parent_id)}}selected{{/if}}>None</option>
               {{#each parent}}
-                <option value="{{id}}" {{#if (eq id ../template.req_parent)}}selected{{/if}}>{{reference}} - {{title}}</option>
+                <option value="{{id}}" {{#if (eq id ../template.parent_id)}}selected{{/if}}>{{reference}} - {{title}}</option>
               {{/each}}
             </select>
           </div>
@@ -315,7 +315,7 @@
     </aside>
   </div>
 
-  <input type="hidden" id="req_id" name="req_id" value="None">
+  <input type="hidden" id="id" name="id" value="None">
   <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
 </form>
 
@@ -338,15 +338,15 @@
         <div class="modal-body">
           <div class="mb-3">
             <label for="inline_cat_title" class="form-label">Title</label>
-            <input type="text" class="form-control" id="inline_cat_title" name="cat_title" required>
+            <input type="text" class="form-control" id="inline_cat_title" name="title" required>
           </div>
           <div class="mb-3">
             <label for="inline_cat_tag" class="form-label">Tag</label>
-            <input type="text" class="form-control" id="inline_cat_tag" name="cat_tag" required>
+            <input type="text" class="form-control" id="inline_cat_tag" name="tag" required>
           </div>
           <div class="mb-3">
             <label for="inline_cat_description" class="form-label">Description</label>
-            <textarea class="form-control" id="inline_cat_description" name="cat_description" rows="3" required></textarea>
+            <textarea class="form-control" id="inline_cat_description" name="description" rows="3" required></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -375,15 +375,15 @@
         <div class="modal-body">
           <div class="mb-3">
             <label for="inline_app_title" class="form-label">Title</label>
-            <input type="text" class="form-control" id="inline_app_title" name="app_title" required>
+            <input type="text" class="form-control" id="inline_app_title" name="title" required>
           </div>
           <div class="mb-3">
             <label for="inline_app_tag" class="form-label">Tag</label>
-            <input type="text" class="form-control" id="inline_app_tag" name="app_tag" required>
+            <input type="text" class="form-control" id="inline_app_tag" name="tag" required>
           </div>
           <div class="mb-3">
             <label for="inline_app_description" class="form-label">Description</label>
-            <textarea class="form-control" id="inline_app_description" name="app_description" rows="3" required></textarea>
+            <textarea class="form-control" id="inline_app_description" name="description" rows="3" required></textarea>
           </div>
         </div>
         <div class="modal-footer">
@@ -411,12 +411,22 @@
       <form id="inlineVerificationForm" data-entity="verification">
         <div class="modal-body">
           <div class="mb-3">
-            <label for="inline_verification_name" class="form-label">Name</label>
+            <label for="inline_verification_title" class="form-label">Title</label>
             <input
               type="text"
               class="form-control"
-              id="inline_verification_name"
-              name="verification_name"
+              id="inline_verification_title"
+              name="title"
+              required
+            >
+          </div>
+          <div class="mb-3">
+            <label for="inline_verification_tag" class="form-label">Tag</label>
+            <input
+              type="text"
+              class="form-control"
+              id="inline_verification_tag"
+              name="tag"
               required
             >
           </div>
@@ -425,7 +435,7 @@
             <textarea
               class="form-control"
               id="inline_verification_description"
-              name="verification_description"
+              name="description"
               rows="3"
               required
             ></textarea>

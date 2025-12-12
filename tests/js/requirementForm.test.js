@@ -23,10 +23,10 @@ describe('Requirement Form', () => {
     it('should have required fields marked', () => {
       document.body.innerHTML = `
         <form data-requirement-form data-allow-soft-mismatch="false">
-          <input type="text" id="req_title" name="req_title" required />
-          <textarea id="req_description" name="req_description" required></textarea>
-          <input type="text" id="req_reference" name="req_reference" />
-          <select id="req_category" name="req_category">
+          <input type="text" id="title" name="title" required />
+          <textarea id="description" name="description" required></textarea>
+          <input type="text" id="reference_code" name="reference_code" />
+          <select id="category_id" name="category_id">
             <option value="1" data-tag="SYS">Systems</option>
           </select>
           <div id="reference-error" hidden></div>
@@ -34,8 +34,8 @@ describe('Requirement Form', () => {
         </form>
       `;
 
-      const titleInput = document.getElementById('req_title');
-      const descriptionInput = document.getElementById('req_description');
+      const titleInput = document.getElementById('title');
+      const descriptionInput = document.getElementById('description');
 
       expect(titleInput.required).toBe(true);
       expect(descriptionInput.required).toBe(true);
@@ -48,8 +48,8 @@ describe('Requirement Form', () => {
 
       document.body.innerHTML = `
         <form data-requirement-form data-allow-soft-mismatch="false">
-          <input type="text" id="req_reference" name="req_reference" />
-          <select id="req_category" name="req_category">
+          <input type="text" id="reference_code" name="reference_code" />
+          <select id="category_id" name="category_id">
             <option value="1" data-tag="SYS" selected>Systems</option>
           </select>
           <div id="reference-error" hidden></div>
@@ -72,8 +72,8 @@ describe('Requirement Form', () => {
     it('should allow custom reference when provided', () => {
       document.body.innerHTML = `
         <form data-requirement-form data-allow-soft-mismatch="false">
-          <input type="text" id="req_reference" name="req_reference" value="REQ-SYS-999" />
-          <select id="req_category" name="req_category">
+          <input type="text" id="reference_code" name="reference_code" value="REQ-SYS-999" />
+          <select id="category_id" name="category_id">
             <option value="1" data-tag="SYS" selected>Systems</option>
           </select>
           <div id="reference-error" hidden></div>
@@ -81,15 +81,15 @@ describe('Requirement Form', () => {
         </form>
       `;
 
-      const referenceInput = document.getElementById('req_reference');
+      const referenceInput = document.getElementById('reference_code');
       expect(referenceInput.value).toBe('REQ-SYS-999');
     });
 
     it('should display error for invalid reference format', () => {
       document.body.innerHTML = `
         <form data-requirement-form data-allow-soft-mismatch="false">
-          <input type="text" id="req_reference" name="req_reference" />
-          <select id="req_category" name="req_category">
+          <input type="text" id="reference_code" name="reference_code" />
+          <select id="category_id" name="category_id">
             <option value="1" data-tag="SYS" selected>Systems</option>
           </select>
           <div id="reference-error" hidden>Invalid format</div>
@@ -115,7 +115,7 @@ describe('Requirement Form', () => {
               <button type="button" data-status-id="2">Accepted</button>
             </div>
           </div>
-          <select id="req_current_status">
+          <select id="status_id">
             <option value="1">Draft</option>
             <option value="2">Accepted</option>
           </select>
@@ -151,7 +151,7 @@ describe('Requirement Form', () => {
               <button type="button" data-status-id="2">Accepted</button>
             </div>
           </div>
-          <select id="req_current_status">
+          <select id="status_id">
             <option value="1" selected>Draft</option>
             <option value="2">Accepted</option>
           </select>
@@ -166,7 +166,7 @@ describe('Requirement Form', () => {
 
       const toggle = document.querySelector('[data-role="status-toggle"]');
       const statusOption = document.querySelector('[data-status-id="2"]');
-      const select = document.getElementById('req_current_status');
+      const select = document.getElementById('status_id');
       const label = document.querySelector('.editor-status__label');
 
       toggle.click();
@@ -207,7 +207,7 @@ describe('Requirement Form', () => {
     it('should have form marker for JavaScript initialization', () => {
       document.body.innerHTML = `
         <form data-requirement-form data-allow-soft-mismatch="false">
-          <input type="text" id="req_title" />
+          <input type="text" id="title" />
         </form>
       `;
 
@@ -219,7 +219,7 @@ describe('Requirement Form', () => {
     it('should specify soft mismatch policy', () => {
       document.body.innerHTML = `
         <form data-requirement-form data-allow-soft-mismatch="true">
-          <input type="text" id="req_title" />
+          <input type="text" id="title" />
         </form>
       `;
 
@@ -230,7 +230,7 @@ describe('Requirement Form', () => {
     it('should have project ID for context', () => {
       document.body.innerHTML = `
         <form data-requirement-form data-project-id="1">
-          <input type="text" id="req_title" />
+          <input type="text" id="title" />
         </form>
       `;
 
@@ -243,7 +243,7 @@ describe('Requirement Form', () => {
     it('should display success message when provided', () => {
       document.body.innerHTML = `
         <form data-requirement-form data-flash-success="Requirement created successfully">
-          <input type="text" id="req_title" />
+          <input type="text" id="title" />
         </form>
       `;
 
@@ -256,14 +256,14 @@ describe('Requirement Form', () => {
     it('should include category tag in options', () => {
       document.body.innerHTML = `
         <form data-requirement-form>
-          <select id="req_category">
+          <select id="category_id">
             <option value="1" data-tag="SYS">Systems</option>
             <option value="2" data-tag="NET">Network</option>
           </select>
         </form>
       `;
 
-      const options = document.querySelectorAll('#req_category option');
+      const options = document.querySelectorAll('#category_id option');
       expect(options[0].dataset.tag).toBe('SYS');
       expect(options[1].dataset.tag).toBe('NET');
     });
@@ -273,14 +273,14 @@ describe('Requirement Form', () => {
     it('should allow selecting parent requirement', () => {
       document.body.innerHTML = `
         <form data-requirement-form>
-          <select id="req_parent">
+          <select id="parent_id">
             <option value="0">None</option>
             <option value="1">REQ-SYS-001 - Parent Requirement</option>
           </select>
         </form>
       `;
 
-      const parentSelect = document.getElementById('req_parent');
+      const parentSelect = document.getElementById('parent_id');
       expect(parentSelect.options.length).toBe(2);
       expect(parentSelect.options[1].value).toBe('1');
     });
@@ -290,11 +290,11 @@ describe('Requirement Form', () => {
     it('should have optional justification textarea', () => {
       document.body.innerHTML = `
         <form data-requirement-form>
-          <textarea id="req_justification" name="req_justification"></textarea>
+          <textarea id="justification" name="justification"></textarea>
         </form>
       `;
 
-      const justificationField = document.getElementById('req_justification');
+      const justificationField = document.getElementById('justification');
       expect(justificationField).toBeTruthy();
       expect(justificationField.tagName).toBe('TEXTAREA');
     });
@@ -332,7 +332,7 @@ describe('Requirement Form', () => {
               </div>
             </div>
           </div>
-          <select id="req_category" style="display: none;">
+          <select id="category_id" style="display: none;">
             <option value="1" data-tag="SYS">Systems</option>
           </select>
         </form>
@@ -358,7 +358,7 @@ describe('Requirement Form', () => {
               <button type="button" class="c-custom-dropdown__item" data-value="1">Systems</button>
             </div>
           </div>
-          <select id="req_category"><option value="1">Systems</option></select>
+          <select id="category_id"><option value="1">Systems</option></select>
         </form>
       `;
 
@@ -384,7 +384,7 @@ describe('Requirement Form', () => {
               <button type="button" class="c-custom-dropdown__item" data-value="1">Systems</button>
             </div>
           </div>
-          <select id="req_category"><option value="1">Systems</option></select>
+          <select id="category_id"><option value="1">Systems</option></select>
         </form>
       `;
 
@@ -392,7 +392,7 @@ describe('Requirement Form', () => {
       initForm();
 
       const item = document.querySelector('.c-custom-dropdown__item');
-      const select = document.getElementById('req_category');
+      const select = document.getElementById('category_id');
 
       item.click();
       expect(select.value).toBe('1');
@@ -412,7 +412,7 @@ describe('Requirement Form', () => {
               <button type="button" class="c-custom-dropdown__item" data-value="2" data-search-text="network">Network</button>
             </div>
           </div>
-          <select id="req_category">
+          <select id="category_id">
             <option value="1">Systems</option>
             <option value="2">Network</option>
           </select>
@@ -565,7 +565,7 @@ describe('Requirement Form', () => {
         <form data-requirement-form>
           <button type="button" data-role="rationale-toggle" aria-expanded="false">Rationale</button>
           <div data-role="rationale-panel" hidden>
-            <textarea id="req_justification"></textarea>
+            <textarea id="justification"></textarea>
           </div>
         </form>
       `;
@@ -640,15 +640,15 @@ describe('Requirement Form', () => {
       localStorage.setItem(storageKey, JSON.stringify({
         savedAt: Date.now(),
         values: {
-          req_title: 'Draft Title',
-          req_description: 'Draft Description'
+          title: 'Draft Title',
+          description: 'Draft Description'
         }
       }));
 
       document.body.innerHTML = `
         <form data-requirement-form class="create-form" data-project-id="${projectId}">
-          <input type="text" id="req_title" name="req_title" />
-          <textarea id="req_description" name="req_description"></textarea>
+          <input type="text" id="title" name="title" />
+          <textarea id="description" name="description"></textarea>
           <span data-role="autosave-text"></span>
           <span data-unsaved-indicator hidden></span>
         </form>
@@ -661,7 +661,7 @@ describe('Requirement Form', () => {
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const titleInput = document.getElementById('req_title');
+      const titleInput = document.getElementById('title');
       expect(titleInput.value).toBe('Draft Title');
       expect(showNotification).toHaveBeenCalled();
     });
@@ -673,7 +673,7 @@ describe('Requirement Form', () => {
       
       document.body.innerHTML = `
         <form data-requirement-form class="create-form" data-project-id="${projectId}">
-          <input type="text" id="req_title" name="req_title" />
+          <input type="text" id="title" name="title" />
           <span data-role="autosave-text"></span>
           <span data-unsaved-indicator hidden></span>
         </form>
@@ -687,7 +687,7 @@ describe('Requirement Form', () => {
       // First verify autosave is initialized by checking storage is initially empty
       expect(localStorage.getItem(storageKey)).toBeNull();
 
-      const titleInput = document.getElementById('req_title');
+      const titleInput = document.getElementById('title');
       titleInput.value = 'New Title';
       titleInput.dispatchEvent(new Event('input', { bubbles: true }));
 
@@ -700,7 +700,7 @@ describe('Requirement Form', () => {
       const saved = localStorage.getItem(storageKey);
       expect(saved).toBeTruthy();
       const parsed = JSON.parse(saved);
-      expect(parsed.values.req_title).toBe('New Title');
+      expect(parsed.values.title).toBe('New Title');
     });
 
     it('should clear draft on form submit', async () => {
@@ -709,12 +709,12 @@ describe('Requirement Form', () => {
       
       localStorage.setItem(storageKey, JSON.stringify({
         savedAt: Date.now(),
-        values: { req_title: 'Draft' }
+        values: { title: 'Draft' }
       }));
 
       document.body.innerHTML = `
         <form data-requirement-form class="create-form" data-project-id="${projectId}">
-          <input type="text" id="req_title" name="req_title" />
+          <input type="text" id="title" name="title" />
           <span data-role="autosave-text"></span>
           <span data-unsaved-indicator hidden></span>
           <button type="submit">Save</button>
@@ -757,13 +757,13 @@ describe('Requirement Form', () => {
               <button type="button" data-action="create-category">+ New Category</button>
             </div>
           </div>
-          <select id="req_category"></select>
+          <select id="category_id"></select>
         </form>
         <div id="categoryModal">
           <form id="inlineCategoryForm">
-            <input type="text" name="cat_title" />
-            <input type="text" name="cat_description" />
-            <input type="text" name="cat_tag" />
+            <input type="text" name="title" />
+            <input type="text" name="description" />
+            <input type="text" name="tag" />
             <button type="submit">Save</button>
           </form>
         </div>
@@ -785,7 +785,7 @@ describe('Requirement Form', () => {
 
       document.body.innerHTML = `
         <form data-requirement-form class="create-form" data-flash-success="Requirement saved!" data-project-id="1">
-          <input type="text" id="req_title" name="req_title" />
+          <input type="text" id="title" name="title" />
           <span data-role="autosave-text"></span>
         </form>
       `;

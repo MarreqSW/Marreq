@@ -6,32 +6,32 @@ Modern card-based layout for test browsing
   {{#if tests}}
   <div class="reqman-requirements-cards-grid">
     {{#each tests}}
-    <article class="reqman-requirement-card" data-test-id="{{test_id}}" data-status-id="{{test_status_id}}"
-      data-status-label="{{test_status}}" data-source="{{test_source}}">
+    <article class="reqman-requirement-card" data-test-id="{{id}}" data-status-id="{{test_status_id}}"
+      data-status-label="{{status_id}}" data-source="{{source}}">
 
       {{!-- Card Header: Reference and Status --}}
       <header class="reqman-requirement-card__header">
         <div class="reqman-requirement-card__reference">
           <span class="reqman-requirement-card__reference-text">
-            {{#if test_reference}}{{test_reference}}{{else}}TEST-{{test_id}}{{/if}}
+            {{#if reference_code}}{{reference_code}}{{else}}TEST-{{id}}{{/if}}
           </span>
         </div>
-        <span class="reqman-requirements-status-badge reqman-requirements-status-badge--{{test_status}}"
-          data-status-id="{{test_status_id}}" data-status="{{test_status}}">
-          {{test_status}}
+        <span class="reqman-requirements-status-badge reqman-requirements-status-badge--{{status_id}}"
+          data-status-id="{{test_status_id}}" data-status="{{status_id}}">
+          {{status_id}}
         </span>
       </header>
 
       {{!-- Card Body: Title and Description --}}
       <div class="reqman-requirement-card__body">
         <h3 class="reqman-requirement-card__title">
-          <a href="/p/{{../project.id}}/tests/show/{{test_id}}" class="reqman-requirement-card__title-link">
-            {{test_name}}
+          <a href="/p/{{../project.id}}/tests/show/{{id}}" class="reqman-requirement-card__title-link">
+            {{name}}
           </a>
         </h3>
-        {{#if test_description}}
+        {{#if description}}
         <p class="reqman-requirement-card__description">
-          {{test_description}}
+          {{description}}
         </p>
         {{/if}}
       </div>
@@ -50,15 +50,15 @@ Modern card-based layout for test browsing
             {{test_category}}
           </span>
           {{/if}}
-          {{#if test_source}}
+          {{#if source}}
           <span class="reqman-requirement-card__badge reqman-requirement-card__badge--verification" data-badge
-            title="Source: {{test_source}}">
+            title="Source: {{source}}">
             <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor"
               viewBox="0 0 16 16">
               <path
                 d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3zM2.5 2a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3zm6.5.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3zm1.5-.5a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5h-3z" />
             </svg>
-            {{test_source}}
+            {{source}}
           </span>
           {{/if}}
           {{#if test_parent_title}}
@@ -82,7 +82,7 @@ Modern card-based layout for test browsing
         </div>
 
         <div class="reqman-requirement-card__actions">
-          <a href="/p/{{../project.id}}/tests/show/{{test_id}}"
+          <a href="/p/{{../project.id}}/tests/show/{{id}}"
             class="reqman-requirement-card__action reqman-requirement-card__action--primary" title="View details">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
               <path
@@ -91,7 +91,7 @@ Modern card-based layout for test browsing
             </svg>
             <span class="u-visually-hidden">View</span>
           </a>
-          <a href="/p/{{../project.id}}/tests/edit/{{test_id}}" class="reqman-requirement-card__action"
+          <a href="/p/{{../project.id}}/tests/edit/{{id}}" class="reqman-requirement-card__action"
             title="Edit test">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
               <path
@@ -99,10 +99,10 @@ Modern card-based layout for test browsing
             </svg>
             <span class="u-visually-hidden">Edit</span>
           </a>
-          {{#if (or (eq test_status "Passed") (eq test_status "Failed") ../user.is_admin)}}
+          {{#if (or (eq status_id "Passed") (eq status_id "Failed") ../user.is_admin)}}
           <button type="button" class="reqman-requirement-card__action reqman-requirement-card__action--danger"
-            data-action="delete-test" data-project-id="{{../project.id}}" data-test-id="{{test_id}}"
-            data-test-name="{{test_name}}" title="Delete test">
+            data-action="delete-test" data-project-id="{{../project.id}}" data-test-id="{{id}}"
+            data-test-name="{{name}}" title="Delete test">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
               <path
                 d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />

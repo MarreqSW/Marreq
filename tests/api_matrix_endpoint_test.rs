@@ -11,6 +11,7 @@
 use req_man::auth::session::SESSION_COOKIE;
 use req_man::models::*;
 use req_man::repository::diesel_repo_mock::DieselRepoMock;
+use req_man::status_enums::ProjectStatus;
 use rocket::http::{Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::Value;
@@ -65,24 +66,24 @@ mod test_support {
         repo.projects.insert(
             1,
             Project {
-                project_id: 1,
-                project_name: "Test Project".into(),
-                project_description: Some("Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(1),
+                id: 1,
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status: ProjectStatus::Active,
+                owner_id: Some(1),
             },
         );
 
         repo
     }
 
-    pub fn sample_matrix_link(req_id: i32, test_id: i32, project_id: i32) -> Matrix {
-        Matrix {
-            matrix_req_id: req_id,
-            matrix_test_id: test_id,
-            matrix_creation_date: timestamp(),
+    pub fn sample_matrix_link(req_id: i32, test_id: i32, project_id: i32) -> MatrixLink {
+        MatrixLink {
+            req_id: req_id,
+            test_id: test_id,
+            creation_date: timestamp(),
             project_id,
         }
     }

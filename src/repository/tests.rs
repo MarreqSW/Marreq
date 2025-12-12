@@ -4,9 +4,10 @@ mod tests {
     use crate::repository::errors::RepoError;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::repository::{
-        UserRepository, RequirementsRepository, TestsRepository, LookupRepository,
+        UserRepository, RequirementsRepository, TestsCaseRepository, LookupRepository,
         ProjectsRepository, MatrixRepository
     };
+    use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
 
     fn test_datetime() -> NaiveDateTime {
@@ -18,14 +19,14 @@ mod tests {
 
     fn create_test_user() -> User {
         User {
-            user_id: 1,
-            user_username: "testuser".to_string(),
-            user_name: "Test User".to_string(),
-            user_email: "test@example.com".to_string(),
+            id: 1,
+            username: "testuser".to_string(),
+            name: "Test User".to_string(),
+            email: "test@example.com".to_string(),
             user_level: 1,
-            user_creation_date: test_datetime(),
-            user_last_login: test_datetime(),
-            user_password: "hashed_password".to_string(),
+            creation_date: test_datetime(),
+            last_login: test_datetime(),
+            password_hash: "hashed_password".to_string(),
             project_id: Some(1),
             is_admin: false,
         }
@@ -33,103 +34,106 @@ mod tests {
 
     fn create_test_requirement() -> Requirement {
         Requirement {
-            req_id: 1,
-            req_title: "Test Requirement".to_string(),
-            req_description: "Test Description".to_string(),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
+            id: 1,
+            title: "Test Requirement".to_string(),
+            description: "Test Description".to_string(),
+            verification_method_id: 1,
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
             req_link: "http://example.com".to_string(),
-            req_reference: "REQ-1".to_string(),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: test_datetime(),
-            req_update_date: test_datetime(),
-            req_deadline_date: test_datetime(),
-            req_applicability: 1,
-            req_justification: None,
+            reference_code: "REF-001".to_string(),
+            category_id: 1,
+            parent_id: None,
+            creation_date: test_datetime(),
+            update_date: test_datetime(),
+            deadline_date: test_datetime(),
+            applicability_id: 1,
+            justification: None,
             project_id: 1,
         }
     }
 
-    fn create_test_test() -> Test {
-        Test {
-            test_id: 1,
-            test_name: "Test Test".to_string(),
-            test_description: "Test Description".to_string(),
-            test_source: "Manual".to_string(),
-            test_reference: "TEST-1".to_string(),
-            test_status: 1,
-            test_parent: 0,
+    fn create_test_test() -> TestCase {
+        TestCase {
+            id: 1,
+            name: "Test Test".to_string(),
+            description: "Test Description".to_string(),
+            source: "Manual".to_string(),
+            reference_code: "TEST-1".to_string(),
+            status_id: 1,
+            parent_id: None,
             project_id: 1,
         }
     }
 
     fn create_test_project() -> Project {
         Project {
-            project_id: 1,
-            project_name: "Test Project".to_string(),
-            project_description: Some("Test Project Description".to_string()),
-            project_creation_date: Some(test_datetime()),
-            project_update_date: Some(test_datetime()),
-            project_status: Some("Active".to_string()),
-            project_owner_id: Some(1),
+            id: 1,
+            name: "Test Project".to_string(),
+            description: Some("Test Project Description".to_string()),
+            creation_date: Some(test_datetime()),
+            update_date: Some(test_datetime()),
+            status: ProjectStatus::Active,
+            owner_id: Some(1),
         }
     }
 
     fn create_test_requirement_status() -> RequirementStatus {
         RequirementStatus {
-            req_st_id: 1,
-            req_st_title: "Draft".to_string(),
-            req_st_description: "Draft status".to_string(),
-            req_st_short_name: "DRAFT".to_string(),
+            id: 1,
+            title: "Draft".to_string(),
+            description: "Draft status".to_string(),
+            tag: "DRAFT".to_string(),
+            project_id: 1,
         }
     }
 
     fn create_test_test_status() -> TestStatus {
         TestStatus {
-            test_st_id: 1,
-            test_st_title: "Draft".to_string(),
-            test_st_description: "Draft status".to_string(),
-            test_st_short_name: "DRAFT".to_string(),
+            id: 1,
+            title: "Draft".to_string(),
+            description: "Draft status".to_string(),
+            tag: "DRAFT".to_string(),
+            project_id: 1,
         }
     }
 
     fn create_test_category() -> Category {
         Category {
-            cat_id: 1,
-            cat_title: "Test Category".to_string(),
-            cat_description: "Test Category Description".to_string(),
-            cat_tag: "TEST".to_string(),
+            id: 1,
+            title: "Test Category".to_string(),
+            description: "Test Category Description".to_string(),
+            tag: "TEST".to_string(),
             project_id: 1,
         }
     }
 
     fn create_test_applicability() -> Applicability {
         Applicability {
-            app_id: 1,
-            app_title: "Test Applicability".to_string(),
-            app_description: "Test Applicability Description".to_string(),
-            app_tag: "TEST".to_string(),
+            id: 1,
+            title: "Test Applicability".to_string(),
+            description: "Test Applicability Description".to_string(),
+            tag: "TEST".to_string(),
             project_id: 1,
         }
     }
 
-    fn create_test_verification() -> Verification {
-        Verification {
-            verification_id: 1,
-            verification_name: "Test Verification".to_string(),
-            verification_description: "Test Verification Description".to_string(),
+    fn create_test_verification() -> VerificationMethod {
+        VerificationMethod {
+            id: 1,
+            title: "Test Verification".to_string(),
+            description: "Test Verification Description".to_string(),
+            tag: "TEST_VERIFICATION".to_string(),
             project_id: 1,
         }
     }
 
-    fn create_test_matrix() -> Matrix {
-        Matrix {
-            matrix_req_id: 1,
-            matrix_test_id: 1,
-            matrix_creation_date: test_datetime(),
+    fn create_test_matrix() -> MatrixLink {
+        MatrixLink {
+            req_id: 1,
+            id: 1,
+            creation_date: test_datetime(),
             project_id: 1,
         }
     }
@@ -144,7 +148,7 @@ mod tests {
         assert!(result.is_ok());
         let users = result.unwrap();
         assert_eq!(users.len(), 1);
-        assert_eq!(users[0].user_username, "testuser");
+        assert_eq!(users[0].username, "testuser");
     }
 
     #[test]
@@ -155,7 +159,7 @@ mod tests {
         let result = repo.get_user_by_id(1);
         assert!(result.is_ok());
         let found_user = result.unwrap();
-        assert_eq!(found_user.user_username, "testuser");
+        assert_eq!(found_user.username, "testuser");
     }
 
     #[test]
@@ -176,7 +180,7 @@ mod tests {
         assert!(result.is_ok());
         let found_user = result.unwrap();
         assert!(found_user.is_some());
-        assert_eq!(found_user.unwrap().user_username, "testuser");
+        assert_eq!(found_user.unwrap().username, "testuser");
     }
 
     #[test]
@@ -193,12 +197,12 @@ mod tests {
     fn test_user_repository_insert_user() {
         let mut repo = DieselRepoMock::default();
         let new_user = NewUser {
-            user_id: None,
-            user_username: "newuser".to_string(),
-            user_name: "New User".to_string(),
-            user_email: "new@example.com".to_string(),
+            id: None,
+            username: "newuser".to_string(),
+            name: "New User".to_string(),
+            email: "new@example.com".to_string(),
             user_level: 1,
-            user_password: "hash".to_string(),
+            password_hash: "hash".to_string(),
             project_id: Some(1),
             is_admin: false,
         };
@@ -220,12 +224,12 @@ mod tests {
     fn test_user_repository_update_user() {
         let mut repo = DieselRepoMock::default();
         let user_data = NewUser {
-            user_id: Some(1),
-            user_username: "updated".to_string(),
-            user_name: "Updated User".to_string(),
-            user_email: "updated@example.com".to_string(),
+            id: Some(1),
+            username: "updated".to_string(),
+            name: "Updated User".to_string(),
+            email: "updated@example.com".to_string(),
             user_level: 1,
-            user_password: "hash".to_string(),
+            password_hash: "hash".to_string(),
             project_id: Some(1),
             is_admin: false,
         };
@@ -239,10 +243,10 @@ mod tests {
     fn test_user_repository_update_user_without_password() {
         let mut repo = DieselRepoMock::default();
         let user_data = UpdateUser {
-            user_id: Some(1),
-            user_username: "updated".to_string(),
-            user_name: "Updated User".to_string(),
-            user_email: "updated@example.com".to_string(),
+            id: Some(1),
+            username: "updated".to_string(),
+            name: "Updated User".to_string(),
+            email: "updated@example.com".to_string(),
             user_level: 1,
             is_admin: false,
         };
@@ -271,7 +275,7 @@ mod tests {
         let result = repo.get_requirement_by_id(1);
         assert!(result.is_ok());
         let found_req = result.unwrap();
-        assert_eq!(found_req.req_title, "Test Requirement");
+        assert_eq!(found_req.title, "Test Requirement");
     }
 
     #[test]
@@ -293,7 +297,7 @@ mod tests {
         assert!(result.is_ok());
         let requirements = result.unwrap();
         assert_eq!(requirements.len(), 1);
-        assert_eq!(requirements[0].req_title, "Test Requirement");
+        assert_eq!(requirements[0].title, "Test Requirement");
     }
 
     #[test]
@@ -319,7 +323,7 @@ mod tests {
         assert!(result.is_ok());
         let requirements = result.unwrap();
         assert_eq!(requirements.len(), 1);
-        assert_eq!(requirements[0].req_category, 1);
+        assert_eq!(requirements[0].category_id, 1);
     }
 
     #[test]
@@ -332,26 +336,26 @@ mod tests {
         assert!(result.is_ok());
         let requirements = result.unwrap();
         assert_eq!(requirements.len(), 1);
-        assert_eq!(requirements[0].req_current_status, 1);
+        assert_eq!(requirements[0].status_id, 1);
     }
 
     #[test]
     fn test_requirements_repository_insert_new_requirement() {
         let mut repo = DieselRepoMock::default();
         let new_req = NewRequirement {
-            req_id: None,
-            req_title: "New Requirement".to_string(),
-            req_description: "New Description".to_string(),
-            req_verification: 1,
-            req_author: 1,
+            id: None,
+            title: "New Requirement".to_string(),
+            description: "New Description".to_string(),
+            verification_method_id: 1,
+            author_id: 1,
             req_link: "http://example.com".to_string(),
-            req_category: 1,
-            req_current_status: 1,
-            req_parent: 0,
-            req_reference: "REQ-NEW".to_string(),
-            req_reviewer: 1,
-            req_applicability: 1,
-            req_justification: None,
+            category_id: 1,
+            status_id: 1,
+            parent_id: None,
+            reference_code: "REQ-NEW".to_string(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: None,
             project_id: 1,
         };
         
@@ -364,19 +368,19 @@ mod tests {
     fn test_requirements_repository_edit_requirement() {
         let mut repo = DieselRepoMock::default();
         let new_req = NewRequirement {
-            req_id: Some(1),
-            req_title: "Updated Requirement".to_string(),
-            req_description: "Updated Description".to_string(),
-            req_verification: 1,
-            req_author: 1,
+            id: Some(1),
+            title: "Updated Requirement".to_string(),
+            description: "Updated Description".to_string(),
+            verification_method_id: 1,
+            author_id: 1,
             req_link: "http://example.com".to_string(),
-            req_category: 1,
-            req_current_status: 1,
-            req_parent: 0,
-            req_reference: "REQ-UPDATED".to_string(),
-            req_reviewer: 1,
-            req_applicability: 1,
-            req_justification: None,
+            category_id: 1,
+            status_id: 1,
+            parent_id: None,
+            reference_code: "REQ-UPDATED".to_string(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: None,
             project_id: 1,
         };
         
@@ -402,7 +406,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    // TestsRepository Tests
+    // TestsCaseRepository Tests
     #[test]
     fn test_tests_repository_get_test_by_id() {
         let mut repo = DieselRepoMock::default();
@@ -412,7 +416,7 @@ mod tests {
         let result = repo.get_test_by_id(1);
         assert!(result.is_ok());
         let found_test = result.unwrap();
-        assert_eq!(found_test.test_name, "Test Test");
+        assert_eq!(found_test.name, "Test Test");
     }
 
     #[test]
@@ -434,7 +438,7 @@ mod tests {
         assert!(result.is_ok());
         let tests = result.unwrap();
         assert_eq!(tests.len(), 1);
-        assert_eq!(tests[0].test_name, "Test Test");
+        assert_eq!(tests[0].name, "Test Test");
     }
 
     #[test]
@@ -460,7 +464,7 @@ mod tests {
         assert!(result.is_ok());
         let tests = result.unwrap();
         assert_eq!(tests.len(), 1);
-        assert_eq!(tests[0].test_status, 1);
+        assert_eq!(tests[0].status_id, 1);
     }
 
     #[test]
@@ -473,7 +477,7 @@ mod tests {
         assert!(result.is_ok());
         let tests = result.unwrap();
         assert_eq!(tests.len(), 1);
-        assert_eq!(tests[0].test_parent, 0);
+        assert_eq!(tests[0].parent_id, 0);
     }
 
     #[test]
@@ -488,7 +492,7 @@ mod tests {
         assert!(result.is_ok());
         let requirements = result.unwrap();
         assert_eq!(requirements.len(), 1);
-        assert_eq!(requirements[0].req_id, 1);
+        assert_eq!(requirements[0].id, 1);
     }
 
     #[test]
@@ -503,20 +507,20 @@ mod tests {
         assert!(result.is_ok());
         let tests = result.unwrap();
         assert_eq!(tests.len(), 1);
-        assert_eq!(tests[0].test_id, 1);
+        assert_eq!(tests[0].id, 1);
     }
 
     #[test]
     fn test_tests_repository_insert_test() {
         let mut repo = DieselRepoMock::default();
-        let new_test = NewTest {
-            test_id: None,
-            test_name: "New Test".to_string(),
-            test_description: "New Description".to_string(),
-            test_source: "Manual".to_string(),
-            test_reference: "TEST-NEW".to_string(),
-            test_status: 1,
-            test_parent: 0,
+        let new_test = NewTestCase {
+            id: None,
+            name: "New Test".to_string(),
+            description: "New Description".to_string(),
+            source: "Manual".to_string(),
+            reference_code: "TEST-NEW".to_string(),
+            status_id: 1,
+            parent_id: None,
             project_id: 1,
         };
         
@@ -528,14 +532,14 @@ mod tests {
     #[test]
     fn test_tests_repository_edit_test() {
         let mut repo = DieselRepoMock::default();
-        let new_test = NewTest {
-            test_id: Some(1),
-            test_name: "Updated Test".to_string(),
-            test_description: "Updated Description".to_string(),
-            test_source: "Manual".to_string(),
-            test_reference: "TEST-UPDATED".to_string(),
-            test_status: 1,
-            test_parent: 0,
+        let new_test = NewTestCase {
+            id: Some(1),
+            name: "Updated Test".to_string(),
+            description: "Updated Description".to_string(),
+            source: "Manual".to_string(),
+            reference_code: "TEST-UPDATED".to_string(),
+            status_id: 1,
+            parent_id: None,
             project_id: 1,
         };
         
@@ -572,7 +576,7 @@ mod tests {
         assert!(result.is_ok());
         let statuses = result.unwrap();
         assert_eq!(statuses.len(), 1);
-        assert_eq!(statuses[0].req_st_title, "Draft");
+        assert_eq!(statuses[0].title, "Draft");
     }
 
     #[test]
@@ -584,7 +588,7 @@ mod tests {
         let result = repo.get_requirement_status_by_id(1);
         assert!(result.is_ok());
         let found_status = result.unwrap();
-        assert_eq!(found_status.req_st_title, "Draft");
+        assert_eq!(found_status.title, "Draft");
     }
 
     #[test]
@@ -606,7 +610,7 @@ mod tests {
         assert!(result.is_ok());
         let statuses = result.unwrap();
         assert_eq!(statuses.len(), 1);
-        assert_eq!(statuses[0].test_st_title, "Draft");
+        assert_eq!(statuses[0].title, "Draft");
     }
 
     #[test]
@@ -618,7 +622,7 @@ mod tests {
         let result = repo.get_test_status_by_id(1);
         assert!(result.is_ok());
         let found_status = result.unwrap();
-        assert_eq!(found_status.test_st_title, "Draft");
+        assert_eq!(found_status.title, "Draft");
     }
 
     #[test]
@@ -640,7 +644,7 @@ mod tests {
         assert!(result.is_ok());
         let categories = result.unwrap();
         assert_eq!(categories.len(), 1);
-        assert_eq!(categories[0].cat_title, "Test Category");
+        assert_eq!(categories[0].title, "Test Category");
     }
 
     #[test]
@@ -665,7 +669,7 @@ mod tests {
         let result = repo.get_category_by_id(1);
         assert!(result.is_ok());
         let found_category = result.unwrap();
-        assert_eq!(found_category.cat_title, "Test Category");
+        assert_eq!(found_category.title, "Test Category");
     }
 
     #[test]
@@ -687,7 +691,7 @@ mod tests {
         assert!(result.is_ok());
         let applicability_list = result.unwrap();
         assert_eq!(applicability_list.len(), 1);
-        assert_eq!(applicability_list[0].app_title, "Test Applicability");
+        assert_eq!(applicability_list[0].title, "Test Applicability");
     }
 
     #[test]
@@ -699,7 +703,7 @@ mod tests {
         let result = repo.get_applicability_by_id(1);
         assert!(result.is_ok());
         let found_applicability = result.unwrap();
-        assert_eq!(found_applicability.app_title, "Test Applicability");
+        assert_eq!(found_applicability.title, "Test Applicability");
     }
 
     #[test]
@@ -734,7 +738,7 @@ mod tests {
         assert!(result.is_ok());
         let verifications = result.unwrap();
         assert_eq!(verifications.len(), 1);
-        assert_eq!(verifications[0].verification_name, "Test Verification");
+        assert_eq!(verifications[0].title, "Test Verification");
     }
 
     #[test]
@@ -746,7 +750,7 @@ mod tests {
         let result = repo.get_verification_by_id(1);
         assert!(result.is_ok());
         let found_verification = result.unwrap();
-        assert_eq!(found_verification.verification_name, "Test Verification");
+        assert_eq!(found_verification.title, "Test Verification");
     }
 
     #[test]
@@ -775,38 +779,42 @@ mod tests {
     fn test_lookup_repository_create_requirement_status() {
         let mut repo = DieselRepoMock::default();
         let new_status = NewRequirementStatus {
-            req_st_title: "New Status".to_string(),
-            req_st_description: "New Status Description".to_string(),
-            req_st_short_name: "NEW".to_string(),
+            id: None,
+            title: "New Status".to_string(),
+            description: "New Status Description".to_string(),
+            tag: "NEW".to_string(),
+            project_id: 1,
         };
         
         let result = repo.create_requirement_status(&new_status);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 0); // DieselRepoMock returns 0
+        assert_eq!(result.unwrap(), 1); // DieselRepoMock returns next available ID
     }
 
     #[test]
     fn test_lookup_repository_create_test_status() {
         let mut repo = DieselRepoMock::default();
         let new_status = NewTestStatus {
-            test_st_title: "New Status".to_string(),
-            test_st_description: "New Status Description".to_string(),
-            test_st_short_name: "NEW".to_string(),
+            id: None,
+            title: "New Test Status".to_string(),
+            description: "Test Status Description".to_string(),
+            tag: "TST".to_string(),
+            project_id: 1,
         };
         
         let result = repo.create_test_status(&new_status);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 0); // DieselRepoMock returns 0
+        assert_eq!(result.unwrap(), 1); // DieselRepoMock returns next available ID
     }
 
     #[test]
     fn test_lookup_repository_insert_new_category() {
         let mut repo = DieselRepoMock::default();
         let new_category = NewCategory {
-            cat_id: None,
-            cat_title: "New Category".to_string(),
-            cat_description: "New Category Description".to_string(),
-            cat_tag: "NEW".to_string(),
+            id: None,
+            title: "New Category".to_string(),
+            description: "New Category Description".to_string(),
+            tag: "NEW".to_string(),
             project_id: 1,
         };
         
@@ -819,10 +827,10 @@ mod tests {
     fn test_lookup_repository_edit_category() {
         let mut repo = DieselRepoMock::default();
         let new_category = NewCategory {
-            cat_id: Some(1),
-            cat_title: "Updated Category".to_string(),
-            cat_description: "Updated Category Description".to_string(),
-            cat_tag: "UPDATED".to_string(),
+            id: Some(1),
+            title: "Updated Category".to_string(),
+            description: "Updated Category Description".to_string(),
+            tag: "UPDATED".to_string(),
             project_id: 1,
         };
         
@@ -844,10 +852,10 @@ mod tests {
     fn test_lookup_repository_insert_new_applicability() {
         let mut repo = DieselRepoMock::default();
         let new_applicability = NewApplicability {
-            app_id: None,
-            app_title: "New Applicability".to_string(),
-            app_description: "New Applicability Description".to_string(),
-            app_tag: "NEW".to_string(),
+            id: None,
+            title: "New Applicability".to_string(),
+            description: "New Applicability Description".to_string(),
+            tag: "NEW".to_string(),
             project_id: 1,
         };
         
@@ -860,10 +868,10 @@ mod tests {
     fn test_lookup_repository_edit_applicability() {
         let mut repo = DieselRepoMock::default();
         let new_applicability = NewApplicability {
-            app_id: Some(1),
-            app_title: "Updated Applicability".to_string(),
-            app_description: "Updated Applicability Description".to_string(),
-            app_tag: "UPDATED".to_string(),
+            id: Some(1),
+            title: "Updated Applicability".to_string(),
+            description: "Updated Applicability Description".to_string(),
+            tag: "UPDATED".to_string(),
             project_id: 1,
         };
         
@@ -917,10 +925,10 @@ mod tests {
     fn test_projects_repository_insert_new_project() {
         let mut repo = DieselRepoMock::default();
         let new_project = NewProject {
-            project_name: "New Project".to_string(),
-            project_description: Some("New Project Description".to_string()),
-            project_status: "Active".to_string(),
-            project_owner_id: Some(1),
+            name: "New Project".to_string(),
+            description: Some("New Project Description".to_string()),
+            status_id: "Active".to_string(),
+            owner_id: Some(1),
         };
         
         let result = repo.insert_new_project(&new_project);
@@ -932,10 +940,10 @@ mod tests {
     fn test_projects_repository_edit_project() {
         let mut repo = DieselRepoMock::default();
         let update_project = UpdateProject {
-            project_name: "Updated Project".to_string(),
-            project_description: Some("Updated Project Description".to_string()),
-            project_status: "Active".to_string(),
-            project_owner_id: Some(1),
+            name: "Updated Project".to_string(),
+            description: Some("Updated Project Description".to_string()),
+            status_id: "Active".to_string(),
+            owner_id: Some(1),
         };
         
         let result = repo.edit_project(1, &update_project);
@@ -963,8 +971,8 @@ mod tests {
         assert!(result.is_ok());
         let matrices = result.unwrap();
         assert_eq!(matrices.len(), 1);
-        assert_eq!(matrices[0].matrix_req_id, 1);
-        assert_eq!(matrices[0].matrix_test_id, 1);
+        assert_eq!(matrices[0].req_id, 1);
+        assert_eq!(matrices[0].id, 1);
     }
 
     #[test]
@@ -983,9 +991,9 @@ mod tests {
     #[test]
     fn test_matrix_repository_insert_new_matrix_item() {
         let mut repo = DieselRepoMock::default();
-        let new_matrix = NewMatrix {
-            matrix_req_id: 1,
-            matrix_test_id: 1,
+        let new_matrix = NewMatrixLink {
+            req_id: 1,
+            test_id: 1,
             project_id: 1,
         };
         

@@ -10,6 +10,7 @@
 //! - Error handling
 
 use req_man::models::*;
+use req_man::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::{json, Value};
@@ -61,26 +62,26 @@ mod test_support {
         repo.projects.insert(
             1,
             Project {
-                project_id: 1,
-                project_name: "Test Project".into(),
-                project_description: Some("Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(1),
+                id: 1,
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status: ProjectStatus::Active,
+                owner_id: Some(1),
             },
         );
 
         repo.projects.insert(
             2,
             Project {
-                project_id: 2,
-                project_name: "Other Project".into(),
-                project_description: Some("Other Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(2),
+                id: 2,
+                name: "Other Project".into(),
+                description: Some("Other Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status: ProjectStatus::Active,
+                owner_id: Some(2),
             },
         );
 
@@ -89,19 +90,19 @@ mod test_support {
 
     pub fn sample_applicability(id: i32, project_id: i32, title: &str, tag: &str) -> Applicability {
         Applicability {
-            app_id: id,
-            app_title: title.to_string(),
-            app_description: format!("{} description", title),
-            app_tag: tag.to_string(),
+            id: id,
+            title: title.to_string(),
+            description: format!("{} description", title),
+            tag: tag.to_string(),
             project_id,
         }
     }
 
     pub fn new_applicability_json(title: &str, tag: &str, project_id: i32) -> Value {
         json!({
-            "app_title": title,
-            "app_description": format!("{} description", title),
-            "app_tag": tag,
+            "title": title,
+            "description": format!("{} description", title),
+            "tag": tag,
             "project_id": project_id
         })
     }
@@ -180,9 +181,9 @@ async fn get_applicability_by_id_returns_correct_item() {
 
     assert_eq!(response.status(), Status::Ok);
     let item: Applicability = response.into_json().await.expect("json");
-    assert_eq!(item.app_id, 1);
-    assert_eq!(item.app_title, "Production Only");
-    assert_eq!(item.app_tag, "PROD");
+    assert_eq!(item.id, 1);
+    assert_eq!(item.title, "Production Only");
+    assert_eq!(item.tag, "PROD");
 }
 
 #[rocket::async_test]
@@ -238,7 +239,7 @@ async fn post_applicability_with_missing_fields_returns_error() {
     let client = test_client(base_repo()).await;
 
     let invalid_json = json!({
-        "app_title": "Incomplete"
+        "title": "Incomplete"
         // Missing required fields
     });
 
@@ -280,9 +281,9 @@ async fn put_applicability_updates_item() {
     let client = test_client(repo).await;
 
     let update = json!({
-        "app_title": "Updated Title",
-        "app_description": "Updated description",
-        "app_tag": "UPDATED",
+        "title": "Updated Title",
+        "description": "Updated description",
+        "tag": "UPDATED",
         "project_id": 1
     });
 
@@ -306,8 +307,8 @@ async fn put_applicability_updates_item() {
         .await;
 
     let item: Applicability = get_response.into_json().await.expect("json");
-    assert_eq!(item.app_title, "Updated Title");
-    assert_eq!(item.app_tag, "UPDATED");
+    assert_eq!(item.title, "Updated Title");
+    assert_eq!(item.tag, "UPDATED");
 }
 
 #[rocket::async_test]
@@ -315,9 +316,9 @@ async fn put_nonexistent_applicability_returns_404() {
     let client = test_client(base_repo()).await;
 
     let update = json!({
-        "app_title": "Updated",
-        "app_description": "Desc",
-        "app_tag": "TAG",
+        "title": "Updated",
+        "description": "Desc",
+        "tag": "TAG",
         "project_id": 1
     });
 
@@ -489,9 +490,9 @@ async fn update_preserves_applicability_id() {
     let client = test_client(repo).await;
 
     let update = json!({
-        "app_title": "Updated",
-        "app_description": "Updated desc",
-        "app_tag": "NEW",
+        "title": "Updated",
+        "description": "Updated desc",
+        "tag": "NEW",
         "project_id": 1
     });
 
@@ -510,5 +511,5 @@ async fn update_preserves_applicability_id() {
         .await;
 
     let item: Applicability = get_response.into_json().await.expect("json");
-    assert_eq!(item.app_id, 1); // ID should remain the same
+    assert_eq!(item.id, 1); // ID should remain the same
 }

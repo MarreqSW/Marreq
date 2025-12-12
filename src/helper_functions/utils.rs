@@ -21,10 +21,10 @@ where
     let existing_count = repo
         .get_requirements_by_project(project_id)?
         .into_iter()
-        .filter(|req| req.req_category == category_id)
+        .filter(|req| req.category_id == category_id)
         .count();
 
-    Ok(format!("REQ-{}-{}", category.cat_tag, existing_count + 1))
+    Ok(format!("REQ-{}-{}", category.tag, existing_count + 1))
 }
 
 #[cfg(test)]
@@ -78,17 +78,17 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         let project_id = 1;
         let category = Category {
-            cat_id: 1,
-            cat_title: "Test Cat".into(),
-            cat_description: "desc".into(),
-            cat_tag: "TC".into(),
+            id: 1,
+            title: "Test Cat".into(),
+            description: "desc".into(),
+            tag: "TC".into(),
             project_id,
         };
-        repo.categories.insert(category.cat_id, category.clone());
+        repo.categories.insert(category.id, category.clone());
 
-        let reference = generate_requirement_reference(&repo, category.cat_id, project_id)
+        let reference = generate_requirement_reference(&repo, category.id, project_id)
             .expect("reference generation");
-        assert_eq!(reference, format!("REQ-{}-1", category.cat_tag));
+        assert_eq!(reference, format!("REQ-{}-1", category.tag));
     }
 
     #[test]

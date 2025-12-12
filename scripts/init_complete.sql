@@ -39,30 +39,30 @@ $$ LANGUAGE plpgsql;
 
 -- Projects table
 CREATE TABLE projects (
-    project_id SERIAL PRIMARY KEY,
-    project_name VARCHAR(255) NOT NULL,
-    project_description TEXT,
-    project_creation_date TIMESTAMP,
-    project_update_date TIMESTAMP,
-    project_status VARCHAR(50),
-    project_owner_id INTEGER
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    creation_date TIMESTAMP,
+    update_date TIMESTAMP,
+    status VARCHAR(50),
+    owner_id INTEGER
 );
 
 -- Users table
 CREATE TABLE users (
-    user_id SERIAL PRIMARY KEY,
-    user_username VARCHAR NOT NULL,
-    user_name VARCHAR NOT NULL,
-    user_email VARCHAR NOT NULL DEFAULT ' ',
-    user_creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    user_last_login TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    user_password VARCHAR(255) NOT NULL DEFAULT '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m',
+    id SERIAL PRIMARY KEY,
+    username VARCHAR NOT NULL,
+    name VARCHAR NOT NULL,
+    email VARCHAR NOT NULL DEFAULT ' ',
+    creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    password_hash VARCHAR(255) NOT NULL DEFAULT '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m',
     is_admin BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE project_members (
-    project_id INTEGER NOT NULL REFERENCES projects(project_id) ON DELETE CASCADE,
-    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role INTEGER NOT NULL DEFAULT 2,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -71,86 +71,88 @@ CREATE TABLE project_members (
 
 -- Requirement Status table
 CREATE TABLE requirement_status (
-    req_st_id SERIAL PRIMARY KEY,
-    req_st_title VARCHAR NOT NULL DEFAULT ' ',
-    req_st_description VARCHAR NOT NULL DEFAULT ' ',
-    req_st_short_name VARCHAR NOT NULL DEFAULT ' '
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    tag VARCHAR NOT NULL,
+    project_id INTEGER NOT NULL
 );
 
 -- Test Status table
 CREATE TABLE test_status (
-    test_st_id SERIAL PRIMARY KEY,
-    test_st_title VARCHAR NOT NULL DEFAULT ' ',
-    test_st_description VARCHAR NOT NULL DEFAULT ' ',
-    test_st_short_name VARCHAR NOT NULL DEFAULT ' '
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    tag VARCHAR NOT NULL,
+    project_id INTEGER NOT NULL
 );
 
 -- Categories table
 CREATE TABLE categories (
-    cat_id SERIAL PRIMARY KEY,
-    cat_title VARCHAR NOT NULL DEFAULT ' ',
-    cat_description VARCHAR NOT NULL DEFAULT ' ',
-    cat_tag VARCHAR NOT NULL DEFAULT ' ',
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL DEFAULT ' ',
+    description VARCHAR NOT NULL DEFAULT ' ',
+    tag VARCHAR NOT NULL DEFAULT ' ',
     project_id INTEGER NOT NULL
 );
 
 -- Applicability table
 CREATE TABLE applicability (
-    app_id SERIAL PRIMARY KEY,
-    app_title VARCHAR NOT NULL DEFAULT ' ',
-    app_description VARCHAR NOT NULL DEFAULT ' ',
-    app_tag VARCHAR NOT NULL DEFAULT ' ',
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL DEFAULT ' ',
+    description VARCHAR NOT NULL DEFAULT ' ',
+    tag VARCHAR NOT NULL DEFAULT ' ',
     project_id INTEGER NOT NULL
 );
 
 -- Verification table
 CREATE TABLE verification (
-    verification_id SERIAL PRIMARY KEY,
-    verification_name VARCHAR NOT NULL DEFAULT ' ',
-    verification_description VARCHAR NOT NULL DEFAULT ' ',
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    tag VARCHAR NOT NULL,
     project_id INTEGER NOT NULL
 );
 
 -- Requirements table
 CREATE TABLE requirements (
-    req_id SERIAL PRIMARY KEY,
-    req_title VARCHAR NOT NULL DEFAULT ' ',
-    req_description VARCHAR NOT NULL DEFAULT ' ',
-    req_verification INTEGER NOT NULL DEFAULT 1,
-    req_current_status INTEGER NOT NULL DEFAULT 1,
-    req_author INTEGER NOT NULL DEFAULT 0,
-    req_reviewer INTEGER NOT NULL DEFAULT 0,
-    req_link VARCHAR NOT NULL DEFAULT ' ',
-    req_reference VARCHAR NOT NULL DEFAULT ' ',
-    req_category INTEGER NOT NULL DEFAULT 1,
-    req_parent INTEGER NOT NULL DEFAULT 0,
-    req_creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    req_update_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    req_deadline_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    req_applicability INTEGER NOT NULL DEFAULT 1,
-    req_justification TEXT,
+    id SERIAL PRIMARY KEY,
+    title VARCHAR NOT NULL DEFAULT ' ',
+    description VARCHAR NOT NULL DEFAULT ' ',
+    verification_method_id INTEGER NOT NULL DEFAULT 1,
+    status_id INTEGER NOT NULL DEFAULT 1,
+    author_id INTEGER NOT NULL DEFAULT 0,
+    reviewer_id INTEGER NOT NULL DEFAULT 0,
+    reference_code VARCHAR NOT NULL DEFAULT ' ',
+    category_id INTEGER NOT NULL DEFAULT 1,
+    parent_id INTEGER,
+    creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deadline_date TIMESTAMP,
+    applicability_id INTEGER NOT NULL DEFAULT 1,
+    justification TEXT,
     project_id INTEGER NOT NULL
 );
 
 -- Tests table
 CREATE TABLE tests (
-    test_id SERIAL PRIMARY KEY,
-    test_name VARCHAR NOT NULL DEFAULT ' ',
-    test_reference VARCHAR NOT NULL DEFAULT ' ',
-    test_description VARCHAR NOT NULL DEFAULT ' ',
-    test_source VARCHAR NOT NULL DEFAULT ' ',
-    test_status INTEGER NOT NULL DEFAULT 0,
-    test_parent INTEGER NOT NULL DEFAULT 0,
+    id SERIAL PRIMARY KEY,
+    name VARCHAR NOT NULL DEFAULT ' ',
+    reference_code VARCHAR NOT NULL DEFAULT ' ',
+    description VARCHAR NOT NULL DEFAULT ' ',
+    source VARCHAR NOT NULL DEFAULT ' ',
+    status_id INTEGER NOT NULL DEFAULT 0,
+    parent_id INTEGER,
     project_id INTEGER NOT NULL
 );
 
 -- Matrix table (traceability between requirements and tests)
 CREATE TABLE matrix (
-    matrix_req_id INTEGER NOT NULL,
-    matrix_test_id INTEGER NOT NULL,
-    matrix_creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    req_id INTEGER NOT NULL,
+    test_id INTEGER NOT NULL,
+    creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     project_id INTEGER NOT NULL,
-    PRIMARY KEY (matrix_req_id, matrix_test_id)
+    PRIMARY KEY (req_id, test_id)
 );
 
 -- Logs table (audit trail)
@@ -174,43 +176,49 @@ CREATE TABLE logs (
 -- =============================================================================
 
 ALTER TABLE categories ADD CONSTRAINT fk_categories_project
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE applicability ADD CONSTRAINT fk_applicability_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE verification ADD CONSTRAINT fk_verification_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
+
+ALTER TABLE requirement_status ADD CONSTRAINT fk_requirement_status_project
+    FOREIGN KEY (project_id) REFERENCES projects(id);
+
+ALTER TABLE test_status ADD CONSTRAINT fk_test_status_project
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE requirements ADD CONSTRAINT fk_requirements_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE requirements ADD CONSTRAINT fk_requirements_applicability 
-    FOREIGN KEY (req_applicability) REFERENCES applicability(app_id);
+    FOREIGN KEY (applicability_id) REFERENCES applicability(id);
 
 ALTER TABLE requirements ADD CONSTRAINT fk_requirements_status 
-    FOREIGN KEY (req_current_status) REFERENCES requirement_status(req_st_id);
+    FOREIGN KEY (status_id) REFERENCES requirement_status(id);
 
 ALTER TABLE tests ADD CONSTRAINT fk_tests_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE tests ADD CONSTRAINT fk_tests_status 
-    FOREIGN KEY (test_status) REFERENCES test_status(test_st_id);
+    FOREIGN KEY (status_id) REFERENCES test_status(id);
 
 ALTER TABLE matrix ADD CONSTRAINT fk_matrix_project 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id);
+    FOREIGN KEY (project_id) REFERENCES projects(id);
 
 ALTER TABLE matrix ADD CONSTRAINT fk_matrix_requirements 
-    FOREIGN KEY (matrix_req_id) REFERENCES requirements(req_id) ON DELETE CASCADE;
+    FOREIGN KEY (req_id) REFERENCES requirements(id) ON DELETE CASCADE;
 
 ALTER TABLE matrix ADD CONSTRAINT fk_matrix_tests 
-    FOREIGN KEY (matrix_test_id) REFERENCES tests(test_id) ON DELETE CASCADE;
+    FOREIGN KEY (test_id) REFERENCES tests(id) ON DELETE CASCADE;
 
 ALTER TABLE logs ADD CONSTRAINT fk_logs_user_id 
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE;
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 ALTER TABLE logs ADD CONSTRAINT fk_logs_project_id 
-    FOREIGN KEY (project_id) REFERENCES projects(project_id) ON DELETE CASCADE;
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
 
 CREATE INDEX project_members_user_idx ON project_members(user_id);
 
@@ -228,63 +236,63 @@ CREATE INDEX idx_logs_action_type ON logs(action_type);
 
 -- Requirements indexes
 CREATE INDEX idx_requirements_project_id ON requirements(project_id);
-CREATE INDEX idx_requirements_category ON requirements(req_category);
-CREATE INDEX idx_requirements_status ON requirements(req_current_status);
-CREATE INDEX idx_requirements_author ON requirements(req_author);
-CREATE INDEX idx_requirements_reviewer ON requirements(req_reviewer);
-CREATE INDEX idx_requirements_parent ON requirements(req_parent);
+CREATE INDEX idx_requirements_category ON requirements(category_id);
+CREATE INDEX idx_requirements_status ON requirements(status_id);
+CREATE INDEX idx_requirements_author ON requirements(author_id);
+CREATE INDEX idx_requirements_reviewer ON requirements(reviewer_id);
+CREATE INDEX idx_requirements_parent ON requirements(parent_id);
 
 -- Tests indexes
 CREATE INDEX idx_tests_project_id ON tests(project_id);
-CREATE INDEX idx_tests_status ON tests(test_status);
-CREATE INDEX idx_tests_parent ON tests(test_parent);
+CREATE INDEX idx_tests_status ON tests(status_id);
+CREATE INDEX idx_tests_parent ON tests(parent_id);
 
 -- Matrix indexes
 CREATE INDEX idx_matrix_project_id ON matrix(project_id);
-CREATE INDEX idx_matrix_req_id ON matrix(matrix_req_id);
-CREATE INDEX idx_matrix_test_id ON matrix(matrix_test_id);
+CREATE INDEX idx_matrix_req_id ON matrix(req_id);
+CREATE INDEX idx_matrix_test_id ON matrix(test_id);
 
 -- Users indexes
-CREATE INDEX idx_users_username ON users(user_username);
+CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_admin ON users(is_admin);
 
 -- Categories indexes
 CREATE INDEX idx_categories_project_id ON categories(project_id);
-CREATE INDEX idx_categories_tag ON categories(cat_tag);
+CREATE INDEX idx_categories_tag ON categories(tag);
 
 -- Applicability indexes
 CREATE INDEX idx_applicability_project_id ON applicability(project_id);
-CREATE INDEX idx_applicability_tag ON applicability(app_tag);
+CREATE INDEX idx_applicability_tag ON applicability(tag);
 
 -- =============================================================================
--- DEFAULT DATA
+-- INITIAL DATA
 -- =============================================================================
 
 -- Projects
-INSERT INTO projects (project_id, project_name, project_description, project_creation_date, project_status) VALUES
-    (1, 'Space Project', 'Space exploration satellite requirements and test management system for advanced satellite missions', NOW(), 'Active'),
-    (2, 'ReqMan Project', 'Requirements management system development and testing', NOW(), 'Active'),
-    (3, 'Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 'Active');
+INSERT INTO projects (id, name, description, creation_date, status) VALUES
+    (1, 'Space Project', 'Space exploration satellite requirements and test management system for advanced satellite missions', NOW(), 'active'),
+    (2, 'ReqMan Project', 'Requirements management system development and testing', NOW(), 'active'),
+    (3, 'Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 'active');
 
 -- Requirement Status definitions
-INSERT INTO requirement_status (req_st_title, req_st_description, req_st_short_name) VALUES
-    ('Draft', 'The requirement is still being edited and developed', 'Drf'),
-    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro'),
-    ('Accepted', 'The requirement is accepted and must be processed', 'Acc'),
-    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej'),
-    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can'),
-    ('Finished', 'The requirement is finished and completed', 'Fsh');
+INSERT INTO requirement_status (title, description, tag, project_id) VALUES
+    ('Draft', 'The requirement is still being edited and developed', 'Drf', 1),
+    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', 1),
+    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', 1),
+    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', 1),
+    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', 1),
+    ('Finished', 'The requirement is finished and completed', 'Fsh', 1);
 
 -- Test Status definitions
-INSERT INTO test_status (test_st_title, test_st_description, test_st_short_name) VALUES
-    ('Passed', 'The test has passed all criteria', 'Pass'),
-    ('Failed', 'The test has failed one or more criteria', 'Fail'),
-    ('Pending', 'The test is pending execution', 'Pend'),
-    ('In Progress', 'The test is currently being executed', 'Prog');
+INSERT INTO test_status (title, description, tag, project_id) VALUES
+    ('Passed', 'The test has passed all criteria', 'Pass', 1),
+    ('Failed', 'The test has failed one or more criteria', 'Fail', 1),
+    ('Pending', 'The test is pending execution', 'Pend', 1),
+    ('In Progress', 'The test is currently being executed', 'Prog', 1);
 
 -- Users with working passwords (all users have password: 'password')
 -- Password hash: $2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m
-INSERT INTO users (user_username, user_name, user_email, is_admin, user_password) VALUES
+INSERT INTO users (username, name, email, is_admin, password_hash) VALUES
     ('alice', 'Alice Johnson', 'alice@reqman.com', true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
     ('dr_smith', 'Dr. Sarah Smith', 'sarah.smith@spacecorp.com', true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
     ('eng_jones', 'Engineer Mike Jones', 'mike.jones@spacecorp.com', false, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
@@ -308,7 +316,7 @@ INSERT INTO project_members (project_id, user_id, role) VALUES
     (3, 1, 2);  -- Alice manages the Empty Project
 
 -- Categories for Space Project
-INSERT INTO categories (cat_title, cat_description, cat_tag, project_id) VALUES
+INSERT INTO categories (title, description, tag, project_id) VALUES
     ('Power System', 'Solar panels, batteries, and power distribution systems', 'PWR', 1),
     ('Communication', 'Antennas, transponders, and data communication links', 'COMM', 1),
     ('Attitude Control', 'Gyroscopes, reaction wheels, and star trackers for orientation', 'ACS', 1),
@@ -319,7 +327,7 @@ INSERT INTO categories (cat_title, cat_description, cat_tag, project_id) VALUES
     ('Software', 'On-board computer systems and control algorithms', 'SW', 1);
 
 -- Applicability definitions for Space Project
-INSERT INTO applicability (app_title, app_description, app_tag, project_id) VALUES
+INSERT INTO applicability (title, description, tag, project_id) VALUES
     ('All Missions', 'Applies to all satellite missions regardless of type', 'ALL', 1),
     ('Earth Observation', 'Low Earth orbit observation and imaging satellites', 'EO', 1),
     ('Communication', 'Geostationary and medium Earth orbit communication satellites', 'COMM', 1),
@@ -328,22 +336,22 @@ INSERT INTO applicability (app_title, app_description, app_tag, project_id) VALU
     ('CubeSat', 'Small satellite missions and CubeSat platforms', 'CUBE', 1);
 
 -- Verification methods
-INSERT INTO verification (verification_name, verification_description, project_id) VALUES
-    ('Inspection', 'Nondestructive examination of a system or component', 1),
-    ('Analysis', 'Verification using mathematical models and calculations', 1),
-    ('Demonstration', 'Manipulation of the product as intended in its operational environment', 1),
-    ('Test', 'Controlled verification with predefined inputs and expected outputs', 1);
+INSERT INTO verification (title, description, tag, project_id) VALUES
+    ('Inspection', 'Nondestructive examination of a system or component', 'INSP', 1),
+    ('Analysis', 'Verification using mathematical models and calculations', 'ANALYSIS', 1),
+    ('Demonstration', 'Manipulation of the product as intended in its operational environment', 'DEMO', 1),
+    ('Test', 'Controlled verification with predefined inputs and expected outputs', 'TEST', 1);
 
 -- Requirements for Space Project
-INSERT INTO requirements (req_title, req_description, req_reference, req_category, req_applicability, req_current_status, req_verification, req_author, req_reviewer, req_parent, req_link, req_creation_date, req_update_date, req_deadline_date, project_id) VALUES
-    ('REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations under AM0 illumination conditions', 'REQ-PWR-001', 1, 1, 1, 1, 1, 2, 0, 'https://spacecorp.com/power-specs', '2024-01-15', '2024-01-15', '2024-06-30', 1),
-    ('REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse periods', 'REQ-PWR-002', 1, 1, 2, 1, 1, 2, 0, '', '2024-01-15', '2024-01-20', '2024-07-15', 1),
-    ('REQ-COMM-001', 'The satellite shall maintain continuous communication with ground stations during 90% of each orbit period', 'REQ-COMM-001', 2, 1, 3, 1, 1, 2, 0, '', '2024-01-16', '2024-01-16', '2024-08-15', 1),
-    ('REQ-ACS-001', 'The satellite shall maintain pointing accuracy of ±0.1 degrees in all three axes during normal operations', 'REQ-ACS-001', 3, 1, 2, 1, 1, 2, 0, '', '2024-01-17', '2024-01-17', '2024-06-15', 1),
-    ('REQ-THERM-001', 'All electronic components shall operate within -20°C to +60°C temperature range throughout the mission', 'REQ-THERM-001', 4, 1, 2, 1, 1, 2, 0, '', '2024-01-18', '2024-01-18', '2024-07-15', 1);
+INSERT INTO requirements (title, description, reference_code, category_id, applicability_id, status_id, verification_method_id, author_id, reviewer_id, parent_id, creation_date, update_date, deadline_date, project_id) VALUES
+    ('REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations under AM0 illumination conditions', 'REQ-PWR-001', 1, 1, 1, 1, 1, 2, NULL, '2024-01-15', '2024-01-15', '2024-06-30', 1),
+    ('REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse periods', 'REQ-PWR-002', 1, 1, 2, 1, 1, 2, NULL, '2024-01-15', '2024-01-20', '2024-07-15', 1),
+    ('REQ-COMM-001', 'The satellite shall maintain continuous communication with ground stations during 90% of each orbit period', 'REQ-COMM-001', 2, 1, 3, 1, 1, 2, NULL, '2024-01-16', '2024-01-16', '2024-08-15', 1),
+    ('REQ-ACS-001', 'The satellite shall maintain pointing accuracy of ±0.1 degrees in all three axes during normal operations', 'REQ-ACS-001', 3, 1, 2, 1, 1, 2, NULL, '2024-01-17', '2024-01-17', '2024-06-15', 1),
+    ('REQ-THERM-001', 'All electronic components shall operate within -20°C to +60°C temperature range throughout the mission', 'REQ-THERM-001', 4, 1, 2, 1, 1, 2, NULL, '2024-01-18', '2024-01-18', '2024-07-15', 1);
 
 -- Tests for Space Project
-INSERT INTO tests (test_reference, test_name, test_description, test_status, test_source, project_id) VALUES
+INSERT INTO tests (reference_code, name, description, status_id, source, project_id) VALUES
     ('TEST-PWR-001', 'Solar Array Power Output Test', 'Verify solar array generates 500W under AM0 illumination in thermal vacuum chamber', 1, 'Solar array testing in thermal vacuum chamber', 1),
     ('TEST-PWR-002', 'Battery Endurance Discharge Test', 'Verify battery provides 200W for 45 minutes during discharge test cycle', 1, 'Battery cycle testing and capacity verification', 1),
     ('TEST-COMM-001', 'S-Band Communication Performance Test', 'Verify S-band communication link performance and data rate capabilities', 1, 'RF testing in anechoic chamber', 1),
@@ -351,7 +359,7 @@ INSERT INTO tests (test_reference, test_name, test_description, test_status, tes
     ('TEST-THERM-001', 'Thermal Vacuum Performance Test', 'Verify thermal control system performance in vacuum environment', 1, 'Thermal vacuum testing and temperature cycling', 1);
 
 -- Traceability Matrix (requirements to tests mapping)
-INSERT INTO matrix (matrix_req_id, matrix_test_id, project_id) VALUES
+INSERT INTO matrix (req_id, test_id, project_id) VALUES
     (1, 1, 1),  -- REQ-PWR-001 -> TEST-PWR-001
     (2, 2, 1),  -- REQ-PWR-002 -> TEST-PWR-002
     (3, 3, 1),  -- REQ-COMM-001 -> TEST-COMM-001

@@ -14,6 +14,7 @@
 //! In a real database, these operations would return BadRequest errors for constraint violations.
 
 use req_man::models::*;
+use req_man::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::json;
@@ -68,43 +69,45 @@ mod test_support {
         repo.projects.insert(
             1,
             Project {
-                project_id: 1,
-                project_name: "Test Project".into(),
-                project_description: Some("Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(1),
+                id: 1,
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status: ProjectStatus::Active,
+                owner_id: Some(1),
             },
         );
 
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Draft".into(),
-                req_st_description: "".into(),
-                req_st_short_name: "D".into(),
+                id: 1,
+                title: "Draft".into(),
+                description: "".into(),
+                tag: "D".into(),
+                project_id: 1,
             },
         );
 
         repo.test_statuses.insert(
             1,
             TestStatus {
-                test_st_id: 1,
-                test_st_title: "Not Run".into(),
-                test_st_description: "".into(),
-                test_st_short_name: "NR".into(),
+                id: 1,
+                title: "Not Run".into(),
+                description: "".into(),
+                tag: "NR".into(),
+                project_id: 1,
             },
         );
 
         repo.categories.insert(
             1,
             Category {
-                cat_id: 1,
-                cat_title: "Test Category".into(),
-                cat_description: "".into(),
-                cat_tag: "TEST".into(),
+                id: 1,
+                title: "Test Category".into(),
+                description: "".into(),
+                tag: "TEST".into(),
                 project_id: 1,
             },
         );
@@ -112,20 +115,21 @@ mod test_support {
         repo.applicability.insert(
             1,
             Applicability {
-                app_id: 1,
-                app_title: "All".into(),
-                app_description: "".into(),
-                app_tag: "ALL".into(),
+                id: 1,
+                title: "All".into(),
+                description: "".into(),
+                tag: "ALL".into(),
                 project_id: 1,
             },
         );
 
         repo.verifications.insert(
             1,
-            Verification {
-                verification_id: 1,
-                verification_name: "Analysis".into(),
-                verification_description: "".into(),
+            VerificationMethod {
+                id: 1,
+                title: "Analysis".into(),
+                description: "".into(),
+                tag: "ANALYSIS".into(),
                 project_id: 1,
             },
         );
@@ -427,21 +431,21 @@ async fn patch_requirement_with_invalid_foreign_keys_returns_error() {
     repo.requirements.insert(
         1,
         Requirement {
-            req_id: 1,
-            req_title: "Test".into(),
-            req_description: "Test".into(),
-            req_reference: "REQ-001".into(),
-            req_category: 1,
-            req_applicability: 1,
-            req_current_status: 1,
-            req_verification: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_justification: None,
+            id: 1,
+            title: "Test".into(),
+            description: "Test".into(),
+            reference_code: "REQ-001".into(),
+            category_id: 1,
+            applicability_id: 1,
+            status_id: 1,
+            verification_method_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            parent_id: Some(0),
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            justification: None,
             project_id: 1,
         },
     );
@@ -558,9 +562,9 @@ async fn create_category_with_invalid_project_id_returns_error() {
 
     // Project ID 999 doesn't exist
     let payload = json!({
-        "cat_title": "New Category",
-        "cat_description": "Description",
-        "cat_tag": "NEW",
+        "title": "New Category",
+        "description": "Description",
+        "tag": "NEW",
         "project_id": 999
     });
 
@@ -591,10 +595,10 @@ async fn update_category_with_invalid_project_id_returns_error() {
     repo.categories.insert(
         1,
         Category {
-            cat_id: 1,
-            cat_title: "Test".into(),
-            cat_description: "".into(),
-            cat_tag: "TEST".into(),
+            id: 1,
+            title: "Test".into(),
+            description: "".into(),
+            tag: "TEST".into(),
             project_id: 1,
         },
     );
@@ -603,9 +607,9 @@ async fn update_category_with_invalid_project_id_returns_error() {
 
     // Try to update with invalid project_id
     let payload = json!({
-        "cat_title": "Updated Category",
-        "cat_description": "Description",
-        "cat_tag": "UPD",
+        "title": "Updated Category",
+        "description": "Description",
+        "tag": "UPD",
         "project_id": 999
     });
 
@@ -640,9 +644,9 @@ async fn create_applicability_with_invalid_project_id_returns_error() {
 
     // Project ID 999 doesn't exist
     let payload = json!({
-        "app_title": "New Applicability",
-        "app_description": "Description",
-        "app_tag": "NEW",
+        "title": "New Applicability",
+        "description": "Description",
+        "tag": "NEW",
         "project_id": 999
     });
 
@@ -728,10 +732,10 @@ async fn create_user_without_required_fields_returns_error() {
 async fn create_category_without_required_fields_returns_error() {
     let client = test_client(base_repo()).await;
 
-    // Missing cat_title (required field)
+    // Missing title (required field)
     let payload = json!({
-        "cat_description": "Description",
-        "cat_tag": "TAG",
+        "description": "Description",
+        "tag": "TAG",
         "project_id": 1
     });
 
@@ -759,21 +763,21 @@ async fn delete_category_that_has_requirements_handles_gracefully() {
     repo.requirements.insert(
         1,
         Requirement {
-            req_id: 1,
-            req_title: "Test".into(),
-            req_description: "Test".into(),
-            req_reference: "REQ-001".into(),
-            req_category: 1,
-            req_applicability: 1,
-            req_current_status: 1,
-            req_verification: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_justification: None,
+            id: 1,
+            title: "Test".into(),
+            description: "Test".into(),
+            reference_code: "REQ-001".into(),
+            category_id: 1,
+            applicability_id: 1,
+            status_id: 1,
+            verification_method_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            parent_id: Some(0),
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            justification: None,
             project_id: 1,
         },
     );
@@ -803,21 +807,21 @@ async fn delete_applicability_that_has_requirements_handles_gracefully() {
     repo.requirements.insert(
         1,
         Requirement {
-            req_id: 1,
-            req_title: "Test".into(),
-            req_description: "Test".into(),
-            req_reference: "REQ-001".into(),
-            req_category: 1,
-            req_applicability: 1,
-            req_current_status: 1,
-            req_verification: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_justification: None,
+            id: 1,
+            title: "Test".into(),
+            description: "Test".into(),
+            reference_code: "REQ-001".into(),
+            category_id: 1,
+            applicability_id: 1,
+            status_id: 1,
+            verification_method_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            parent_id: Some(0),
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            justification: None,
             project_id: 1,
         },
     );
@@ -845,21 +849,21 @@ async fn delete_status_that_has_requirements_handles_gracefully() {
     repo.requirements.insert(
         1,
         Requirement {
-            req_id: 1,
-            req_title: "Test".into(),
-            req_description: "Test".into(),
-            req_reference: "REQ-001".into(),
-            req_category: 1,
-            req_applicability: 1,
-            req_current_status: 1,
-            req_verification: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_justification: None,
+            id: 1,
+            title: "Test".into(),
+            description: "Test".into(),
+            reference_code: "REQ-001".into(),
+            category_id: 1,
+            applicability_id: 1,
+            status_id: 1,
+            verification_method_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            parent_id: Some(0),
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            justification: None,
             project_id: 1,
         },
     );
@@ -878,7 +882,7 @@ async fn delete_status_that_has_requirements_handles_gracefully() {
 
     assert_eq!(response.status(), Status::Ok);
     let req: Requirement = response.into_json().await.expect("json");
-    assert_eq!(req.req_current_status, 1);
+    assert_eq!(req.status_id, 1);
 }
 
 // ============================================================================
@@ -975,10 +979,10 @@ async fn update_category_with_invalid_foreign_keys_returns_error() {
     repo.categories.insert(
         1,
         Category {
-            cat_id: 1,
-            cat_title: "Test".into(),
-            cat_description: "".into(),
-            cat_tag: "TEST".into(),
+            id: 1,
+            title: "Test".into(),
+            description: "".into(),
+            tag: "TEST".into(),
             project_id: 1,
         },
     );
@@ -987,9 +991,9 @@ async fn update_category_with_invalid_foreign_keys_returns_error() {
 
     // Try to update with invalid project_id
     let payload = json!({
-        "cat_title": "Updated",
-        "cat_description": "Description",
-        "cat_tag": "UPD",
+        "title": "Updated",
+        "description": "Description",
+        "tag": "UPD",
         "project_id": 999
     });
 
@@ -1020,10 +1024,10 @@ async fn update_applicability_with_invalid_foreign_keys_returns_error() {
     repo.applicability.insert(
         1,
         Applicability {
-            app_id: 1,
-            app_title: "Test".into(),
-            app_description: "".into(),
-            app_tag: "TEST".into(),
+            id: 1,
+            title: "Test".into(),
+            description: "".into(),
+            tag: "TEST".into(),
             project_id: 1,
         },
     );
@@ -1032,9 +1036,9 @@ async fn update_applicability_with_invalid_foreign_keys_returns_error() {
 
     // Try to update with invalid project_id
     let payload = json!({
-        "app_title": "Updated",
-        "app_description": "Description",
-        "app_tag": "UPD",
+        "title": "Updated",
+        "description": "Description",
+        "tag": "UPD",
         "project_id": 999
     });
 

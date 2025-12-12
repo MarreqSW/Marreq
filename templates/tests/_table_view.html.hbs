@@ -35,42 +35,42 @@
         {{#each tests}}
         <tr
           class="reqman-requirements-row"
-          data-test-id="{{test_id}}"
+          data-test-id="{{id}}"
           data-status-id="{{test_status_id}}"
-          data-status-label="{{test_status}}">
+          data-status-label="{{status_id}}">
           <td class="reqman-requirements-row__cell reqman-requirements-row__cell--key">
             <div class="reqman-requirements-key">
               <span class="reqman-requirements-key__value">
-                {{#if test_reference}}{{test_reference}}{{else}}TEST-{{test_id}}{{/if}}
+                {{#if reference_code}}{{reference_code}}{{else}}TEST-{{id}}{{/if}}
               </span>
               <button
                 type="button"
                 class="reqman-requirements-key__toggle"
                 data-action="toggle-row-details"
                 aria-expanded="false"
-                aria-controls="test-details-{{test_id}}">
-                <span class="u-visually-hidden">Toggle details for {{test_name}}</span>
+                aria-controls="test-details-{{id}}">
+                <span class="u-visually-hidden">Toggle details for {{name}}</span>
               </button>
             </div>
           </td>
           <td class="reqman-requirements-row__cell reqman-requirements-row__cell--title">
             <a
-              href="/p/{{../project.id}}/tests/show/{{test_id}}"
+              href="/p/{{../project.id}}/tests/show/{{id}}"
               class="reqman-requirements-title"
-              title="{{test_name}}">
-              {{test_name}}
+              title="{{name}}">
+              {{name}}
             </a>
           </td>
           <td class="reqman-requirements-row__cell reqman-requirements-row__cell--status">
             <span
               class="reqman-requirements-status-badge"
               data-status-id="{{test_status_id}}"
-              data-status="{{test_status}}">
-              {{test_status}}
+              data-status="{{status_id}}">
+              {{status_id}}
             </span>
           </td>
           <td class="reqman-requirements-row__cell reqman-requirements-row__cell--verification">
-            <span class="reqman-requirements-cell-muted">{{test_source}}</span>
+            <span class="reqman-requirements-cell-muted">{{source}}</span>
           </td>
           <td class="reqman-requirements-row__cell reqman-requirements-row__cell--parent">
             {{#if test_parent_title}}
@@ -82,7 +82,7 @@
           <td class="reqman-requirements-row__cell reqman-requirements-row__cell--actions">
             <div class="reqman-requirements-row__actions">
               <a 
-                href="/p/{{../project.id}}/tests/show/{{test_id}}" 
+                href="/p/{{../project.id}}/tests/show/{{id}}" 
                 class="reqman-requirements-row__action reqman-requirements-row__action--icon"
                 title="View test">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
@@ -92,7 +92,7 @@
                 <span class="u-visually-hidden">View</span>
               </a>
               <a 
-                href="/p/{{../project.id}}/tests/edit/{{test_id}}" 
+                href="/p/{{../project.id}}/tests/edit/{{id}}" 
                 class="reqman-requirements-row__action reqman-requirements-row__action--icon"
                 title="Edit test">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
@@ -100,14 +100,14 @@
                 </svg>
                 <span class="u-visually-hidden">Edit</span>
               </a>
-              {{#if (or (eq test_status "Passed") (eq test_status "Failed") ../user.is_admin)}}
+              {{#if (or (eq status_id "Passed") (eq status_id "Failed") ../user.is_admin)}}
               <button
                 type="button"
                 class="reqman-requirements-row__action reqman-requirements-row__action--icon reqman-requirements-row__action--danger"
                 data-action="delete-test"
                 data-project-id="{{../project.id}}"
-                data-test-id="{{test_id}}"
-                data-test-name="{{test_name}}"
+                data-test-id="{{id}}"
+                data-test-name="{{name}}"
                 title="Delete test">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                   <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
@@ -120,15 +120,15 @@
           </td>
         </tr>
         <tr
-          id="test-details-{{test_id}}"
+          id="test-details-{{id}}"
           class="reqman-requirements-row__details"
-          data-details-for="{{test_id}}"
+          data-details-for="{{id}}"
           hidden>
           <td colspan="6">
             <dl class="reqman-requirements-details-grid">
               <div>
                 <dt>Description</dt>
-                <dd>{{test_description}}</dd>
+                <dd>{{description}}</dd>
               </div>
               <div>
                 <dt>Category</dt>

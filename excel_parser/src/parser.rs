@@ -5,33 +5,33 @@ use anyhow::{Result, anyhow};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RequirementData {
-    pub req_id: Option<i32>,
-    pub req_title: String,
-    pub req_description: String,
-    pub req_reference: String,
-    pub req_category: String,
-    pub req_applicability: String,
-    pub req_current_status: String,
-    pub req_verification: String,
-    pub req_author: String,
-    pub req_reviewer: String,
-    pub req_parent: Option<i32>,
+    pub id: Option<i32>,
+    pub title: String,
+    pub description: String,
+    pub reference_code: String,
+    pub category_id: String,
+    pub applicability_id: String,
+    pub status_id: String,
+    pub verification_method_id: String,
+    pub author_id: String,
+    pub reviewer_id: String,
+    pub parent_id: Option<i32>,
     pub req_parent_title: String,
     pub req_link: String,
-    pub req_creation_date: String,
-    pub req_update_date: String,
-    pub req_deadline_date: String,
-    pub req_justification: Option<String>,
+    pub creation_date: String,
+    pub update_date: String,
+    pub deadline_date: String,
+    pub justification: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TestData {
-    pub test_id: Option<i32>,
-    pub test_name: String,
-    pub test_description: String,
-    pub test_status: String,
-    pub test_source: String,
-    pub test_parent: Option<i32>,
+    pub id: Option<i32>,
+    pub name: String,
+    pub description: String,
+    pub status_id: String,
+    pub source: String,
+    pub parent_id: Option<i32>,
     pub test_parent_name: String,
 }
 
@@ -124,23 +124,23 @@ fn parse_tests_sheet(workbook: &mut Xlsx<std::io::BufReader<std::fs::File>>) -> 
 
 fn parse_requirement_row(row: &[DataType], headers: &[String]) -> Result<RequirementData> {
     let mut req = RequirementData {
-        req_id: None,
-        req_title: String::new(),
-        req_description: String::new(),
-        req_reference: String::new(),
-        req_category: String::new(),
-        req_applicability: String::new(),
-        req_current_status: String::new(),
-        req_verification: String::new(),
-        req_author: String::new(),
-        req_reviewer: String::new(),
-        req_parent: None,
+        id: None,
+        title: String::new(),
+        description: String::new(),
+        reference_code: String::new(),
+        category_id: String::new(),
+        applicability_id: String::new(),
+        status_id: String::new(),
+        verification_method_id: String::new(),
+        author_id: String::new(),
+        reviewer_id: String::new(),
+        parent_id: None,
         req_parent_title: String::new(),
         req_link: String::new(),
-        req_creation_date: String::new(),
-        req_update_date: String::new(),
-        req_deadline_date: String::new(),
-        req_justification: None,
+        creation_date: String::new(),
+        update_date: String::new(),
+        deadline_date: String::new(),
+        justification: None,
     };
     
     for (i, cell) in row.iter().enumerate() {
@@ -154,33 +154,33 @@ fn parse_requirement_row(row: &[DataType], headers: &[String]) -> Result<Require
         match header.as_str() {
             "req id" => {
                 if let Ok(id) = value.parse::<i32>() {
-                    req.req_id = Some(id);
+                    req.id = Some(id);
                 }
             },
-            "title" => req.req_title = value,
-            "description" => req.req_description = value,
-            "reference" => req.req_reference = value,
-            "category" => req.req_category = value,
-            "applicability" => req.req_applicability = value,
-            "status" => req.req_current_status = value,
-            "verification" => req.req_verification = value,
-            "author" => req.req_author = value,
-            "reviewer" => req.req_reviewer = value,
+            "title" => req.title = value,
+            "description" => req.description = value,
+            "reference" => req.reference_code = value,
+            "category" => req.category_id = value,
+            "applicability" => req.applicability_id = value,
+            "status" => req.status_id = value,
+            "verification" => req.verification_method_id = value,
+            "author" => req.author_id = value,
+            "reviewer" => req.reviewer_id = value,
             "parent" => {
                 if value != "None" && !value.is_empty() {
                     if let Ok(id) = value.parse::<i32>() {
-                        req.req_parent = Some(id);
+                        req.parent_id = Some(id);
                     }
                 }
             },
             "parent title" => req.req_parent_title = value,
             "link" => req.req_link = value,
-            "creation date" => req.req_creation_date = value,
-            "update date" => req.req_update_date = value,
-            "deadline date" => req.req_deadline_date = value,
+            "creation date" => req.creation_date = value,
+            "update date" => req.update_date = value,
+            "deadline date" => req.deadline_date = value,
             "justification" => {
                 if value != "None" && !value.is_empty() {
-                    req.req_justification = Some(value);
+                    req.justification = Some(value);
                 }
             },
             _ => {} // Ignore unknown headers
@@ -192,12 +192,12 @@ fn parse_requirement_row(row: &[DataType], headers: &[String]) -> Result<Require
 
 fn parse_test_row(row: &[DataType], headers: &[String]) -> Result<TestData> {
     let mut test = TestData {
-        test_id: None,
-        test_name: String::new(),
-        test_description: String::new(),
-        test_status: String::new(),
-        test_source: String::new(),
-        test_parent: None,
+        id: None,
+        name: String::new(),
+        description: String::new(),
+        status_id: String::new(),
+        source: String::new(),
+        parent_id: None,
         test_parent_name: String::new(),
     };
     
@@ -212,17 +212,17 @@ fn parse_test_row(row: &[DataType], headers: &[String]) -> Result<TestData> {
         match header.as_str() {
             "test id" => {
                 if let Ok(id) = value.parse::<i32>() {
-                    test.test_id = Some(id);
+                    test.id = Some(id);
                 }
             },
-            "name" => test.test_name = value,
-            "description" => test.test_description = value,
-            "status" => test.test_status = value,
-            "source" => test.test_source = value,
+            "name" => test.name = value,
+            "description" => test.description = value,
+            "status" => test.status_id = value,
+            "source" => test.source = value,
             "parent id" => {
                 if value != "None" && !value.is_empty() {
                     if let Ok(id) = value.parse::<i32>() {
-                        test.test_parent = Some(id);
+                        test.parent_id = Some(id);
                     }
                 }
             },

@@ -37,28 +37,28 @@ impl From<serde_json::Error> for LoggerError {
 
 #[derive(Debug, Clone, Default)]
 pub struct LogCtx {
-    user_id: i32,
+    id: i32,
     ip_address: Option<String>,
     user_agent: Option<String>,
 }
 
 impl LogCtx {
-    pub fn new(user_id: i32) -> Self {
+    pub fn new(id: i32) -> Self {
         Self {
-            user_id,
+            id,
             ip_address: None,
             user_agent: None,
         }
     }
 
-    pub fn from_request(user_id: i32, request: &rocket::Request<'_>) -> Self {
-        Self::new(user_id).with_request(request)
+    pub fn from_request(id: i32, request: &rocket::Request<'_>) -> Self {
+        Self::new(id).with_request(request)
     }
 
-    pub fn from_optional_request(user_id: i32, request: Option<&rocket::Request<'_>>) -> Self {
+    pub fn from_optional_request(id: i32, request: Option<&rocket::Request<'_>>) -> Self {
         request
-            .map(|req| Self::new(user_id).with_request(req))
-            .unwrap_or_else(|| Self::new(user_id))
+            .map(|req| Self::new(id).with_request(req))
+            .unwrap_or_else(|| Self::new(id))
     }
 
     pub fn with_request(mut self, request: &rocket::Request<'_>) -> Self {
@@ -70,8 +70,8 @@ impl LogCtx {
         self
     }
 
-    pub fn user_id(&self) -> i32 {
-        self.user_id
+    pub fn id(&self) -> i32 {
+        self.id
     }
 
     pub fn ip_address(&self) -> Option<&str> {
@@ -102,7 +102,7 @@ pub enum LogEntity {
     Category,
     Applicability,
     User,
-    Matrix,
+    MatrixLink,
     Verification,
 }
 
@@ -163,7 +163,7 @@ impl Logger {
             ctx,
             ActionType::Login,
             Some(EntityType::User),
-            Some(ctx.user_id()),
+            Some(ctx.id()),
             None,
             None,
             None,
@@ -177,7 +177,7 @@ impl Logger {
             ctx,
             ActionType::Logout,
             Some(EntityType::User),
-            Some(ctx.user_id()),
+            Some(ctx.id()),
             None,
             None,
             None,
@@ -187,7 +187,7 @@ impl Logger {
 
     pub fn log_unauthorized(conn: &mut PgConnection, ctx: &LogCtx) -> Result<(), LoggerError> {
         let new_log = NewLog {
-            user_id: ctx.user_id(),
+            user_id: ctx.id(),
             action_type: "ILLEGAL_ACCESS".to_string(),
             entity_type: "entity_type".to_string(),
             project_id: None,
@@ -259,7 +259,7 @@ impl Logger {
         description: Option<String>,
     ) -> Result<(), LoggerError> {
         let new_log = NewLog {
-            user_id: ctx.user_id(),
+            user_id: ctx.id(),
             action_type: action_type.to_string(),
             // If None, default to empty string
             entity_type: entity_type

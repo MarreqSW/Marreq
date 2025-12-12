@@ -33,42 +33,42 @@
           
           <div class="mb-3">
             <label for="dup_req_title" class="form-label">Title <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="dup_req_title" name="req_title" required>
+            <input type="text" class="form-control" id="dup_req_title" name="title" required>
           </div>
 
           <div class="mb-3">
             <label for="dup_req_reference" class="form-label">Reference <span class="text-muted small">(optional)</span></label>
-            <input type="text" class="form-control" id="dup_req_reference" name="req_reference" placeholder="Auto-generated if left blank">
+            <input type="text" class="form-control" id="dup_req_reference" name="reference_code" placeholder="Auto-generated if left blank">
             <div class="form-text">Leave blank to auto-generate a new reference</div>
           </div>
 
           <div class="mb-3">
             <label for="dup_req_description" class="form-label">Statement <span class="text-danger">*</span></label>
-            <textarea class="form-control" id="dup_req_description" name="req_description" rows="5" required></textarea>
+            <textarea class="form-control" id="dup_req_description" name="description" rows="5" required></textarea>
           </div>
 
           <div class="mb-3">
             <label for="dup_req_justification" class="form-label">Rationale <span class="text-muted small">(optional)</span></label>
-            <textarea class="form-control" id="dup_req_justification" name="req_justification" rows="3"></textarea>
+            <textarea class="form-control" id="dup_req_justification" name="justification" rows="3"></textarea>
           </div>
 
           <div class="row">
             <div class="col-md-6 mb-3">
               <label for="dup_req_category" class="form-label">Category <span class="text-danger">*</span></label>
-              <select class="form-select" id="dup_req_category" name="req_category" required>
+              <select class="form-select" id="dup_req_category" name="category_id" required>
                 <option value="">Select category...</option>
                 {{#each categories}}
-                  <option value="{{cat_id}}">{{cat_title}}</option>
+                  <option value="{{id}}">{{title}}</option>
                 {{/each}}
               </select>
             </div>
 
             <div class="col-md-6 mb-3">
               <label for="dup_req_current_status" class="form-label">Status <span class="text-danger">*</span></label>
-              <select class="form-select" id="dup_req_current_status" name="req_current_status" required>
+              <select class="form-select" id="dup_req_current_status" name="status_id" required>
                 <option value="">Select status...</option>
                 {{#each statuses}}
-                  <option value="{{req_st_id}}">{{req_st_title}}</option>
+                  <option value="{{id}}">{{title}}</option>
                 {{/each}}
               </select>
             </div>
@@ -77,20 +77,20 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <label for="dup_req_verification" class="form-label">Verification <span class="text-danger">*</span></label>
-              <select class="form-select" id="dup_req_verification" name="req_verification" required>
+              <select class="form-select" id="dup_req_verification" name="verification_method_id" required>
                 <option value="">Select verification...</option>
                 {{#each verifications}}
-                  <option value="{{verification_id}}">{{verification_name}}</option>
+                  <option value="{{id}}">{{name}}</option>
                 {{/each}}
               </select>
             </div>
 
             <div class="col-md-6 mb-3">
               <label for="dup_req_applicability" class="form-label">Applicability <span class="text-danger">*</span></label>
-              <select class="form-select" id="dup_req_applicability" name="req_applicability" required>
+              <select class="form-select" id="dup_req_applicability" name="applicability_id" required>
                 <option value="">Select applicability...</option>
                 {{#each applicability}}
-                  <option value="{{app_id}}">{{app_title}}</option>
+                  <option value="{{id}}">{{title}}</option>
                 {{/each}}
               </select>
             </div>
@@ -99,17 +99,17 @@
           <div class="row">
             <div class="col-md-6 mb-3">
               <label for="dup_req_reviewer" class="form-label">Reviewer</label>
-              <select class="form-select" id="dup_req_reviewer" name="req_reviewer">
+              <select class="form-select" id="dup_req_reviewer" name="reviewer_id">
                 <option value="">Select reviewer...</option>
                 {{#each users}}
-                  <option value="{{user_id}}">{{user_name}}</option>
+                  <option value="{{id}}">{{name}}</option>
                 {{/each}}
               </select>
             </div>
 
             <div class="col-md-6 mb-3">
               <label for="dup_req_parent" class="form-label">Parent Requirement</label>
-              <select class="form-select" id="dup_req_parent" name="req_parent">
+              <select class="form-select" id="dup_req_parent" name="parent_id">
                 <option value="0">None</option>
                 {{!-- Parent options will be populated dynamically --}}
               </select>
@@ -117,7 +117,7 @@
           </div>
 
           <input type="hidden" id="dup_project_id" name="project_id">
-          <input type="hidden" id="dup_req_author" name="req_author">
+          <input type="hidden" id="dup_req_author" name="author_id">
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

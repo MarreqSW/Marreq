@@ -214,7 +214,7 @@ impl Cache {
         self.remove(&keys::Requirements::by_project(project_id));
         self.remove(&keys::Tests::by_project(project_id));
         self.remove(&keys::Matrix::by_project(project_id));
-        self.remove(&keys::Verification::by_project(project_id));
+        self.remove(&keys::VerificationMethod::by_project(project_id));
         self.remove(&keys::Categories::by_project(project_id));
         self.remove(&keys::Applicability::by_project(project_id));
         self.remove(&keys::Projects::by_id(project_id));
@@ -236,10 +236,10 @@ impl Cache {
     }
 
     /// Invalidate all requirement-related cache entries
-    pub fn invalidate_requirement(&self, req_id: i32) {
-        self.remove(&keys::Requirements::by_id(req_id));
-        self.remove(&keys::LinkedTests::for_requirement(req_id));
-        self.remove(&keys::RequirementTitle::by_id(req_id));
+    pub fn invalidate_requirement(&self, requirement_id: i32) {
+        self.remove(&keys::Requirements::by_id(requirement_id));
+        self.remove(&keys::LinkedTests::for_requirement(requirement_id));
+        self.remove(&keys::RequirementTitle::by_id(requirement_id));
         // Also invalidate global lists and project-level caches
         self.remove(keys::REQUIREMENTS_ALL);
         // Note: In a real implementation, you'd need to track which project the requirement belongs to
@@ -256,20 +256,21 @@ impl Cache {
     }
 
     /// Invalidate all category-related cache entries
-    pub fn invalidate_category(&self, cat_id: i32) {
-        self.remove(&keys::Categories::by_id(cat_id));
+    pub fn invalidate_category(&self, category_id: i32) {
+        self.remove(&keys::Categories::by_id(category_id));
         self.remove(keys::CATEGORIES_ALL);
     }
 
     /// Invalidate all status-related cache entries
     pub fn invalidate_status(&self, status_id: i32) {
-        self.remove(&keys::Status::by_id(status_id));
-        self.remove(keys::STATUS_ALL);
+        self.remove(&keys::RequirementStatus::by_id(status_id));
+        self.remove(keys::REQUIREMENT_STATUS_ALL);
+        self.remove(keys::TEST_STATUS_ALL);
     }
 
     /// Invalidate all verification-related cache entries
     pub fn invalidate_verification(&self, verification_id: i32) {
-        self.remove(&keys::Verification::by_id(verification_id));
+        self.remove(&keys::VerificationMethod::by_id(verification_id));
         self.remove(keys::VERIFICATION_ALL);
     }
 
@@ -373,7 +374,7 @@ mod tests {
         cache.set(&keys::Requirements::by_project(pid), "r".to_string());
         cache.set(&keys::Tests::by_project(pid), "t".to_string());
         cache.set(&keys::Matrix::by_project(pid), "m".to_string());
-        cache.set(&keys::Verification::by_project(pid), "v".to_string());
+        cache.set(&keys::VerificationMethod::by_project(pid), "v".to_string());
         cache.set(&keys::Categories::by_project(pid), "c".to_string());
         cache.set(&keys::Applicability::by_project(pid), "a".to_string());
         cache.set(&keys::Projects::by_id(pid), "p".to_string());
@@ -384,7 +385,9 @@ mod tests {
         assert!(cache.get(&keys::Requirements::by_project(pid)).is_none());
         assert!(cache.get(&keys::Tests::by_project(pid)).is_none());
         assert!(cache.get(&keys::Matrix::by_project(pid)).is_none());
-        assert!(cache.get(&keys::Verification::by_project(pid)).is_none());
+        assert!(cache
+            .get(&keys::VerificationMethod::by_project(pid))
+            .is_none());
         assert!(cache.get(&keys::Categories::by_project(pid)).is_none());
         assert!(cache.get(&keys::Applicability::by_project(pid)).is_none());
         assert!(cache.get(&keys::Projects::by_id(pid)).is_none());
@@ -466,21 +469,23 @@ mod tests {
     fn test_invalidate_status_removes_related_keys() {
         let cache = Cache::new(300);
         let sid = 9;
-        cache.set(&keys::Status::by_id(sid), "s".to_string());
-        cache.set(keys::STATUS_ALL, "sa".to_string());
+        cache.set(&keys::RequirementStatus::by_id(sid), "s".to_string());
+        cache.set(keys::REQUIREMENT_STATUS_ALL, "sa".to_string());
+        cache.set(keys::TEST_STATUS_ALL, "tsa".to_string());
         cache.invalidate_status(sid);
-        assert!(cache.get(&keys::Status::by_id(sid)).is_none());
-        assert!(cache.get(keys::STATUS_ALL).is_none());
+        assert!(cache.get(&keys::RequirementStatus::by_id(sid)).is_none());
+        assert!(cache.get(keys::REQUIREMENT_STATUS_ALL).is_none());
+        assert!(cache.get(keys::TEST_STATUS_ALL).is_none());
     }
 
     #[test]
     fn test_invalidate_verification_removes_related_keys() {
         let cache = Cache::new(300);
         let vid = 4;
-        cache.set(&keys::Verification::by_id(vid), "v".to_string());
+        cache.set(&keys::VerificationMethod::by_id(vid), "v".to_string());
         cache.set(keys::VERIFICATION_ALL, "va".to_string());
         cache.invalidate_verification(vid);
-        assert!(cache.get(&keys::Verification::by_id(vid)).is_none());
+        assert!(cache.get(&keys::VerificationMethod::by_id(vid)).is_none());
         assert!(cache.get(keys::VERIFICATION_ALL).is_none());
     }
 

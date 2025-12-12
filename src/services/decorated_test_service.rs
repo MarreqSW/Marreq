@@ -6,7 +6,7 @@
 
 use super::{RequirementService, StatusService, TestService};
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{DecoratedTest, NewTest, Test, User};
+use crate::models::{DecoratedTestCase, NewTestCase, TestCase, User};
 use crate::repository::errors::RepoError;
 
 /// High level operations for tests backed by the shared [`AppState`].
@@ -27,28 +27,28 @@ impl<'a> DecoratedTestService<'a> {
     }
 
     /// Retrieve all tests.
-    pub fn list_all(&self) -> Result<Vec<DecoratedTest>, RepoError> {
+    pub fn list_all(&self) -> Result<Vec<DecoratedTestCase>, RepoError> {
         self.decorate_vec(self.test_service.list_all()?)
     }
 
     /// Retrieve tests scoped to a project.
-    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<DecoratedTest>, RepoError> {
+    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<DecoratedTestCase>, RepoError> {
         self.decorate_vec(self.test_service.list_by_project(project_id)?)
     }
 
     /// Retrieve a single test by identifier.
-    pub fn get_by_id(&self, id: i32) -> Result<DecoratedTest, RepoError> {
+    pub fn get_by_id(&self, id: i32) -> Result<DecoratedTestCase, RepoError> {
         let test = self.test_service.get_by_id(id)?;
         self.decorate(&test)
     }
 
     /// Retrieve child tests for a given parent identifier.
-    pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<DecoratedTest>, RepoError> {
-        let children: Vec<Test> = self
+    pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<DecoratedTestCase>, RepoError> {
+        let children: Vec<TestCase> = self
             .test_service
             .list_all()?
             .into_iter()
-            .filter(|t| t.test_parent == parent_id)
+            .filter(|t| t.parent_id == Some(parent_id))
             .collect();
         self.decorate_vec(children)
     }
@@ -57,54 +57,59 @@ impl<'a> DecoratedTestService<'a> {
     pub fn get_linked_to_requirement(
         &self,
         requirement_id: i32,
-    ) -> Result<Vec<DecoratedTest>, RepoError> {
+    ) -> Result<Vec<DecoratedTestCase>, RepoError> {
         self.decorate_vec(self.requirement_service.get_linked_tests(requirement_id)?)
     }
 
     /// Create a new test entry and log the action.
-    pub fn create(&self, actor: &User, payload: NewTest) -> Result<i32, RepoError> {
+    pub fn create(&self, actor: &User, payload: NewTestCase) -> Result<i32, RepoError> {
         self.test_service.create(actor, payload)
     }
 
     /// Update an existing test entry and log the change.
-    pub fn update(&self, actor: &User, id: i32, payload: NewTest) -> Result<Test, RepoError> {
+    pub fn update(
+        &self,
+        actor: &User,
+        id: i32,
+        payload: NewTestCase,
+    ) -> Result<TestCase, RepoError> {
         self.test_service.update(actor, id, payload)
     }
 
     /// Delete a test entry and log the removal.
-    pub fn delete(&self, actor: &User, id: i32) -> Result<Test, RepoError> {
+    pub fn delete(&self, actor: &User, id: i32) -> Result<TestCase, RepoError> {
         self.test_service.delete(actor, id)
     }
 
-    fn decorate_vec(&self, tests: Vec<Test>) -> Result<Vec<DecoratedTest>, RepoError> {
+    fn decorate_vec(&self, tests: Vec<TestCase>) -> Result<Vec<DecoratedTestCase>, RepoError> {
         tests.iter().map(|t| self.decorate(t)).collect()
     }
 
-    fn decorate(&self, test: &Test) -> Result<DecoratedTest, RepoError> {
+    fn decorate(&self, test: &TestCase) -> Result<DecoratedTestCase, RepoError> {
         let status = self
             .status_service
-            .get_test_status(test.test_status)
-            .map(|s| s.test_st_title)
-            .unwrap_or_else(|_| format!("Unknown Status ({})", test.test_status));
+            .get_test_status(test.status_id)
+            .map(|s| s.title)
+            .unwrap_or_else(|_| format!("Unknown Status ({})", test.status_id));
 
-        let parent_title = if test.test_parent != 0 {
-            match self.test_service.get_by_id(test.test_parent) {
-                Ok(parent) => parent.test_name,
-                Err(_) => String::new(),
+        let parent_title = if let Some(parent_id) = test.parent_id {
+            match self.test_service.get_by_id(parent_id) {
+                Ok(parent_test) => parent_test.name,
+                Err(_) => "[Deleted Parent]".to_string(),
             }
         } else {
             String::new()
         };
 
-        Ok(DecoratedTest {
-            test_id: test.test_id,
-            test_reference: test.test_reference.clone(),
-            test_name: test.test_name.clone(),
-            test_description: test.test_description.clone(),
-            test_source: test.test_source.clone(),
-            test_status: status,
-            test_status_id: test.test_status,
-            test_parent_id: test.test_parent,
+        Ok(DecoratedTestCase {
+            id: test.id,
+            reference_code: test.reference_code.clone(),
+            name: test.name.clone(),
+            description: test.description.clone(),
+            source: test.source.clone(),
+            status_id: status,
+            test_status_id: test.status_id,
+            test_parent_id: test.parent_id,
             test_parent_title: parent_title,
             project_id: test.project_id,
         })
@@ -114,7 +119,7 @@ impl<'a> DecoratedTestService<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Matrix, Requirement, TestStatus};
+    use crate::models::{MatrixLink, Requirement, TestCase, TestStatus};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -132,15 +137,15 @@ mod tests {
         }
     }
 
-    fn make_test(id: i32, parent: i32, status: i32) -> Test {
-        Test {
-            test_id: id,
-            test_name: format!("Test {id}"),
-            test_description: "desc".into(),
-            test_source: "manual".into(),
-            test_status: status,
-            test_reference: format!("TEST-{id}"),
-            test_parent: parent,
+    fn make_test(id: i32, parent: i32, status: i32) -> TestCase {
+        TestCase {
+            id: id,
+            name: format!("Test {id}"),
+            description: "desc".into(),
+            source: "manual".into(),
+            status_id: status,
+            reference_code: format!("TEST-{id}"),
+            parent_id: Some(parent),
             project_id: 99,
         }
     }
@@ -151,12 +156,14 @@ mod tests {
         repo.test_statuses.insert(
             1,
             TestStatus {
-                test_st_id: 1,
-                test_st_title: "Open".into(),
-                test_st_description: String::new(),
-                test_st_short_name: String::new(),
+                id: 1,
+                title: "Open".into(),
+                description: String::new(),
+                tag: String::new(),
+                project_id: 1,
             },
         );
+        repo.tests.insert(1, make_test(1, 0, 1));
         repo.tests.insert(5, make_test(5, 0, 1));
         repo.tests.insert(6, make_test(6, 5, 1));
 
@@ -164,7 +171,7 @@ mod tests {
         let service = DecoratedTestService::new(&state);
 
         let decorated = service.get_by_id(6).unwrap();
-        assert_eq!(decorated.test_status, "Open");
+        assert_eq!(decorated.status_id, "Open");
         assert_eq!(decorated.test_parent_title, "Test 5");
     }
 
@@ -177,8 +184,8 @@ mod tests {
         let service = DecoratedTestService::new(&state);
 
         let decorated = service.get_by_id(1).unwrap();
-        assert_eq!(decorated.test_status, "Unknown Status (77)");
-        assert_eq!(decorated.test_parent_title, "");
+        assert_eq!(decorated.status_id, "Unknown Status (77)");
+        assert_eq!(decorated.test_parent_title, "[Deleted Parent]");
     }
 
     #[test]
@@ -187,38 +194,39 @@ mod tests {
         repo.test_statuses.insert(
             1,
             TestStatus {
-                test_st_id: 1,
-                test_st_title: "Ready".into(),
-                test_st_description: String::new(),
-                test_st_short_name: String::new(),
+                id: 1,
+                title: "Ready".into(),
+                description: String::new(),
+                tag: String::new(),
+                project_id: 1,
             },
         );
         repo.tests.insert(10, make_test(10, 0, 1));
         repo.requirements.insert(
             3,
             Requirement {
-                req_id: 3,
-                req_title: "Req".into(),
-                req_description: String::new(),
-                req_verification: 0,
-                req_current_status: 0,
-                req_author: 0,
-                req_reviewer: 0,
-                req_reference: String::new(),
-                req_category: 0,
-                req_parent: 0,
-                req_creation_date: ts(),
-                req_update_date: ts(),
-                req_deadline_date: ts(),
-                req_applicability: 0,
-                req_justification: None,
+                id: 3,
+                title: "Req".into(),
+                description: String::new(),
+                verification_method_id: 0,
+                status_id: 0,
+                author_id: 0,
+                reviewer_id: 0,
+                reference_code: String::new(),
+                category_id: 0,
+                parent_id: None,
+                creation_date: ts(),
+                update_date: ts(),
+                deadline_date: Some(ts()),
+                applicability_id: 0,
+                justification: None,
                 project_id: 99,
             },
         );
-        repo.matrices.push(Matrix {
-            matrix_req_id: 3,
-            matrix_test_id: 10,
-            matrix_creation_date: ts(),
+        repo.matrices.push(MatrixLink {
+            req_id: 3,
+            test_id: 10,
+            creation_date: ts(),
             project_id: 99,
         });
 
@@ -227,7 +235,7 @@ mod tests {
 
         let items = service.get_linked_to_requirement(3).unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].test_status, "Ready");
-        assert_eq!(items[0].test_reference, "TEST-10");
+        assert_eq!(items[0].status_id, "Ready");
+        assert_eq!(items[0].reference_code, "TEST-10");
     }
 }

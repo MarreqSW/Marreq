@@ -65,18 +65,18 @@ async fn post_category(
     Ok(Redirect::to(show_url))
 }
 
-#[get("/<project_id>/categories/edit/<cat_id>")]
+#[get("/<project_id>/categories/edit/<category_id>")]
 async fn get_edit_category(
     project_access: ProjectAccess,
     project_id: i32,
-    cat_id: i32,
+    category_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
     let service = CategoryService::new(state.inner());
 
     let category = service
-        .get_by_id(cat_id)
+        .get_by_id(category_id)
         .map_err(|_| Redirect::to(uri!("/p", show_categories(project_id))))?;
 
     if category.project_id != project_id {
@@ -98,22 +98,22 @@ async fn get_edit_category(
     Ok(Template::render("categories/edit_category", ctx))
 }
 
-#[post("/<project_id>/categories/edit/<cat_id>", data = "<category>")]
+#[post("/<project_id>/categories/edit/<category_id>", data = "<category>")]
 async fn post_edit_category(
     project_access: ProjectAccess,
     project_id: i32,
-    cat_id: i32,
+    category_id: i32,
     category: Form<NewCategory>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
     let service = CategoryService::new(state.inner());
 
-    let edit_url = uri!("/p", get_edit_category(project_id, cat_id));
+    let edit_url = uri!("/p", get_edit_category(project_id, category_id));
     let show_url = uri!("/p", show_categories(project_id));
 
     let old = service
-        .get_by_id(cat_id)
+        .get_by_id(category_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
 
     if old.project_id != project_id {
@@ -124,10 +124,10 @@ async fn post_edit_category(
     }
 
     let mut edited = category.into_inner();
-    edited.cat_id = Some(cat_id);
+    edited.id = Some(category_id);
     edited.project_id = project_id;
 
-    if let Err(_e) = service.update(&user, cat_id, edited) {
+    if let Err(_e) = service.update(&user, category_id, edited) {
         #[cfg(debug_assertions)]
         eprintln!("edit_category error: {:?}", _e);
         return Ok(Redirect::to(edit_url.clone()));
@@ -136,17 +136,17 @@ async fn post_edit_category(
     Ok(Redirect::to(show_url))
 }
 
-#[delete("/<project_id>/categories/delete/<cat_id>")]
+#[delete("/<project_id>/categories/delete/<category_id>")]
 async fn delete_category_route(
     project_access: ProjectAccess,
     project_id: i32,
-    cat_id: i32,
+    category_id: i32,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, Redirect> {
     let user = project_access.into_user();
     let service = CategoryService::new(state.inner());
 
-    let category = match service.get_by_id(cat_id) {
+    let category = match service.get_by_id(category_id) {
         Ok(c) => c,
         Err(_) => return Ok(rocket::http::Status::NotFound),
     };
@@ -158,7 +158,7 @@ async fn delete_category_route(
         )));
     }
 
-    match service.delete(&user, cat_id) {
+    match service.delete(&user, category_id) {
         Ok(_) => Ok(rocket::http::Status::Ok),
         Err(_e) => {
             #[cfg(debug_assertions)]
@@ -188,6 +188,7 @@ mod tests {
         client_with_routes, delete_with_session, get_with_session, post_form_with_session,
         timestamp, TestAppState,
     };
+    use crate::status_enums::ProjectStatus;
     use rocket::http::Status;
     use rocket::local::asynchronous::Client;
 
@@ -196,22 +197,22 @@ mod tests {
 
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
-            project_id: id,
-            project_name: name.to_string(),
-            project_description: Some(format!("{name} project")),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("Active".to_string()),
-            project_owner_id: Some(ADMIN_ID),
+            id: id,
+            name: name.to_string(),
+            description: Some(format!("{name} project")),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status: ProjectStatus::Active,
+            owner_id: Some(ADMIN_ID),
         }
     }
 
     fn sample_category(id: i32, project_id: i32, title: &str) -> Category {
         Category {
-            cat_id: id,
-            cat_title: title.to_string(),
-            cat_description: format!("Description for {title}"),
-            cat_tag: title.to_ascii_lowercase(),
+            id: id,
+            title: title.to_string(),
+            description: format!("Description for {title}"),
+            tag: title.to_ascii_lowercase(),
             project_id,
         }
     }
@@ -284,7 +285,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/categories/new",
-            "cat_title=Avionics&cat_description=Avionics+systems&cat_tag=avionics&project_id=1",
+            "title=Avionics&description=Avionics+systems&tag=avionics&project_id=1",
             ADMIN_ID,
         )
         .await;
@@ -301,7 +302,7 @@ mod tests {
             .get_categories_by_project(PRIMARY_PROJECT)
             .expect("categories");
         assert_eq!(categories.len(), 2);
-        assert!(categories.iter().any(|cat| cat.cat_title == "Avionics"));
+        assert!(categories.iter().any(|cat| cat.title == "Avionics"));
     }
 
     #[rocket::async_test]
@@ -331,7 +332,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/categories/edit/1",
-            "cat_id=1&project_id=1&cat_title=Systems+Rev&cat_description=Updated&cat_tag=systems",
+            "id=1&project_id=1&title=Systems+Rev&description=Updated&tag=systems",
             ADMIN_ID,
         )
         .await;
@@ -345,8 +346,8 @@ mod tests {
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
         let category = repo.get_category_by_id(1).expect("category");
-        assert_eq!(category.cat_title, "Systems Rev");
-        assert_eq!(category.cat_description, "Updated");
+        assert_eq!(category.title, "Systems Rev");
+        assert_eq!(category.description, "Updated");
     }
 
     #[rocket::async_test]
@@ -355,7 +356,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/categories/edit/99",
-            "cat_id=99&project_id=1&cat_title=Ghost&cat_description=None&cat_tag=ghost",
+            "id=99&project_id=1&title=Ghost&description=None&tag=ghost",
             ADMIN_ID,
         )
         .await;
@@ -373,7 +374,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/categories/edit/2",
-            "cat_id=2&project_id=1&cat_title=Surface&cat_description=Stay&cat_tag=surface",
+            "id=2&project_id=1&title=Surface&description=Stay&tag=surface",
             ADMIN_ID,
         )
         .await;

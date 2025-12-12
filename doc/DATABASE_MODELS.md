@@ -1,37 +1,36 @@
-# Modelos y Estructura de la Base de Datos
+# Database Models and Structure
 
-## Índice
-1. [Visión General](#visión-general)
-2. [Diagrama Entidad-Relación](#diagrama-entidad-relación)
-3. [Modelos de Datos](#modelos-de-datos)
-4. [Relaciones Principales](#relaciones-principales)
-5. [Índices y Restricciones](#índices-y-restricciones)
-6. [Migración y Evolución](#migración-y-evolución)
+## Table of Contents
+1. [Overview](#overview)
+2. [Entity-Relationship Diagrams](#entity-relationship-diagrams)
+3. [Data Models](#data-models)
+4. [Main Relationships](#main-relationships)
+5. [Indexes and Constraints](#indexes-and-constraints)
+6. [Migration and Evolution](#migration-and-evolution)
 
 ---
 
-## Visión General
+## Overview
 
-ReqMan utiliza PostgreSQL como base de datos relacional con Diesel como ORM. El esquema está diseñado para gestionar proyectos de gestión de requisitos con trazabilidad completa entre requisitos y pruebas.
+ReqMan uses PostgreSQL as a relational database with Diesel as the ORM. The schema is designed to manage requirements management projects with complete traceability between requirements and tests.
 
-### Tecnologías
-- **Base de datos**: PostgreSQL
+### Technologies
+- **Database**: PostgreSQL
 - **ORM**: Diesel 2.x
-- **Migraciones**: Diesel CLI
-- **Lenguaje**: Rust
+- **Migrations**: Diesel CLI
+- **Language**: Rust
 
 ---
 
-## Diagramas Entidad-Relación
+## Entity-Relationship Diagrams
 
-### 1. Diagrama Principal: Core Entities
+### 1. Main Diagram: Core Entities
 
 ```mermaid
 erDiagram
     PROJECTS ||--o{ REQUIREMENTS : contains
     PROJECTS ||--o{ TESTS : contains
     PROJECTS ||--o{ PROJECT_MEMBERS : has
-    PROJECTS }o--|| PROJECT_STATUS : "has status"
     PROJECTS }o--|| USERS : "owned by"
     
     USERS ||--o{ REQUIREMENTS : authors
@@ -59,7 +58,7 @@ erDiagram
         text description
         timestamp creation_date
         timestamp update_date
-        int status_id FK
+        varchar status "enum: Active, Completed, OnHold, Cancelled"
         int owner_id FK
     }
     
@@ -119,9 +118,9 @@ erDiagram
     }
 ```
 
-### 2. Entidades de Configuración (Tagged Entities)
+### 2. Configuration Entities (Tagged Entities)
 
-Todas estas entidades comparten la misma estructura y son personalizables por proyecto:
+All these entities share the same structure and are customizable per project:
 
 ```mermaid
 erDiagram
@@ -134,6 +133,7 @@ erDiagram
     PROJECTS {
         int id PK
         varchar name
+        varchar status "enum: Active, Completed, OnHold, Cancelled"
     }
     
     CATEGORIES {
@@ -175,16 +175,9 @@ erDiagram
         varchar tag
         int project_id FK
     }
-    
-    PROJECT_STATUS {
-        int id PK
-        varchar name
-        text description
-        timestamp created_at
-    }
 ```
 
-### 3. Sistema de Auditoría
+### 3. Audit System
 
 ```mermaid
 erDiagram
@@ -220,141 +213,143 @@ erDiagram
 
 ---
 
-## Modelos de Datos
+## Data Models
 
-Para el detalle completo de cada tabla consulta el esquema en [`src/schema.rs`](../src/schema.rs).
+For complete details of each table, consult the schema at [`src/schema.rs`](../src/schema.rs).
 
-### Entidades Principales
+### Main Entities
 
 #### **Projects**
-Agrupa requisitos, tests y configuraciones. Tiene relación con `ProjectStatus` para gestión del ciclo de vida.
+Groups requirements, tests, and configurations. Has a relationship with `ProjectStatus` for lifecycle management.
 
-**Campos clave**: `id`, `name`, `description`, `status_id`, `owner_id`
+**Key fields**: `id`, `name`, `description`, `status_id`, `owner_id`
 
 #### **Requirements**
-Requisitos del sistema con trazabilidad completa, jerarquías (campo `parent_id`), y metadatos como estado, categoría, aplicabilidad y método de verificación.
+System requirements with complete traceability, hierarchies (`parent_id` field), and metadata such as status, category, applicability, and verification method.
+`status` field that is an enum (Active, Completed, OnHold, Cancelled) for lifecycle management.
 
-**Campos clave**: `id`, `title`, `reference_code` (UNIQUE), `status_id`, `author_id`, `reviewer_id`, `project_id`, `parent_id`
-
+**Key fields**: `id`, `name`, `description`, `status` (enum)
 #### **Tests**
-Casos de prueba vinculados a requisitos mediante la tabla `Matrix`. Soporta jerarquías.
+Test cases linked to requirements via the `Matrix` table. Supports hierarchies.
 
-**Campos clave**: `id`, `name`, `reference_code` (UNIQUE), `status_id`, `project_id`, `parent_id`
+**Key fields**: `id`, `name`, `reference_code` (UNIQUE), `status_id`, `project_id`, `parent_id`
 
 #### **Users**
-Usuarios del sistema con autenticación. Campo `is_admin` para permisos globales.
+System users with authentication. `is_admin` field for global permissions.
 
-**Campos clave**: `id`, `username`, `email`, `password_hash`, `is_admin`
+**Key fields**: `id`, `username`, `email`, `password_hash`, `is_admin`
 
-⚠️ **Seguridad**: `password_hash` nunca debe exponerse en APIs (protegido con `#[serde(skip_serializing)]`)
+⚠️ **Security**: `password_hash` should never be exposed in APIs (protected with `#[serde(skip_serializing)]`)
 
-#### **Matrix (Trazabilidad)**
-Tabla de enlace N:M entre requisitos y tests. Clave primaria compuesta: (`req_id`, `test_id`)
+#### **Matrix (Traceability)**
+N:M linking table between requirements and tests. Composite primary key: (`req_id`, `test_id`)
 
 #### **ProjectMembers**
-Gestión de acceso por proyecto con roles (0=viewer, 1=editor, 2=admin). Clave primaria: (`project_id`, `user_id`)
+Per-project access management with roles (0=viewer, 1=editor, 2=admin). Primary key: (`project_id`, `user_id`)
 
-### Entidades de Configuración (Tagged Entities)
+### Configuration Entities (Tagged Entities)
 
-Las siguientes entidades comparten estructura y son personalizables por proyecto:
+The following entities share the same structure and are customizable per project:
 
-- **Categories**: Clasificación de requisitos
-- **Applicability**: Contextos de aplicación
-- **RequirementStatus**: Estados de requisitos
-- **TestStatus**: Estados de tests
-- **Verification**: Métodos de verificación
+- **Categories**: Classification of requirements
+- **Applicability**: Application contexts
+- **RequirementStatus**: Requirement states
+- **TestStatus**: Test states
+- **Verification**: Verification methods
 
-**Estructura común**: `id`, `title`, `description`, `tag`, `project_id`
+**Common structure**: `id`, `title`, `description`, `tag`, `project_id`
 
-### Auditoría
+### Audit
 
 #### **Logs**
-Registro completo de todas las acciones del sistema (CREATE, UPDATE, DELETE, LOGIN, etc.) con valores antiguos/nuevos en JSON.
+Complete record of all system actions (CREATE, UPDATE, DELETE, LOGIN, etc.) with old/new values in JSON.
 
-**Campos clave**: `log_id`, `user_id`, `action_type`, `entity_type`, `entity_id`, `created_at`
+**Key fields**: `log_id`, `user_id`, `action_type`, `entity_type`, `entity_id`, `created_at`
 
 ---
 
-## Relaciones Principales
+## Main Relationships
 
-### Jerarquías de Proyectos
+### Project Hierarchies
 ```
 Projects
-  ├── Requirements (con jerarquías internas vía parent_id)
-  ├── Tests (con jerarquías internas vía parent_id)
+  ├── Requirements (with internal hierarchies via parent_id)
+  ├── Tests (with internal hierarchies via parent_id)
   ├── Categories
   ├── Applicability
   ├── RequirementStatus
   ├── TestStatus
   ├── Verification
-  └── Matrix (trazabilidad req-test)
+  └── Matrix (req-test traceability)
 ```
 
-### Trazabilidad
-- **Requirements ↔ Tests**: Relación N:M mediante tabla `Matrix`
-- **Projects ↔ Users**: Relación N:M mediante `ProjectMembers` con roles
+### Traceability
+- **Requirements ↔ Tests**: N:M relationship via `Matrix` table
+- **Projects ↔ Users**: N:M relationship via `ProjectMembers` with roles
 
-### Restricciones de Integridad
-- Claves foráneas con `ON DELETE CASCADE` (excepto `status_id` y `parent_id` que usan `SET NULL`)
-- `reference_code` único en `requirements` y `tests`
-- Restricciones CHECK para prevenir auto-referencias y validar roles
+### Integrity Constraints
+- Foreign keys with `ON DELETE CASCADE` (except `status_id` and `parent_id` which use `SET NULL`)
+- Unique `reference_code` in `requirements` and `tests`
+- CHECK constraints to prevent self-references and validate roles
 
 ---
 
-## Índices y Restricciones
+## Indexes and Constraintsparent_id` which uses `SET NULL`)
+- Unique `reference_code` in `requirements` and `tests`
+- CHECK constraints to prevent self-references and validate roles
+- `ProjectStatus` enum constrains project status to: Active, Completed, OnHold, Cancelled
+- **By project**: `requirements`, `tests`, `matrix`, `logs` all indexed by `project_id`
+- **By status**: `requirements.status_id`, `tests.status_id`
+- **Hierarchies**: `requirements.parent_id`, `tests.parent_id`
+- **Audit**: `logs.user_id`, `logs.created_at`, `logs(entity_type, entity_id)`
+- **Traceability**: `matrix.req_id`, `matrix.test_id`
 
-### Índices de Rendimiento
-- **Por proyecto**: `requirements`, `tests`, `matrix`, `logs` todos indexados por `project_id`
-- **Por estado**: `requirements.status_id`, `tests.status_id`
-- **Jerarquías**: `requirements.parent_id`, `tests.parent_id`
-- **Auditoría**: `logs.user_id`, `logs.created_at`, `logs(entity_type, entity_id)`
-- **Trazabilidad**: `matrix.req_id`, `matrix.test_id`
+See migration `2025-11-23-000006_add_performance_indexes` for details.
 
-Ver migración `2025-11-23-000006_add_performance_indexes` para detalles.
-
-### Restricciones Principales
+### Main Constraints
 - **UNIQUE**: `requirements.reference_code`, `tests.reference_code`
-- **CHECK**: Validación de roles (0-2), prevención de auto-referencias en jerarquías
-- **FOREIGN KEYS**: Mayoritariamente con `ON DELETE CASCADE`, excepto `status_id` y `parent_id` que usan `SET NULL`
+- **CHECK**: Role validation (0-2), prevention of self-refereparent_id` which uses `SET NULL`
+- **ENUM**: `projects.status` uses `ProjectStatus` enum (Active, Completed, OnHold, Cancelled)
+- **FOREIGN KEYS**: Mostly with `ON DELETE CASCADE`, except `status_id` and `parent_id` which use `SET NULL`
 
-Ver migraciones `2025-11-23-000004` (FKs) y `2025-11-23-000005` (CHECKs) para detalles.
+See migrations `2025-11-23-000004` (FKs) and `2025-11-23-000005` (CHECKs) for details.
 
 ---
 
-## Migración y Evolución
+## Migration and Evolution
 
-El proyecto utiliza Diesel CLI para gestionar migraciones.
+The project uses Diesel CLI to manage migrations.
 
-### Historial de Cambios Clave
+### Key Change History
 
-| Fecha | Cambio |
-|-------|--------|
-| 2022-11-07 | Creación inicial (`requirements`, `users`, `tests`, `matrix`) |
-| 2025-08-03 | Añadida `applicability` y `justification` |
-| 2025-08-06 | Sistema multi-proyecto con `projects` y `project_members` |
-| 2025-09-06 | División de tablas de estado por proyecto |
-| 2025-11-23 | Suite de mejoras: `project_status`, FKs completas, restricciones CHECK, índices de rendimiento |
+| Date | Change |
+|------|--------|
+| 2022-11-07 | Initial creation (`requirements`, `users`, `tests`, `matrix`) |
+| 2025-08-03 | Added `applicability` and `justification` |
+| 2025-08-06 | Multi-project system witProjectStatus` enumd `project_members` |
+| 2025-09-06 | Split status tables by project |
+| 2025-11-23 | Suite of improvements: `project_status`, complete FKs, CHECK constraints, performance indexes |
 
-### Comandos Diesel
+### Diesel Commands
 
 ```bash
-diesel migration generate nombre_migracion  # Crear
-diesel migration run                         # Aplicar
-diesel migration revert                      # Revertir
-diesel print-schema > src/schema.rs         # Regenerar schema
+diesel migration generate migration_name  # Create
+diesel migration run                      # Apply
+diesel migration revert                   # Revert
+diesel print-schema > src/schema.rs      # Regenerate schema
 ```
 
-Ver carpeta [`migrations/`](../migrations/) para todas las migraciones.
+See [`migrations/`](../migrations/) folder for all migrations.
 
 ---
 
-## Recursos Adicionales
+## Additional Resources
 
-- **Schema Diesel**: [`src/schema.rs`](../src/schema.rs)
-- **Modelos Rust**: [`src/models/entities.rs`](../src/models/entities.rs)
-- **Migraciones**: [`migrations/`](../migrations/)
-- **Setup de BD**: [`DATABASE_SETUP_README.md`](../DATABASE_SETUP_README.md)
+- **Diesel Schema**: [`src/schema.rs`](../src/schema.rs)
+- **Rust Models**: [`src/models/entities.rs`](../src/models/entities.rs)
+- **Migrations**: [`migrations/`](../migrations/)
+- **DB Setup**: [`DATABASE_SETUP_README.md`](../DATABASE_SETUP_README.md)
 
 ---
 
-**Última actualización**: 9 de diciembre de 2025
+**Last updated**: December 12, 2025

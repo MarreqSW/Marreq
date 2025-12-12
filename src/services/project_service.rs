@@ -29,9 +29,9 @@ impl<'a> ProjectService<'a> {
     }
 
     /// Retrieve all projects that the specified user is a member of.
-    pub fn get_by_user_id(&self, user_id: i32) -> Result<Vec<Project>, RepoError> {
+    pub fn get_by_user_id(&self, id: i32) -> Result<Vec<Project>, RepoError> {
         let repo = self.state.repo_read();
-        let memberships = repo.get_projects_for_user(user_id)?;
+        let memberships = repo.get_projects_for_user(id)?;
 
         let mut projects = Vec::with_capacity(memberships.len());
 
@@ -43,11 +43,7 @@ impl<'a> ProjectService<'a> {
             }
         }
 
-        projects.sort_by(|a, b| {
-            a.project_name
-                .to_lowercase()
-                .cmp(&b.project_name.to_lowercase())
-        });
+        projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
 
         Ok(projects)
     }
@@ -76,10 +72,10 @@ impl<'a> ProjectService<'a> {
     ) -> Result<Project, RepoError> {
         let before = self.get_by_id(id)?;
 
-        // Handle project_owner_id logic before validation
-        if payload.project_owner_id.is_none() {
+        // Handle owner_id logic before validation
+        if payload.owner_id.is_none() {
             // If no owner provided in payload, use existing owner or assign actor
-            payload.project_owner_id = before.project_owner_id.or(Some(actor.user_id));
+            payload.owner_id = before.owner_id.or(Some(actor.id));
         }
 
         self.prepare_update_payload(&mut payload)?;
@@ -109,21 +105,21 @@ impl<'a> ProjectService<'a> {
     }
 
     fn prepare_new_payload(&self, payload: &mut NewProject) -> Result<(), RepoError> {
-        sanitize_string(&mut payload.project_name);
-        sanitize_optional_string(&mut payload.project_description);
+        sanitize_string(&mut payload.name);
+        sanitize_optional_string(&mut payload.description);
 
         validate_project(payload).map_err(|err| RepoError::BadInput(err.to_string()))
     }
 
     fn prepare_update_payload(&self, payload: &mut UpdateProject) -> Result<(), RepoError> {
-        sanitize_string(&mut payload.project_name);
-        sanitize_optional_string(&mut payload.project_description);
+        sanitize_string(&mut payload.name);
+        sanitize_optional_string(&mut payload.description);
 
         let mut clone = NewProject {
-            project_name: payload.project_name.clone(),
-            project_description: payload.project_description.clone(),
-            project_status: payload.project_status.clone(),
-            project_owner_id: payload.project_owner_id,
+            name: payload.name.clone(),
+            description: payload.description.clone(),
+            status: payload.status.unwrap_or_default(),
+            owner_id: payload.owner_id,
         };
         self.prepare_new_payload(&mut clone)
     }
@@ -134,7 +130,7 @@ impl<'a> ProjectService<'a> {
 
     fn log_created(&self, actor: &User, id: i32, entity: &Project) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.user_id);
+            let ctx = LogCtx::new(actor.id);
             if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!("Failed to log project creation {id}: {_err}");
@@ -144,12 +140,12 @@ impl<'a> ProjectService<'a> {
 
     fn log_updated(&self, actor: &User, before: &Project, after: &Project) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.user_id);
+            let ctx = LogCtx::new(actor.id);
             if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log project update {} -> {}: {_err}",
-                    before.project_id, after.project_id
+                    before.id, after.id
                 );
             }
         }
@@ -157,13 +153,10 @@ impl<'a> ProjectService<'a> {
 
     fn log_deleted(&self, actor: &User, entity: &Project) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.user_id);
+            let ctx = LogCtx::new(actor.id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log project deletion {}: {_err}",
-                    entity.project_id
-                );
+                eprintln!("Failed to log project deletion {}: {_err}", entity.id);
             }
         }
     }
@@ -174,6 +167,7 @@ mod tests {
     use super::*;
     use crate::models::ProjectMember;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
 
@@ -196,13 +190,13 @@ mod tests {
 
     fn project(id: i32, name: &str) -> Project {
         Project {
-            project_id: id,
-            project_name: name.into(),
-            project_description: Some("Existing description".into()),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("open".into()),
-            project_owner_id: Some(1),
+            id: id,
+            name: name.into(),
+            description: Some("Existing description".into()),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status: ProjectStatus::Active,
+            owner_id: Some(1),
         }
     }
 
@@ -213,18 +207,18 @@ mod tests {
         let service = ProjectService::new(&state);
 
         let payload = NewProject {
-            project_name: "  Project Phoenix  ".into(),
-            project_description: Some("   ".into()),
-            project_status: "  active  ".into(),
-            project_owner_id: Some(1),
+            name: "  Project Phoenix  ".into(),
+            description: Some("   ".into()),
+            status: ProjectStatus::Active,
+            owner_id: Some(1),
         };
 
         let id = service.create(&actor(), payload).unwrap();
         let stored = service.get_by_id(id).unwrap();
 
-        assert_eq!(stored.project_name, "Project Phoenix");
-        assert_eq!(stored.project_description, None);
-        assert_eq!(stored.project_status.as_deref(), Some("  active  "));
+        assert_eq!(stored.name, "Project Phoenix");
+        assert_eq!(stored.description, None);
+        assert_eq!(stored.status, ProjectStatus::Active);
     }
 
     #[test]
@@ -234,10 +228,10 @@ mod tests {
         let service = ProjectService::new(&state);
 
         let payload = NewProject {
-            project_name: " ".into(),
-            project_description: None,
-            project_status: "planned".into(),
-            project_owner_id: None,
+            name: " ".into(),
+            description: None,
+            status: ProjectStatus::Completed,
+            owner_id: None,
         };
 
         let err = service.create(&actor(), payload).unwrap_err();
@@ -252,20 +246,17 @@ mod tests {
         let service = ProjectService::new(&state);
 
         let payload = UpdateProject {
-            project_name: "  Modernized  ".into(),
-            project_description: Some("  Updated description  ".into()),
-            project_status: "  done  ".into(),
-            project_owner_id: Some(2),
+            name: "  Modernized  ".into(),
+            description: Some("  Updated description  ".into()),
+            status: Some(ProjectStatus::OnHold),
+            owner_id: Some(2),
         };
 
         let updated = service.update(&actor(), 1, payload).unwrap();
-        assert_eq!(updated.project_name, "Modernized");
-        assert_eq!(
-            updated.project_description.as_deref(),
-            Some("Updated description")
-        );
-        assert_eq!(updated.project_status.as_deref(), Some("  done  "));
-        assert_eq!(updated.project_owner_id, Some(2));
+        assert_eq!(updated.name, "Modernized");
+        assert_eq!(updated.description.as_deref(), Some("Updated description"));
+        assert_eq!(updated.status, ProjectStatus::OnHold);
+        assert_eq!(updated.owner_id, Some(2));
     }
 
     #[test]
@@ -275,10 +266,10 @@ mod tests {
         let service = ProjectService::new(&state);
 
         let payload = UpdateProject {
-            project_name: "Valid".into(),
-            project_description: Some("Desc".into()),
-            project_status: "active".into(),
-            project_owner_id: None,
+            name: "Valid".into(),
+            description: Some("Desc".into()),
+            status: Some(ProjectStatus::Active),
+            owner_id: None,
         };
 
         let err = service.update(&actor(), 99, payload).unwrap_err();
@@ -293,37 +284,37 @@ mod tests {
         let service = ProjectService::new(&state);
 
         let payload = UpdateProject {
-            project_name: "Legacy".into(),
-            project_description: Some("Still around".into()),
-            project_status: "active".into(),
-            project_owner_id: None,
+            name: "Legacy".into(),
+            description: Some("Still around".into()),
+            status: Some(ProjectStatus::Active),
+            owner_id: None,
         };
 
         let updated = service.update(&actor(), 1, payload).unwrap();
-        assert_eq!(updated.project_owner_id, Some(1));
+        assert_eq!(updated.owner_id, Some(1));
     }
 
     #[test]
     fn update_assigns_actor_when_owner_missing_from_existing_record() {
         let mut repo = DieselRepoMock::default();
         let mut orphaned = project(2, "Orphaned");
-        orphaned.project_owner_id = None;
+        orphaned.owner_id = None;
         repo.projects.insert(2, orphaned);
         let state = state_with_repo(repo);
         let service = ProjectService::new(&state);
 
         let mut editor = actor();
-        editor.user_id = 314;
+        editor.id = 314;
 
         let payload = UpdateProject {
-            project_name: "Orphaned".into(),
-            project_description: Some("Needs owner".into()),
-            project_status: "active".into(),
-            project_owner_id: None,
+            name: "Orphaned".into(),
+            description: Some("Needs owner".into()),
+            status: Some(ProjectStatus::Active),
+            owner_id: None,
         };
 
         let updated = service.update(&editor, 2, payload).unwrap();
-        assert_eq!(updated.project_owner_id, Some(314));
+        assert_eq!(updated.owner_id, Some(314));
     }
 
     #[test]
@@ -369,8 +360,8 @@ mod tests {
         let projects = service.get_by_user_id(42).unwrap();
 
         assert_eq!(projects.len(), 2);
-        assert_eq!(projects[0].project_name, "Alpha Mission");
-        assert_eq!(projects[1].project_name, "Beta Initiative");
+        assert_eq!(projects[0].name, "Alpha Mission");
+        assert_eq!(projects[1].name, "Beta Initiative");
     }
 
     #[test]
@@ -381,7 +372,7 @@ mod tests {
         let service = ProjectService::new(&state);
 
         let deleted = service.delete(&actor(), 4).unwrap();
-        assert_eq!(deleted.project_id, 4);
+        assert_eq!(deleted.id, 4);
         assert!(matches!(service.get_by_id(4), Err(RepoError::NotFound)));
     }
 
@@ -394,10 +385,10 @@ mod tests {
         let service = ProjectService::new(&state);
 
         let mut projects = service.list_all().unwrap();
-        projects.sort_by_key(|p| p.project_id);
+        projects.sort_by_key(|p| p.id);
         assert_eq!(projects.len(), 2);
-        assert_eq!(projects[0].project_name, "A");
-        assert_eq!(projects[1].project_name, "B");
+        assert_eq!(projects[0].name, "A");
+        assert_eq!(projects[1].name, "B");
     }
 
     #[test]
@@ -445,8 +436,8 @@ mod tests {
 
         let projects = service.get_by_user_id(42).unwrap();
         assert_eq!(projects.len(), 2);
-        assert_eq!(projects[0].project_name, "Alpha Project");
-        assert_eq!(projects[1].project_name, "Zebra Project");
+        assert_eq!(projects[0].name, "Alpha Project");
+        assert_eq!(projects[1].name, "Zebra Project");
     }
 
     #[test]
@@ -484,9 +475,9 @@ mod tests {
 
         let projects = service.get_by_user_id(42).unwrap();
         assert_eq!(projects.len(), 3);
-        assert_eq!(projects[0].project_name, "Alpha Project");
-        assert_eq!(projects[1].project_name, "beta project");
-        assert_eq!(projects[2].project_name, "CHARLIE PROJECT");
+        assert_eq!(projects[0].name, "Alpha Project");
+        assert_eq!(projects[1].name, "beta project");
+        assert_eq!(projects[2].name, "CHARLIE PROJECT");
     }
 
     #[test]
@@ -515,7 +506,7 @@ mod tests {
 
         let projects = service.get_by_user_id(42).unwrap();
         assert_eq!(projects.len(), 1);
-        assert_eq!(projects[0].project_name, "Existing Project");
+        assert_eq!(projects[0].name, "Existing Project");
     }
 
     #[test]
@@ -561,12 +552,12 @@ mod tests {
         assert_eq!(projects3.len(), 3);
 
         for i in 0..3 {
-            assert_eq!(projects1[i].project_name, projects2[i].project_name);
-            assert_eq!(projects2[i].project_name, projects3[i].project_name);
+            assert_eq!(projects1[i].name, projects2[i].name);
+            assert_eq!(projects2[i].name, projects3[i].name);
         }
 
-        assert_eq!(projects1[0].project_name, "Project A");
-        assert_eq!(projects1[1].project_name, "Project B");
-        assert_eq!(projects1[2].project_name, "Project C");
+        assert_eq!(projects1[0].name, "Project A");
+        assert_eq!(projects1[1].name, "Project B");
+        assert_eq!(projects1[2].name, "Project C");
     }
 }

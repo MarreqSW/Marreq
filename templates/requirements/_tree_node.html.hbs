@@ -1,16 +1,16 @@
 <div class="c-tree__node" 
-     data-node-id="{{requirement.req_id}}"
-     data-requirement-id="{{requirement.req_id}}"
-     data-status="{{requirement.req_current_status}}"
-     data-category="{{requirement.req_category}}"
-     data-verification="{{requirement.req_verification}}"
-     data-search-text="{{requirement.req_reference}} {{requirement.req_title}} {{requirement.req_description}}"
+     data-node-id="{{requirement.id}}"
+     data-requirement-id="{{requirement.id}}"
+     data-status="{{requirement.status_id}}"
+     data-category="{{requirement.category_id}}"
+     data-verification="{{requirement.verification_method_id}}"
+     data-search-text="{{requirement.reference_code}} {{requirement.title}} {{requirement.description}}"
      role="treeitem"
      {{#if children}}aria-expanded="false"{{/if}}>
   <div class="c-tree__node-content">
     <button class="c-tree__toggle" 
             type="button" 
-            data-tree-toggle="{{requirement.req_id}}"
+            data-tree-toggle="{{requirement.id}}"
             {{#if children}}
             aria-expanded="false"
             {{else}}
@@ -26,17 +26,17 @@
     <div class="c-tree__requirement-card c-requirement-card" tabindex="0">
       <div class="c-tree__requirement-header">
         <div class="c-tree__requirement-title-wrapper">
-          <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.req_id}}"
+          <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.id}}"
             class="reqman-requirement-card__reference-text"
             title="View requirement details">
-            {{requirement.req_reference}}
+            {{requirement.reference_code}}
           </a>
-          <div class="c-tree__requirement-title c-linked-requirements__title" title="{{requirement.req_title}}">
-            {{requirement.req_title}}
+          <div class="c-tree__requirement-title c-linked-requirements__title" title="{{requirement.title}}">
+            {{requirement.title}}
           </div>
         </div>
         <div class="c-tree__actions">
-          <a href="/p/{{requirement.project_id}}/requirements/edit/{{requirement.req_id}}" 
+          <a href="/p/{{requirement.project_id}}/requirements/edit/{{requirement.id}}" 
              class="c-tree__action-button" 
              title="Edit requirement"
              aria-label="Edit requirement">
@@ -44,7 +44,7 @@
               <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
             </svg>
           </a>
-          <a href="/p/{{requirement.project_id}}/requirements/new?parent={{requirement.req_id}}" 
+          <a href="/p/{{requirement.project_id}}/requirements/new?parent={{requirement.id}}" 
              class="c-tree__action-button" 
              title="Add child requirement"
              aria-label="Add child requirement">
@@ -54,15 +54,15 @@
           </a>
         </div>
         <div class="requirement-status">
-          <span class="reqman-requirements-status-badge reqman-requirements-status-badge--{{requirement.req_current_status}}"
-            data-status="{{requirement.req_current_status}}"
-            title="Status: {{requirement.req_current_status}}">
-            {{requirement.req_current_status}}
+          <span class="reqman-requirements-status-badge reqman-requirements-status-badge--{{requirement.status_id}}"
+            data-status="{{requirement.status_id}}"
+            title="Status: {{requirement.status_id}}">
+            {{requirement.status_id}}
           </span>
         </div>
       </div>
-      <div class="c-tree__requirement-description" title="{{requirement.req_description}}">
-        {{requirement.req_description}}
+      <div class="c-tree__requirement-description" title="{{requirement.description}}">
+        {{requirement.description}}
       </div>
       {{#if requirement.req_author_name}}
       <div class="c-tree__requirement-meta">
@@ -106,8 +106,8 @@
   </div>
   {{#if children}}
   <div class="c-tree__children" 
-       id="children-{{requirement.req_id}}" 
-       data-tree-branch="{{requirement.req_id}}" 
+       id="children-{{requirement.id}}" 
+       data-tree-branch="{{requirement.id}}" 
        role="group"
        hidden>
     {{#each children}}

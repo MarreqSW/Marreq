@@ -35,7 +35,17 @@
 //! - Failed (2): Test failed
 //! - Pending (3): Awaiting execution
 //! - In Progress (4): Currently executing
+//!
+//! **Project Statuses**:
+//! - Active: Project is currently active and in progress
+//! - Completed: Project has been completed
+//! - OnHold: Project is temporarily paused
+//! - Cancelled: Project has been cancelled
 
+use diesel::deserialize::{self, FromSql};
+use diesel::pg::Pg;
+use diesel::serialize::{self, Output, ToSql};
+use diesel::{AsExpression, FromSqlRow};
 use serde::{Deserialize, Serialize};
 
 /// Requirement status values as defined in the database.
@@ -262,6 +272,147 @@ impl std::fmt::Display for TestStatusEnum {
     }
 }
 
+/// Project status values representing the lifecycle states of a project.
+///
+/// These statuses are stored directly in the database as VARCHAR text values
+/// but are represented as a type-safe enum in Rust code. Diesel automatically
+/// handles the conversion between the database string and the enum.
+///
+/// - Active: Project is currently active and in progress
+/// - Completed: Project has been completed
+/// - OnHold: Project is temporarily paused
+/// - Cancelled: Project has been cancelled
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, AsExpression, FromSqlRow,
+)]
+#[diesel(sql_type = diesel::sql_types::Text)]
+pub enum ProjectStatus {
+    Active,
+    Completed,
+    OnHold,
+    Cancelled,
+}
+
+impl ProjectStatus {
+    /// Returns the full title of the status.
+    pub fn title(&self) -> &'static str {
+        match self {
+            ProjectStatus::Active => "Active",
+            ProjectStatus::Completed => "Completed",
+            ProjectStatus::OnHold => "On Hold",
+            ProjectStatus::Cancelled => "Cancelled",
+        }
+    }
+
+    /// Returns the description of the status.
+    pub fn description(&self) -> &'static str {
+        match self {
+            ProjectStatus::Active => "The project is currently active and in progress",
+            ProjectStatus::Completed => "The project has been completed",
+            ProjectStatus::OnHold => "The project is temporarily on hold",
+            ProjectStatus::Cancelled => "The project has been cancelled",
+        }
+    }
+
+    /// Returns the normalized lowercase string representation for database storage.
+    pub fn to_db_string(&self) -> &'static str {
+        match self {
+            ProjectStatus::Active => "active",
+            ProjectStatus::Completed => "completed",
+            ProjectStatus::OnHold => "on_hold",
+            ProjectStatus::Cancelled => "cancelled",
+        }
+    }
+
+    /// Convert from a database string to the enum variant.
+    pub fn from_db_string(s: &str) -> Option<Self> {
+        let normalized = s.trim().to_ascii_lowercase();
+        match normalized.as_str() {
+            "active" => Some(ProjectStatus::Active),
+            "completed" => Some(ProjectStatus::Completed),
+            "on_hold" | "on hold" | "onhold" => Some(ProjectStatus::OnHold),
+            "cancelled" | "canceled" => Some(ProjectStatus::Cancelled),
+            _ => None,
+        }
+    }
+
+    /// Convert from a title string to the enum variant.
+    pub fn from_title(title: &str) -> Option<Self> {
+        Self::from_db_string(title)
+    }
+
+    /// Returns all status variants in order.
+    pub fn all() -> Vec<Self> {
+        vec![
+            ProjectStatus::Active,
+            ProjectStatus::Completed,
+            ProjectStatus::OnHold,
+            ProjectStatus::Cancelled,
+        ]
+    }
+
+    /// Check if the project is in an active state.
+    pub fn is_active(&self) -> bool {
+        matches!(self, ProjectStatus::Active)
+    }
+
+    /// Check if the project is completed or cancelled.
+    pub fn is_finished(&self) -> bool {
+        matches!(self, ProjectStatus::Completed | ProjectStatus::Cancelled)
+    }
+
+    /// Get the CSS badge class for this status (for HTML templates).
+    pub fn badge_class(&self) -> &'static str {
+        match self {
+            ProjectStatus::Active => "bg-success",
+            ProjectStatus::Completed => "bg-info",
+            ProjectStatus::OnHold => "bg-warning",
+            ProjectStatus::Cancelled => "bg-secondary",
+        }
+    }
+}
+
+impl std::fmt::Display for ProjectStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.title())
+    }
+}
+
+impl Default for ProjectStatus {
+    fn default() -> Self {
+        ProjectStatus::Active
+    }
+}
+
+// Diesel FromSql implementation for ProjectStatus
+impl FromSql<diesel::sql_types::Text, Pg> for ProjectStatus {
+    fn from_sql(
+        bytes: <Pg as diesel::backend::Backend>::RawValue<'_>,
+    ) -> deserialize::Result<Self> {
+        let value = <String as FromSql<diesel::sql_types::Text, Pg>>::from_sql(bytes)?;
+        Self::from_db_string(&value)
+            .ok_or_else(|| format!("Unrecognized project status: {}", value).into())
+    }
+}
+
+// Diesel ToSql implementation for ProjectStatus
+impl ToSql<diesel::sql_types::Text, Pg> for ProjectStatus {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        let value = self.to_db_string();
+        <str as ToSql<diesel::sql_types::Text, Pg>>::to_sql(value, out)
+    }
+}
+
+// Rocket FromFormField implementation for ProjectStatus
+impl<'r> rocket::form::FromFormField<'r> for ProjectStatus {
+    fn from_value(field: rocket::form::ValueField<'r>) -> rocket::form::Result<'r, Self> {
+        Self::from_db_string(field.value).ok_or_else(|| {
+            rocket::form::Error::validation(format!("Invalid project status: {}", field.value))
+                .into()
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -337,5 +488,89 @@ mod tests {
     fn test_status_from_invalid_title() {
         assert_eq!(TestStatusEnum::from_title("invalid"), None);
         assert_eq!(TestStatusEnum::from_title(""), None);
+    }
+
+    #[test]
+    fn project_status_db_string_round_trip() {
+        for status in ProjectStatus::all() {
+            let db_str = status.to_db_string();
+            let recovered = ProjectStatus::from_db_string(db_str);
+            assert_eq!(Some(status), recovered);
+        }
+    }
+
+    #[test]
+    fn project_status_title_round_trip() {
+        for status in ProjectStatus::all() {
+            let title = status.title();
+            let recovered = ProjectStatus::from_title(title);
+            assert_eq!(Some(status), recovered);
+        }
+    }
+
+    #[test]
+    fn project_status_properties() {
+        assert_eq!(ProjectStatus::Active.title(), "Active");
+        assert_eq!(ProjectStatus::Active.to_db_string(), "active");
+        assert!(ProjectStatus::Active.is_active());
+        assert!(!ProjectStatus::Active.is_finished());
+
+        assert_eq!(ProjectStatus::Completed.title(), "Completed");
+        assert!(!ProjectStatus::Completed.is_active());
+        assert!(ProjectStatus::Completed.is_finished());
+
+        assert_eq!(ProjectStatus::OnHold.title(), "On Hold");
+        assert_eq!(ProjectStatus::OnHold.to_db_string(), "on_hold");
+        assert!(!ProjectStatus::OnHold.is_active());
+
+        assert_eq!(ProjectStatus::Cancelled.badge_class(), "bg-secondary");
+    }
+
+    #[test]
+    fn project_status_from_db_string_variations() {
+        // Test case insensitivity
+        assert_eq!(
+            ProjectStatus::from_db_string("ACTIVE"),
+            Some(ProjectStatus::Active)
+        );
+        assert_eq!(
+            ProjectStatus::from_db_string("Active"),
+            Some(ProjectStatus::Active)
+        );
+
+        // Test "on hold" variations
+        assert_eq!(
+            ProjectStatus::from_db_string("on hold"),
+            Some(ProjectStatus::OnHold)
+        );
+        assert_eq!(
+            ProjectStatus::from_db_string("On Hold"),
+            Some(ProjectStatus::OnHold)
+        );
+        assert_eq!(
+            ProjectStatus::from_db_string("onhold"),
+            Some(ProjectStatus::OnHold)
+        );
+        assert_eq!(
+            ProjectStatus::from_db_string("on_hold"),
+            Some(ProjectStatus::OnHold)
+        );
+
+        // Test cancelled/canceled
+        assert_eq!(
+            ProjectStatus::from_db_string("cancelled"),
+            Some(ProjectStatus::Cancelled)
+        );
+        assert_eq!(
+            ProjectStatus::from_db_string("canceled"),
+            Some(ProjectStatus::Cancelled)
+        );
+    }
+
+    #[test]
+    fn project_status_from_invalid() {
+        assert_eq!(ProjectStatus::from_db_string("invalid"), None);
+        assert_eq!(ProjectStatus::from_db_string(""), None);
+        assert_eq!(ProjectStatus::from_db_string("pending"), None);
     }
 }

@@ -9,13 +9,16 @@ use rocket::State;
 
 use crate::app::AppState;
 use crate::helper_functions::{decorators::decorate_tests_with_repo, get_selected_project_id};
-use crate::models::{Category, DecoratedTest, Project, ProjectMember, Requirement, Test, User};
+use crate::models::{
+    Category, DecoratedTestCase, Project, ProjectMember, Requirement, TestCase, User,
+};
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
     LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
-    TestsRepository, UserRepository,
+    TestsCaseRepository, UserRepository,
 };
 use crate::services::project_service::ProjectService;
+use crate::status_enums::ProjectStatus;
 
 /// Helper function to get a database connection with proper error handling
 pub(crate) fn get_db_connection(
@@ -33,15 +36,11 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
 
     if user.is_admin {
         let mut projects = repo.get_projects_all().unwrap_or_default();
-        projects.sort_by(|a, b| {
-            a.project_name
-                .to_lowercase()
-                .cmp(&b.project_name.to_lowercase())
-        });
+        projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
         return projects;
     }
 
-    let memberships = repo.get_projects_for_user(user.user_id).unwrap_or_default();
+    let memberships = repo.get_projects_for_user(user.id).unwrap_or_default();
 
     if memberships.is_empty() {
         return Vec::new();
@@ -52,11 +51,7 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
         .filter_map(|membership| repo.get_project_by_id(membership.project_id).ok())
         .collect();
 
-    projects.sort_by(|a, b| {
-        a.project_name
-            .to_lowercase()
-            .cmp(&b.project_name.to_lowercase())
-    });
+    projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     projects
 }
 
@@ -65,14 +60,10 @@ pub(crate) fn resolve_selected_project_id(
     projects: &[Project],
 ) -> Option<i32> {
     match requested {
-        Some(project_id)
-            if projects
-                .iter()
-                .any(|project| project.project_id == project_id) =>
-        {
+        Some(project_id) if projects.iter().any(|project| project.id == project_id) => {
             Some(project_id)
         }
-        _ => projects.first().map(|project| project.project_id),
+        _ => projects.first().map(|project| project.id),
     }
 }
 
@@ -109,7 +100,7 @@ pub(crate) fn decorate_projects_for_listing(
     let repo = state.repo_read();
 
     let membership_by_project: HashMap<i32, ProjectMember> = repo
-        .get_projects_for_user(user.user_id)
+        .get_projects_for_user(user.id)
         .unwrap_or_default()
         .into_iter()
         .map(|membership| (membership.project_id, membership))
@@ -119,28 +110,28 @@ pub(crate) fn decorate_projects_for_listing(
         .get_users_all()
         .unwrap_or_default()
         .into_iter()
-        .map(|u| (u.user_id, u.user_name))
+        .map(|u| (u.id, u.name))
         .collect();
 
     let mut decorated: Vec<Value> = Vec::with_capacity(projects.len());
 
     for project in projects {
-        if !user.is_admin && !membership_by_project.contains_key(&project.project_id) {
+        if !user.is_admin && !membership_by_project.contains_key(&project.id) {
             continue;
         }
 
         let requirements_count = repo
-            .get_requirements_by_project(project.project_id)
+            .get_requirements_by_project(project.id)
             .map(|reqs| reqs.len())
             .unwrap_or(0);
 
         let tests_count = repo
-            .get_tests_by_project(project.project_id)
+            .get_tests_by_project(project.id)
             .map(|tests| tests.len())
             .unwrap_or(0);
 
         let role_label = membership_by_project
-            .get(&project.project_id)
+            .get(&project.id)
             .map(|membership| describe_project_role(membership.role).to_string())
             .or_else(|| {
                 if user.is_admin {
@@ -151,46 +142,40 @@ pub(crate) fn decorate_projects_for_listing(
             });
 
         let role_id = membership_by_project
-            .get(&project.project_id)
+            .get(&project.id)
             .map(|membership| membership.role);
 
         let owner_name = project
-            .project_owner_id
+            .owner_id
             .and_then(|owner_id| owner_lookup.get(&owner_id).cloned());
 
-        let status_original = project
-            .project_status
-            .as_ref()
-            .map(|status| status.trim().to_string());
-        let status_display = status_original
-            .clone()
-            .unwrap_or_else(|| "Unknown".to_string());
-        let status_normalized = status_original
-            .as_ref()
-            .map(|status| status.to_ascii_lowercase())
-            .unwrap_or_else(|| "unknown".to_string());
-        let status_badge = project_status_badge(status_display.as_str());
+        let status = project.status;
+
+        let status_display = status.title();
+        let status_normalized = status.to_db_string();
+        let status_badge = status.badge_class();
+
         let project_initial = project
-            .project_name
+            .name
             .chars()
             .find(|c| c.is_alphanumeric())
             .map(|c| c.to_uppercase().collect::<String>())
             .unwrap_or_else(|| "#".to_string());
 
         decorated.push(json!({
-            "project_id": project.project_id,
-            "project_name": project.project_name,
-            "project_description": project.project_description,
-            "project_creation_date": project
-                .project_creation_date
+            "project_id": project.id,
+            "name": project.name,
+            "description": project.description,
+            "creation_date": project
+                .creation_date
                 .map(|dt| dt.format("%Y-%m-%d").to_string()),
-            "project_update_date": project
-                .project_update_date
+            "update_date": project
+                .update_date
                 .map(|dt| dt.format("%Y-%m-%d").to_string()),
-            "project_status": status_display,
+            "status_id": status_display,
             "project_status_normalized": status_normalized,
             "project_status_badge": status_badge,
-            "project_owner_id": project.project_owner_id,
+            "owner_id": project.owner_id,
             "project_owner_name": owner_name,
             "role_label": role_label,
             "role_id": role_id,
@@ -202,12 +187,12 @@ pub(crate) fn decorate_projects_for_listing(
 
     decorated.sort_by(|a, b| {
         let a_name = a
-            .get("project_name")
+            .get("name")
             .and_then(|value| value.as_str())
             .unwrap_or("")
             .to_lowercase();
         let b_name = b
-            .get("project_name")
+            .get("name")
             .and_then(|value| value.as_str())
             .unwrap_or("")
             .to_lowercase();
@@ -217,7 +202,10 @@ pub(crate) fn decorate_projects_for_listing(
     decorated
 }
 
-pub(crate) fn decorate_tests_cached(state: &AppState, tests: Vec<Test>) -> Vec<DecoratedTest> {
+pub(crate) fn decorate_tests_cached(
+    state: &AppState,
+    tests: Vec<TestCase>,
+) -> Vec<DecoratedTestCase> {
     let repo = state.repo_read();
     decorate_tests_with_repo(&*repo, tests)
 }
@@ -232,25 +220,15 @@ pub(crate) fn describe_project_role(role: i32) -> &'static str {
     }
 }
 
-pub(crate) fn project_status_badge(status: &str) -> &'static str {
-    let normalized = status.trim().to_ascii_lowercase();
-    match normalized.as_str() {
-        "active" => "bg-success",
-        "archived" | "inactive" => "bg-secondary",
-        "on hold" | "paused" | "maintenance" => "bg-warning",
-        _ => "bg-secondary",
-    }
-}
-
 pub(crate) fn get_category_by_id_cached(state: &AppState, id: i32) -> Category {
     state
         .repo_read()
         .get_category_by_id(id)
         .unwrap_or_else(|_| Category {
-            cat_id: id,
-            cat_title: format!("Unknown Category ({})", id),
-            cat_description: "Category not found".to_string(),
-            cat_tag: "unknown".to_string(),
+            id: id,
+            title: format!("Unknown Category ({})", id),
+            description: "Category not found".to_string(),
+            tag: "unknown".to_string(),
             project_id: 1,
         })
 }
@@ -258,18 +236,18 @@ pub(crate) fn get_category_by_id_cached(state: &AppState, id: i32) -> Category {
 pub(crate) fn get_status_name_by_id_cached(state: &AppState, id: i32) -> String {
     state
         .repo_read()
-        .get_status_by_id(id)
-        .map(|s| s.st_title)
+        .get_requirement_status_by_id(id)
+        .map(|s| s.title)
         .unwrap_or_else(|_| "[Status Not Found]".to_string())
 }
 
 pub(crate) fn get_requirements_for_test_cached(
     state: &AppState,
-    test_id: i32,
+    id: i32,
 ) -> Result<Vec<Requirement>, String> {
     state
         .repo_read()
-        .get_requirements_for_test(test_id)
+        .get_requirements_for_test(id)
         .map_err(|e| e.to_string())
 }
 
@@ -278,12 +256,12 @@ pub(crate) fn get_project_by_id_pooled_safe(state: &State<AppState>, project_id:
     ProjectService::new(state.inner())
         .get_by_id(project_id)
         .unwrap_or(Project {
-            project_id: 0,
-            project_name: "Unknown Project".to_string(),
-            project_description: Some("Unknown project".to_string()),
-            project_creation_date: Some(Utc::now().naive_utc()),
-            project_update_date: Some(Utc::now().naive_utc()),
-            project_status: Some("Unknown".to_string()),
-            project_owner_id: Some(0),
+            id: 0,
+            name: "Unknown Project".to_string(),
+            description: Some("Unknown project".to_string()),
+            creation_date: Some(Utc::now().naive_utc()),
+            update_date: Some(Utc::now().naive_utc()),
+            owner_id: Some(0),
+            status: ProjectStatus::Active,
         })
 }

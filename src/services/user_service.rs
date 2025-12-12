@@ -1,8 +1,9 @@
 //! Service encapsulating user related operations.
 
 use crate::app::{AppState, DieselCachedRepo};
+use crate::auth::password::hash_password;
 use crate::logger::{LogCtx, Logger};
-use crate::models::{NewUser, UpdateUser, User};
+use crate::models::{NewUser, UpdateUser, User, UserCreateRequest};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, UserRepository};
 use crate::validation::sanitize_string;
@@ -39,11 +40,26 @@ impl<'a> UserService<'a> {
         self.state.repo_read().get_user_by_id(id)
     }
 
-    /// Create a new user entry and log the action.
-    pub fn create(&self, actor: &User, mut payload: NewUser) -> Result<i32, RepoError> {
-        sanitize_string(&mut payload.user_username);
-        sanitize_string(&mut payload.user_name);
-        sanitize_string(&mut payload.user_email);
+    /// Create a new user from a request containing a plain password.
+    ///
+    /// This method sanitizes input, hashes the password, and creates the user.
+    /// Always provide plain text passwords - they will be hashed with bcrypt.
+    pub fn create(&self, actor: &User, request: UserCreateRequest) -> Result<i32, RepoError> {
+        let password_hash = hash_password(&request.password)
+            .map_err(|e| RepoError::BadInput(format!("Password hashing failed: {}", e)))?;
+
+        let mut payload = NewUser {
+            id: None,
+            username: request.username,
+            name: request.name,
+            email: request.email,
+            password_hash,
+            is_admin: request.is_admin,
+        };
+
+        sanitize_string(&mut payload.username);
+        sanitize_string(&mut payload.name);
+        sanitize_string(&mut payload.email);
 
         let id = {
             let mut repo = self.state.repo_write();
@@ -71,11 +87,11 @@ impl<'a> UserService<'a> {
         actor: &User,
         payload: &UpdateUser,
     ) -> Result<bool, RepoError> {
-        let user_id = payload.user_id.ok_or(RepoError::NotFound)?;
-        if !actor.is_admin && actor.user_id != user_id {
+        let id = payload.id.ok_or(RepoError::NotFound)?;
+        if !actor.is_admin && actor.id != id {
             return Err(RepoError::Unauthorized);
         }
-        let old = self.get_by_id(user_id)?;
+        let old = self.get_by_id(id)?;
 
         let updated = {
             let mut repo = self.state.repo_write();
@@ -84,12 +100,12 @@ impl<'a> UserService<'a> {
 
         if updated {
             if let Ok(mut conn) = self.db_connection() {
-                let ctx = LogCtx::new(actor.user_id);
+                let ctx = LogCtx::new(actor.id);
                 if let Err(_err) =
-                    Logger::updated(conn.as_mut(), &ctx, &old, &self.get_by_id(old.user_id)?)
+                    Logger::updated(conn.as_mut(), &ctx, &old, &self.get_by_id(old.id)?)
                 {
                     #[cfg(debug_assertions)]
-                    eprintln!("Failed to log user update {}: {_err}", old.user_id);
+                    eprintln!("Failed to log user update {}: {_err}", old.id);
                 }
             }
         }
@@ -103,7 +119,7 @@ impl<'a> UserService<'a> {
 
     fn log_created(&self, actor: &User, id: i32, entity: &NewUser) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.user_id);
+            let ctx = LogCtx::new(actor.id);
             if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!("Failed to log user creation {id}: {_err}");
@@ -113,10 +129,10 @@ impl<'a> UserService<'a> {
 
     fn log_deleted(&self, actor: &User, entity: &User) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.user_id);
+            let ctx = LogCtx::new(actor.id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
-                eprintln!("Failed to log user deletion {}: {_err}", entity.user_id);
+                eprintln!("Failed to log user deletion {}: {_err}", entity.id);
             }
         }
     }
@@ -138,21 +154,20 @@ mod tests {
         DieselRepoMock::make_user(99, "admin", "")
     }
 
-    fn new_user_payload() -> NewUser {
-        NewUser {
-            user_id: None,
-            user_username: "  alice  ".into(),
-            user_name: "  Alice Example  ".into(),
-            user_email: "  alice@example.com  ".into(),
-            user_password: "secret".into(),
+    fn new_user_payload() -> UserCreateRequest {
+        UserCreateRequest {
+            username: "  alice  ".into(),
+            name: "  Alice Example  ".into(),
+            email: "  alice@example.com  ".into(),
+            password: "secret".into(),
             is_admin: false,
         }
     }
 
     fn sample_user(id: i32, username: &str) -> User {
         let mut user = DieselRepoMock::make_user(id, username, "hash");
-        user.user_name = "Existing".into();
-        user.user_email = "existing@example.com".into();
+        user.name = "Existing".into();
+        user.email = "existing@example.com".into();
         user
     }
 
@@ -166,9 +181,9 @@ mod tests {
         let id = service.create(&actor(), payload).unwrap();
 
         let stored = service.get_by_id(id).unwrap();
-        assert_eq!(stored.user_username, "alice");
-        assert_eq!(stored.user_name, "Alice Example");
-        assert_eq!(stored.user_email, "alice@example.com");
+        assert_eq!(stored.username, "alice");
+        assert_eq!(stored.name, "Alice Example");
+        assert_eq!(stored.email, "alice@example.com");
     }
 
     #[test]
@@ -179,7 +194,7 @@ mod tests {
         let service = UserService::new(&state);
 
         let removed = service.delete(&actor(), 1).unwrap();
-        assert_eq!(removed.user_id, 1);
+        assert_eq!(removed.id, 1);
         assert!(matches!(service.get_by_id(1), Err(RepoError::NotFound)));
     }
 
@@ -192,10 +207,10 @@ mod tests {
         let service = UserService::new(&state);
 
         let mut users = service.list_all().unwrap();
-        users.sort_by_key(|u| u.user_id);
+        users.sort_by_key(|u| u.id);
         assert_eq!(users.len(), 2);
-        assert_eq!(users[0].user_username, "bob");
-        assert_eq!(users[1].user_username, "carol");
+        assert_eq!(users[0].username, "bob");
+        assert_eq!(users[1].username, "carol");
     }
 
     #[test]
@@ -208,10 +223,10 @@ mod tests {
 
         let actor = sample_user(1, "alice");
         let update = UpdateUser {
-            user_id: Some(2),
-            user_username: "carol".into(),
-            user_name: "Carol Updated".into(),
-            user_email: "carol.updated@example.com".into(),
+            id: Some(2),
+            username: "carol".into(),
+            name: "Carol Updated".into(),
+            email: "carol.updated@example.com".into(),
             is_admin: false,
         };
 
@@ -234,10 +249,10 @@ mod tests {
         admin.is_admin = true;
 
         let update = UpdateUser {
-            user_id: Some(2),
-            user_username: "carol".into(),
-            user_name: "Carol Updated".into(),
-            user_email: "carol.updated@example.com".into(),
+            id: Some(2),
+            username: "carol".into(),
+            name: "Carol Updated".into(),
+            email: "carol.updated@example.com".into(),
             is_admin: true,
         };
 
@@ -247,8 +262,33 @@ mod tests {
         assert!(updated);
 
         let stored = service.get_by_id(2).unwrap();
-        assert_eq!(stored.user_name, "Carol Updated");
-        assert_eq!(stored.user_email, "carol.updated@example.com");
+        assert_eq!(stored.name, "Carol Updated");
+        assert_eq!(stored.email, "carol.updated@example.com");
         assert!(stored.is_admin);
+    }
+
+    #[test]
+    fn create_hashes_password_and_creates_user() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let request = UserCreateRequest {
+            username: "  bob  ".into(),
+            name: "  Bob Example  ".into(),
+            email: "  bob@example.com  ".into(),
+            password: "plaintext_password".into(),
+            is_admin: false,
+        };
+
+        let id = service.create(&actor(), request).unwrap();
+        let stored = service.get_by_id(id).unwrap();
+
+        assert_eq!(stored.username, "bob");
+        assert_eq!(stored.name, "Bob Example");
+        assert_eq!(stored.email, "bob@example.com");
+        // Password should be hashed (bcrypt hashes start with $2)
+        assert!(stored.password_hash.starts_with("$2"));
+        assert_ne!(stored.password_hash, "plaintext_password");
     }
 }

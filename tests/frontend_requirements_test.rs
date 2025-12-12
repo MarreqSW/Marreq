@@ -1,6 +1,7 @@
 #![cfg(feature = "test-helpers")]
 
 use req_man::models::*;
+use req_man::status_enums::ProjectStatus;
 /// Frontend integration tests for requirements pages.
 ///
 /// These tests verify:
@@ -53,8 +54,8 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
+    pub fn session_cookie(id: i32) -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, id.to_string());
         cookie.set_path("/");
         cookie
     }
@@ -69,13 +70,13 @@ mod test_support {
         repo.projects.insert(
             1,
             Project {
-                project_id: 1,
-                project_name: "Test Project".into(),
-                project_description: Some("Description".into()),
-                project_creation_date: Some(timestamp()),
-                project_update_date: Some(timestamp()),
-                project_status: Some("Active".into()),
-                project_owner_id: Some(1),
+                id: 1,
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status: ProjectStatus::Active,
+                owner_id: Some(1),
             },
         );
 
@@ -90,40 +91,43 @@ mod test_support {
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Draft".into(),
-                req_st_description: "".into(),
-                req_st_short_name: "D".into(),
+                id: 1,
+                title: "Draft".into(),
+                description: "".into(),
+                tag: "D".into(),
+                project_id: 1,
             },
         );
 
         repo.requirement_statuses.insert(
             2,
             RequirementStatus {
-                req_st_id: 2,
-                req_st_title: "Accepted".into(),
-                req_st_description: "".into(),
-                req_st_short_name: "A".into(),
+                id: 2,
+                title: "Accepted".into(),
+                description: "".into(),
+                tag: "A".into(),
+                project_id: 1,
             },
         );
 
         repo.categories.insert(
             1,
             Category {
-                cat_id: 1,
-                cat_title: "Systems".into(),
-                cat_description: "".into(),
-                cat_tag: "SYS".into(),
+                id: 1,
+                title: "Systems".into(),
+                description: "".into(),
+                tag: "SYS".into(),
                 project_id: 1,
             },
         );
 
         repo.verifications.insert(
             1,
-            Verification {
-                verification_id: 1,
-                verification_name: "Analysis".into(),
-                verification_description: "".into(),
+            VerificationMethod {
+                id: 1,
+                title: "Analysis".into(),
+                description: "".into(),
+                tag: "ANALYSIS".into(),
                 project_id: 1,
             },
         );
@@ -131,10 +135,10 @@ mod test_support {
         repo.applicability.insert(
             1,
             Applicability {
-                app_id: 1,
-                app_title: "All".into(),
-                app_description: "".into(),
-                app_tag: "ALL".into(),
+                id: 1,
+                title: "All".into(),
+                description: "".into(),
+                tag: "ALL".into(),
                 project_id: 1,
             },
         );
@@ -144,21 +148,21 @@ mod test_support {
 
     pub fn sample_requirement(id: i32, project_id: i32) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Requirement {id}"),
-            req_description: "Test requirement".into(),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: 1,
-            req_reviewer: 1,
-            req_reference: format!("REQ-SYS-{id:03}"),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("Test justification".into()),
+            id: id,
+            title: format!("Requirement {id}"),
+            description: "Test requirement".into(),
+            verification_method_id: 1,
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: format!("REQ-SYS-{id:03}"),
+            category_id: 1,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            applicability_id: 1,
+            justification: Some("Test justification".into()),
             project_id,
         }
     }
@@ -318,33 +322,30 @@ async fn new_requirement_form_has_required_fields() {
     let html = response.into_string().await.expect("body");
 
     // Verify form fields
-    assert!(html.contains("name=\"req_title\""), "Missing title field");
+    assert!(html.contains("name=\"title\""), "Missing title field");
     assert!(
-        html.contains("name=\"req_description\""),
+        html.contains("name=\"description\""),
         "Missing description field"
     );
     assert!(
-        html.contains("name=\"req_reference\""),
+        html.contains("name=\"reference_code\""),
         "Missing reference field"
     );
     assert!(
-        html.contains("name=\"req_category\""),
+        html.contains("name=\"category_id\""),
         "Missing category field"
     );
     assert!(
-        html.contains("name=\"req_verification\""),
+        html.contains("name=\"verification_method_id\""),
         "Missing verification field"
     );
+    assert!(html.contains("name=\"status_id\""), "Missing status field");
     assert!(
-        html.contains("name=\"req_current_status\""),
-        "Missing status field"
-    );
-    assert!(
-        html.contains("name=\"req_applicability\""),
+        html.contains("name=\"applicability_id\""),
         "Missing applicability field"
     );
     assert!(
-        html.contains("name=\"req_justification\""),
+        html.contains("name=\"justification\""),
         "Missing justification field"
     );
     assert!(
@@ -396,7 +397,7 @@ async fn requirement_detail_page_shows_relationships() {
     repo.requirements.insert(1, parent);
 
     let mut child = sample_requirement(2, 1);
-    child.req_parent = 1;
+    child.parent_id = Some(1);
     repo.requirements.insert(2, child);
 
     let client = test_client(repo).await;
@@ -434,9 +435,9 @@ async fn create_requirement_redirects_to_detail_page() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=New+Req&req_description=Body&req_verification=1&\
-               req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
-               req_applicability=1&req_reference=&req_justification=",
+            "title=New+Req&description=Body&verification_method_id=1&\
+               status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
+               applicability_id=1&reference_code=&justification=",
         )
         .dispatch()
         .await;
@@ -461,9 +462,9 @@ async fn create_requirement_with_add_another_redirects_to_form() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_title=Test&req_description=Body&req_verification=1&\
-               req_current_status=1&req_reviewer=1&req_category=1&req_parent=0&\
-               req_applicability=1&req_reference=&req_justification=&intent=add_another",
+            "title=Test&description=Body&verification_method_id=1&\
+               status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
+               applicability_id=1&reference_code=&justification=&intent=add_another",
         )
         .dispatch()
         .await;
@@ -494,10 +495,10 @@ async fn edit_requirement_redirects_to_detail_page() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "req_id=1&req_title=Updated&req_description=Body&req_verification=1&\
-               req_current_status=1&req_author=1&req_reviewer=1&req_category=1&\
-               req_parent=0&req_applicability=1&req_justification=&project_id=1&\
-               req_reference=REQ-SYS-001",
+            "id=1&title=Updated&description=Body&verification_method_id=1&\
+               status_id=1&author_id=1&reviewer_id=1&category_id=1&\
+               parent_id=0&applicability_id=1&justification=&project_id=1&\
+               reference_code=REQ-SYS-001",
         )
         .dispatch()
         .await;
@@ -645,7 +646,7 @@ async fn requirement_form_has_reference_validation_markers() {
         "Missing reference error element"
     );
     assert!(
-        html.contains("id=\"req_reference\""),
+        html.contains("id=\"reference_code\""),
         "Missing reference input"
     );
     assert!(

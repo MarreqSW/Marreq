@@ -126,22 +126,22 @@
             role="button"
             data-bs-toggle="dropdown"
             aria-expanded="false">
-            {{#if user.user_name}}
-              <span class="nav-user-label c-navbar__user-label">{{user.user_name}}</span>
+            {{#if user.name}}
+              <span class="nav-user-label c-navbar__user-label">{{user.name}}</span>
             {{else}}
-              <span class="nav-user-label c-navbar__user-label">{{user.user_username}}</span>
+              <span class="nav-user-label c-navbar__user-label">{{user.username}}</span>
             {{/if}}
           </a>
           <ul class="dropdown-menu dropdown-menu-end nav-user-menu c-navbar__user-menu c-navbar__dropdown-menu" aria-labelledby="user-menu-toggle">
             <li>
               <h6 class="dropdown-header nav-user-header c-navbar__user-header">
-                {{#if user.user_name}}
-                  <span class="nav-user-name c-navbar__user-name">{{user.user_name}}</span>
+                {{#if user.name}}
+                  <span class="nav-user-name c-navbar__user-name">{{user.name}}</span>
                 {{else}}
-                  <span class="nav-user-name c-navbar__user-name">{{user.user_username}}</span>
+                  <span class="nav-user-name c-navbar__user-name">{{user.username}}</span>
                 {{/if}}
-                {{#if user.user_username}}
-                  <span class="nav-user-username c-navbar__user-username">@{{user.user_username}}</span>
+                {{#if user.username}}
+                  <span class="nav-user-username c-navbar__user-username">@{{user.username}}</span>
                 {{/if}}
               </h6>
             </li>

@@ -2,12 +2,13 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{ActionType, EntityType, Matrix, NewMatrix, Requirement, Test, User};
+use crate::models::{
+    ActionType, EntityType, MatrixLink, NewMatrixLink, Requirement, TestCase, User,
+};
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsRepository,
+    MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository,
 };
-use diesel::prelude::*;
 use std::collections::HashSet;
 
 /// High level matrix operations backed by the shared [`AppState`].
@@ -22,17 +23,23 @@ impl<'a> MatrixService<'a> {
     }
 
     /// Retrieve every matrix entry.
-    pub fn list_all(&self) -> Result<Vec<Matrix>, RepoError> {
-        use crate::schema::matrix::dsl::matrix;
+    /// Note: This collects from all projects since there's no get_matrix_all in the MatrixRepository trait.
+    pub fn list_all(&self) -> Result<Vec<MatrixLink>, RepoError> {
+        use crate::repository::ProjectsRepository;
 
-        let mut conn = self.db_connection()?;
-        matrix
-            .load::<Matrix>(conn.as_mut())
-            .map_err(RepoError::from)
+        let repo = self.state.repo_write();
+        // Collect matrix links from all projects
+        let projects = repo.get_projects_all()?;
+        let mut all_links = Vec::new();
+        for project in projects {
+            let links = repo.get_matrix_by_project(project.id)?;
+            all_links.extend(links);
+        }
+        Ok(all_links)
     }
 
     /// Retrieve matrix entries scoped to a project.
-    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Matrix>, RepoError> {
+    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<MatrixLink>, RepoError> {
         self.state.repo_read().get_matrix_by_project(project_id)
     }
 
@@ -47,40 +54,40 @@ impl<'a> MatrixService<'a> {
 
         // Load all requirements for the project
         let mut reqs = repo.get_requirements_by_project(project_id)?;
-        reqs.sort_by_key(|r| r.req_id);
+        reqs.sort_by_key(|r| r.id);
 
         // Load all tests for the project
         let mut all_tests = repo.get_tests_by_project(project_id)?;
-        all_tests.sort_by_key(|t| t.test_id);
+        all_tests.sort_by_key(|t| t.id);
 
         // Filter tests by status if specified
         if let Some(status) = test_status_filter {
-            all_tests.retain(|t| t.test_status == status);
+            all_tests.retain(|t| t.status_id == status);
         }
 
         // Load all matrix links for the project
         let all_links = repo.get_matrix_by_project(project_id)?;
         let links: HashSet<(i32, i32)> = all_links
             .into_iter()
-            .map(|m| (m.matrix_req_id, m.matrix_test_id))
+            .map(|m| (m.req_id, m.test_id))
             .collect();
 
         // Build CSV
         let mut csv = String::from("Title,Reference");
         for test in &all_tests {
-            csv.push_str(&format!(",Test #{}", test.test_id));
+            csv.push_str(&format!(",Test #{}", test.id));
         }
         csv.push('\n');
 
         for req in &reqs {
             csv.push_str(&format!(
                 "{},{}",
-                Self::csv_escape(&req.req_title),
-                Self::csv_escape(&req.req_reference)
+                Self::csv_escape(&req.title),
+                Self::csv_escape(&req.reference_code)
             ));
 
             for test in &all_tests {
-                let linked = links.contains(&(req.req_id, test.test_id));
+                let linked = links.contains(&(req.id, test.id));
                 csv.push_str(if linked { ",✓" } else { ",-" });
             }
             csv.push('\n');
@@ -103,12 +110,12 @@ impl<'a> MatrixService<'a> {
         &self,
         actor: &User,
         requirement_id: i32,
-        test_id: i32,
+        id: i32,
         project_id: i32,
     ) -> Result<(), RepoError> {
-        let payload = NewMatrix {
-            matrix_req_id: requirement_id,
-            matrix_test_id: test_id,
+        let payload = NewMatrixLink {
+            req_id: requirement_id,
+            test_id: id,
             project_id,
         };
 
@@ -125,19 +132,19 @@ impl<'a> MatrixService<'a> {
         self.state.repo_read().inner_repo().get_conn()
     }
 
-    fn log_link_created(&self, actor: &User, entity: &NewMatrix) {
+    fn log_link_created(&self, actor: &User, entity: &NewMatrixLink) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.user_id);
+            let ctx = LogCtx::new(actor.id);
             let description = format!(
                 "Linked requirement {} with test {}",
-                entity.matrix_req_id, entity.matrix_test_id
+                entity.req_id, entity.test_id
             );
 
             if let Err(_err) = Logger::log_custom(
                 conn.as_mut(),
                 &ctx,
                 ActionType::Create,
-                EntityType::Matrix,
+                EntityType::MatrixLink,
                 None,
                 Some(entity.project_id),
                 None,
@@ -147,7 +154,7 @@ impl<'a> MatrixService<'a> {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log matrix link {} -> {}: {_err}",
-                    entity.matrix_req_id, entity.matrix_test_id
+                    entity.req_id, entity.test_id
                 );
             }
         }
@@ -176,18 +183,18 @@ impl<'a> MatrixService<'a> {
 
         // Load all tests
         let mut all_tests = repo.get_tests_by_project(project_id)?;
-        all_tests.sort_by_key(|t| t.test_id);
+        all_tests.sort_by_key(|t| t.id);
 
         // Filter tests by status
-        if let Some(status) = filters.test_status {
-            all_tests.retain(|t| t.test_status == status);
+        if let Some(status) = filters.status_id {
+            all_tests.retain(|t| t.status_id == status);
         }
 
         // Load matrix links
         let matrix_links = repo.get_matrix_by_project(project_id)?;
         let links: HashSet<(i32, i32)> = matrix_links
             .into_iter()
-            .map(|m| (m.matrix_req_id, m.matrix_test_id))
+            .map(|m| (m.req_id, m.test_id))
             .collect();
 
         let total_requirements = all_reqs.len() as i64;
@@ -221,7 +228,7 @@ impl<'a> MatrixService<'a> {
             .map(|req| {
                 all_tests
                     .iter()
-                    .filter(|t| links.contains(&(req.req_id, t.test_id)))
+                    .filter(|t| links.contains(&(req.id, t.id)))
                     .count()
             })
             .sum();
@@ -244,23 +251,23 @@ impl<'a> MatrixService<'a> {
         search: Option<&str>,
     ) {
         if let Some(status) = status_filter {
-            reqs.retain(|r| r.req_current_status == status);
+            reqs.retain(|r| r.status_id == status);
         }
 
         if let Some(category) = category_filter {
-            reqs.retain(|r| r.req_category == category);
+            reqs.retain(|r| r.category_id == category);
         }
 
         if let Some(applicability) = applicability_filter {
-            reqs.retain(|r| r.req_applicability == applicability);
+            reqs.retain(|r| r.applicability_id == applicability);
         }
 
         if let Some(search_term) = search {
             let search_lower = search_term.to_lowercase();
             reqs.retain(|r| {
-                r.req_title.to_lowercase().contains(&search_lower)
-                    || r.req_reference.to_lowercase().contains(&search_lower)
-                    || r.req_id.to_string().contains(&search_lower)
+                r.title.to_lowercase().contains(&search_lower)
+                    || r.reference_code.to_lowercase().contains(&search_lower)
+                    || r.id.to_string().contains(&search_lower)
             });
         }
     }
@@ -274,7 +281,7 @@ impl<'a> MatrixService<'a> {
         // Check if sorting by test column
         if let Some(test_id_str) = sort_by.strip_prefix("test_") {
             if let Ok(target_test_id) = test_id_str.parse::<i32>() {
-                reqs.sort_by_key(|r| links.contains(&(r.req_id, target_test_id)));
+                reqs.sort_by_key(|r| links.contains(&(r.id, target_test_id)));
                 if desc {
                     reqs.reverse();
                 }
@@ -284,14 +291,14 @@ impl<'a> MatrixService<'a> {
 
         // Sort by requirement fields
         match sort_by {
-            "req_title" => {
-                reqs.sort_by(|a, b| a.req_title.cmp(&b.req_title));
+            "title" => {
+                reqs.sort_by(|a, b| a.title.cmp(&b.title));
             }
-            "req_reference" => {
-                reqs.sort_by(|a, b| a.req_reference.cmp(&b.req_reference));
+            "reference_code" => {
+                reqs.sort_by(|a, b| a.reference_code.cmp(&b.reference_code));
             }
             _ => {
-                reqs.sort_by_key(|r| r.req_id);
+                reqs.sort_by_key(|r| r.id);
             }
         }
 
@@ -304,7 +311,7 @@ impl<'a> MatrixService<'a> {
 /// Filter parameters for matrix view
 #[derive(Debug, Clone, Default)]
 pub struct MatrixFilters {
-    pub test_status: Option<i32>,
+    pub status_id: Option<i32>,
     pub req_status: Option<i32>,
     pub category: Option<i32>,
     pub applicability: Option<i32>,
@@ -325,7 +332,7 @@ impl Default for MatrixPagination {
         Self {
             page: 1,
             per_page: 50,
-            sort_by: "req_id".to_string(),
+            sort_by: "id".to_string(),
             sort_order: SortOrder::Asc,
         }
     }
@@ -340,7 +347,7 @@ pub enum SortOrder {
 /// Complete matrix view data ready for rendering
 pub struct MatrixView {
     pub requirements: Vec<Requirement>,
-    pub tests: Vec<Test>,
+    pub tests: Vec<TestCase>,
     pub links: HashSet<(i32, i32)>,
     pub total_requirements: i64,
     pub total_links: usize,
@@ -350,7 +357,7 @@ pub struct MatrixView {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::Test;
+    use crate::models::TestCase;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -373,28 +380,29 @@ mod tests {
     }
 
     #[test]
-    fn list_all_propagates_connection_error() {
+    fn list_all_returns_empty_when_no_projects() {
         let repo = DieselRepoMock::default();
         let state = state_with_repo(repo);
         let service = MatrixService::new(&state);
 
         let result = service.list_all();
-        assert!(matches!(result, Err(RepoError::Pool(_))));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().len(), 0);
     }
 
     #[test]
     fn list_by_project_filters_results() {
         let mut repo = DieselRepoMock::default();
-        repo.matrices.push(Matrix {
-            matrix_req_id: 1,
-            matrix_test_id: 10,
-            matrix_creation_date: timestamp(),
+        repo.matrices.push(MatrixLink {
+            req_id: 1,
+            test_id: 10,
+            creation_date: timestamp(),
             project_id: 7,
         });
-        repo.matrices.push(Matrix {
-            matrix_req_id: 2,
-            matrix_test_id: 20,
-            matrix_creation_date: timestamp(),
+        repo.matrices.push(MatrixLink {
+            req_id: 2,
+            test_id: 20,
+            creation_date: timestamp(),
             project_id: 99,
         });
 
@@ -403,7 +411,7 @@ mod tests {
 
         let results = service.list_by_project(7).unwrap();
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].matrix_test_id, 10);
+        assert_eq!(results[0].test_id, 10);
     }
 
     #[test]
@@ -416,8 +424,8 @@ mod tests {
 
         let entries = service.list_by_project(42).unwrap();
         assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].matrix_req_id, 5);
-        assert_eq!(entries[0].matrix_test_id, 6);
+        assert_eq!(entries[0].req_id, 5);
+        assert_eq!(entries[0].test_id, 6);
     }
 
     #[test]
@@ -428,21 +436,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Test Requirement".to_string(),
-                req_description: String::new(),
-                req_verification: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Test Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-001".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -450,36 +458,36 @@ mod tests {
         // Add tests
         repo.tests.insert(
             10,
-            Test {
-                test_id: 10,
-                test_name: "Test 10".to_string(),
-                test_reference: "TST-10".to_string(),
-                test_description: String::new(),
-                test_source: String::new(),
-                test_status: 1,
-                test_parent: 0,
+            TestCase {
+                id: 10,
+                name: "Test 10".to_string(),
+                reference_code: "TST-10".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: None,
                 project_id: 1,
             },
         );
         repo.tests.insert(
             20,
-            Test {
-                test_id: 20,
-                test_name: "Test 20".to_string(),
-                test_reference: "TST-20".to_string(),
-                test_description: String::new(),
-                test_source: String::new(),
-                test_status: 1,
-                test_parent: 0,
+            TestCase {
+                id: 20,
+                name: "Test 20".to_string(),
+                reference_code: "TST-20".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: None,
                 project_id: 1,
             },
         );
 
         // Add matrix link
-        repo.matrices.push(Matrix {
-            matrix_req_id: 1,
-            matrix_test_id: 10,
-            matrix_creation_date: timestamp(),
+        repo.matrices.push(MatrixLink {
+            req_id: 1,
+            test_id: 10,
+            creation_date: timestamp(),
             project_id: 1,
         });
 
@@ -506,21 +514,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Test, with \"quotes\"".to_string(),
-                req_description: String::new(),
-                req_verification: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Test, with \"quotes\"".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-001".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -541,21 +549,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Req 1".to_string(),
-                req_description: String::new(),
-                req_verification: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-1".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Req 1".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-1".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -563,14 +571,14 @@ mod tests {
         // Test with status 1
         repo.tests.insert(
             10,
-            Test {
-                test_id: 10,
-                test_name: "Test 10".to_string(),
-                test_reference: "TST-10".to_string(),
-                test_description: String::new(),
-                test_source: String::new(),
-                test_status: 1,
-                test_parent: 0,
+            TestCase {
+                id: 10,
+                name: "Test 10".to_string(),
+                reference_code: "TST-10".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: None,
                 project_id: 1,
             },
         );
@@ -578,14 +586,14 @@ mod tests {
         // Test with status 2
         repo.tests.insert(
             20,
-            Test {
-                test_id: 20,
-                test_name: "Test 20".to_string(),
-                test_reference: "TST-20".to_string(),
-                test_description: String::new(),
-                test_source: String::new(),
-                test_status: 2,
-                test_parent: 0,
+            TestCase {
+                id: 20,
+                name: "Test 20".to_string(),
+                reference_code: "TST-20".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 2,
+                parent_id: None,
                 project_id: 1,
             },
         );

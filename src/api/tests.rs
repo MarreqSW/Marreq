@@ -1,7 +1,7 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::models::{NewTest, Test};
+use crate::models::{NewTestCase, TestCase};
 use crate::repository::errors::RepoError;
 use crate::services::TestService;
 
@@ -13,14 +13,14 @@ pub struct FieldUpdateRequest {
 }
 
 #[get("/tests")]
-pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Test>>> {
+pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<TestCase>>> {
     let service = TestService::new(state.inner());
     let tests = service.list_all()?;
     Ok(Json(tests))
 }
 
 #[get("/tests/<id>")]
-pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Test>> {
+pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<TestCase>> {
     let service = TestService::new(state.inner());
     let test = service.get_by_id(id)?;
     Ok(Json(test))
@@ -30,7 +30,7 @@ pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<
 pub async fn create(
     user: ApiUser,
     state: &State<AppState>,
-    payload: Json<NewTest>,
+    payload: Json<NewTestCase>,
 ) -> ApiResult<Value> {
     let service = TestService::new(state.inner());
     let id = service.create(user.user(), payload.into_inner())?;
@@ -57,21 +57,27 @@ pub async fn update_field(
     let mut test = service.get_by_id(id)?;
 
     match update.field.as_str() {
-        "test_name" => test.test_name = update.value,
-        "test_description" => test.test_description = update.value,
-        "test_source" => test.test_source = update.value,
-        "test_status" => {
-            test.test_status = update
+        "name" => test.name = update.value,
+        "description" => test.description = update.value,
+        "source" => test.source = update.value,
+        "status_id" => {
+            test.status_id = update
                 .value
                 .parse()
                 .map_err(|_| RepoError::BadInput("invalid status id".into()))?;
         }
-        "test_reference" => test.test_reference = update.value,
-        "test_parent" => {
-            test.test_parent = update
-                .value
-                .parse()
-                .map_err(|_| RepoError::BadInput("invalid parent id".into()))?;
+        "reference_code" => test.reference_code = update.value,
+        "parent_id" => {
+            test.parent_id = if update.value.is_empty() || update.value == "0" {
+                None
+            } else {
+                Some(
+                    update
+                        .value
+                        .parse()
+                        .map_err(|_| RepoError::BadInput("invalid parent id".into()))?,
+                )
+            };
         }
         other => {
             return Err(ApiError::from(RepoError::BadInput(format!(
@@ -80,14 +86,14 @@ pub async fn update_field(
         }
     }
 
-    let payload = NewTest {
-        test_id: Some(test.test_id),
-        test_reference: test.test_reference.clone(),
-        test_name: test.test_name.clone(),
-        test_description: test.test_description.clone(),
-        test_source: test.test_source.clone(),
-        test_status: test.test_status,
-        test_parent: test.test_parent,
+    let payload = NewTestCase {
+        id: Some(test.id),
+        reference_code: test.reference_code.clone(),
+        name: test.name.clone(),
+        description: test.description.clone(),
+        source: test.source.clone(),
+        status_id: test.status_id,
+        parent_id: test.parent_id,
         project_id: test.project_id,
     };
 
@@ -135,13 +141,13 @@ mod tests {
 
     fn sample_test(name: &str) -> Value {
         json!({
-            "test_id": null,
-            "test_name": name,
-            "test_description": format!("{name} description"),
-            "test_source": "manual",
-            "test_status": 1,
-            "test_reference": "T-1",
-            "test_parent": 0,
+            "id": null,
+            "name": name,
+            "description": format!("{name} description"),
+            "source": "manual",
+            "status_id": 1,
+            "reference_code": "T-1",
+            "parent_id": null,
             "project_id": 1
         })
     }
@@ -155,7 +161,7 @@ mod tests {
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
-        let items: Vec<Test> = response.into_json().await.unwrap();
+        let items: Vec<TestCase> = response.into_json().await.unwrap();
         assert!(items.is_empty());
     }
 
@@ -195,7 +201,7 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "field": "test_name",
+                    "field": "name",
                     "value": "Updated"
                 })
                 .to_string(),
@@ -212,8 +218,8 @@ mod tests {
             .private_cookie(auth_cookie())
             .dispatch()
             .await;
-        let test: Test = get_response.into_json().await.unwrap();
-        assert_eq!(test.test_name, "Updated");
+        let test: TestCase = get_response.into_json().await.unwrap();
+        assert_eq!(test.name, "Updated");
     }
 
     #[rocket::async_test]

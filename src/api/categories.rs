@@ -109,10 +109,10 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "cat_id": null,
-                    "cat_title": "Category",
-                    "cat_description": "Initial description",
-                    "cat_tag": "tag",
+                    "id": null,
+                    "title": "Category",
+                    "description": "Initial description",
+                    "tag": "tag",
                     "project_id": 1
                 })
                 .to_string(),
@@ -135,10 +135,10 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "cat_id": null,
-                    "cat_title": "Legacy",
-                    "cat_description": "Old",
-                    "cat_tag": "legacy",
+                    "id": null,
+                    "title": "Legacy",
+                    "description": "Old",
+                    "tag": "legacy",
                     "project_id": 7
                 })
                 .to_string(),
@@ -154,10 +154,10 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "cat_id": id,
-                    "cat_title": "Updated",
-                    "cat_description": "Refreshed",
-                    "cat_tag": "updated",
+                    "id": id,
+                    "title": "Updated",
+                    "description": "Refreshed",
+                    "tag": "updated",
                     "project_id": 7
                 })
                 .to_string(),
@@ -178,8 +178,8 @@ mod tests {
             .dispatch()
             .await;
         let category: Category = get_response.into_json().await.unwrap();
-        assert_eq!(category.cat_title, "Updated");
-        assert_eq!(category.cat_description, "Refreshed");
+        assert_eq!(category.title, "Updated");
+        assert_eq!(category.description, "Refreshed");
     }
 
     #[rocket::async_test]
@@ -191,10 +191,10 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "cat_id": null,
-                    "cat_title": "Disposable",
-                    "cat_description": "Temporary",
-                    "cat_tag": "temp",
+                    "id": null,
+                    "title": "Disposable",
+                    "description": "Temporary",
+                    "tag": "temp",
                     "project_id": 1
                 })
                 .to_string(),

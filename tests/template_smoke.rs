@@ -110,10 +110,10 @@ fn register_templates(hb: &mut Handlebars) {
 
 fn sample_user() -> serde_json::Value {
     json!({
-        "user_id": 1,
-        "user_name": "Alice Example",
-        "user_username": "alice",
-        "user_email": "alice@example.com",
+        "id": 1,
+        "name": "Alice Example",
+        "username": "alice",
+        "email": "alice@example.com",
         "is_admin": true
     })
 }
@@ -132,12 +132,12 @@ fn render_core_templates() {
     let user = sample_user();
     let project = json!({
         "project_id": 1,
-        "project_name": "Demo Project",
-        "project_description": "Sample project for smoke tests",
-        "project_status": "Active",
+        "name": "Demo Project",
+        "description": "Sample project for smoke tests",
+        "status": "Active",
         "project_status_badge": "active",
         "project_initial": "D",
-        "project_owner_id": 1,
+        "owner_id": 1,
         "project_owner_name": "Alice Example",
         "role_label": "Owner"
     });
@@ -159,13 +159,13 @@ fn render_core_templates() {
                 "user": user,
                 "selected_project_id": 1,
                 "statuses": [
-                    { "req_st_id": 1, "req_st_title": "Draft" }
+                    { "id": 1, "title": "Draft" }
                 ],
                 "verifications": [
-                    { "verification_id": 1, "verification_name": "Analysis" }
+                    { "id": 1, "name": "Analysis" }
                 ],
                 "categories": [
-                    { "cat_id": 1, "cat_title": "General" }
+                    { "id": 1, "title": "General" }
                 ],
                 "requirements": [],
                 "current_status_filter": "",
@@ -182,30 +182,30 @@ fn render_core_templates() {
                 "user": user,
                 "selected_project_id": 1,
                 "statuses": [
-                    { "req_st_id": 1, "req_st_title": "Draft" }
+                    { "id": 1, "title": "Draft" }
                 ],
                 "verifications": [
-                    { "verification_id": 1, "verification_name": "Analysis" }
+                    { "id": 1, "name": "Analysis" }
                 ],
                 "categories": [
-                    { "cat_id": 1, "cat_title": "General" }
+                    { "id": 1, "title": "General" }
                 ],
                 "users": [
-                    { "user_id": 1, "user_name": "Alice Example" }
+                    { "id": 1, "name": "Alice Example" }
                 ],
                 "requirements": [
                     {
-                        "req_id": 101,
+                        "id": 101,
                         "project_id": 1,
-                        "req_title": "Sample requirement",
-                        "req_reference": "REQ-101",
-                        "req_category_id": 1,
-                        "req_current_status_id": 1,
-                        "req_verification_id": 1,
-                        "req_author_id": 1,
-                        "req_reviewer_id": 1,
-                        "req_creation_date": "2024-01-01",
-                        "req_deadline_date": "2024-02-01"
+                        "title": "Sample requirement",
+                        "reference_code": "REQ-101",
+                        "category_id": 1,
+                        "req_current_status": 1,
+                        "verification_method_id": 1,
+                        "author_id": 1,
+                        "reviewer_id": 1,
+                        "creation_date": "2024-01-01",
+                        "deadline_date": "2024-02-01"
                     }
                 ],
                 "current_status_filter": "",

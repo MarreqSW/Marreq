@@ -1,7 +1,7 @@
 use rocket::http::{Cookie, CookieJar};
 
 /// Name of the session cookie used to store the authenticated user id.
-pub const SESSION_COOKIE: &str = "user_id";
+pub const SESSION_COOKIE: &str = "id";
 
 /// Store the authenticated user's id in a private cookie.
 pub fn set_session_cookie(cookies: &CookieJar<'_>, user_id: i32) {

@@ -26,9 +26,9 @@ describe('Requirement Detail Page', () => {
       
       const canonicalData = {
         requirement: {
-          req_id: 1,
-          req_title: 'Test Requirement',
-          req_reference: 'REQ-001',
+          id: 1,
+          title: 'Test Requirement',
+          reference_code: 'REQ-001',
         },
         project_id: 1,
       };
@@ -123,7 +123,7 @@ describe('Requirement Detail Page', () => {
 
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
-          {"requirement": {"req_id": 1, "req_title": "Test", "req_reference": "REQ-SYS-001"}, "project_id": 1}
+          {"requirement": {"id": 1, "title": "Test", "reference_code": "REQ-SYS-001"}, "project_id": 1}
         </script>
         <div data-requirement-root>
           <span data-field="reference"></span>
@@ -160,7 +160,7 @@ describe('Requirement Detail Page', () => {
 
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
-          {"requirement": {"req_id": 1, "req_title": "Test", "req_current_status": "Accepted"}, "project_id": 1}
+          {"requirement": {"id": 1, "title": "Test", "status_id": "Accepted"}, "project_id": 1}
         </script>
         <div data-requirement-root>
           <span data-field="status-badge" class="badge"></span>
@@ -201,7 +201,7 @@ describe('Requirement Detail Page', () => {
 
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
-          {"requirement": {"req_id": 1, "req_category": "Systems", "req_applicability": "All Platforms"}, "project_id": 1}
+          {"requirement": {"id": 1, "category_id": "Systems", "applicability_id": "All Platforms"}, "project_id": 1}
         </script>
         <div data-requirement-root>
           <div data-slot="chips"></div>
@@ -240,7 +240,7 @@ describe('Requirement Detail Page', () => {
 
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
-          {"requirement": {"req_id": 1, "req_author": "John Doe", "req_reviewer": "Jane Smith"}, "project_id": 1}
+          {"requirement": {"id": 1, "author_id": "John Doe", "reviewer_id": "Jane Smith"}, "project_id": 1}
         </script>
         <div data-requirement-root>
           <span data-field="author-name"></span>
@@ -288,10 +288,10 @@ describe('Requirement Detail Page', () => {
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
           {
-            "requirement": {"req_id": 2, "req_parent": 1},
+            "requirement": {"id": 2, "parent_id": 1},
             "project_id": 1,
             "relationships": {
-              "parent": {"req_id": 1, "req_reference": "REQ-PARENT-001", "req_title": "Parent Req", "req_current_status": "Accepted"}
+              "parent": {"id": 1, "reference_code": "REQ-PARENT-001", "title": "Parent Req", "status_id": "Accepted"}
             }
           }
         </script>
@@ -338,12 +338,12 @@ describe('Requirement Detail Page', () => {
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
           {
-            "requirement": {"req_id": 1},
+            "requirement": {"id": 1},
             "project_id": 1,
             "relationships": {
               "children": [
-                {"req_id": 2, "req_reference": "REQ-CHILD-001", "req_title": "Child Req 1"},
-                {"req_id": 3, "req_reference": "REQ-CHILD-002", "req_title": "Child Req 2"}
+                {"id": 2, "reference_code": "REQ-CHILD-001", "title": "Child Req 1"},
+                {"id": 3, "reference_code": "REQ-CHILD-002", "title": "Child Req 2"}
               ]
             }
           }
@@ -392,7 +392,7 @@ describe('Requirement Detail Page', () => {
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
           {
-            "requirement": {"req_id": 1},
+            "requirement": {"id": 1},
             "project_id": 1,
             "verification": {"counts": {"total": 10, "passed": 8, "failed": 1, "pending": 1}}
           }
@@ -432,19 +432,19 @@ describe('Requirement Detail Page', () => {
         relationships: { parent: null, children: [], has_links: false },
         verification_summary: { total: 2, passed: 1, failed: 0, pending: 1, percent: 50 },
         linked_tests: [
-          { test_id: 1, test_name: 'Test 1', test_description: 'Desc 1', test_status: 'Passed' },
-          { test_id: 2, test_name: 'Test 2', test_description: 'Desc 2', test_status: 'Pending' },
+          { id: 1, name: 'Test 1', description: 'Desc 1', status_id: 'Passed' },
+          { id: 2, name: 'Test 2', description: 'Desc 2', status_id: 'Pending' },
         ],
       });
 
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
           {
-            "requirement": {"req_id": 1},
+            "requirement": {"id": 1},
             "project_id": 1,
             "linked_tests": [
-              {"test_id": 1, "test_name": "Test 1", "test_description": "Desc 1", "test_status": "Passed"},
-              {"test_id": 2, "test_name": "Test 2", "test_description": "Desc 2", "test_status": "Pending"}
+              {"id": 1, "name": "Test 1", "description": "Desc 1", "status_id": "Passed"},
+              {"id": 2, "name": "Test 2", "description": "Desc 2", "status_id": "Pending"}
             ]
           }
         </script>
@@ -489,7 +489,7 @@ describe('Requirement Detail Page', () => {
 
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
-          {"requirement": {"req_id": 1}, "project_id": 1}
+          {"requirement": {"id": 1}, "project_id": 1}
         </script>
         <div data-requirement-root>
           <button data-action="toggle-requirement-details" data-bs-target="#details">Toggle</button>
@@ -527,7 +527,7 @@ describe('Requirement Detail Page', () => {
 
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
-          {"requirement": {"req_id": 1}, "project_id": 1}
+          {"requirement": {"id": 1}, "project_id": 1}
         </script>
         <div data-requirement-root>
           <button data-action="copy-requirement-link" data-requirement-url="/p/1/requirements/show/1">Copy Link</button>
@@ -565,7 +565,7 @@ describe('Requirement Detail Page', () => {
 
       document.body.innerHTML = `
         <script id="requirement-detail-data" type="application/json">
-          {"requirement": {"req_id": 1}, "project_id": 1}
+          {"requirement": {"id": 1}, "project_id": 1}
         </script>
         <div data-requirement-root></div>
         <button data-action="show-changes">Show Changes</button>

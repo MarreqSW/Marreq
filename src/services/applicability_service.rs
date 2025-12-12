@@ -63,7 +63,7 @@ impl<'a> ApplicabilityService<'a> {
     ) -> Result<Applicability, RepoError> {
         let before = self.get_by_id(id)?;
 
-        updated_app.app_id = Some(id);
+        updated_app.id = Some(id);
         self.prepare_payload(&mut updated_app)?;
 
         {
@@ -91,9 +91,9 @@ impl<'a> ApplicabilityService<'a> {
     }
 
     fn prepare_payload(&self, payload: &mut NewApplicability) -> Result<(), RepoError> {
-        sanitize(&mut payload.app_title);
-        sanitize(&mut payload.app_description);
-        sanitize(&mut payload.app_tag);
+        sanitize(&mut payload.title);
+        sanitize(&mut payload.description);
+        sanitize(&mut payload.tag);
 
         validate(payload)
     }
@@ -104,7 +104,7 @@ impl<'a> ApplicabilityService<'a> {
 
     fn log_created(&self, user: &User, id: i32, entity: &NewApplicability) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(user.id);
             if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!("Failed to log applicability creation {id}: {_err}");
@@ -114,12 +114,12 @@ impl<'a> ApplicabilityService<'a> {
 
     fn log_updated(&self, user: &User, before: &Applicability, after: &Applicability) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(user.id);
             if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log applicability update {} -> {}: {_err}",
-                    before.app_id, after.app_id
+                    before.id, after.id
                 );
             }
         }
@@ -127,13 +127,10 @@ impl<'a> ApplicabilityService<'a> {
 
     fn log_deleted(&self, user: &User, entity: &Applicability) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(user.id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log applicability deletion {}: {_err}",
-                    entity.app_id
-                );
+                eprintln!("Failed to log applicability deletion {}: {_err}", entity.id);
             }
         }
     }
@@ -144,32 +141,32 @@ fn sanitize(value: &mut String) {
 }
 
 fn validate(payload: &NewApplicability) -> Result<(), RepoError> {
-    if payload.app_title.is_empty() {
-        return Err(bad_input("app_title is required"));
+    if payload.title.is_empty() {
+        return Err(bad_input("title is required"));
     }
-    if payload.app_title.len() > 100 {
-        return Err(bad_input("app_title must be at most 100 characters"));
+    if payload.title.len() > 100 {
+        return Err(bad_input("title must be at most 100 characters"));
     }
-    if payload.app_title.len() < 2 {
-        return Err(bad_input("app_title must be at least 2 characters"));
-    }
-
-    if payload.app_description.is_empty() {
-        return Err(bad_input("app_description is required"));
-    }
-    if payload.app_description.len() > 500 {
-        return Err(bad_input("app_description must be at most 500 characters"));
+    if payload.title.len() < 2 {
+        return Err(bad_input("title must be at least 2 characters"));
     }
 
-    if payload.app_tag.is_empty() {
-        return Err(bad_input("app_tag is required"));
+    if payload.description.is_empty() {
+        return Err(bad_input("description is required"));
     }
-    if payload.app_tag.len() > 50 {
-        return Err(bad_input("app_tag must be at most 50 characters"));
+    if payload.description.len() > 500 {
+        return Err(bad_input("description must be at most 500 characters"));
     }
-    if !TAG_REGEX.is_match(&payload.app_tag) {
+
+    if payload.tag.is_empty() {
+        return Err(bad_input("tag is required"));
+    }
+    if payload.tag.len() > 50 {
+        return Err(bad_input("tag must be at most 50 characters"));
+    }
+    if !TAG_REGEX.is_match(&payload.tag) {
         return Err(bad_input(
-            "app_tag must only contain letters, numbers, or underscores",
+            "tag must only contain letters, numbers, or underscores",
         ));
     }
 
@@ -202,10 +199,10 @@ mod tests {
 
     fn sample_app(id: i32, title: &str) -> Applicability {
         Applicability {
-            app_id: id,
-            app_title: title.into(),
-            app_description: "desc".into(),
-            app_tag: "TAG".into(),
+            id: id,
+            title: title.into(),
+            description: "desc".into(),
+            tag: "TAG".into(),
             project_id: 1,
         }
     }
@@ -217,19 +214,19 @@ mod tests {
         let service = ApplicabilityService::new(&state);
 
         let payload = NewApplicability {
-            app_id: None,
-            app_title: "  Applicable  ".into(),
-            app_description: "  Description  ".into(),
-            app_tag: "  PROD_1  ".into(),
+            id: None,
+            title: "  Applicable  ".into(),
+            description: "  Description  ".into(),
+            tag: "  PROD_1  ".into(),
             project_id: 3,
         };
 
         let id = service.create(&actor(), payload).unwrap();
         let stored = service.get_by_id(id).unwrap();
 
-        assert_eq!(stored.app_title, "Applicable");
-        assert_eq!(stored.app_description, "Description");
-        assert_eq!(stored.app_tag, "PROD_1");
+        assert_eq!(stored.title, "Applicable");
+        assert_eq!(stored.description, "Description");
+        assert_eq!(stored.tag, "PROD_1");
     }
 
     #[test]
@@ -239,10 +236,10 @@ mod tests {
         let service = ApplicabilityService::new(&state);
 
         let payload = NewApplicability {
-            app_id: None,
-            app_title: "Title".into(),
-            app_description: "Description".into(),
-            app_tag: "invalid tag".into(),
+            id: None,
+            title: "Title".into(),
+            description: "Description".into(),
+            tag: "invalid tag".into(),
             project_id: 1,
         };
 
@@ -258,17 +255,17 @@ mod tests {
         let service = ApplicabilityService::new(&state);
 
         let payload = NewApplicability {
-            app_id: None,
-            app_title: "  New Title  ".into(),
-            app_description: "  New Description  ".into(),
-            app_tag: "  NEW_TAG  ".into(),
+            id: None,
+            title: "  New Title  ".into(),
+            description: "  New Description  ".into(),
+            tag: "  NEW_TAG  ".into(),
             project_id: 2,
         };
 
         let updated = service.update(&actor(), 7, payload).unwrap();
-        assert_eq!(updated.app_title, "New Title");
-        assert_eq!(updated.app_description, "New Description");
-        assert_eq!(updated.app_tag, "NEW_TAG");
+        assert_eq!(updated.title, "New Title");
+        assert_eq!(updated.description, "New Description");
+        assert_eq!(updated.tag, "NEW_TAG");
         assert_eq!(updated.project_id, 2);
     }
 
@@ -280,7 +277,7 @@ mod tests {
         let service = ApplicabilityService::new(&state);
 
         let removed = service.delete(&actor(), 3).unwrap();
-        assert_eq!(removed.app_id, 3);
+        assert_eq!(removed.id, 3);
         assert!(matches!(service.get_by_id(3), Err(RepoError::NotFound)));
     }
 
@@ -300,6 +297,6 @@ mod tests {
 
         let items = service.list_by_project(1).unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].app_title, "Alpha");
+        assert_eq!(items[0].title, "Alpha");
     }
 }

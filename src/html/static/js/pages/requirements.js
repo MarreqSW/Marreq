@@ -636,21 +636,21 @@ function showDuplicateModal(requirement) {
   }
 
   // Pre-fill the form fields
-  document.getElementById('dup_req_title').value = buildDuplicateTitle(requirement.req_title);
+  document.getElementById('dup_req_title').value = buildDuplicateTitle(requirement.title);
   document.getElementById('dup_req_reference').value = ''; // Leave blank for auto-generation
-  document.getElementById('dup_req_description').value = requirement.req_description || '';
-  document.getElementById('dup_req_justification').value = requirement.req_justification || '';
-  document.getElementById('dup_req_category').value = requirement.req_category || '';
-  document.getElementById('dup_req_current_status').value = requirement.req_current_status || '';
-  document.getElementById('dup_req_verification').value = requirement.req_verification || '';
-  document.getElementById('dup_req_applicability').value = requirement.req_applicability || '';
-  document.getElementById('dup_req_reviewer').value = requirement.req_reviewer || '';
-  document.getElementById('dup_req_parent').value = requirement.req_parent || '0';
+  document.getElementById('dup_req_description').value = requirement.description || '';
+  document.getElementById('dup_req_justification').value = requirement.justification || '';
+  document.getElementById('dup_req_category').value = requirement.category_id || '';
+  document.getElementById('dup_req_current_status').value = requirement.status_id || '';
+  document.getElementById('dup_req_verification').value = requirement.verification_method_id || '';
+  document.getElementById('dup_req_applicability').value = requirement.applicability_id || '';
+  document.getElementById('dup_req_reviewer').value = requirement.reviewer_id || '';
+  document.getElementById('dup_req_parent').value = requirement.parent_id || '0';
   document.getElementById('dup_project_id').value = requirement.project_id;
-  document.getElementById('dup_req_author').value = requirement.req_author;
+  document.getElementById('dup_req_author').value = requirement.author_id;
   
   // Load parent requirement options from the current page's requirements
-  loadParentRequirementOptionsFromPage(requirement.req_id, requirement.req_parent);
+  loadParentRequirementOptionsFromPage(requirement.id, requirement.parent_id);
 
   // Show the modal using Bootstrap
   if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -766,19 +766,19 @@ function initDuplicateForm() {
     try {
       const formData = new FormData(form);
       const payload = {
-        req_id: null,
-        req_title: formData.get('req_title'),
-        req_description: formData.get('req_description'),
-        req_reference: formData.get('req_reference') || '',
-        req_justification: formData.get('req_justification') || '',
-        req_category: parseInt(formData.get('req_category'), 10),
-        req_current_status: parseInt(formData.get('req_current_status'), 10),
-        req_verification: parseInt(formData.get('req_verification'), 10),
-        req_applicability: parseInt(formData.get('req_applicability'), 10),
-        req_reviewer: parseInt(formData.get('req_reviewer'), 10) || 0,
-        req_parent: parseInt(formData.get('req_parent'), 10) || 0,
+        id: null,
+        title: formData.get('title'),
+        description: formData.get('description'),
+        reference_code: formData.get('reference_code') || '',
+        justification: formData.get('justification') || '',
+        category_id: parseInt(formData.get('category_id'), 10),
+        status_id: parseInt(formData.get('status_id'), 10),
+        verification_method_id: parseInt(formData.get('verification_method_id'), 10),
+        applicability_id: parseInt(formData.get('applicability_id'), 10),
+        reviewer_id: parseInt(formData.get('reviewer_id'), 10) || 0,
+        parent_id: parseInt(formData.get('parent_id'), 10) || 0,
         project_id: parseInt(formData.get('project_id'), 10),
-        req_author: parseInt(formData.get('req_author'), 10),
+        author_id: parseInt(formData.get('author_id'), 10),
       };
 
       await postJson('/api/requirements', payload);

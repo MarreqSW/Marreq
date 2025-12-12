@@ -4,15 +4,15 @@ use rocket::serde::json::Value;
 
 #[derive(FromForm)]
 pub struct ProjectMemberForm {
-    pub user_id: i32,
+    pub id: i32,
     pub role: i32,
 }
 
-fn is_project_owner(state: &State<AppState>, project_id: i32, user_id: i32) -> bool {
+fn is_project_owner(state: &State<AppState>, project_id: i32, id: i32) -> bool {
     if let Ok(members) = state.repo_read().get_members_by_project(project_id) {
         members
             .into_iter()
-            .any(|member| member.user_id == user_id && member.role == 1)
+            .any(|member| member.user_id == id && member.role == 1)
     } else {
         false
     }
@@ -64,12 +64,9 @@ async fn show_project_members(
     drop(repo);
 
     let owner_count = memberships.iter().filter(|member| member.role == 1).count();
-    let can_manage_members = is_project_owner(state, project_id, user.user_id);
+    let can_manage_members = is_project_owner(state, project_id, user.id);
 
-    let user_lookup: HashMap<i32, &User> = users
-        .iter()
-        .map(|member| (member.user_id, member))
-        .collect();
+    let user_lookup: HashMap<i32, &User> = users.iter().map(|member| (member.id, member)).collect();
 
     let decorated_members: Vec<Value> = memberships
         .iter()
@@ -78,9 +75,9 @@ async fn show_project_members(
                 .get(&membership.user_id)
                 .map(|member| {
                     (
-                        member.user_name.clone(),
-                        member.user_username.clone(),
-                        member.user_email.clone(),
+                        member.name.clone(),
+                        member.username.clone(),
+                        member.email.clone(),
                         member.is_admin,
                     )
                 })
@@ -94,7 +91,7 @@ async fn show_project_members(
                 });
 
             json!({
-                "user_id": membership.user_id,
+                "id": membership.user_id,
                 "name": name,
                 "username": username,
                 "email": email,
@@ -105,7 +102,7 @@ async fn show_project_members(
                     can_manage_members,
                     owner_count,
                     membership,
-                    user.user_id,
+                    user.id,
                 ),
             })
         })
@@ -121,11 +118,11 @@ async fn show_project_members(
     let available_users: Vec<Value> = if can_manage_members {
         users
             .iter()
-            .filter(|candidate| !member_ids.contains(&candidate.user_id))
+            .filter(|candidate| !member_ids.contains(&candidate.id))
             .map(|candidate| {
                 json!({
-                    "user_id": candidate.user_id,
-                    "label": format!("{} (@{})", candidate.user_name, candidate.user_username),
+                    "id": candidate.id,
+                    "label": format!("{} (@{})", candidate.name, candidate.username),
                 })
             })
             .collect()
@@ -149,7 +146,7 @@ async fn show_project_members(
         ctx_obj.insert("available_users".to_string(), json!(available_users));
         ctx_obj.insert("role_options".to_string(), json!(role_options));
         ctx_obj.insert("project_id".to_string(), json!(project_id));
-        ctx_obj.insert("current_user_id".to_string(), json!(user.user_id));
+        ctx_obj.insert("current_user_id".to_string(), json!(user.id));
         ctx_obj.insert("owner_count".to_string(), json!(owner_count));
         ctx_obj.insert("member_count".to_string(), json!(member_count));
         ctx_obj.insert(
@@ -171,14 +168,14 @@ async fn add_project_member(
 ) -> Redirect {
     let user = project_access.into_user();
 
-    if !is_project_owner(state, project_id, user.user_id) {
+    if !is_project_owner(state, project_id, user.id) {
         return Redirect::to(uri!(show_project_members(project_id = project_id)));
     }
 
     let payload = form.into_inner();
     let new_member = NewProjectMember {
         project_id,
-        user_id: payload.user_id,
+        user_id: payload.id,
         role: payload.role,
     };
 
@@ -198,7 +195,7 @@ async fn remove_project_member(
 ) -> Redirect {
     let user = project_access.into_user();
 
-    if !is_project_owner(state, project_id, user.user_id) {
+    if !is_project_owner(state, project_id, user.id) {
         return Redirect::to(uri!(show_project_members(project_id = project_id)));
     }
 
@@ -242,6 +239,7 @@ mod tests {
     use crate::routes::html::project::test_helpers::{
         client_with_routes, get_with_session, post_form_with_session, timestamp, TestAppState,
     };
+    use crate::status_enums::ProjectStatus;
     use rocket::http::Status as HttpStatus;
     use rocket::local::asynchronous::Client;
 
@@ -252,34 +250,34 @@ mod tests {
 
     fn sample_project() -> Project {
         Project {
-            project_id: PROJECT_ID,
-            project_name: "Lunar Lander".into(),
-            project_description: Some("Exploration program".into()),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("Active".into()),
-            project_owner_id: Some(OWNER_ID),
+            id: PROJECT_ID,
+            name: "Lunar Lander".into(),
+            description: Some("Exploration program".into()),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status: ProjectStatus::Active,
+            owner_id: Some(OWNER_ID),
         }
     }
 
     fn owner_user() -> User {
         let mut user = DieselRepoMock::make_user(OWNER_ID, "owner", "");
-        user.user_name = "Mission Owner".into();
-        user.user_username = "owner".into();
+        user.name = "Mission Owner".into();
+        user.username = "owner".into();
         user
     }
 
     fn member_user() -> User {
         let mut user = DieselRepoMock::make_user(MEMBER_ID, "member", "");
-        user.user_name = "Payload Engineer".into();
-        user.user_username = "member".into();
+        user.name = "Payload Engineer".into();
+        user.username = "member".into();
         user
     }
 
     fn candidate_user() -> User {
         let mut user = DieselRepoMock::make_user(CANDIDATE_ID, "newhire", "");
-        user.user_name = "Flight Specialist".into();
-        user.user_username = "newhire".into();
+        user.name = "Flight Specialist".into();
+        user.username = "newhire".into();
         user
     }
 
@@ -354,7 +352,7 @@ mod tests {
     async fn add_project_member_as_owner_persists_membership() {
         let client = test_client(base_repo()).await;
         let response =
-            post_form_with_session(&client, "/p/1/members", "user_id=3&role=2", OWNER_ID).await;
+            post_form_with_session(&client, "/p/1/members", "id=3&role=2", OWNER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
         assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
@@ -371,7 +369,7 @@ mod tests {
     async fn add_project_member_requires_owner_role() {
         let client = test_client(base_repo()).await;
         let response =
-            post_form_with_session(&client, "/p/1/members", "user_id=3&role=2", MEMBER_ID).await;
+            post_form_with_session(&client, "/p/1/members", "id=3&role=2", MEMBER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
         assert_eq!(response.headers().get_one("Location"), Some("/1/members"));

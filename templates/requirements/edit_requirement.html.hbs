@@ -15,7 +15,7 @@
         </a>
         <span class="c-editor-breadcrumb__sep">›</span>
         <a
-          href="/p/{{req.project_id}}/requirements/show/{{req.req_id}}"
+          href="/p/{{req.project_id}}/requirements/show/{{req.id}}"
           class="c-editor-breadcrumb__link"
         >{{display_reference}}</a>
       </nav>
@@ -34,7 +34,7 @@
             aria-expanded="false"
           >
             <span class="c-editor-status__dot"></span>
-            <span class="c-editor-status__label">{{req.req_current_status}}</span>
+            <span class="c-editor-status__label">{{req.status_id}}</span>
           </button>
         </div>
 
@@ -56,7 +56,7 @@
         >Save</button>
 
         <a
-          href="/p/{{req.project_id}}/requirements/show/{{req.req_id}}"
+          href="/p/{{req.project_id}}/requirements/show/{{req.id}}"
           class="c-editor-actions__cancel"
         >Cancel</a>
       </div>
@@ -66,12 +66,12 @@
   <div class="c-editor-layout">
     <main class="c-editor-main">
       <section class="c-editor-section editor-section--title">
-        <label for="req_title" class="c-editor-field__label">Title</label>
+        <label for="title" class="c-editor-field__label">Title</label>
         <input
           type="text"
-          name="req_title"
-          id="req_title"
-          value="{{req.req_title}}"
+          name="title"
+          id="title"
+          value="{{req.title}}"
           class="c-editor-field__input editor-field__input--headline"
           autofocus
           required
@@ -82,7 +82,7 @@
 
       <section class="c-editor-section editor-section--statement">
         <div class="c-editor-field__header">
-          <label for="req_description" class="c-editor-field__label">
+          <label for="description" class="c-editor-field__label">
             Requirement statement
           </label>
           <div class="c-editor-inline-actions">
@@ -102,14 +102,14 @@
           </div>
 
           <textarea
-            name="req_description"
-            id="req_description"
+            name="description"
+            id="description"
             class="c-editor-field__textarea"
             rows="10"
             data-role="requirement-input"
             required
             placeholder="The system shall…"
-          >{{req.req_description}}</textarea>
+          >{{req.description}}</textarea>
 
           <div class="c-editor-preview" data-role="preview" hidden>
             <div class="c-editor-preview__content" data-role="preview-content"></div>
@@ -126,7 +126,7 @@
           type="button"
           class="c-editor-collapsible__trigger"
           data-role="rationale-toggle"
-          aria-expanded="{{#if req.req_justification}}true{{else}}false{{/if}}"
+          aria-expanded="{{#if req.justification}}true{{else}}false{{/if}}"
         >
           Rationale / Notes
           <span class="c-editor-collapsible__hint">Optional</span>
@@ -135,15 +135,15 @@
         <div
           class="c-editor-collapsible__panel"
           data-role="rationale-panel"
-          {{#unless req.req_justification}}hidden{{/unless}}
+          {{#unless req.justification}}hidden{{/unless}}
         >
           <textarea
-            name="req_justification"
-            id="req_justification"
+            name="justification"
+            id="justification"
             class="c-editor-field__textarea"
             rows="6"
             placeholder="Why is this required?"
-          >{{req.req_justification}}</textarea>
+          >{{req.justification}}</textarea>
         </div>
       </section>
 
@@ -167,12 +167,12 @@
         <h2 class="c-editor-meta__title">Classification</h2>
 
         <div class="c-editor-field">
-          <label for="req_reference" class="c-editor-field__label">Reference</label>
+          <label for="reference_code" class="c-editor-field__label">Reference</label>
           <input
             type="text"
-            name="req_reference"
-            id="req_reference"
-            value="{{req.req_reference}}"
+            name="reference_code"
+            id="reference_code"
+            value="{{req.reference_code}}"
             class="c-editor-field__input"
             placeholder="REQ-SYS-42"
             readonly
@@ -184,48 +184,48 @@
         </div>
 
         <div class="c-editor-field">
-          <label for="req_category" class="c-editor-field__label">Category</label>
+          <label for="category_id" class="c-editor-field__label">Category</label>
           <select
-            name="req_category"
-            id="req_category"
+            name="category_id"
+            id="category_id"
             class="c-editor-field__input"
             required
           >
             {{#each categories}}
-              <option value="{{cat_id}}" data-tag="{{cat_tag}}" {{#if (eq cat_id ../req.req_category_id)}}selected{{/if}}>
-                {{cat_title}}
+              <option value="{{id}}" data-tag="{{tag}}" {{#if (eq id ../req.req_category_id)}}selected{{/if}}>
+                {{title}}
               </option>
             {{/each}}
           </select>
         </div>
 
         <div class="c-editor-field">
-          <label for="req_applicability" class="c-editor-field__label">Applicability</label>
+          <label for="applicability_id" class="c-editor-field__label">Applicability</label>
           <select
-            name="req_applicability"
-            id="req_applicability"
+            name="applicability_id"
+            id="applicability_id"
             class="c-editor-field__input"
             required
           >
             {{#each applicability}}
-              <option value="{{app_id}}" {{#if (eq app_id ../req.req_applicability_id)}}selected{{/if}}>
-                {{app_title}}
+              <option value="{{id}}" {{#if (eq id ../req.req_applicability_id)}}selected{{/if}}>
+                {{title}}
               </option>
             {{/each}}
           </select>
         </div>
 
         <div class="c-editor-field">
-          <label for="req_verification" class="c-editor-field__label">Verification method</label>
+          <label for="verification_method_id" class="c-editor-field__label">Verification method</label>
           <select
-            name="req_verification"
-            id="req_verification"
+            name="verification_method_id"
+            id="verification_method_id"
             class="c-editor-field__input"
             required
           >
             {{#each verification}}
-              <option value="{{verification_id}}" {{#if (eq verification_id ../req.req_verification_id)}}selected{{/if}}>
-                {{verification_name}}
+              <option value="{{id}}" {{#if (eq id ../req.req_verification_id)}}selected{{/if}}>
+                {{title}}
               </option>
             {{/each}}
           </select>
@@ -236,32 +236,32 @@
         <h2 class="c-editor-meta__title">People</h2>
 
         <div class="c-editor-field">
-          <label for="req_author" class="c-editor-field__label">Author</label>
+          <label for="author_id" class="c-editor-field__label">Author</label>
           <input
             type="text"
             id="req_author_display"
             class="c-editor-field__input"
-            value="{{req.req_author}}"
+            value="{{req.author_id}}"
             readonly
             disabled
           >
-          <input type="hidden" name="req_author" value="{{req.req_author_id}}">
+          <input type="hidden" name="author_id" value="{{req.req_author_id}}">
           <small class="c-editor-field__help">
             Original author cannot be changed.
           </small>
         </div>
 
         <div class="c-editor-field">
-          <label for="req_reviewer" class="c-editor-field__label">Reviewer</label>
+          <label for="reviewer_id" class="c-editor-field__label">Reviewer</label>
           <select
-            name="req_reviewer"
-            id="req_reviewer"
+            name="reviewer_id"
+            id="reviewer_id"
             class="c-editor-field__input"
             required
           >
             {{#each users}}
-              <option value="{{user_id}}" {{#if (eq user_id ../req.req_reviewer_id)}}selected{{/if}}>
-                {{user_name}}
+              <option value="{{id}}" {{#if (eq id ../req.req_reviewer_id)}}selected{{/if}}>
+                {{name}}
               </option>
             {{/each}}
           </select>
@@ -271,10 +271,10 @@
       <section class="c-editor-meta-group">
         <h2 class="c-editor-meta__title">Upstream Trace</h2>
         <div class="c-editor-field">
-          <label for="req_parent" class="c-editor-field__label">Parent requirement</label>
+          <label for="parent_id" class="c-editor-field__label">Parent requirement</label>
           <select
-            name="req_parent"
-            id="req_parent"
+            name="parent_id"
+            id="parent_id"
             class="c-editor-field__input"
           >
             <option value="0" {{#if (eq 0 ../req.req_parent_id)}}selected{{/if}}>None</option>
@@ -294,10 +294,10 @@
     </aside>
   </div>
 
-  <input type="hidden" name="req_author" value="{{req.req_author_id}}">
-  <input type="hidden" id="req_id" name="req_id" value="{{req.req_id}}">
-  <input type="hidden" name="req_reference" value="{{req.req_reference}}">
-  <input type="hidden" name="req_current_status" value="{{req.req_current_status_id}}">
+  <input type="hidden" name="author_id" value="{{req.req_author_id}}">
+  <input type="hidden" id="id" name="id" value="{{req.id}}">
+  <input type="hidden" name="reference_code" value="{{req.reference_code}}">
+  <input type="hidden" name="status_id" value="{{req.req_current_status_id}}">
   <input type="hidden" id="project_id" name="project_id" value="{{req.project_id}}">
   <input type="hidden" id="autosave-interval" value="{{autosave.interval_ms}}" data-role="autosave-interval">
 </form>

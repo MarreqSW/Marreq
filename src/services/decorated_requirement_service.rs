@@ -9,7 +9,7 @@ use super::{
     VerificationService,
 };
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{DecoratedRequirement, NewRequirement, Requirement, Test, User};
+use crate::models::{DecoratedRequirement, NewRequirement, Requirement, TestCase, User};
 use crate::repository::errors::RepoError;
 
 /// High level operations for requirements backed by the shared [`AppState`].
@@ -72,7 +72,7 @@ impl<'a> DecoratedRequirementService<'a> {
         self.decorate_vec(self.requirement_service.get_by_parent_id(parent_id)?)
     }
 
-    pub fn get_linked_tests(&self, id: i32) -> Result<Vec<Test>, RepoError> {
+    pub fn get_linked_tests(&self, id: i32) -> Result<Vec<TestCase>, RepoError> {
         self.requirement_service.get_linked_tests(id)
     }
 
@@ -103,43 +103,43 @@ impl<'a> DecoratedRequirementService<'a> {
     fn decorate(&self, req: &Requirement) -> Result<DecoratedRequirement, RepoError> {
         let verification = self
             .verification_service
-            .get_by_id(req.req_verification)
-            .map(|v| v.verification_name)
-            .unwrap_or_else(|_| format!("Unknown Verification ({})", req.req_verification));
+            .get_by_id(req.verification_method_id)
+            .map(|v| v.title)
+            .unwrap_or_else(|_| format!("Unknown Verification ({})", req.verification_method_id));
 
         let status = self
             .status_service
-            .get_requirement_status(req.req_current_status)
-            .map(|s| s.req_st_title)
-            .unwrap_or_else(|_| format!("Unknown Status ({})", req.req_current_status));
+            .get_requirement_status(req.status_id)
+            .map(|s| s.title)
+            .unwrap_or_else(|_| format!("Unknown Status ({})", req.status_id));
 
         let author = self
             .user_service
-            .get_by_id(req.req_author)
-            .map(|u| u.user_name)
-            .unwrap_or_else(|_| format!("Unknown User ({})", req.req_author));
+            .get_by_id(req.author_id)
+            .map(|u| u.name)
+            .unwrap_or_else(|_| format!("Unknown User ({})", req.author_id));
 
         let reviewer = self
             .user_service
-            .get_by_id(req.req_reviewer)
-            .map(|u| u.user_name)
-            .unwrap_or_else(|_| format!("Unknown User ({})", req.req_reviewer));
+            .get_by_id(req.reviewer_id)
+            .map(|u| u.name)
+            .unwrap_or_else(|_| format!("Unknown User ({})", req.reviewer_id));
 
         let category = self
             .category_service
-            .get_by_id(req.req_category)
-            .map(|c| c.cat_title)
-            .unwrap_or_else(|_| format!("Unknown Category ({})", req.req_category));
+            .get_by_id(req.category_id)
+            .map(|c| c.title)
+            .unwrap_or_else(|_| format!("Unknown Category ({})", req.category_id));
 
         let applicability = self
             .applicability_service
-            .get_by_id(req.req_applicability)
-            .map(|a| a.app_title)
-            .unwrap_or_else(|_| format!("Unknown Applicability ({})", req.req_applicability));
+            .get_by_id(req.applicability_id)
+            .map(|a| a.title)
+            .unwrap_or_else(|_| format!("Unknown Applicability ({})", req.applicability_id));
 
-        let parent_title = if req.req_parent != 0 {
-            match self.requirement_service.get_by_id(req.req_parent) {
-                Ok(parent_req) => parent_req.req_title,
+        let parent_title = if let Some(parent_id) = req.parent_id {
+            match self.requirement_service.get_by_id(parent_id) {
+                Ok(parent_req) => parent_req.title,
                 Err(_) => "[Deleted Parent]".to_string(),
             }
         } else {
@@ -147,34 +147,31 @@ impl<'a> DecoratedRequirementService<'a> {
         };
 
         Ok(DecoratedRequirement {
-            req_id: req.req_id,
-            req_title: req.req_title.clone(),
-            req_verification: verification,
-            req_verification_id: req.req_verification,
-            req_description: req.req_description.clone(),
-            req_current_status: status,
-            req_current_status_id: req.req_current_status,
-            req_author: author,
-            req_author_id: req.req_author,
-            req_reviewer: reviewer,
-            req_reviewer_id: req.req_reviewer,
-            req_reference: req.req_reference.clone(),
-            req_category: category,
-            req_category_id: req.req_category,
-            req_applicability: applicability,
-            req_applicability_id: req.req_applicability,
-            req_parent_id: req.req_parent,
+            id: req.id,
+            title: req.title.clone(),
+            verification_method_id: verification,
+            req_verification_id: req.verification_method_id,
+            description: req.description.clone(),
+            status_id: status,
+            req_current_status_id: req.status_id,
+            author_id: author,
+            req_author_id: req.author_id,
+            reviewer_id: reviewer,
+            req_reviewer_id: req.reviewer_id,
+            reference_code: req.reference_code.clone(),
+            category_id: category,
+            req_category_id: req.category_id,
+            applicability_id: applicability,
+            req_applicability_id: req.applicability_id,
+            req_parent_id: req.parent_id,
             req_parent_title: parent_title,
-            req_creation_date: req
-                .req_creation_date
-                .format("%d-%m-%Y %H:%M:%S")
-                .to_string(),
-            req_update_date: req.req_update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
-            req_deadline_date: req
-                .req_deadline_date
-                .format("%d-%m-%Y %H:%M:%S")
-                .to_string(),
-            req_justification: req.req_justification.clone(),
+            creation_date: req.creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+            update_date: req.update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+            deadline_date: req
+                .deadline_date
+                .map(|d| d.format("%d-%m-%Y %H:%M:%S").to_string())
+                .unwrap_or_default(),
+            justification: req.justification.clone(),
             project_id: req.project_id,
         })
     }

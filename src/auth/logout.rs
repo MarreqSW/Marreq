@@ -1,14 +1,14 @@
 use crate::auth::{clear_session_cookie, read_session_user_id};
-use crate::logger::{LogCtx, Logger};
-use crate::repository::DieselRepo;
+use crate::models::NewLog;
+use crate::repository::LogRepository;
 use rocket::http::CookieJar;
 
 /// Clear session cookies and log the logout event.
-/// Note: login calls Cookie::new(..). By default, Rocket’s Cookie::new creates
-/// a cookie without any explicit path, and Rocket’s add_private will add it to
+/// Note: login calls Cookie::new(..). By default, Rocket's Cookie::new creates
+/// a cookie without any explicit path, and Rocket's add_private will add it to
 /// the response as-is. The default path is handled by the browser: if no Path
-/// is given, RFC 6265 says the default is the request’s path up to the rightmost “/”.
-pub fn logout_user(cookies: &CookieJar<'_>) {
+/// is given, RFC 6265 says the default is the request's path up to the rightmost "/".
+pub fn logout_user<R: LogRepository>(cookies: &CookieJar<'_>, repo: &mut R) {
     // Get user info before clearing cookies
     let user_id = read_session_user_id(cookies);
 
@@ -16,32 +16,42 @@ pub fn logout_user(cookies: &CookieJar<'_>) {
     clear_session_cookie(cookies);
 
     // Remove legacy cookies from previous versions if they exist
-    for legacy in &["username", "user_name"] {
+    for legacy in &["username", "name"] {
         let mut cookie = rocket::http::Cookie::new(*legacy, "");
         cookie.set_path("/");
         cookies.remove_private(cookie);
     }
 
-    // Log logout if possible
+    // Log logout if we have a user_id - don't fail if logging fails
     if let Some(uid) = user_id {
-        if let Ok(mut conn) = DieselRepo::new().get_conn() {
-            let ctx = LogCtx::new(uid);
-            let _ = Logger::log_logout(&mut conn, &ctx);
-        }
+        let log = NewLog {
+            user_id: uid,
+            action_type: "LOGOUT".to_string(),
+            entity_type: "User".to_string(),
+            project_id: None,
+            entity_id: Some(uid),
+            old_values: None,
+            new_values: None,
+            description: Some("User logged out".to_string()),
+            ip_address: None,
+            user_agent: None,
+        };
+        let _ = repo.insert_log(&log);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use rocket::local::blocking::Client;
     use rocket::{get, routes};
 
     #[get("/")]
     fn set_basic(cookies: &CookieJar<'_>) {
-        cookies.add_private(rocket::http::Cookie::new("user_id", "not-an-int"));
+        cookies.add_private(rocket::http::Cookie::new("id", "not-an-int"));
         cookies.add_private(rocket::http::Cookie::new("username", "alice"));
-        cookies.add_private(rocket::http::Cookie::new("user_name", "Alice"));
+        cookies.add_private(rocket::http::Cookie::new("name", "Alice"));
     }
 
     #[test]
@@ -52,19 +62,20 @@ mod tests {
         let jar = client.cookies();
         assert!(jar.get_private("username").is_some());
 
-        logout_user(&jar);
+        let mut repo = DieselRepoMock::default();
+        logout_user(&jar, &mut repo);
 
-        assert!(jar.get_pending("user_id").is_none());
+        assert!(jar.get_pending("id").is_none());
         assert!(jar.get_pending("username").is_none());
-        assert!(jar.get_pending("user_name").is_none());
+        assert!(jar.get_pending("name").is_none());
     }
 
     #[get("/")]
     fn set_with_other(cookies: &CookieJar<'_>) {
         cookies.add(rocket::http::Cookie::new("other", "ok"));
-        cookies.add_private(rocket::http::Cookie::new("user_id", "bad"));
+        cookies.add_private(rocket::http::Cookie::new("id", "bad"));
         cookies.add_private(rocket::http::Cookie::new("username", "bob"));
-        cookies.add_private(rocket::http::Cookie::new("user_name", "Bob"));
+        cookies.add_private(rocket::http::Cookie::new("name", "Bob"));
     }
 
     #[test]
@@ -74,11 +85,12 @@ mod tests {
         client.get("/").dispatch();
         let jar = client.cookies();
 
-        logout_user(&jar);
+        let mut repo = DieselRepoMock::default();
+        logout_user(&jar, &mut repo);
 
-        assert!(jar.get_pending("user_id").is_none());
+        assert!(jar.get_pending("id").is_none());
         assert!(jar.get_pending("username").is_none());
-        assert!(jar.get_pending("user_name").is_none());
+        assert!(jar.get_pending("name").is_none());
         assert!(jar.get_pending("other").is_some());
     }
 }

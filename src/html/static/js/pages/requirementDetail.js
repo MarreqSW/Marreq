@@ -255,24 +255,24 @@ function renderVerification(root, view, canonical) {
     const link = document.createElement('a');
     link.className =
       'list-group-item list-group-item-action d-flex justify-content-between align-items-start';
-    link.href = `/p/${canonical.project_id}/tests/show/${test.test_id}`;
+    link.href = `/p/${canonical.project_id}/tests/show/${test.id}`;
 
     const info = document.createElement('div');
     info.className = 'me-3';
 
     const name = document.createElement('div');
     name.className = 'fw-semibold';
-    name.textContent = test.test_name;
+    name.textContent = test.name;
 
     const description = document.createElement('div');
     description.className = 'small text-muted';
-    description.textContent = test.test_description;
+    description.textContent = test.description;
 
     info.append(name, description);
 
     const status = document.createElement('span');
     status.className = 'badge bg-light text-dark border';
-    status.textContent = test.test_status;
+    status.textContent = test.status_id;
 
     link.append(info, status);
     testsContainer.appendChild(link);
@@ -431,7 +431,7 @@ function hydratePage(view, canonical) {
   }
 
   setText(getField(root, 'reference'), view.reference);
-  setText(getField(root, 'title'), canonical.requirement?.req_title);
+  setText(getField(root, 'title'), canonical.requirement?.title);
 
   renderBadge(getField(root, 'status-badge'), view.status_badge);
   renderSolidity(root, view.solidity);

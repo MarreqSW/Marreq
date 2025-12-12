@@ -26,7 +26,7 @@
       <select name="req_status_filter" id="req_status_filter" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
         <option value="">All</option>
         {{#each statuses}}
-          <option value="{{req_st_id}}" {{#if (eq ../req_status_filter req_st_id)}}selected{{/if}}>{{req_st_title}}</option>
+          <option value="{{id}}" {{#if (eq ../req_status_filter id)}}selected{{/if}}>{{title}}</option>
         {{/each}}
       </select>
     </div>
@@ -39,7 +39,7 @@
       <select name="category_filter" id="category_filter" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
         <option value="">All</option>
         {{#each categories}}
-          <option value="{{cat_id}}" {{#if (eq ../category_filter cat_id)}}selected{{/if}}>{{cat_title}}</option>
+          <option value="{{id}}" {{#if (eq ../category_filter id)}}selected{{/if}}>{{title}}</option>
         {{/each}}
       </select>
     </div>
@@ -52,7 +52,7 @@
       <select name="applicability_filter" id="applicability_filter" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
         <option value="">All</option>
         {{#each applicabilities}}
-          <option value="{{app_id}}" {{#if (eq ../applicability_filter app_id)}}selected{{/if}}>{{app_title}}</option>
+          <option value="{{id}}" {{#if (eq ../applicability_filter id)}}selected{{/if}}>{{title}}</option>
         {{/each}}
       </select>
     </div>
@@ -65,7 +65,7 @@
       <select name="test_status_filter" id="test_status_filter" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
         <option value="">All</option>
         {{#each test_statuses}}
-          <option value="{{test_st_id}}" {{#if (eq ../test_status_filter test_st_id)}}selected{{/if}}>{{test_st_title}}</option>
+          <option value="{{id}}" {{#if (eq ../test_status_filter id)}}selected{{/if}}>{{title}}</option>
         {{/each}}
       </select>
     </div>

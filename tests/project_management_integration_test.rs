@@ -1,3 +1,5 @@
+#![cfg(feature = "test-helpers")]
+
 use req_man::app::AppState;
 use req_man::auth::session::SESSION_COOKIE;
 use req_man::models::{Project, ProjectMember};
@@ -5,16 +7,22 @@ use req_man::repository::diesel_repo_mock::DieselRepoMock;
 use req_man::repository::CacheRepository;
 use req_man::routes::html::project;
 use req_man::routes::html::projects;
+use req_man::status_enums::ProjectStatus;
 use rocket::http::{Cookie, Status};
 use rocket::local::asynchronous::Client;
 use std::sync::{Arc, RwLock};
 
+type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
+
+fn managed_state(repo: DieselRepoMock) -> TestAppState {
+    AppState {
+        repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+    }
+}
+
 // Helper to create a test client with a populated mock repository
 async fn test_client(repo: DieselRepoMock) -> Client {
     let rocket = rocket::build()
-        .manage(AppState {
-            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
-        })
         .attach(rocket_dyn_templates::Template::fairing())
         .mount(
             "/",
@@ -31,7 +39,8 @@ async fn test_client(repo: DieselRepoMock) -> Client {
                 req_man::routes::catchers::unauthorized,
                 req_man::routes::catchers::forbidden
             ],
-        );
+        )
+        .manage(managed_state(repo));
 
     Client::tracked(rocket).await.expect("rocket instance")
 }
@@ -64,13 +73,13 @@ async fn projects_page_lists_user_projects() {
     let mut repo = authenticated_repo(1);
     // Add a project where user 1 is owner
     let project = Project {
-        project_id: 10,
-        project_name: "My Project".into(),
-        project_description: Some("Description".into()),
-        project_creation_date: None,
-        project_update_date: None,
-        project_status: Some("Active".into()),
-        project_owner_id: Some(1),
+        id: 10,
+        name: "My Project".into(),
+        description: Some("Description".into()),
+        creation_date: None,
+        update_date: None,
+        owner_id: Some(1),
+        status: ProjectStatus::Active,
     };
     repo.projects.insert(10, project);
 
@@ -108,7 +117,7 @@ async fn create_project_success() {
         .post("/new_project")
         .private_cookie(session_cookie(1))
         .header(rocket::http::ContentType::Form)
-        .body("project_name=New+Project&project_description=Test+Description&project_status=active&project_owner_id=1")
+        .body("name=New+Project&description=Test+Description&status=active&owner_id=1")
         .dispatch()
         .await;
 
@@ -120,13 +129,13 @@ async fn create_project_success() {
 async fn access_project_details_as_owner() {
     let mut repo = authenticated_repo(1);
     let project = Project {
-        project_id: 30,
-        project_name: "Owner Project".into(),
-        project_description: None,
-        project_creation_date: None,
-        project_update_date: None,
-        project_status: Some("Active".into()),
-        project_owner_id: Some(1),
+        id: 30,
+        name: "Owner Project".into(),
+        description: None,
+        creation_date: None,
+        update_date: None,
+        status: ProjectStatus::Active,
+        owner_id: Some(1),
     };
     repo.projects.insert(30, project);
 
@@ -155,13 +164,13 @@ async fn access_project_details_as_owner() {
 async fn access_project_details_forbidden_for_non_member() {
     let mut repo = authenticated_repo(2); // User 2
     let project = Project {
-        project_id: 40,
-        project_name: "Private Project".into(),
-        project_description: None,
-        project_creation_date: None,
-        project_update_date: None,
-        project_status: Some("Active".into()),
-        project_owner_id: Some(1), // Owned by User 1
+        id: 40,
+        name: "Private Project".into(),
+        description: None,
+        creation_date: None,
+        update_date: None,
+        status: ProjectStatus::Active,
+        owner_id: Some(1), // Owned by User 1
     };
     repo.projects.insert(40, project);
     // User 2 is NOT a member

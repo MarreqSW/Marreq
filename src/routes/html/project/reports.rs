@@ -1,7 +1,7 @@
 use super::helpers::*;
 use super::prelude::*;
 use crate::app::DieselCachedRepo;
-use crate::models::{Category, Requirement, Test, User};
+use crate::models::{Category, Requirement, TestCase, User};
 use std::collections::HashMap;
 
 fn round1(x: f64) -> f64 {
@@ -11,7 +11,7 @@ fn round1(x: f64) -> f64 {
 fn get_details(
     project_id: i32,
     repo: &DieselCachedRepo,
-) -> (Vec<Requirement>, Vec<Test>, Vec<Category>) {
+) -> (Vec<Requirement>, Vec<TestCase>, Vec<Category>) {
     (
         repo.get_requirements_by_project(project_id)
             .unwrap_or_default(),
@@ -26,24 +26,24 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
 
     let (requirements, tests, categories) = get_details(project_id, &repo);
     let users_len = repo.get_users_all().unwrap_or_default().len();
-    let all_statuses = repo.get_status_all().unwrap_or_default();
+    let all_statuses = repo.get_requirement_status_all().unwrap_or_default();
 
     // group helpers (i32 counts)
     let requirements_by_status = requirements.iter().fold(HashMap::new(), |mut acc, req| {
-        let status = get_status_name_by_id_cached(state, req.req_current_status);
+        let status = get_status_name_by_id_cached(state, req.status_id);
         *acc.entry(status).or_insert(0) += 1i32;
         acc
     });
 
     let tests_by_status = tests.iter().fold(HashMap::new(), |mut acc, t| {
-        let status = get_status_name_by_id_cached(state, t.test_status);
+        let status = get_status_name_by_id_cached(state, t.status_id);
         *acc.entry(status).or_insert(0) += 1i32;
         acc
     });
 
     let requirements_by_category = requirements.iter().fold(HashMap::new(), |mut acc, req| {
-        let cat = get_category_by_id_cached(state, req.req_category);
-        *acc.entry(cat.cat_title.clone()).or_insert(0) += 1i32;
+        let cat = get_category_by_id_cached(state, req.category_id);
+        *acc.entry(cat.title.clone()).or_insert(0) += 1i32;
         acc
     });
 
@@ -51,7 +51,7 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
     let mut covered = 0usize;
     let mut total_links = 0usize;
     for req in &requirements {
-        let links = get_requirements_for_test_cached(state, req.req_id).unwrap_or_default();
+        let links = get_requirements_for_test_cached(state, req.id).unwrap_or_default();
         if !links.is_empty() {
             covered += 1;
         }
@@ -74,7 +74,7 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
     let recent_requirements = requirements.len();
     let recent_tests = tests.len();
 
-    let selected_project_name = get_project_by_id_pooled_safe(state, project_id).project_name;
+    let selected_project_name = get_project_by_id_pooled_safe(state, project_id).name;
 
     let metrics = Metrics {
         users_len,
@@ -107,12 +107,12 @@ async fn show_reports(
 ) -> Result<Template, Redirect> {
     let user: User = project_access.into_user();
 
-    let (m, project_name) = compute_metrics(state, project_id);
+    let (m, name) = compute_metrics(state, project_id);
 
     let ctx = serde_json::json!({
         "user": user,
         "selected_project_id": project_id,
-        "selected_project_name": project_name,
+        "selected_project_name": name,
         "metrics": {
             "total_requirements": m.total_requirements,
             "total_tests": m.total_tests,
@@ -166,11 +166,14 @@ pub fn routes() -> Vec<Route> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Category, Matrix, Project, ProjectMember, Requirement, Status, Test};
+    use crate::models::{
+        Category, MatrixLink, Project, ProjectMember, Requirement, RequirementStatus, TestCase,
+    };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
         client_with_routes, get_with_session, timestamp,
     };
+    use crate::status_enums::ProjectStatus;
     use rocket::http::{ContentType, Status as HttpStatus};
     use rocket::local::asynchronous::Client;
 
@@ -179,65 +182,66 @@ mod tests {
 
     fn sample_project() -> Project {
         Project {
-            project_id: PROJECT_ID,
-            project_name: "Orbiter".to_string(),
-            project_description: Some("Orbiter project".to_string()),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("Active".to_string()),
-            project_owner_id: Some(ADMIN_ID),
+            id: PROJECT_ID,
+            name: "Orbiter".to_string(),
+            description: Some("Orbiter project".to_string()),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status: ProjectStatus::Active,
+            owner_id: Some(ADMIN_ID),
         }
     }
 
     fn sample_category() -> Category {
         Category {
-            cat_id: 1,
-            cat_title: "Systems".to_string(),
-            cat_description: "Core systems".to_string(),
-            cat_tag: "systems".to_string(),
+            id: 1,
+            title: "Systems".to_string(),
+            description: "Core systems".to_string(),
+            tag: "systems".to_string(),
             project_id: PROJECT_ID,
         }
     }
 
-    fn sample_status(id: i32, title: &str) -> Status {
-        Status {
-            st_id: id,
-            st_title: title.to_string(),
-            st_description: format!("{title} status"),
-            st_short_name: title.chars().take(3).collect(),
+    fn sample_status(id: i32, title: &str) -> RequirementStatus {
+        RequirementStatus {
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} status"),
+            tag: title.chars().take(3).collect(),
+            project_id: 1,
         }
     }
 
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Requirement {id}"),
-            req_description: "Test requirement".to_string(),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: ADMIN_ID,
-            req_reviewer: ADMIN_ID,
-            req_reference: format!("REQ-{:03}", id),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("For testing".to_string()),
+            id: id,
+            title: format!("Requirement {id}"),
+            description: "Test requirement".to_string(),
+            verification_method_id: 1,
+            status_id: 1,
+            author_id: ADMIN_ID,
+            reviewer_id: ADMIN_ID,
+            reference_code: format!("REQ-{:03}", id),
+            category_id: 1,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            applicability_id: 1,
+            justification: Some("For testing".to_string()),
             project_id: PROJECT_ID,
         }
     }
 
-    fn sample_test(id: i32, status_id: i32, name: &str) -> Test {
-        Test {
-            test_id: id,
-            test_name: name.to_string(),
-            test_description: "Validation test".to_string(),
-            test_source: "Spec".to_string(),
-            test_status: status_id,
-            test_reference: format!("TEST-{id:03}"),
-            test_parent: 0,
+    fn sample_test(id: i32, status_id: i32, name: &str) -> TestCase {
+        TestCase {
+            id: id,
+            name: name.to_string(),
+            description: "Validation test".to_string(),
+            source: "Spec".to_string(),
+            status_id: status_id,
+            reference_code: format!("TEST-{id:03}"),
+            parent_id: None,
             project_id: PROJECT_ID,
         }
     }
@@ -251,14 +255,16 @@ mod tests {
 
         repo.projects.insert(PROJECT_ID, sample_project());
         repo.categories.insert(1, sample_category());
-        repo.statuses.insert(1, sample_status(1, "Draft"));
-        repo.statuses.insert(2, sample_status(2, "In Review"));
+        repo.requirement_statuses
+            .insert(1, sample_status(1, "Draft"));
+        repo.requirement_statuses
+            .insert(2, sample_status(2, "In Review"));
         repo.requirements.insert(1, sample_requirement(1));
         repo.tests.insert(1, sample_test(1, 1, "System Validation"));
-        repo.matrices.push(Matrix {
-            matrix_req_id: 1,
-            matrix_test_id: 1,
-            matrix_creation_date: timestamp(),
+        repo.matrices.push(MatrixLink {
+            req_id: 1,
+            test_id: 1,
+            creation_date: timestamp(),
             project_id: PROJECT_ID,
         });
         repo.project_members.push(ProjectMember {

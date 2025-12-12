@@ -27,14 +27,14 @@ async fn get_matrix(
 
     // Build filter and pagination parameters
     let filters = MatrixFilters {
-        test_status: test_status_filter,
+        status_id: test_status_filter,
         req_status: req_status_filter,
         category: category_filter,
         applicability: applicability_filter,
         search: search.clone(),
     };
 
-    let sort_by_value = sort_by.clone().unwrap_or_else(|| "req_id".to_string());
+    let sort_by_value = sort_by.clone().unwrap_or_else(|| "id".to_string());
     let is_desc = sort_order.as_deref() == Some("desc");
     let pagination = MatrixPagination {
         page: page.unwrap_or(1).max(1),
@@ -118,7 +118,7 @@ async fn get_matrix(
 /// Build matrix rows with linkage information
 fn build_matrix_rows(
     reqs: &[Requirement],
-    tests: &[Test],
+    tests: &[TestCase],
     links: &HashSet<(i32, i32)>,
 ) -> (Vec<serde_json::Value>, usize) {
     use serde_json::json;
@@ -130,16 +130,16 @@ fn build_matrix_rows(
                 .iter()
                 .map(|test| {
                     json!({
-                        "linked": links.contains(&(req.req_id, test.test_id)),
-                        "test_status": test.test_status
+                        "linked": links.contains(&(req.id, test.id)),
+                        "status_id": test.status_id
                     })
                 })
                 .collect();
 
             json!({
-                "req_id": req.req_id,
-                "req_title": req.req_title,
-                "req_reference": req.req_reference,
+                "id": req.id,
+                "title": req.title,
+                "reference_code": req.reference_code,
                 "matrix": row
             })
         })
@@ -151,7 +151,7 @@ fn build_matrix_rows(
         .map(|req| {
             tests
                 .iter()
-                .filter(|test| links.contains(&(req.req_id, test.test_id)))
+                .filter(|test| links.contains(&(req.id, test.id)))
                 .count()
         })
         .sum();
@@ -160,17 +160,17 @@ fn build_matrix_rows(
 }
 
 /// Build tests list with status names
-fn build_tests_with_status(tests: &[Test], state: &State<AppState>) -> Vec<serde_json::Value> {
+fn build_tests_with_status(tests: &[TestCase], state: &State<AppState>) -> Vec<serde_json::Value> {
     use serde_json::json;
 
     tests
         .iter()
         .map(|t| {
             json!({
-                "test_id": t.test_id,
-                "test_name": t.test_name,
-                "test_reference": t.test_reference,
-                "test_status": get_status_name_by_id_cached(state, t.test_status)
+                "id": t.id,
+                "name": t.name,
+                "reference_code": t.reference_code,
+                "status_id": get_status_name_by_id_cached(state, t.status_id)
             })
         })
         .collect()
@@ -216,7 +216,7 @@ async fn get_matrix_xls(
 
     println!(
         "User {} (id:{}) requested matrix export for project {}",
-        user.user_username, user.user_id, project_id
+        user.username, user.id, project_id
     );
 
     excel::create_matrix_workbook(cookies).map_err(|e| {
@@ -249,7 +249,7 @@ async fn get_matrix_csv(
 
     println!(
         "User {} (id:{}) requested CSV export for project {} with test status filter: {:?}",
-        user.user_username, user.user_id, project_id, test_status_filter
+        user.username, user.id, project_id, test_status_filter
     );
 
     let service = MatrixService::new(state.inner());
@@ -271,13 +271,14 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Applicability, Category, Project, ProjectMember, Requirement, Status, Test, TestStatus,
-        Verification,
+        Applicability, Category, Project, ProjectMember, Requirement, RequirementStatus, TestCase,
+        TestStatus, VerificationMethod,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
         client_with_routes, get_with_session, timestamp,
     };
+    use crate::status_enums::ProjectStatus;
     use rocket::http::Status as HttpStatus;
     use rocket::local::asynchronous::Client;
 
@@ -287,80 +288,83 @@ mod tests {
 
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
-            project_id: id,
-            project_name: name.to_string(),
-            project_description: Some(format!("{name} project")),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("Active".to_string()),
-            project_owner_id: Some(ADMIN_ID),
+            id: id,
+            name: name.to_string(),
+            description: Some(format!("{name} project")),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status: ProjectStatus::Active,
+            owner_id: Some(ADMIN_ID),
         }
     }
 
     fn sample_category(id: i32, title: &str) -> Category {
         Category {
-            cat_id: id,
-            cat_title: title.to_string(),
-            cat_description: format!("{title} systems"),
-            cat_tag: title.to_ascii_uppercase(),
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} systems"),
+            tag: title.to_ascii_uppercase(),
             project_id: PRIMARY_PROJECT,
         }
     }
 
-    fn sample_status(id: i32, title: &str) -> Status {
-        Status {
-            st_id: id,
-            st_title: title.to_string(),
-            st_description: format!("{title} status"),
-            st_short_name: title.to_ascii_uppercase(),
+    fn sample_status(id: i32, title: &str) -> RequirementStatus {
+        RequirementStatus {
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} status"),
+            tag: title.to_ascii_uppercase(),
+            project_id: 1,
         }
     }
 
     fn sample_test_status(id: i32, title: &str) -> TestStatus {
         TestStatus {
-            test_st_id: id,
-            test_st_title: title.to_string(),
-            test_st_description: format!("{title} status"),
-            test_st_short_name: title.to_ascii_uppercase(),
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} status"),
+            tag: title.to_ascii_uppercase(),
+            project_id: 1,
         }
     }
 
     fn sample_applicability(id: i32, title: &str) -> Applicability {
         Applicability {
-            app_id: id,
-            app_title: title.to_string(),
-            app_description: format!("{title} applicability"),
-            app_tag: title.to_ascii_uppercase(),
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} applicability"),
+            tag: title.to_ascii_uppercase(),
             project_id: PRIMARY_PROJECT,
         }
     }
 
-    fn sample_verification(id: i32, title: &str) -> Verification {
-        Verification {
-            verification_id: id,
-            verification_name: title.to_string(),
-            verification_description: format!("{title} verification"),
+    fn sample_verification(id: i32, title: &str) -> VerificationMethod {
+        VerificationMethod {
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} verification"),
+            tag: title.to_uppercase().replace(" ", "_"),
             project_id: PRIMARY_PROJECT,
         }
     }
 
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Requirement {id}"),
-            req_description: "Test requirement".into(),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: ADMIN_ID,
-            req_reviewer: ADMIN_ID,
-            req_reference: format!("REQ-SYS-{id}"),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("For testing".into()),
+            id: id,
+            title: format!("Requirement {id}"),
+            description: "Test requirement".into(),
+            verification_method_id: 1,
+            status_id: 1,
+            author_id: ADMIN_ID,
+            reviewer_id: ADMIN_ID,
+            reference_code: format!("REQ-SYS-{id}"),
+            category_id: 1,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            applicability_id: 1,
+            justification: Some("For testing".into()),
             project_id: PRIMARY_PROJECT,
         }
     }
@@ -443,21 +447,21 @@ mod tests {
             repo.requirements.insert(
                 i,
                 Requirement {
-                    req_id: i,
-                    req_title: format!("Req {}", i),
-                    req_description: String::new(),
-                    req_verification: 1,
-                    req_current_status: 1,
-                    req_author: 1,
-                    req_reviewer: 1,
-                    req_reference: format!("REF-{}", i),
-                    req_category: 1,
-                    req_parent: 0,
-                    req_creation_date: timestamp(),
-                    req_update_date: timestamp(),
-                    req_deadline_date: timestamp(),
-                    req_applicability: 1,
-                    req_justification: None,
+                    id: i,
+                    title: format!("Req {}", i),
+                    description: String::new(),
+                    verification_method_id: 1,
+                    status_id: 1,
+                    author_id: 1,
+                    reviewer_id: 1,
+                    reference_code: format!("REF-{}", i),
+                    category_id: 1,
+                    parent_id: None,
+                    creation_date: timestamp(),
+                    update_date: timestamp(),
+                    deadline_date: Some(timestamp()),
+                    applicability_id: 1,
+                    justification: None,
                     project_id: 1,
                 },
             );
@@ -471,8 +475,8 @@ mod tests {
 
         let body = response.into_string().await.expect("response body");
         // Page 1 should contain first 10 requirements
-        let req_1_in_table = body.contains(r#"req_id":1"#) || body.contains("REF-1");
-        let req_10_in_table = body.contains(r#"req_id":10"#) || body.contains("REF-10");
+        let req_1_in_table = body.contains(r#"id":1"#) || body.contains("REF-1");
+        let req_10_in_table = body.contains(r#"id":10"#) || body.contains("REF-10");
         assert!(req_1_in_table, "Page 1 should contain requirement 1");
         assert!(req_10_in_table, "Page 1 should contain requirement 10");
 
@@ -481,8 +485,8 @@ mod tests {
         assert_eq!(response2.status(), HttpStatus::Ok);
         let body2 = response2.into_string().await.expect("response body");
 
-        let req_11_in_table = body2.contains(r#"req_id":11"#) || body2.contains("REF-11");
-        let req_20_in_table = body2.contains(r#"req_id":20"#) || body2.contains("REF-20");
+        let req_11_in_table = body2.contains(r#"id":11"#) || body2.contains("REF-11");
+        let req_20_in_table = body2.contains(r#"id":20"#) || body2.contains("REF-20");
         assert!(req_11_in_table, "Page 2 should contain requirement 11");
         assert!(req_20_in_table, "Page 2 should contain requirement 20");
     }
@@ -495,21 +499,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Authentication Requirement".to_string(),
-                req_description: String::new(),
-                req_verification: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "AUTH-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Authentication Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "AUTH-001".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -517,21 +521,21 @@ mod tests {
         repo.requirements.insert(
             2,
             Requirement {
-                req_id: 2,
-                req_title: "Database Requirement".to_string(),
-                req_description: String::new(),
-                req_verification: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "DB-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 2,
+                title: "Database Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "DB-001".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -563,35 +567,35 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Test Requirement".to_string(),
-                req_description: String::new(),
-                req_verification: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Test Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-001".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
 
         repo.tests.insert(
             1,
-            Test {
-                test_id: 1,
-                test_name: "Test 1".to_string(),
-                test_reference: "TST-1".to_string(),
-                test_description: String::new(),
-                test_source: String::new(),
-                test_status: 1,
-                test_parent: 0,
+            TestCase {
+                id: 1,
+                name: "Test 1".to_string(),
+                reference_code: "TST-1".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: None,
                 project_id: 1,
             },
         );
@@ -614,21 +618,21 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Test, with \"quotes\"".to_string(),
-                req_description: String::new(),
-                req_verification: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Test, with \"quotes\"".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-001".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
@@ -664,35 +668,35 @@ mod tests {
         repo.requirements.insert(
             1,
             Requirement {
-                req_id: 1,
-                req_title: "Unlinked Requirement".to_string(),
-                req_description: String::new(),
-                req_verification: 1,
-                req_current_status: 1,
-                req_author: 1,
-                req_reviewer: 1,
-                req_reference: "REF-001".to_string(),
-                req_category: 1,
-                req_parent: 0,
-                req_creation_date: timestamp(),
-                req_update_date: timestamp(),
-                req_deadline_date: timestamp(),
-                req_applicability: 1,
-                req_justification: None,
+                id: 1,
+                title: "Unlinked Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-001".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
                 project_id: 1,
             },
         );
 
         repo.tests.insert(
             1,
-            Test {
-                test_id: 1,
-                test_name: "Test 1".to_string(),
-                test_reference: "TST-1".to_string(),
-                test_description: String::new(),
-                test_source: String::new(),
-                test_status: 1,
-                test_parent: 0,
+            TestCase {
+                id: 1,
+                name: "Test 1".to_string(),
+                reference_code: "TST-1".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: None,
                 project_id: 1,
             },
         );

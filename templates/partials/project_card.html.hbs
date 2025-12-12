@@ -8,18 +8,18 @@
           {{project_initial}}
         </span>
         <div class="reqman-project-card__titles">
-          <h3>{{project_name}}</h3>
+          <h3>{{name}}</h3>
           {{#if project_owner_name}}
             <p class="reqman-project-card__owner">Owned by {{project_owner_name}}</p>
           {{/if}}
         </div>
       </div>
       <span class="reqman-project-card__status reqman-badge reqman-badge--{{project_status_badge}}">
-        {{project_status}}
+        {{status_id}}
       </span>
     </div>
-    {{#if project_description}}
-      <p class="reqman-project-card__description">{{project_description}}</p>
+    {{#if description}}
+      <p class="reqman-project-card__description">{{description}}</p>
     {{/if}}
     <div class="reqman-project-card__meta">
       <div class="reqman-project-card__meta-item">
@@ -32,16 +32,16 @@
           {{/if}}
         </span>
       </div>
-      {{#if project_update_date}}
+      {{#if update_date}}
         <div class="reqman-project-card__meta-item">
           <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
-          <span>Updated {{project_update_date}}</span>
+          <span>Updated {{update_date}}</span>
         </div>
       {{else}}
-        {{#if project_creation_date}}
+        {{#if creation_date}}
           <div class="reqman-project-card__meta-item">
             <i class="fas fa-calendar-plus" aria-hidden="true"></i>
-            <span>Created {{project_creation_date}}</span>
+            <span>Created {{creation_date}}</span>
           </div>
         {{/if}}
       {{/if}}

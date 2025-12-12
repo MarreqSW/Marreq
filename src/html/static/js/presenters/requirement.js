@@ -117,11 +117,11 @@ export function initials(name = '') {
 }
 
 export function reference(entity = {}) {
-  const ref = normalise(entity.req_reference);
+  const ref = normalise(entity.reference_code);
   if (ref) {
     return ref;
   }
-  const id = entity.req_id ?? '';
+  const id = entity.id ?? '';
   return `REQ-${String(id).padStart(4, '0')}`;
 }
 
@@ -186,15 +186,15 @@ function formatTimelineEntry(entry, index, totalVersions) {
 }
 
 export function timeline({ requirement = {}, historyEntries = [] } = {}) {
-  const updateDate = requirement.req_update_date;
-  const reviewer = normalise(requirement.req_reviewer);
-  const actor = reviewer || normalise(requirement.req_author);
+  const updateDate = requirement.update_date;
+  const reviewer = normalise(requirement.reviewer_id);
+  const actor = reviewer || normalise(requirement.author_id);
   const totalVersions = historyEntries.length + 1;
 
   const entries = [
     {
       version: `v${totalVersions}`,
-      summary: `Current revision — ${normalise(requirement.req_current_status)}`,
+      summary: `Current revision — ${normalise(requirement.status_id)}`,
       actor,
       timestamp: updateDate,
       action: 'CURRENT',
@@ -218,10 +218,10 @@ function relationships(rawRelationships = {}) {
     }
 
     return {
-      id: item.req_id,
+      id: item.id,
       reference: reference(item),
-      title: normalise(item.req_title),
-      status: normalise(item.req_current_status ?? item.req_current_status_id),
+      title: normalise(item.title),
+      status: normalise(item.status_id ?? item.req_current_status_id),
     };
   };
 
@@ -270,12 +270,12 @@ export function buildRequirementViewModel(canonical = {}) {
   const counts = canonical.verification?.counts ?? {};
   const historyEntries = canonical.history?.entries ?? [];
 
-  const badge = statusBadge(requirement.req_current_status);
-  const verification = verificationBadge(counts, requirement.req_verification);
-  const solidityView = solidity(counts, requirement.req_current_status);
+  const badge = statusBadge(requirement.status_id);
+  const verification = verificationBadge(counts, requirement.verification_method_id);
+  const solidityView = solidity(counts, requirement.status_id);
   const percent = verificationPercent(counts);
   const rationale =
-    normalise(requirement.req_justification) || 'No rationale documented yet.';
+    normalise(requirement.justification) || 'No rationale documented yet.';
   const notesResult = notesAndAttachments(requirement.req_link);
   const relationshipsView = relationships(canonical.relationships);
   const timelineEntries = timeline({
@@ -283,26 +283,26 @@ export function buildRequirementViewModel(canonical = {}) {
     historyEntries,
   });
 
-  const authorName = normalise(requirement.req_author);
-  const reviewerName = normalise(requirement.req_reviewer);
+  const authorName = normalise(requirement.author_id);
+  const reviewerName = normalise(requirement.reviewer_id);
   const reviewerAssigned = Boolean(reviewerName);
 
   const metadata = {
     author: {
       name: authorName,
-      timestamp: requirement.req_creation_date,
+      timestamp: requirement.creation_date,
       initial: initials(authorName),
     },
     reviewer: {
       name: reviewerName,
       timestamp: reviewerAssigned
-        ? requirement.req_update_date
+        ? requirement.update_date
         : null,
       initial: reviewerAssigned ? initials(reviewerName) : null,
       assigned: reviewerAssigned,
     },
-    updated: requirement.req_update_date,
-    deadline: requirement.req_deadline_date,
+    updated: requirement.update_date,
+    deadline: requirement.deadline_date,
     version: timelineEntries[0]?.version ?? 'v1',
   };
 
@@ -317,8 +317,8 @@ export function buildRequirementViewModel(canonical = {}) {
     verification_badge: verification,
     solidity: solidityView,
     chips: [
-      { label: normalise(requirement.req_category), type: 'category' },
-      { label: normalise(requirement.req_applicability), type: 'applicability' },
+      { label: normalise(requirement.category_id), type: 'category' },
+      { label: normalise(requirement.applicability_id), type: 'applicability' },
     ].filter((chip) => chip.label),
     metadata,
     body_sections: bodySections,
@@ -330,11 +330,11 @@ export function buildRequirementViewModel(canonical = {}) {
       failed: safeNumber(counts.failed),
       pending: safeNumber(counts.pending),
       percent,
-      last_checked: requirement.req_update_date,
-      tool: normalise(canonical.verification?.tool_name || requirement.req_verification),
+      last_checked: requirement.update_date,
+      tool: normalise(canonical.verification?.tool_name || requirement.verification_method_id),
     },
     linked_tests: canonical.linked_tests ?? [],
     timeline: timelineEntries,
-    comments: commentsView(canonical.comments?.items ?? [], requirement.req_current_status),
+    comments: commentsView(canonical.comments?.items ?? [], requirement.status_id),
   };
 }

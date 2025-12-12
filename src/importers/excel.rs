@@ -1,6 +1,6 @@
-use crate::models::{NewApplicability, NewCategory, NewRequirement, NewTest};
+use crate::models::{NewApplicability, NewCategory, NewRequirement, NewTestCase};
 use crate::repository::{
-    DieselRepo, LookupRepository, RequirementsRepository, TestsRepository, UserRepository,
+    DieselRepo, LookupRepository, RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use anyhow::{anyhow, Result};
 use calamine::{open_workbook, DataType, Reader, Xlsx};
@@ -114,24 +114,24 @@ impl ExcelImporter {
     pub fn get_available_fields(&self) -> Vec<String> {
         match self.import_type.as_str() {
             "requirements" => vec![
-                "req_title".to_string(),
-                "req_description".to_string(),
-                "req_reference".to_string(),
-                "req_category".to_string(),
-                "req_applicability".to_string(),
-                "req_current_status".to_string(),
-                "req_verification".to_string(),
-                "req_author".to_string(),
-                "req_reviewer".to_string(),
-                "req_parent".to_string(),
-                "req_justification".to_string(),
+                "title".to_string(),
+                "description".to_string(),
+                "reference_code".to_string(),
+                "category_id".to_string(),
+                "applicability_id".to_string(),
+                "status_id".to_string(),
+                "verification_method_id".to_string(),
+                "author_id".to_string(),
+                "reviewer_id".to_string(),
+                "parent_id".to_string(),
+                "justification".to_string(),
             ],
             "tests" => vec![
-                "test_name".to_string(),
-                "test_description".to_string(),
-                "test_status".to_string(),
-                "test_source".to_string(),
-                "test_parent".to_string(),
+                "name".to_string(),
+                "description".to_string(),
+                "status_id".to_string(),
+                "source".to_string(),
+                "parent_id".to_string(),
             ],
             _ => vec![],
         }
@@ -215,37 +215,37 @@ impl ExcelImporter {
         }
 
         // Resolve foreign key references
-        let category_id = if let Some(category_name) = req_data.get("req_category") {
+        let category_id = if let Some(category_name) = req_data.get("category_id") {
             self.resolve_category_id(category_name, project_id)?
         } else {
             1 // Default category
         };
 
-        let applicability_id = if let Some(app_name) = req_data.get("req_applicability") {
+        let applicability_id = if let Some(app_name) = req_data.get("applicability_id") {
             self.resolve_applicability_id(app_name, project_id)?
         } else {
             1 // Default applicability
         };
 
-        let status_id = if let Some(status_name) = req_data.get("req_current_status") {
+        let status_id = if let Some(status_name) = req_data.get("status_id") {
             self.resolve_requirement_status_id(status_name, conn)?
         } else {
             1 // Default status
         };
 
-        let author_id = if let Some(author_name) = req_data.get("req_author") {
+        let author_id = if let Some(author_name) = req_data.get("author_id") {
             self.resolve_user_id(author_name, project_id, conn)?
         } else {
             1 // Default user
         };
 
-        let reviewer_id = if let Some(reviewer_name) = req_data.get("req_reviewer") {
+        let reviewer_id = if let Some(reviewer_name) = req_data.get("reviewer_id") {
             self.resolve_user_id(reviewer_name, project_id, conn)?
         } else {
             1 // Default user
         };
 
-        let parent_id = if let Some(parent_title) = req_data.get("req_parent") {
+        let parent_id = if let Some(parent_title) = req_data.get("parent_id") {
             if !parent_title.is_empty() && parent_title != "None" {
                 self.resolve_requirement_id_by_title(parent_title, project_id, conn)
                     .ok()
@@ -258,27 +258,27 @@ impl ExcelImporter {
 
         // Create new requirement
         let new_req = NewRequirement {
-            req_id: None,
-            req_title: req_data
-                .get("req_title")
+            id: None,
+            title: req_data
+                .get("title")
                 .unwrap_or(&"Imported Requirement".to_string())
                 .clone(),
-            req_description: req_data
-                .get("req_description")
+            description: req_data
+                .get("description")
                 .unwrap_or(&"".to_string())
                 .clone(),
-            req_reference: req_data
-                .get("req_reference")
+            reference_code: req_data
+                .get("reference_code")
                 .unwrap_or(&"".to_string())
                 .clone(),
-            req_category: category_id,
-            req_applicability: applicability_id,
-            req_current_status: status_id,
-            req_verification: 1, // Default verification
-            req_author: author_id,
-            req_reviewer: reviewer_id,
-            req_parent: parent_id.unwrap_or(0),
-            req_justification: req_data.get("req_justification").cloned(),
+            category_id: category_id,
+            applicability_id: applicability_id,
+            status_id: status_id,
+            verification_method_id: 1, // Default verification
+            author_id: author_id,
+            reviewer_id: reviewer_id,
+            parent_id: parent_id,
+            justification: req_data.get("justification").cloned(),
             project_id,
         };
 
@@ -311,13 +311,13 @@ impl ExcelImporter {
         }
 
         // Resolve foreign key references
-        let status_id = if let Some(status_name) = test_data.get("test_status") {
+        let status_id = if let Some(status_name) = test_data.get("status_id") {
             self.resolve_test_status_id(status_name, conn)?
         } else {
             1 // Default status
         };
 
-        let parent_id = if let Some(parent_name) = test_data.get("test_parent") {
+        let parent_id = if let Some(parent_name) = test_data.get("parent_id") {
             if !parent_name.is_empty() && parent_name != "None" {
                 self.resolve_test_id_by_name(parent_name, project_id, conn)
                     .ok()
@@ -329,26 +329,23 @@ impl ExcelImporter {
         };
 
         // Create new test
-        let new_test = NewTest {
-            test_id: None,
-            test_name: test_data
-                .get("test_name")
+        let new_test = NewTestCase {
+            id: None,
+            name: test_data
+                .get("name")
                 .unwrap_or(&"Imported Test".to_string())
                 .clone(),
-            test_description: test_data
-                .get("test_description")
+            description: test_data
+                .get("description")
                 .unwrap_or(&"".to_string())
                 .clone(),
-            test_source: test_data
-                .get("test_source")
-                .unwrap_or(&"".to_string())
-                .clone(),
-            test_reference: test_data
-                .get("test_reference")
+            source: test_data.get("source").unwrap_or(&"".to_string()).clone(),
+            reference_code: test_data
+                .get("reference_code")
                 .unwrap_or(&format!("TEST-{}", chrono::Utc::now().timestamp()))
                 .clone(),
-            test_status: status_id,
-            test_parent: parent_id.unwrap_or(0),
+            status_id: status_id,
+            parent_id: parent_id,
             project_id,
         };
 
@@ -364,17 +361,17 @@ impl ExcelImporter {
             .get_categories_by_project(project_id)
             .map_err(|e| anyhow!("{}", e))?;
         for category in categories {
-            if category.cat_title == category_name {
-                return Ok(category.cat_id);
+            if category.title == category_name {
+                return Ok(category.id);
             }
         }
 
         // Create new category if not found
         let new_category = NewCategory {
-            cat_id: None,
-            cat_title: category_name.to_string(),
-            cat_description: format!("Imported category: {}", category_name),
-            cat_tag: category_name.to_lowercase().replace(" ", "_"),
+            id: None,
+            title: category_name.to_string(),
+            description: format!("Imported category: {}", category_name),
+            tag: category_name.to_lowercase().replace(" ", "_"),
             project_id,
         };
 
@@ -388,17 +385,17 @@ impl ExcelImporter {
             .get_applicability_by_project(project_id)
             .map_err(|e| anyhow!("{}", e))?;
         for app in applicability_list {
-            if app.app_title == app_name {
-                return Ok(app.app_id);
+            if app.title == app_name {
+                return Ok(app.id);
             }
         }
 
         // Create new applicability if not found
         let new_app = NewApplicability {
-            app_id: None,
-            app_title: app_name.to_string(),
-            app_description: format!("Imported applicability: {}", app_name),
-            app_tag: app_name.to_lowercase().replace(" ", "_"),
+            id: None,
+            title: app_name.to_string(),
+            description: format!("Imported applicability: {}", app_name),
+            tag: app_name.to_lowercase().replace(" ", "_"),
             project_id,
         };
 
@@ -417,8 +414,8 @@ impl ExcelImporter {
             .get_requirement_status_all()
             .map_err(|e| anyhow!("{}", e))?;
         for status in statuses {
-            if status.req_st_title == status_name {
-                return Ok(status.req_st_id);
+            if status.title == status_name {
+                return Ok(status.id);
             }
         }
 
@@ -430,8 +427,8 @@ impl ExcelImporter {
         let repo = DieselRepo::new();
         let statuses = repo.get_test_status_all().map_err(|e| anyhow!("{}", e))?;
         for status in statuses {
-            if status.test_st_title == status_name {
-                return Ok(status.test_st_id);
+            if status.title == status_name {
+                return Ok(status.id);
             }
         }
 
@@ -441,15 +438,15 @@ impl ExcelImporter {
 
     fn resolve_user_id(
         &self,
-        user_name: &str,
+        name: &str,
         _project_id: i32,
         _conn: &mut PgConnection,
     ) -> Result<i32> {
         let repo = DieselRepo::new();
         let users = repo.get_users_all().map_err(|e| anyhow!("{}", e))?;
         for user in users {
-            if user.user_name == user_name {
-                return Ok(user.user_id);
+            if user.name == name {
+                return Ok(user.id);
             }
         }
 
@@ -468,8 +465,8 @@ impl ExcelImporter {
             .get_requirements_by_project(project_id)
             .map_err(|e| anyhow!("{}", e))?;
         for req in requirements {
-            if req.req_title == title {
-                return Ok(req.req_id);
+            if req.title == title {
+                return Ok(req.id);
             }
         }
 
@@ -487,8 +484,8 @@ impl ExcelImporter {
             .get_tests_by_project(project_id)
             .map_err(|e| anyhow!("{}", e))?;
         for test in tests {
-            if test.test_name == name {
-                return Ok(test.test_id);
+            if test.name == name {
+                return Ok(test.id);
             }
         }
 

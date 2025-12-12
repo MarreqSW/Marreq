@@ -15,13 +15,13 @@ function initTestTable() {
   }
 
   initTableSort(table, {
-    test_id: 0,
-    test_name: 1,
-    test_reference: 2,
-    test_description: 3,
-    test_status: 4,
-    test_source: 5,
-    test_parent: 6,
+    id: 0,
+    name: 1,
+    reference_code: 2,
+    description: 3,
+    status_id: 4,
+    source: 5,
+    parent_id: 6,
   });
 
   enableInlineTextEditing(table, '.editable-field', async ({ id, field, value, revert }) => {

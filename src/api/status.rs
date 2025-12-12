@@ -1,40 +1,34 @@
 use crate::api::prelude::*;
-use crate::models::{NewStatus, RequirementStatus, Status as LegacyStatus};
+use crate::models::{NewRequirementStatus, RequirementStatus};
 use crate::services::StatusService;
 
 #[get("/status")]
-pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<LegacyStatus>>> {
+pub async fn list_requirement_statuses(
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<RequirementStatus>>> {
     let service = StatusService::new(state.inner());
-    let statuses = service
-        .list_requirement_statuses()?
-        .into_iter()
-        .map(|status: RequirementStatus| LegacyStatus {
-            st_id: status.req_st_id,
-            st_title: status.req_st_title,
-            st_description: status.req_st_description,
-            st_short_name: status.req_st_short_name,
-        })
-        .collect();
+    let statuses = service.list_requirement_statuses()?;
     Ok(Json(statuses))
 }
 
 #[get("/status/<id>")]
-pub async fn get(id: i32, state: &State<AppState>) -> ApiResult<Json<Value>> {
+pub async fn get_requirement_status(id: i32, state: &State<AppState>) -> ApiResult<Json<Value>> {
     let service = StatusService::new(state.inner());
     let status = service.get_requirement_status(id)?;
 
     Ok(Json(json!({
-        "id": status.req_st_id,
-        "title": status.req_st_title,
-        "description": status.req_st_description,
-        "short_name": status.req_st_short_name,
+        "id": status.id,
+        "title": status.title,
+        "description": status.description,
+        "tag": status.tag,
+        "project_id": status.project_id,
     })))
 }
 
 #[post("/status", data = "<payload>")]
-pub async fn create(
+pub async fn create_requirement_status(
     state: &State<AppState>,
-    payload: Json<NewStatus>,
+    payload: Json<NewRequirementStatus>,
 ) -> ApiResult<(Status, Value)> {
     let service = StatusService::new(state.inner());
     let id = service.create_requirement_status(payload.into_inner())?;
@@ -62,9 +56,14 @@ mod tests {
     }
 
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
-        let rocket = rocket::build()
-            .manage(state_from_repo(repo))
-            .mount("/api", routes![list, get, create]);
+        let rocket = rocket::build().manage(state_from_repo(repo)).mount(
+            "/api",
+            routes![
+                list_requirement_statuses,
+                get_requirement_status,
+                create_requirement_status
+            ],
+        );
         Client::tracked(rocket).await.unwrap()
     }
 
@@ -75,10 +74,11 @@ mod tests {
         statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Draft".into(),
-                req_st_description: "Initial".into(),
-                req_st_short_name: "DR".into(),
+                id: 1,
+                title: "Draft".into(),
+                description: "Initial".into(),
+                tag: "DR".into(),
+                project_id: 1,
             },
         );
         repo.requirement_statuses = statuses;
@@ -86,9 +86,9 @@ mod tests {
         let client = client_with_repo(repo).await;
         let response = client.get("/api/status").dispatch().await;
         assert_eq!(response.status(), Status::Ok);
-        let items: Vec<LegacyStatus> = response.into_json().await.unwrap();
+        let items: Vec<RequirementStatus> = response.into_json().await.unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].st_title, "Draft");
+        assert_eq!(items[0].title, "Draft");
     }
 
     #[rocket::async_test]
@@ -97,10 +97,11 @@ mod tests {
         repo.requirement_statuses.insert(
             5,
             RequirementStatus {
-                req_st_id: 5,
-                req_st_title: "Approved".into(),
-                req_st_description: "Ready".into(),
-                req_st_short_name: "AP".into(),
+                id: 5,
+                title: "Approved".into(),
+                description: "Ready".into(),
+                tag: "AP".into(),
+                project_id: 1,
             },
         );
 
@@ -120,9 +121,10 @@ mod tests {
             .header(ContentType::JSON)
             .body(
                 json!({
-                    "req_st_title": "In Review",
-                    "req_st_description": "Under evaluation",
-                    "req_st_short_name": "IR"
+                    "title": "In Review",
+                    "description": "Under evaluation",
+                    "tag": "IR",
+                    "project_id": 1
                 })
                 .to_string(),
             )

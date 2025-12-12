@@ -7,37 +7,37 @@
             <div class="user-details-title c-user-details__title">
                 <span class="user-details-label c-user-details__label">User profile</span>
                 <div class="user-name-row c-user-details__name-row">
-                    <h1 class="user-details-name c-user-details__name">{{user_name}}</h1>
+                    <h1 class="user-details-name c-user-details__name">{{name}}</h1>
                     {{#if is_admin}}
                         <span class="user-level-badge c-user-details__level-badge">Administrator</span>
                     {{else}}
                         <span class="user-level-badge c-user-details__level-badge">Standard User</span>
                     {{/if}}
                 </div>
-                <p class="user-details-username c-user-details__username">@{{user_username}}</p>
+                <p class="user-details-username c-user-details__username">@{{username}}</p>
             </div>
             <div class="user-details-actions c-user-details__actions">
                 <a href="/admin/users" class="btn btn-outline-secondary btn-sm c-user-details__action">Back to User Management</a>
-                <a href="/user/{{user_id}}/edit" class="btn btn-primary btn-sm c-user-details__action">Edit User</a>
+                <a href="/user/{{id}}/edit" class="btn btn-primary btn-sm c-user-details__action">Edit User</a>
             </div>
         </div>
         <div class="user-details-body c-user-details__body">
             <div class="user-info-grid c-user-details__info-grid">
                 <div class="user-info-item c-user-details__info-item">
                     <span class="user-info-label c-user-details__info-label">Email</span>
-                    <span class="user-info-value c-user-details__info-value">{{user_email}}</span>
+                    <span class="user-info-value c-user-details__info-value">{{email}}</span>
                 </div>
                 <div class="user-info-item c-user-details__info-item">
                     <span class="user-info-label c-user-details__info-label">User ID</span>
-                    <span class="user-info-value c-user-details__info-value">#{{user_id}}</span>
+                    <span class="user-info-value c-user-details__info-value">#{{id}}</span>
                 </div>
                 <div class="user-info-item c-user-details__info-item">
                     <span class="user-info-label c-user-details__info-label">Created</span>
-                    <span class="user-info-value c-user-details__info-value">{{user_creation_date}}</span>
+                    <span class="user-info-value c-user-details__info-value">{{creation_date}}</span>
                 </div>
                 <div class="user-info-item c-user-details__info-item">
                     <span class="user-info-label c-user-details__info-label">Last login</span>
-                    <span class="user-info-value c-user-details__info-value">{{user_last_login}}</span>
+                    <span class="user-info-value c-user-details__info-value">{{last_login}}</span>
                 </div>
             </div>
             <p class="user-details-help-text c-user-details__help-text">

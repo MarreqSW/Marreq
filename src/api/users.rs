@@ -1,5 +1,5 @@
 use crate::api::prelude::*;
-use crate::models::{NewUser, User};
+use crate::models::{User, UserCreateRequest};
 use crate::services::UserService;
 
 #[get("/users")]
@@ -20,7 +20,7 @@ pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<
 pub async fn create(
     caller: ApiUser,
     state: &State<AppState>,
-    payload: Json<NewUser>,
+    payload: Json<UserCreateRequest>,
 ) -> ApiResult<Value> {
     let service = UserService::new(state.inner());
     let id = service.create(caller.user(), payload.into_inner())?;
@@ -88,7 +88,7 @@ mod tests {
         assert_eq!(response.status(), Status::Ok);
         let items: Vec<User> = response.into_json().await.unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].user_username, "alice");
+        assert_eq!(items[0].username, "alice");
     }
 
     #[rocket::async_test]
@@ -100,11 +100,10 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "user_id": null,
-                    "user_username": "bob",
-                    "user_name": "Bob",
-                    "user_email": "bob@example.com",
-                    "user_password": "secret",
+                    "username": "bob",
+                    "name": "Bob",
+                    "email": "bob@example.com",
+                    "password": "secret",
                     "is_admin": false
                 })
                 .to_string(),
@@ -127,11 +126,10 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "user_id": null,
-                    "user_username": "carol",
-                    "user_name": "Carol",
-                    "user_email": "carol@example.com",
-                    "user_password": "secret",
+                    "username": "carol",
+                    "name": "Carol",
+                    "email": "carol@example.com",
+                    "password": "secret",
                     "is_admin": false
                 })
                 .to_string(),

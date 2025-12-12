@@ -33,7 +33,7 @@ impl<'a> CategoryService<'a> {
 
     pub fn get_category_name(&self, id: i32) -> Result<String, RepoError> {
         let category = self.state.repo_read().get_category_by_id(id)?;
-        Ok(category.cat_title)
+        Ok(category.title)
     }
 
     /// Create a new Category entry and log the action.
@@ -56,7 +56,7 @@ impl<'a> CategoryService<'a> {
     ) -> Result<Category, RepoError> {
         let before = self.get_by_id(id)?;
 
-        updated_cat.cat_id = Some(id);
+        updated_cat.id = Some(id);
 
         {
             let mut repo = self.state.repo_write();
@@ -88,7 +88,7 @@ impl<'a> CategoryService<'a> {
 
     fn log_created(&self, user: &User, id: i32, entity: &NewCategory) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(user.id);
             if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
                 #[cfg(debug_assertions)]
                 eprintln!("Failed to log category creation {id}: {_err}");
@@ -98,12 +98,12 @@ impl<'a> CategoryService<'a> {
 
     fn log_updated(&self, user: &User, before: &Category, after: &Category) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(user.id);
             if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log category update {} -> {}: {_err}",
-                    before.cat_id, after.cat_id
+                    before.id, after.id
                 );
             }
         }
@@ -111,10 +111,10 @@ impl<'a> CategoryService<'a> {
 
     fn log_deleted(&self, user: &User, entity: &Category) {
         if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.user_id);
+            let ctx = LogCtx::new(user.id);
             if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
                 #[cfg(debug_assertions)]
-                eprintln!("Failed to log category deletion {}: {_err}", entity.cat_id);
+                eprintln!("Failed to log category deletion {}: {_err}", entity.id);
             }
         }
     }
@@ -138,10 +138,10 @@ mod tests {
 
     fn category(id: i32, title: &str, project_id: i32) -> Category {
         Category {
-            cat_id: id,
-            cat_title: title.into(),
-            cat_description: "desc".into(),
-            cat_tag: "TAG".into(),
+            id: id,
+            title: title.into(),
+            description: "desc".into(),
+            tag: "TAG".into(),
             project_id,
         }
     }
@@ -153,16 +153,16 @@ mod tests {
         let service = CategoryService::new(&state);
 
         let payload = NewCategory {
-            cat_id: None,
-            cat_title: "Primary".into(),
-            cat_description: "Main".into(),
-            cat_tag: "MAIN".into(),
+            id: None,
+            title: "Primary".into(),
+            description: "Main".into(),
+            tag: "MAIN".into(),
             project_id: 2,
         };
 
         let id = service.create(&actor(), payload).unwrap();
         let stored = service.get_by_id(id).unwrap();
-        assert_eq!(stored.cat_title, "Primary");
+        assert_eq!(stored.title, "Primary");
     }
 
     #[test]
@@ -173,17 +173,17 @@ mod tests {
         let service = CategoryService::new(&state);
 
         let payload = NewCategory {
-            cat_id: None,
-            cat_title: "Updated".into(),
-            cat_description: "New description".into(),
-            cat_tag: "NEW".into(),
+            id: None,
+            title: "Updated".into(),
+            description: "New description".into(),
+            tag: "NEW".into(),
             project_id: 5,
         };
 
         let updated = service.update(&actor(), 1, payload).unwrap();
-        assert_eq!(updated.cat_title, "Updated");
-        assert_eq!(updated.cat_description, "New description");
-        assert_eq!(updated.cat_tag, "NEW");
+        assert_eq!(updated.title, "Updated");
+        assert_eq!(updated.description, "New description");
+        assert_eq!(updated.tag, "NEW");
         assert_eq!(updated.project_id, 5);
     }
 
@@ -195,7 +195,7 @@ mod tests {
         let service = CategoryService::new(&state);
 
         let removed = service.delete(&actor(), 3).unwrap();
-        assert_eq!(removed.cat_id, 3);
+        assert_eq!(removed.id, 3);
         assert!(matches!(service.get_by_id(3), Err(RepoError::NotFound)));
     }
 
@@ -209,6 +209,6 @@ mod tests {
 
         let cats = service.list_by_project(10).unwrap();
         assert_eq!(cats.len(), 1);
-        assert_eq!(cats[0].cat_title, "A");
+        assert_eq!(cats[0].title, "A");
     }
 }

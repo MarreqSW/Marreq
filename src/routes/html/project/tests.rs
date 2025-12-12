@@ -28,8 +28,8 @@ async fn show_tests(
     let project = repo.get_project_by_id(project_id).ok();
     if let Some(ref proj) = project {
         ctx["project"] = json!({
-            "id": proj.project_id,
-            "name": proj.project_name,
+            "id": proj.id,
+            "name": proj.name,
         });
     }
 
@@ -41,19 +41,19 @@ async fn show_tests(
     let total = all_tests.len();
     let passed = all_tests
         .iter()
-        .filter(|t| t.test_status == TestStatusEnum::Passed.id())
+        .filter(|t| t.status_id == TestStatusEnum::Passed.id())
         .count();
     let failed = all_tests
         .iter()
-        .filter(|t| t.test_status == TestStatusEnum::Failed.id())
+        .filter(|t| t.status_id == TestStatusEnum::Failed.id())
         .count();
     let pending = all_tests
         .iter()
-        .filter(|t| t.test_status == TestStatusEnum::Pending.id())
+        .filter(|t| t.status_id == TestStatusEnum::Pending.id())
         .count();
     let in_progress = all_tests
         .iter()
-        .filter(|t| t.test_status == TestStatusEnum::InProgress.id())
+        .filter(|t| t.status_id == TestStatusEnum::InProgress.id())
         .count();
     let pass_rate_percent = if total > 0 { (passed * 100) / total } else { 0 };
 
@@ -69,9 +69,9 @@ async fn show_tests(
     if let Some(ref query) = search {
         let query_lower = query.to_lowercase();
         tests.retain(|t| {
-            t.test_name.to_lowercase().contains(&query_lower)
-                || t.test_description.to_lowercase().contains(&query_lower)
-                || t.test_reference.to_lowercase().contains(&query_lower)
+            t.name.to_lowercase().contains(&query_lower)
+                || t.description.to_lowercase().contains(&query_lower)
+                || t.reference_code.to_lowercase().contains(&query_lower)
         });
     }
 
@@ -202,18 +202,18 @@ async fn post_test(
     let user = project_access.into_user();
     let service = TestService::new(state.inner());
 
-    let my_new_test = NewTest {
-        test_id: None,
-        test_name: new_test.test_name.clone(),
-        test_description: new_test.test_description.clone(),
-        test_source: new_test.test_source.clone(),
-        test_status: new_test.test_status,
-        test_reference: new_test.test_reference.clone(),
-        test_parent: new_test.test_parent,
+    let my_new_test = NewTestCase {
+        id: None,
+        name: new_test.name.clone(),
+        description: new_test.description.clone(),
+        source: new_test.source.clone(),
+        status_id: new_test.status_id,
+        reference_code: new_test.reference_code.clone(),
+        parent_id: new_test.parent_id,
         project_id: project_id,
     };
 
-    let test_id = service.create(&user, my_new_test).map_err(|e| {
+    let id = service.create(&user, my_new_test).map_err(|e| {
         eprintln!("Error inserting new test: {:?}", e);
         Redirect::to(uri!(
             "/p",
@@ -228,9 +228,9 @@ async fn post_test(
     #[cfg(debug_assertions)]
     println!("NewTestForm requirements: {:#?}", new_test.test_req);
     for req in new_test.test_req.iter() {
-        let matrix_item = NewMatrix {
-            matrix_req_id: *req,
-            matrix_test_id: test_id,
+        let matrix_item = NewMatrixLink {
+            req_id: *req,
+            test_id: id,
             project_id: new_test.project_id,
         };
         state
@@ -248,7 +248,7 @@ async fn post_test(
             })?;
     }
 
-    Ok(Redirect::to(uri!("/p", show_test_id(project_id, test_id))))
+    Ok(Redirect::to(uri!("/p", show_test_id(project_id, id))))
 }
 
 #[get("/<project_id>/tests/edit/<test_id>")]
@@ -271,7 +271,7 @@ async fn get_edit_test(
     let test0 = &decorated[0];
 
     let linked_requirements = get_requirements_for_test_cached(state, test_id).unwrap_or_default();
-    let linked_req_ids: Vec<i32> = linked_requirements.iter().map(|r| r.req_id).collect();
+    let linked_req_ids: Vec<i32> = linked_requirements.iter().map(|r| r.id).collect();
 
     let ctx = json!({
         "tests": test0,
@@ -308,14 +308,14 @@ async fn post_edit_test(
     // Own the form to avoid cloning strings
     let f = edit_test_form.into_inner();
 
-    let new_test = NewTest {
-        test_id: Some(f.test_id),
-        test_name: f.test_name,
-        test_description: f.test_description,
-        test_source: f.test_source,
-        test_status: f.test_status,
-        test_reference: f.test_reference,
-        test_parent: f.test_parent,
+    let new_test = NewTestCase {
+        id: Some(f.id),
+        name: f.name,
+        description: f.description,
+        source: f.source,
+        status_id: f.status_id,
+        reference_code: f.reference_code,
+        parent_id: f.parent_id,
         project_id: f.project_id,
     };
 
@@ -326,16 +326,13 @@ async fn post_edit_test(
 
     state
         .repo_write()
-        .update_test_requirement_links(f.test_id, &f.linked_requirements)
+        .update_test_requirement_links(f.id, &f.linked_requirements)
         .map_err(|e| {
             eprintln!("Error updating test requirement links: {e:?}");
             to_list()
         })?;
 
-    Ok(Redirect::to(uri!(
-        "/p",
-        show_test_id(project_id, f.test_id)
-    )))
+    Ok(Redirect::to(uri!("/p", show_test_id(project_id, f.id))))
 }
 
 #[delete("/<project_id>/tests/delete/<test_id>")]
@@ -354,7 +351,7 @@ async fn delete_test_route(
 
     // Permission gate: only allow deletion of tests in Passed or Failed status, or if admin
     // Using enum to check if the test is in a deletable state
-    let is_deletable = TestStatusEnum::from_id(test.test_status)
+    let is_deletable = TestStatusEnum::from_id(test.status_id)
         .map(|status| matches!(status, TestStatusEnum::Passed | TestStatusEnum::Failed))
         .unwrap_or(false);
 
@@ -378,7 +375,7 @@ async fn get_requirements_xls(
     let user = project_access.into_user();
     println!(
         "User [{} - id:{}] requested requirements export for project_id={}",
-        user.user_username, user.user_id, project_id
+        user.username, user.id, project_id
     );
 
     let _file = excel::create_requirements_workbook().expect("file can be created");
@@ -407,7 +404,7 @@ async fn get_tests_xls(
     let user = project_access.into_user();
     println!(
         "User [{} - id:{}] requested requirements export for project_id={}",
-        user.user_username, user.user_id, project_id
+        user.username, user.id, project_id
     );
     let _file = excel::create_tests_workbook().expect("file can be created");
     let path_to_file = path::Path::new("target/tests.xls");
@@ -445,14 +442,15 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Applicability, Category, Matrix, Project, ProjectMember, Requirement, Status, Test,
-        TestStatus, Verification,
+        Applicability, Category, MatrixLink, Project, ProjectMember, Requirement,
+        RequirementStatus, TestCase, TestStatus, VerificationMethod,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
         client_with_routes, delete_with_session, get_with_session, post_form_with_session,
         timestamp, TestAppState,
     };
+    use crate::status_enums::ProjectStatus;
     use rocket::http::Status as HttpStatus;
     use rocket::local::asynchronous::Client;
 
@@ -462,93 +460,96 @@ mod tests {
 
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
-            project_id: id,
-            project_name: name.to_string(),
-            project_description: Some(format!("{name} project")),
-            project_creation_date: Some(timestamp()),
-            project_update_date: Some(timestamp()),
-            project_status: Some("Active".to_string()),
-            project_owner_id: Some(ADMIN_ID),
+            id: id,
+            name: name.to_string(),
+            description: Some(format!("{name} project")),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status: ProjectStatus::Active,
+            owner_id: Some(ADMIN_ID),
         }
     }
 
     fn sample_category(id: i32, title: &str) -> Category {
         Category {
-            cat_id: id,
-            cat_title: title.to_string(),
-            cat_description: format!("{title} systems"),
-            cat_tag: title.to_ascii_uppercase(),
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} systems"),
+            tag: title.to_ascii_uppercase(),
             project_id: PRIMARY_PROJECT,
         }
     }
 
-    fn sample_status(id: i32, title: &str) -> Status {
-        Status {
-            st_id: id,
-            st_title: title.to_string(),
-            st_description: format!("{title} status"),
-            st_short_name: title.to_ascii_uppercase(),
+    fn sample_status(id: i32, title: &str) -> RequirementStatus {
+        RequirementStatus {
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} status"),
+            tag: title.to_ascii_uppercase(),
+            project_id: 1,
         }
     }
 
     fn sample_test_status(id: i32, title: &str) -> TestStatus {
         TestStatus {
-            test_st_id: id,
-            test_st_title: title.to_string(),
-            test_st_description: format!("{title} status"),
-            test_st_short_name: title.to_ascii_uppercase(),
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} status"),
+            tag: title.to_ascii_uppercase(),
+            project_id: 1,
         }
     }
 
     fn sample_applicability(id: i32, title: &str) -> Applicability {
         Applicability {
-            app_id: id,
-            app_title: title.to_string(),
-            app_description: format!("{title} applicability"),
-            app_tag: title.to_ascii_uppercase(),
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} applicability"),
+            tag: title.to_ascii_uppercase(),
             project_id: PRIMARY_PROJECT,
         }
     }
 
-    fn sample_verification(id: i32, title: &str) -> Verification {
-        Verification {
-            verification_id: id,
-            verification_name: title.to_string(),
-            verification_description: format!("{title} verification"),
+    fn sample_verification(id: i32, title: &str) -> VerificationMethod {
+        VerificationMethod {
+            id: id,
+            title: title.to_string(),
+            description: format!("{title} verification"),
+            tag: title.to_uppercase().replace(" ", "_"),
             project_id: PRIMARY_PROJECT,
         }
     }
 
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Requirement {id}"),
-            req_description: "Test requirement".into(),
-            req_verification: 1,
-            req_current_status: 1,
-            req_author: ADMIN_ID,
-            req_reviewer: ADMIN_ID,
-            req_reference: format!("REQ-SYS-{id}"),
-            req_category: 1,
-            req_parent: 0,
-            req_creation_date: timestamp(),
-            req_update_date: timestamp(),
-            req_deadline_date: timestamp(),
-            req_applicability: 1,
-            req_justification: Some("For testing".into()),
+            id: id,
+            title: format!("Requirement {id}"),
+            description: "Test requirement".into(),
+            verification_method_id: 1,
+            status_id: 1,
+            author_id: ADMIN_ID,
+            reviewer_id: ADMIN_ID,
+            reference_code: format!("REQ-SYS-{id}"),
+            category_id: 1,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            applicability_id: 1,
+            justification: Some("For testing".into()),
             project_id: PRIMARY_PROJECT,
         }
     }
 
-    fn sample_test(id: i32, status: i32, name: &str) -> Test {
-        Test {
-            test_id: id,
-            test_name: name.to_string(),
-            test_description: format!("{name} description"),
-            test_source: "Design Spec".into(),
-            test_status: status,
-            test_reference: format!("TEST-{id:03}"),
-            test_parent: 0,
+    fn sample_test(id: i32, status: i32, name: &str) -> TestCase {
+        TestCase {
+            id: id,
+            name: name.to_string(),
+            description: format!("{name} description"),
+            source: "Design Spec".into(),
+            status_id: status,
+            reference_code: format!("TEST-{id:03}"),
+            parent_id: None,
             project_id: PRIMARY_PROJECT,
         }
     }
@@ -601,10 +602,10 @@ mod tests {
     fn repo_with_tests() -> DieselRepoMock {
         let mut repo = base_repo();
         repo.tests.insert(1, sample_test(1, 1, "Baseline Test"));
-        repo.matrices.push(Matrix {
-            matrix_req_id: 1,
-            matrix_test_id: 1,
-            matrix_creation_date: timestamp(),
+        repo.matrices.push(MatrixLink {
+            req_id: 1,
+            test_id: 1,
+            creation_date: timestamp(),
             project_id: PRIMARY_PROJECT,
         });
         repo
@@ -682,8 +683,8 @@ mod tests {
             &client,
             "/p/1/tests/new",
             concat!(
-                "test_name=Thermal+Check&test_reference=TEST-002&test_description=Thermal+validation&",
-                "test_source=Spec&test_status=1&test_parent=0&test_req=1&project_id=1"
+                "name=Thermal+Check&reference_code=TEST-002&description=Thermal+validation&",
+                "source=Spec&status_id=1&parent_id=0&test_req=1&project_id=1"
             ),
             ADMIN_ID,
         )
@@ -700,16 +701,12 @@ mod tests {
         let inner = repo.inner_repo();
 
         let test = inner.tests.get(&1).expect("inserted test");
-        assert_eq!(test.test_name, "Thermal Check");
-        assert_eq!(test.test_status, 1);
+        assert_eq!(test.name, "Thermal Check");
+        assert_eq!(test.status_id, 1);
 
-        let links: Vec<_> = inner
-            .matrices
-            .iter()
-            .filter(|m| m.matrix_test_id == 1)
-            .collect();
+        let links: Vec<_> = inner.matrices.iter().filter(|m| m.test_id == 1).collect();
         assert_eq!(links.len(), 1);
-        assert_eq!(links[0].matrix_req_id, 1);
+        assert_eq!(links[0].req_id, 1);
     }
 
     #[rocket::async_test]
@@ -730,8 +727,8 @@ mod tests {
             &client,
             "/p/1/tests/edit/1",
             concat!(
-                "test_id=1&test_reference=TEST-001&test_name=Updated+Test&test_description=Updated+desc&",
-                "test_source=Updated&test_status=2&test_parent=0&linked_requirements=1&project_id=1"
+                "id=1&reference_code=TEST-001&name=Updated+Test&description=Updated+desc&",
+                "source=Updated&status_id=2&parent_id=0&linked_requirements=1&project_id=1"
             ),
             ADMIN_ID,
         )
@@ -748,16 +745,12 @@ mod tests {
         let inner = repo.inner_repo();
 
         let test = inner.tests.get(&1).expect("existing test");
-        assert_eq!(test.test_name, "Updated Test");
-        assert_eq!(test.test_status, 2);
+        assert_eq!(test.name, "Updated Test");
+        assert_eq!(test.status_id, 2);
 
-        let links: Vec<_> = inner
-            .matrices
-            .iter()
-            .filter(|m| m.matrix_test_id == 1)
-            .collect();
+        let links: Vec<_> = inner.matrices.iter().filter(|m| m.test_id == 1).collect();
         assert_eq!(links.len(), 1);
-        assert_eq!(links[0].matrix_req_id, 1);
+        assert_eq!(links[0].req_id, 1);
     }
 
     #[rocket::async_test]

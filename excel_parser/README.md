@@ -176,23 +176,23 @@ When using `-o` option, the parser generates a JSON file with the parsed data:
 ```json
 [
   {
-    "req_id": 1,
-    "req_title": "User Authentication",
-    "req_description": "System shall provide user authentication",
-    "req_reference": "REQ-001",
-    "req_category": "Security",
-    "req_applicability": "All Systems",
-    "req_current_status": "Draft",
-    "req_verification": "Test",
-    "req_author": "Alice",
-    "req_reviewer": "Bob",
-    "req_parent": null,
+    "id": 1,
+    "title": "User Authentication",
+    "description": "System shall provide user authentication",
+    "reference_code": "REQ-001",
+    "category_id": "Security",
+    "applicability_id": "All Systems",
+    "status_id": "Draft",
+    "verification_method_id": "Test",
+    "author_id": "Alice",
+    "reviewer_id": "Bob",
+    "parent_id": null,
     "req_parent_title": "None",
     "req_link": "",
-    "req_creation_date": "2025-08-03",
-    "req_update_date": "2025-08-03",
-    "req_deadline_date": "2025-12-31",
-    "req_justification": "Security requirement"
+    "creation_date": "2025-08-03",
+    "update_date": "2025-08-03",
+    "deadline_date": "2025-12-31",
+    "justification": "Security requirement"
   }
 ]
 ```

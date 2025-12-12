@@ -42,20 +42,22 @@ mod test_support {
         repo.requirement_statuses.insert(
             1,
             RequirementStatus {
-                req_st_id: 1,
-                req_st_title: "Draft".into(),
-                req_st_description: "Initial draft".into(),
-                req_st_short_name: "DR".into(),
+                id: 1,
+                title: "Draft".into(),
+                description: "Initial draft".into(),
+                tag: "DR".into(),
+                project_id: 1,
             },
         );
 
         repo.requirement_statuses.insert(
             2,
             RequirementStatus {
-                req_st_id: 2,
-                req_st_title: "Approved".into(),
-                req_st_description: "Approved for implementation".into(),
-                req_st_short_name: "AP".into(),
+                id: 2,
+                title: "Approved".into(),
+                description: "Approved for implementation".into(),
+                tag: "AP".into(),
+                project_id: 1,
             },
         );
 
@@ -82,7 +84,7 @@ async fn get_status_returns_all_statuses() {
     // Verify content
     let titles: Vec<&str> = statuses
         .iter()
-        .map(|s| s["st_title"].as_str().unwrap())
+        .map(|s| s["title"].as_str().unwrap())
         .collect();
     assert!(titles.contains(&"Draft"));
     assert!(titles.contains(&"Approved"));
@@ -102,7 +104,7 @@ async fn get_status_by_id_returns_correct_status() {
     let status: Value = response.into_json().await.expect("json");
     assert_eq!(status["id"], 1);
     assert_eq!(status["title"], "Draft");
-    assert_eq!(status["short_name"], "DR");
+    assert_eq!(status["tag"], "DR");
 }
 
 #[rocket::async_test]
@@ -123,9 +125,10 @@ async fn post_status_creates_new_status() {
     let client = test_client(base_repo()).await;
 
     let new_status = json!({
-        "req_st_title": "In Review",
-        "req_st_description": "Under review",
-        "req_st_short_name": "REV"
+        "title": "In Review",
+        "description": "Under review",
+        "tag": "REV",
+        "project_id": 1
     });
 
     let response = client
@@ -138,10 +141,6 @@ async fn post_status_creates_new_status() {
     assert_eq!(response.status(), Status::Created);
     let result: Value = response.into_json().await.expect("json");
     assert_eq!(result["status"], "ok");
-    assert_eq!(result["id"], 1); // Mock repo IDs start at 1 for new items if not specified? Or maybe 3 since we inserted 1 and 2 manually?
-                                 // Actually DieselRepoMock usually uses a counter or max id + 1.
-                                 // Let's check the implementation of create_requirement_status in DieselRepoMock if possible,
-                                 // but usually it's safe to just check it returns an ID.
     assert!(result["id"].as_i64().is_some());
 }
 
@@ -150,7 +149,7 @@ async fn post_status_with_missing_fields_returns_error() {
     let client = test_client(base_repo()).await;
 
     let invalid_json = json!({
-        "req_st_title": "Incomplete"
+        "title": "Incomplete"
         // Missing short_name
     });
 

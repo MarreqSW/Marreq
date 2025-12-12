@@ -154,23 +154,23 @@ describe('Requirement Presenter', () => {
   });
 
   describe('reference', () => {
-    it('should return req_reference when present', () => {
-      const result = reference({ req_reference: 'REQ-SYS-001', req_id: 42 });
+    it('should return reference_code when present', () => {
+      const result = reference({ reference_code: 'REQ-SYS-001', id: 42 });
       expect(result).toBe('REQ-SYS-001');
     });
 
     it('should generate reference from ID when missing', () => {
-      const result = reference({ req_id: 5 });
+      const result = reference({ id: 5 });
       expect(result).toBe('REQ-0005');
     });
 
     it('should handle empty reference', () => {
-      const result = reference({ req_reference: '', req_id: 10 });
+      const result = reference({ reference_code: '', id: 10 });
       expect(result).toBe('REQ-0010');
     });
 
     it('should pad ID to 4 digits', () => {
-      const result = reference({ req_id: 1 });
+      const result = reference({ id: 1 });
       expect(result).toBe('REQ-0001');
     });
   });
@@ -220,9 +220,9 @@ describe('Requirement Presenter', () => {
     it('should create current version entry', () => {
       const result = timeline({
         requirement: {
-          req_current_status: 'Draft',
-          req_update_date: '2024-01-01',
-          req_author: 'Admin',
+          status_id: 'Draft',
+          update_date: '2024-01-01',
+          author_id: 'Admin',
         },
         historyEntries: [],
       });
@@ -234,7 +234,7 @@ describe('Requirement Presenter', () => {
 
     it('should include history entries', () => {
       const result = timeline({
-        requirement: { req_current_status: 'Draft', req_author: 'Admin' },
+        requirement: { status_id: 'Draft', author_id: 'Admin' },
         historyEntries: [
           {
             username: 'User1',
@@ -254,7 +254,7 @@ describe('Requirement Presenter', () => {
 
     it('should calculate version numbers correctly', () => {
       const result = timeline({
-        requirement: { req_current_status: 'Draft', req_author: 'Admin' },
+        requirement: { status_id: 'Draft', author_id: 'Admin' },
         historyEntries: [
           { username: 'User1', log: { action_type: 'UPDATE', created_at: '2024-01-02' } },
           { username: 'User2', log: { action_type: 'UPDATE', created_at: '2024-01-01' } },
@@ -271,15 +271,15 @@ describe('Requirement Presenter', () => {
     it('should build complete view model', () => {
       const canonical = {
         requirement: {
-          req_id: 1,
-          req_title: 'Test Requirement',
-          req_reference: 'REQ-001',
-          req_description: 'Description',
-          req_current_status: 'Draft',
-          req_verification: 'Analysis',
-          req_author: 'Admin',
-          req_category: 'Systems',
-          req_applicability: 'All Platforms',
+          id: 1,
+          title: 'Test Requirement',
+          reference_code: 'REQ-001',
+          description: 'Description',
+          status_id: 'Draft',
+          verification_method_id: 'Analysis',
+          author_id: 'Admin',
+          category_id: 'Systems',
+          applicability_id: 'All Platforms',
         },
         project_id: 1,
         verification: {
@@ -308,8 +308,8 @@ describe('Requirement Presenter', () => {
     it('should handle missing verification data', () => {
       const canonical = {
         requirement: {
-          req_id: 1,
-          req_title: 'Test',
+          id: 1,
+          title: 'Test',
         },
         project_id: 1,
       };
@@ -321,9 +321,9 @@ describe('Requirement Presenter', () => {
     it('should format chips correctly', () => {
       const canonical = {
         requirement: {
-          req_id: 1,
-          req_category: 'Systems',
-          req_applicability: 'Hardware Only',
+          id: 1,
+          category_id: 'Systems',
+          applicability_id: 'Hardware Only',
         },
         project_id: 1,
       };
@@ -338,9 +338,9 @@ describe('Requirement Presenter', () => {
     it('should filter out empty chips', () => {
       const canonical = {
         requirement: {
-          req_id: 1,
-          req_category: 'Systems',
-          req_applicability: '',
+          id: 1,
+          category_id: 'Systems',
+          applicability_id: '',
         },
         project_id: 1,
       };
@@ -353,11 +353,11 @@ describe('Requirement Presenter', () => {
     it('should build metadata correctly', () => {
       const canonical = {
         requirement: {
-          req_id: 1,
-          req_author: 'John Doe',
-          req_reviewer: 'Jane Smith',
-          req_creation_date: '2024-01-01',
-          req_update_date: '2024-01-02',
+          id: 1,
+          author_id: 'John Doe',
+          reviewer_id: 'Jane Smith',
+          creation_date: '2024-01-01',
+          update_date: '2024-01-02',
         },
         project_id: 1,
       };
@@ -372,9 +372,9 @@ describe('Requirement Presenter', () => {
     it('should handle unassigned reviewer', () => {
       const canonical = {
         requirement: {
-          req_id: 1,
-          req_author: 'Admin',
-          req_reviewer: '',
+          id: 1,
+          author_id: 'Admin',
+          reviewer_id: '',
         },
         project_id: 1,
       };
@@ -387,8 +387,8 @@ describe('Requirement Presenter', () => {
     it('should build body sections', () => {
       const canonical = {
         requirement: {
-          req_id: 1,
-          req_justification: 'This is the rationale',
+          id: 1,
+          justification: 'This is the rationale',
           req_link: 'https://example.com/doc',
         },
         project_id: 1,
@@ -403,8 +403,8 @@ describe('Requirement Presenter', () => {
     it('should handle empty body sections', () => {
       const canonical = {
         requirement: {
-          req_id: 1,
-          req_justification: '',
+          id: 1,
+          justification: '',
         },
         project_id: 1,
       };

@@ -37,7 +37,7 @@ impl<'r> FromRequest<'r> for SessionUser {
         let cookies = request.cookies();
 
         let user_id = match read_session_user_id(cookies) {
-            Some(id) => id,
+            Some(user_id) => user_id,
             None => {
                 clear_session_cookie(cookies);
                 return Outcome::Error((Status::Unauthorized, ()));
@@ -139,7 +139,7 @@ impl<'r> FromRequest<'r> for ApiUser {
         match request.guard::<SessionUser>().await {
             Outcome::Success(session_user) => {
                 let user = session_user.into_inner();
-                let log_ctx = LogCtx::from_request(user.user_id, request);
+                let log_ctx = LogCtx::from_request(user.id, request);
                 Outcome::Success(ApiUser { user, log_ctx })
             }
             Outcome::Error((status, ())) => Outcome::Error((status, ())),
@@ -236,7 +236,7 @@ impl<'r> FromRequest<'r> for ProjectAccess {
                 }
 
                 let repo = state.repo_read();
-                match repo.get_projects_for_user(user.user_id) {
+                match repo.get_projects_for_user(user.id) {
                     Ok(memberships) => {
                         if memberships
                             .iter()

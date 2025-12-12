@@ -11,8 +11,8 @@ function collectCategories(select) {
 }
 
 function initReferenceValidation(form) {
-  const referenceInput = form.querySelector('#req_reference');
-  const categorySelect = form.querySelector('#req_category');
+  const referenceInput = form.querySelector('#reference_code');
+  const categorySelect = form.querySelector('#category_id');
   const errorEl = form.querySelector('#reference-error');
   const submitButton = form.querySelector('[data-role="submit-requirement"]');
 
@@ -37,7 +37,7 @@ function initStatusControls(form) {
   const toggle = form.querySelector('[data-role="status-toggle"]');
   const menu = form.querySelector('[data-role="status-menu"]');
   const statusLabel = toggle?.querySelector('.editor-status__label');
-  const select = form.querySelector('#req_current_status');
+  const select = form.querySelector('#status_id');
 
   if (!toggle || !menu || !statusLabel || !select) {
     return;
@@ -259,18 +259,18 @@ function initInlineCreation(form) {
   const config = {
     category: {
       label: 'Category',
-      select: form.querySelector('#req_category'),
+      select: form.querySelector('#category_id'),
       modal: document.querySelector('#categoryModal'),
       form: document.querySelector('#inlineCategoryForm'),
       dropdown: form.querySelector('[data-dropdown="category"]'),
       endpoint: `/p/${projectId}/requirements/inline/category`,
       serialize: (fd) => ({
-        title: (fd.get('cat_title') || '').toString().trim(),
-        description: (fd.get('cat_description') || '').toString().trim(),
-        tag: (fd.get('cat_tag') || '').toString().trim(),
+        title: (fd.get('title') || '').toString().trim(),
+        description: (fd.get('description') || '').toString().trim(),
+        tag: (fd.get('tag') || '').toString().trim(),
       }),
       apply: (data) => {
-        const select = form.querySelector('#req_category');
+        const select = form.querySelector('#category_id');
         const dropdown = form.querySelector('[data-dropdown="category"]');
         
         if (!select || !dropdown) {
@@ -332,24 +332,24 @@ function initInlineCreation(form) {
           valueDisplay.classList.remove('c-custom-dropdown__value--placeholder');
         }
 
-        const reference = form.querySelector('#req_reference');
+        const reference = form.querySelector('#reference_code');
         reference?.dispatchEvent(new Event('input', { bubbles: true }));
       },
     },
     applicability: {
       label: 'Applicability',
-      select: form.querySelector('#req_applicability'),
+      select: form.querySelector('#applicability_id'),
       modal: document.querySelector('#applicabilityModal'),
       form: document.querySelector('#inlineApplicabilityForm'),
       dropdown: form.querySelector('[data-dropdown="applicability"]'),
       endpoint: `/p/${projectId}/requirements/inline/applicability`,
       serialize: (fd) => ({
-        title: (fd.get('app_title') || '').toString().trim(),
-        description: (fd.get('app_description') || '').toString().trim(),
-        tag: (fd.get('app_tag') || '').toString().trim(),
+        title: (fd.get('title') || '').toString().trim(),
+        description: (fd.get('description') || '').toString().trim(),
+        tag: (fd.get('tag') || '').toString().trim(),
       }),
       apply: (data) => {
-        const select = form.querySelector('#req_applicability');
+        const select = form.querySelector('#applicability_id');
         const dropdown = form.querySelector('[data-dropdown="applicability"]');
         
         if (!select || !dropdown) {
@@ -408,17 +408,18 @@ function initInlineCreation(form) {
     },
     verification: {
       label: 'Verification method',
-      select: form.querySelector('#req_verification'),
+      select: form.querySelector('#verification_method_id'),
       modal: document.querySelector('#verificationModal'),
       form: document.querySelector('#inlineVerificationForm'),
       dropdown: form.querySelector('[data-dropdown="verification"]'),
       endpoint: `/p/${projectId}/requirements/inline/verification`,
       serialize: (fd) => ({
-        name: (fd.get('verification_name') || '').toString().trim(),
-        description: (fd.get('verification_description') || '').toString().trim(),
+        title: (fd.get('title') || '').toString().trim(),
+        description: (fd.get('description') || '').toString().trim(),
+        tag: (fd.get('tag') || '').toString().trim(),
       }),
       apply: (data) => {
-        const select = form.querySelector('#req_verification');
+        const select = form.querySelector('#verification_method_id');
         const dropdown = form.querySelector('[data-dropdown="verification"]');
         
         if (!select || !dropdown) {
@@ -864,7 +865,7 @@ function shouldPersistField(field) {
   if (field.type === 'hidden') {
     return false;
   }
-  if (['req_author', 'project_id', 'req_author_email', 'req_id', 'intent'].includes(field.name)) {
+  if (['author_id', 'project_id', 'req_author_email', 'id', 'intent'].includes(field.name)) {
     return false;
   }
   if (field.matches('[data-ignore-autosave]')) {

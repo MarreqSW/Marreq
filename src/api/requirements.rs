@@ -7,14 +7,14 @@ use crate::services::RequirementService;
 #[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct RequirementPatch {
-    pub req_title: Option<String>,
-    pub req_description: Option<String>,
-    pub req_current_status: Option<i32>,
-    pub req_verification: Option<i32>,
-    pub req_author: Option<i32>,
-    pub req_reviewer: Option<i32>,
-    pub req_category: Option<i32>,
-    pub req_applicability: Option<i32>,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub status_id: Option<i32>,
+    pub verification_method_id: Option<i32>,
+    pub author_id: Option<i32>,
+    pub reviewer_id: Option<i32>,
+    pub category_id: Option<i32>,
+    pub applicability_id: Option<i32>,
 }
 
 #[get("/requirements")]
@@ -58,14 +58,14 @@ pub async fn patch_requirement(
     patch: Json<RequirementPatch>,
 ) -> ApiResult<Value> {
     let patch = patch.into_inner();
-    let any_updates = patch.req_title.is_some()
-        || patch.req_description.is_some()
-        || patch.req_current_status.is_some()
-        || patch.req_verification.is_some()
-        || patch.req_author.is_some()
-        || patch.req_reviewer.is_some()
-        || patch.req_category.is_some()
-        || patch.req_applicability.is_some();
+    let any_updates = patch.title.is_some()
+        || patch.description.is_some()
+        || patch.status_id.is_some()
+        || patch.verification_method_id.is_some()
+        || patch.author_id.is_some()
+        || patch.reviewer_id.is_some()
+        || patch.category_id.is_some()
+        || patch.applicability_id.is_some();
 
     if !any_updates {
         return Err(ApiError::BadRequest("no fields provided".into()));
@@ -74,44 +74,44 @@ pub async fn patch_requirement(
     let service = RequirementService::new(state.inner());
     let mut requirement = service.get_by_id(id)?;
 
-    if let Some(v) = patch.req_title {
-        requirement.req_title = v;
+    if let Some(v) = patch.title {
+        requirement.title = v;
     }
-    if let Some(v) = patch.req_description {
-        requirement.req_description = v;
+    if let Some(v) = patch.description {
+        requirement.description = v;
     }
-    if let Some(v) = patch.req_current_status {
-        requirement.req_current_status = v;
+    if let Some(v) = patch.status_id {
+        requirement.status_id = v;
     }
-    if let Some(v) = patch.req_verification {
-        requirement.req_verification = v;
+    if let Some(v) = patch.verification_method_id {
+        requirement.verification_method_id = v;
     }
-    if let Some(v) = patch.req_author {
-        requirement.req_author = v;
+    if let Some(v) = patch.author_id {
+        requirement.author_id = v;
     }
-    if let Some(v) = patch.req_reviewer {
-        requirement.req_reviewer = v;
+    if let Some(v) = patch.reviewer_id {
+        requirement.reviewer_id = v;
     }
-    if let Some(v) = patch.req_category {
-        requirement.req_category = v;
+    if let Some(v) = patch.category_id {
+        requirement.category_id = v;
     }
-    if let Some(v) = patch.req_applicability {
-        requirement.req_applicability = v;
+    if let Some(v) = patch.applicability_id {
+        requirement.applicability_id = v;
     }
 
     let payload = NewRequirement {
-        req_id: Some(requirement.req_id),
-        req_title: requirement.req_title.clone(),
-        req_description: requirement.req_description.clone(),
-        req_verification: requirement.req_verification,
-        req_author: requirement.req_author,
-        req_category: requirement.req_category,
-        req_current_status: requirement.req_current_status,
-        req_parent: requirement.req_parent,
-        req_reference: requirement.req_reference.clone(),
-        req_reviewer: requirement.req_reviewer,
-        req_applicability: requirement.req_applicability,
-        req_justification: requirement.req_justification.clone(),
+        id: Some(requirement.id),
+        title: requirement.title.clone(),
+        description: requirement.description.clone(),
+        verification_method_id: requirement.verification_method_id,
+        author_id: requirement.author_id,
+        category_id: requirement.category_id,
+        status_id: requirement.status_id,
+        parent_id: requirement.parent_id,
+        reference_code: requirement.reference_code.clone(),
+        reviewer_id: requirement.reviewer_id,
+        applicability_id: requirement.applicability_id,
+        justification: requirement.justification.clone(),
         project_id: requirement.project_id,
     };
 
@@ -162,18 +162,18 @@ mod tests {
 
     fn sample_requirement(title: &str) -> Value {
         json!({
-            "req_id": null,
-            "req_title": title,
-            "req_description": format!("{title} description"),
-            "req_verification": 1,
-            "req_author": 1,
-            "req_category": 1,
-            "req_current_status": 1,
-            "req_parent": 0,
-            "req_reference": "REF-1",
-            "req_reviewer": 2,
-            "req_applicability": 3,
-            "req_justification": null,
+            "id": null,
+            "title": title,
+            "description": format!("{title} description"),
+            "verification_method_id": 1,
+            "author_id": 1,
+            "category_id": 1,
+            "status_id": 1,
+            "parent_id": null,
+            "reference_code": "REF-1",
+            "reviewer_id": 2,
+            "applicability_id": 3,
+            "justification": null,
             "project_id": 1
         })
     }
@@ -227,8 +227,8 @@ mod tests {
             .private_cookie(auth_cookie())
             .body(
                 json!({
-                    "req_title": "Updated",
-                    "req_description": "Updated description"
+                    "title": "Updated",
+                    "description": "Updated description"
                 })
                 .to_string(),
             )
@@ -245,8 +245,8 @@ mod tests {
             .dispatch()
             .await;
         let requirement: Requirement = get_response.into_json().await.unwrap();
-        assert_eq!(requirement.req_title, "Updated");
-        assert_eq!(requirement.req_description, "Updated description");
+        assert_eq!(requirement.title, "Updated");
+        assert_eq!(requirement.description, "Updated description");
     }
 
     #[rocket::async_test]

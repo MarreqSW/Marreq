@@ -1,4 +1,4 @@
-use crate::models::{Requirement, Test};
+use crate::models::{Requirement, TestCase};
 
 pub fn filter_requirements(
     requirements: Vec<Requirement>,
@@ -9,23 +9,21 @@ pub fn filter_requirements(
     let mut filtered_requirements: Vec<Requirement> = requirements
         .into_iter()
         .filter(|req| {
-            let status_match =
-                status_filter.map_or(true, |status_id| req.req_current_status == status_id);
-            let verification_match = verification_filter.map_or(true, |verification_id| {
-                req.req_verification == verification_id
-            });
+            let status_match = status_filter.map_or(true, |status_id| req.status_id == status_id);
+            let verification_match =
+                verification_filter.map_or(true, |id| req.verification_method_id == id);
             let category_match =
-                category_filter.map_or(true, |category_id| req.req_category == category_id);
+                category_filter.map_or(true, |category_id| req.category_id == category_id);
             status_match && verification_match && category_match
         })
         .collect();
 
     filtered_requirements.sort_by(|a, b| {
-        match (a.req_reference.is_empty(), b.req_reference.is_empty()) {
-            (false, false) => a.req_reference.cmp(&b.req_reference),
+        match (a.reference_code.is_empty(), b.reference_code.is_empty()) {
+            (false, false) => a.reference_code.cmp(&b.reference_code),
             (false, true) => std::cmp::Ordering::Less,
             (true, false) => std::cmp::Ordering::Greater,
-            (true, true) => a.req_id.cmp(&b.req_id),
+            (true, true) => a.id.cmp(&b.id),
         }
     });
 
@@ -33,16 +31,15 @@ pub fn filter_requirements(
 }
 
 pub fn filter_tests(
-    tests: Vec<Test>,
+    tests: Vec<TestCase>,
     status_filter: Option<i32>,
     _verification_filter: Option<i32>,
     _category_filter: Option<i32>,
-) -> Vec<Test> {
+) -> Vec<TestCase> {
     tests
         .into_iter()
         .filter(|test| {
-            let status_match =
-                status_filter.map_or(true, |status_id| test.test_status == status_id);
+            let status_match = status_filter.map_or(true, |status_id| test.status_id == status_id);
             status_match
         })
         .collect()
@@ -51,7 +48,7 @@ pub fn filter_tests(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Requirement, Test};
+    use crate::models::{Requirement, TestCase};
     use chrono::NaiveDate;
 
     fn dummy_datetime() -> chrono::NaiveDateTime {
@@ -69,21 +66,21 @@ mod tests {
         reference: &str,
     ) -> Requirement {
         Requirement {
-            req_id: id,
-            req_title: format!("Req {}", id),
-            req_description: String::new(),
-            req_verification: verification,
-            req_current_status: status,
-            req_author: 0,
-            req_reviewer: 0,
-            req_reference: reference.to_string(),
-            req_category: category,
-            req_parent: 0,
-            req_creation_date: dummy_datetime(),
-            req_update_date: dummy_datetime(),
-            req_deadline_date: dummy_datetime(),
-            req_applicability: 0,
-            req_justification: None,
+            id: id,
+            title: format!("Req {}", id),
+            description: String::new(),
+            verification_method_id: verification,
+            status_id: status,
+            author_id: 0,
+            reviewer_id: 0,
+            reference_code: reference.to_string(),
+            category_id: category,
+            parent_id: None,
+            creation_date: dummy_datetime(),
+            update_date: dummy_datetime(),
+            deadline_date: Some(dummy_datetime()),
+            applicability_id: 0,
+            justification: None,
             project_id: 0,
         }
     }
@@ -98,41 +95,41 @@ mod tests {
 
         let filtered = filter_requirements(reqs.clone(), Some(1), None, None);
         assert_eq!(filtered.len(), 2);
-        assert_eq!(filtered[0].req_id, 1);
-        assert_eq!(filtered[1].req_id, 2);
+        assert_eq!(filtered[0].id, 1);
+        assert_eq!(filtered[1].id, 2);
 
         let filtered2 = filter_requirements(reqs.clone(), None, Some(1), Some(1));
         assert_eq!(filtered2.len(), 1);
-        assert_eq!(filtered2[0].req_id, 1);
+        assert_eq!(filtered2[0].id, 1);
 
         let filtered3 = filter_requirements(reqs, None, None, None);
-        assert_eq!(filtered3[0].req_id, 1);
-        assert_eq!(filtered3[1].req_id, 3);
-        assert_eq!(filtered3[2].req_id, 2);
+        assert_eq!(filtered3[0].id, 1);
+        assert_eq!(filtered3[1].id, 3);
+        assert_eq!(filtered3[2].id, 2);
     }
 
     #[test]
     fn filter_tests_filters_by_status() {
         let only_status1 = filter_tests(
             vec![
-                Test {
-                    test_id: 1,
-                    test_name: "T1".into(),
-                    test_description: String::new(),
-                    test_source: String::new(),
-                    test_reference: "TEST-1".into(),
-                    test_status: 1,
-                    test_parent: 0,
+                TestCase {
+                    id: 1,
+                    name: "T1".into(),
+                    description: String::new(),
+                    source: String::new(),
+                    reference_code: "TEST-1".into(),
+                    status_id: 1,
+                    parent_id: None,
                     project_id: 0,
                 },
-                Test {
-                    test_id: 2,
-                    test_name: "T2".into(),
-                    test_description: String::new(),
-                    test_source: String::new(),
-                    test_reference: "TEST-2".into(),
-                    test_status: 2,
-                    test_parent: 0,
+                TestCase {
+                    id: 2,
+                    name: "T2".into(),
+                    description: String::new(),
+                    source: String::new(),
+                    reference_code: "TEST-2".into(),
+                    status_id: 2,
+                    parent_id: None,
                     project_id: 0,
                 },
             ],
@@ -141,28 +138,28 @@ mod tests {
             None,
         );
         assert_eq!(only_status1.len(), 1);
-        assert_eq!(only_status1[0].test_id, 1);
+        assert_eq!(only_status1[0].id, 1);
 
         let all = filter_tests(
             vec![
-                Test {
-                    test_id: 1,
-                    test_name: "T1".into(),
-                    test_description: String::new(),
-                    test_source: String::new(),
-                    test_reference: "TEST-1".into(),
-                    test_status: 1,
-                    test_parent: 0,
+                TestCase {
+                    id: 1,
+                    name: "T1".into(),
+                    description: String::new(),
+                    source: String::new(),
+                    reference_code: "TEST-1".into(),
+                    status_id: 1,
+                    parent_id: None,
                     project_id: 0,
                 },
-                Test {
-                    test_id: 2,
-                    test_name: "T2".into(),
-                    test_description: String::new(),
-                    test_source: String::new(),
-                    test_reference: "TEST-2".into(),
-                    test_status: 2,
-                    test_parent: 0,
+                TestCase {
+                    id: 2,
+                    name: "T2".into(),
+                    description: String::new(),
+                    source: String::new(),
+                    reference_code: "TEST-2".into(),
+                    status_id: 2,
+                    parent_id: None,
                     project_id: 0,
                 },
             ],

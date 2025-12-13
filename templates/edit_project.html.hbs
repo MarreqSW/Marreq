@@ -22,12 +22,12 @@
                         </div>
                         
                         <div class="mb-3">
-                            <label for="status_id" class="form-label c-form-label">Status</label>
-                            <select class="form-select c-form-select c-form-control c-form-control--select" id="status_id" name="status_id">
-                                <option value="active" {{#if (eq project.status_id 'active')}}selected{{/if}}>Active</option>
-                                <option value="inactive" {{#if (eq project.status_id 'inactive')}}selected{{/if}}>Inactive</option>
-                                <option value="completed" {{#if (eq project.status_id 'completed')}}selected{{/if}}>Completed</option>
-                                <option value="on-hold" {{#if (eq project.status_id 'on-hold')}}selected{{/if}}>On Hold</option>
+                            <label for="status" class="form-label c-form-label">Status</label>
+                            <select class="form-select c-form-select c-form-control c-form-control--select" id="status" name="status">
+                                <option value="active" {{#if (eq project.status 'active')}}selected{{/if}}>Active</option>
+                                <option value="completed" {{#if (eq project.status 'completed')}}selected{{/if}}>Completed</option>
+                                <option value="on_hold" {{#if (eq project.status 'on_hold')}}selected{{/if}}>On Hold</option>
+                                <option value="cancelled" {{#if (eq project.status 'cancelled')}}selected{{/if}}>Cancelled</option>
                             </select>
                         </div>
                         

@@ -23,9 +23,33 @@ impl<'a> StatusService<'a> {
         self.state.repo_read().get_requirement_status_all()
     }
 
+    /// Retrieve requirement statuses for a specific project.
+    pub fn list_requirement_statuses_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<RequirementStatus>, RepoError> {
+        let all_statuses = self.state.repo_read().get_requirement_status_all()?;
+        Ok(all_statuses
+            .into_iter()
+            .filter(|s| s.project_id == project_id)
+            .collect())
+    }
+
     /// Retrieve test statuses.
     pub fn list_test_statuses(&self) -> Result<Vec<TestStatus>, RepoError> {
         self.state.repo_read().get_test_status_all()
+    }
+
+    /// Retrieve test statuses for a specific project.
+    pub fn list_test_statuses_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<TestStatus>, RepoError> {
+        let all_statuses = self.state.repo_read().get_test_status_all()?;
+        Ok(all_statuses
+            .into_iter()
+            .filter(|s| s.project_id == project_id)
+            .collect())
     }
 
     /// Retrieve a single requirement status by identifier.

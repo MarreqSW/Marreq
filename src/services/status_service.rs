@@ -4,6 +4,7 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{NewRequirementStatus, NewTestStatus, RequirementStatus, TestStatus};
 use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
+use crate::status_enums::{RequirementStatusEnum, TestStatusEnum};
 use crate::validation::{sanitize_string, validate_requirement_status};
 
 /// High level status operations backed by the shared [`AppState`].
@@ -22,9 +23,33 @@ impl<'a> StatusService<'a> {
         self.state.repo_read().get_requirement_status_all()
     }
 
+    /// Retrieve requirement statuses for a specific project.
+    pub fn list_requirement_statuses_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<RequirementStatus>, RepoError> {
+        let all_statuses = self.state.repo_read().get_requirement_status_all()?;
+        Ok(all_statuses
+            .into_iter()
+            .filter(|s| s.project_id == project_id)
+            .collect())
+    }
+
     /// Retrieve test statuses.
     pub fn list_test_statuses(&self) -> Result<Vec<TestStatus>, RepoError> {
         self.state.repo_read().get_test_status_all()
+    }
+
+    /// Retrieve test statuses for a specific project.
+    pub fn list_test_statuses_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<TestStatus>, RepoError> {
+        let all_statuses = self.state.repo_read().get_test_status_all()?;
+        Ok(all_statuses
+            .into_iter()
+            .filter(|s| s.project_id == project_id)
+            .collect())
     }
 
     /// Retrieve a single requirement status by identifier.
@@ -84,6 +109,45 @@ impl<'a> StatusService<'a> {
         };
 
         Ok(id)
+    }
+
+    /// Initialize default requirement and test statuses for a new project.
+    ///
+    /// This method creates the standard set of statuses defined in the
+    /// `RequirementStatusEnum` and `TestStatusEnum` enums for the given project.
+    ///
+    /// # Arguments
+    /// * `project_id` - The ID of the project to initialize statuses for
+    ///
+    /// # Returns
+    /// * `Ok(())` if all statuses were created successfully
+    /// * `Err(RepoError)` if any status creation failed
+    pub fn initialize_default_statuses(&self, project_id: i32) -> Result<(), RepoError> {
+        // Initialize requirement statuses from enum
+        for status_enum in RequirementStatusEnum::all() {
+            let payload = NewRequirementStatus {
+                id: None,
+                title: status_enum.title().to_string(),
+                description: status_enum.description().to_string(),
+                tag: status_enum.short_name().to_string(),
+                project_id,
+            };
+            self.create_requirement_status(payload)?;
+        }
+
+        // Initialize test statuses from enum
+        for status_enum in TestStatusEnum::all() {
+            let payload = NewTestStatus {
+                id: None,
+                title: status_enum.title().to_string(),
+                description: status_enum.description().to_string(),
+                tag: status_enum.short_name().to_string(),
+                project_id,
+            };
+            self.create_test_status(payload)?;
+        }
+
+        Ok(())
     }
 }
 
@@ -185,5 +249,49 @@ mod tests {
 
         let err = service.create_requirement_status(payload).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn initialize_default_statuses_creates_all_standard_statuses() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let project_id = 42;
+        let result = service.initialize_default_statuses(project_id);
+        assert!(result.is_ok());
+
+        // Verify all requirement statuses were created
+        let req_statuses = service.list_requirement_statuses().unwrap();
+        let project_req_statuses: Vec<_> = req_statuses
+            .iter()
+            .filter(|s| s.project_id == project_id)
+            .collect();
+        assert_eq!(project_req_statuses.len(), 6); // Draft, Proposal, Accepted, Rejected, Cancelled, Finished
+
+        // Verify all test statuses were created
+        let test_statuses = service.list_test_statuses().unwrap();
+        let project_test_statuses: Vec<_> = test_statuses
+            .iter()
+            .filter(|s| s.project_id == project_id)
+            .collect();
+        assert_eq!(project_test_statuses.len(), 4); // Passed, Failed, Pending, In Progress
+
+        // Verify specific statuses exist with correct titles
+        let req_titles: Vec<_> = project_req_statuses
+            .iter()
+            .map(|s| s.title.as_str())
+            .collect();
+        assert!(req_titles.contains(&"Draft"));
+        assert!(req_titles.contains(&"Accepted"));
+        assert!(req_titles.contains(&"Finished"));
+
+        let test_titles: Vec<_> = project_test_statuses
+            .iter()
+            .map(|s| s.title.as_str())
+            .collect();
+        assert!(test_titles.contains(&"Passed"));
+        assert!(test_titles.contains(&"Failed"));
+        assert!(test_titles.contains(&"Pending"));
     }
 }

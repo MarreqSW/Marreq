@@ -67,6 +67,27 @@ Defines:
 - Helper methods: `is_verified()`, `is_editable_by_user()`, `is_passed()`, `is_active()`
 - Comprehensive unit tests
 
+### Status Service
+
+**File**: `src/services/status_service.rs`
+
+Key features:
+- `initialize_default_statuses(project_id)`: Automatically creates all default requirement and test statuses for a new project
+- Status creation and management methods
+- Uses the enum definitions to ensure consistency
+
+### Project Service Integration
+
+**File**: `src/services/project_service.rs`
+
+When a new project is created via `ProjectService::create()`, the system automatically:
+1. Creates the project record in the database
+2. Initializes all default requirement statuses (Draft, Proposal, Accepted, Rejected, Cancelled, Finished)
+3. Initializes all default test statuses (Passed, Failed, Pending, In Progress)
+4. Logs the project creation
+
+This ensures every new project starts with a complete set of standard statuses based on the hardcoded enums.
+
 ### Backend Integration
 
 **Modified Files**:
@@ -135,6 +156,52 @@ println!("Description: {}", status.description());
     <button data-action="delete-test">Delete</button>
 {{/if}}
 ```
+
+## Automatic Status Initialization
+
+### New Project Creation
+
+When a new project is created, the system automatically initializes all default statuses:
+
+**Requirement Statuses Created**:
+- Draft (Drf): The requirement is still being edited and developed
+- Proposal (Pro): The requirement is proposed and awaiting approval
+- Accepted (Acc): The requirement is accepted and must be processed
+- Rejected (Rej): The requirement is not accepted and needs revision
+- Cancelled (Can): The requirement is cancelled and will not be implemented
+- Finished (Fsh): The requirement is finished and completed
+
+**Test Statuses Created**:
+- Passed (Pass): The test has passed all criteria
+- Failed (Fail): The test has failed one or more criteria
+- Pending (Pend): The test is pending execution
+- In Progress (Prog): The test is currently being executed
+
+### Implementation Details
+
+The initialization happens in `ProjectService::create()`:
+
+```rust
+// After creating the project
+let status_service = StatusService::new(self.state);
+status_service.initialize_default_statuses(project_id)?;
+```
+
+This ensures:
+1. **Consistency**: All projects start with the same set of statuses
+2. **Type Safety**: Statuses are defined once in the enum and reused everywhere
+3. **Maintainability**: Adding or modifying default statuses only requires updating the enum
+4. **Automatic**: No manual setup required when creating new projects
+
+### Testing
+
+The automatic initialization is tested in `src/services/status_service.rs`:
+
+```bash
+cargo test services::status_service::tests::initialize_default_statuses_creates_all_standard_statuses --lib
+```
+
+This test verifies that all 6 requirement statuses and 4 test statuses are correctly created for a new project.
 
 ## Testing
 

@@ -680,7 +680,10 @@ mod tests {
                 project_id: 1,
             };
 
-            assert_eq!(NewVerificationMethod::entity_type(), EntityType::Verification);
+            assert_eq!(
+                NewVerificationMethod::entity_type(),
+                EntityType::Verification
+            );
             assert_eq!(new_ver.id(), 1);
             assert_eq!(new_ver.project_id(), Some(1));
             assert_eq!(new_ver.display_name(), "Test");
@@ -1374,4 +1377,3 @@ mod tests {
         }
     }
 }
-

@@ -99,10 +99,10 @@ async fn get_matrix(
     ctx["show_first_ellipsis"] = json!(pagination_ctx.show_first_ellipsis);
     ctx["show_last_ellipsis"] = json!(pagination_ctx.show_last_ellipsis);
     ctx["test_statuses"] = json!(StatusService::new(state.inner())
-        .list_test_statuses()
+        .list_test_statuses_by_project(project_id)
         .unwrap_or_default());
     ctx["statuses"] = json!(StatusService::new(state.inner())
-        .list_requirement_statuses()
+        .list_requirement_statuses_by_project(project_id)
         .unwrap_or_default());
     ctx["categories"] = json!(CategoryService::new(state.inner())
         .list_by_project(project_id)

@@ -276,19 +276,34 @@ INSERT INTO projects (id, name, description, creation_date, status) VALUES
 
 -- Requirement Status definitions
 INSERT INTO requirement_status (title, description, tag, project_id) VALUES
+    -- Space Project statuses
     ('Draft', 'The requirement is still being edited and developed', 'Drf', 1),
     ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', 1),
     ('Accepted', 'The requirement is accepted and must be processed', 'Acc', 1),
     ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', 1),
     ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', 1),
-    ('Finished', 'The requirement is finished and completed', 'Fsh', 1);
+    ('Finished', 'The requirement is finished and completed', 'Fsh', 1),
+    -- ReqMan Project statuses
+    ('Draft', 'The requirement is still being edited and developed', 'Drf', 2),
+    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', 2),
+    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', 2),
+    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', 2),
+    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', 2),
+    ('Finished', 'The requirement is finished and completed', 'Fsh', 2);
+
 
 -- Test Status definitions
 INSERT INTO test_status (title, description, tag, project_id) VALUES
+    -- Space Project test statuses
     ('Passed', 'The test has passed all criteria', 'Pass', 1),
     ('Failed', 'The test has failed one or more criteria', 'Fail', 1),
     ('Pending', 'The test is pending execution', 'Pend', 1),
-    ('In Progress', 'The test is currently being executed', 'Prog', 1);
+    ('In Progress', 'The test is currently being executed', 'Prog', 1),
+    -- ReqMan Project test statuses
+    ('Passed', 'The test has passed all criteria', 'Pass', 2),
+    ('Failed', 'The test has failed one or more criteria', 'Fail', 2),
+    ('Pending', 'The test is pending execution', 'Pend', 2),
+    ('In Progress', 'The test is currently being executed', 'Prog', 2);
 
 -- Users with working passwords (all users have password: 'password')
 -- Password hash: $2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m
@@ -326,6 +341,16 @@ INSERT INTO categories (title, description, tag, project_id) VALUES
     ('Structure', 'Mechanical structure and deployment mechanisms', 'STRUCT', 1),
     ('Software', 'On-board computer systems and control algorithms', 'SW', 1);
 
+-- Categories for ReqMan Project
+INSERT INTO categories (title, description, tag, project_id) VALUES
+    ('User Interface', 'User interface components and functionality', 'UI', 2),
+    ('Backend', 'Server-side logic and API endpoints', 'BE', 2),
+    ('Database', 'Database schema and data management', 'DB', 2),
+    ('Authentication', 'User authentication and authorization', 'AUTH', 2),
+    ('Documentation', 'Technical and user documentation', 'DOC', 2),
+    ('Testing', 'Test infrastructure and test cases', 'TEST', 2),
+    ('Performance', 'System performance and optimization', 'PERF', 2);
+
 -- Applicability definitions for Space Project
 INSERT INTO applicability (title, description, tag, project_id) VALUES
     ('All Missions', 'Applies to all satellite missions regardless of type', 'ALL', 1),
@@ -335,12 +360,29 @@ INSERT INTO applicability (title, description, tag, project_id) VALUES
     ('Deep Space', 'Interplanetary and deep space exploration missions', 'DEEP', 1),
     ('CubeSat', 'Small satellite missions and CubeSat platforms', 'CUBE', 1);
 
--- Verification methods
+-- Applicability definitions for ReqMan Project
+INSERT INTO applicability (title, description, tag, project_id) VALUES
+    ('All Users', 'Applies to all user types', 'ALL', 2),
+    ('Administrators', 'Applies to system administrators only', 'ADMIN', 2),
+    ('Project Managers', 'Applies to project managers and owners', 'MGR', 2),
+    ('Contributors', 'Applies to regular contributors', 'CONT', 2),
+    ('Viewers', 'Applies to read-only viewers', 'VIEW', 2);
+
+-- Verification methods for Space Project
 INSERT INTO verification (title, description, tag, project_id) VALUES
     ('Inspection', 'Nondestructive examination of a system or component', 'INSP', 1),
     ('Analysis', 'Verification using mathematical models and calculations', 'ANALYSIS', 1),
     ('Demonstration', 'Manipulation of the product as intended in its operational environment', 'DEMO', 1),
     ('Test', 'Controlled verification with predefined inputs and expected outputs', 'TEST', 1);
+
+-- Verification methods for ReqMan Project
+INSERT INTO verification (title, description, tag, project_id) VALUES
+    ('Code Review', 'Review of source code by peers', 'REVIEW', 2),
+    ('Unit Test', 'Automated unit testing', 'UNIT', 2),
+    ('Integration Test', 'Testing of integrated components', 'INTEG', 2),
+    ('System Test', 'End-to-end system testing', 'SYS', 2),
+    ('Manual Test', 'Manual testing by QA team', 'MANUAL', 2);
+
 
 -- Requirements for Space Project
 INSERT INTO requirements (title, description, reference_code, category_id, applicability_id, status_id, verification_method_id, author_id, reviewer_id, parent_id, creation_date, update_date, deadline_date, project_id) VALUES

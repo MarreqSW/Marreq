@@ -50,7 +50,7 @@ impl<'a> ProjectService<'a> {
     }
 
     /// Create a new project entry and log the action.
-    /// 
+    ///
     /// This method creates the project and automatically initializes default
     /// requirement and test statuses based on the hardcoded enums.
     pub fn create(&self, actor: &User, mut payload: NewProject) -> Result<i32, RepoError> {
@@ -274,7 +274,11 @@ mod tests {
             .iter()
             .filter(|s| s.project_id == project_id)
             .collect();
-        assert_eq!(project_req_statuses.len(), 6, "Should have 6 requirement statuses");
+        assert_eq!(
+            project_req_statuses.len(),
+            6,
+            "Should have 6 requirement statuses"
+        );
 
         // Verify test statuses were created
         let test_statuses = status_service.list_test_statuses().unwrap();
@@ -282,15 +286,25 @@ mod tests {
             .iter()
             .filter(|s| s.project_id == project_id)
             .collect();
-        assert_eq!(project_test_statuses.len(), 4, "Should have 4 test statuses");
+        assert_eq!(
+            project_test_statuses.len(),
+            4,
+            "Should have 4 test statuses"
+        );
 
         // Verify specific status titles exist
-        let req_titles: Vec<_> = project_req_statuses.iter().map(|s| s.title.as_str()).collect();
+        let req_titles: Vec<_> = project_req_statuses
+            .iter()
+            .map(|s| s.title.as_str())
+            .collect();
         assert!(req_titles.contains(&"Draft"));
         assert!(req_titles.contains(&"Accepted"));
         assert!(req_titles.contains(&"Finished"));
 
-        let test_titles: Vec<_> = project_test_statuses.iter().map(|s| s.title.as_str()).collect();
+        let test_titles: Vec<_> = project_test_statuses
+            .iter()
+            .map(|s| s.title.as_str())
+            .collect();
         assert!(test_titles.contains(&"Passed"));
         assert!(test_titles.contains(&"Failed"));
         assert!(test_titles.contains(&"Pending"));

@@ -521,7 +521,8 @@ async fn new_requirement(
     let requirement_service = RequirementService::new(state.inner());
 
     let project = ProjectService::new(state.inner()).get_by_id(project_id)?;
-    let statuses = StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
+    let statuses =
+        StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
     let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
     let users = UserService::new(state.inner()).get_by_project(project_id)?;
     let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;

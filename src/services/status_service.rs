@@ -112,13 +112,13 @@ impl<'a> StatusService<'a> {
     }
 
     /// Initialize default requirement and test statuses for a new project.
-    /// 
+    ///
     /// This method creates the standard set of statuses defined in the
     /// `RequirementStatusEnum` and `TestStatusEnum` enums for the given project.
-    /// 
+    ///
     /// # Arguments
     /// * `project_id` - The ID of the project to initialize statuses for
-    /// 
+    ///
     /// # Returns
     /// * `Ok(())` if all statuses were created successfully
     /// * `Err(RepoError)` if any status creation failed
@@ -278,12 +278,18 @@ mod tests {
         assert_eq!(project_test_statuses.len(), 4); // Passed, Failed, Pending, In Progress
 
         // Verify specific statuses exist with correct titles
-        let req_titles: Vec<_> = project_req_statuses.iter().map(|s| s.title.as_str()).collect();
+        let req_titles: Vec<_> = project_req_statuses
+            .iter()
+            .map(|s| s.title.as_str())
+            .collect();
         assert!(req_titles.contains(&"Draft"));
         assert!(req_titles.contains(&"Accepted"));
         assert!(req_titles.contains(&"Finished"));
 
-        let test_titles: Vec<_> = project_test_statuses.iter().map(|s| s.title.as_str()).collect();
+        let test_titles: Vec<_> = project_test_statuses
+            .iter()
+            .map(|s| s.title.as_str())
+            .collect();
         assert!(test_titles.contains(&"Passed"));
         assert!(test_titles.contains(&"Failed"));
         assert!(test_titles.contains(&"Pending"));

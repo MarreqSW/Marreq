@@ -146,6 +146,10 @@
                   <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
                     {{name}}
                   </button>
+                {{else}}
+                  <div class="c-custom-dropdown__empty">
+                    No reviewers available yet
+                  </div>
                 {{/each}}
               </div>
             </div>
@@ -267,20 +271,36 @@
           <label for="status_id" class="c-create-field__label">
             Status <span class="c-create-field__required">*</span>
           </label>
-          <select
-            name="status_id"
-            id="status_id"
-            class="c-create-field__select"
-            required
-          >
-            {{#each status}}
-              {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title "Deprecated"))))}}
-                <option value="{{id}}" {{#if (eq id ../status_id)}}selected{{/if}}>
-                  {{title}}
-                </option>
-              {{/if}}
-            {{/each}}
-          </select>
+          <div class="c-custom-dropdown" data-dropdown="status">
+            <button type="button" class="c-custom-dropdown__trigger" data-role="dropdown-trigger">
+              <span class="c-custom-dropdown__value" data-role="dropdown-value">Select status...</span>
+              <span class="c-custom-dropdown__arrow">▼</span>
+            </button>
+            <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
+              <div class="c-custom-dropdown__list" data-role="dropdown-list">
+                {{#each status}}
+                  {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title "Deprecated"))))}}
+                    <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
+                      {{title}}
+                    </button>
+                  {{/if}}
+                {{else}}
+                  <div class="c-custom-dropdown__empty">
+                    No status options available yet
+                  </div>
+                {{/each}}
+              </div>
+            </div>
+            <select name="status_id" id="status_id" class="c-custom-dropdown__hidden" required hidden>
+              {{#each status}}
+                {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title "Deprecated"))))}}
+                  <option value="{{id}}" {{#if (eq id ../status_id)}}selected{{/if}}>
+                    {{title}}
+                  </option>
+                {{/if}}
+              {{/each}}
+            </select>
+          </div>
         </div>
         {{/if}}
 

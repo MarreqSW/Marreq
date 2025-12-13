@@ -13,6 +13,9 @@ pub mod decorators;
 pub mod entities;
 pub mod forms;
 
+#[cfg(test)]
+mod tests;
+
 // Re-export all public types for backward compatibility
 pub use decorators::*;
 pub use entities::*;

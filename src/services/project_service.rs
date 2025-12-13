@@ -54,6 +54,11 @@ impl<'a> ProjectService<'a> {
     /// This method creates the project and automatically initializes default
     /// requirement and test statuses based on the hardcoded enums.
     pub fn create(&self, actor: &User, mut payload: NewProject) -> Result<i32, RepoError> {
+        // If no owner provided, assign the actor as owner
+        if payload.owner_id.is_none() {
+            payload.owner_id = Some(actor.id);
+        }
+
         self.prepare_new_payload(&mut payload)?;
 
         let id = {

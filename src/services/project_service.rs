@@ -68,10 +68,7 @@ impl<'a> ProjectService<'a> {
 
         // Initialize default statuses for the new project
         let status_service = StatusService::new(self.state);
-        if let Err(e) = status_service.initialize_default_statuses(id) {
-            // Log the error but don't fail the project creation
-            eprintln!("Warning: Failed to initialize default statuses for project {}: {:?}", id, e);
-        }
+        status_service.initialize_default_statuses(id)?;
 
         if let Ok(project) = self.get_by_id(id) {
             self.log_created(actor, id, &project);
@@ -183,6 +180,7 @@ mod tests {
     use super::*;
     use crate::models::ProjectMember;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::services::StatusService;
     use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -252,6 +250,51 @@ mod tests {
 
         let err = service.create(&actor(), payload).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_initializes_default_statuses() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+        let status_service = StatusService::new(&state);
+
+        let payload = NewProject {
+            name: "Test Project".into(),
+            description: None,
+            status: ProjectStatus::Active,
+            owner_id: Some(1),
+        };
+
+        let project_id = service.create(&actor(), payload).unwrap();
+
+        // Verify requirement statuses were created
+        let req_statuses = status_service.list_requirement_statuses().unwrap();
+        let project_req_statuses: Vec<_> = req_statuses
+            .iter()
+            .filter(|s| s.project_id == project_id)
+            .collect();
+        assert_eq!(project_req_statuses.len(), 6, "Should have 6 requirement statuses");
+
+        // Verify test statuses were created
+        let test_statuses = status_service.list_test_statuses().unwrap();
+        let project_test_statuses: Vec<_> = test_statuses
+            .iter()
+            .filter(|s| s.project_id == project_id)
+            .collect();
+        assert_eq!(project_test_statuses.len(), 4, "Should have 4 test statuses");
+
+        // Verify specific status titles exist
+        let req_titles: Vec<_> = project_req_statuses.iter().map(|s| s.title.as_str()).collect();
+        assert!(req_titles.contains(&"Draft"));
+        assert!(req_titles.contains(&"Accepted"));
+        assert!(req_titles.contains(&"Finished"));
+
+        let test_titles: Vec<_> = project_test_statuses.iter().map(|s| s.title.as_str()).collect();
+        assert!(test_titles.contains(&"Passed"));
+        assert!(test_titles.contains(&"Failed"));
+        assert!(test_titles.contains(&"Pending"));
+        assert!(test_titles.contains(&"In Progress"));
     }
 
     #[test]

@@ -5,6 +5,7 @@ use crate::logger::{LogCtx, Logger};
 use crate::models::{NewProject, Project, UpdateProject, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, ProjectMembersRepository, ProjectsRepository};
+use crate::services::status_service::StatusService;
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_project};
 
 /// High level project operations backed by the shared [`AppState`].
@@ -49,6 +50,9 @@ impl<'a> ProjectService<'a> {
     }
 
     /// Create a new project entry and log the action.
+    /// 
+    /// This method creates the project and automatically initializes default
+    /// requirement and test statuses based on the hardcoded enums.
     pub fn create(&self, actor: &User, mut payload: NewProject) -> Result<i32, RepoError> {
         self.prepare_new_payload(&mut payload)?;
 
@@ -56,6 +60,13 @@ impl<'a> ProjectService<'a> {
             let mut repo = self.state.repo_write();
             repo.insert_new_project(&payload)?
         };
+
+        // Initialize default statuses for the new project
+        let status_service = StatusService::new(self.state);
+        if let Err(e) = status_service.initialize_default_statuses(id) {
+            // Log the error but don't fail the project creation
+            eprintln!("Warning: Failed to initialize default statuses for project {}: {:?}", id, e);
+        }
 
         if let Ok(project) = self.get_by_id(id) {
             self.log_created(actor, id, &project);

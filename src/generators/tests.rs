@@ -267,12 +267,7 @@ mod tests {
         #[test]
         fn matrix_workbook_headers() {
             // Test that headers are correctly defined
-            let headers = vec![
-                "Title",
-                "Reference",
-                "Category",
-                "Status",
-            ];
+            let headers = vec!["Title", "Reference", "Category", "Status"];
             assert_eq!(headers.len(), 4);
             assert_eq!(headers[0], "Title");
             assert_eq!(headers[1], "Reference");
@@ -334,7 +329,7 @@ mod tests {
             // Test the logic for checking if a requirement is linked to a test
             let test_present: i64 = 1;
             assert!(test_present > 0);
-            
+
             let test_absent: i64 = 0;
             assert!(!(test_absent > 0));
         }
@@ -457,10 +452,7 @@ mod tests {
                 sample_decorated_requirement(1),
                 sample_decorated_requirement(2),
             ];
-            let tests = vec![
-                sample_decorated_test_case(1),
-                sample_decorated_test_case(2),
-            ];
+            let tests = vec![sample_decorated_test_case(1), sample_decorated_test_case(2)];
 
             // Verify data is sorted
             let mut sorted_reqs = reqs.clone();
@@ -493,10 +485,7 @@ mod tests {
         #[test]
         fn tests_workbook_data_structure() {
             // Test the expected data structure for tests workbook
-            let tests = vec![
-                sample_decorated_test_case(1),
-                sample_decorated_test_case(2),
-            ];
+            let tests = vec![sample_decorated_test_case(1), sample_decorated_test_case(2)];
 
             // Verify all required fields are present
             for test in &tests {
@@ -547,10 +536,7 @@ mod tests {
                 sample_decorated_requirement(2),
                 sample_decorated_requirement(3),
             ];
-            let tests = vec![
-                sample_decorated_test_case(1),
-                sample_decorated_test_case(2),
-            ];
+            let tests = vec![sample_decorated_test_case(1), sample_decorated_test_case(2)];
 
             assert_eq!(reqs.len(), 3);
             assert_eq!(tests.len(), 2);

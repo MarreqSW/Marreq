@@ -13,13 +13,13 @@ test-helpers = []
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diesel = { version = "2.3", features = ["postgres", "chrono", "r2d2"] }
+diesel = { version = "2.3", features = ["postgres","chrono", "r2d2"] }
 dotenvy = "0.15"
-chrono = { version = "0.4", features = ["serde"] }
+chrono = {version = "0.4", features = ["serde"] }
 serde = "1.0"
 serde_json = "1.0"
 lazy_static = "1.4"
-rocket = { version = "0.5", features = ["json", "secrets"] }
+rocket = {version = "0.5",  features = ["json", "secrets"]}
 bcrypt = "0.17"
 time = "0.3"
 xlsxwriter = "0.6"
@@ -45,4 +45,3 @@ features = ["handlebars"]
 [dev-dependencies]
 handlebars = { version = "6.3", features = ["dir_source"] }
 serde_json = "1.0"
-tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }

@@ -167,3 +167,6 @@ pub type ApiResult<T> = Result<T, ApiError>;
 
 /// Result type alias for API responses
 pub type ApiResponseResult<T> = Result<Json<ApiResponse<T>>, ApiError>;
+
+#[cfg(test)]
+mod tests;

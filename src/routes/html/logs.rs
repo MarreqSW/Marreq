@@ -18,7 +18,7 @@ pub fn show_logs(admin: AdminOnly, state: &State<AppState>) -> Result<Template, 
     let ctx = json!({
         "user": user,
         "logs": logs,
-        "title": "System Logs",
+        "page_title": "System Logs",
     });
 
     Ok(Template::render("logs", ctx))
@@ -46,7 +46,7 @@ pub fn show_entity_logs(
         "logs": logs,
         "entity_type": entity_type,
         "entity_id": entity_id,
-        "title": format!("Logs for {} {}", entity_type, entity_id),
+        "page_title": format!("Logs for {} {}", entity_type, entity_id),
     });
 
     Ok(Template::render("entity_logs", ctx))
@@ -152,7 +152,7 @@ pub fn log_analytics(admin: AdminOnly, state: &State<AppState>) -> Result<Templa
         "last_7_days": analytics.last_7_days,
         "last_30_days": analytics.last_30_days,
         "last_90_days": analytics.last_90_days,
-        "title": "Log Analytics",
+        "page_title": "Log Analytics",
     });
 
     Ok(Template::render("log_analytics", ctx))

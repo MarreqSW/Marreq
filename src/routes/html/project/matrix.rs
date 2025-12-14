@@ -112,6 +112,17 @@ async fn get_matrix(
         .unwrap_or_default());
     ctx["total_test_columns"] = json!(view.tests.len() + 1);
 
+    // Add page title
+    if let Some(proj) = ctx
+        .get("project")
+        .and_then(|p| p.get("name"))
+        .and_then(|n| n.as_str())
+    {
+        ctx["page_title"] = json!(format!("{} - Traceability Matrix", proj));
+    } else {
+        ctx["page_title"] = json!("Traceability Matrix");
+    }
+
     Ok(Template::render("matrix/matrix", ctx))
 }
 

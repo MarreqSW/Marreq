@@ -3,7 +3,7 @@ use super::prelude::*;
 #[get("/login?<error>")]
 pub fn login_page(error: Option<String>) -> Template {
     let ctx = json!({
-        "title": "Login",
+        "page_title": "Login",
         "error": error
     });
     Template::render("login", ctx)
@@ -55,7 +55,7 @@ pub fn change_password_page(
     let selected_project_id: Option<i32> = None; // No project selected on change password page
 
     let ctx = json!({
-        "title": "Change Password",
+        "page_title": "Change Password",
         "projects": projects,
         "selected_project_id": selected_project_id,
         "error": error,

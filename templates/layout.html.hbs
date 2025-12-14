@@ -1,12 +1,12 @@
 {{!--
-  Depends on: css/index.css, js/theme-prefetch.js, js/app.js
-  Dynamic classes: reqman-sidebar--collapsed, reqman-sidebar--mobile-open, data-theme
+Depends on: css/index.css, js/theme-prefetch.js, js/app.js
+Dynamic classes: reqman-sidebar--collapsed, reqman-sidebar--mobile-open, data-theme
 --}}
 <!doctype html>
 <html lang='en'>
 
 <head>
-  <title>ReqMan</title>
+  <title>{{#if page_title}}{{page_title}} - {{/if}}ReqMan</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +18,7 @@
   <link rel='icon' type='image/x-icon' href='/static/favicon.ico'>
 </head>
 
-<body {{#if page_id}}data-page="{{page_id}}"{{/if}}>
+<body {{#if page_id}}data-page="{{page_id}}" {{/if}}>
   {{#unless hide_nav}}
   {{#if user}}
   {{> partials/nav}}

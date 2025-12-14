@@ -154,6 +154,10 @@ async fn show_project_members(
             json!(has_available_users),
         );
         ctx_obj.insert("selected_project_id".to_string(), json!(project_id));
+        ctx_obj.insert(
+            "page_title".to_string(),
+            json!(format!("{} - Members", project.name)),
+        );
     }
 
     Ok(Template::render("members", ctx))

@@ -191,7 +191,7 @@ impl ActionType {
 }
 
 /// Entities that can be referenced by a [`Log`] entry.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EntityType {
     Project,
     Requirement,

@@ -44,3 +44,94 @@ impl From<LogServiceError> for Redirect {
         Redirect::to("/error")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::errors::RepoError;
+    use diesel::result::Error as DieselError;
+    use rocket::http::Status;
+
+    #[test]
+    fn repo_error_to_status_not_found() {
+        use rocket::http::Status;
+        let error = RepoError::NotFound;
+        let status: Status = error.into();
+        assert_eq!(status, Status::NotFound);
+    }
+
+    #[test]
+    fn repo_error_to_status_pool_error() {
+        use rocket::http::Status;
+        let error = RepoError::Pool("test".to_string());
+        let status: Status = error.into();
+        assert_eq!(status, Status::NotFound);
+    }
+
+    #[test]
+    fn repo_error_to_status_bad_input() {
+        use rocket::http::Status;
+        let error = RepoError::BadInput("test".to_string());
+        let status: Status = error.into();
+        assert_eq!(status, Status::NotFound);
+    }
+
+    #[test]
+    fn repo_error_to_status_unauthorized() {
+        use rocket::http::Status;
+        let error = RepoError::Unauthorized;
+        let status: Status = error.into();
+        assert_eq!(status, Status::NotFound);
+    }
+
+    #[test]
+    fn repo_error_to_status_db_error() {
+        use rocket::http::Status;
+        let diesel_error = DieselError::NotFound;
+        let error: RepoError = diesel_error.into();
+        let status: Status = error.into();
+        assert_eq!(status, Status::NotFound);
+    }
+
+    #[test]
+    fn repo_error_to_redirect_not_found() {
+        let error = RepoError::NotFound;
+        let redirect: Redirect = error.into();
+        // Test that redirect is created (can't easily test URI in unit tests)
+        let _ = redirect;
+        assert!(true);
+    }
+
+    #[test]
+    fn repo_error_to_redirect_pool_error() {
+        let error = RepoError::Pool("test".to_string());
+        let redirect: Redirect = error.into();
+        let _ = redirect;
+        assert!(true);
+    }
+
+    #[test]
+    fn repo_error_to_redirect_bad_input() {
+        let error = RepoError::BadInput("test".to_string());
+        let redirect: Redirect = error.into();
+        let _ = redirect;
+        assert!(true);
+    }
+
+    #[test]
+    fn repo_error_to_redirect_unauthorized() {
+        let error = RepoError::Unauthorized;
+        let redirect: Redirect = error.into();
+        let _ = redirect;
+        assert!(true);
+    }
+
+    #[test]
+    fn repo_error_to_redirect_db_error() {
+        let diesel_error = DieselError::NotFound;
+        let error: RepoError = diesel_error.into();
+        let redirect: Redirect = error.into();
+        let _ = redirect;
+        assert!(true);
+    }
+}

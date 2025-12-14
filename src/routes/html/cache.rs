@@ -165,4 +165,41 @@ mod tests {
 
         assert!(description.contains("/admin/cache"));
     }
+
+    #[test]
+    fn cache_stats_page_with_empty_cache() {
+        let state = app_state();
+        let template = cache_stats_page(state_guard(&state));
+        let rendered = format!("{:?}", template);
+        assert!(rendered.contains("admin/cache_stats"));
+    }
+
+    #[test]
+    fn clear_cache_with_empty_cache() {
+        let state = app_state();
+        let template = clear_cache(state_guard(&state));
+        let rendered = format!("{:?}", template);
+        assert!(rendered.contains("All cache entries have been cleared"));
+    }
+
+    #[test]
+    fn cleanup_cache_with_expired_entries() {
+        let state = app_state();
+        {
+            let cache = state.repo_read().cache();
+            cache.set("key1", "value1".to_string());
+        }
+        let template = cleanup_cache(state_guard(&state));
+        let rendered = format!("{:?}", template);
+        assert!(rendered.contains("Cleaned up"));
+    }
+
+    #[test]
+    fn cache_health_page_verifies_structure() {
+        let state = app_state();
+        let admin = AdminOnly(admin_user());
+        let template = cache_health_page(admin, state_guard(&state));
+        let rendered = format!("{:?}", template);
+        assert!(rendered.contains("admin/cache_health"));
+    }
 }

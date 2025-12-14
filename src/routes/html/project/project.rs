@@ -15,7 +15,7 @@ pub fn show_project_id(
         Ok(proj) => proj,
         Err(_) => {
             let ctx = json!({
-                "title": "Project Not Found",
+                "page_title": "Project Not Found",
                 "message": "The project you're looking for could not be found.",
                 "details": format!("Project ID {} does not exist", project_id),
                 "user": user
@@ -42,7 +42,7 @@ pub fn show_project_id(
     let ctx = json!({
         "user": user,
         "selected_project_id": project_id,
-        "title": "Main",
+        "page_title": format!("{} - Project", selected_project_name),
         "selected_project_name": selected_project_name,
         "requirements_count": requirements_count,
         "tests_count": tests_count,
@@ -61,7 +61,7 @@ pub fn get_edit_project(admin: AdminOnly, project_id: i32, state: &State<AppStat
             #[cfg(debug_assertions)]
             eprintln!("Failed to load project {project_id}: {err:?}");
             let ctx = json!({
-                "title": "Project Not Found",
+                "page_title": "Project Not Found",
                 "message": "The project you're trying to edit could not be found.",
                 "details": err.to_string(),
                 "user": user
@@ -74,7 +74,8 @@ pub fn get_edit_project(admin: AdminOnly, project_id: i32, state: &State<AppStat
     let ctx = json!({
         "project": project,
         "users": users,
-        "user": user
+        "user": user,
+        "page_title": format!("Edit {} - Project", project.name)
     });
     Template::render("edit_project", ctx)
 }

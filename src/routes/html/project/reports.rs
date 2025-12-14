@@ -129,7 +129,8 @@ async fn show_reports(
         "tests_by_status": m.tests_by_status,
         "requirements_by_category": m.requirements_by_category,
         "all_statuses": m.statuses,
-        "all_categories": m.categories
+        "all_categories": m.categories,
+        "page_title": format!("{} - Reports", name)
     });
 
     Ok(Template::render("reports", ctx))

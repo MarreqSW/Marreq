@@ -14,7 +14,7 @@ async fn profile(
 
     if let Some(ctx_obj) = ctx.as_object_mut() {
         ctx_obj.insert("user".to_string(), json!(user));
-        ctx_obj.insert("title".to_string(), json!("My Profile"));
+        ctx_obj.insert("page_title".to_string(), json!("My Profile"));
         ctx_obj.insert(
             "profile_updated".to_string(),
             json!(updated.unwrap_or(false)),
@@ -36,7 +36,7 @@ async fn edit_profile(
 
     if let Some(ctx_obj) = ctx.as_object_mut() {
         ctx_obj.insert("user".to_string(), json!(user));
-        ctx_obj.insert("title".to_string(), json!("Edit Profile"));
+        ctx_obj.insert("page_title".to_string(), json!("Edit Profile"));
         if let Some(error_msg) = error {
             ctx_obj.insert("profile_error".to_string(), json!(error_msg));
         }
@@ -88,7 +88,8 @@ async fn show_user_id(
         "id": user.id,
         "creation_date": user.creation_date,
         "last_login": user.last_login,
-        "is_admin": user.is_admin
+        "is_admin": user.is_admin,
+        "page_title": format!("{} - User Profile", user.name)
     });
 
     Ok(Template::render("user_by_id", ctx))
@@ -111,7 +112,8 @@ async fn edit_user(
     let ctx = json!({
         "users": user,
         "user": current_user,
-        "error": error
+        "error": error,
+        "page_title": format!("Edit {} - User", user.name)
     });
 
     Ok(Template::render("edit_user_by_id", ctx))
@@ -153,7 +155,8 @@ async fn new_user(
     let ctx = json!({
         "status": status_json,
         "user": user,
-        "error": error
+        "error": error,
+        "page_title": "New User"
     });
     Ok(Template::render("new_user", ctx))
 }

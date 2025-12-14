@@ -33,7 +33,8 @@ pub fn index(
         "projects_count": decorated_projects.len(),
         "user": user,
         "selected_project_id": selected_project_id,
-        "hide_nav": true
+        "hide_nav": true,
+        "page_title": "Dashboard"
     });
 
     Ok(Template::render("index", ctx))

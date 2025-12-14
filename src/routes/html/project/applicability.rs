@@ -19,6 +19,7 @@ pub async fn show_applicability(
         "projects": projects,
         "selected_project_id": project_id,
         "applicability": apps,
+        "page_title": "Applicability"
     });
 
     Ok(Template::render("applicability/applicability", ctx))
@@ -38,7 +39,8 @@ pub async fn new_applicability(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
-        "error": error
+        "error": error,
+        "page_title": "New Applicability"
     });
 
     Ok(Template::render("applicability/new_applicability", ctx))
@@ -104,7 +106,8 @@ pub async fn get_edit_applicability(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
-        "error": error
+        "error": error,
+        "page_title": format!("Edit {} - Applicability", applicability.title)
     });
     Ok(Template::render("applicability/edit_applicability", ctx))
 }

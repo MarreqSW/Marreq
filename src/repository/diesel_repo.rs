@@ -1051,6 +1051,7 @@ impl MatrixRepository for DieselRepo {
 #[cfg(test)]
 mod tests {
     use super::PoolStats;
+    use std::time::Duration;
 
     #[test]
     fn utilization_percentage_handles_zero() {
@@ -1117,5 +1118,132 @@ mod tests {
         };
         assert_eq!(empty.active_connections(), 0);
         assert_eq!(empty.efficiency(), 0.0);
+    }
+
+    #[test]
+    fn pool_info_creation() {
+        use super::PoolInfo;
+        use super::PoolStats;
+
+        let stats = PoolStats {
+            max_size: 10,
+            min_idle: 5,
+            current_size: 7,
+            available: 2,
+        };
+
+        let timeout = Duration::from_secs(30);
+        let idle_timeout = Some(Duration::from_secs(600));
+        let max_lifetime = Some(Duration::from_secs(1800));
+
+        let info = PoolInfo {
+            stats: stats.clone(),
+            connection_timeout: timeout,
+            idle_timeout,
+            max_lifetime,
+        };
+
+        assert_eq!(info.stats.max_size, 10);
+        assert_eq!(info.stats.min_idle, 5);
+        assert_eq!(info.stats.current_size, 7);
+        assert_eq!(info.stats.available, 2);
+        assert_eq!(info.connection_timeout, timeout);
+        assert_eq!(info.idle_timeout, idle_timeout);
+        assert_eq!(info.max_lifetime, max_lifetime);
+    }
+
+    #[test]
+    fn pool_info_with_none_timeouts() {
+        use super::PoolInfo;
+        use super::PoolStats;
+
+        let stats = PoolStats {
+            max_size: 5,
+            min_idle: 0,
+            current_size: 3,
+            available: 1,
+        };
+
+        let info = PoolInfo {
+            stats,
+            connection_timeout: Duration::from_secs(10),
+            idle_timeout: None,
+            max_lifetime: None,
+        };
+
+        assert_eq!(info.idle_timeout, None);
+        assert_eq!(info.max_lifetime, None);
+    }
+
+    #[test]
+    fn pool_stats_clone() {
+        let stats = PoolStats {
+            max_size: 10,
+            min_idle: 5,
+            current_size: 7,
+            available: 2,
+        };
+
+        let cloned = stats.clone();
+        assert_eq!(cloned.max_size, stats.max_size);
+        assert_eq!(cloned.min_idle, stats.min_idle);
+        assert_eq!(cloned.current_size, stats.current_size);
+        assert_eq!(cloned.available, stats.available);
+    }
+
+    #[test]
+    fn pool_stats_debug() {
+        let stats = PoolStats {
+            max_size: 10,
+            min_idle: 5,
+            current_size: 7,
+            available: 2,
+        };
+
+        let debug_str = format!("{:?}", stats);
+        assert!(debug_str.contains("PoolStats"));
+    }
+
+    #[test]
+    fn pool_info_clone() {
+        use super::PoolInfo;
+        use super::PoolStats;
+
+        let info = PoolInfo {
+            stats: PoolStats {
+                max_size: 10,
+                min_idle: 5,
+                current_size: 7,
+                available: 2,
+            },
+            connection_timeout: Duration::from_secs(30),
+            idle_timeout: Some(Duration::from_secs(600)),
+            max_lifetime: Some(Duration::from_secs(1800)),
+        };
+
+        let cloned = info.clone();
+        assert_eq!(cloned.stats.max_size, info.stats.max_size);
+        assert_eq!(cloned.connection_timeout, info.connection_timeout);
+    }
+
+    #[test]
+    fn pool_info_debug() {
+        use super::PoolInfo;
+        use super::PoolStats;
+
+        let info = PoolInfo {
+            stats: PoolStats {
+                max_size: 10,
+                min_idle: 5,
+                current_size: 7,
+                available: 2,
+            },
+            connection_timeout: Duration::from_secs(30),
+            idle_timeout: Some(Duration::from_secs(600)),
+            max_lifetime: Some(Duration::from_secs(1800)),
+        };
+
+        let debug_str = format!("{:?}", info);
+        assert!(debug_str.contains("PoolInfo"));
     }
 }

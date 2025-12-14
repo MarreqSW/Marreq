@@ -16,7 +16,7 @@ pub struct ExcelColumn {
     pub sample_value: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ColumnMapping {
     pub excel_column: String,
     pub target_field: String,

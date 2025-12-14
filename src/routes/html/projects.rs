@@ -17,7 +17,8 @@ pub fn show_projects(
     let ctx = json!({
         "projects": decorated_projects,
         "user": user,
-        "selected_project_id": selected_project_id
+        "selected_project_id": selected_project_id,
+        "page_title": "Projects"
     });
 
     Ok(Template::render("projects", ctx))
@@ -71,6 +72,7 @@ fn render_new_project_form(
         "user": user,
         "form": form,
         "error": error,
+        "page_title": "New Project"
     });
 
     Template::render("new_project", ctx)

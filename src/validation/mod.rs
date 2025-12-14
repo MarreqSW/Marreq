@@ -518,3 +518,6 @@ pub fn sanitize_optional_string(input: &mut Option<String>) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

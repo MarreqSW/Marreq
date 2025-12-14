@@ -124,3 +124,72 @@ pub fn routes() -> Vec<Route> {
         change_password
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::repository::CacheRepository;
+    use rocket::State;
+    use std::sync::{Arc, RwLock};
+
+    fn app_state() -> AppState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(
+                DieselRepoMock::default(),
+                60,
+            ))),
+        }
+    }
+
+    fn state_guard(state: &AppState) -> &State<AppState> {
+        State::from(state)
+    }
+
+    #[test]
+    fn login_page_without_error() {
+        let template = login_page(None);
+        let rendered = format!("{:?}", template);
+        assert!(rendered.contains("login"));
+    }
+
+    #[test]
+    fn login_page_with_error() {
+        let template = login_page(Some("Invalid credentials".to_string()));
+        let rendered = format!("{:?}", template);
+        assert!(rendered.contains("login"));
+    }
+
+    #[test]
+    fn change_password_page_without_messages() {
+        let state = app_state();
+        let template = change_password_page(state_guard(&state), None, None);
+        let rendered = format!("{:?}", template);
+        assert!(rendered.contains("change_password"));
+    }
+
+    #[test]
+    fn change_password_page_with_error() {
+        let state = app_state();
+        let template = change_password_page(
+            state_guard(&state),
+            Some("Password too short".to_string()),
+            None,
+        );
+        let rendered = format!("{:?}", template);
+        assert!(rendered.contains("change_password"));
+    }
+
+    #[test]
+    fn change_password_page_with_success() {
+        let state = app_state();
+        let template = change_password_page(
+            state_guard(&state),
+            None,
+            Some("Password changed".to_string()),
+        );
+        let rendered = format!("{:?}", template);
+        assert!(rendered.contains("change_password"));
+    }
+}

@@ -18,6 +18,7 @@ async fn show_categories(
         "projects": projects,
         "selected_project_id": project_id,
         "categories": categories,
+        "page_title": "Categories"
     });
 
     Ok(Template::render("categories/categories", ctx))
@@ -35,7 +36,8 @@ async fn new_category(
     let ctx = json!({
         "user": user,
         "projects": projects,
-        "selected_project_id": project_id
+        "selected_project_id": project_id,
+        "page_title": "New Category"
     });
     Ok(Template::render("categories/new_category", ctx))
 }
@@ -92,7 +94,8 @@ async fn get_edit_category(
         "categories": category,
         "user": user,
         "projects": projects,
-        "selected_project_id": project_id
+        "selected_project_id": project_id,
+        "page_title": format!("Edit {} - Category", category.title)
     });
 
     Ok(Template::render("categories/edit_category", ctx))

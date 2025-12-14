@@ -8,7 +8,7 @@ pub async fn admin_dashboard(admin: AdminOnly) -> Template {
 
     let context = json!({
         "user": user,
-        "title": "Admin Dashboard"
+        "page_title": "Admin Dashboard"
     });
 
     Template::render("admin/dashboard", context)
@@ -23,7 +23,7 @@ pub async fn admin_users_page(admin: AdminOnly, state: &State<AppState>) -> Temp
     let context = json!({
         "user": user,
         "users": users,
-        "title": "User Management"
+        "page_title": "User Management"
     });
 
     Template::render("admin/users", context)
@@ -35,7 +35,7 @@ pub async fn admin_backup_page(admin: AdminOnly) -> Template {
 
     let context = json!({
         "user": user,
-        "title": "Database Backup"
+        "page_title": "Database Backup"
     });
 
     Template::render("admin/backup", context)

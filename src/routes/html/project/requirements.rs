@@ -244,6 +244,7 @@ async fn show_requirements(
             "name": selected_project.name,
         }),
         "is_admin": user.is_admin,
+        "page_title": format!("{} - Requirements", selected_project.name),
     });
 
     Ok(Template::render("requirements/requirements", ctx))
@@ -341,6 +342,7 @@ async fn show_requirement_id(
         }),
         "requirement_data": canonical_data,
         "requirement_data_json": serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string()),
+        "page_title": format!("{} - Requirement", requirement.reference_code),
     });
 
     Ok(Template::render("requirements/requirement", ctx))
@@ -440,7 +442,8 @@ async fn get_edit_requirement(
         "autosave": {
             "enabled": true,
             "interval_ms": 3_000
-        }
+        },
+        "page_title": format!("Edit {} - Requirement", display_reference),
     });
 
     #[cfg(debug_assertions)]
@@ -615,6 +618,7 @@ async fn new_requirement(
         "is_admin_or_owner": is_admin_or_owner,
         "error": error,
         "flash_success": created_flash,
+        "page_title": format!("New Requirement - {}", project.name),
     });
 
     Ok(Template::render("requirements/new_requirement", ctx))
@@ -796,7 +800,8 @@ async fn show_requirements_tree(
         "total_requirements": reqs.len(),
         "user": user,
         "project_id": project_id,
-        "selected_project_id": project_id
+        "selected_project_id": project_id,
+        "page_title": "Requirements Tree"
     });
 
     Ok(Template::render("requirements/requirements_tree", ctx))

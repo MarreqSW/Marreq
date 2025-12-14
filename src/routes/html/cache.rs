@@ -12,7 +12,7 @@ pub fn cache_stats_page(state: &State<AppState>) -> Template {
     let service = CacheService::new(state);
 
     let ctx = json!({
-        "title": "Cache Statistics",
+        "page_title": "Cache Statistics",
         "stats": service.stats(),
         "cleaned_entries": service.cleanup(),
         "performance": service.performance(),
@@ -29,7 +29,7 @@ pub fn clear_cache(state: &State<AppState>) -> Template {
     service.clear();
 
     let ctx = json!({
-        "title": "Cache Statistics",
+        "page_title": "Cache Statistics",
         "stats": service.stats(),
         "cleaned_entries": 0,
         "message": "All cache entries have been cleared"
@@ -45,7 +45,7 @@ pub fn cleanup_cache(state: &State<AppState>) -> Template {
     let cleaned = service.cleanup();
 
     let ctx = json!({
-        "title": "Cache Statistics",
+        "page_title": "Cache Statistics",
         "stats": service.stats(),
         "cleaned_entries": cleaned,
         "message": format!("Cleaned up {} expired cache entries", cleaned)

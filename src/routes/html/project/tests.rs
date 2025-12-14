@@ -109,6 +109,13 @@ async fn show_tests(
     // User info for admin checks
     ctx["is_admin"] = json!(is_admin);
 
+    // Add page title
+    if let Some(proj) = project {
+        ctx["page_title"] = json!(format!("{} - Tests", proj.name));
+    } else {
+        ctx["page_title"] = json!("Tests");
+    }
+
     Ok(Template::render("tests/tests", ctx))
 }
 
@@ -128,7 +135,7 @@ async fn show_test_id(
         Ok(t) => t,
         Err(details) => {
             let ctx = json!({
-                "title": "Test Not Found",
+                "page_title": "Test Not Found",
                 "message": "The test you're looking for could not be found.",
                 "details": details.to_string(),
                 "user": user
@@ -154,6 +161,13 @@ async fn show_test_id(
         for (key, value) in test_obj {
             ctx_map.insert(key, value);
         }
+    }
+
+    // Add page title from test reference code
+    if let Some(ref_code) = ctx_map.get("reference_code").and_then(|v| v.as_str()) {
+        ctx_map.insert("page_title".into(), json!(format!("{} - Test", ref_code)));
+    } else {
+        ctx_map.insert("page_title".into(), json!("Test"));
     }
 
     Ok(Template::render(
@@ -188,6 +202,17 @@ async fn new_test(
     ctx["project_id"] = json!(project_id);
     ctx["selected_project_id"] = json!(project_id);
     ctx["error"] = json!(error);
+
+    // Add page title
+    if let Some(proj) = ctx
+        .get("project")
+        .and_then(|p| p.get("name"))
+        .and_then(|n| n.as_str())
+    {
+        ctx["page_title"] = json!(format!("New Test - {}", proj));
+    } else {
+        ctx["page_title"] = json!("New Test");
+    }
 
     Ok(Template::render("tests/new_test", ctx))
 }
@@ -284,7 +309,8 @@ async fn get_edit_test(
         "linked_requirements": linked_requirements,
         "linked_req_ids": linked_req_ids,
         "requirements": repo.get_requirements_by_project(project_id).unwrap_or_default(),
-        "user": user
+        "user": user,
+        "page_title": format!("Edit {} - Test", test0.reference_code)
     });
 
     #[cfg(debug_assertions)]

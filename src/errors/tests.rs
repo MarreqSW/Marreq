@@ -415,10 +415,7 @@ mod tests {
             let response = client.get("/test").dispatch();
 
             assert_eq!(response.status(), Status::NotFound);
-            assert!(response
-                .into_string()
-                .unwrap()
-                .contains("Not found"));
+            assert!(response.into_string().unwrap().contains("Not found"));
         }
     }
 
@@ -496,11 +493,10 @@ mod tests {
 
         #[test]
         fn api_response_result_err() {
-            let result: ApiResponseResult<String> =
-                Err(ApiError::NotFound {
-                    entity: "Test".to_string(),
-                    id: 1,
-                });
+            let result: ApiResponseResult<String> = Err(ApiError::NotFound {
+                entity: "Test".to_string(),
+                id: 1,
+            });
             assert!(result.is_err());
         }
     }
@@ -608,4 +604,3 @@ mod tests {
         }
     }
 }
-

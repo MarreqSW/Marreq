@@ -339,14 +339,11 @@ mod tests {
 
     #[test]
     fn resolve_selected_project_id_with_valid_requested() {
-        let projects = vec![
-            create_test_project(),
-            {
-                let mut p = create_test_project();
-                p.id = 2;
-                p
-            },
-        ];
+        let projects = vec![create_test_project(), {
+            let mut p = create_test_project();
+            p.id = 2;
+            p
+        }];
 
         let result = resolve_selected_project_id(Some(2), &projects);
         assert_eq!(result, Some(2));

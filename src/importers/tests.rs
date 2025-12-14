@@ -363,9 +363,7 @@ mod tests {
         fn import_type_detection_requirements() {
             // Test logic for detecting import type based on column names
             let columns = vec!["Title", "Req ID", "Description"];
-            let has_req = columns
-                .iter()
-                .any(|col| col.to_lowercase().contains("req"));
+            let has_req = columns.iter().any(|col| col.to_lowercase().contains("req"));
             assert!(has_req);
         }
 
@@ -381,9 +379,7 @@ mod tests {
         #[test]
         fn import_type_default() {
             let columns = vec!["Column1", "Column2"];
-            let has_req = columns
-                .iter()
-                .any(|col| col.to_lowercase().contains("req"));
+            let has_req = columns.iter().any(|col| col.to_lowercase().contains("req"));
             let has_test = columns
                 .iter()
                 .any(|col| col.to_lowercase().contains("test"));
@@ -723,4 +719,3 @@ mod tests {
         }
     }
 }
-

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Foreign key fields are replaced by their corresponding names, simplifying
 /// template rendering.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct DecoratedRequirement {
     pub id: i32,
     pub title: String,
@@ -38,7 +38,7 @@ pub struct DecoratedRequirement {
 }
 
 /// Test case information with resolved foreign keys for presentation.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DecoratedTestCase {
     pub id: i32,
     pub reference_code: String,

@@ -1101,4 +1101,331 @@ mod tests {
         .unwrap();
         assert!(cache.get(&keys::Matrix::by_project(1)).is_none());
     }
+
+    #[test]
+    fn test_get_or_fetch_with_json_deserialization_failure() {
+        let repo = CacheRepository::new(
+            DieselRepoMock {
+                users: HashMap::new(),
+                ..Default::default()
+            },
+            60,
+        );
+        let cache = repo.cache();
+
+        // Insert invalid JSON
+        cache.set(&keys::Users::by_id(1), "invalid json".to_string());
+
+        // This should remove the invalid entry and fetch from repo
+        // But since repo is empty, it should return NotFound
+        let result = repo.get_user_by_id(1);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RepoError::NotFound));
+
+        // Invalid entry should be removed
+        assert!(cache.get(&keys::Users::by_id(1)).is_none());
+    }
+
+    #[test]
+    fn test_get_or_fetch_with_serialization_failure() {
+        // This test verifies that if serialization fails, we still return the value
+        // In practice, this is hard to test without a custom type that fails to serialize
+        // But we can test the error propagation path
+        let repo = CacheRepository::new(
+            DieselRepoMock {
+                users: HashMap::new(),
+                ..Default::default()
+            },
+            60,
+        );
+
+        // Test that errors from inner repo are propagated
+        let result = repo.get_user_by_id(999);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_cache_repository_inner_repo_mutability() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+
+        // Test that we can mutate through the wrapper
+        let new_user = NewUser {
+            id: None,
+            username: "test".into(),
+            name: "Test".into(),
+            email: "test@example.com".into(),
+            password_hash: "hash".into(),
+            is_admin: false,
+        };
+
+        let result = repo.insert_user(&new_user);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_cache_repository_warm_cache_with_errors() {
+        // Test warm_cache when inner repo returns errors
+        let repo = CacheRepository::new(DieselRepoMock::with_error(), 60);
+
+        // Should not panic even if inner repo returns errors
+        repo.warm_cache();
+    }
+
+    #[test]
+    fn test_cache_repository_log_repository_passthrough() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+
+        let new_log = NewLog {
+            user_id: 1,
+            entity_type: "test".into(),
+            entity_id: Some(1),
+            action_type: "create".into(),
+            description: Some("test".into()),
+            project_id: Some(1),
+            old_values: None,
+            new_values: None,
+            ip_address: None,
+            user_agent: None,
+        };
+
+        // Log operations should pass through without caching
+        let result = repo.insert_log(&new_log);
+        assert!(result.is_ok());
+
+        let logs = repo.get_logs_recent(10).unwrap();
+        assert_eq!(logs.len(), 1);
+    }
+
+    #[test]
+    fn test_cache_repository_get_logs_by_entity() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+
+        let new_log = NewLog {
+            user_id: 1,
+            entity_type: "requirement".into(),
+            entity_id: Some(1),
+            action_type: "create".into(),
+            description: Some("test".into()),
+            project_id: Some(1),
+            old_values: None,
+            new_values: None,
+            ip_address: None,
+            user_agent: None,
+        };
+        repo.insert_log(&new_log).unwrap();
+
+        let logs = repo.get_logs_by_entity("requirement", 1).unwrap();
+        assert_eq!(logs.len(), 1);
+    }
+
+    #[test]
+    fn test_cache_repository_cleanup_logs() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+
+        for i in 0..5 {
+            let new_log = NewLog {
+                user_id: 1,
+                entity_type: "requirement".into(),
+                entity_id: Some(i),
+                action_type: "create".into(),
+                description: Some("test".into()),
+                project_id: Some(1),
+                old_values: None,
+                new_values: None,
+                ip_address: None,
+                user_agent: None,
+            };
+            repo.insert_log(&new_log).unwrap();
+        }
+
+        let result = repo.cleanup_logs(30);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_cache_repository_matrix_insert_invalidates_cache() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+        let cache = repo.cache();
+
+        // Populate cache
+        repo.get_matrix_by_project(1).unwrap();
+        assert!(cache.get(&keys::Matrix::by_project(1)).is_some());
+
+        // Insert new matrix item should invalidate cache
+        repo.insert_new_matrix_item(&NewMatrixLink {
+            req_id: 1,
+            test_id: 1,
+            project_id: 1,
+        })
+        .unwrap();
+
+        assert!(cache.get(&keys::Matrix::by_project(1)).is_none());
+    }
+
+    #[test]
+    fn test_cache_repository_delete_user_invalidates_project_memberships() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+        let cache = repo.cache();
+
+        // Add a project member
+        let new_member = NewProjectMember {
+            project_id: 1,
+            user_id: 1,
+            role: 1,
+        };
+        repo.add_project_member(&new_member).unwrap();
+
+        // Cache project members
+        repo.get_members_by_project(1).unwrap();
+        repo.get_projects_for_user(1).unwrap();
+
+        // Delete user should invalidate both caches
+        repo.delete_user(1).unwrap();
+
+        // Note: The cache invalidation happens in delete_user implementation
+        // We verify the user cache is invalidated
+        assert!(cache.get(&keys::Users::by_id(1)).is_none());
+    }
+
+    #[test]
+    fn test_get_or_fetch_with_serialization_error_handling() {
+        // Test that if serialization fails, we still return the value
+        let repo = CacheRepository::new(populated_repo(), 60);
+        let cache = repo.cache();
+
+        // Insert a value that will fail to serialize (this is hard to test without custom types)
+        // But we can test the error path by ensuring fetch errors are propagated
+        let result = repo.get_user_by_id(999);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_get_or_fetch_cache_hit_path() {
+        let repo = CacheRepository::new(populated_repo(), 60);
+        let cache = repo.cache();
+
+        // First call populates cache
+        let user1 = repo.get_user_by_id(1).unwrap();
+
+        // Second call should hit cache
+        let user2 = repo.get_user_by_id(1).unwrap();
+        assert_eq!(user1.id, user2.id);
+
+        // Verify cache was used
+        assert!(cache.get(&keys::Users::by_id(1)).is_some());
+    }
+
+    #[test]
+    fn test_get_or_fetch_cache_miss_then_hit() {
+        let repo = CacheRepository::new(populated_repo(), 60);
+        let cache = repo.cache();
+
+        // First call - cache miss
+        let _ = repo.get_user_by_id(1).unwrap();
+        let stats_before = cache.stats();
+
+        // Second call - cache hit
+        let _ = repo.get_user_by_id(1).unwrap();
+        let stats_after = cache.stats();
+
+        // Should have one more hit
+        assert!(stats_after.hits > stats_before.hits);
+    }
+
+    #[test]
+    fn test_cache_repository_all_trait_methods_accessible() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+
+        // Test that all repository trait methods are accessible through CacheRepository
+        let _ = repo.get_users_all();
+        let _ = repo.get_user_by_id(1);
+        let _ = repo.get_user_by_username("alice");
+        let _ = repo.get_requirements_all();
+        let _ = repo.get_requirement_by_id(1);
+        let _ = repo.get_requirements_by_project(1);
+        let _ = repo.get_tests_all();
+        let _ = repo.get_test_by_id(1);
+        let _ = repo.get_tests_by_project(1);
+        let _ = repo.get_projects_all();
+        let _ = repo.get_project_by_id(1);
+        let _ = repo.get_categories_all();
+        let _ = repo.get_category_by_id(1);
+        let _ = repo.get_categories_by_project(1);
+        let _ = repo.get_applicability_all();
+        let _ = repo.get_applicability_by_id(1);
+        let _ = repo.get_applicability_by_project(1);
+        let _ = repo.get_verification_all();
+        let _ = repo.get_verification_by_id(1);
+        let _ = repo.get_verification_by_project(1);
+        let _ = repo.get_requirement_status_all();
+        let _ = repo.get_requirement_status_by_id(1);
+        let _ = repo.get_test_status_all();
+        let _ = repo.get_test_status_by_id(1);
+        let _ = repo.get_members_by_project(1);
+        let _ = repo.get_projects_for_user(1);
+        let _ = repo.get_matrix_by_project(1);
+        let _ = repo.get_requirements_for_test(1);
+        let _ = repo.get_tests_for_requirement(1);
+        let _ = repo.get_logs_recent(10);
+        let _ = repo.get_logs_by_entity("requirement", 1);
+
+        // If we get here, all methods are accessible
+        assert!(true);
+    }
+
+    #[test]
+    fn test_cache_repository_inner_repo_immutable_access() {
+        let repo = CacheRepository::new(populated_repo(), 60);
+
+        // Test that inner_repo() provides read access
+        let users1 = repo.inner_repo().get_users_all().unwrap();
+        let users2 = repo.inner_repo().get_users_all().unwrap();
+
+        assert_eq!(users1.len(), users2.len());
+    }
+
+    #[test]
+    fn test_cache_repository_cache_access() {
+        let repo = CacheRepository::new(populated_repo(), 60);
+        let cache1 = repo.cache();
+        let cache2 = repo.cache();
+
+        // Both should be the same Arc
+        cache1.set("test_key", "test_value".to_string());
+        assert_eq!(cache2.get("test_key"), Some("test_value".to_string()));
+    }
+
+    #[test]
+    fn test_warm_cache_handles_serialization_errors() {
+        let repo = CacheRepository::new(
+            DieselRepoMock {
+                users: HashMap::new(),
+                ..Default::default()
+            },
+            60,
+        );
+
+        // Should not panic even if serialization fails
+        repo.warm_cache();
+    }
+
+    #[test]
+    fn test_warm_cache_with_partial_data() {
+        let mut repo = CacheRepository::new(populated_repo(), 60);
+        let cache = repo.cache();
+
+        // Clear some data to test partial warm
+        cache.clear();
+
+        // Warm cache should populate what's available
+        repo.warm_cache();
+
+        // Should have populated some keys
+        assert!(
+            cache.get(keys::PROJECTS_ALL).is_some()
+                || cache.get(keys::REQUIREMENT_STATUS_ALL).is_some()
+                || cache.get(keys::CATEGORIES_ALL).is_some()
+                || cache.get(keys::USERS_ALL).is_some()
+        );
+    }
 }

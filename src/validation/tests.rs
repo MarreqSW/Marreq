@@ -1593,9 +1593,9 @@ mod tests {
         fn multiple_validation_errors_first_one_returned() {
             let mut req = NewRequirement {
                 id: None,
-                title: "".to_string(), // Error 1
+                title: "".to_string(),       // Error 1
                 description: "".to_string(), // Error 2
-                verification_method_id: 0, // Error 3
+                verification_method_id: 0,   // Error 3
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
@@ -1637,4 +1637,3 @@ mod tests {
         }
     }
 }
-

@@ -50,7 +50,6 @@ mod tests {
     use super::*;
     use crate::repository::errors::RepoError;
     use diesel::result::Error as DieselError;
-    use rocket::http::Status;
 
     #[test]
     fn repo_error_to_status_not_found() {

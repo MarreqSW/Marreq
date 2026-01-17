@@ -10,7 +10,6 @@
 #[cfg(test)]
 mod tests {
     use crate::errors::ValidationError;
-    use crate::models::*;
     use crate::status_enums::ProjectStatus;
     use crate::validation::*;
 
@@ -1531,7 +1530,7 @@ mod tests {
 
         #[test]
         fn boundary_values_title_min() {
-            let mut req = NewRequirement {
+            let req = NewRequirement {
                 id: None,
                 title: "ABC".to_string(), // Exactly 3
                 description: "Desc".to_string(),
@@ -1551,7 +1550,7 @@ mod tests {
 
         #[test]
         fn boundary_values_title_max() {
-            let mut req = NewRequirement {
+            let req = NewRequirement {
                 id: None,
                 title: "A".repeat(255),
                 description: "Desc".to_string(),
@@ -1571,7 +1570,7 @@ mod tests {
 
         #[test]
         fn boundary_values_description_max() {
-            let mut req = NewRequirement {
+            let req = NewRequirement {
                 id: None,
                 title: "Title".to_string(),
                 description: "A".repeat(2000),
@@ -1591,7 +1590,7 @@ mod tests {
 
         #[test]
         fn multiple_validation_errors_first_one_returned() {
-            let mut req = NewRequirement {
+            let req = NewRequirement {
                 id: None,
                 title: "".to_string(),       // Error 1
                 description: "".to_string(), // Error 2
@@ -1617,7 +1616,7 @@ mod tests {
 
         #[test]
         fn unicode_characters_in_strings() {
-            let mut req = NewRequirement {
+            let req = NewRequirement {
                 id: None,
                 title: "Título con ñ".to_string(),
                 description: "Descripción".to_string(),

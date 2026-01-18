@@ -338,4 +338,146 @@ mod tests {
             .expect("category filtered metrics");
         assert_eq!(category_filtered.total, 2);
     }
+
+    #[test]
+    fn metrics_returns_zero_for_empty_project() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service.metrics(999, None, None, None, None).unwrap();
+        assert_eq!(metrics.total, 0);
+        assert_eq!(metrics.draft, 0);
+        assert_eq!(metrics.accepted, 0);
+        assert_eq!(metrics.rejected, 0);
+        assert_eq!(metrics.coverage_verified, 0);
+        assert_eq!(metrics.coverage_percent, 0);
+    }
+
+    #[test]
+    fn metrics_computes_coverage_percent_correctly() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(1, status(1, "Draft"));
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        // 3 accepted out of 10 total = 30%
+        for i in 1..=3 {
+            repo.requirements
+                .insert(i, make_requirement(i, 1, 2, 1, 10)); // Accepted
+        }
+        for i in 4..=10 {
+            repo.requirements
+                .insert(i, make_requirement(i, 1, 1, 1, 10)); // Draft
+        }
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service.metrics(1, None, None, None, None).unwrap();
+        assert_eq!(metrics.total, 10);
+        assert_eq!(metrics.accepted, 3);
+        assert_eq!(metrics.coverage_verified, 3);
+        assert_eq!(metrics.coverage_percent, 30);
+    }
+
+    #[test]
+    fn metrics_handles_100_percent_coverage() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        for i in 1..=5 {
+            repo.requirements
+                .insert(i, make_requirement(i, 1, 2, 1, 10)); // All Accepted
+        }
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service.metrics(1, None, None, None, None).unwrap();
+        assert_eq!(metrics.total, 5);
+        assert_eq!(metrics.accepted, 5);
+        assert_eq!(metrics.coverage_percent, 100);
+    }
+
+    #[test]
+    fn metrics_handles_unknown_status() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(1, status(1, "Draft"));
+        // Requirement with status_id that doesn't exist in statuses
+        repo.requirements
+            .insert(1, make_requirement(1, 1, 999, 1, 10));
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service.metrics(1, None, None, None, None).unwrap();
+        assert_eq!(metrics.total, 1);
+        // Unknown status should not be counted in draft/accepted/rejected
+        assert_eq!(metrics.draft, 0);
+        assert_eq!(metrics.accepted, 0);
+        assert_eq!(metrics.rejected, 0);
+    }
+
+    #[test]
+    fn metrics_applies_multiple_filters() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        // Only this one matches all filters
+        repo.requirements
+            .insert(1, make_requirement(1, 1, 2, 5, 10)); // status=2, verification=5, category=10
+        repo.requirements
+            .insert(2, make_requirement(2, 1, 2, 5, 11)); // status=2, verification=5, category=11 (wrong)
+        repo.requirements
+            .insert(3, make_requirement(3, 1, 2, 6, 10)); // status=2, verification=6 (wrong), category=10
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service
+            .metrics(1, Some(2), Some(5), Some(10), None)
+            .unwrap();
+        assert_eq!(metrics.total, 1);
+        assert_eq!(metrics.accepted, 1);
+    }
+
+    #[test]
+    fn metrics_applies_applicability_filter() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        let mut req1 = make_requirement(1, 1, 2, 1, 10);
+        req1.applicability_id = 20;
+        let mut req2 = make_requirement(2, 1, 2, 1, 10);
+        req2.applicability_id = 21;
+
+        repo.requirements.insert(1, req1);
+        repo.requirements.insert(2, req2);
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service.metrics(1, None, None, None, Some(20)).unwrap();
+        assert_eq!(metrics.total, 1);
+    }
+
+    #[test]
+    fn metrics_handles_different_projects() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        repo.requirements
+            .insert(1, make_requirement(1, 1, 2, 1, 10)); // Project 1
+        repo.requirements
+            .insert(2, make_requirement(2, 2, 2, 1, 10)); // Project 2
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics1 = service.metrics(1, None, None, None, None).unwrap();
+        assert_eq!(metrics1.total, 1);
+
+        let metrics2 = service.metrics(2, None, None, None, None).unwrap();
+        assert_eq!(metrics2.total, 1);
+    }
 }

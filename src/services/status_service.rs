@@ -294,4 +294,204 @@ mod tests {
         assert!(test_titles.contains(&"Failed"));
         assert!(test_titles.contains(&"Pending"));
     }
+
+    #[test]
+    fn list_requirement_statuses_by_project_filters_correctly() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(
+            1,
+            RequirementStatus {
+                id: 1,
+                title: "Draft".into(),
+                description: "draft".into(),
+                tag: "DRT".into(),
+                project_id: 10,
+            },
+        );
+        repo.requirement_statuses.insert(
+            2,
+            RequirementStatus {
+                id: 2,
+                title: "Accepted".into(),
+                description: "accepted".into(),
+                tag: "ACC".into(),
+                project_id: 10,
+            },
+        );
+        repo.requirement_statuses.insert(
+            3,
+            RequirementStatus {
+                id: 3,
+                title: "Finished".into(),
+                description: "finished".into(),
+                tag: "FIN".into(),
+                project_id: 20,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let statuses = service.list_requirement_statuses_by_project(10).unwrap();
+        assert_eq!(statuses.len(), 2);
+        let titles: Vec<&str> = statuses.iter().map(|s| s.title.as_str()).collect();
+        assert!(titles.contains(&"Draft"));
+        assert!(titles.contains(&"Accepted"));
+    }
+
+    #[test]
+    fn list_test_statuses_by_project_filters_correctly() {
+        let mut repo = DieselRepoMock::default();
+        repo.test_statuses.insert(
+            1,
+            TestStatus {
+                id: 1,
+                title: "Passed".into(),
+                description: "passed".into(),
+                tag: "PASS".into(),
+                project_id: 10,
+            },
+        );
+        repo.test_statuses.insert(
+            2,
+            TestStatus {
+                id: 2,
+                title: "Failed".into(),
+                description: "failed".into(),
+                tag: "FAIL".into(),
+                project_id: 10,
+            },
+        );
+        repo.test_statuses.insert(
+            3,
+            TestStatus {
+                id: 3,
+                title: "Pending".into(),
+                description: "pending".into(),
+                tag: "PEND".into(),
+                project_id: 20,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let statuses = service.list_test_statuses_by_project(10).unwrap();
+        assert_eq!(statuses.len(), 2);
+        let titles: Vec<&str> = statuses.iter().map(|s| s.title.as_str()).collect();
+        assert!(titles.contains(&"Passed"));
+        assert!(titles.contains(&"Failed"));
+    }
+
+    #[test]
+    fn get_status_name_returns_title() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(
+            1,
+            RequirementStatus {
+                id: 1,
+                title: "Draft".into(),
+                description: "draft".into(),
+                tag: "DRT".into(),
+                project_id: 1,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let name = service.get_status_name(1).unwrap();
+        assert_eq!(name, "Draft");
+    }
+
+    #[test]
+    fn get_status_name_returns_not_found_for_missing_status() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let result = service.get_status_name(999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn create_test_status_trims_input() {
+        let repo = populated_repo();
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let payload = NewTestStatus {
+            id: None,
+            title: "  In Progress  ".into(),
+            description: "  Description  ".into(),
+            tag: "  PROG  ".into(),
+            project_id: 1,
+        };
+
+        let id = service.create_test_status(payload).unwrap();
+
+        let repo_guard = state.repo_read();
+        let stored = repo_guard.inner_repo().test_statuses.get(&id).unwrap();
+        assert_eq!(stored.title, "In Progress");
+        assert_eq!(stored.description, "Description");
+        assert_eq!(stored.tag, "PROG");
+    }
+
+    #[test]
+    fn create_test_status_rejects_invalid_title() {
+        let repo = populated_repo();
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let payload = NewTestStatus {
+            id: None,
+            title: " ".into(),
+            description: "Desc".into(),
+            tag: "TAG".into(),
+            project_id: 1,
+        };
+
+        let err = service.create_test_status(payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn list_requirement_statuses_by_project_returns_empty_for_nonexistent_project() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let statuses = service.list_requirement_statuses_by_project(999).unwrap();
+        assert_eq!(statuses.len(), 0);
+    }
+
+    #[test]
+    fn list_test_statuses_by_project_returns_empty_for_nonexistent_project() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let statuses = service.list_test_statuses_by_project(999).unwrap();
+        assert_eq!(statuses.len(), 0);
+    }
+
+    #[test]
+    fn get_requirement_status_returns_not_found_for_missing_status() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let result = service.get_requirement_status(999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn get_test_status_returns_not_found_for_missing_status() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let result = service.get_test_status(999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
 }

@@ -180,9 +180,7 @@ impl<'a> DecoratedRequirementService<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{
-        Applicability, Category, RequirementStatus, User, VerificationMethod,
-    };
+    use crate::models::{Applicability, Category, RequirementStatus, User, VerificationMethod};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};

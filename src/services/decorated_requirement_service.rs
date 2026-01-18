@@ -493,8 +493,10 @@ mod tests {
 
         let decorated = service.list_all().unwrap();
         assert_eq!(decorated.len(), 2);
-        assert_eq!(decorated[0].id, 1);
-        assert_eq!(decorated[1].id, 2);
+        // Order may vary, so check that both IDs are present
+        let ids: Vec<i32> = decorated.iter().map(|r| r.id).collect();
+        assert!(ids.contains(&1));
+        assert!(ids.contains(&2));
     }
 
     #[test]

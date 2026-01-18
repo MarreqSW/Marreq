@@ -381,10 +381,7 @@ mod tests {
 
         // Should have a cleanup log entry
         let logs = service.recent_logs_raw(10).unwrap();
-        let cleanup_logs: Vec<_> = logs
-            .iter()
-            .filter(|l| l.action_type == "CLEANUP")
-            .collect();
+        let cleanup_logs: Vec<_> = logs.iter().filter(|l| l.action_type == "CLEANUP").collect();
         assert!(!cleanup_logs.is_empty());
     }
 

@@ -211,4 +211,111 @@ mod tests {
         assert_eq!(cats.len(), 1);
         assert_eq!(cats[0].title, "A");
     }
+
+    #[test]
+    fn list_all_returns_all_categories() {
+        let mut repo = DieselRepoMock::default();
+        repo.categories.insert(1, category(1, "A", 1));
+        repo.categories.insert(2, category(2, "B", 2));
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let cats = service.list_all().unwrap();
+        assert_eq!(cats.len(), 2);
+    }
+
+    #[test]
+    fn list_all_returns_empty_when_no_categories() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let cats = service.list_all().unwrap();
+        assert_eq!(cats.len(), 0);
+    }
+
+    #[test]
+    fn list_by_project_returns_empty_for_nonexistent_project() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let cats = service.list_by_project(999).unwrap();
+        assert_eq!(cats.len(), 0);
+    }
+
+    #[test]
+    fn get_by_id_returns_not_found_for_nonexistent_category() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let result = service.get_by_id(999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn get_category_name_returns_title() {
+        let mut repo = DieselRepoMock::default();
+        repo.categories.insert(1, category(1, "Functional", 1));
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let name = service.get_category_name(1).unwrap();
+        assert_eq!(name, "Functional");
+    }
+
+    #[test]
+    fn get_category_name_returns_not_found_for_missing_category() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let result = service.get_category_name(999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn update_returns_not_found_for_missing_category() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let payload = NewCategory {
+            id: None,
+            title: "Updated".into(),
+            description: "Desc".into(),
+            tag: "TAG".into(),
+            project_id: 1,
+        };
+
+        let result = service.update(&actor(), 999, payload);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn delete_returns_not_found_for_missing_category() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let result = service.delete(&actor(), 999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_by_project_returns_multiple_categories_for_same_project() {
+        let mut repo = DieselRepoMock::default();
+        repo.categories.insert(1, category(1, "A", 10));
+        repo.categories.insert(2, category(2, "B", 10));
+        repo.categories.insert(3, category(3, "C", 20));
+        let state = state_with_repo(repo);
+        let service = CategoryService::new(&state);
+
+        let cats = service.list_by_project(10).unwrap();
+        assert_eq!(cats.len(), 2);
+        let titles: Vec<&str> = cats.iter().map(|c| c.title.as_str()).collect();
+        assert!(titles.contains(&"A"));
+        assert!(titles.contains(&"B"));
+    }
 }

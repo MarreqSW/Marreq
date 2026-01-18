@@ -608,4 +608,518 @@ mod tests {
         assert!(lines[0].contains("Test #10"));
         assert!(!lines[0].contains("Test #20"));
     }
+
+    #[test]
+    fn get_matrix_view_applies_requirement_filters() {
+        let mut repo = DieselRepoMock::default();
+        let mut req1 = Requirement {
+            id: 1,
+            title: "Req 1".to_string(),
+            description: String::new(),
+            verification_method_id: 1,
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: "REF-1".to_string(),
+            category_id: 10,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            applicability_id: 5,
+            justification: None,
+            project_id: 1,
+        };
+        let mut req2 = Requirement {
+            id: 2,
+            title: "Req 2".to_string(),
+            description: String::new(),
+            verification_method_id: 1,
+            status_id: 2,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: "REF-2".to_string(),
+            category_id: 20,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            applicability_id: 5,
+            justification: None,
+            project_id: 1,
+        };
+        repo.requirements.insert(1, req1);
+        repo.requirements.insert(2, req2);
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let filters = MatrixFilters {
+            req_status: Some(1),
+            category: None,
+            applicability: None,
+            status_id: None,
+            search: None,
+        };
+        let pagination = MatrixPagination::default();
+
+        let view = service.get_matrix_view(1, filters, pagination).unwrap();
+        assert_eq!(view.requirements.len(), 1);
+        assert_eq!(view.requirements[0].status_id, 1);
+    }
+
+    #[test]
+    fn get_matrix_view_applies_search_filter() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                title: "Alpha Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-ALPHA".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+        repo.requirements.insert(
+            2,
+            Requirement {
+                id: 2,
+                title: "Beta Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-BETA".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let filters = MatrixFilters {
+            req_status: None,
+            category: None,
+            applicability: None,
+            status_id: None,
+            search: Some("Alpha".to_string()),
+        };
+        let pagination = MatrixPagination::default();
+
+        let view = service.get_matrix_view(1, filters, pagination).unwrap();
+        assert_eq!(view.requirements.len(), 1);
+        assert_eq!(view.requirements[0].title, "Alpha Requirement");
+    }
+
+    #[test]
+    fn get_matrix_view_search_filter_is_case_insensitive() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                title: "Alpha Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-ALPHA".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let filters = MatrixFilters {
+            req_status: None,
+            category: None,
+            applicability: None,
+            status_id: None,
+            search: Some("alpha".to_string()),
+        };
+        let pagination = MatrixPagination::default();
+
+        let view = service.get_matrix_view(1, filters, pagination).unwrap();
+        assert_eq!(view.requirements.len(), 1);
+    }
+
+    #[test]
+    fn get_matrix_view_search_filter_matches_reference_code() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                title: "Some Requirement".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-123".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let filters = MatrixFilters {
+            req_status: None,
+            category: None,
+            applicability: None,
+            status_id: None,
+            search: Some("123".to_string()),
+        };
+        let pagination = MatrixPagination::default();
+
+        let view = service.get_matrix_view(1, filters, pagination).unwrap();
+        assert_eq!(view.requirements.len(), 1);
+    }
+
+    #[test]
+    fn get_matrix_view_paginates_results() {
+        let mut repo = DieselRepoMock::default();
+        for i in 1..=10 {
+            repo.requirements.insert(
+                i,
+                Requirement {
+                    id: i,
+                    title: format!("Req {}", i),
+                    description: String::new(),
+                    verification_method_id: 1,
+                    status_id: 1,
+                    author_id: 1,
+                    reviewer_id: 1,
+                    reference_code: format!("REF-{}", i),
+                    category_id: 1,
+                    parent_id: None,
+                    creation_date: timestamp(),
+                    update_date: timestamp(),
+                    deadline_date: Some(timestamp()),
+                    applicability_id: 1,
+                    justification: None,
+                    project_id: 1,
+                },
+            );
+        }
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let filters = MatrixFilters::default();
+        let pagination = MatrixPagination {
+            page: 2,
+            per_page: 3,
+            sort_by: "id".to_string(),
+            sort_order: SortOrder::Asc,
+        };
+
+        let view = service.get_matrix_view(1, filters, pagination).unwrap();
+        assert_eq!(view.requirements.len(), 3);
+        assert_eq!(view.total_requirements, 10);
+        assert_eq!(view.total_pages, 4); // ceil(10/3) = 4
+    }
+
+    #[test]
+    fn get_matrix_view_sorts_by_title() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                title: "Zebra".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-1".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+        repo.requirements.insert(
+            2,
+            Requirement {
+                id: 2,
+                title: "Alpha".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-2".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let filters = MatrixFilters::default();
+        let pagination = MatrixPagination {
+            page: 1,
+            per_page: 50,
+            sort_by: "title".to_string(),
+            sort_order: SortOrder::Asc,
+        };
+
+        let view = service.get_matrix_view(1, filters, pagination).unwrap();
+        assert_eq!(view.requirements.len(), 2);
+        assert_eq!(view.requirements[0].title, "Alpha");
+        assert_eq!(view.requirements[1].title, "Zebra");
+    }
+
+    #[test]
+    fn get_matrix_view_sorts_by_reference_code() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                title: "Req 1".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-Z".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+        repo.requirements.insert(
+            2,
+            Requirement {
+                id: 2,
+                title: "Req 2".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-A".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let filters = MatrixFilters::default();
+        let pagination = MatrixPagination {
+            page: 1,
+            per_page: 50,
+            sort_by: "reference_code".to_string(),
+            sort_order: SortOrder::Asc,
+        };
+
+        let view = service.get_matrix_view(1, filters, pagination).unwrap();
+        assert_eq!(view.requirements.len(), 2);
+        assert_eq!(view.requirements[0].reference_code, "REF-A");
+        assert_eq!(view.requirements[1].reference_code, "REF-Z");
+    }
+
+    #[test]
+    fn get_matrix_view_sorts_descending() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                title: "Alpha".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-1".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+        repo.requirements.insert(
+            2,
+            Requirement {
+                id: 2,
+                title: "Zebra".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-2".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let filters = MatrixFilters::default();
+        let pagination = MatrixPagination {
+            page: 1,
+            per_page: 50,
+            sort_by: "title".to_string(),
+            sort_order: SortOrder::Desc,
+        };
+
+        let view = service.get_matrix_view(1, filters, pagination).unwrap();
+        assert_eq!(view.requirements.len(), 2);
+        assert_eq!(view.requirements[0].title, "Zebra");
+        assert_eq!(view.requirements[1].title, "Alpha");
+    }
+
+    #[test]
+    fn get_matrix_view_counts_total_links() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                title: "Req 1".to_string(),
+                description: String::new(),
+                verification_method_id: 1,
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-1".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+        repo.tests.insert(
+            10,
+            TestCase {
+                id: 10,
+                name: "Test 10".to_string(),
+                reference_code: "TST-10".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: None,
+                project_id: 1,
+            },
+        );
+        repo.matrices.push(MatrixLink {
+            req_id: 1,
+            test_id: 10,
+            creation_date: timestamp(),
+            project_id: 1,
+        });
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let filters = MatrixFilters::default();
+        let pagination = MatrixPagination::default();
+
+        let view = service.get_matrix_view(1, filters, pagination).unwrap();
+        assert_eq!(view.total_links, 1);
+    }
+
+    #[test]
+    fn csv_escape_handles_commas() {
+        assert_eq!(MatrixService::csv_escape("Test,Value"), "\"Test,Value\"");
+    }
+
+    #[test]
+    fn csv_escape_handles_quotes() {
+        assert_eq!(
+            MatrixService::csv_escape("Test\"Value"),
+            "\"Test\"\"Value\""
+        );
+    }
+
+    #[test]
+    fn csv_escape_handles_newlines() {
+        assert_eq!(MatrixService::csv_escape("Test\nValue"), "\"Test\nValue\"");
+    }
+
+    #[test]
+    fn csv_escape_does_not_escape_normal_strings() {
+        assert_eq!(MatrixService::csv_escape("Normal String"), "Normal String");
+    }
 }

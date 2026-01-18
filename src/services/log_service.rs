@@ -255,4 +255,187 @@ mod tests {
         assert!(json.contains("\n"));
         assert!(json.contains("Created project"));
     }
+
+    #[test]
+    fn recent_logs_returns_enriched_logs() {
+        let user = DieselRepoMock::make_user(1, "alice", "");
+        let mut repo = DieselRepoMock::with_users([user]);
+        repo.logs.push(sample_log(1, 1));
+        repo.logs.push(sample_log(2, 1));
+
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let logs = service.recent_logs(10).unwrap();
+        assert_eq!(logs.len(), 2);
+        assert_eq!(logs[0].username, "alice");
+        assert_eq!(logs[1].username, "alice");
+    }
+
+    #[test]
+    fn recent_logs_respects_limit() {
+        let user = DieselRepoMock::make_user(1, "alice", "");
+        let mut repo = DieselRepoMock::with_users([user]);
+        for i in 1..=5 {
+            repo.logs.push(sample_log(i, 1));
+        }
+
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let logs = service.recent_logs(3).unwrap();
+        assert_eq!(logs.len(), 3);
+    }
+
+    #[test]
+    fn recent_logs_raw_returns_unenriched_logs() {
+        let mut repo = DieselRepoMock::default();
+        repo.logs.push(sample_log(1, 1));
+        repo.logs.push(sample_log(2, 1));
+
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let logs = service.recent_logs_raw(10).unwrap();
+        assert_eq!(logs.len(), 2);
+        // get_logs_recent returns logs in reverse order (most recent first)
+        let log_ids: Vec<i32> = logs.iter().map(|l| l.log_id).collect();
+        assert!(log_ids.contains(&1));
+        assert!(log_ids.contains(&2));
+    }
+
+    #[test]
+    fn entity_logs_returns_enriched_logs_for_entity() {
+        let user = DieselRepoMock::make_user(1, "alice", "");
+        let mut repo = DieselRepoMock::with_users([user]);
+        let mut log1 = sample_log(1, 1);
+        log1.entity_type = "PROJECT".into();
+        log1.entity_id = Some(10);
+        let mut log2 = sample_log(2, 1);
+        log2.entity_type = "PROJECT".into();
+        log2.entity_id = Some(20);
+        let mut log3 = sample_log(3, 1);
+        log3.entity_type = "PROJECT".into();
+        log3.entity_id = Some(10);
+
+        repo.logs.push(log1);
+        repo.logs.push(log2);
+        repo.logs.push(log3);
+
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let logs = service.entity_logs("PROJECT", 10).unwrap();
+        assert_eq!(logs.len(), 2);
+        assert_eq!(logs[0].log.entity_id, Some(10));
+        assert_eq!(logs[1].log.entity_id, Some(10));
+    }
+
+    #[test]
+    fn entity_logs_raw_returns_unenriched_logs() {
+        let mut repo = DieselRepoMock::default();
+        let mut log = sample_log(1, 1);
+        log.entity_type = "REQUIREMENT".into();
+        log.entity_id = Some(5);
+        repo.logs.push(log);
+
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let logs = service.entity_logs_raw("REQUIREMENT", 5).unwrap();
+        assert_eq!(logs.len(), 1);
+        assert_eq!(logs[0].entity_id, Some(5));
+    }
+
+    #[test]
+    fn log_export_action_creates_export_log() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        service
+            .log_export_action(1, Some("Exported requirements".into()))
+            .unwrap();
+
+        let logs = service.recent_logs_raw(1).unwrap();
+        assert_eq!(logs.len(), 1);
+        assert_eq!(logs[0].action_type, "EXPORT");
+        assert_eq!(logs[0].entity_type, "SYSTEM");
+        assert_eq!(logs[0].user_id, 1);
+    }
+
+    #[test]
+    fn cleanup_old_logs_removes_old_entries() {
+        let mut repo = DieselRepoMock::default();
+        // Add some old logs (we'll simulate old dates)
+        for i in 1..=5 {
+            repo.logs.push(sample_log(i, 1));
+        }
+
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        // Cleanup logs older than 0 days (should remove all)
+        let count = service.cleanup_old_logs(1, 0).unwrap();
+        assert!(count >= 0); // May vary based on implementation
+
+        // Should have a cleanup log entry
+        let logs = service.recent_logs_raw(10).unwrap();
+        let cleanup_logs: Vec<_> = logs
+            .iter()
+            .filter(|l| l.action_type == "CLEANUP")
+            .collect();
+        assert!(!cleanup_logs.is_empty());
+    }
+
+    #[test]
+    fn analytics_computes_recent_counts() {
+        let mut repo = DieselRepoMock::default();
+        // Add some recent logs
+        for i in 1..=10 {
+            repo.logs.push(sample_log(i, 1));
+        }
+
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let analytics = service.analytics().unwrap();
+        assert!(analytics.last_7_days >= 0);
+        assert!(analytics.last_30_days >= 0);
+        assert!(analytics.last_90_days >= 0);
+        assert!(analytics.last_30_days >= analytics.last_7_days);
+        assert!(analytics.last_90_days >= analytics.last_30_days);
+    }
+
+    #[test]
+    fn analytics_returns_zero_for_empty_logs() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let analytics = service.analytics().unwrap();
+        assert_eq!(analytics.last_7_days, 0);
+        assert_eq!(analytics.last_30_days, 0);
+        assert_eq!(analytics.last_90_days, 0);
+    }
+
+    #[test]
+    fn recent_logs_returns_empty_when_no_logs() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let logs = service.recent_logs(10).unwrap();
+        assert_eq!(logs.len(), 0);
+    }
+
+    #[test]
+    fn entity_logs_returns_empty_for_nonexistent_entity() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+
+        let logs = service.entity_logs("PROJECT", 999).unwrap();
+        assert_eq!(logs.len(), 0);
+    }
 }

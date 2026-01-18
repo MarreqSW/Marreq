@@ -457,9 +457,7 @@ mod tests {
         let state = state_with_repo(repo);
         let service = RequirementAnalyticsService::new(&state);
 
-        let metrics = service
-            .metrics(1, None, None, None, Some(20))
-            .unwrap();
+        let metrics = service.metrics(1, None, None, None, Some(20)).unwrap();
         assert_eq!(metrics.total, 1);
     }
 

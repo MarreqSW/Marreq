@@ -208,6 +208,7 @@ impl<'a> RequirementService<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::MatrixLink;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -338,5 +339,283 @@ mod tests {
         let items = service.list_by_project(7).unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].project_id, 7);
+    }
+
+    #[test]
+    fn list_by_project_filtered_with_status_filter() {
+        let mut repo = DieselRepoMock::default();
+        let mut req1 = requirement(1, 7, "REQ-001");
+        req1.status_id = 1;
+        let mut req2 = requirement(2, 7, "REQ-002");
+        req2.status_id = 2;
+        repo.requirements.insert(1, req1);
+        repo.requirements.insert(2, req2);
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let items = service
+            .list_by_project_filtered(7, Some(1), None, None, None)
+            .unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].status_id, 1);
+    }
+
+    #[test]
+    fn list_by_project_filtered_with_verification_filter() {
+        let mut repo = DieselRepoMock::default();
+        let mut req1 = requirement(1, 7, "REQ-001");
+        req1.verification_method_id = 10;
+        let mut req2 = requirement(2, 7, "REQ-002");
+        req2.verification_method_id = 20;
+        repo.requirements.insert(1, req1);
+        repo.requirements.insert(2, req2);
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let items = service
+            .list_by_project_filtered(7, None, Some(10), None, None)
+            .unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].verification_method_id, 10);
+    }
+
+    #[test]
+    fn list_by_project_filtered_with_category_filter() {
+        let mut repo = DieselRepoMock::default();
+        let mut req1 = requirement(1, 7, "REQ-001");
+        req1.category_id = 100;
+        let mut req2 = requirement(2, 7, "REQ-002");
+        req2.category_id = 200;
+        repo.requirements.insert(1, req1);
+        repo.requirements.insert(2, req2);
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let items = service
+            .list_by_project_filtered(7, None, None, Some(100), None)
+            .unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].category_id, 100);
+    }
+
+    #[test]
+    fn list_by_project_filtered_with_applicability_filter() {
+        let mut repo = DieselRepoMock::default();
+        let mut req1 = requirement(1, 7, "REQ-001");
+        req1.applicability_id = 5;
+        let mut req2 = requirement(2, 7, "REQ-002");
+        req2.applicability_id = 6;
+        repo.requirements.insert(1, req1);
+        repo.requirements.insert(2, req2);
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let items = service
+            .list_by_project_filtered(7, None, None, None, Some(5))
+            .unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].applicability_id, 5);
+    }
+
+    #[test]
+    fn list_by_project_filtered_with_multiple_filters() {
+        let mut repo = DieselRepoMock::default();
+        let mut req1 = requirement(1, 7, "REQ-001");
+        req1.status_id = 1;
+        req1.verification_method_id = 10;
+        req1.category_id = 100;
+        let mut req2 = requirement(2, 7, "REQ-002");
+        req2.status_id = 1;
+        req2.verification_method_id = 20; // Different verification
+        req2.category_id = 100;
+        let mut req3 = requirement(3, 7, "REQ-003");
+        req3.status_id = 2; // Different status
+        req3.verification_method_id = 10;
+        req3.category_id = 100;
+        repo.requirements.insert(1, req1);
+        repo.requirements.insert(2, req2);
+        repo.requirements.insert(3, req3);
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let items = service
+            .list_by_project_filtered(7, Some(1), Some(10), Some(100), None)
+            .unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].id, 1);
+    }
+
+    #[test]
+    fn list_by_project_filtered_returns_empty_when_no_matches() {
+        let mut repo = DieselRepoMock::default();
+        let mut req1 = requirement(1, 7, "REQ-001");
+        req1.status_id = 1;
+        repo.requirements.insert(1, req1);
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let items = service
+            .list_by_project_filtered(7, Some(999), None, None, None)
+            .unwrap();
+        assert_eq!(items.len(), 0);
+    }
+
+    #[test]
+    fn list_by_project_filtered_sorts_by_reference_code() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, requirement(1, 7, "REQ-003"));
+        repo.requirements.insert(2, requirement(2, 7, "REQ-001"));
+        repo.requirements.insert(3, requirement(3, 7, "REQ-002"));
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let items = service
+            .list_by_project_filtered(7, None, None, None, None)
+            .unwrap();
+        assert_eq!(items.len(), 3);
+        assert_eq!(items[0].reference_code, "REQ-001");
+        assert_eq!(items[1].reference_code, "REQ-002");
+        assert_eq!(items[2].reference_code, "REQ-003");
+    }
+
+    #[test]
+    fn list_by_project_filtered_sorts_empty_reference_codes_last() {
+        let mut repo = DieselRepoMock::default();
+        let mut req1 = requirement(1, 7, "");
+        let mut req2 = requirement(2, 7, "REQ-001");
+        let mut req3 = requirement(3, 7, "");
+        repo.requirements.insert(1, req1);
+        repo.requirements.insert(2, req2);
+        repo.requirements.insert(3, req3);
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let items = service
+            .list_by_project_filtered(7, None, None, None, None)
+            .unwrap();
+        assert_eq!(items.len(), 3);
+        assert_eq!(items[0].reference_code, "REQ-001");
+        // Empty reference codes should come after, sorted by ID
+        assert!(items[1].reference_code.is_empty() || items[2].reference_code.is_empty());
+    }
+
+    #[test]
+    fn get_by_parent_id_returns_children() {
+        let mut repo = DieselRepoMock::default();
+        let mut req1 = requirement(1, 7, "REQ-001");
+        req1.parent_id = None;
+        let mut req2 = requirement(2, 7, "REQ-002");
+        req2.parent_id = Some(1);
+        let mut req3 = requirement(3, 7, "REQ-003");
+        req3.parent_id = Some(1);
+        let mut req4 = requirement(4, 7, "REQ-004");
+        req4.parent_id = Some(2);
+        repo.requirements.insert(1, req1);
+        repo.requirements.insert(2, req2);
+        repo.requirements.insert(3, req3);
+        repo.requirements.insert(4, req4);
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let children = service.get_by_parent_id(1).unwrap();
+        assert_eq!(children.len(), 2);
+        assert!(children.iter().any(|r| r.id == 2));
+        assert!(children.iter().any(|r| r.id == 3));
+    }
+
+    #[test]
+    fn get_by_parent_id_returns_empty_when_no_children() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, requirement(1, 7, "REQ-001"));
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let children = service.get_by_parent_id(999).unwrap();
+        assert_eq!(children.len(), 0);
+    }
+
+    #[test]
+    fn get_linked_tests_returns_tests_for_requirement() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, requirement(1, 7, "REQ-001"));
+        let test1 = TestCase {
+            id: 10,
+            name: "Test 1".into(),
+            description: "Desc".into(),
+            source: "manual".into(),
+            status_id: 1,
+            reference_code: "TEST-1".into(),
+            parent_id: None,
+            project_id: 7,
+        };
+        repo.tests.insert(10, test1);
+        repo.matrices.push(MatrixLink {
+            req_id: 1,
+            test_id: 10,
+            creation_date: timestamp(),
+            project_id: 7,
+        });
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let tests = service.get_linked_tests(1).unwrap();
+        assert_eq!(tests.len(), 1);
+        assert_eq!(tests[0].id, 10);
+    }
+
+    #[test]
+    fn create_propagates_validation_errors() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        // Create payload with invalid data that will fail validation
+        let mut payload = new_payload();
+        payload.title = "".to_string(); // Empty title should fail validation
+
+        let result = service.create(&actor(), payload);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn update_returns_not_found_when_requirement_does_not_exist() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let payload = new_payload();
+        let result = service.update(&actor(), 999, payload);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn delete_returns_not_found_when_requirement_does_not_exist() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let result = service.delete(&actor(), 999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_by_project_returns_empty_for_nonexistent_project() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let items = service.list_by_project(999).unwrap();
+        assert_eq!(items.len(), 0);
+    }
+
+    #[test]
+    fn get_by_id_returns_not_found_for_nonexistent_id() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let result = service.get_by_id(999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
     }
 }

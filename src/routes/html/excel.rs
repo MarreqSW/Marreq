@@ -2,11 +2,12 @@ use super::helpers::*;
 use super::prelude::*;
 use std::path::Path;
 
-#[get("/p/<project_id>/import_excel")]
+#[get("/p/<project_id>/import_excel?<error>")]
 pub fn import_excel_page(
     session_user: SessionUser,
     project_id: i32,
     state: &State<AppState>,
+    error: Option<String>,
 ) -> Result<content::RawHtml<String>, Redirect> {
     let _user = session_user.into_inner();
 
@@ -38,6 +39,7 @@ pub fn import_excel_page(
                                 <br>
                                 <small class="text-muted">Requirements and tests will be imported into this project. You can change the project using the dropdown in the navigation bar above.</small>
                             </div>
+                            {}
                             <p>Upload a file to import requirements or tests into the selected project.</p>
                             <form action="/p/{}/import_excel/upload" method="post" enctype="multipart/form-data">
                                 <div class="mb-3">
@@ -58,7 +60,13 @@ pub fn import_excel_page(
     </body>
     </html>
     "#,
-        name, project_id, project_id
+        name,
+        project_id,
+        error
+            .as_ref()
+            .map(|message| format!("<div class=\"alert alert-danger\">{}</div>", message))
+            .unwrap_or_default(),
+        project_id
     );
 
     Ok(content::RawHtml(html))
@@ -73,27 +81,59 @@ pub async fn upload_excel_file(
     let _user = session_user.into_inner();
 
     // Save uploaded file temporarily
-    let filename = upload.name().unwrap_or("upload.xlsx");
-    let extension = Path::new(filename)
+    let filename = upload.name().unwrap_or("upload");
+    let mut extension = Path::new(filename)
         .extension()
         .and_then(|ext| ext.to_str())
-        .unwrap_or("xlsx")
+        .unwrap_or("")
         .to_ascii_lowercase();
+
+    if extension.is_empty() {
+        if let Some(content_type) = upload.content_type() {
+            let content_type = content_type.to_string().to_ascii_lowercase();
+            if content_type.contains("text/csv") {
+                extension = "csv".to_string();
+            } else if content_type.contains("application/vnd.ms-excel") {
+                extension = "xls".to_string();
+            } else if content_type
+                .contains("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            {
+                extension = "xlsx".to_string();
+            }
+        }
+    }
+
+    if extension.is_empty() {
+        extension = "xlsx".to_string();
+    }
 
     let is_supported = matches!(extension.as_str(), "xlsx" | "xls" | "csv");
     if !is_supported {
-        return Err(Redirect::to(uri!(import_excel_page(project_id))));
+        return Err(Redirect::to(uri!(import_excel_page(
+            project_id = project_id,
+            error = Some("Unsupported file type. Use .xlsx, .xls, or .csv".to_string())
+        ))));
     }
 
     let temp_path = format!("/tmp/upload_{}.{}", chrono::Utc::now().timestamp(), extension);
     upload
         .persist_to(&temp_path)
         .await
-        .map_err(|_| Redirect::to(uri!(import_excel_page(project_id))))?;
+        .map_err(|_| {
+            Redirect::to(uri!(import_excel_page(
+                project_id = project_id,
+                error = Some("Failed to store upload. Please try again.".to_string())
+            )))
+        })?;
 
     // Parse Excel file
     let importer = crate::importers::excel::ExcelImporter::new(&temp_path)
-        .map_err(|_| Redirect::to(uri!(import_excel_page(project_id))))?;
+        .map_err(|e| {
+            Redirect::to(uri!(import_excel_page(
+                project_id = project_id,
+                error = Some(format!("Failed to parse file: {}", e))
+            )))
+        })?;
 
     // Create HTML for column mapping
     let _columns_html = importer
@@ -239,14 +279,20 @@ pub fn process_excel_import(
     let column_mappings: Vec<crate::importers::excel::ColumnMapping> =
         serde_json::from_str(&mapping_data.column_mappings).map_err(|e| {
             eprintln!("JSON parsing error: {}", e);
-            Redirect::to(uri!(import_excel_page(project_id)))
+            Redirect::to(uri!(import_excel_page(
+                project_id = project_id,
+                error = Some("Invalid column mapping data.".to_string())
+            )))
         })?;
 
     // Create importer and import data
     let importer =
         crate::importers::excel::ExcelImporter::new(&mapping_data.temp_file).map_err(|e| {
             eprintln!("Excel importer creation error: {}", e);
-            Redirect::to(uri!(import_excel_page(project_id)))
+            Redirect::to(uri!(import_excel_page(
+                project_id = project_id,
+                error = Some("Unable to read uploaded file. Please re-upload.".to_string())
+            )))
         })?;
 
     // Create import configuration
@@ -258,7 +304,10 @@ pub fn process_excel_import(
 
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(import_excel_page(project_id)))
+        Redirect::to(uri!(import_excel_page(
+            project_id = project_id,
+            error = Some("Database connection failed.".to_string())
+        )))
     })?;
     let result = importer.import_data(&config, connection);
 

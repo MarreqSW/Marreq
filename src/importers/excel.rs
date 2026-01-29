@@ -4,6 +4,7 @@ use crate::repository::{
 };
 use anyhow::{anyhow, Result};
 use calamine::{open_workbook, DataType, Reader, Xlsx};
+use csv::ReaderBuilder;
 use diesel::{Connection, PgConnection};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -45,7 +46,18 @@ pub struct ExcelImporter {
 
 impl ExcelImporter {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let mut workbook: Xlsx<_> = open_workbook(path)?;
+        let path_ref = path.as_ref();
+        let extension = path_ref
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+
+        if extension == "csv" {
+            return Self::from_csv(path_ref);
+        }
+
+        let mut workbook: Xlsx<_> = open_workbook(path_ref)?;
 
         // Get the first sheet
         let sheet_name = workbook.sheet_names()[0].clone();
@@ -102,6 +114,60 @@ impl ExcelImporter {
             "tests".to_string()
         } else {
             "requirements".to_string() // Default
+        };
+
+        Ok(ExcelImporter {
+            columns,
+            data,
+            import_type,
+        })
+    }
+
+    fn from_csv(path: &Path) -> Result<Self> {
+        let mut reader = ReaderBuilder::new().flexible(true).from_path(path)?;
+        let headers = reader.headers()?.clone();
+
+        let mut columns = headers
+            .iter()
+            .enumerate()
+            .map(|(index, name)| ExcelColumn {
+                index,
+                name: name.to_string(),
+                sample_value: String::new(),
+            })
+            .collect::<Vec<_>>();
+
+        let mut data = Vec::new();
+
+        for result in reader.records() {
+            let record = result?;
+            if record.iter().all(|cell| cell.trim().is_empty()) {
+                continue;
+            }
+
+            if data.is_empty() {
+                for (i, cell) in record.iter().enumerate() {
+                    if i < columns.len() {
+                        columns[i].sample_value = cell.to_string();
+                    }
+                }
+            }
+
+            data.push(record.iter().map(|cell| cell.to_string()).collect());
+        }
+
+        let import_type = if columns
+            .iter()
+            .any(|col| col.name.to_lowercase().contains("req"))
+        {
+            "requirements".to_string()
+        } else if columns
+            .iter()
+            .any(|col| col.name.to_lowercase().contains("test"))
+        {
+            "tests".to_string()
+        } else {
+            "requirements".to_string()
         };
 
         Ok(ExcelImporter {

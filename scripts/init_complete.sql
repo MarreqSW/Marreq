@@ -274,6 +274,9 @@ INSERT INTO projects (id, name, description, creation_date, status) VALUES
     (2, 'ReqMan Project', 'Requirements management system development and testing', NOW(), 'active'),
     (3, 'Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 'active');
 
+-- Ensure the projects sequence is aligned with seeded IDs
+SELECT setval('projects_id_seq', (SELECT COALESCE(MAX(id), 1) FROM projects));
+
 -- Requirement Status definitions
 INSERT INTO requirement_status (title, description, tag, project_id) VALUES
     -- Space Project statuses

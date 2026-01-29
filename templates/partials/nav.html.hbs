@@ -85,7 +85,15 @@
             </li>
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/user/new">New User</a></li>
             <li><hr class="dropdown-divider c-navbar__dropdown-divider"></li>
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/import_excel">Import Excel</a></li>
+            <li>
+              {{#if project.id}}
+                <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/import_excel">Import File</a>
+              {{else if selected_project_id}}
+                <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_excel">Import File</a>
+              {{else}}
+                <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">Import File</span>
+              {{/if}}
+            </li>
           </ul>
         </li>
         <li class="nav-item dropdown c-navbar__item">
@@ -97,7 +105,15 @@
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/admin/users">User Management</a></li>
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/admin/backup">Database Backup</a></li>
             <li><hr class="dropdown-divider c-navbar__dropdown-divider"></li>
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/import_excel">Import Excel</a></li>
+            <li>
+              {{#if project.id}}
+                <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/import_excel">Import File</a>
+              {{else if selected_project_id}}
+                <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_excel">Import File</a>
+              {{else}}
+                <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">Import File</span>
+              {{/if}}
+            </li>
             <li><hr class="dropdown-divider c-navbar__dropdown-divider"></li>
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/logs">System Logs</a></li>
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/log_analytics">Log Analytics</a></li>

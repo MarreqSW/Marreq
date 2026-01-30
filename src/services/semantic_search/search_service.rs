@@ -346,7 +346,7 @@ impl<'a> SemanticSearchService<'a> {
         .load::<VectorResult>(conn.as_mut())
         .map_err(|e| SearchError::Repo(RepoError::Db(e)))?
         .into_iter()
-        .map(|r| (r.id, r.similarity))
+        .map(|r| (r.id, r.similarity as f32))
         .collect();
 
         // Apply filters
@@ -451,6 +451,7 @@ impl<'a> SemanticSearchService<'a> {
 
         let answer = llm
             .chat(&messages, self.config.rag_max_tokens)
+            .await
             .map_err(SearchError::Llm)?;
 
         // Extract citations
@@ -491,8 +492,8 @@ struct LexicalResult {
 struct VectorResult {
     #[diesel(sql_type = Integer)]
     id: i32,
-    #[diesel(sql_type = Float4)]
-    similarity: f32,
+    #[diesel(sql_type = diesel::sql_types::Double)]
+    similarity: f64,
 }
 
 /// Truncate text to create a snippet.
@@ -520,10 +521,10 @@ pub fn calculate_rrf_score(rank: usize) -> f32 {
 }
 
 /// Combine search results using Reciprocal Rank Fusion (RRF).
-/// 
+///
 /// RRF score = sum(1 / (k + rank)) across all result lists
 /// where k is a constant (60) that dampens the contribution of high ranks.
-/// 
+///
 /// Returns (id, combined_score, lexical_rank, vector_rank) sorted by score descending.
 pub fn combine_results_rrf(
     lexical: &[(i32, f32)],
@@ -675,7 +676,7 @@ mod tests {
         let rrf_1: f32 = 1.0 / 61.0;
         let rrf_2: f32 = 1.0 / 62.0;
         let ratio = rrf_1 / rrf_2;
-        
+
         // Should be close to 1 (about 1.016)
         assert!((ratio - 1.016).abs() < 0.01);
     }
@@ -749,7 +750,10 @@ mod tests {
     #[test]
     fn vector_result_queryable() {
         // This test ensures the VectorResult struct is properly defined
-        let result = VectorResult { id: 42, similarity: 0.95 };
+        let result = VectorResult {
+            id: 42,
+            similarity: 0.95,
+        };
         assert_eq!(result.id, 42);
         assert!((result.similarity - 0.95).abs() < f32::EPSILON);
     }

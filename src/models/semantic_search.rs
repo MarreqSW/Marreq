@@ -171,7 +171,10 @@ mod tests {
         // Statuses are case-sensitive
         assert_eq!(EmbeddingIndexStatus::from_str("PENDING"), None);
         assert_eq!(EmbeddingIndexStatus::from_str("Pending"), None);
-        assert_eq!(EmbeddingIndexStatus::from_str("pending"), Some(EmbeddingIndexStatus::Pending));
+        assert_eq!(
+            EmbeddingIndexStatus::from_str("pending"),
+            Some(EmbeddingIndexStatus::Pending)
+        );
     }
 
     #[test]
@@ -323,13 +326,11 @@ mod tests {
     fn rag_answer_response_creation() {
         let response = RagAnswerResponse {
             answer: "This is the answer based on requirements.".into(),
-            citations: vec![
-                RagCitation {
-                    requirement_id: 1,
-                    reference_code: "REQ-001".into(),
-                    title: "First".into(),
-                },
-            ],
+            citations: vec![RagCitation {
+                requirement_id: 1,
+                reference_code: "REQ-001".into(),
+                title: "First".into(),
+            }],
             results: vec![],
         };
 

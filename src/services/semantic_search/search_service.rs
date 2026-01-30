@@ -184,54 +184,36 @@ impl<'a> SemanticSearchService<'a> {
         let repo = self.state.repo_read();
         let mut conn = repo.inner_repo().get_conn().map_err(SearchError::Repo)?;
 
-        // Convert query to tsquery
-        let ts_query = query
+        if query.trim().is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Build OR-based tsquery for better recall with natural language questions
+        // Extract meaningful words (skip common stop words and short terms)
+        let stop_words = ["does", "is", "are", "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for"];
+        let ts_query: String = query
             .split_whitespace()
-            .map(|w| format!("{}:*", w.replace("'", "''")))
+            .filter(|w| w.len() > 2) // Skip very short words
+            .filter(|w| !stop_words.contains(&w.to_lowercase().as_str()))
+            .map(|w| {
+                // Remove all non-alphanumeric characters from both ends
+                let cleaned = w.trim_matches(|c: char| !c.is_alphanumeric());
+                if cleaned.is_empty() {
+                    String::new()
+                } else {
+                    // Escape single quotes and add prefix matching
+                    format!("{}:*", cleaned.replace("'", "''").to_lowercase())
+                }
+            })
+            .filter(|s| !s.is_empty())
             .collect::<Vec<_>>()
-            .join(" & ");
+            .join(" | "); // Use OR (|) instead of AND (&) for better recall
 
         if ts_query.is_empty() {
             return Ok(vec![]);
         }
 
-        // Build raw SQL for full-text search with ranking
-        // Using ts_rank_cd for better ranking with position information
-        // Note: Dynamic filter SQL stored for documentation, actual query uses simpler approach
-        let _sql = format!(
-            r#"
-            SELECT 
-                r.id,
-                ts_rank_cd(r.search_vector, to_tsquery('english', $1)) as rank
-            FROM requirements r
-            WHERE r.project_id = $2
-                AND r.search_vector @@ to_tsquery('english', $1)
-                {}
-                {}
-                {}
-                {}
-            ORDER BY rank DESC
-            LIMIT $3
-            "#,
-            filters
-                .status_id
-                .map(|_| "AND r.status_id = $4")
-                .unwrap_or(""),
-            filters
-                .category_id
-                .map(|_| "AND r.category_id = $5")
-                .unwrap_or(""),
-            filters
-                .applicability_id
-                .map(|_| "AND r.applicability_id = $6")
-                .unwrap_or(""),
-            filters
-                .verification_id
-                .map(|_| "AND r.verification_method_id = $7")
-                .unwrap_or(""),
-        );
-
-        // Execute with parameters
+        // Execute with parameters using to_tsquery with OR logic
         let results: Vec<(i32, f32)> = diesel::sql_query(
             r#"
             SELECT 

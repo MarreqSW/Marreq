@@ -33,7 +33,10 @@ impl<'a> IndexingService<'a> {
     }
 
     /// Create with custom configuration (for testing).
-    pub fn with_config(state: &'a AppState<DieselCachedRepo>, config: SemanticSearchConfig) -> Self {
+    pub fn with_config(
+        state: &'a AppState<DieselCachedRepo>,
+        config: SemanticSearchConfig,
+    ) -> Self {
         Self { state, config }
     }
 
@@ -117,7 +120,10 @@ impl<'a> IndexingService<'a> {
     }
 
     /// Get existing embedding for a requirement.
-    pub fn get_embedding(&self, requirement_id: i32) -> Result<Option<RequirementEmbedding>, RepoError> {
+    pub fn get_embedding(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Option<RequirementEmbedding>, RepoError> {
         let repo = self.state.repo_read();
         let mut conn = repo.inner_repo().get_conn()?;
 
@@ -131,7 +137,10 @@ impl<'a> IndexingService<'a> {
     /// Index a single requirement.
     ///
     /// Generates embedding if needed (content changed or not indexed).
-    pub async fn index_requirement(&self, req: &DecoratedRequirement) -> Result<bool, EmbeddingError> {
+    pub async fn index_requirement(
+        &self,
+        req: &DecoratedRequirement,
+    ) -> Result<bool, EmbeddingError> {
         if !self.is_enabled() {
             return Err(EmbeddingError::NotConfigured(
                 "Embeddings are disabled".into(),
@@ -169,9 +178,10 @@ impl<'a> IndexingService<'a> {
         };
 
         let repo = self.state.repo_read();
-        let mut conn = repo.inner_repo().get_conn().map_err(|e| {
-            EmbeddingError::ApiError(format!("Failed to get connection: {}", e))
-        })?;
+        let mut conn = repo
+            .inner_repo()
+            .get_conn()
+            .map_err(|e| EmbeddingError::ApiError(format!("Failed to get connection: {}", e)))?;
 
         diesel::insert_into(requirement_embeddings::table)
             .values(&new_embedding)
@@ -187,7 +197,10 @@ impl<'a> IndexingService<'a> {
     /// Reindex all requirements for a project.
     ///
     /// Returns (indexed_count, skipped_count, failed_count).
-    pub async fn reindex_project(&self, project_id: i32) -> Result<(usize, usize, usize), EmbeddingError> {
+    pub async fn reindex_project(
+        &self,
+        project_id: i32,
+    ) -> Result<(usize, usize, usize), EmbeddingError> {
         if !self.is_enabled() {
             return Err(EmbeddingError::NotConfigured(
                 "Embeddings are disabled".into(),
@@ -218,7 +231,11 @@ impl<'a> IndexingService<'a> {
     }
 
     /// Queue a requirement for background indexing.
-    pub fn queue_for_indexing(&self, requirement_id: i32, project_id: i32) -> Result<(), RepoError> {
+    pub fn queue_for_indexing(
+        &self,
+        requirement_id: i32,
+        project_id: i32,
+    ) -> Result<(), RepoError> {
         let repo = self.state.repo_read();
         let mut conn = repo.inner_repo().get_conn()?;
 

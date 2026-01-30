@@ -388,6 +388,7 @@ impl<'a> IndexingService<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::EmbeddingIndexStatus;
 
     // Note: Full integration tests require database setup
     // These tests verify the service configuration logic
@@ -416,5 +417,174 @@ mod tests {
             ..Default::default()
         };
         assert!(config.is_valid_for_embeddings().is_ok());
+    }
+
+    #[test]
+    fn embedding_index_status_as_str() {
+        assert_eq!(EmbeddingIndexStatus::Pending.as_str(), "pending");
+        assert_eq!(EmbeddingIndexStatus::Processing.as_str(), "processing");
+        assert_eq!(EmbeddingIndexStatus::Completed.as_str(), "completed");
+        assert_eq!(EmbeddingIndexStatus::Failed.as_str(), "failed");
+    }
+
+    #[test]
+    fn embedding_index_status_from_str() {
+        assert_eq!(
+            EmbeddingIndexStatus::from_str("pending"),
+            Some(EmbeddingIndexStatus::Pending)
+        );
+        assert_eq!(
+            EmbeddingIndexStatus::from_str("processing"),
+            Some(EmbeddingIndexStatus::Processing)
+        );
+        assert_eq!(
+            EmbeddingIndexStatus::from_str("completed"),
+            Some(EmbeddingIndexStatus::Completed)
+        );
+        assert_eq!(
+            EmbeddingIndexStatus::from_str("failed"),
+            Some(EmbeddingIndexStatus::Failed)
+        );
+        assert_eq!(EmbeddingIndexStatus::from_str("unknown"), None);
+        assert_eq!(EmbeddingIndexStatus::from_str(""), None);
+        assert_eq!(EmbeddingIndexStatus::from_str("PENDING"), None); // Case sensitive
+    }
+
+    #[test]
+    fn embedding_index_status_equality() {
+        assert_eq!(EmbeddingIndexStatus::Pending, EmbeddingIndexStatus::Pending);
+        assert_ne!(EmbeddingIndexStatus::Pending, EmbeddingIndexStatus::Failed);
+    }
+
+    #[test]
+    fn config_validation_disabled() {
+        let config = SemanticSearchConfig {
+            embeddings_enabled: false,
+            ..Default::default()
+        };
+        assert!(config.is_valid_for_embeddings().is_err());
+        assert!(config
+            .is_valid_for_embeddings()
+            .unwrap_err()
+            .contains("disabled"));
+    }
+
+    #[test]
+    fn config_validation_unknown_provider() {
+        let config = SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "unknown_provider".into(),
+            ..Default::default()
+        };
+        assert!(config.is_valid_for_embeddings().is_err());
+        assert!(config
+            .is_valid_for_embeddings()
+            .unwrap_err()
+            .contains("Unknown"));
+    }
+
+    #[test]
+    fn config_rag_requires_embeddings() {
+        let config = SemanticSearchConfig {
+            embeddings_enabled: false,
+            rag_enabled: true,
+            ..Default::default()
+        };
+        assert!(config.is_valid_for_rag().is_err());
+    }
+
+    #[test]
+    fn config_rag_disabled_error() {
+        let config = SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "mock".into(),
+            rag_enabled: false,
+            ..Default::default()
+        };
+        assert!(config.is_valid_for_rag().is_err());
+        assert!(config.is_valid_for_rag().unwrap_err().contains("disabled"));
+    }
+
+    #[test]
+    fn config_rag_valid() {
+        let config = SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "mock".into(),
+            rag_enabled: true,
+            ..Default::default()
+        };
+        assert!(config.is_valid_for_rag().is_ok());
+    }
+
+    #[test]
+    fn new_embedding_index_queue_entry_fields() {
+        let entry = NewEmbeddingIndexQueueEntry {
+            requirement_id: 42,
+            project_id: 1,
+            status: EmbeddingIndexStatus::Pending.as_str().to_string(),
+        };
+        assert_eq!(entry.requirement_id, 42);
+        assert_eq!(entry.project_id, 1);
+        assert_eq!(entry.status, "pending");
+    }
+
+    #[test]
+    fn project_index_status_fields() {
+        let status = ProjectIndexStatus {
+            project_id: 1,
+            total_requirements: 100,
+            indexed_count: 80,
+            pending_count: 15,
+            failed_count: 5,
+            last_indexed_at: None,
+            embeddings_enabled: true,
+            embedding_model: "nomic-embed-text".into(),
+        };
+
+        assert_eq!(status.project_id, 1);
+        assert_eq!(status.total_requirements, 100);
+        assert_eq!(status.indexed_count, 80);
+        assert_eq!(status.pending_count, 15);
+        assert_eq!(status.failed_count, 5);
+        assert!(status.last_indexed_at.is_none());
+        assert!(status.embeddings_enabled);
+        assert_eq!(status.embedding_model, "nomic-embed-text");
+    }
+
+    #[test]
+    fn project_index_status_with_timestamp() {
+        use chrono::NaiveDate;
+        let timestamp = NaiveDate::from_ymd_opt(2025, 1, 30)
+            .unwrap()
+            .and_hms_opt(12, 0, 0)
+            .unwrap();
+
+        let status = ProjectIndexStatus {
+            project_id: 1,
+            total_requirements: 50,
+            indexed_count: 50,
+            pending_count: 0,
+            failed_count: 0,
+            last_indexed_at: Some(timestamp),
+            embeddings_enabled: true,
+            embedding_model: "mxbai-embed-large".into(),
+        };
+
+        assert!(status.last_indexed_at.is_some());
+        assert_eq!(status.last_indexed_at.unwrap(), timestamp);
+    }
+
+    #[test]
+    fn embedding_error_not_configured() {
+        let err = EmbeddingError::NotConfigured("test error".into());
+        assert!(err.to_string().contains("not configured"));
+        assert!(err.to_string().contains("test error"));
+    }
+
+    #[test]
+    fn embedding_error_api_error() {
+        let err = EmbeddingError::ApiError("network timeout".into());
+        assert!(err.to_string().contains("API request failed"));
+        assert!(err.to_string().contains("network timeout"));
     }
 }

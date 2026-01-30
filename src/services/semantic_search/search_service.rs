@@ -371,36 +371,8 @@ impl<'a> SemanticSearchService<'a> {
         vector: &[(i32, f32)],
         k: usize,
     ) -> Vec<(i32, f32, Option<i32>, Option<i32>)> {
-        const RRF_K: f32 = 60.0;
-
-        let mut scores: HashMap<i32, (f32, Option<i32>, Option<i32>)> = HashMap::new();
-
-        // Add lexical scores
-        for (rank, (id, _score)) in lexical.iter().enumerate() {
-            let rrf_score = 1.0 / (RRF_K + (rank + 1) as f32);
-            let entry = scores.entry(*id).or_insert((0.0, None, None));
-            entry.0 += rrf_score;
-            entry.1 = Some((rank + 1) as i32);
-        }
-
-        // Add vector scores
-        for (rank, (id, _score)) in vector.iter().enumerate() {
-            let rrf_score = 1.0 / (RRF_K + (rank + 1) as f32);
-            let entry = scores.entry(*id).or_insert((0.0, None, None));
-            entry.0 += rrf_score;
-            entry.2 = Some((rank + 1) as i32);
-        }
-
-        // Sort by combined RRF score
-        let mut results: Vec<_> = scores
-            .into_iter()
-            .map(|(id, (score, lex_rank, vec_rank))| (id, score, lex_rank, vec_rank))
-            .collect();
-        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-
-        // Take top k
-        results.truncate(k);
-        results
+        // Delegate to standalone function for testability
+        combine_results_rrf(lexical, vector, k)
     }
 
     /// Enrich results with full requirement data.
@@ -538,6 +510,92 @@ fn truncate_snippet(text: &str, max_len: usize) -> String {
     }
 }
 
+/// RRF constant for damping rank contributions.
+const RRF_K: f32 = 60.0;
+
+/// Calculate RRF score for a given rank.
+/// Uses the formula: 1 / (k + rank) where k=60
+pub fn calculate_rrf_score(rank: usize) -> f32 {
+    1.0 / (RRF_K + rank as f32)
+}
+
+/// Combine search results using Reciprocal Rank Fusion (RRF).
+/// 
+/// RRF score = sum(1 / (k + rank)) across all result lists
+/// where k is a constant (60) that dampens the contribution of high ranks.
+/// 
+/// Returns (id, combined_score, lexical_rank, vector_rank) sorted by score descending.
+pub fn combine_results_rrf(
+    lexical: &[(i32, f32)],
+    vector: &[(i32, f32)],
+    k: usize,
+) -> Vec<(i32, f32, Option<i32>, Option<i32>)> {
+    let mut scores: HashMap<i32, (f32, Option<i32>, Option<i32>)> = HashMap::new();
+
+    // Add lexical scores
+    for (rank, (id, _score)) in lexical.iter().enumerate() {
+        let rrf_score = calculate_rrf_score(rank + 1);
+        let entry = scores.entry(*id).or_insert((0.0, None, None));
+        entry.0 += rrf_score;
+        entry.1 = Some((rank + 1) as i32);
+    }
+
+    // Add vector scores
+    for (rank, (id, _score)) in vector.iter().enumerate() {
+        let rrf_score = calculate_rrf_score(rank + 1);
+        let entry = scores.entry(*id).or_insert((0.0, None, None));
+        entry.0 += rrf_score;
+        entry.2 = Some((rank + 1) as i32);
+    }
+
+    // Sort by combined RRF score
+    let mut results: Vec<_> = scores
+        .into_iter()
+        .map(|(id, (score, lex_rank, vec_rank))| (id, score, lex_rank, vec_rank))
+        .collect();
+    results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+    // Take top k
+    results.truncate(k);
+    results
+}
+
+/// Check if a query string looks like a reference code.
+/// Reference codes typically contain a hyphen, are at least 3 chars,
+/// and contain at least one digit.
+pub fn looks_like_reference_code(query: &str) -> bool {
+    let query_upper = query.to_uppercase();
+    query_upper.contains('-')
+        && query_upper.len() >= 3
+        && query_upper.chars().any(|c| c.is_ascii_digit())
+}
+
+/// Build OR-based tsquery from natural language query.
+/// Extracts meaningful words, skips stop words and short terms.
+pub fn build_tsquery(query: &str) -> String {
+    const STOP_WORDS: [&str; 14] = [
+        "does", "is", "are", "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
+    ];
+
+    query
+        .split_whitespace()
+        .filter(|w| w.len() > 2) // Skip very short words
+        .filter(|w| !STOP_WORDS.contains(&w.to_lowercase().as_str()))
+        .map(|w| {
+            // Remove all non-alphanumeric characters from both ends
+            let cleaned = w.trim_matches(|c: char| !c.is_alphanumeric());
+            if cleaned.is_empty() {
+                String::new()
+            } else {
+                // Escape single quotes and add prefix matching
+                format!("{}:*", cleaned.replace('\'', "''").to_lowercase())
+            }
+        })
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join(" | ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -557,9 +615,38 @@ mod tests {
     }
 
     #[test]
-    fn rrf_fusion_combines_scores() {
-        // Can't fully test without state, but we can test the algorithm
+    fn truncate_snippet_no_word_boundary() {
+        // Text without spaces - should truncate at exact position
+        let text = "abcdefghijklmnopqrstuvwxyz";
+        let result = truncate_snippet(text, 10);
+        assert_eq!(result, "abcdefghij...");
+    }
 
+    #[test]
+    fn truncate_snippet_exact_length() {
+        let text = "Exactly ten";
+        let result = truncate_snippet(text, 11);
+        assert_eq!(result, "Exactly ten");
+    }
+
+    #[test]
+    fn truncate_snippet_empty_text() {
+        let text = "";
+        let result = truncate_snippet(text, 100);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn truncate_snippet_single_word_longer_than_max() {
+        let text = "superlongwordwithoutanyspaces and more";
+        let result = truncate_snippet(text, 15);
+        // Should truncate at word boundary after "superlongwordwithoutanyspaces"
+        // but since first word is longer than max, falls back to exact truncation
+        assert!(result.ends_with("..."));
+    }
+
+    #[test]
+    fn rrf_fusion_combines_scores() {
         // RRF formula: 1/(k + rank) where k=60
         // rank 1: 1/61 ≈ 0.0164
         // rank 2: 1/62 ≈ 0.0161
@@ -572,11 +659,299 @@ mod tests {
     }
 
     #[test]
+    fn rrf_formula_decreases_with_rank() {
+        // Higher ranks should contribute less to the score
+        let rrf_1: f32 = 1.0 / 61.0;
+        let rrf_10: f32 = 1.0 / 70.0;
+        let rrf_100: f32 = 1.0 / 160.0;
+
+        assert!(rrf_1 > rrf_10);
+        assert!(rrf_10 > rrf_100);
+    }
+
+    #[test]
+    fn rrf_k_constant_dampens_rank_differences() {
+        // With k=60, the difference between rank 1 and 2 is small
+        let rrf_1: f32 = 1.0 / 61.0;
+        let rrf_2: f32 = 1.0 / 62.0;
+        let ratio = rrf_1 / rrf_2;
+        
+        // Should be close to 1 (about 1.016)
+        assert!((ratio - 1.016).abs() < 0.01);
+    }
+
+    #[test]
     fn search_filters_default() {
         let filters = SearchFilters::default();
         assert!(filters.status_id.is_none());
         assert!(filters.category_id.is_none());
         assert!(filters.applicability_id.is_none());
         assert!(filters.verification_id.is_none());
+    }
+
+    #[test]
+    fn search_filters_with_values() {
+        let filters = SearchFilters {
+            status_id: Some(1),
+            category_id: Some(2),
+            applicability_id: Some(3),
+            verification_id: Some(4),
+        };
+        assert_eq!(filters.status_id, Some(1));
+        assert_eq!(filters.category_id, Some(2));
+        assert_eq!(filters.applicability_id, Some(3));
+        assert_eq!(filters.verification_id, Some(4));
+    }
+
+    #[test]
+    fn search_filters_partial() {
+        let filters = SearchFilters {
+            status_id: Some(1),
+            category_id: None,
+            applicability_id: Some(3),
+            verification_id: None,
+        };
+        assert!(filters.status_id.is_some());
+        assert!(filters.category_id.is_none());
+        assert!(filters.applicability_id.is_some());
+        assert!(filters.verification_id.is_none());
+    }
+
+    #[test]
+    fn search_error_display() {
+        let repo_err = SearchError::NotConfigured("test error".into());
+        assert!(repo_err.to_string().contains("test error"));
+    }
+
+    #[test]
+    fn search_error_embedding_variant() {
+        let emb_err = EmbeddingError::NotConfigured("not configured".into());
+        let search_err = SearchError::Embedding(emb_err);
+        assert!(search_err.to_string().contains("Embedding error"));
+    }
+
+    #[test]
+    fn search_error_llm_variant() {
+        let llm_err = LlmError::NotConfigured("not configured".into());
+        let search_err = SearchError::Llm(llm_err);
+        assert!(search_err.to_string().contains("LLM error"));
+    }
+
+    #[test]
+    fn lexical_result_queryable() {
+        // This test ensures the LexicalResult struct is properly defined
+        // It's used for SQL queries and must have the correct types
+        let result = LexicalResult { id: 1, rank: 0.5 };
+        assert_eq!(result.id, 1);
+        assert!((result.rank - 0.5).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn vector_result_queryable() {
+        // This test ensures the VectorResult struct is properly defined
+        let result = VectorResult { id: 42, similarity: 0.95 };
+        assert_eq!(result.id, 42);
+        assert!((result.similarity - 0.95).abs() < f32::EPSILON);
+    }
+
+    // Tests for calculate_rrf_score
+    #[test]
+    fn calculate_rrf_score_rank_1() {
+        let score = calculate_rrf_score(1);
+        let expected = 1.0 / 61.0;
+        assert!((score - expected).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn calculate_rrf_score_rank_10() {
+        let score = calculate_rrf_score(10);
+        let expected = 1.0 / 70.0;
+        assert!((score - expected).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn calculate_rrf_score_decreases_with_rank() {
+        let score_1 = calculate_rrf_score(1);
+        let score_5 = calculate_rrf_score(5);
+        let score_10 = calculate_rrf_score(10);
+        let score_100 = calculate_rrf_score(100);
+
+        assert!(score_1 > score_5);
+        assert!(score_5 > score_10);
+        assert!(score_10 > score_100);
+    }
+
+    // Tests for combine_results_rrf
+    #[test]
+    fn combine_results_rrf_empty_inputs() {
+        let result = combine_results_rrf(&[], &[], 10);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn combine_results_rrf_only_lexical() {
+        let lexical = vec![(1, 0.9), (2, 0.8), (3, 0.7)];
+        let result = combine_results_rrf(&lexical, &[], 10);
+
+        assert_eq!(result.len(), 3);
+        // First item should be id=1 with lexical_rank=1, vector_rank=None
+        assert_eq!(result[0].0, 1); // id
+        assert_eq!(result[0].2, Some(1)); // lexical_rank
+        assert!(result[0].3.is_none()); // vector_rank
+    }
+
+    #[test]
+    fn combine_results_rrf_only_vector() {
+        let vector = vec![(4, 0.95), (5, 0.85)];
+        let result = combine_results_rrf(&[], &vector, 10);
+
+        assert_eq!(result.len(), 2);
+        // First item should be id=4 with vector_rank=1, lexical_rank=None
+        assert_eq!(result[0].0, 4);
+        assert!(result[0].2.is_none()); // lexical_rank
+        assert_eq!(result[0].3, Some(1)); // vector_rank
+    }
+
+    #[test]
+    fn combine_results_rrf_overlapping_results() {
+        // Same item appears in both lists - should have higher combined score
+        let lexical = vec![(1, 0.9), (2, 0.8)];
+        let vector = vec![(1, 0.95), (3, 0.75)];
+        let result = combine_results_rrf(&lexical, &vector, 10);
+
+        assert_eq!(result.len(), 3);
+        // id=1 should be first because it appears in both lists
+        assert_eq!(result[0].0, 1);
+        assert_eq!(result[0].2, Some(1)); // lexical_rank
+        assert_eq!(result[0].3, Some(1)); // vector_rank
+
+        // Score should be sum of both RRF contributions
+        let expected_score = calculate_rrf_score(1) + calculate_rrf_score(1);
+        assert!((result[0].1 - expected_score).abs() < 0.001);
+    }
+
+    #[test]
+    fn combine_results_rrf_respects_k_limit() {
+        let lexical = vec![(1, 0.9), (2, 0.8), (3, 0.7), (4, 0.6), (5, 0.5)];
+        let result = combine_results_rrf(&lexical, &[], 3);
+
+        assert_eq!(result.len(), 3);
+    }
+
+    #[test]
+    fn combine_results_rrf_sorted_by_score() {
+        let lexical = vec![(3, 0.7)];
+        let vector = vec![(1, 0.95), (2, 0.85)];
+        let result = combine_results_rrf(&lexical, &vector, 10);
+
+        // Check that results are sorted by score descending
+        for i in 1..result.len() {
+            assert!(result[i - 1].1 >= result[i].1);
+        }
+    }
+
+    #[test]
+    fn combine_results_rrf_complex_overlap() {
+        let lexical = vec![(1, 0.9), (2, 0.8), (3, 0.7)];
+        let vector = vec![(2, 0.95), (4, 0.85), (1, 0.75)];
+        let result = combine_results_rrf(&lexical, &vector, 10);
+
+        assert_eq!(result.len(), 4);
+
+        // id=1: lexical rank 1, vector rank 3
+        // id=2: lexical rank 2, vector rank 1
+        // Both should have high scores due to overlap
+
+        // Find id=2 in results - should be first because (rank 2, rank 1) beats (rank 1, rank 3)
+        let id2_result = result.iter().find(|r| r.0 == 2).unwrap();
+        assert_eq!(id2_result.2, Some(2)); // lexical rank
+        assert_eq!(id2_result.3, Some(1)); // vector rank
+    }
+
+    // Tests for looks_like_reference_code
+    #[test]
+    fn looks_like_reference_code_valid() {
+        assert!(looks_like_reference_code("REQ-001"));
+        assert!(looks_like_reference_code("SYS-PERF-002"));
+        assert!(looks_like_reference_code("req-1")); // lowercase also works
+        assert!(looks_like_reference_code("A-1"));
+    }
+
+    #[test]
+    fn looks_like_reference_code_invalid() {
+        assert!(!looks_like_reference_code("REQ")); // No hyphen
+        assert!(!looks_like_reference_code("REQ-")); // No digit
+        assert!(!looks_like_reference_code("123")); // No hyphen
+        assert!(!looks_like_reference_code("AB")); // Too short
+        assert!(!looks_like_reference_code("")); // Empty
+    }
+
+    #[test]
+    fn looks_like_reference_code_edge_cases() {
+        assert!(looks_like_reference_code("X-1")); // Minimum valid
+        assert!(!looks_like_reference_code("-1")); // No letter before hyphen
+        assert!(looks_like_reference_code("REQ-ABC-123")); // Multiple hyphens
+    }
+
+    // Tests for build_tsquery
+    #[test]
+    fn build_tsquery_simple() {
+        let result = build_tsquery("system performance");
+        assert!(result.contains("system:*"));
+        assert!(result.contains("performance:*"));
+        assert!(result.contains(" | "));
+    }
+
+    #[test]
+    fn build_tsquery_filters_stop_words() {
+        let result = build_tsquery("the system is fast");
+        assert!(!result.contains("the:*"));
+        assert!(!result.contains("is:*"));
+        assert!(result.contains("system:*"));
+        assert!(result.contains("fast:*"));
+    }
+
+    #[test]
+    fn build_tsquery_filters_short_words() {
+        let result = build_tsquery("a to be");
+        // All words are 2 chars or less, so should be filtered
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn build_tsquery_handles_punctuation() {
+        let result = build_tsquery("system's performance, good!");
+        // Apostrophe inside word is escaped (doubled for SQL), punctuation at word boundaries is trimmed
+        // "system's" becomes "system''s" (apostrophe escaped)
+        assert!(result.contains("system''s:*"));
+        assert!(result.contains("performance:*"));
+        assert!(result.contains("good:*"));
+    }
+
+    #[test]
+    fn build_tsquery_empty() {
+        let result = build_tsquery("");
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn build_tsquery_only_stop_words() {
+        let result = build_tsquery("the a an and or");
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn build_tsquery_preserves_case_insensitive() {
+        let result = build_tsquery("SYSTEM Performance");
+        assert!(result.contains("system:*"));
+        assert!(result.contains("performance:*"));
+    }
+
+    #[test]
+    fn build_tsquery_handles_special_chars() {
+        let result = build_tsquery("(system) [performance]");
+        // Brackets should be stripped
+        assert!(result.contains("system:*"));
+        assert!(result.contains("performance:*"));
     }
 }

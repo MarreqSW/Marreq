@@ -155,6 +155,21 @@ mod tests {
     }
 
     #[test]
+    fn default_config_ollama_url() {
+        let config = SemanticSearchConfig::default();
+        assert_eq!(config.ollama_url, "http://localhost:11434");
+    }
+
+    #[test]
+    fn default_config_rag_settings() {
+        let config = SemanticSearchConfig::default();
+        assert!(!config.rag_enabled);
+        assert_eq!(config.rag_model, "llama3.2");
+        assert_eq!(config.rag_max_tokens, 1024);
+        assert_eq!(config.rag_top_k, 10);
+    }
+
+    #[test]
     fn model_dimensions() {
         assert_eq!(
             SemanticSearchConfig::default_dim_for_model("nomic-embed-text"),
@@ -172,9 +187,47 @@ mod tests {
     }
 
     #[test]
+    fn model_dimensions_snowflake() {
+        assert_eq!(
+            SemanticSearchConfig::default_dim_for_model("snowflake-arctic-embed"),
+            1024
+        );
+    }
+
+    #[test]
+    fn model_dimensions_bge() {
+        assert_eq!(
+            SemanticSearchConfig::default_dim_for_model("bge-m3"),
+            1024
+        );
+        assert_eq!(
+            SemanticSearchConfig::default_dim_for_model("bge-large"),
+            1024
+        );
+    }
+
+    #[test]
+    fn model_dimensions_fallback() {
+        // Unknown models should fallback to 768
+        assert_eq!(
+            SemanticSearchConfig::default_dim_for_model("my-custom-model"),
+            768
+        );
+        assert_eq!(SemanticSearchConfig::default_dim_for_model(""), 768);
+    }
+
+    #[test]
     fn validation_disabled_embeddings() {
         let config = SemanticSearchConfig::default();
         assert!(config.is_valid_for_embeddings().is_err());
+    }
+
+    #[test]
+    fn validation_disabled_embeddings_error_message() {
+        let config = SemanticSearchConfig::default();
+        let err = config.is_valid_for_embeddings().unwrap_err();
+        assert!(err.contains("disabled"));
+        assert!(err.contains("EMBEDDINGS_ENABLED"));
     }
 
     #[test]
@@ -208,6 +261,20 @@ mod tests {
     }
 
     #[test]
+    fn validation_unknown_provider_error_message() {
+        let config = SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "invalid_provider".into(),
+            ..Default::default()
+        };
+        let err = config.is_valid_for_embeddings().unwrap_err();
+        assert!(err.contains("Unknown"));
+        assert!(err.contains("invalid_provider"));
+        assert!(err.contains("ollama"));
+        assert!(err.contains("mock"));
+    }
+
+    #[test]
     fn validation_rag_requires_embeddings() {
         let config = SemanticSearchConfig {
             embeddings_enabled: false,
@@ -215,5 +282,84 @@ mod tests {
             ..Default::default()
         };
         assert!(config.is_valid_for_rag().is_err());
+    }
+
+    #[test]
+    fn validation_rag_disabled_error() {
+        let config = SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "mock".into(),
+            rag_enabled: false,
+            ..Default::default()
+        };
+        let err = config.is_valid_for_rag().unwrap_err();
+        assert!(err.contains("disabled"));
+        assert!(err.contains("RAG_ENABLED"));
+    }
+
+    #[test]
+    fn validation_rag_valid() {
+        let config = SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "mock".into(),
+            rag_enabled: true,
+            ..Default::default()
+        };
+        assert!(config.is_valid_for_rag().is_ok());
+    }
+
+    #[test]
+    fn config_clone() {
+        let config = SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "mock".into(),
+            embedding_model: "custom".into(),
+            embedding_dim: 512,
+            ollama_url: "http://custom:8080".into(),
+            rag_enabled: true,
+            rag_model: "custom-llm".into(),
+            rag_max_tokens: 2048,
+            rag_top_k: 20,
+        };
+
+        let cloned = config.clone();
+        assert_eq!(cloned.embeddings_enabled, config.embeddings_enabled);
+        assert_eq!(cloned.embedding_provider, config.embedding_provider);
+        assert_eq!(cloned.embedding_model, config.embedding_model);
+        assert_eq!(cloned.embedding_dim, config.embedding_dim);
+        assert_eq!(cloned.ollama_url, config.ollama_url);
+        assert_eq!(cloned.rag_enabled, config.rag_enabled);
+        assert_eq!(cloned.rag_model, config.rag_model);
+        assert_eq!(cloned.rag_max_tokens, config.rag_max_tokens);
+        assert_eq!(cloned.rag_top_k, config.rag_top_k);
+    }
+
+    #[test]
+    fn config_debug_format() {
+        let config = SemanticSearchConfig::default();
+        let debug = format!("{:?}", config);
+        assert!(debug.contains("SemanticSearchConfig"));
+        assert!(debug.contains("embeddings_enabled"));
+        assert!(debug.contains("embedding_provider"));
+    }
+
+    #[test]
+    fn config_custom_values() {
+        let config = SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "ollama".into(),
+            embedding_model: "mxbai-embed-large".into(),
+            embedding_dim: 1024,
+            ollama_url: "http://gpu-server:11434".into(),
+            rag_enabled: true,
+            rag_model: "llama3.2:70b".into(),
+            rag_max_tokens: 4096,
+            rag_top_k: 15,
+        };
+
+        assert!(config.embeddings_enabled);
+        assert_eq!(config.embedding_dim, 1024);
+        assert_eq!(config.rag_max_tokens, 4096);
+        assert_eq!(config.rag_top_k, 15);
     }
 }

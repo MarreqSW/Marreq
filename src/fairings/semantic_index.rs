@@ -140,3 +140,83 @@ async fn background_queue_processor(state: &'static AppState<DieselCachedRepo>) 
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn queue_process_interval_is_reasonable() {
+        // Interval should be at least 10 seconds to avoid hammering the DB
+        assert!(QUEUE_PROCESS_INTERVAL.as_secs() >= 10);
+        // And not more than 5 minutes to keep things responsive
+        assert!(QUEUE_PROCESS_INTERVAL.as_secs() <= 300);
+    }
+
+    #[test]
+    fn queue_batch_size_is_reasonable() {
+        // Batch size should be at least 1
+        assert!(QUEUE_BATCH_SIZE >= 1);
+        // And not too large to avoid long-running operations
+        assert!(QUEUE_BATCH_SIZE <= 1000);
+    }
+
+    #[test]
+    fn fairing_info() {
+        let fairing = SemanticIndexFairing;
+        let info = fairing.info();
+        assert_eq!(info.name, "Semantic Index Manager");
+        assert!(info.kind.is(Kind::Liftoff));
+    }
+
+    #[test]
+    fn fairing_kind_is_liftoff_only() {
+        let fairing = SemanticIndexFairing;
+        let info = fairing.info();
+        // Should only be Liftoff, not Request or Response
+        assert!(info.kind.is(Kind::Liftoff));
+    }
+
+    #[test]
+    fn constants_match_expected_values() {
+        assert_eq!(QUEUE_PROCESS_INTERVAL, Duration::from_secs(60));
+        assert_eq!(QUEUE_BATCH_SIZE, 50);
+    }
+
+    #[test]
+    fn semantic_search_config_accessible() {
+        // Verify global config is accessible
+        let config = SemanticSearchConfig::global();
+        // Just verify it doesn't panic
+        let _ = config.embeddings_enabled;
+        let _ = config.rag_enabled;
+    }
+
+    #[test]
+    fn config_embeddings_disabled_by_default() {
+        // In test environment without env vars, embeddings should be disabled
+        let config = SemanticSearchConfig::default();
+        assert!(!config.embeddings_enabled);
+    }
+
+    #[test]
+    fn indexing_service_requires_config() {
+        // Verify the service respects configuration
+        let config = SemanticSearchConfig {
+            embeddings_enabled: false,
+            ..Default::default()
+        };
+        assert!(!config.embeddings_enabled);
+        assert!(config.is_valid_for_embeddings().is_err());
+    }
+
+    #[test]
+    fn indexing_service_enabled_with_mock() {
+        let config = SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "mock".into(),
+            ..Default::default()
+        };
+        assert!(config.is_valid_for_embeddings().is_ok());
+    }
+}

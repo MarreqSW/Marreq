@@ -345,7 +345,8 @@ mod tests {
                 import_type: "tests".to_string(),
             };
             let fields = importer.get_available_fields();
-            assert_eq!(fields.len(), 5);
+            assert_eq!(fields.len(), 6);
+            assert!(fields.contains(&"reference_code".to_string()));
             assert!(fields.contains(&"name".to_string()));
             assert!(fields.contains(&"description".to_string()));
             assert!(fields.contains(&"status_id".to_string()));

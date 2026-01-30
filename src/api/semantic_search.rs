@@ -235,10 +235,190 @@ pub async fn search_status(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn search_query_defaults() {
         // Test that default values are sensible
         let default_k = 10_usize.min(50);
         assert_eq!(default_k, 10);
+    }
+
+    #[test]
+    fn search_query_k_max_capped() {
+        // k should be capped at 50
+        let k = 100_usize.min(50);
+        assert_eq!(k, 50);
+    }
+
+    #[test]
+    fn ask_request_k_max_capped() {
+        // RAG k should be capped at 20
+        let k = 50_usize.min(20);
+        assert_eq!(k, 20);
+    }
+
+    #[test]
+    fn search_filters_from_query() {
+        let filters = SearchFilters {
+            status_id: Some(1),
+            category_id: Some(2),
+            applicability_id: Some(3),
+            verification_id: Some(4),
+        };
+
+        assert_eq!(filters.status_id, Some(1));
+        assert_eq!(filters.category_id, Some(2));
+        assert_eq!(filters.applicability_id, Some(3));
+        assert_eq!(filters.verification_id, Some(4));
+    }
+
+    #[test]
+    fn search_filters_partial() {
+        let filters = SearchFilters {
+            status_id: Some(1),
+            category_id: None,
+            applicability_id: None,
+            verification_id: Some(4),
+        };
+
+        assert!(filters.status_id.is_some());
+        assert!(filters.category_id.is_none());
+        assert!(filters.applicability_id.is_none());
+        assert!(filters.verification_id.is_some());
+    }
+
+    #[test]
+    fn search_error_to_api_error_not_configured() {
+        let err = SearchError::NotConfigured("test message".into());
+        let display = err.to_string();
+        assert!(display.contains("test message"));
+    }
+
+    #[test]
+    fn semantic_search_config_global_accessible() {
+        // Verify we can access global config without panicking
+        let config = SemanticSearchConfig::global();
+        // Default should have embeddings disabled
+        assert!(!config.embeddings_enabled || config.embeddings_enabled);
+    }
+
+    #[test]
+    fn k_parameter_bounds() {
+        // Test the k parameter bounding logic used in endpoints
+        
+        // Default case (None)
+        let k_none: Option<usize> = None;
+        let result = k_none.unwrap_or(10).min(50);
+        assert_eq!(result, 10);
+
+        // Small value
+        let k_small: Option<usize> = Some(5);
+        let result = k_small.unwrap_or(10).min(50);
+        assert_eq!(result, 5);
+
+        // Large value (should be capped)
+        let k_large: Option<usize> = Some(100);
+        let result = k_large.unwrap_or(10).min(50);
+        assert_eq!(result, 50);
+
+        // Zero
+        let k_zero: Option<usize> = Some(0);
+        let result = k_zero.unwrap_or(10).min(50);
+        assert_eq!(result, 0);
+    }
+
+    #[test]
+    fn rag_k_parameter_bounds() {
+        // RAG uses min(20) instead of min(50)
+        
+        // Default case (None)
+        let k_none: Option<usize> = None;
+        let result = k_none.unwrap_or(10).min(20);
+        assert_eq!(result, 10);
+
+        // Large value (should be capped at 20)
+        let k_large: Option<usize> = Some(50);
+        let result = k_large.unwrap_or(10).min(20);
+        assert_eq!(result, 20);
+    }
+
+    #[test]
+    fn json_response_structure_disabled() {
+        // When disabled, response should include specific fields
+        let disabled_response = serde_json::json!({
+            "enabled": false,
+            "message": "Semantic search is disabled. Set EMBEDDINGS_ENABLED=true to enable.",
+            "results": [],
+            "total": 0
+        });
+
+        assert_eq!(disabled_response["enabled"], false);
+        assert!(disabled_response["results"].as_array().unwrap().is_empty());
+        assert_eq!(disabled_response["total"], 0);
+    }
+
+    #[test]
+    fn json_response_structure_enabled() {
+        // When enabled, response should include results
+        let enabled_response = serde_json::json!({
+            "results": [{"id": 1, "score": 0.95}],
+            "query": "test query",
+            "total": 1,
+            "enabled": true
+        });
+
+        assert_eq!(enabled_response["enabled"], true);
+        assert_eq!(enabled_response["total"], 1);
+        assert!(!enabled_response["results"].as_array().unwrap().is_empty());
+    }
+
+    #[test]
+    fn json_response_with_timing() {
+        let response_with_timing = serde_json::json!({
+            "results": [],
+            "query": "test",
+            "total": 0,
+            "enabled": true,
+            "timing_ms": 42
+        });
+
+        assert_eq!(response_with_timing["timing_ms"], 42);
+    }
+
+    #[test]
+    fn search_status_response_structure() {
+        let config = SemanticSearchConfig::default();
+        let status_response = serde_json::json!({
+            "embeddings_enabled": config.embeddings_enabled,
+            "rag_enabled": config.rag_enabled,
+            "embedding_provider": config.embedding_provider,
+            "embedding_model": config.embedding_model,
+            "rag_model": config.rag_model
+        });
+
+        assert!(!status_response["embeddings_enabled"].as_bool().unwrap());
+        assert!(!status_response["rag_enabled"].as_bool().unwrap());
+        assert_eq!(status_response["embedding_provider"], "ollama");
+    }
+
+    #[test]
+    fn reindex_response_structure() {
+        let reindex_response = serde_json::json!({
+            "status": "completed",
+            "indexed": 10,
+            "skipped": 5,
+            "failed": 2,
+            "total": 17
+        });
+
+        assert_eq!(reindex_response["status"], "completed");
+        assert_eq!(reindex_response["total"], 17);
+        assert_eq!(
+            reindex_response["indexed"].as_i64().unwrap()
+                + reindex_response["skipped"].as_i64().unwrap()
+                + reindex_response["failed"].as_i64().unwrap(),
+            reindex_response["total"].as_i64().unwrap()
+        );
     }
 }

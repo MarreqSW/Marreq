@@ -6,7 +6,11 @@ use std::path::Path;
 /// Queue imported requirements for semantic search indexing.
 ///
 /// This is a best-effort operation - failures are logged but don't affect the import.
-fn queue_requirements_for_indexing(state: &State<AppState>, project_id: i32, requirement_ids: &[i32]) {
+fn queue_requirements_for_indexing(
+    state: &State<AppState>,
+    project_id: i32,
+    requirement_ids: &[i32],
+) {
     let config = SemanticSearchConfig::global();
     if !config.embeddings_enabled || requirement_ids.is_empty() {
         return;
@@ -15,7 +19,10 @@ fn queue_requirements_for_indexing(state: &State<AppState>, project_id: i32, req
     let indexing_service = IndexingService::new(state.inner());
     let mut queued = 0;
     for &req_id in requirement_ids {
-        if indexing_service.queue_for_indexing(req_id, project_id).is_ok() {
+        if indexing_service
+            .queue_for_indexing(req_id, project_id)
+            .is_ok()
+        {
             queued += 1;
         }
     }
@@ -141,25 +148,25 @@ pub async fn upload_excel_file(
         ))));
     }
 
-    let temp_path = format!("/tmp/upload_{}.{}", chrono::Utc::now().timestamp(), extension);
-    upload
-        .persist_to(&temp_path)
-        .await
-        .map_err(|_| {
-            Redirect::to(uri!(import_excel_page(
-                project_id = project_id,
-                error = Some("Failed to store upload. Please try again.".to_string())
-            )))
-        })?;
+    let temp_path = format!(
+        "/tmp/upload_{}.{}",
+        chrono::Utc::now().timestamp(),
+        extension
+    );
+    upload.persist_to(&temp_path).await.map_err(|_| {
+        Redirect::to(uri!(import_excel_page(
+            project_id = project_id,
+            error = Some("Failed to store upload. Please try again.".to_string())
+        )))
+    })?;
 
     // Parse Excel file
-    let importer = crate::importers::excel::ExcelImporter::new(&temp_path)
-        .map_err(|e| {
-            Redirect::to(uri!(import_excel_page(
-                project_id = project_id,
-                error = Some(format!("Failed to parse file: {}", e))
-            )))
-        })?;
+    let importer = crate::importers::excel::ExcelImporter::new(&temp_path).map_err(|e| {
+        Redirect::to(uri!(import_excel_page(
+            project_id = project_id,
+            error = Some(format!("Failed to parse file: {}", e))
+        )))
+    })?;
 
     // Create HTML for column mapping
     let _columns_html = importer
@@ -345,7 +352,11 @@ pub fn process_excel_import(
             state.repo_read().cache().clear();
 
             // Queue imported requirements for semantic search indexing
-            queue_requirements_for_indexing(state, project_id, &import_result.imported_requirement_ids);
+            queue_requirements_for_indexing(
+                state,
+                project_id,
+                &import_result.imported_requirement_ids,
+            );
 
             // Get project name for display
             let name = get_project_by_id_pooled_safe(state, project_id).name;
@@ -389,7 +400,11 @@ pub fn process_excel_import(
             </body>
             </html>
             "#,
-                import_result.imported_count, mapping_data.import_type, name, project_id, project_id
+                import_result.imported_count,
+                mapping_data.import_type,
+                name,
+                project_id,
+                project_id
             )
         }
         Err(e) => {

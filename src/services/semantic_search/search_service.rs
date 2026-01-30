@@ -45,7 +45,10 @@ impl<'a> SemanticSearchService<'a> {
     }
 
     /// Create with custom configuration.
-    pub fn with_config(state: &'a AppState<DieselCachedRepo>, config: SemanticSearchConfig) -> Self {
+    pub fn with_config(
+        state: &'a AppState<DieselCachedRepo>,
+        config: SemanticSearchConfig,
+    ) -> Self {
         Self { state, config }
     }
 
@@ -84,7 +87,8 @@ impl<'a> SemanticSearchService<'a> {
 
         // Perform vector search if embeddings are enabled
         let vector_results = if self.is_enabled() {
-            self.vector_search(project_id, query, filters, k * 2).await?
+            self.vector_search(project_id, query, filters, k * 2)
+                .await?
         } else {
             vec![]
         };
@@ -190,7 +194,10 @@ impl<'a> SemanticSearchService<'a> {
 
         // Build OR-based tsquery for better recall with natural language questions
         // Extract meaningful words (skip common stop words and short terms)
-        let stop_words = ["does", "is", "are", "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for"];
+        let stop_words = [
+            "does", "is", "are", "the", "a", "an", "and", "or", "but", "in", "on", "at", "to",
+            "for",
+        ];
         let ts_query: String = query
             .split_whitespace()
             .filter(|w| w.len() > 2) // Skip very short words
@@ -301,7 +308,10 @@ impl<'a> SemanticSearchService<'a> {
     ) -> Result<Vec<(i32, f32)>, SearchError> {
         // Generate query embedding
         let provider = create_embedding_provider(&self.config).map_err(SearchError::Embedding)?;
-        let query_embedding = provider.embed(query).await.map_err(SearchError::Embedding)?;
+        let query_embedding = provider
+            .embed(query)
+            .await
+            .map_err(SearchError::Embedding)?;
 
         let repo = self.state.repo_read();
         let mut conn = repo.inner_repo().get_conn().map_err(SearchError::Repo)?;

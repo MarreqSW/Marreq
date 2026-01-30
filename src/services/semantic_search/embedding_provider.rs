@@ -193,12 +193,12 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
         if !response.status().is_success() {
             let status = response.status();
             let text = response.text().await.unwrap_or_default();
-            
+
             // Check for model not found in error message
             if text.contains("not found") || text.contains("pull") {
                 return Err(EmbeddingError::ModelNotFound(self.model.clone()));
             }
-            
+
             return Err(EmbeddingError::ApiError(format!(
                 "HTTP {}: {}",
                 status, text
@@ -225,7 +225,9 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
                 .collect();
 
             if embedding.is_empty() {
-                return Err(EmbeddingError::InvalidResponse("Empty embedding returned".into()));
+                return Err(EmbeddingError::InvalidResponse(
+                    "Empty embedding returned".into(),
+                ));
             }
 
             embeddings.push(embedding);
@@ -280,7 +282,10 @@ mod tests {
         let emb1 = provider.embed("First text").unwrap();
         let emb2 = provider.embed("Second text").unwrap();
 
-        assert_ne!(emb1, emb2, "Different texts should produce different embeddings");
+        assert_ne!(
+            emb1, emb2,
+            "Different texts should produce different embeddings"
+        );
     }
 
     #[test]
@@ -295,7 +300,11 @@ mod tests {
     #[test]
     fn mock_provider_batch() {
         let provider = MockEmbeddingProvider::new(768);
-        let texts = vec!["First".to_string(), "Second".to_string(), "Third".to_string()];
+        let texts = vec![
+            "First".to_string(),
+            "Second".to_string(),
+            "Third".to_string(),
+        ];
 
         let results = provider.embed_batch(&texts).unwrap();
         assert_eq!(results.len(), 3);

@@ -55,8 +55,7 @@ impl SemanticSearchConfig {
             .map(|v| v.to_lowercase() == "true" || v == "1")
             .unwrap_or(false);
 
-        let embedding_provider =
-            env::var("EMBEDDING_PROVIDER").unwrap_or_else(|_| "ollama".into());
+        let embedding_provider = env::var("EMBEDDING_PROVIDER").unwrap_or_else(|_| "ollama".into());
 
         let embedding_model =
             env::var("EMBEDDING_MODEL").unwrap_or_else(|_| "nomic-embed-text".into());
@@ -66,8 +65,7 @@ impl SemanticSearchConfig {
             .and_then(|v| v.parse().ok())
             .unwrap_or_else(|| Self::default_dim_for_model(&embedding_model));
 
-        let ollama_url =
-            env::var("OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".into());
+        let ollama_url = env::var("OLLAMA_URL").unwrap_or_else(|_| "http://localhost:11434".into());
 
         let rag_enabled = env::var("RAG_ENABLED")
             .map(|v| v.to_lowercase() == "true" || v == "1")
@@ -124,7 +122,10 @@ impl SemanticSearchConfig {
 
         match self.embedding_provider.as_str() {
             "ollama" | "mock" => Ok(()),
-            other => Err(format!("Unknown embedding provider: {}. Use 'ollama' or 'mock'.", other)),
+            other => Err(format!(
+                "Unknown embedding provider: {}. Use 'ollama' or 'mock'.",
+                other
+            )),
         }
     }
 
@@ -167,10 +168,7 @@ mod tests {
             SemanticSearchConfig::default_dim_for_model("all-minilm"),
             384
         );
-        assert_eq!(
-            SemanticSearchConfig::default_dim_for_model("unknown"),
-            768
-        );
+        assert_eq!(SemanticSearchConfig::default_dim_for_model("unknown"), 768);
     }
 
     #[test]

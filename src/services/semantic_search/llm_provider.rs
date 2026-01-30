@@ -111,10 +111,7 @@ pub fn build_rag_user_prompt(query: &str, results: &[SemanticSearchResult]) -> S
 }
 
 /// Extract citations from LLM response text.
-pub fn extract_citations(
-    response: &str,
-    results: &[SemanticSearchResult],
-) -> Vec<RagCitation> {
+pub fn extract_citations(response: &str, results: &[SemanticSearchResult]) -> Vec<RagCitation> {
     let mut citations = Vec::new();
     let mut seen_codes = std::collections::HashSet::new();
 
@@ -243,18 +240,13 @@ impl LlmProvider for OllamaLlmProvider {
             }
         });
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .map_err(|e| {
-                if e.is_connect() {
-                    LlmError::ServerNotReachable(self.base_url.clone())
-                } else {
-                    LlmError::ApiError(e.to_string())
-                }
-            })?;
+        let response = self.client.post(&url).json(&payload).send().map_err(|e| {
+            if e.is_connect() {
+                LlmError::ServerNotReachable(self.base_url.clone())
+            } else {
+                LlmError::ApiError(e.to_string())
+            }
+        })?;
 
         if response.status() == reqwest::StatusCode::NOT_FOUND {
             return Err(LlmError::ModelNotFound(self.model.clone()));

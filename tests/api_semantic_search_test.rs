@@ -1,12 +1,12 @@
+#![cfg(feature = "test-helpers")]
+
 //! Integration tests for semantic search API endpoints.
 
-use req_man::api::semantic_search;
 use req_man::app::AppState;
 use req_man::auth::session::SESSION_COOKIE;
 use req_man::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
-use rocket::routes;
 use serde_json::{json, Value};
 use std::sync::{Arc, RwLock};
 
@@ -24,16 +24,7 @@ fn state_from_repo(repo: DieselRepoMock) -> TestState {
 async fn client_with_repo(repo: DieselRepoMock) -> Client {
     let rocket = rocket::build()
         .manage(state_from_repo(repo.with_admin_user()))
-        .mount(
-            "/api",
-            routes![
-                semantic_search::semantic_search,
-                semantic_search::ask,
-                semantic_search::reindex,
-                semantic_search::index_status,
-                semantic_search::search_status,
-            ],
-        );
+        .mount("/api", req_man::api::routes());
     Client::tracked(rocket).await.unwrap()
 }
 

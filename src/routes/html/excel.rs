@@ -1,6 +1,32 @@
 use super::helpers::*;
 use super::prelude::*;
+use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
 use std::path::Path;
+
+/// Queue imported requirements for semantic search indexing.
+///
+/// This is a best-effort operation - failures are logged but don't affect the import.
+fn queue_requirements_for_indexing(state: &State<AppState>, project_id: i32, requirement_ids: &[i32]) {
+    let config = SemanticSearchConfig::global();
+    if !config.embeddings_enabled || requirement_ids.is_empty() {
+        return;
+    }
+
+    let indexing_service = IndexingService::new(state.inner());
+    let mut queued = 0;
+    for &req_id in requirement_ids {
+        if indexing_service.queue_for_indexing(req_id, project_id).is_ok() {
+            queued += 1;
+        }
+    }
+
+    if queued > 0 {
+        eprintln!(
+            "📊 Queued {} imported requirements for semantic indexing",
+            queued
+        );
+    }
+}
 
 #[get("/p/<project_id>/import_excel?<error>")]
 pub fn import_excel_page(
@@ -317,6 +343,9 @@ pub fn process_excel_import(
         Ok(import_result) => {
             // Invalidate all caches after successful import since we don't know exactly what was imported
             state.repo_read().cache().clear();
+
+            // Queue imported requirements for semantic search indexing
+            queue_requirements_for_indexing(state, project_id, &import_result.imported_requirement_ids);
 
             // Get project name for display
             let name = get_project_by_id_pooled_safe(state, project_id).name;

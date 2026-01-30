@@ -11,6 +11,7 @@ pub mod api;
 pub mod app;
 pub mod auth;
 pub mod errors;
+pub mod fairings;
 pub mod generators;
 pub mod helper_functions;
 pub mod html;

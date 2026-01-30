@@ -58,6 +58,7 @@ pub fn build() -> Rocket<Build> {
             rocket::fs::FileServer::from(rocket::fs::relative!("src/html/static")),
         )
         .attach(crate::html::cors::CorsFairing)
+        .attach(crate::fairings::SemanticIndexFairing)
         .attach(rocket_dyn_templates::Template::fairing())
         .attach(crate::app::MyDbConn::fairing())
 }

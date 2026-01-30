@@ -28,13 +28,14 @@ pub enum EmbeddingError {
 pub type EmbeddingResult<T> = Result<T, EmbeddingError>;
 
 /// Trait for embedding providers.
+#[rocket::async_trait]
 pub trait EmbeddingProvider: Send + Sync {
     /// Generate embeddings for a batch of texts.
-    fn embed_batch(&self, texts: &[String]) -> EmbeddingResult<Vec<Vec<f32>>>;
+    async fn embed_batch(&self, texts: &[String]) -> EmbeddingResult<Vec<Vec<f32>>>;
 
     /// Generate embedding for a single text.
-    fn embed(&self, text: &str) -> EmbeddingResult<Vec<f32>> {
-        let results = self.embed_batch(&[text.to_string()])?;
+    async fn embed(&self, text: &str) -> EmbeddingResult<Vec<f32>> {
+        let results = self.embed_batch(&[text.to_string()]).await?;
         results
             .into_iter()
             .next()
@@ -95,8 +96,9 @@ impl MockEmbeddingProvider {
     }
 }
 
+#[rocket::async_trait]
 impl EmbeddingProvider for MockEmbeddingProvider {
-    fn embed_batch(&self, texts: &[String]) -> EmbeddingResult<Vec<Vec<f32>>> {
+    async fn embed_batch(&self, texts: &[String]) -> EmbeddingResult<Vec<Vec<f32>>> {
         Ok(texts
             .iter()
             .map(|t| self.deterministic_embedding(t))
@@ -117,7 +119,7 @@ impl EmbeddingProvider for MockEmbeddingProvider {
 /// Connects to a local or remote Ollama server for embedding generation.
 /// See https://ollama.ai for installation instructions.
 pub struct OllamaEmbeddingProvider {
-    client: reqwest::blocking::Client,
+    client: reqwest::Client,
     base_url: String,
     model: String,
     dimension: usize,
@@ -125,7 +127,7 @@ pub struct OllamaEmbeddingProvider {
 
 impl OllamaEmbeddingProvider {
     pub fn new(config: &SemanticSearchConfig) -> EmbeddingResult<Self> {
-        let client = reqwest::blocking::Client::builder()
+        let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(120))
             .build()
             .map_err(|e| EmbeddingError::ApiError(e.to_string()))?;
@@ -143,19 +145,20 @@ impl OllamaEmbeddingProvider {
     }
 
     /// Check if the Ollama server is reachable.
-    pub fn health_check(&self) -> EmbeddingResult<()> {
+    pub async fn health_check(&self) -> EmbeddingResult<()> {
         let url = format!("{}/api/tags", self.base_url);
         self.client
             .get(&url)
             .timeout(std::time::Duration::from_secs(5))
             .send()
+            .await
             .map_err(|_| EmbeddingError::ServerNotReachable(self.base_url.clone()))?;
         Ok(())
     }
 }
-
+#[rocket::async_trait]
 impl EmbeddingProvider for OllamaEmbeddingProvider {
-    fn embed_batch(&self, texts: &[String]) -> EmbeddingResult<Vec<Vec<f32>>> {
+    async fn embed_batch(&self, texts: &[String]) -> EmbeddingResult<Vec<Vec<f32>>> {
         if texts.is_empty() {
             return Ok(vec![]);
         }
@@ -174,6 +177,7 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
             .post(&url)
             .json(&payload)
             .send()
+            .await
             .map_err(|e| {
                 if e.is_connect() {
                     EmbeddingError::ServerNotReachable(self.base_url.clone())
@@ -188,7 +192,7 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
 
         if !response.status().is_success() {
             let status = response.status();
-            let text = response.text().unwrap_or_default();
+            let text = response.text().await.unwrap_or_default();
             
             // Check for model not found in error message
             if text.contains("not found") || text.contains("pull") {
@@ -203,6 +207,7 @@ impl EmbeddingProvider for OllamaEmbeddingProvider {
 
         let body: serde_json::Value = response
             .json()
+            .await
             .map_err(|e| EmbeddingError::InvalidResponse(e.to_string()))?;
 
         // Ollama returns embeddings array directly

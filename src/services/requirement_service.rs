@@ -3,12 +3,16 @@
 //! The service is intentionally lightweight and wraps repository calls with
 //! validation and logging so that route handlers can remain focused on HTTP
 //! concerns.
+//!
+//! When semantic search is enabled, requirements are automatically queued for
+//! embedding generation on create/update operations.
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
 use crate::models::{NewRequirement, Requirement, TestCase, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository};
+use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
 
 /// High level operations for requirements backed by the shared [`AppState`].
@@ -67,19 +71,25 @@ impl<'a> RequirementService<'a> {
     }
 
     /// Create a new requirement entry and log the action.
+    ///
+    /// If semantic search is enabled, the requirement is queued for embedding generation.
     pub fn create(&self, actor: &User, mut payload: NewRequirement) -> Result<i32, RepoError> {
         self.prepare_payload(&mut payload)?;
 
+        let project_id = payload.project_id;
         let id = {
             let mut repo = self.repo_write();
             repo.insert_new_requirement(&payload)?
         };
 
         self.log_created(actor, id, &payload);
+        self.queue_for_indexing(id, project_id);
         Ok(id)
     }
 
     /// Update an existing requirement entry and log the change.
+    ///
+    /// If semantic search is enabled, the requirement is queued for re-embedding.
     pub fn update(
         &self,
         actor: &User,
@@ -101,6 +111,7 @@ impl<'a> RequirementService<'a> {
 
         let after = self.get_by_id(id)?;
         self.log_updated(actor, &before, &after);
+        self.queue_for_indexing(id, after.project_id);
         Ok(after)
     }
 
@@ -169,6 +180,26 @@ impl<'a> RequirementService<'a> {
 
     fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
         self.state.repo_read().inner_repo().get_conn()
+    }
+
+    /// Queue a requirement for semantic search indexing if enabled.
+    ///
+    /// This is a best-effort operation; failures are logged but don't affect
+    /// the main CRUD operation.
+    fn queue_for_indexing(&self, requirement_id: i32, project_id: i32) {
+        let config = SemanticSearchConfig::global();
+        if !config.embeddings_enabled {
+            return;
+        }
+
+        let indexing_service = IndexingService::new(self.state);
+        if let Err(e) = indexing_service.queue_for_indexing(requirement_id, project_id) {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "Failed to queue requirement {} for indexing: {}",
+                requirement_id, e
+            );
+        }
     }
 
     fn log_created(&self, actor: &User, id: i32, entity: &NewRequirement) {

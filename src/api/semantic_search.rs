@@ -85,13 +85,16 @@ pub async fn semantic_search(
     let results = service
         .search(project_id, &query.q, &filters, k)
         .await
-        .map_err(|e| match e {
-            SearchError::Repo(repo_err) => ApiError::from(repo_err),
-            SearchError::Embedding(emb_err) => {
-                ApiError::Internal(format!("Embedding error: {}", emb_err))
+        .map_err(|e| {
+            eprintln!("❌ Semantic search error: {:?}", e);
+            match e {
+                SearchError::Repo(repo_err) => ApiError::from(repo_err),
+                SearchError::Embedding(emb_err) => {
+                    ApiError::Internal(format!("Embedding error: {}", emb_err))
+                }
+                SearchError::Llm(llm_err) => ApiError::Internal(format!("LLM error: {}", llm_err)),
+                SearchError::NotConfigured(msg) => ApiError::BadRequest(msg),
             }
-            SearchError::Llm(llm_err) => ApiError::Internal(format!("LLM error: {}", llm_err)),
-            SearchError::NotConfigured(msg) => ApiError::BadRequest(msg),
         })?;
 
     let total = results.len();
@@ -306,7 +309,7 @@ mod tests {
     #[test]
     fn k_parameter_bounds() {
         // Test the k parameter bounding logic used in endpoints
-        
+
         // Default case (None)
         let k_none: Option<usize> = None;
         let result = k_none.unwrap_or(10).min(50);
@@ -331,7 +334,7 @@ mod tests {
     #[test]
     fn rag_k_parameter_bounds() {
         // RAG uses min(20) instead of min(50)
-        
+
         // Default case (None)
         let k_none: Option<usize> = None;
         let result = k_none.unwrap_or(10).min(20);

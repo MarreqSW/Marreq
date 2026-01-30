@@ -196,10 +196,7 @@ mod tests {
 
     #[test]
     fn model_dimensions_bge() {
-        assert_eq!(
-            SemanticSearchConfig::default_dim_for_model("bge-m3"),
-            1024
-        );
+        assert_eq!(SemanticSearchConfig::default_dim_for_model("bge-m3"), 1024);
         assert_eq!(
             SemanticSearchConfig::default_dim_for_model("bge-large"),
             1024

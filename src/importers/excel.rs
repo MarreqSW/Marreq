@@ -1,4 +1,6 @@
-use crate::models::{NewApplicability, NewCategory, NewRequirement, NewTestCase, NewVerificationMethod};
+use crate::models::{
+    NewApplicability, NewCategory, NewRequirement, NewTestCase, NewVerificationMethod,
+};
 use crate::repository::{
     DieselRepo, LookupRepository, RequirementsRepository, TestsCaseRepository, UserRepository,
 };
@@ -307,11 +309,12 @@ impl ExcelImporter {
             1 // Default status
         };
 
-        let verification_method_id = if let Some(verification_name) = req_data.get("verification_method_id") {
-            self.resolve_verification_id(verification_name, project_id)?
-        } else {
-            1 // Default verification
-        };
+        let verification_method_id =
+            if let Some(verification_name) = req_data.get("verification_method_id") {
+                self.resolve_verification_id(verification_name, project_id)?
+            } else {
+                1 // Default verification
+            };
 
         let author_id = if let Some(author_name) = req_data.get("author_id") {
             self.resolve_user_id(author_name, project_id, conn)?

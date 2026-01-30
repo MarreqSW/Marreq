@@ -58,9 +58,10 @@ impl ChatMessage {
 }
 
 /// Trait for LLM providers.
+#[rocket::async_trait]
 pub trait LlmProvider: Send + Sync {
     /// Generate a chat completion.
-    fn chat(&self, messages: &[ChatMessage], max_tokens: u32) -> LlmResult<String>;
+    async fn chat(&self, messages: &[ChatMessage], max_tokens: u32) -> LlmResult<String>;
 
     /// Get the model name.
     fn model_name(&self) -> &str;
@@ -157,8 +158,9 @@ impl Default for MockLlmProvider {
     }
 }
 
+#[rocket::async_trait]
 impl LlmProvider for MockLlmProvider {
-    fn chat(&self, messages: &[ChatMessage], _max_tokens: u32) -> LlmResult<String> {
+    async fn chat(&self, messages: &[ChatMessage], _max_tokens: u32) -> LlmResult<String> {
         // Extract the user message to find requirements context
         let empty = String::new();
         let user_msg = messages
@@ -206,14 +208,14 @@ impl LlmProvider for MockLlmProvider {
 ///
 /// Connects to a local or remote Ollama server for chat completions.
 pub struct OllamaLlmProvider {
-    client: reqwest::blocking::Client,
+    client: reqwest::Client,
     base_url: String,
     model: String,
 }
 
 impl OllamaLlmProvider {
     pub fn new(config: &SemanticSearchConfig) -> LlmResult<Self> {
-        let client = reqwest::blocking::Client::builder()
+        let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(300)) // LLM can be slow
             .build()
             .map_err(|e| LlmError::ApiError(e.to_string()))?;
@@ -226,8 +228,9 @@ impl OllamaLlmProvider {
     }
 }
 
+#[rocket::async_trait]
 impl LlmProvider for OllamaLlmProvider {
-    fn chat(&self, messages: &[ChatMessage], max_tokens: u32) -> LlmResult<String> {
+    async fn chat(&self, messages: &[ChatMessage], max_tokens: u32) -> LlmResult<String> {
         let url = format!("{}/api/chat", self.base_url);
 
         let payload = serde_json::json!({
@@ -240,13 +243,19 @@ impl LlmProvider for OllamaLlmProvider {
             }
         });
 
-        let response = self.client.post(&url).json(&payload).send().map_err(|e| {
-            if e.is_connect() {
-                LlmError::ServerNotReachable(self.base_url.clone())
-            } else {
-                LlmError::ApiError(e.to_string())
-            }
-        })?;
+        let response = self
+            .client
+            .post(&url)
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| {
+                if e.is_connect() {
+                    LlmError::ServerNotReachable(self.base_url.clone())
+                } else {
+                    LlmError::ApiError(e.to_string())
+                }
+            })?;
 
         if response.status() == reqwest::StatusCode::NOT_FOUND {
             return Err(LlmError::ModelNotFound(self.model.clone()));
@@ -254,7 +263,7 @@ impl LlmProvider for OllamaLlmProvider {
 
         if !response.status().is_success() {
             let status = response.status();
-            let text = response.text().unwrap_or_default();
+            let text = response.text().await.unwrap_or_default();
 
             if text.contains("not found") || text.contains("pull") {
                 return Err(LlmError::ModelNotFound(self.model.clone()));
@@ -265,6 +274,7 @@ impl LlmProvider for OllamaLlmProvider {
 
         let body: serde_json::Value = response
             .json()
+            .await
             .map_err(|e| LlmError::InvalidResponse(e.to_string()))?;
 
         let content = body
@@ -294,53 +304,53 @@ pub fn create_llm_provider(config: &SemanticSearchConfig) -> LlmResult<Box<dyn L
 mod tests {
     use super::*;
 
-    #[test]
-    fn mock_provider_generates_response() {
+    #[tokio::test]
+    async fn mock_provider_generates_response() {
         let provider = MockLlmProvider::new();
         let messages = vec![
             ChatMessage::system("You are a helpful assistant."),
             ChatMessage::user("RELEVANT REQUIREMENTS:\n1. [REQ-001] Test requirement\n\nQUESTION: What does this do?"),
         ];
 
-        let response = provider.chat(&messages, 100).unwrap();
+        let response = provider.chat(&messages, 100).await.unwrap();
         assert!(response.contains("[REQ-001]"));
     }
 
-    #[test]
-    fn mock_provider_handles_no_context() {
+    #[tokio::test]
+    async fn mock_provider_handles_no_context() {
         let provider = MockLlmProvider::new();
         let messages = vec![
             ChatMessage::system("You are a helpful assistant."),
             ChatMessage::user("What is the meaning of life?"),
         ];
 
-        let response = provider.chat(&messages, 100).unwrap();
+        let response = provider.chat(&messages, 100).await.unwrap();
         assert!(response.contains("cannot find sufficient information"));
     }
 
-    #[test]
-    fn mock_provider_multiple_citations() {
+    #[tokio::test]
+    async fn mock_provider_multiple_citations() {
         let provider = MockLlmProvider::new();
         let messages = vec![
             ChatMessage::system("You are a helpful assistant."),
             ChatMessage::user("RELEVANT REQUIREMENTS:\n1. [REQ-001] First\n2. [REQ-002] Second\n3. [REQ-003] Third\n\nQUESTION: Compare them"),
         ];
 
-        let response = provider.chat(&messages, 100).unwrap();
+        let response = provider.chat(&messages, 100).await.unwrap();
         assert!(response.contains("[REQ-001]"));
         assert!(response.contains("[REQ-002]"));
         assert!(response.contains("[REQ-003]"));
     }
 
-    #[test]
-    fn mock_provider_limits_to_three_citations() {
+    #[tokio::test]
+    async fn mock_provider_limits_to_three_citations() {
         let provider = MockLlmProvider::new();
         let messages = vec![
             ChatMessage::system("You are a helpful assistant."),
             ChatMessage::user("RELEVANT REQUIREMENTS:\n1. [REQ-001] First\n2. [REQ-002] Second\n3. [REQ-003] Third\n4. [REQ-004] Fourth\n5. [REQ-005] Fifth\n\nQUESTION: List them"),
         ];
 
-        let response = provider.chat(&messages, 100).unwrap();
+        let response = provider.chat(&messages, 100).await.unwrap();
         // Should contain at most 3 citations
         let citation_count = response.matches("[REQ-").count();
         assert!(citation_count <= 3);
@@ -358,23 +368,21 @@ mod tests {
         assert_eq!(provider.model_name(), "mock-llm");
     }
 
-    #[test]
-    fn mock_provider_empty_messages() {
+    #[tokio::test]
+    async fn mock_provider_empty_messages() {
         let provider = MockLlmProvider::new();
         let messages: Vec<ChatMessage> = vec![];
 
-        let response = provider.chat(&messages, 100).unwrap();
+        let response = provider.chat(&messages, 100).await.unwrap();
         assert!(response.contains("cannot find sufficient information"));
     }
 
-    #[test]
-    fn mock_provider_only_system_message() {
+    #[tokio::test]
+    async fn mock_provider_only_system_message() {
         let provider = MockLlmProvider::new();
-        let messages = vec![
-            ChatMessage::system("You are a helpful assistant."),
-        ];
+        let messages = vec![ChatMessage::system("You are a helpful assistant.")];
 
-        let response = provider.chat(&messages, 100).unwrap();
+        let response = provider.chat(&messages, 100).await.unwrap();
         assert!(response.contains("cannot find sufficient information"));
     }
 
@@ -621,7 +629,7 @@ mod tests {
     #[test]
     fn build_rag_system_prompt_content() {
         let prompt = build_rag_system_prompt();
-        
+
         // Check key instructions are present
         assert!(prompt.contains("ONLY the provided requirements"));
         assert!(prompt.contains("square brackets"));
@@ -672,17 +680,17 @@ mod tests {
         ];
 
         let user = build_rag_user_prompt("Compare these requirements", &results);
-        
+
         // Check numbering
         assert!(user.contains("1. [REQ-001]"));
         assert!(user.contains("2. [REQ-002]"));
-        
+
         // Check content
         assert!(user.contains("First Requirement"));
         assert!(user.contains("Second Requirement"));
         assert!(user.contains("First description"));
         assert!(user.contains("Second description"));
-        
+
         // Check metadata
         assert!(user.contains("Active"));
         assert!(user.contains("Functional"));

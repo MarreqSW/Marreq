@@ -755,7 +755,7 @@ mod tests {
             similarity: 0.95,
         };
         assert_eq!(result.id, 42);
-        assert!((result.similarity - 0.95).abs() < f32::EPSILON);
+        assert!((result.similarity - 0.95).abs() < f64::EPSILON);
     }
 
     // Tests for calculate_rrf_score

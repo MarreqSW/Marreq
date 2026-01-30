@@ -310,6 +310,87 @@ mod tests {
         assert_eq!(results.len(), 3);
     }
 
+    #[tokio::test]
+    async fn mock_provider_empty_batch() {
+        let provider = MockEmbeddingProvider::new(768);
+        let texts: Vec<String> = vec![];
+
+        let results = provider.embed_batch(&texts).await.unwrap();
+        assert_eq!(results.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn mock_provider_single_batch() {
+        let provider = MockEmbeddingProvider::new(768);
+        let texts = vec!["Single text".to_string()];
+
+        let results = provider.embed_batch(&texts).await.unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].len(), 768);
+    }
+
+    #[tokio::test]
+    async fn mock_provider_different_dimensions() {
+        let provider_384 = MockEmbeddingProvider::new(384);
+        let provider_1024 = MockEmbeddingProvider::new(1024);
+
+        let emb_384 = provider_384.embed("Test").await.unwrap();
+        let emb_1024 = provider_1024.embed("Test").await.unwrap();
+
+        assert_eq!(emb_384.len(), 384);
+        assert_eq!(emb_1024.len(), 1024);
+        assert_eq!(provider_384.dimension(), 384);
+        assert_eq!(provider_1024.dimension(), 1024);
+    }
+
+    #[tokio::test]
+    async fn mock_provider_model_name() {
+        let provider = MockEmbeddingProvider::new(768);
+        assert_eq!(provider.model_name(), "mock");
+    }
+
+    #[tokio::test]
+    async fn mock_provider_consistent_across_batches() {
+        let provider = MockEmbeddingProvider::new(768);
+        
+        // Single embed
+        let single = provider.embed("Test text").await.unwrap();
+        
+        // Batch embed with same text
+        let batch = provider.embed_batch(&["Test text".to_string()]).await.unwrap();
+        
+        assert_eq!(single, batch[0], "Single and batch should produce same embedding");
+    }
+
+    #[tokio::test]
+    async fn mock_provider_unicode_text() {
+        let provider = MockEmbeddingProvider::new(768);
+        let emb = provider.embed("日本語テスト 🚀 émojis").await.unwrap();
+        
+        assert_eq!(emb.len(), 768);
+        let norm: f32 = emb.iter().map(|x| x * x).sum::<f32>().sqrt();
+        assert!((norm - 1.0).abs() < 0.001);
+    }
+
+    #[tokio::test]
+    async fn mock_provider_empty_text() {
+        let provider = MockEmbeddingProvider::new(768);
+        let emb = provider.embed("").await.unwrap();
+        
+        assert_eq!(emb.len(), 768);
+    }
+
+    #[tokio::test]
+    async fn mock_provider_very_long_text() {
+        let provider = MockEmbeddingProvider::new(768);
+        let long_text = "a".repeat(100_000);
+        let emb = provider.embed(&long_text).await.unwrap();
+        
+        assert_eq!(emb.len(), 768);
+        let norm: f32 = emb.iter().map(|x| x * x).sum::<f32>().sqrt();
+        assert!((norm - 1.0).abs() < 0.001);
+    }
+
     #[test]
     fn create_mock_provider() {
         let config = SemanticSearchConfig {
@@ -324,6 +405,18 @@ mod tests {
     }
 
     #[test]
+    fn create_mock_provider_custom_dimension() {
+        let config = SemanticSearchConfig {
+            embedding_provider: "mock".into(),
+            embedding_dim: 384,
+            ..Default::default()
+        };
+
+        let provider = create_embedding_provider(&config).unwrap();
+        assert_eq!(provider.dimension(), 384);
+    }
+
+    #[test]
     fn create_unknown_provider_fails() {
         let config = SemanticSearchConfig {
             embedding_provider: "unknown".into(),
@@ -332,6 +425,14 @@ mod tests {
 
         let result = create_embedding_provider(&config);
         assert!(result.is_err());
+        
+        match result {
+            Err(err) => {
+                assert!(matches!(err, EmbeddingError::NotConfigured(_)));
+                assert!(err.to_string().contains("unknown"));
+            }
+            Ok(_) => panic!("Expected error but got Ok"),
+        }
     }
 
     #[test]
@@ -348,5 +449,109 @@ mod tests {
         let provider = create_embedding_provider(&config).unwrap();
         assert_eq!(provider.model_name(), "nomic-embed-text");
         assert_eq!(provider.dimension(), 768);
+    }
+
+    #[test]
+    fn embedding_error_not_configured_display() {
+        let err = EmbeddingError::NotConfigured("test message".into());
+        let display = err.to_string();
+        assert!(display.contains("not configured"));
+        assert!(display.contains("test message"));
+    }
+
+    #[test]
+    fn embedding_error_api_error_display() {
+        let err = EmbeddingError::ApiError("connection failed".into());
+        let display = err.to_string();
+        assert!(display.contains("API request failed"));
+        assert!(display.contains("connection failed"));
+    }
+
+    #[test]
+    fn embedding_error_invalid_response_display() {
+        let err = EmbeddingError::InvalidResponse("missing field".into());
+        let display = err.to_string();
+        assert!(display.contains("Invalid response"));
+        assert!(display.contains("missing field"));
+    }
+
+    #[test]
+    fn embedding_error_model_not_found_display() {
+        let err = EmbeddingError::ModelNotFound("nomic-embed-text".into());
+        let display = err.to_string();
+        assert!(display.contains("Model not found"));
+        assert!(display.contains("nomic-embed-text"));
+        assert!(display.contains("ollama pull"));
+    }
+
+    #[test]
+    fn embedding_error_server_not_reachable_display() {
+        let err = EmbeddingError::ServerNotReachable("http://localhost:11434".into());
+        let display = err.to_string();
+        assert!(display.contains("not reachable"));
+        assert!(display.contains("http://localhost:11434"));
+        assert!(display.contains("Ollama running"));
+    }
+
+    #[test]
+    fn ollama_provider_new_custom_config() {
+        let config = SemanticSearchConfig {
+            embedding_provider: "ollama".into(),
+            embedding_model: "custom-model".into(),
+            embedding_dim: 512,
+            ollama_url: "http://custom:8080".into(),
+            ..Default::default()
+        };
+
+        let provider = OllamaEmbeddingProvider::new(&config).unwrap();
+        assert_eq!(provider.model_name(), "custom-model");
+        assert_eq!(provider.dimension(), 512);
+    }
+
+    #[test]
+    fn mock_provider_dimension_zero() {
+        // Edge case: what happens with 0 dimensions?
+        let provider = MockEmbeddingProvider::new(0);
+        assert_eq!(provider.dimension(), 0);
+    }
+
+    #[tokio::test]
+    async fn mock_provider_single_embed() {
+        // Test the single-text embed method (default implementation)
+        let provider = MockEmbeddingProvider::new(64);
+        let embedding = provider.embed("test text").await.unwrap();
+        assert_eq!(embedding.len(), 64);
+    }
+
+    #[tokio::test]
+    async fn mock_provider_single_embed_deterministic() {
+        // Verify single embed produces same result as batch
+        let provider = MockEmbeddingProvider::new(64);
+        
+        let single = provider.embed("hello world").await.unwrap();
+        let batch = provider.embed_batch(&["hello world".to_string()]).await.unwrap();
+        
+        assert_eq!(single, batch[0]);
+    }
+
+    #[tokio::test]
+    async fn mock_provider_embed_whitespace() {
+        let provider = MockEmbeddingProvider::new(32);
+        let embedding = provider.embed("  ").await.unwrap();
+        assert_eq!(embedding.len(), 32);
+    }
+
+    #[tokio::test]
+    async fn mock_provider_embed_special_chars() {
+        let provider = MockEmbeddingProvider::new(32);
+        let embedding = provider.embed("@#$%^&*()!").await.unwrap();
+        assert_eq!(embedding.len(), 32);
+    }
+
+    #[tokio::test]
+    async fn mock_provider_embed_newlines() {
+        let provider = MockEmbeddingProvider::new(32);
+        let embedding = provider.embed("line1\nline2\nline3").await.unwrap();
+        assert_eq!(embedding.len(), 32);
     }
 }

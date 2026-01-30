@@ -12,7 +12,6 @@ pub type DieselCachedRepo = CacheRepository<crate::repository::diesel_repo::Dies
 #[cfg(any(test, feature = "test-helpers"))]
 pub type DieselCachedRepo = CacheRepository<crate::repository::diesel_repo_mock::DieselRepoMock>;
 
-#[derive(Clone)]
 pub struct AppState<R = DieselCachedRepo> {
     pub repo: Arc<RwLock<R>>,
 }

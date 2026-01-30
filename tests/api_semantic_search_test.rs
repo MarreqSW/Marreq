@@ -254,22 +254,22 @@ mod document_builder_tests {
 mod embedding_provider_tests {
     use req_man::services::semantic_search::{EmbeddingProvider, MockEmbeddingProvider};
 
-    #[test]
-    fn mock_provider_produces_deterministic_embeddings() {
+    #[tokio::test]
+    async fn mock_provider_produces_deterministic_embeddings() {
         let provider = MockEmbeddingProvider::new(1536);
         let text = "Test requirement description";
 
-        let emb1 = provider.embed(text).unwrap();
-        let emb2 = provider.embed(text).unwrap();
+        let emb1 = provider.embed(text).await.unwrap();
+        let emb2 = provider.embed(text).await.unwrap();
 
         assert_eq!(emb1.len(), 1536);
         assert_eq!(emb1, emb2, "Same text should produce same embedding");
     }
 
-    #[test]
-    fn mock_provider_embeddings_are_normalized() {
+    #[tokio::test]
+    async fn mock_provider_embeddings_are_normalized() {
         let provider = MockEmbeddingProvider::new(1536);
-        let emb = provider.embed("Test").unwrap();
+        let emb = provider.embed("Test").await.unwrap();
 
         let norm: f32 = emb.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!(
@@ -278,8 +278,8 @@ mod embedding_provider_tests {
         );
     }
 
-    #[test]
-    fn mock_provider_batch_works() {
+    #[tokio::test]
+    async fn mock_provider_batch_works() {
         let provider = MockEmbeddingProvider::new(1536);
         let texts = vec![
             "First".to_string(),
@@ -287,7 +287,7 @@ mod embedding_provider_tests {
             "Third".to_string(),
         ];
 
-        let results = provider.embed_batch(&texts).unwrap();
+        let results = provider.embed_batch(&texts).await.unwrap();
         assert_eq!(results.len(), 3);
         for emb in &results {
             assert_eq!(emb.len(), 1536);

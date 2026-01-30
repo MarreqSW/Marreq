@@ -1,6 +1,7 @@
 import { jsonFetch, postJson } from '../core/net.js';
 import { showNotification } from '../modules/notifications.js';
 import { searchTree, filterTree, initTreeControls } from '../modules/tree.js';
+import { init as initSemanticSearch } from './semanticSearch.js';
 
 const state = {
   rows: [],
@@ -1028,4 +1029,7 @@ export function init() {
   initFiltersForm(filtersForm, searchInput);
   initKeyboardShortcuts({ searchInput, newRequirementButton });
   initDuplicateForm();
+  
+  // Initialize semantic search
+  initSemanticSearch();
 }

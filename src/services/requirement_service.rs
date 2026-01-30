@@ -512,9 +512,9 @@ mod tests {
     #[test]
     fn list_by_project_filtered_sorts_empty_reference_codes_last() {
         let mut repo = DieselRepoMock::default();
-        let mut req1 = requirement(1, 7, "");
-        let mut req2 = requirement(2, 7, "REQ-001");
-        let mut req3 = requirement(3, 7, "");
+        let req1 = requirement(1, 7, "");
+        let req2 = requirement(2, 7, "REQ-001");
+        let req3 = requirement(3, 7, "");
         repo.requirements.insert(1, req1);
         repo.requirements.insert(2, req2);
         repo.requirements.insert(3, req3);

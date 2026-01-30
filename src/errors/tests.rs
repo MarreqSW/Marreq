@@ -548,7 +548,7 @@ mod tests {
         fn responder_with_serialization_fallback() {
             // Test that Responder handles serialization errors
             // The implementation uses unwrap_or_else with a fallback JSON string
-            let err = ApiError::Internal("test".to_string());
+            let _err = ApiError::Internal("test".to_string());
             // The responder should handle this without panicking
             // We test this indirectly through the Responder test above
         }

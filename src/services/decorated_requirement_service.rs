@@ -590,7 +590,7 @@ mod tests {
         let service = DecoratedRequirementService::new(&state);
 
         let actor = DieselRepoMock::make_user(1, "actor", "");
-        let mut payload = NewRequirement {
+        let payload = NewRequirement {
             id: Some(1),
             title: "Updated".into(),
             description: "Updated Description".into(),

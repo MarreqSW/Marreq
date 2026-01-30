@@ -501,8 +501,6 @@ mod tests {
     // ============================================================================
 
     mod error_handling_tests {
-        use super::*;
-
         #[test]
         fn error_message_formatting() {
             let row_index = 3;
@@ -555,8 +553,6 @@ mod tests {
     // ============================================================================
 
     mod default_value_tests {
-        use super::*;
-
         #[test]
         fn default_category_id() {
             let category_id = 1; // Default
@@ -1032,7 +1028,6 @@ mod tests {
     // ============================================================================
 
     mod requirement_row_building_tests {
-        use super::*;
         use std::collections::HashMap;
 
         #[test]
@@ -1134,7 +1129,6 @@ mod tests {
     // ============================================================================
 
     mod test_row_building_tests {
-        use super::*;
         use std::collections::HashMap;
 
         #[test]
@@ -1221,8 +1215,6 @@ mod tests {
     // ============================================================================
 
     mod import_result_message_tests {
-        use super::*;
-
         #[test]
         fn success_message_zero_records() {
             let imported_count = 0;

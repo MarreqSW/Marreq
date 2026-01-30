@@ -306,7 +306,7 @@ mod tests {
     fn get_by_project_returns_project_members() {
         let mut repo = DieselRepoMock::default();
         use crate::models::ProjectMember;
-        use chrono::{NaiveDate, NaiveDateTime};
+        use chrono::NaiveDate;
 
         let timestamp = NaiveDate::from_ymd_opt(2024, 1, 1)
             .unwrap()
@@ -354,7 +354,7 @@ mod tests {
     fn get_by_project_handles_missing_users_gracefully() {
         let mut repo = DieselRepoMock::default();
         use crate::models::ProjectMember;
-        use chrono::{NaiveDate, NaiveDateTime};
+        use chrono::NaiveDate;
 
         let timestamp = NaiveDate::from_ymd_opt(2024, 1, 1)
             .unwrap()

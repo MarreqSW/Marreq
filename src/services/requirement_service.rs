@@ -193,11 +193,11 @@ impl<'a> RequirementService<'a> {
         }
 
         let indexing_service = IndexingService::new(self.state);
-        if let Err(e) = indexing_service.queue_for_indexing(requirement_id, project_id) {
+        if let Err(_e) = indexing_service.queue_for_indexing(requirement_id, project_id) {
             #[cfg(debug_assertions)]
             eprintln!(
                 "Failed to queue requirement {} for indexing: {}",
-                requirement_id, e
+                requirement_id, _e
             );
         }
     }

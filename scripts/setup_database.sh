@@ -139,6 +139,24 @@ docker exec -i "${DB_CID}" psql -v ON_ERROR_STOP=1 -U rust -d reqman < "${INIT_S
 echo "✅ Database initialization completed successfully!"
 echo ""
 
+# Apply semantic search migrations
+SEMANTIC_SEARCH_MIGRATION="${PROJECT_ROOT}/migrations/2026-01-29-000001_add_semantic_search/up.sql"
+EMBEDDING_FIX_MIGRATION="${PROJECT_ROOT}/migrations/2026-01-30-144348-0000_fix_embedding_dimensions/up.sql"
+
+echo "🔍 Setting up semantic search tables..."
+if [[ -f "${SEMANTIC_SEARCH_MIGRATION}" ]]; then
+  docker exec -i "${DB_CID}" psql -v ON_ERROR_STOP=1 -U rust -d reqman < "${SEMANTIC_SEARCH_MIGRATION}"
+  echo "✅ Semantic search tables created"
+else
+  echo "⚠️  Semantic search migration not found at ${SEMANTIC_SEARCH_MIGRATION}"
+fi
+
+if [[ -f "${EMBEDDING_FIX_MIGRATION}" ]]; then
+  docker exec -i "${DB_CID}" psql -v ON_ERROR_STOP=1 -U rust -d reqman < "${EMBEDDING_FIX_MIGRATION}"
+  echo "✅ Embedding dimensions fixed"
+fi
+echo ""
+
 echo "🔍 Verifying database setup..."
 echo "📋 Tables created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "\dt" \

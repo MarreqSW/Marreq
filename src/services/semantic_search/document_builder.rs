@@ -167,7 +167,10 @@ mod tests {
         let doc1 = build_embedding_document(&req);
         let doc2 = build_embedding_document(&req);
 
-        assert_eq!(doc1, doc2, "Same requirement should produce identical document");
+        assert_eq!(
+            doc1, doc2,
+            "Same requirement should produce identical document"
+        );
     }
 
     #[test]
@@ -209,7 +212,10 @@ mod tests {
         let hash1 = compute_content_hash(doc, "model-a");
         let hash2 = compute_content_hash(doc, "model-b");
 
-        assert_ne!(hash1, hash2, "Different models should produce different hashes");
+        assert_ne!(
+            hash1, hash2,
+            "Different models should produce different hashes"
+        );
     }
 
     #[test]
@@ -219,7 +225,10 @@ mod tests {
         let hash1 = compute_content_hash("Document A", model);
         let hash2 = compute_content_hash("Document B", model);
 
-        assert_ne!(hash1, hash2, "Different content should produce different hashes");
+        assert_ne!(
+            hash1, hash2,
+            "Different content should produce different hashes"
+        );
     }
 
     #[test]

@@ -696,17 +696,54 @@ impl RequirementsRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         requirements
             .order(id)
-            .select((id, title, description, verification_method_id, status_id, author_id, reviewer_id, reference_code, category_id, parent_id, creation_date, update_date, deadline_date, applicability_id, justification, project_id))
+            .select((
+                id,
+                title,
+                description,
+                verification_method_id,
+                status_id,
+                author_id,
+                reviewer_id,
+                reference_code,
+                category_id,
+                parent_id,
+                creation_date,
+                update_date,
+                deadline_date,
+                applicability_id,
+                justification,
+                project_id,
+            ))
             .load::<Requirement>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_requirements_by_project(&self, project_id_param: i32) -> Result<Vec<Requirement>, RepoError> {
+    fn get_requirements_by_project(
+        &self,
+        project_id_param: i32,
+    ) -> Result<Vec<Requirement>, RepoError> {
         use schema::requirements::dsl::*;
         let mut conn = self.get_conn()?;
         requirements
             .filter(project_id.eq(project_id_param))
-            .select((id, title, description, verification_method_id, status_id, author_id, reviewer_id, reference_code, category_id, parent_id, creation_date, update_date, deadline_date, applicability_id, justification, project_id))
+            .select((
+                id,
+                title,
+                description,
+                verification_method_id,
+                status_id,
+                author_id,
+                reviewer_id,
+                reference_code,
+                category_id,
+                parent_id,
+                creation_date,
+                update_date,
+                deadline_date,
+                applicability_id,
+                justification,
+                project_id,
+            ))
             .load::<Requirement>(conn.as_mut())
             .map_err(|e| e.into())
     }
@@ -716,7 +753,24 @@ impl RequirementsRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         let res: Requirement = diesel::insert_into(schema::requirements::table)
             .values(new)
-            .returning((id, title, description, verification_method_id, status_id, author_id, reviewer_id, reference_code, category_id, parent_id, creation_date, update_date, deadline_date, applicability_id, justification, project_id))
+            .returning((
+                id,
+                title,
+                description,
+                verification_method_id,
+                status_id,
+                author_id,
+                reviewer_id,
+                reference_code,
+                category_id,
+                parent_id,
+                creation_date,
+                update_date,
+                deadline_date,
+                applicability_id,
+                justification,
+                project_id,
+            ))
             .get_result(conn.as_mut())?;
         Ok(res.id)
     }
@@ -739,7 +793,24 @@ impl RequirementsRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         let req = requirements
             .filter(id.eq(requirement_id))
-            .select((id, title, description, verification_method_id, status_id, author_id, reviewer_id, reference_code, category_id, parent_id, creation_date, update_date, deadline_date, applicability_id, justification, project_id))
+            .select((
+                id,
+                title,
+                description,
+                verification_method_id,
+                status_id,
+                author_id,
+                reviewer_id,
+                reference_code,
+                category_id,
+                parent_id,
+                creation_date,
+                update_date,
+                deadline_date,
+                applicability_id,
+                justification,
+                project_id,
+            ))
             .get_result::<Requirement>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -748,8 +819,7 @@ impl RequirementsRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(requirements.filter(id.eq(requirement_id)))
-            .execute(conn.as_mut())?;
+        diesel::delete(requirements.filter(id.eq(requirement_id))).execute(conn.as_mut())?;
         Ok(req)
     }
 

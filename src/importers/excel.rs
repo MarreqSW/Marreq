@@ -225,13 +225,9 @@ impl ExcelImporter {
                         config.project_id,
                         conn,
                     ),
-                    "tests" => self.import_test_row(
-                        row_data,
-                        &config.column_mappings,
-                        config.project_id,
-                        conn,
-                    )
-                    .map(|_| None), // Tests don't need indexing
+                    "tests" => self
+                        .import_test_row(row_data, &config.column_mappings, config.project_id, conn)
+                        .map(|_| None), // Tests don't need indexing
                     _ => Err(anyhow!("Unknown import type: {}", config.import_type)),
                 };
 

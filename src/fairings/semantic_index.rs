@@ -70,10 +70,8 @@ impl Fairing for SemanticIndexFairing {
 
         // Process any pending queue items on startup
         let state_clone = state.clone();
-        let startup_result = tokio::spawn(async move {
-            process_queue_once(&state_clone).await
-        })
-        .await;
+        let startup_result =
+            tokio::spawn(async move { process_queue_once(&state_clone).await }).await;
 
         match startup_result {
             Ok(Ok((processed, failed))) => {
@@ -103,9 +101,7 @@ impl Fairing for SemanticIndexFairing {
 }
 
 /// Process the embedding index queue once.
-async fn process_queue_once(
-    state: &AppState<DieselCachedRepo>,
-) -> Result<(usize, usize), String> {
+async fn process_queue_once(state: &AppState<DieselCachedRepo>) -> Result<(usize, usize), String> {
     let config = SemanticSearchConfig::global();
     if !config.embeddings_enabled {
         return Ok((0, 0));

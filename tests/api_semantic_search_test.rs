@@ -104,10 +104,7 @@ async fn search_requires_authentication() {
 async fn ask_returns_error_when_rag_disabled() {
     let client = client_with_repo(DieselRepoMock::default()).await;
     let response = client
-        .post(format!(
-            "/api/projects/{}/requirements/ask",
-            PROJECT_ID
-        ))
+        .post(format!("/api/projects/{}/requirements/ask", PROJECT_ID))
         .header(ContentType::JSON)
         .private_cookie(auth_cookie())
         .body(json!({ "query": "What are the safety requirements?" }).to_string())
@@ -128,10 +125,7 @@ async fn ask_returns_error_when_rag_disabled() {
 async fn reindex_returns_error_when_embeddings_disabled() {
     let client = client_with_repo(DieselRepoMock::default()).await;
     let response = client
-        .post(format!(
-            "/api/projects/{}/requirements/reindex",
-            PROJECT_ID
-        ))
+        .post(format!("/api/projects/{}/requirements/reindex", PROJECT_ID))
         .private_cookie(auth_cookie())
         .dispatch()
         .await;
@@ -173,8 +167,8 @@ async fn search_with_empty_query_returns_empty_results() {
 
 #[cfg(test)]
 mod document_builder_tests {
-    use req_man::services::semantic_search::{build_embedding_document, compute_content_hash};
     use req_man::models::DecoratedRequirement;
+    use req_man::services::semantic_search::{build_embedding_document, compute_content_hash};
 
     fn sample_requirement() -> DecoratedRequirement {
         DecoratedRequirement {
@@ -209,7 +203,10 @@ mod document_builder_tests {
         let req = sample_requirement();
         let doc1 = build_embedding_document(&req);
         let doc2 = build_embedding_document(&req);
-        assert_eq!(doc1, doc2, "Same requirement should produce identical document");
+        assert_eq!(
+            doc1, doc2,
+            "Same requirement should produce identical document"
+        );
     }
 
     #[test]
@@ -233,7 +230,10 @@ mod document_builder_tests {
         let hash1 = compute_content_hash(&doc, "model-a");
         let hash2 = compute_content_hash(&doc, "model-b");
 
-        assert_ne!(hash1, hash2, "Different models should produce different hashes");
+        assert_ne!(
+            hash1, hash2,
+            "Different models should produce different hashes"
+        );
     }
 
     #[test]
@@ -252,9 +252,7 @@ mod document_builder_tests {
 
 #[cfg(test)]
 mod embedding_provider_tests {
-    use req_man::services::semantic_search::{
-        EmbeddingProvider, MockEmbeddingProvider,
-    };
+    use req_man::services::semantic_search::{EmbeddingProvider, MockEmbeddingProvider};
 
     #[test]
     fn mock_provider_produces_deterministic_embeddings() {

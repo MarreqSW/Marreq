@@ -6,7 +6,7 @@
 use crate::api::prelude::*;
 use crate::auth::guards::{AdminOnly, ProjectAccess};
 use crate::services::semantic_search::{
-    IndexingService, SearchFilters, SearchError, SemanticSearchConfig, SemanticSearchService,
+    IndexingService, SearchError, SearchFilters, SemanticSearchConfig, SemanticSearchService,
 };
 use rocket::serde::Deserialize;
 
@@ -204,7 +204,9 @@ pub async fn index_status(
     let _user = project_access.into_user();
 
     let service = IndexingService::new(state.inner());
-    let status = service.get_index_status(project_id).map_err(ApiError::from)?;
+    let status = service
+        .get_index_status(project_id)
+        .map_err(ApiError::from)?;
 
     Ok(json!(status))
 }

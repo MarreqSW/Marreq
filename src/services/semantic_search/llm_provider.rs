@@ -319,6 +319,66 @@ mod tests {
     }
 
     #[test]
+    fn mock_provider_multiple_citations() {
+        let provider = MockLlmProvider::new();
+        let messages = vec![
+            ChatMessage::system("You are a helpful assistant."),
+            ChatMessage::user("RELEVANT REQUIREMENTS:\n1. [REQ-001] First\n2. [REQ-002] Second\n3. [REQ-003] Third\n\nQUESTION: Compare them"),
+        ];
+
+        let response = provider.chat(&messages, 100).unwrap();
+        assert!(response.contains("[REQ-001]"));
+        assert!(response.contains("[REQ-002]"));
+        assert!(response.contains("[REQ-003]"));
+    }
+
+    #[test]
+    fn mock_provider_limits_to_three_citations() {
+        let provider = MockLlmProvider::new();
+        let messages = vec![
+            ChatMessage::system("You are a helpful assistant."),
+            ChatMessage::user("RELEVANT REQUIREMENTS:\n1. [REQ-001] First\n2. [REQ-002] Second\n3. [REQ-003] Third\n4. [REQ-004] Fourth\n5. [REQ-005] Fifth\n\nQUESTION: List them"),
+        ];
+
+        let response = provider.chat(&messages, 100).unwrap();
+        // Should contain at most 3 citations
+        let citation_count = response.matches("[REQ-").count();
+        assert!(citation_count <= 3);
+    }
+
+    #[test]
+    fn mock_provider_default() {
+        let provider = MockLlmProvider::default();
+        assert_eq!(provider.model_name(), "mock-llm");
+    }
+
+    #[test]
+    fn mock_provider_model_name() {
+        let provider = MockLlmProvider::new();
+        assert_eq!(provider.model_name(), "mock-llm");
+    }
+
+    #[test]
+    fn mock_provider_empty_messages() {
+        let provider = MockLlmProvider::new();
+        let messages: Vec<ChatMessage> = vec![];
+
+        let response = provider.chat(&messages, 100).unwrap();
+        assert!(response.contains("cannot find sufficient information"));
+    }
+
+    #[test]
+    fn mock_provider_only_system_message() {
+        let provider = MockLlmProvider::new();
+        let messages = vec![
+            ChatMessage::system("You are a helpful assistant."),
+        ];
+
+        let response = provider.chat(&messages, 100).unwrap();
+        assert!(response.contains("cannot find sufficient information"));
+    }
+
+    #[test]
     fn extract_citations_finds_refs() {
         let response = "The system [REQ-001] handles this, and [REQ-002] provides backup.";
         let results = vec![
@@ -384,6 +444,153 @@ mod tests {
     }
 
     #[test]
+    fn extract_citations_empty_response() {
+        let response = "";
+        let results = vec![SemanticSearchResult {
+            id: 1,
+            reference_code: "REQ-001".into(),
+            title: "First".into(),
+            description: "Desc".into(),
+            snippet: "".into(),
+            score: 1.0,
+            rank: 1,
+            lexical_rank: None,
+            vector_rank: None,
+            status: "Draft".into(),
+            category: "Cat".into(),
+            applicability: "All".into(),
+            verification: "Test".into(),
+        }];
+
+        let citations = extract_citations(response, &results);
+        assert_eq!(citations.len(), 0);
+    }
+
+    #[test]
+    fn extract_citations_no_matching_results() {
+        let response = "See [REQ-999] for details.";
+        let results = vec![SemanticSearchResult {
+            id: 1,
+            reference_code: "REQ-001".into(),
+            title: "First".into(),
+            description: "Desc".into(),
+            snippet: "".into(),
+            score: 1.0,
+            rank: 1,
+            lexical_rank: None,
+            vector_rank: None,
+            status: "Draft".into(),
+            category: "Cat".into(),
+            applicability: "All".into(),
+            verification: "Test".into(),
+        }];
+
+        let citations = extract_citations(response, &results);
+        assert_eq!(citations.len(), 0);
+    }
+
+    #[test]
+    fn extract_citations_complex_codes() {
+        let response = "See [SYS-PERF-001] and [REQ-SEC-002-A] for details.";
+        let results = vec![
+            SemanticSearchResult {
+                id: 1,
+                reference_code: "SYS-PERF-001".into(),
+                title: "Performance".into(),
+                description: "Desc".into(),
+                snippet: "".into(),
+                score: 1.0,
+                rank: 1,
+                lexical_rank: None,
+                vector_rank: None,
+                status: "Draft".into(),
+                category: "Cat".into(),
+                applicability: "All".into(),
+                verification: "Test".into(),
+            },
+            SemanticSearchResult {
+                id: 2,
+                reference_code: "REQ-SEC-002-A".into(),
+                title: "Security".into(),
+                description: "Desc".into(),
+                snippet: "".into(),
+                score: 0.9,
+                rank: 2,
+                lexical_rank: None,
+                vector_rank: None,
+                status: "Draft".into(),
+                category: "Cat".into(),
+                applicability: "All".into(),
+                verification: "Test".into(),
+            },
+        ];
+
+        let citations = extract_citations(response, &results);
+        assert_eq!(citations.len(), 2);
+        assert_eq!(citations[0].reference_code, "SYS-PERF-001");
+        assert_eq!(citations[1].reference_code, "REQ-SEC-002-A");
+    }
+
+    #[test]
+    fn extract_citations_preserves_order() {
+        let response = "First [REQ-003], then [REQ-001], finally [REQ-002].";
+        let results = vec![
+            SemanticSearchResult {
+                id: 1,
+                reference_code: "REQ-001".into(),
+                title: "First".into(),
+                description: "Desc".into(),
+                snippet: "".into(),
+                score: 1.0,
+                rank: 1,
+                lexical_rank: None,
+                vector_rank: None,
+                status: "Draft".into(),
+                category: "Cat".into(),
+                applicability: "All".into(),
+                verification: "Test".into(),
+            },
+            SemanticSearchResult {
+                id: 2,
+                reference_code: "REQ-002".into(),
+                title: "Second".into(),
+                description: "Desc".into(),
+                snippet: "".into(),
+                score: 0.9,
+                rank: 2,
+                lexical_rank: None,
+                vector_rank: None,
+                status: "Draft".into(),
+                category: "Cat".into(),
+                applicability: "All".into(),
+                verification: "Test".into(),
+            },
+            SemanticSearchResult {
+                id: 3,
+                reference_code: "REQ-003".into(),
+                title: "Third".into(),
+                description: "Desc".into(),
+                snippet: "".into(),
+                score: 0.8,
+                rank: 3,
+                lexical_rank: None,
+                vector_rank: None,
+                status: "Draft".into(),
+                category: "Cat".into(),
+                applicability: "All".into(),
+                verification: "Test".into(),
+            },
+        ];
+
+        let citations = extract_citations(response, &results);
+        assert_eq!(citations.len(), 3);
+        // Order should match appearance in response
+        assert_eq!(citations[0].reference_code, "REQ-003");
+        assert_eq!(citations[1].reference_code, "REQ-001");
+        assert_eq!(citations[2].reference_code, "REQ-002");
+    }
+
+    #[test]
     fn build_rag_prompts() {
         let system = build_rag_system_prompt();
         assert!(system.contains("reference code"));
@@ -409,5 +616,186 @@ mod tests {
         assert!(user.contains("[REQ-TEST]"));
         assert!(user.contains("Test Title"));
         assert!(user.contains("Test description"));
+    }
+
+    #[test]
+    fn build_rag_system_prompt_content() {
+        let prompt = build_rag_system_prompt();
+        
+        // Check key instructions are present
+        assert!(prompt.contains("ONLY the provided requirements"));
+        assert!(prompt.contains("square brackets"));
+        assert!(prompt.contains("concise"));
+        assert!(prompt.contains("300 words"));
+    }
+
+    #[test]
+    fn build_rag_user_prompt_empty_results() {
+        let user = build_rag_user_prompt("What about nothing?", &[]);
+        assert!(user.contains("RELEVANT REQUIREMENTS:"));
+        assert!(user.contains("What about nothing?"));
+    }
+
+    #[test]
+    fn build_rag_user_prompt_multiple_results() {
+        let results = vec![
+            SemanticSearchResult {
+                id: 1,
+                reference_code: "REQ-001".into(),
+                title: "First Requirement".into(),
+                description: "First description".into(),
+                snippet: "".into(),
+                score: 1.0,
+                rank: 1,
+                lexical_rank: None,
+                vector_rank: None,
+                status: "Active".into(),
+                category: "Functional".into(),
+                applicability: "All".into(),
+                verification: "Test".into(),
+            },
+            SemanticSearchResult {
+                id: 2,
+                reference_code: "REQ-002".into(),
+                title: "Second Requirement".into(),
+                description: "Second description".into(),
+                snippet: "".into(),
+                score: 0.9,
+                rank: 2,
+                lexical_rank: None,
+                vector_rank: None,
+                status: "Draft".into(),
+                category: "Performance".into(),
+                applicability: "Variant A".into(),
+                verification: "Analysis".into(),
+            },
+        ];
+
+        let user = build_rag_user_prompt("Compare these requirements", &results);
+        
+        // Check numbering
+        assert!(user.contains("1. [REQ-001]"));
+        assert!(user.contains("2. [REQ-002]"));
+        
+        // Check content
+        assert!(user.contains("First Requirement"));
+        assert!(user.contains("Second Requirement"));
+        assert!(user.contains("First description"));
+        assert!(user.contains("Second description"));
+        
+        // Check metadata
+        assert!(user.contains("Active"));
+        assert!(user.contains("Functional"));
+        assert!(user.contains("Compare these requirements"));
+    }
+
+    #[test]
+    fn chat_message_constructors() {
+        let system = ChatMessage::system("System message");
+        assert_eq!(system.role, "system");
+        assert_eq!(system.content, "System message");
+
+        let user = ChatMessage::user("User message");
+        assert_eq!(user.role, "user");
+        assert_eq!(user.content, "User message");
+
+        let assistant = ChatMessage::assistant("Assistant message");
+        assert_eq!(assistant.role, "assistant");
+        assert_eq!(assistant.content, "Assistant message");
+    }
+
+    #[test]
+    fn chat_message_into_string() {
+        // Test that Into<String> works
+        let msg = ChatMessage::system(String::from("Owned string"));
+        assert_eq!(msg.content, "Owned string");
+
+        let msg = ChatMessage::user("String literal");
+        assert_eq!(msg.content, "String literal");
+    }
+
+    #[test]
+    fn llm_error_not_configured_display() {
+        let err = LlmError::NotConfigured("test".into());
+        assert!(err.to_string().contains("not configured"));
+    }
+
+    #[test]
+    fn llm_error_api_error_display() {
+        let err = LlmError::ApiError("connection failed".into());
+        assert!(err.to_string().contains("API request failed"));
+    }
+
+    #[test]
+    fn llm_error_invalid_response_display() {
+        let err = LlmError::InvalidResponse("missing field".into());
+        assert!(err.to_string().contains("Invalid response"));
+    }
+
+    #[test]
+    fn llm_error_model_not_found_display() {
+        let err = LlmError::ModelNotFound("llama3.2".into());
+        let display = err.to_string();
+        assert!(display.contains("Model not found"));
+        assert!(display.contains("llama3.2"));
+        assert!(display.contains("ollama pull"));
+    }
+
+    #[test]
+    fn llm_error_server_not_reachable_display() {
+        let err = LlmError::ServerNotReachable("http://localhost:11434".into());
+        let display = err.to_string();
+        assert!(display.contains("not reachable"));
+        assert!(display.contains("http://localhost:11434"));
+    }
+
+    #[test]
+    fn create_mock_llm_provider() {
+        let config = SemanticSearchConfig {
+            embedding_provider: "mock".into(),
+            ..Default::default()
+        };
+
+        let provider = create_llm_provider(&config).unwrap();
+        assert_eq!(provider.model_name(), "mock-llm");
+    }
+
+    #[test]
+    fn create_ollama_llm_provider() {
+        let config = SemanticSearchConfig {
+            embedding_provider: "ollama".into(),
+            rag_model: "llama3.2".into(),
+            ollama_url: "http://localhost:11434".into(),
+            ..Default::default()
+        };
+
+        let provider = create_llm_provider(&config).unwrap();
+        assert_eq!(provider.model_name(), "llama3.2");
+    }
+
+    #[test]
+    fn create_default_llm_provider() {
+        // Default (unknown provider) should fall back to Ollama
+        let config = SemanticSearchConfig {
+            embedding_provider: "something_else".into(),
+            rag_model: "custom-model".into(),
+            ..Default::default()
+        };
+
+        let provider = create_llm_provider(&config).unwrap();
+        assert_eq!(provider.model_name(), "custom-model");
+    }
+
+    #[test]
+    fn rag_citation_fields() {
+        let citation = RagCitation {
+            requirement_id: 42,
+            reference_code: "REQ-042".into(),
+            title: "Test Requirement".into(),
+        };
+
+        assert_eq!(citation.requirement_id, 42);
+        assert_eq!(citation.reference_code, "REQ-042");
+        assert_eq!(citation.title, "Test Requirement");
     }
 }

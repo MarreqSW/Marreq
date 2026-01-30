@@ -58,7 +58,7 @@ pub async fn semantic_search(
     state: &State<AppState>,
 ) -> ApiResult<Value> {
     let _user = project_access.into_user();
-    let config = SemanticSearchConfig::from_env();
+    let config = SemanticSearchConfig::global();
 
     // Check if embeddings are enabled
     if !config.embeddings_enabled {
@@ -84,6 +84,7 @@ pub async fn semantic_search(
 
     let results = service
         .search(project_id, &query.q, &filters, k)
+        .await
         .map_err(|e| match e {
             SearchError::Repo(repo_err) => ApiError::from(repo_err),
             SearchError::Embedding(emb_err) => {
@@ -120,7 +121,7 @@ pub async fn ask(
     state: &State<AppState>,
 ) -> ApiResult<Value> {
     let _user = project_access.into_user();
-    let config = SemanticSearchConfig::from_env();
+    let config = SemanticSearchConfig::global();
 
     // Check if RAG is enabled
     if !config.rag_enabled {
@@ -141,6 +142,7 @@ pub async fn ask(
 
     let response = service
         .ask(project_id, &request.query, &filters, k)
+        .await
         .map_err(|e| match e {
             SearchError::Repo(repo_err) => ApiError::from(repo_err),
             SearchError::Embedding(emb_err) => {
@@ -167,7 +169,7 @@ pub async fn reindex(
     let _user = admin.into_inner();
     let _ = project_access; // Verify project access
 
-    let config = SemanticSearchConfig::from_env();
+    let config = SemanticSearchConfig::global();
 
     if !config.embeddings_enabled {
         return Err(ApiError::BadRequest(
@@ -176,10 +178,10 @@ pub async fn reindex(
     }
 
     let service = IndexingService::new(state.inner());
-
-    let (indexed, skipped, failed) = service.reindex_project(project_id).map_err(|e| {
-        ApiError::Internal(format!("Reindex failed: {}", e))
-    })?;
+    let (indexed, skipped, failed) = service
+        .reindex_project(project_id)
+        .await
+        .map_err(|e| ApiError::Internal(format!("Reindex failed: {}", e)))?;
 
     Ok(json!({
         "status": "completed",
@@ -218,7 +220,7 @@ pub async fn search_status(
 ) -> ApiResult<Value> {
     let _user = project_access.into_user();
     let _ = project_id; // Used for ProjectAccess guard
-    let config = SemanticSearchConfig::from_env();
+    let config = SemanticSearchConfig::global();
 
     Ok(json!({
         "embeddings_enabled": config.embeddings_enabled,

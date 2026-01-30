@@ -28,7 +28,7 @@ impl<'a> IndexingService<'a> {
     pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
         Self {
             state,
-            config: SemanticSearchConfig::from_env(),
+            config: SemanticSearchConfig::global().clone(),
         }
     }
 
@@ -131,7 +131,7 @@ impl<'a> IndexingService<'a> {
     /// Index a single requirement.
     ///
     /// Generates embedding if needed (content changed or not indexed).
-    pub fn index_requirement(&self, req: &DecoratedRequirement) -> Result<bool, EmbeddingError> {
+    pub async fn index_requirement(&self, req: &DecoratedRequirement) -> Result<bool, EmbeddingError> {
         if !self.is_enabled() {
             return Err(EmbeddingError::NotConfigured(
                 "Embeddings are disabled".into(),
@@ -155,7 +155,7 @@ impl<'a> IndexingService<'a> {
 
         // Generate embedding
         let provider = create_embedding_provider(&self.config)?;
-        let embedding_vec = provider.embed(&document)?;
+        let embedding_vec = provider.embed(&document).await?;
         let embedding = Vector::from(embedding_vec);
 
         // Upsert embedding
@@ -187,7 +187,7 @@ impl<'a> IndexingService<'a> {
     /// Reindex all requirements for a project.
     ///
     /// Returns (indexed_count, skipped_count, failed_count).
-    pub fn reindex_project(&self, project_id: i32) -> Result<(usize, usize, usize), EmbeddingError> {
+    pub async fn reindex_project(&self, project_id: i32) -> Result<(usize, usize, usize), EmbeddingError> {
         if !self.is_enabled() {
             return Err(EmbeddingError::NotConfigured(
                 "Embeddings are disabled".into(),
@@ -204,7 +204,7 @@ impl<'a> IndexingService<'a> {
         let mut failed = 0;
 
         for req in &requirements {
-            match self.index_requirement(req) {
+            match self.index_requirement(req).await {
                 Ok(true) => indexed += 1,
                 Ok(false) => skipped += 1,
                 Err(e) => {
@@ -246,7 +246,7 @@ impl<'a> IndexingService<'a> {
     /// Process pending items in the index queue.
     ///
     /// Returns (processed_count, failed_count).
-    pub fn process_queue(&self, limit: i64) -> Result<(usize, usize), EmbeddingError> {
+    pub async fn process_queue(&self, limit: i64) -> Result<(usize, usize), EmbeddingError> {
         if !self.is_enabled() {
             return Ok((0, 0));
         }
@@ -293,7 +293,7 @@ impl<'a> IndexingService<'a> {
             };
 
             // Index the requirement
-            match self.index_requirement(&req) {
+            match self.index_requirement(&req).await {
                 Ok(_) => {
                     self.update_queue_status(req_id, EmbeddingIndexStatus::Completed, None)
                         .ok();

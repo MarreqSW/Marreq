@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 /// Repository wrapper that checks the cache before hitting the database
+#[derive(Clone)]
 pub struct CacheRepository<R> {
     inner: R,
     cache: Arc<Cache>,

@@ -352,21 +352,27 @@ mod tests {
     #[tokio::test]
     async fn mock_provider_consistent_across_batches() {
         let provider = MockEmbeddingProvider::new(768);
-        
+
         // Single embed
         let single = provider.embed("Test text").await.unwrap();
-        
+
         // Batch embed with same text
-        let batch = provider.embed_batch(&["Test text".to_string()]).await.unwrap();
-        
-        assert_eq!(single, batch[0], "Single and batch should produce same embedding");
+        let batch = provider
+            .embed_batch(&["Test text".to_string()])
+            .await
+            .unwrap();
+
+        assert_eq!(
+            single, batch[0],
+            "Single and batch should produce same embedding"
+        );
     }
 
     #[tokio::test]
     async fn mock_provider_unicode_text() {
         let provider = MockEmbeddingProvider::new(768);
         let emb = provider.embed("日本語テスト 🚀 émojis").await.unwrap();
-        
+
         assert_eq!(emb.len(), 768);
         let norm: f32 = emb.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!((norm - 1.0).abs() < 0.001);
@@ -376,7 +382,7 @@ mod tests {
     async fn mock_provider_empty_text() {
         let provider = MockEmbeddingProvider::new(768);
         let emb = provider.embed("").await.unwrap();
-        
+
         assert_eq!(emb.len(), 768);
     }
 
@@ -385,7 +391,7 @@ mod tests {
         let provider = MockEmbeddingProvider::new(768);
         let long_text = "a".repeat(100_000);
         let emb = provider.embed(&long_text).await.unwrap();
-        
+
         assert_eq!(emb.len(), 768);
         let norm: f32 = emb.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!((norm - 1.0).abs() < 0.001);
@@ -425,7 +431,7 @@ mod tests {
 
         let result = create_embedding_provider(&config);
         assert!(result.is_err());
-        
+
         match result {
             Err(err) => {
                 assert!(matches!(err, EmbeddingError::NotConfigured(_)));
@@ -527,10 +533,13 @@ mod tests {
     async fn mock_provider_single_embed_deterministic() {
         // Verify single embed produces same result as batch
         let provider = MockEmbeddingProvider::new(64);
-        
+
         let single = provider.embed("hello world").await.unwrap();
-        let batch = provider.embed_batch(&["hello world".to_string()]).await.unwrap();
-        
+        let batch = provider
+            .embed_batch(&["hello world".to_string()])
+            .await
+            .unwrap();
+
         assert_eq!(single, batch[0]);
     }
 

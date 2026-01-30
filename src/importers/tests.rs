@@ -239,6 +239,7 @@ mod tests {
                 message: "Successfully imported 10 records".to_string(),
                 imported_count: 10,
                 errors: vec![],
+                imported_requirement_ids: vec![],
             };
             assert!(result.success);
             assert_eq!(result.imported_count, 10);
@@ -252,6 +253,7 @@ mod tests {
                 message: "Imported 8 records with 2 errors".to_string(),
                 imported_count: 8,
                 errors: vec!["Row 3: Error".to_string(), "Row 5: Error".to_string()],
+                imported_requirement_ids: vec![],
             };
             assert!(!result.success);
             assert_eq!(result.imported_count, 8);
@@ -265,6 +267,7 @@ mod tests {
                 message: "Test".to_string(),
                 imported_count: 0,
                 errors: vec![],
+                imported_requirement_ids: vec![],
             };
             let debug = format!("{:?}", result);
             assert!(debug.contains("Test"));
@@ -277,6 +280,7 @@ mod tests {
                 message: "Success".to_string(),
                 imported_count: 5,
                 errors: vec![],
+                imported_requirement_ids: vec![],
             };
             let json = serde_json::to_string(&result).unwrap();
             assert!(json.contains("\"success\":true"));
@@ -298,6 +302,7 @@ mod tests {
                 message: "Successfully imported 0 records".to_string(),
                 imported_count: 0,
                 errors: vec![],
+                imported_requirement_ids: vec![],
             };
             assert_eq!(result.imported_count, 0);
         }
@@ -680,6 +685,7 @@ mod tests {
                 message: format!("Successfully imported {} records", 1000),
                 imported_count: 1000,
                 errors: vec![],
+                imported_requirement_ids: vec![],
             };
             assert_eq!(result.imported_count, 1000);
         }
@@ -1490,6 +1496,7 @@ mod tests {
                 message: "Imported 8 records with 2 errors".to_string(),
                 imported_count: 8,
                 errors: vec!["Row 3: Error".to_string(), "Row 7: Error".to_string()],
+                imported_requirement_ids: vec![],
             };
             assert!(!result.success);
             assert_eq!(result.imported_count, 8);

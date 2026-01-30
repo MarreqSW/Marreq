@@ -263,24 +263,24 @@ pub fn create_embedding_provider(
 mod tests {
     use super::*;
 
-    #[test]
-    fn mock_provider_deterministic() {
+    #[tokio::test]
+    async fn mock_provider_deterministic() {
         let provider = MockEmbeddingProvider::new(768);
         let text = "Test requirement description";
 
-        let emb1 = provider.embed(text).unwrap();
-        let emb2 = provider.embed(text).unwrap();
+        let emb1 = provider.embed(text).await.unwrap();
+        let emb2 = provider.embed(text).await.unwrap();
 
         assert_eq!(emb1.len(), 768);
         assert_eq!(emb1, emb2, "Same text should produce same embedding");
     }
 
-    #[test]
-    fn mock_provider_different_texts() {
+    #[tokio::test]
+    async fn mock_provider_different_texts() {
         let provider = MockEmbeddingProvider::new(768);
 
-        let emb1 = provider.embed("First text").unwrap();
-        let emb2 = provider.embed("Second text").unwrap();
+        let emb1 = provider.embed("First text").await.unwrap();
+        let emb2 = provider.embed("Second text").await.unwrap();
 
         assert_ne!(
             emb1, emb2,
@@ -288,17 +288,17 @@ mod tests {
         );
     }
 
-    #[test]
-    fn mock_provider_normalized() {
+    #[tokio::test]
+    async fn mock_provider_normalized() {
         let provider = MockEmbeddingProvider::new(768);
-        let emb = provider.embed("Test").unwrap();
+        let emb = provider.embed("Test").await.unwrap();
 
         let norm: f32 = emb.iter().map(|x| x * x).sum::<f32>().sqrt();
         assert!((norm - 1.0).abs() < 0.001, "Embedding should be normalized");
     }
 
-    #[test]
-    fn mock_provider_batch() {
+    #[tokio::test]
+    async fn mock_provider_batch() {
         let provider = MockEmbeddingProvider::new(768);
         let texts = vec![
             "First".to_string(),
@@ -306,7 +306,7 @@ mod tests {
             "Third".to_string(),
         ];
 
-        let results = provider.embed_batch(&texts).unwrap();
+        let results = provider.embed_batch(&texts).await.unwrap();
         assert_eq!(results.len(), 3);
     }
 

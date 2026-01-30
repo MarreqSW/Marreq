@@ -13,7 +13,6 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{Orbit, Rocket};
-use std::sync::Arc;
 use std::time::Duration;
 
 /// Interval between background queue processing runs.
@@ -60,18 +59,20 @@ impl Fairing for SemanticIndexFairing {
         }
 
         // Get AppState from managed state
-        let state = match rocket.state::<AppState<DieselCachedRepo>>() {
-            Some(s) => s.clone(),
-            None => {
-                eprintln!("⚠️  Could not access AppState for semantic indexing");
-                return;
-            }
-        };
+        let state: &'static AppState<DieselCachedRepo> =
+            match rocket.state::<AppState<DieselCachedRepo>>() {
+                Some(s) => {
+                    // SAFETY: Rocket's managed state has 'static lifetime
+                    unsafe { std::mem::transmute(s) }
+                }
+                None => {
+                    eprintln!("⚠️  Could not access AppState for semantic indexing");
+                    return;
+                }
+            };
 
         // Process any pending queue items on startup
-        let state_clone = state.clone();
-        let startup_result =
-            tokio::spawn(async move { process_queue_once(&state_clone).await }).await;
+        let startup_result = tokio::spawn(async move { process_queue_once(state).await }).await;
 
         match startup_result {
             Ok(Ok((processed, failed))) => {
@@ -91,9 +92,8 @@ impl Fairing for SemanticIndexFairing {
         }
 
         // Start background processing task
-        let state_for_background = Arc::new(state);
         tokio::spawn(async move {
-            background_queue_processor(state_for_background).await;
+            background_queue_processor(state).await;
         });
 
         eprintln!("✅ Semantic index background processor started");
@@ -115,7 +115,7 @@ async fn process_queue_once(state: &AppState<DieselCachedRepo>) -> Result<(usize
 }
 
 /// Background task that periodically processes the index queue.
-async fn background_queue_processor(state: Arc<AppState<DieselCachedRepo>>) {
+async fn background_queue_processor(state: &'static AppState<DieselCachedRepo>) {
     loop {
         tokio::time::sleep(QUEUE_PROCESS_INTERVAL).await;
 
@@ -124,7 +124,7 @@ async fn background_queue_processor(state: Arc<AppState<DieselCachedRepo>>) {
             continue;
         }
 
-        match process_queue_once(&state).await {
+        match process_queue_once(state).await {
             Ok((processed, failed)) => {
                 if processed > 0 || failed > 0 {
                     eprintln!(

@@ -6,8 +6,8 @@
  * - Optional RAG answer generation with citations
  */
 
-import { jsonFetch, postJson } from '@core/net.js';
-import { showNotification } from '@modules/notifications.js';
+import { jsonFetch, postJson } from '../core/net.js';
+import { showNotification } from '../modules/notifications.js';
 
 // State
 const state = {

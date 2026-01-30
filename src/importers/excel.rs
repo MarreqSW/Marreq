@@ -36,6 +36,9 @@ pub struct ImportResult {
     pub message: String,
     pub imported_count: usize,
     pub errors: Vec<String>,
+    /// IDs of imported requirements (for semantic search indexing)
+    #[serde(default)]
+    pub imported_requirement_ids: Vec<i32>,
 }
 
 pub struct ExcelImporter {
@@ -210,6 +213,7 @@ impl ExcelImporter {
     ) -> Result<ImportResult> {
         let mut imported_count = 0;
         let mut errors = Vec::new();
+        let mut imported_requirement_ids = Vec::new();
 
         // Start transaction
         conn.transaction(|conn| {
@@ -226,12 +230,18 @@ impl ExcelImporter {
                         &config.column_mappings,
                         config.project_id,
                         conn,
-                    ),
+                    )
+                    .map(|_| None), // Tests don't need indexing
                     _ => Err(anyhow!("Unknown import type: {}", config.import_type)),
                 };
 
                 match result {
-                    Ok(_) => imported_count += 1,
+                    Ok(opt_id) => {
+                        imported_count += 1;
+                        if let Some(id) = opt_id {
+                            imported_requirement_ids.push(id);
+                        }
+                    }
                     Err(e) => {
                         errors.push(format!("Row {}: {}", row_index + 2, e));
                         // Continue processing other rows
@@ -255,6 +265,7 @@ impl ExcelImporter {
             },
             imported_count,
             errors,
+            imported_requirement_ids,
         })
     }
 
@@ -264,7 +275,7 @@ impl ExcelImporter {
         mappings: &[ColumnMapping],
         project_id: i32,
         conn: &mut PgConnection,
-    ) -> Result<()> {
+    ) -> Result<Option<i32>> {
         let mut req_data = HashMap::new();
 
         // Map Excel columns to requirement fields
@@ -322,7 +333,6 @@ impl ExcelImporter {
             None
         };
 
-        // Create new requirement
         let new_req = NewRequirement {
             id: None,
             title: req_data
@@ -348,10 +358,10 @@ impl ExcelImporter {
             project_id,
         };
 
-        DieselRepo::new()
+        let id = DieselRepo::new()
             .insert_new_requirement(&new_req)
             .map_err(|e| anyhow!("{}", e))?;
-        Ok(())
+        Ok(Some(id))
     }
 
     fn import_test_row(

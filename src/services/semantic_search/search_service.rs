@@ -40,7 +40,7 @@ impl<'a> SemanticSearchService<'a> {
     pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
         Self {
             state,
-            config: SemanticSearchConfig::from_env(),
+            config: SemanticSearchConfig::global().clone(),
         }
     }
 
@@ -62,7 +62,7 @@ impl<'a> SemanticSearchService<'a> {
     /// Perform hybrid semantic search.
     ///
     /// Combines lexical (full-text) and dense (vector) search using RRF.
-    pub fn search(
+    pub async fn search(
         &self,
         project_id: i32,
         query: &str,
@@ -84,7 +84,7 @@ impl<'a> SemanticSearchService<'a> {
 
         // Perform vector search if embeddings are enabled
         let vector_results = if self.is_enabled() {
-            self.vector_search(project_id, query, filters, k * 2)?
+            self.vector_search(project_id, query, filters, k * 2).await?
         } else {
             vec![]
         };
@@ -310,7 +310,7 @@ impl<'a> SemanticSearchService<'a> {
     }
 
     /// Perform vector similarity search.
-    fn vector_search(
+    async fn vector_search(
         &self,
         project_id: i32,
         query: &str,
@@ -319,7 +319,7 @@ impl<'a> SemanticSearchService<'a> {
     ) -> Result<Vec<(i32, f32)>, SearchError> {
         // Generate query embedding
         let provider = create_embedding_provider(&self.config).map_err(SearchError::Embedding)?;
-        let query_embedding = provider.embed(query).map_err(SearchError::Embedding)?;
+        let query_embedding = provider.embed(query).await.map_err(SearchError::Embedding)?;
 
         let repo = self.state.repo_read();
         let mut conn = repo.inner_repo().get_conn().map_err(SearchError::Repo)?;
@@ -450,7 +450,7 @@ impl<'a> SemanticSearchService<'a> {
     }
 
     /// Generate a RAG answer from search results.
-    pub fn ask(
+    pub async fn ask(
         &self,
         project_id: i32,
         query: &str,
@@ -464,7 +464,7 @@ impl<'a> SemanticSearchService<'a> {
         }
 
         // Get search results
-        let results = self.search(project_id, query, filters, k)?;
+        let results = self.search(project_id, query, filters, k).await?;
 
         if results.is_empty() {
             return Ok(RagAnswerResponse {

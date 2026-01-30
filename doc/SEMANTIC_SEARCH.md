@@ -3,41 +3,90 @@
 ReqMan includes an optional RAG-powered semantic search feature that enables:
 - **Semantic/hybrid search**: Find requirements by meaning, not just keywords
 - **RAG answers**: Ask questions and get AI-generated answers grounded in your requirements with citations
+- **Automatic indexing**: Requirements are automatically queued for embedding generation on create/update
 
 All AI processing runs locally using [Ollama](https://ollama.ai), ensuring your data stays private and secure.
 
 ## Quick Start
 
-1. **Install Ollama** (see [OLLAMA_SETUP.md](OLLAMA_SETUP.md) for details):
-   ```bash
-   curl -fsSL https://ollama.ai/install.sh | sh
-   ```
+### 1. Start PostgreSQL with pgvector (Docker)
 
-2. **Download required models**:
-   ```bash
-   ollama pull nomic-embed-text  # For embeddings
-   ollama pull llama3.2          # For RAG answers (optional)
-   ```
+Use the provided `docker-compose.yml` which includes pgvector:
 
-3. **Run database migration**:
-   ```bash
-   diesel migration run
-   ```
+```bash
+docker-compose up -d db
+```
 
-4. **Configure environment**:
-   ```bash
-   EMBEDDINGS_ENABLED=true
-   EMBEDDING_PROVIDER=ollama
-   EMBEDDING_MODEL=nomic-embed-text
-   OLLAMA_URL=http://localhost:11434
-   RAG_ENABLED=true
-   RAG_MODEL=llama3.2
-   ```
+This starts PostgreSQL 15 with the pgvector extension pre-installed.
 
-5. **Reindex requirements** (admin only):
-   ```bash
-   curl -X POST http://localhost:8000/api/projects/1/requirements/reindex
-   ```
+### 2. Install Ollama
+
+See [OLLAMA_SETUP.md](OLLAMA_SETUP.md) for details:
+
+```bash
+# Linux/WSL
+curl -fsSL https://ollama.ai/install.sh | sh
+
+# macOS
+brew install ollama
+
+# Start the server
+ollama serve
+```
+
+### 3. Download required models
+
+```bash
+ollama pull nomic-embed-text  # For embeddings (768 dimensions)
+ollama pull llama3.2          # For RAG answers (optional)
+```
+
+### 4. Run database migrations
+
+```bash
+diesel migration run
+```
+
+### 5. Configure environment
+
+Add to your `.env` file:
+
+```bash
+# Required for semantic search
+EMBEDDINGS_ENABLED=true
+EMBEDDING_PROVIDER=ollama
+OLLAMA_URL=http://localhost:11434
+
+# Optional: RAG answers
+RAG_ENABLED=true
+RAG_MODEL=llama3.2
+```
+
+### 6. Start ReqMan
+
+```bash
+cargo run
+```
+
+On startup, you'll see:
+```
+🔍 Semantic search enabled: provider=ollama, model=nomic-embed-text, dim=768
+🤖 RAG enabled: model=llama3.2, max_tokens=1024
+✅ Semantic index background processor started
+```
+
+### 7. Initial reindex (for existing requirements)
+
+For projects with existing requirements, trigger a one-time reindex:
+
+```bash
+# Via the UI (Admin menu → Reindex)
+# Or via API:
+curl -X POST http://localhost:8000/api/projects/1/requirements/reindex \
+  -H "Cookie: session=<your-session-cookie>"
+```
+
+After initial reindex, new/updated requirements are automatically indexed.
 
 ## Architecture
 
@@ -246,6 +295,54 @@ For each requirement, an embedding document is created:
 ```
 
 A SHA-256 content hash ensures embeddings are only regenerated when content changes.
+
+## Automatic Indexing
+
+ReqMan automatically manages embeddings for requirements:
+
+### When Indexing Happens
+
+| Event | Behavior |
+|-------|----------|
+| **Create requirement** | Queued for indexing immediately |
+| **Update requirement** | Queued for re-indexing (only if content changed) |
+| **Delete requirement** | Embedding deleted via CASCADE |
+| **Import from Excel/CSV** | All imported requirements queued |
+| **Application startup** | Pending queue items processed |
+
+### Background Processing
+
+A background task runs every 60 seconds to process queued items:
+- Processes up to 50 items per run
+- Skips requirements whose content hasn't changed (using content hash)
+- Logs progress: `📊 Background index queue: processed=5, failed=0`
+
+### Index Queue States
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Waiting to be processed |
+| `processing` | Currently generating embedding |
+| `completed` | Successfully indexed |
+| `failed` | Error occurred (will be retried on next reindex) |
+
+### Monitoring Index Status
+
+```bash
+# Check project indexing status
+curl http://localhost:8000/api/projects/1/requirements/index_status
+
+# Response:
+{
+  "project_id": 1,
+  "total_requirements": 150,
+  "indexed_count": 148,
+  "pending_count": 2,
+  "failed_count": 0,
+  "embeddings_enabled": true,
+  "embedding_model": "nomic-embed-text"
+}
+```
 
 ## Troubleshooting
 

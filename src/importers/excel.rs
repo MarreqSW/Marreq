@@ -1,4 +1,4 @@
-use crate::models::{NewApplicability, NewCategory, NewRequirement, NewTestCase};
+use crate::models::{NewApplicability, NewCategory, NewRequirement, NewTestCase, NewVerificationMethod};
 use crate::repository::{
     DieselRepo, LookupRepository, RequirementsRepository, TestsCaseRepository, UserRepository,
 };
@@ -196,6 +196,7 @@ impl ExcelImporter {
                 "justification".to_string(),
             ],
             "tests" => vec![
+                "reference_code".to_string(),
                 "name".to_string(),
                 "description".to_string(),
                 "status_id".to_string(),
@@ -301,9 +302,15 @@ impl ExcelImporter {
         };
 
         let status_id = if let Some(status_name) = req_data.get("status_id") {
-            self.resolve_requirement_status_id(status_name, conn)?
+            self.resolve_requirement_status_id(status_name, project_id)?
         } else {
             1 // Default status
+        };
+
+        let verification_method_id = if let Some(verification_name) = req_data.get("verification_method_id") {
+            self.resolve_verification_id(verification_name, project_id)?
+        } else {
+            1 // Default verification
         };
 
         let author_id = if let Some(author_name) = req_data.get("author_id") {
@@ -346,7 +353,7 @@ impl ExcelImporter {
             category_id: category_id,
             applicability_id: applicability_id,
             status_id: status_id,
-            verification_method_id: 1, // Default verification
+            verification_method_id,
             author_id: author_id,
             reviewer_id: reviewer_id,
             parent_id: parent_id,
@@ -384,7 +391,7 @@ impl ExcelImporter {
 
         // Resolve foreign key references
         let status_id = if let Some(status_name) = test_data.get("status_id") {
-            self.resolve_test_status_id(status_name, conn)?
+            self.resolve_test_status_id(status_name, project_id)?
         } else {
             1 // Default status
         };
@@ -476,36 +483,73 @@ impl ExcelImporter {
             .map_err(|e| anyhow!("{}", e))
     }
 
-    fn resolve_requirement_status_id(
-        &self,
-        status_name: &str,
-        _conn: &mut PgConnection,
-    ) -> Result<i32> {
+    fn resolve_requirement_status_id(&self, status_name: &str, project_id: i32) -> Result<i32> {
         let repo = DieselRepo::new();
         let statuses = repo
             .get_requirement_status_all()
             .map_err(|e| anyhow!("{}", e))?;
-        for status in statuses {
-            if status.title == status_name {
-                return Ok(status.id);
-            }
+
+        // Prefer matching within the selected project first.
+        if let Some(status) = statuses
+            .iter()
+            .find(|status| status.project_id == project_id && status.title == status_name)
+        {
+            return Ok(status.id);
         }
 
-        // Return default status ID if not found
+        // Fallback: allow matching across projects (legacy behavior).
+        if let Some(status) = statuses.iter().find(|status| status.title == status_name) {
+            return Ok(status.id);
+        }
+
+        // Return default status ID if not found (legacy behavior).
         Ok(1)
     }
 
-    fn resolve_test_status_id(&self, status_name: &str, _conn: &mut PgConnection) -> Result<i32> {
+    fn resolve_test_status_id(&self, status_name: &str, project_id: i32) -> Result<i32> {
         let repo = DieselRepo::new();
         let statuses = repo.get_test_status_all().map_err(|e| anyhow!("{}", e))?;
-        for status in statuses {
-            if status.title == status_name {
-                return Ok(status.id);
-            }
+
+        // Prefer matching within the selected project first.
+        if let Some(status) = statuses
+            .iter()
+            .find(|status| status.project_id == project_id && status.title == status_name)
+        {
+            return Ok(status.id);
         }
 
-        // Return default status ID if not found
+        // Fallback: allow matching across projects (legacy behavior).
+        if let Some(status) = statuses.iter().find(|status| status.title == status_name) {
+            return Ok(status.id);
+        }
+
+        // Return default status ID if not found (legacy behavior).
         Ok(1)
+    }
+
+    fn resolve_verification_id(&self, verification_name: &str, project_id: i32) -> Result<i32> {
+        let repo = DieselRepo::new();
+
+        // Prefer matching within the selected project first.
+        let methods = repo
+            .get_verification_by_project(project_id)
+            .map_err(|e| anyhow!("{}", e))?;
+        if let Some(method) = methods.iter().find(|m| m.title == verification_name) {
+            return Ok(method.id);
+        }
+
+        // Create a new verification method in the project if not found.
+        let new_verification = NewVerificationMethod {
+            id: None,
+            title: verification_name.to_string(),
+            description: format!("Imported verification method: {}", verification_name),
+            tag: verification_name.to_uppercase().replace(" ", "_"),
+            project_id,
+        };
+
+        DieselRepo::new()
+            .insert_new_verification(&new_verification)
+            .map_err(|e| anyhow!("{}", e))
     }
 
     fn resolve_user_id(

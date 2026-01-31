@@ -1,94 +1,104 @@
-# Semantic Search (AI) for Requirements
+# Semantic Search (AI) — Setup + Internals
 
-ReqMan includes an optional RAG-powered semantic search feature that enables:
-- **Semantic/hybrid search**: Find requirements by meaning, not just keywords
-- **RAG answers**: Ask questions and get AI-generated answers grounded in your requirements with citations
-- **Automatic indexing**: Requirements are automatically queued for embedding generation on create/update
+ReqMan includes an optional **semantic search** feature for requirements:
+- **Hybrid search**: lexical full‑text search + vector similarity search
+- **RAG answers**: optional AI answers grounded in your requirements with citations
+- **Automatic indexing**: new/updated requirements are queued for embedding generation
 
-All AI processing runs locally using [Ollama](https://ollama.ai), ensuring your data stays private and secure.
+All AI processing runs locally using Ollama, so your requirements stay on your machine/network.
+
+---
 
 ## Quick Start
 
-### 1. Start PostgreSQL with pgvector (Docker)
+### 1) Start PostgreSQL (with pgvector)
 
-Use the provided `docker-compose.yml` which includes pgvector:
+Use the repo’s `docker-compose.yml` (it uses a `pgvector/pgvector` Postgres image):
 
 ```bash
-docker-compose up -d db
+docker compose up -d db
 ```
 
-This starts PostgreSQL 15 with the pgvector extension pre-installed.
+### 2) Initialize the database schema + sample data
 
-### 2. Install Ollama
-
-See [OLLAMA_SETUP.md](OLLAMA_SETUP.md) for details:
+This project’s dev setup uses the SQL initializer (it creates the semantic search tables too):
 
 ```bash
-# Linux/WSL
-curl -fsSL https://ollama.ai/install.sh | sh
+./scripts/setup_database.sh
+```
 
-# macOS
-brew install ollama
+Manual equivalent:
 
-# Start the server
+```bash
+docker exec -i $(docker compose ps -q db) psql -U rust -d postgres -c "CREATE DATABASE reqman;"
+docker exec -i $(docker compose ps -q db) psql -U rust -d reqman < scripts/init_complete.sql
+```
+
+### 3) Install and run Ollama
+
+See `doc/OLLAMA_SETUP.md` for full instructions. Minimal:
+
+```bash
 ollama serve
 ```
 
-### 3. Download required models
+### 4) Download models
 
 ```bash
-ollama pull nomic-embed-text  # For embeddings (768 dimensions)
-ollama pull llama3.2          # For RAG answers (optional)
+ollama pull nomic-embed-text  # embeddings (768 dimensions)
+ollama pull llama3.2          # optional RAG answers
 ```
 
-### 4. Run database migrations
+### 5) Configure `.env`
 
 ```bash
-diesel migration run
-```
-
-### 5. Configure environment
-
-Add to your `.env` file:
-
-```bash
-# Required for semantic search
+# Embeddings (required for semantic/vector search)
 EMBEDDINGS_ENABLED=true
 EMBEDDING_PROVIDER=ollama
 OLLAMA_URL=http://localhost:11434
 
-# Optional: RAG answers
+# RAG answers (optional)
 RAG_ENABLED=true
 RAG_MODEL=llama3.2
 ```
 
-### 6. Start ReqMan
+### 6) Start ReqMan
 
 ```bash
-cargo run
+cargo run --bin req_man
 ```
 
-On startup, you'll see:
-```
-🔍 Semantic search enabled: provider=ollama, model=nomic-embed-text, dim=768
-🤖 RAG enabled: model=llama3.2, max_tokens=1024
-✅ Semantic index background processor started
-```
+### 7) One-time reindex (for existing requirements)
 
-### 7. Initial reindex (for existing requirements)
-
-For projects with existing requirements, trigger a one-time reindex:
+New/updated requirements are queued automatically, but for projects that already have requirements, trigger a reindex:
 
 ```bash
-# Via the UI (Admin menu → Reindex)
-# Or via API:
 curl -X POST http://localhost:8000/api/projects/1/requirements/reindex \
   -H "Cookie: session=<your-session-cookie>"
 ```
 
-After initial reindex, new/updated requirements are automatically indexed.
+---
 
-## Architecture
+## Feature Overview
+
+### Hybrid retrieval
+
+ReqMan combines:
+1) **Lexical search** via Postgres full‑text search (`tsvector`)
+2) **Vector search** via pgvector cosine similarity over embeddings
+3) **Fusion** using Reciprocal Rank Fusion (RRF)
+
+### RAG answers
+
+When enabled, ReqMan can generate an answer by:
+1) retrieving top‑K relevant requirements, then
+2) asking an Ollama LLM to answer using that retrieved context.
+
+ReqMan attempts to extract citations like `[REQ-123]` from the answer.
+
+---
+
+## Architecture (High Level)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -107,128 +117,182 @@ After initial reindex, new/updated requirements are automatically indexed.
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Search Service                               │
-│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐        │
-│  │   Lexical    │   │    Vector    │   │     RRF      │        │
-│  │   Search     │ + │   Search     │ → │   Fusion     │        │
-│  │  (tsvector)  │   │  (pgvector)  │   │              │        │
-│  └──────────────┘   └──────────────┘   └──────────────┘        │
+│                    Backend Services                             │
+│  - Hybrid retrieval (lexical + vector + RRF)                    │
+│  - Optional answer generation                                   │
+│  - Index queue processing                                       │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Ollama (Local AI)                            │
-│  ┌──────────────────┐   ┌──────────────────┐                   │
-│  │  nomic-embed-text │   │    llama3.2      │                   │
-│  │   (embeddings)    │   │   (RAG answers)  │                   │
-│  └──────────────────┘   └──────────────────┘                   │
+│  - Embeddings: /api/embed                                       │
+│  - LLM chat:  /api/chat                                         │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      PostgreSQL                                 │
-│  requirements (search_vector tsvector)                          │
-│  requirement_embeddings (embedding vector)                      │
+│  - requirements.search_vector (tsvector)                        │
+│  - requirement_embeddings (pgvector)                            │
+│  - embedding_index_queue                                        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Requirements
+---
 
-### PostgreSQL with pgvector
+## Code Map (Backend)
 
-Install the [pgvector](https://github.com/pgvector/pgvector) extension:
+Core modules live under `src/services/semantic_search/`:
+- `config.rs`: reads env vars into `SemanticSearchConfig`
+- `document_builder.rs`: builds the embedding document + SHA-256 content hash
+- `embedding_provider.rs`: embeddings provider abstraction (Ollama + mock)
+- `llm_provider.rs`: LLM provider abstraction (Ollama + mock)
+- `indexing_service.rs`: writes embeddings and manages `embedding_index_queue`
+- `search_service.rs`: lexical search + vector search + RRF + optional `ask()`
 
-```bash
-# Ubuntu/Debian
-sudo apt install postgresql-16-pgvector
+API endpoints are in `src/api/semantic_search.rs`.
 
-# macOS
-brew install pgvector
+Automatic background indexing runs via a Rocket fairing in `src/fairings/semantic_index.rs`.
 
-# Docker
-docker pull pgvector/pgvector:pg16
+---
+
+## Database Objects (Created by `scripts/init_complete.sql`)
+
+### Extension
+
+- `vector` (pgvector)
+
+### Tables
+
+- `requirement_embeddings`
+  - stores `embedding vector(768)` plus metadata (`embedding_model`, `content_hash`, timestamps)
+  - `requirement_id` is the primary key and CASCADE deletes with the requirement
+- `embedding_index_queue`
+  - tracks indexing jobs (`pending`, `processing`, `completed`, `failed`)
+  - unique per `requirement_id` (only one active job per requirement)
+- `requirements.search_vector`
+  - `tsvector` column used for lexical full‑text search
+
+### Indexes and triggers
+
+- ANN index on `requirement_embeddings.embedding` using HNSW + cosine distance ops
+- GIN index on `requirements.search_vector`
+- trigger `requirements_search_vector_trigger` keeps `search_vector` up to date on insert/update
+
+---
+
+## How Search Works
+
+### 1) Lexical search (full‑text search)
+
+The lexical pass ranks requirements using Postgres full‑text search:
+- ranks via `ts_rank_cd(search_vector, to_tsquery(...))`
+- filters via `search_vector @@ to_tsquery(...)`
+
+ReqMan builds an OR‑based `tsquery` string for “question-like” inputs:
+- splits words
+- drops short words and a small stop-word list
+- adds `:*` prefix matching
+- joins tokens with ` | ` for recall
+
+### 2) Vector search (pgvector)
+
+The vector pass:
+1) generates an embedding for the query via Ollama (`/api/embed`)
+2) searches `requirement_embeddings` ordered by cosine distance
+
+### 3) Fusion (RRF)
+
+ReqMan combines the two ranked lists using Reciprocal Rank Fusion:
+- contribution is `1 / (RRF_K + rank)` with `RRF_K = 60`
+- avoids mixing raw lexical/vectors scores directly (no scale matching problems)
+
+### 4) Reference-code shortcut
+
+If the query looks like a reference code (dash + digits), ReqMan short-circuits to a direct lookup.
+
+---
+
+## How Indexing Works
+
+### Embedding document
+
+Each requirement is converted into a deterministic embedding document, e.g.:
+
+```
+[REF] REQ-SYS-001
+[TITLE] System shall process inputs
+[DESC] The system shall process all valid inputs within 100ms
+[RATIONALE] Required for real-time operation
+[CATEGORY] Functional
+[STATUS] Draft
 ```
 
-### Ollama
+A SHA‑256 hash derived from (document + model name) is stored as `content_hash` so embeddings are only regenerated when content changes (or the model changes).
 
-See [OLLAMA_SETUP.md](OLLAMA_SETUP.md) for complete installation instructions.
+### Queue lifecycle
+
+On requirement create/update/import:
+- the requirement is upserted into `embedding_index_queue` with status `pending`
+
+Background processing:
+- runs periodically
+- processes the oldest pending items first
+- marks each as `processing`, then `completed` or `failed`
+
+Queue statuses:
+- `pending`: waiting
+- `processing`: active
+- `completed`: indexed successfully
+- `failed`: error occurred
+
+---
 
 ## Configuration
 
-### Environment Variables
+### Environment variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `EMBEDDINGS_ENABLED` | Enable embedding generation | `false` |
 | `EMBEDDING_PROVIDER` | Provider (`ollama` or `mock`) | `ollama` |
 | `EMBEDDING_MODEL` | Ollama embedding model | `nomic-embed-text` |
-| `EMBEDDING_DIM` | Embedding dimension (auto-detected) | `768` |
+| `EMBEDDING_DIM` | Embedding dimension | `768` |
 | `OLLAMA_URL` | Ollama server URL | `http://localhost:11434` |
-| `RAG_ENABLED` | Enable RAG answer generation | `false` |
+| `RAG_ENABLED` | Enable answer generation | `false` |
 | `RAG_MODEL` | Ollama LLM model | `llama3.2` |
-| `RAG_MAX_TOKENS` | Max tokens for RAG response | `1024` |
-| `RAG_TOP_K` | Results to use for RAG context | `10` |
+| `RAG_MAX_TOKENS` | Max tokens for answer | `1024` |
+| `RAG_TOP_K` | Results used as answer context | `10` |
 
-### Recommended Ollama Models
+### Model notes
 
-**Embedding Models:**
-| Model | Dimensions | Best For |
-|-------|------------|----------|
-| `nomic-embed-text` | 768 | General use (recommended) |
-| `mxbai-embed-large` | 1024 | Higher quality |
-| `all-minilm` | 384 | Fastest |
+- `nomic-embed-text` uses 768 dimensions, matching the default DB column type.
+- If you choose a different embedding model dimension, you must also change the DB column type accordingly (and rebuild existing embeddings).
 
-**LLM Models (for RAG):**
-| Model | Best For |
-|-------|----------|
-| `llama3.2` | General use (recommended) |
-| `mistral` | Fast responses |
-| `llama3.1` | Higher quality |
+---
 
 ## Usage
 
-### User Interface
+### UI
 
-1. Navigate to the Requirements page for any project
-2. Click the **AI Search** button (or press `Ctrl+K` / `Cmd+K`)
-3. Enter your search query:
-   - **Keywords**: Find requirements matching terms
-   - **Questions**: Get AI-generated answers (e.g., "What are the safety requirements?")
-   - **Reference codes**: Direct lookup (e.g., "REQ-001")
-4. Optionally expand **Filters** to narrow results
-5. Results show:
-   - **Ranked requirements** with match scores
-   - **AI Answer** (for question queries) with citations
+1) Open a project’s Requirements page
+2) Click **AI Search** (or press `Ctrl+K` / `Cmd+K`)
+3) Enter a query:
+   - keywords (“battery endurance”)
+   - reference codes (“REQ-PWR-002”)
+   - questions (“What are the thermal requirements?”)
+4) (Optional) use filters
 
-### API Endpoints
+### API
 
-#### Search Requirements
+#### Search requirements
 
 ```http
 GET /api/projects/{project_id}/requirements/semantic_search?q=<query>&k=<limit>
 ```
 
-Response:
-```json
-{
-  "enabled": true,
-  "results": [
-    {
-      "id": 1,
-      "reference_code": "REQ-001",
-      "title": "System shall...",
-      "snippet": "...",
-      "score": 0.95,
-      "rank": 1,
-      "status": "Draft",
-      "category": "Functional"
-    }
-  ],
-  "total": 1
-}
-```
-
-#### Ask a Question (RAG)
+#### Ask a question (answer generation)
 
 ```http
 POST /api/projects/{project_id}/requirements/ask
@@ -240,150 +304,58 @@ Content-Type: application/json
 }
 ```
 
-Response:
-```json
-{
-  "answer": "Based on the requirements, safety is addressed by [REQ-SAF-001] which specifies...",
-  "citations": [
-    {"requirement_id": 5, "reference_code": "REQ-SAF-001", "title": "Safety Constraint"}
-  ],
-  "results": [...]
-}
-```
-
-#### Reindex Project (Admin Only)
+#### Reindex a project (admin only)
 
 ```http
 POST /api/projects/{project_id}/requirements/reindex
 ```
 
-#### Get Index Status
+#### Index status
 
 ```http
 GET /api/projects/{project_id}/requirements/index_status
 ```
 
-## How It Works
-
-### Hybrid Search
-
-The search combines two retrieval methods using Reciprocal Rank Fusion (RRF):
-
-1. **Lexical Search** (PostgreSQL full-text search)
-   - Uses `tsvector` for fast keyword matching
-   - Good for exact matches and known terminology
-
-2. **Vector Search** (pgvector similarity)
-   - Computes cosine similarity between query and requirement embeddings
-   - Good for semantic meaning and paraphrased queries
-
-3. **RRF Fusion**
-   - Combines results: `score = sum(1 / (k + rank))`
-   - Balances lexical precision with semantic recall
-
-### Embedding Document
-
-For each requirement, an embedding document is created:
-
-```
-[REF] REQ-SYS-001
-[TITLE] System shall process inputs
-[DESC] The system shall process all valid inputs within 100ms
-[RATIONALE] Required for real-time operation
-[CATEGORY] Functional
-[STATUS] Draft
-```
-
-A SHA-256 content hash ensures embeddings are only regenerated when content changes.
-
-## Automatic Indexing
-
-ReqMan automatically manages embeddings for requirements:
-
-### When Indexing Happens
-
-| Event | Behavior |
-|-------|----------|
-| **Create requirement** | Queued for indexing immediately |
-| **Update requirement** | Queued for re-indexing (only if content changed) |
-| **Delete requirement** | Embedding deleted via CASCADE |
-| **Import from Excel/CSV** | All imported requirements queued |
-| **Application startup** | Pending queue items processed |
-
-### Background Processing
-
-A background task runs every 60 seconds to process queued items:
-- Processes up to 50 items per run
-- Skips requirements whose content hasn't changed (using content hash)
-- Logs progress: `📊 Background index queue: processed=5, failed=0`
-
-### Index Queue States
-
-| Status | Description |
-|--------|-------------|
-| `pending` | Waiting to be processed |
-| `processing` | Currently generating embedding |
-| `completed` | Successfully indexed |
-| `failed` | Error occurred (will be retried on next reindex) |
-
-### Monitoring Index Status
-
-```bash
-# Check project indexing status
-curl http://localhost:8000/api/projects/1/requirements/index_status
-
-# Response:
-{
-  "project_id": 1,
-  "total_requirements": 150,
-  "indexed_count": 148,
-  "pending_count": 2,
-  "failed_count": 0,
-  "embeddings_enabled": true,
-  "embedding_model": "nomic-embed-text"
-}
-```
+---
 
 ## Troubleshooting
 
-### "Ollama server not reachable"
-- Start Ollama: `ollama serve`
-- Check URL: `curl http://localhost:11434/api/tags`
+### Ollama server not reachable
+- start Ollama: `ollama serve`
+- confirm it responds: `curl http://localhost:11434/api/tags`
 
-### "Model not found"
-- Pull the model: `ollama pull nomic-embed-text`
+### Model not found
+- pull the model: `ollama pull nomic-embed-text`
 
-### "pgvector extension not found"
-- Install pgvector for your PostgreSQL version
+### pgvector not available
+- use the repo’s docker compose service (recommended), or install pgvector for your Postgres distribution
 
-### Slow Performance
-- Use GPU acceleration for Ollama
-- Use smaller models (`all-minilm`, `llama3.2:1b`)
+### Slow performance
+- use GPU acceleration for Ollama if available
+- use smaller models (e.g. `llama3.2:1b`)
 
-## Security
+---
 
-1. **Data Privacy**: All processing is local - no data leaves your infrastructure
-2. **Project Isolation**: Queries are scoped to user's accessible projects
-3. **Network Security**: Don't expose Ollama to public internet
+## Security Notes
+
+1) Data stays local (Ollama runs on your host)
+2) Searches are project-scoped and guarded by existing authorization checks
+3) Do not expose Ollama to the public internet
+
+---
 
 ## Development
 
-### Running Tests
+### Tests
 
 ```bash
-# Rust tests
 cargo test semantic_search --lib
+```
 
-# With mock provider (no Ollama needed)
+### Mock provider (no Ollama required)
+
+```bash
+EMBEDDINGS_ENABLED=true
 EMBEDDING_PROVIDER=mock cargo test
 ```
 
-### Mock Provider
-
-For development without Ollama:
-```bash
-EMBEDDINGS_ENABLED=true
-EMBEDDING_PROVIDER=mock
-```
-
-The mock provider generates deterministic embeddings for testing.

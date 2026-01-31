@@ -2,7 +2,7 @@
 //!
 //! These enums provide type-safe representations of requirement and test statuses,
 //! ensuring consistency across the application and matching the exact definitions
-//! in the database initialization script (`init_complete.sql`).
+//! in the database initialization script (`scripts/init_complete.sql`).
 //!
 //! # Coverage Calculation
 //!

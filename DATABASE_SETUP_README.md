@@ -20,7 +20,7 @@ This guide provides complete instructions for setting up the ReqMan database wit
 
 3. **Run the automated setup script**
    ```bash
-   ./setup_database.sh
+   ./scripts/setup_database.sh
    ```
 
 4. **Start the application**
@@ -41,7 +41,7 @@ This guide provides complete instructions for setting up the ReqMan database wit
 
 2. **Run the initialization script**
    ```bash
-   docker exec -i reqman_db_1 psql -U rust -d reqman < init_complete.sql
+   docker exec -i reqman_db_1 psql -U rust -d reqman < scripts/init_complete.sql
    ```
 
 ## Database Schema
@@ -97,18 +97,16 @@ This guide provides complete instructions for setting up the ReqMan database wit
 
 ## Database Files
 
-### `init_complete.sql`
+### `scripts/init_complete.sql`
 Complete database initialization script containing:
 - All table definitions
 - Foreign key constraints
 - Performance indexes
+- Semantic search schema (pgvector + full-text search)
 - Sample data
 - Working user passwords
 
-### `init_simple.sql`
-Simplified version with basic schema and data.
-
-### `setup_database.sh`
+### `scripts/setup_database.sh`
 Automated setup script that:
 - Checks Docker status
 - Creates database
@@ -167,7 +165,7 @@ docker exec reqman_db_1 psql -U rust -d postgres -c "DROP DATABASE IF EXISTS req
 docker exec reqman_db_1 psql -U rust -d postgres -c "CREATE DATABASE reqman;"
 
 # Re-run initialization
-./setup_database.sh
+./scripts/setup_database.sh
 ```
 
 ## Security Notes

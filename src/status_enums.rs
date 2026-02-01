@@ -283,10 +283,21 @@ impl std::fmt::Display for TestStatusEnum {
 /// - OnHold: Project is temporarily paused
 /// - Cancelled: Project has been cancelled
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, AsExpression, FromSqlRow,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize,
+    AsExpression,
+    FromSqlRow,
+    Default,
 )]
 #[diesel(sql_type = diesel::sql_types::Text)]
 pub enum ProjectStatus {
+    #[default]
     Active,
     Completed,
     OnHold,
@@ -375,12 +386,6 @@ impl ProjectStatus {
 impl std::fmt::Display for ProjectStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.title())
-    }
-}
-
-impl Default for ProjectStatus {
-    fn default() -> Self {
-        ProjectStatus::Active
     }
 }
 

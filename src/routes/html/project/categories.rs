@@ -200,7 +200,7 @@ mod tests {
 
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
-            id: id,
+            id,
             name: name.to_string(),
             description: Some(format!("{name} project")),
             creation_date: Some(timestamp()),
@@ -212,7 +212,7 @@ mod tests {
 
     fn sample_category(id: i32, project_id: i32, title: &str) -> Category {
         Category {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("Description for {title}"),
             tag: title.to_ascii_lowercase(),

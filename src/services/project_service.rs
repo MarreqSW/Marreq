@@ -204,7 +204,7 @@ mod tests {
 
     fn project(id: i32, name: &str) -> Project {
         Project {
-            id: id,
+            id,
             name: name.into(),
             description: Some("Existing description".into()),
             creation_date: Some(timestamp()),

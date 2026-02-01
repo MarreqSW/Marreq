@@ -63,7 +63,12 @@ impl Fairing for SemanticIndexFairing {
             match rocket.state::<AppState<DieselCachedRepo>>() {
                 Some(s) => {
                     // SAFETY: Rocket's managed state has 'static lifetime
-                    unsafe { std::mem::transmute(s) }
+                    unsafe {
+                        std::mem::transmute::<
+                            &AppState<DieselCachedRepo>,
+                            &'static AppState<DieselCachedRepo>,
+                        >(s)
+                    }
                 }
                 None => {
                     eprintln!("⚠️  Could not access AppState for semantic indexing");
@@ -145,20 +150,16 @@ async fn background_queue_processor(state: &'static AppState<DieselCachedRepo>) 
 mod tests {
     use super::*;
 
-    #[test]
-    fn queue_process_interval_is_reasonable() {
-        // Interval should be at least 10 seconds to avoid hammering the DB
-        assert!(QUEUE_PROCESS_INTERVAL.as_secs() >= 10);
-        // And not more than 5 minutes to keep things responsive
-        assert!(QUEUE_PROCESS_INTERVAL.as_secs() <= 300);
-    }
+    // Compile-time assertions on constants
+    const _: () = assert!(QUEUE_PROCESS_INTERVAL.as_secs() >= 10);
+    const _: () = assert!(QUEUE_PROCESS_INTERVAL.as_secs() <= 300);
+    const _: () = assert!(QUEUE_BATCH_SIZE >= 1);
+    const _: () = assert!(QUEUE_BATCH_SIZE <= 1000);
 
     #[test]
-    fn queue_batch_size_is_reasonable() {
-        // Batch size should be at least 1
-        assert!(QUEUE_BATCH_SIZE >= 1);
-        // And not too large to avoid long-running operations
-        assert!(QUEUE_BATCH_SIZE <= 1000);
+    fn constants_match_expected_values() {
+        assert_eq!(QUEUE_PROCESS_INTERVAL, Duration::from_secs(60));
+        assert_eq!(QUEUE_BATCH_SIZE, 50);
     }
 
     #[test]
@@ -175,12 +176,6 @@ mod tests {
         let info = fairing.info();
         // Should only be Liftoff, not Request or Response
         assert!(info.kind.is(Kind::Liftoff));
-    }
-
-    #[test]
-    fn constants_match_expected_values() {
-        assert_eq!(QUEUE_PROCESS_INTERVAL, Duration::from_secs(60));
-        assert_eq!(QUEUE_BATCH_SIZE, 50);
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use super::cache::Cache;
+use super::repository::Cache;
 use super::keys;
 use chrono;
 use serde::{Deserialize, Serialize};

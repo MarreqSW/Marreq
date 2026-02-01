@@ -273,7 +273,7 @@ impl<'a> MatrixService<'a> {
     }
 
     fn sort_requirements(
-        reqs: &mut Vec<Requirement>,
+        reqs: &mut [Requirement],
         sort_by: &str,
         desc: bool,
         links: &HashSet<(i32, i32)>,

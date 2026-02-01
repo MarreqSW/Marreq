@@ -136,15 +136,13 @@ impl<'a> RequirementService<'a> {
         let mut filtered_requirements: Vec<Requirement> = requirements
             .into_iter()
             .filter(|req| {
-                let status_match =
-                    status_filter.map_or(true, |status_id| req.status_id == status_id);
+                let status_match = status_filter.is_none_or(|status_id| req.status_id == status_id);
                 let verification_match =
-                    verification_filter.map_or(true, |id| req.verification_method_id == id);
+                    verification_filter.is_none_or(|id| req.verification_method_id == id);
                 let category_match =
-                    category_filter.map_or(true, |category_id| req.category_id == category_id);
-                let applicability_match = applicability_filter.map_or(true, |applicability_id| {
-                    req.applicability_id == applicability_id
-                });
+                    category_filter.is_none_or(|category_id| req.category_id == category_id);
+                let applicability_match = applicability_filter
+                    .is_none_or(|applicability_id| req.applicability_id == applicability_id);
                 status_match && verification_match && category_match && applicability_match
             })
             .collect();
@@ -263,7 +261,7 @@ mod tests {
 
     fn requirement(id: i32, project_id: i32, reference: &str) -> Requirement {
         Requirement {
-            id: id,
+            id,
             title: format!("Requirement {id}"),
             description: "Existing description".into(),
             verification_method_id: 1,

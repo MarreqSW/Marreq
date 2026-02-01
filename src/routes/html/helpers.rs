@@ -225,7 +225,7 @@ pub(crate) fn get_category_by_id_cached(state: &AppState, id: i32) -> Category {
         .repo_read()
         .get_category_by_id(id)
         .unwrap_or_else(|_| Category {
-            id: id,
+            id,
             title: format!("Unknown Category ({})", id),
             description: "Category not found".to_string(),
             tag: "unknown".to_string(),
@@ -324,7 +324,8 @@ mod tests {
         user.is_admin = true;
 
         let projects = get_accessible_projects(&state, &user);
-        assert!(projects.len() == 0 || projects.len() > 0);
+        // Verify function returns without panic - result depends on test data
+        let _ = projects.is_empty();
     }
 
     #[test]
@@ -439,7 +440,7 @@ mod tests {
         let state = create_test_state();
         // Verify state creation works and we can read from it
         let _repo = state.repo_read();
-        assert!(true); // State creation successful
+        // Reaching here without panic proves state creation works
     }
 
     #[test]

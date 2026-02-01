@@ -44,7 +44,7 @@ impl<'a> ProjectService<'a> {
             }
         }
 
-        projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        projects.sort_by_key(|a| a.name.to_lowercase());
 
         Ok(projects)
     }
@@ -204,7 +204,7 @@ mod tests {
 
     fn project(id: i32, name: &str) -> Project {
         Project {
-            id: id,
+            id,
             name: name.into(),
             description: Some("Existing description".into()),
             creation_date: Some(timestamp()),

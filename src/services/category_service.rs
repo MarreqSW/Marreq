@@ -138,7 +138,7 @@ mod tests {
 
     fn category(id: i32, title: &str, project_id: i32) -> Category {
         Category {
-            id: id,
+            id,
             title: title.into(),
             description: "desc".into(),
             tag: "TAG".into(),

@@ -50,15 +50,9 @@ impl Cache {
     pub fn start_cache_maintenance(self: &Arc<Self>) {
         let weak: Weak<Self> = Arc::downgrade(self);
         thread::spawn(move || {
-            loop {
-                // stop if `Cache` is dropped everywhere
-                match weak.upgrade() {
-                    Some(this) => {
-                        this.cleanup();
-                        thread::sleep(this.default_ttl);
-                    }
-                    None => break, // Cache gone; exit thread
-                }
+            while let Some(this) = weak.upgrade() {
+                this.cleanup();
+                thread::sleep(this.default_ttl);
             }
         });
     }
@@ -76,15 +70,14 @@ impl Cache {
     pub fn get(&self, key: &str) -> Option<String> {
         let start = Instant::now();
 
-        let result: Option<String>;
-        match self.read(key) {
+        let result: Option<String> = match self.read(key) {
             Status::Hit(value) => {
                 self.hits.fetch_add(1, Ordering::Relaxed);
-                result = Some(value);
+                Some(value)
             }
             Status::Miss => {
                 self.misses.fetch_add(1, Ordering::Relaxed);
-                result = None;
+                None
             }
             Status::Expired => {
                 // Update counters: move from active to expired before removal
@@ -92,9 +85,9 @@ impl Cache {
                 self.expired_entries.fetch_add(1, Ordering::Relaxed);
                 self.misses.fetch_add(1, Ordering::Relaxed);
                 self.remove(key);
-                result = None;
+                None
             }
-        }
+        };
 
         let dt = start.elapsed().as_nanos() as u64;
         self.total_access_time.fetch_add(dt, Ordering::Relaxed);

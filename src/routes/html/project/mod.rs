@@ -2,12 +2,12 @@ mod applicability;
 mod categories;
 mod matrix;
 mod members;
-mod project;
+mod project_routes;
 mod reports;
 pub mod requirements;
+mod test_cases;
 #[cfg(any(test, feature = "test-helpers"))]
 pub mod test_helpers;
-mod tests;
 
 use super::helpers;
 use super::projects;
@@ -45,7 +45,7 @@ pub fn routes() -> Vec<Route> {
     routes.extend(members::routes());
     routes.extend(reports::routes());
     routes.extend(requirements::routes());
-    routes.extend(tests::routes());
-    routes.extend(project::routes());
+    routes.extend(test_cases::routes());
+    routes.extend(project_routes::routes());
     routes
 }

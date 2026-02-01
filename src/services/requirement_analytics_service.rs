@@ -248,11 +248,11 @@ mod tests {
             title: format!("Req {id}"),
             description: "desc".into(),
             verification_method_id,
-            status_id: status_id,
+            status_id,
             author_id: 1,
             reviewer_id: 1,
             reference_code: format!("REF-{id}"),
-            category_id: category_id,
+            category_id,
             parent_id: None,
             creation_date: naive_datetime(),
             update_date: naive_datetime(),
@@ -265,7 +265,7 @@ mod tests {
 
     fn status(id: i32, title: &str) -> RequirementStatus {
         RequirementStatus {
-            id: id,
+            id,
             title: title.into(),
             description: format!("{title} description"),
             tag: title.chars().take(3).collect(),

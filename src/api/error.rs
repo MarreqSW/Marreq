@@ -57,19 +57,15 @@ impl From<RepoError> for ApiError {
     fn from(value: RepoError) -> Self {
         match value {
             RepoError::NotFound => ApiError::NotFound("record not found".into()),
-            RepoError::Db(err) => match err {
-                DieselError::DatabaseError(kind, info) => match kind {
-                    DatabaseErrorKind::UniqueViolation
-                    | DatabaseErrorKind::ForeignKeyViolation
-                    | DatabaseErrorKind::CheckViolation
-                    | DatabaseErrorKind::NotNullViolation => {
-                        ApiError::BadRequest(info.message().to_string())
-                    }
-                    _ => ApiError::Internal("database query failed".into()),
-                },
-                DieselError::NotFound => ApiError::NotFound("record not found".into()),
-                _ => ApiError::Internal("database query failed".into()),
-            },
+            RepoError::Db(DieselError::DatabaseError(
+                DatabaseErrorKind::UniqueViolation
+                | DatabaseErrorKind::ForeignKeyViolation
+                | DatabaseErrorKind::CheckViolation
+                | DatabaseErrorKind::NotNullViolation,
+                info,
+            )) => ApiError::BadRequest(info.message().to_string()),
+            RepoError::Db(DieselError::NotFound) => ApiError::NotFound("record not found".into()),
+            RepoError::Db(_) => ApiError::Internal("database query failed".into()),
             RepoError::Pool(err) => ApiError::Internal(format!("connection pool error: {}", err)),
             RepoError::BadInput(msg) => ApiError::BadRequest(msg),
             RepoError::Unauthorized => ApiError::Forbidden("operation not permitted".into()),

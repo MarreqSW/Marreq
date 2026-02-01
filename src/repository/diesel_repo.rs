@@ -39,11 +39,13 @@ impl PooledConnectionWrapper {
     }
 
     /// Get a mutable reference to the inner connection
+    #[allow(clippy::should_implement_trait)]
     pub fn as_mut(&mut self) -> &mut PgConnection {
         &mut self.inner
     }
 
     /// Get a reference to the inner connection
+    #[allow(clippy::should_implement_trait)]
     pub fn as_ref(&self) -> &PgConnection {
         &self.inner
     }
@@ -131,8 +133,15 @@ pub struct PoolInfo {
     pub max_lifetime: Option<Duration>,
 }
 
+#[derive(Clone)]
 pub struct DieselRepo {
     pool: Arc<ConnectionPool>,
+}
+
+impl Default for DieselRepo {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DieselRepo {
@@ -658,10 +667,28 @@ impl LookupRepository for DieselRepo {
 
 impl RequirementsRepository for DieselRepo {
     fn get_requirement_by_id(&self, requirement_id: i32) -> Result<Requirement, RepoError> {
-        use schema::requirements::dsl;
+        use schema::requirements::dsl::*;
         let mut conn = self.get_conn()?;
-        dsl::requirements
-            .filter(dsl::id.eq(requirement_id))
+        requirements
+            .filter(id.eq(requirement_id))
+            .select((
+                id,
+                title,
+                description,
+                verification_method_id,
+                status_id,
+                author_id,
+                reviewer_id,
+                reference_code,
+                category_id,
+                parent_id,
+                creation_date,
+                update_date,
+                deadline_date,
+                applicability_id,
+                justification,
+                project_id,
+            ))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -673,27 +700,85 @@ impl RequirementsRepository for DieselRepo {
     }
 
     fn get_requirements_all(&self) -> Result<Vec<Requirement>, RepoError> {
-        use schema::requirements::dsl;
+        use schema::requirements::dsl::*;
         let mut conn = self.get_conn()?;
-        dsl::requirements
-            .order(dsl::id)
+        requirements
+            .order(id)
+            .select((
+                id,
+                title,
+                description,
+                verification_method_id,
+                status_id,
+                author_id,
+                reviewer_id,
+                reference_code,
+                category_id,
+                parent_id,
+                creation_date,
+                update_date,
+                deadline_date,
+                applicability_id,
+                justification,
+                project_id,
+            ))
             .load::<Requirement>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_requirements_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        use schema::requirements::dsl;
+    fn get_requirements_by_project(
+        &self,
+        project_id_param: i32,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        use schema::requirements::dsl::*;
         let mut conn = self.get_conn()?;
-        dsl::requirements
-            .filter(dsl::project_id.eq(project_id))
+        requirements
+            .filter(project_id.eq(project_id_param))
+            .select((
+                id,
+                title,
+                description,
+                verification_method_id,
+                status_id,
+                author_id,
+                reviewer_id,
+                reference_code,
+                category_id,
+                parent_id,
+                creation_date,
+                update_date,
+                deadline_date,
+                applicability_id,
+                justification,
+                project_id,
+            ))
             .load::<Requirement>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError> {
+        use schema::requirements::dsl::*;
         let mut conn = self.get_conn()?;
         let res: Requirement = diesel::insert_into(schema::requirements::table)
             .values(new)
+            .returning((
+                id,
+                title,
+                description,
+                verification_method_id,
+                status_id,
+                author_id,
+                reviewer_id,
+                reference_code,
+                category_id,
+                parent_id,
+                creation_date,
+                update_date,
+                deadline_date,
+                applicability_id,
+                justification,
+                project_id,
+            ))
             .get_result(conn.as_mut())?;
         Ok(res.id)
     }
@@ -712,10 +797,28 @@ impl RequirementsRepository for DieselRepo {
     }
 
     fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError> {
-        use crate::schema::requirements::dsl;
+        use crate::schema::requirements::dsl::*;
         let mut conn = self.get_conn()?;
-        let req = dsl::requirements
-            .filter(dsl::id.eq(requirement_id))
+        let req = requirements
+            .filter(id.eq(requirement_id))
+            .select((
+                id,
+                title,
+                description,
+                verification_method_id,
+                status_id,
+                author_id,
+                reviewer_id,
+                reference_code,
+                category_id,
+                parent_id,
+                creation_date,
+                update_date,
+                deadline_date,
+                applicability_id,
+                justification,
+                project_id,
+            ))
             .get_result::<Requirement>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -724,8 +827,7 @@ impl RequirementsRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::requirements.filter(dsl::id.eq(requirement_id)))
-            .execute(conn.as_mut())?;
+        diesel::delete(requirements.filter(id.eq(requirement_id))).execute(conn.as_mut())?;
         Ok(req)
     }
 
@@ -895,8 +997,8 @@ impl TestsCaseRepository for DieselRepo {
 
                     let new_matrix = NewMatrixLink {
                         req_id: *requirement_id,
-                        test_id: test_id,
-                        project_id: project_id,
+                        test_id,
+                        project_id,
                     };
                     diesel::insert_into(schema::matrix::table)
                         .values(&new_matrix)

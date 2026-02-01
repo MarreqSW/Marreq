@@ -115,6 +115,8 @@ echo ""
 
 echo "🧹 Cleaning existing tables (if any)..."
 psqlc -U rust -d reqman <<'SQL' >/dev/null 2>&1 || true
+DROP TABLE IF EXISTS embedding_index_queue CASCADE;
+DROP TABLE IF EXISTS requirement_embeddings CASCADE;
 DROP TABLE IF EXISTS matrix CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;
 DROP TABLE IF EXISTS requirements CASCADE;

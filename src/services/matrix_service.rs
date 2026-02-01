@@ -273,7 +273,7 @@ impl<'a> MatrixService<'a> {
     }
 
     fn sort_requirements(
-        reqs: &mut Vec<Requirement>,
+        reqs: &mut [Requirement],
         sort_by: &str,
         desc: bool,
         links: &HashSet<(i32, i32)>,
@@ -612,7 +612,7 @@ mod tests {
     #[test]
     fn get_matrix_view_applies_requirement_filters() {
         let mut repo = DieselRepoMock::default();
-        let mut req1 = Requirement {
+        let req1 = Requirement {
             id: 1,
             title: "Req 1".to_string(),
             description: String::new(),
@@ -630,7 +630,7 @@ mod tests {
             justification: None,
             project_id: 1,
         };
-        let mut req2 = Requirement {
+        let req2 = Requirement {
             id: 2,
             title: "Req 2".to_string(),
             description: String::new(),

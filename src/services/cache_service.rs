@@ -207,7 +207,7 @@ mod tests {
 
         // Should have performance-related fields
         let obj = performance.as_object().unwrap();
-        assert!(obj.contains_key("hit_rate") || obj.contains_key("miss_rate") || obj.len() > 0);
+        assert!(obj.contains_key("hit_rate") || obj.contains_key("miss_rate") || !obj.is_empty());
     }
 
     #[test]

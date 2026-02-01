@@ -139,7 +139,7 @@ mod tests {
 
     fn make_test(id: i32, parent: i32, status: i32) -> TestCase {
         TestCase {
-            id: id,
+            id,
             name: format!("Test {id}"),
             description: "desc".into(),
             source: "manual".into(),
@@ -400,7 +400,7 @@ mod tests {
         let service = DecoratedTestService::new(&state);
 
         let actor = DieselRepoMock::make_user(1, "actor", "");
-        let mut payload = NewTestCase {
+        let payload = NewTestCase {
             id: Some(1),
             reference_code: "TEST-1".into(),
             name: "Updated Test".into(),

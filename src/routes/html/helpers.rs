@@ -36,7 +36,7 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
 
     if user.is_admin {
         let mut projects = repo.get_projects_all().unwrap_or_default();
-        projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        projects.sort_by_key(|a| a.name.to_lowercase());
         return projects;
     }
 
@@ -51,7 +51,7 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
         .filter_map(|membership| repo.get_project_by_id(membership.project_id).ok())
         .collect();
 
-    projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    projects.sort_by_key(|a| a.name.to_lowercase());
     projects
 }
 
@@ -225,7 +225,7 @@ pub(crate) fn get_category_by_id_cached(state: &AppState, id: i32) -> Category {
         .repo_read()
         .get_category_by_id(id)
         .unwrap_or_else(|_| Category {
-            id: id,
+            id,
             title: format!("Unknown Category ({})", id),
             description: "Category not found".to_string(),
             tag: "unknown".to_string(),
@@ -270,7 +270,6 @@ pub(crate) fn get_project_by_id_pooled_safe(state: &State<AppState>, project_id:
 mod tests {
     use super::*;
     use crate::models::*;
-    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::Arc;
@@ -325,7 +324,8 @@ mod tests {
         user.is_admin = true;
 
         let projects = get_accessible_projects(&state, &user);
-        assert!(projects.len() >= 0);
+        // Verify function returns without panic - result depends on test data
+        let _ = projects.is_empty();
     }
 
     #[test]
@@ -440,7 +440,7 @@ mod tests {
         let state = create_test_state();
         // Verify state creation works and we can read from it
         let _repo = state.repo_read();
-        assert!(true); // State creation successful
+        // Reaching here without panic proves state creation works
     }
 
     #[test]

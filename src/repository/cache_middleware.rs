@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 /// Repository wrapper that checks the cache before hitting the database
+#[derive(Clone)]
 pub struct CacheRepository<R> {
     inner: R,
     cache: Arc<Cache>,
@@ -1291,7 +1292,6 @@ mod tests {
     fn test_get_or_fetch_with_serialization_error_handling() {
         // Test that if serialization fails, we still return the value
         let repo = CacheRepository::new(populated_repo(), 60);
-        let cache = repo.cache();
 
         // Insert a value that will fail to serialize (this is hard to test without custom types)
         // But we can test the error path by ensuring fetch errors are propagated
@@ -1334,7 +1334,7 @@ mod tests {
 
     #[test]
     fn test_cache_repository_all_trait_methods_accessible() {
-        let mut repo = CacheRepository::new(populated_repo(), 60);
+        let repo = CacheRepository::new(populated_repo(), 60);
 
         // Test that all repository trait methods are accessible through CacheRepository
         let _ = repo.get_users_all();
@@ -1369,8 +1369,7 @@ mod tests {
         let _ = repo.get_logs_recent(10);
         let _ = repo.get_logs_by_entity("requirement", 1);
 
-        // If we get here, all methods are accessible
-        assert!(true);
+        // If we get here without panic, all methods are accessible
     }
 
     #[test]
@@ -1411,7 +1410,7 @@ mod tests {
 
     #[test]
     fn test_warm_cache_with_partial_data() {
-        let mut repo = CacheRepository::new(populated_repo(), 60);
+        let repo = CacheRepository::new(populated_repo(), 60);
         let cache = repo.cache();
 
         // Clear some data to test partial warm

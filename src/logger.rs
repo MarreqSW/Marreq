@@ -223,6 +223,7 @@ impl Logger {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn log_custom(
         conn: &mut PgConnection,
         ctx: &LogCtx,
@@ -247,6 +248,7 @@ impl Logger {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn log_action(
         conn: &mut PgConnection,
         ctx: &LogCtx,
@@ -262,9 +264,7 @@ impl Logger {
             user_id: ctx.id(),
             action_type: action_type.to_string(),
             // If None, default to empty string
-            entity_type: entity_type
-                .map(|et| et.to_string())
-                .unwrap_or_else(|| "".to_string()),
+            entity_type: entity_type.map(|et| et.to_string()).unwrap_or_default(),
             entity_id,
             project_id,
             old_values,

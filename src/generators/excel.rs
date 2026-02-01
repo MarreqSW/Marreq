@@ -56,10 +56,10 @@ pub fn create_matrix_workbook(
     let mut decorated_tests = decorators::decorate_tests(all_tests);
 
     // Sort requirements by ID
-    decorated_reqs.sort_by(|a, b| a.id.cmp(&b.id));
+    decorated_reqs.sort_by_key(|req| req.id);
 
     // Sort tests by ID
-    decorated_tests.sort_by(|a, b| a.id.cmp(&b.id));
+    decorated_tests.sort_by_key(|test| test.id);
 
     let workbook = xlsxwriter::Workbook::new("target/matrix.xls")?;
     let mut sheet1 = workbook.add_worksheet(None)?;

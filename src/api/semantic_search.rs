@@ -240,25 +240,27 @@ pub async fn search_status(
 mod tests {
     use super::*;
 
+    /// Helper to simulate the k parameter bounding logic from endpoints
+    fn bound_k(k: Option<usize>, default: usize, max: usize) -> usize {
+        k.unwrap_or(default).min(max)
+    }
+
     #[test]
     fn search_query_defaults() {
         // Test that default values are sensible
-        let default_k = 10_usize.min(50);
-        assert_eq!(default_k, 10);
+        assert_eq!(bound_k(None, 10, 50), 10);
     }
 
     #[test]
     fn search_query_k_max_capped() {
         // k should be capped at 50
-        let k = 100_usize.min(50);
-        assert_eq!(k, 50);
+        assert_eq!(bound_k(Some(100), 10, 50), 50);
     }
 
     #[test]
     fn ask_request_k_max_capped() {
         // RAG k should be capped at 20
-        let k = 50_usize.min(20);
-        assert_eq!(k, 20);
+        assert_eq!(bound_k(Some(50), 10, 20), 20);
     }
 
     #[test]
@@ -302,48 +304,24 @@ mod tests {
     fn semantic_search_config_global_accessible() {
         // Verify we can access global config without panicking
         let config = SemanticSearchConfig::global();
-        // Default should have embeddings disabled
-        assert!(!config.embeddings_enabled || config.embeddings_enabled);
+        // Just verify we can read the field (config is runtime-determined)
+        let _ = config.embeddings_enabled;
     }
 
     #[test]
     fn k_parameter_bounds() {
         // Test the k parameter bounding logic used in endpoints
-
-        // Default case (None)
-        let k_none: Option<usize> = None;
-        let result = k_none.unwrap_or(10).min(50);
-        assert_eq!(result, 10);
-
-        // Small value
-        let k_small: Option<usize> = Some(5);
-        let result = k_small.unwrap_or(10).min(50);
-        assert_eq!(result, 5);
-
-        // Large value (should be capped)
-        let k_large: Option<usize> = Some(100);
-        let result = k_large.unwrap_or(10).min(50);
-        assert_eq!(result, 50);
-
-        // Zero
-        let k_zero: Option<usize> = Some(0);
-        let result = k_zero.unwrap_or(10).min(50);
-        assert_eq!(result, 0);
+        assert_eq!(bound_k(None, 10, 50), 10); // Default case
+        assert_eq!(bound_k(Some(5), 10, 50), 5); // Small value
+        assert_eq!(bound_k(Some(100), 10, 50), 50); // Large value (capped)
+        assert_eq!(bound_k(Some(0), 10, 50), 0); // Zero
     }
 
     #[test]
     fn rag_k_parameter_bounds() {
         // RAG uses min(20) instead of min(50)
-
-        // Default case (None)
-        let k_none: Option<usize> = None;
-        let result = k_none.unwrap_or(10).min(20);
-        assert_eq!(result, 10);
-
-        // Large value (should be capped at 20)
-        let k_large: Option<usize> = Some(50);
-        let result = k_large.unwrap_or(10).min(20);
-        assert_eq!(result, 20);
+        assert_eq!(bound_k(None, 10, 20), 10); // Default case
+        assert_eq!(bound_k(Some(50), 10, 20), 20); // Large value (capped at 20)
     }
 
     #[test]

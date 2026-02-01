@@ -29,7 +29,7 @@ impl EmbeddingIndexStatus {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s {
             "pending" => Some(Self::Pending),
             "processing" => Some(Self::Processing),
@@ -151,28 +151,28 @@ mod tests {
             EmbeddingIndexStatus::Failed,
         ] {
             let s = status.as_str();
-            let parsed = EmbeddingIndexStatus::from_str(s);
+            let parsed = EmbeddingIndexStatus::parse(s);
             assert_eq!(parsed, Some(status));
         }
     }
 
     #[test]
     fn embedding_index_status_unknown_returns_none() {
-        assert_eq!(EmbeddingIndexStatus::from_str("unknown"), None);
+        assert_eq!(EmbeddingIndexStatus::parse("unknown"), None);
     }
 
     #[test]
     fn embedding_index_status_empty_returns_none() {
-        assert_eq!(EmbeddingIndexStatus::from_str(""), None);
+        assert_eq!(EmbeddingIndexStatus::parse(""), None);
     }
 
     #[test]
     fn embedding_index_status_case_sensitive() {
         // Statuses are case-sensitive
-        assert_eq!(EmbeddingIndexStatus::from_str("PENDING"), None);
-        assert_eq!(EmbeddingIndexStatus::from_str("Pending"), None);
+        assert_eq!(EmbeddingIndexStatus::parse("PENDING"), None);
+        assert_eq!(EmbeddingIndexStatus::parse("Pending"), None);
         assert_eq!(
-            EmbeddingIndexStatus::from_str("pending"),
+            EmbeddingIndexStatus::parse("pending"),
             Some(EmbeddingIndexStatus::Pending)
         );
     }
@@ -183,13 +183,6 @@ mod tests {
         assert_eq!(EmbeddingIndexStatus::Processing.as_str(), "processing");
         assert_eq!(EmbeddingIndexStatus::Completed.as_str(), "completed");
         assert_eq!(EmbeddingIndexStatus::Failed.as_str(), "failed");
-    }
-
-    #[test]
-    fn embedding_index_status_clone() {
-        let status = EmbeddingIndexStatus::Processing;
-        let cloned = status.clone();
-        assert_eq!(status, cloned);
     }
 
     #[test]

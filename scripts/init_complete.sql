@@ -34,6 +34,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- =============================================================================
+-- EXTENSIONS
+-- =============================================================================
+
+-- pgvector extension for vector similarity search
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- =============================================================================
 -- CORE TABLES
 -- =============================================================================
 
@@ -44,7 +51,7 @@ CREATE TABLE projects (
     description TEXT,
     creation_date TIMESTAMP,
     update_date TIMESTAMP,
-    status VARCHAR(50),
+    status VARCHAR(50) NOT NULL DEFAULT 'active',
     owner_id INTEGER
 );
 
@@ -131,7 +138,8 @@ CREATE TABLE requirements (
     deadline_date TIMESTAMP,
     applicability_id INTEGER NOT NULL DEFAULT 1,
     justification TEXT,
-    project_id INTEGER NOT NULL
+    project_id INTEGER NOT NULL,
+    search_vector tsvector
 );
 
 -- Tests table
@@ -265,6 +273,93 @@ CREATE INDEX idx_applicability_project_id ON applicability(project_id);
 CREATE INDEX idx_applicability_tag ON applicability(tag);
 
 -- =============================================================================
+-- CONSTRAINTS
+-- =============================================================================
+
+ALTER TABLE requirements
+    ADD CONSTRAINT requirements_reference_code_unique UNIQUE (reference_code),
+    ADD CONSTRAINT requirements_title_not_blank CHECK (btrim(title) <> '');
+
+ALTER TABLE tests
+    ADD CONSTRAINT tests_reference_code_unique UNIQUE (reference_code),
+    ADD CONSTRAINT tests_name_not_blank CHECK (btrim(name) <> '');
+
+ALTER TABLE projects
+    ADD CONSTRAINT projects_name_not_blank CHECK (btrim(name) <> '');
+
+-- Composite indexes (from performance tuning migrations)
+CREATE INDEX IF NOT EXISTS idx_requirements_project_status
+    ON requirements (project_id, status_id);
+
+CREATE INDEX IF NOT EXISTS idx_tests_project_status
+    ON tests (project_id, status_id);
+
+CREATE INDEX IF NOT EXISTS idx_matrix_project_req
+    ON matrix (project_id, req_id);
+
+-- =============================================================================
+-- SEMANTIC SEARCH
+-- =============================================================================
+
+-- Table for storing requirement embeddings (vector similarity search)
+CREATE TABLE requirement_embeddings (
+    requirement_id INTEGER PRIMARY KEY REFERENCES requirements(id) ON DELETE CASCADE,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    embedding vector(768),
+    embedding_model VARCHAR(100) NOT NULL DEFAULT 'nomic-embed-text',
+    content_hash VARCHAR(64) NOT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_requirement_embeddings_project_id
+    ON requirement_embeddings(project_id);
+
+CREATE INDEX idx_requirement_embeddings_vector_hnsw
+    ON requirement_embeddings
+    USING hnsw (embedding vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64);
+
+-- Full-text search trigger on requirements
+CREATE OR REPLACE FUNCTION requirements_search_vector_update() RETURNS trigger AS $$
+BEGIN
+    NEW.search_vector :=
+        setweight(to_tsvector('english', COALESCE(NEW.reference_code, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.title, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.description, '')), 'B') ||
+        setweight(to_tsvector('english', COALESCE(NEW.justification, '')), 'C');
+    RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER requirements_search_vector_trigger
+    BEFORE INSERT OR UPDATE OF title, description, justification, reference_code
+    ON requirements
+    FOR EACH ROW
+    EXECUTE FUNCTION requirements_search_vector_update();
+
+CREATE INDEX idx_requirements_search_vector
+    ON requirements
+    USING gin(search_vector);
+
+-- Table for tracking embedding indexing jobs (for async processing)
+CREATE TABLE embedding_index_queue (
+    id SERIAL PRIMARY KEY,
+    requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    error_message TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP,
+    UNIQUE(requirement_id)
+);
+
+CREATE INDEX idx_embedding_index_queue_status
+    ON embedding_index_queue(status, created_at);
+
+CREATE INDEX idx_embedding_index_queue_project
+    ON embedding_index_queue(project_id);
+
+-- =============================================================================
 -- INITIAL DATA
 -- =============================================================================
 
@@ -273,6 +368,9 @@ INSERT INTO projects (id, name, description, creation_date, status) VALUES
     (1, 'Space Project', 'Space exploration satellite requirements and test management system for advanced satellite missions', NOW(), 'active'),
     (2, 'ReqMan Project', 'Requirements management system development and testing', NOW(), 'active'),
     (3, 'Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 'active');
+
+-- Ensure the projects sequence is aligned with seeded IDs
+SELECT setval('projects_id_seq', (SELECT COALESCE(MAX(id), 1) FROM projects));
 
 -- Requirement Status definitions
 INSERT INTO requirement_status (title, description, tag, project_id) VALUES

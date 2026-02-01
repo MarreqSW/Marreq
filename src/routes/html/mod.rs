@@ -33,6 +33,7 @@ pub(crate) mod prelude {
 
     pub(crate) use crate::app::AppState;
     pub(crate) use crate::auth::*;
+    #[allow(unused_imports)]
     pub(crate) use crate::helper_functions::*;
     pub(crate) use crate::html::*;
     pub(crate) use crate::logger::{LogCtx, Logger};

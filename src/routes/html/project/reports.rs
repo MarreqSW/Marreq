@@ -205,7 +205,7 @@ mod tests {
 
     fn sample_status(id: i32, title: &str) -> RequirementStatus {
         RequirementStatus {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{title} status"),
             tag: title.chars().take(3).collect(),
@@ -215,7 +215,7 @@ mod tests {
 
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
-            id: id,
+            id,
             title: format!("Requirement {id}"),
             description: "Test requirement".to_string(),
             verification_method_id: 1,
@@ -236,11 +236,11 @@ mod tests {
 
     fn sample_test(id: i32, status_id: i32, name: &str) -> TestCase {
         TestCase {
-            id: id,
+            id,
             name: name.to_string(),
             description: "Validation test".to_string(),
             source: "Spec".to_string(),
-            status_id: status_id,
+            status_id,
             reference_code: format!("TEST-{id:03}"),
             parent_id: None,
             project_id: PROJECT_ID,

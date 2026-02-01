@@ -534,12 +534,12 @@ mod tests {
     #[test]
     fn test_generate_pdf_report_data_with_page_break() {
         let mut req_status = HashMap::new();
-        for i in 0..15 {
-            req_status.insert(format!("Status{}", i), i as i32);
+        for i in 0..15_i32 {
+            req_status.insert(format!("Status{}", i), i);
         }
         let mut status_id = HashMap::new();
-        for i in 0..15 {
-            status_id.insert(format!("TestStatus{}", i), i as i32);
+        for i in 0..15_i32 {
+            status_id.insert(format!("TestStatus{}", i), i);
         }
         let pdf_bytes = generate_pdf_report_data(&Metrics {
             categories: vec![],
@@ -565,8 +565,8 @@ mod tests {
     #[test]
     fn test_generate_pdf_report_data_adds_new_page() {
         let mut req_status = HashMap::new();
-        for i in 0..20 {
-            req_status.insert(format!("Status{}", i), i as i32);
+        for i in 0..20_i32 {
+            req_status.insert(format!("Status{}", i), i);
         }
 
         let pdf_bytes = generate_pdf_report_data(&Metrics {

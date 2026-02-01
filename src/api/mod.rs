@@ -5,8 +5,9 @@ pub mod error;
 pub mod matrix;
 pub mod prelude;
 pub mod requirements;
+pub mod semantic_search;
 pub mod status;
-pub mod tests;
+pub mod test_cases;
 pub mod users;
 
 use rocket::Route;
@@ -18,11 +19,11 @@ pub fn routes() -> Vec<Route> {
         requirements::create,
         requirements::delete,
         requirements::patch_requirement,
-        tests::list,
-        tests::get,
-        tests::create,
-        tests::delete,
-        tests::update_field,
+        test_cases::list,
+        test_cases::get,
+        test_cases::create,
+        test_cases::delete,
+        test_cases::update_field,
         categories::list,
         categories::get,
         categories::create,
@@ -48,5 +49,11 @@ pub fn routes() -> Vec<Route> {
         cache::recommendations,
         cache::reset_counters,
         cache::health,
+        // Semantic search endpoints
+        semantic_search::semantic_search,
+        semantic_search::ask,
+        semantic_search::reindex,
+        semantic_search::index_status,
+        semantic_search::search_status,
     ]
 }

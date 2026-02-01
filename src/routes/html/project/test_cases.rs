@@ -56,7 +56,8 @@ async fn show_tests(
         .iter()
         .filter(|t| t.status_id == TestStatusEnum::InProgress.id())
         .count();
-    let pass_rate_percent = if total > 0 { (passed * 100) / total } else { 0 };
+    //let pass_rate_percent = if total > 0 { (passed * 100) / total } else { 0 };
+    let pass_rate_percent = (passed * 100).checked_div(total).unwrap_or(0);
 
     // Apply filters
     let mut tests = filter_tests(

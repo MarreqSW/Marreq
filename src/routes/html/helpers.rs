@@ -36,7 +36,7 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
 
     if user.is_admin {
         let mut projects = repo.get_projects_all().unwrap_or_default();
-        projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        projects.sort_by_key(|a| a.name.to_lowercase());
         return projects;
     }
 
@@ -51,7 +51,7 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
         .filter_map(|membership| repo.get_project_by_id(membership.project_id).ok())
         .collect();
 
-    projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    projects.sort_by_key(|a| a.name.to_lowercase());
     projects
 }
 

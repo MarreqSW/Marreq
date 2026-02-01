@@ -376,8 +376,8 @@ mod tests {
         let service = LogService::new(&state);
 
         // Cleanup logs older than 0 days (should remove all)
-        let count = service.cleanup_old_logs(1, 0).unwrap();
-        assert!(count >= 0); // May vary based on implementation
+        let _count = service.cleanup_old_logs(1, 0).unwrap();
+        // Count varies based on implementation - verify no panic
 
         // Should have a cleanup log entry
         let logs = service.recent_logs_raw(10).unwrap();

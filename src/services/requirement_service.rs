@@ -3,12 +3,16 @@
 //! The service is intentionally lightweight and wraps repository calls with
 //! validation and logging so that route handlers can remain focused on HTTP
 //! concerns.
+//!
+//! When semantic search is enabled, requirements are automatically queued for
+//! embedding generation on create/update operations.
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
 use crate::models::{NewRequirement, Requirement, TestCase, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository};
+use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
 
 /// High level operations for requirements backed by the shared [`AppState`].
@@ -67,19 +71,25 @@ impl<'a> RequirementService<'a> {
     }
 
     /// Create a new requirement entry and log the action.
+    ///
+    /// If semantic search is enabled, the requirement is queued for embedding generation.
     pub fn create(&self, actor: &User, mut payload: NewRequirement) -> Result<i32, RepoError> {
         self.prepare_payload(&mut payload)?;
 
+        let project_id = payload.project_id;
         let id = {
             let mut repo = self.repo_write();
             repo.insert_new_requirement(&payload)?
         };
 
         self.log_created(actor, id, &payload);
+        self.queue_for_indexing(id, project_id);
         Ok(id)
     }
 
     /// Update an existing requirement entry and log the change.
+    ///
+    /// If semantic search is enabled, the requirement is queued for re-embedding.
     pub fn update(
         &self,
         actor: &User,
@@ -101,6 +111,7 @@ impl<'a> RequirementService<'a> {
 
         let after = self.get_by_id(id)?;
         self.log_updated(actor, &before, &after);
+        self.queue_for_indexing(id, after.project_id);
         Ok(after)
     }
 
@@ -125,15 +136,13 @@ impl<'a> RequirementService<'a> {
         let mut filtered_requirements: Vec<Requirement> = requirements
             .into_iter()
             .filter(|req| {
-                let status_match =
-                    status_filter.map_or(true, |status_id| req.status_id == status_id);
+                let status_match = status_filter.is_none_or(|status_id| req.status_id == status_id);
                 let verification_match =
-                    verification_filter.map_or(true, |id| req.verification_method_id == id);
+                    verification_filter.is_none_or(|id| req.verification_method_id == id);
                 let category_match =
-                    category_filter.map_or(true, |category_id| req.category_id == category_id);
-                let applicability_match = applicability_filter.map_or(true, |applicability_id| {
-                    req.applicability_id == applicability_id
-                });
+                    category_filter.is_none_or(|category_id| req.category_id == category_id);
+                let applicability_match = applicability_filter
+                    .is_none_or(|applicability_id| req.applicability_id == applicability_id);
                 status_match && verification_match && category_match && applicability_match
             })
             .collect();
@@ -169,6 +178,26 @@ impl<'a> RequirementService<'a> {
 
     fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
         self.state.repo_read().inner_repo().get_conn()
+    }
+
+    /// Queue a requirement for semantic search indexing if enabled.
+    ///
+    /// This is a best-effort operation; failures are logged but don't affect
+    /// the main CRUD operation.
+    fn queue_for_indexing(&self, requirement_id: i32, project_id: i32) {
+        let config = SemanticSearchConfig::global();
+        if !config.embeddings_enabled {
+            return;
+        }
+
+        let indexing_service = IndexingService::new(self.state);
+        if let Err(_e) = indexing_service.queue_for_indexing(requirement_id, project_id) {
+            #[cfg(debug_assertions)]
+            eprintln!(
+                "Failed to queue requirement {} for indexing: {}",
+                requirement_id, _e
+            );
+        }
     }
 
     fn log_created(&self, actor: &User, id: i32, entity: &NewRequirement) {
@@ -232,7 +261,7 @@ mod tests {
 
     fn requirement(id: i32, project_id: i32, reference: &str) -> Requirement {
         Requirement {
-            id: id,
+            id,
             title: format!("Requirement {id}"),
             description: "Existing description".into(),
             verification_method_id: 1,
@@ -481,9 +510,9 @@ mod tests {
     #[test]
     fn list_by_project_filtered_sorts_empty_reference_codes_last() {
         let mut repo = DieselRepoMock::default();
-        let mut req1 = requirement(1, 7, "");
-        let mut req2 = requirement(2, 7, "REQ-001");
-        let mut req3 = requirement(3, 7, "");
+        let req1 = requirement(1, 7, "");
+        let req2 = requirement(2, 7, "REQ-001");
+        let req3 = requirement(3, 7, "");
         repo.requirements.insert(1, req1);
         repo.requirements.insert(2, req2);
         repo.requirements.insert(3, req3);

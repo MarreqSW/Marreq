@@ -50,7 +50,6 @@ mod tests {
     use super::*;
     use crate::repository::errors::RepoError;
     use diesel::result::Error as DieselError;
-    use rocket::http::Status;
 
     #[test]
     fn repo_error_to_status_not_found() {
@@ -98,32 +97,32 @@ mod tests {
         let error = RepoError::NotFound;
         let redirect: Redirect = error.into();
         // Test that redirect is created (can't easily test URI in unit tests)
-        let _ = redirect;
-        assert!(true);
+        // Dropping redirect without panic proves conversion succeeded
+        drop(redirect);
     }
 
     #[test]
     fn repo_error_to_redirect_pool_error() {
         let error = RepoError::Pool("test".to_string());
         let redirect: Redirect = error.into();
-        let _ = redirect;
-        assert!(true);
+        // Dropping redirect without panic proves conversion succeeded
+        drop(redirect);
     }
 
     #[test]
     fn repo_error_to_redirect_bad_input() {
         let error = RepoError::BadInput("test".to_string());
         let redirect: Redirect = error.into();
-        let _ = redirect;
-        assert!(true);
+        // Dropping redirect without panic proves conversion succeeded
+        drop(redirect);
     }
 
     #[test]
     fn repo_error_to_redirect_unauthorized() {
         let error = RepoError::Unauthorized;
         let redirect: Redirect = error.into();
-        let _ = redirect;
-        assert!(true);
+        // Dropping redirect without panic proves conversion succeeded
+        drop(redirect);
     }
 
     #[test]
@@ -131,7 +130,7 @@ mod tests {
         let diesel_error = DieselError::NotFound;
         let error: RepoError = diesel_error.into();
         let redirect: Redirect = error.into();
-        let _ = redirect;
-        assert!(true);
+        // Dropping redirect without panic proves conversion succeeded
+        drop(redirect);
     }
 }

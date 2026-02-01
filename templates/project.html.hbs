@@ -19,14 +19,14 @@
           <a href="/p/{{selected_project_id}}/requirements" class="btn btn-primary c-dashboard-card__action">View Requirements</a>
           <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success c-dashboard-card__action">Export Excel</a>
           {{#if user.is_admin}}
-          <a href="/import_excel" class="btn btn-warning c-dashboard-card__action">Import Excel</a>
+          <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
           {{/if}}
           <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-outline c-dashboard-card__action">New Requirement</a>
         {{else}}
           <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Requirements</span>
           <span class="btn btn-success disabled c-dashboard-card__action" aria-disabled="true">Export Excel</span>
           {{#if user.is_admin}}
-          <a href="/import_excel" class="btn btn-warning c-dashboard-card__action">Import Excel</a>
+          <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
           {{/if}}
           <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Requirement</span>
         {{/if}}
@@ -43,14 +43,14 @@
         <a href="/p/{{selected_project_id}}/tests" class="btn btn-primary c-dashboard-card__action">View Tests</a>
         <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success c-dashboard-card__action">Export Excel</a>
         {{#if user.is_admin}}
-        <a href="/import_excel" class="btn btn-warning c-dashboard-card__action">Import Excel</a>
+        <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
         {{/if}}
         <a href="/p/{{selected_project_id}}/tests/new" class="btn btn-outline c-dashboard-card__action">New Test</a>
       {{else}}
         <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Tests</span>
         <span class="btn btn-success disabled c-dashboard-card__action" aria-disabled="true">Export Excel</span>
         {{#if user.is_admin}}
-        <a href="/import_excel" class="btn btn-warning c-dashboard-card__action">Import Excel</a>
+        <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
         {{/if}}
         <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Test</span>
       {{/if}}

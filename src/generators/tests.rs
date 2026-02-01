@@ -159,7 +159,7 @@ mod data_structure_tests {
             sample_requirement(1, 1),
             sample_requirement(2, 1),
         ];
-        reqs.sort_by(|a, b| a.id.cmp(&b.id));
+        reqs.sort_by_key(|a| a.id);
         assert_eq!(reqs[0].id, 1);
         assert_eq!(reqs[1].id, 2);
         assert_eq!(reqs[2].id, 3);
@@ -172,7 +172,7 @@ mod data_structure_tests {
             sample_test_case(1, 1),
             sample_test_case(2, 1),
         ];
-        tests.sort_by(|a, b| a.id.cmp(&b.id));
+        tests.sort_by_key(|a| a.id);
         assert_eq!(tests[0].id, 1);
         assert_eq!(tests[1].id, 2);
         assert_eq!(tests[2].id, 3);
@@ -457,12 +457,12 @@ mod integration_behavior_tests {
 
         // Verify data is sorted
         let mut sorted_reqs = reqs.clone();
-        sorted_reqs.sort_by(|a, b| a.id.cmp(&b.id));
+        sorted_reqs.sort_by_key(|a| a.id);
         assert_eq!(sorted_reqs[0].id, 1);
         assert_eq!(sorted_reqs[1].id, 2);
 
         let mut sorted_tests = tests.clone();
-        sorted_tests.sort_by(|a, b| a.id.cmp(&b.id));
+        sorted_tests.sort_by_key(|a| a.id);
         assert_eq!(sorted_tests[0].id, 1);
         assert_eq!(sorted_tests[1].id, 2);
     }

@@ -5,6 +5,7 @@ use crate::services::TestService;
 use crate::status_enums::TestStatusEnum;
 
 #[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>&<search>")]
+#[allow(clippy::too_many_arguments)]
 async fn show_tests(
     project_access: ProjectAccess,
     project_id: i32,
@@ -55,7 +56,8 @@ async fn show_tests(
         .iter()
         .filter(|t| t.status_id == TestStatusEnum::InProgress.id())
         .count();
-    let pass_rate_percent = if total > 0 { (passed * 100) / total } else { 0 };
+    //let pass_rate_percent = if total > 0 { (passed * 100) / total } else { 0 };
+    let pass_rate_percent = (passed * 100).checked_div(total).unwrap_or(0);
 
     // Apply filters
     let mut tests = filter_tests(
@@ -157,7 +159,7 @@ async fn show_test_id(
     ctx_map.insert("linked_requirements".into(), json!(decorated_requirements));
     ctx_map.insert("user".into(), json!(user));
 
-    if let Ok(serde_json::Value::Object(test_obj)) = serde_json::to_value(&test) {
+    if let Ok(serde_json::Value::Object(test_obj)) = serde_json::to_value(test) {
         for (key, value) in test_obj {
             ctx_map.insert(key, value);
         }
@@ -235,7 +237,7 @@ async fn post_test(
         status_id: new_test.status_id,
         reference_code: new_test.reference_code.clone(),
         parent_id: new_test.parent_id,
-        project_id: project_id,
+        project_id,
     };
 
     let id = service.create(&user, my_new_test).map_err(|e| {
@@ -486,7 +488,7 @@ mod tests {
 
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
-            id: id,
+            id,
             name: name.to_string(),
             description: Some(format!("{name} project")),
             creation_date: Some(timestamp()),
@@ -498,7 +500,7 @@ mod tests {
 
     fn sample_category(id: i32, title: &str) -> Category {
         Category {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{title} systems"),
             tag: title.to_ascii_uppercase(),
@@ -508,7 +510,7 @@ mod tests {
 
     fn sample_status(id: i32, title: &str) -> RequirementStatus {
         RequirementStatus {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{title} status"),
             tag: title.to_ascii_uppercase(),
@@ -518,7 +520,7 @@ mod tests {
 
     fn sample_test_status(id: i32, title: &str) -> TestStatus {
         TestStatus {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{title} status"),
             tag: title.to_ascii_uppercase(),
@@ -528,7 +530,7 @@ mod tests {
 
     fn sample_applicability(id: i32, title: &str) -> Applicability {
         Applicability {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{title} applicability"),
             tag: title.to_ascii_uppercase(),
@@ -538,7 +540,7 @@ mod tests {
 
     fn sample_verification(id: i32, title: &str) -> VerificationMethod {
         VerificationMethod {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{title} verification"),
             tag: title.to_uppercase().replace(" ", "_"),
@@ -548,7 +550,7 @@ mod tests {
 
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
-            id: id,
+            id,
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
             verification_method_id: 1,
@@ -569,7 +571,7 @@ mod tests {
 
     fn sample_test(id: i32, status: i32, name: &str) -> TestCase {
         TestCase {
-            id: id,
+            id,
             name: name.to_string(),
             description: format!("{name} description"),
             source: "Design Spec".into(),

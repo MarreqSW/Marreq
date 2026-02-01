@@ -1369,8 +1369,7 @@ mod tests {
         let _ = repo.get_logs_recent(10);
         let _ = repo.get_logs_by_entity("requirement", 1);
 
-        // If we get here, all methods are accessible
-        assert!(true);
+        // If we get here without panic, all methods are accessible
     }
 
     #[test]

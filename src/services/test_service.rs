@@ -147,7 +147,7 @@ mod tests {
 
     fn test_case(id: i32, project_id: i32, reference: &str) -> TestCase {
         TestCase {
-            id: id,
+            id,
             name: format!("Test {id}"),
             description: "desc".into(),
             source: "manual".into(),

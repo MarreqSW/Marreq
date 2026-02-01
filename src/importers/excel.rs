@@ -95,7 +95,7 @@ impl ExcelImporter {
             // Store sample values from first few rows
             if data.len() < 3 {
                 for (i, cell) in row.iter().enumerate() {
-                    if i < columns.len() && data.len() == 0 {
+                    if i < columns.len() && data.is_empty() {
                         columns[i].sample_value = cell.to_string();
                     }
                 }
@@ -353,13 +353,13 @@ impl ExcelImporter {
                 .get("reference_code")
                 .unwrap_or(&"".to_string())
                 .clone(),
-            category_id: category_id,
-            applicability_id: applicability_id,
-            status_id: status_id,
+            category_id,
+            applicability_id,
+            status_id,
             verification_method_id,
-            author_id: author_id,
-            reviewer_id: reviewer_id,
-            parent_id: parent_id,
+            author_id,
+            reviewer_id,
+            parent_id,
             justification: req_data.get("justification").cloned(),
             project_id,
         };
@@ -426,8 +426,8 @@ impl ExcelImporter {
                 .get("reference_code")
                 .unwrap_or(&format!("TEST-{}", chrono::Utc::now().timestamp()))
                 .clone(),
-            status_id: status_id,
-            parent_id: parent_id,
+            status_id,
+            parent_id,
             project_id,
         };
 

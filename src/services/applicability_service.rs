@@ -199,7 +199,7 @@ mod tests {
 
     fn sample_app(id: i32, title: &str) -> Applicability {
         Applicability {
-            id: id,
+            id,
             title: title.into(),
             description: "desc".into(),
             tag: "TAG".into(),

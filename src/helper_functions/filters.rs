@@ -11,8 +11,8 @@ pub fn filter_requirements(
         .into_iter()
         .filter(|req| {
             let status_match = status_filter.is_none_or(|status_id| req.status_id == status_id);
-            let verification_match = verification_requirement_ids
-                .map_or(true, |ids| ids.contains(&req.id));
+            let verification_match =
+                verification_requirement_ids.map_or(true, |ids| ids.contains(&req.id));
             let category_match =
                 category_filter.is_none_or(|category_id| req.category_id == category_id);
             status_match && verification_match && category_match

@@ -823,7 +823,8 @@ impl RequirementsRepository for DieselRepo {
             diesel::insert_into(requirement_verification_methods::table)
                 .values((
                     requirement_verification_methods::requirement_id.eq(requirement_id),
-                    requirement_verification_methods::verification_method_id.eq(verification_method_id),
+                    requirement_verification_methods::verification_method_id
+                        .eq(verification_method_id),
                 ))
                 .execute(conn.as_mut())?;
         }

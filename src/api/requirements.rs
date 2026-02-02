@@ -139,11 +139,9 @@ pub async fn patch_requirement(
         requirement.applicability_id = v;
     }
 
-    let verification_method_ids = patch.verification_method_ids.unwrap_or_else(|| {
-        service
-            .get_verification_method_ids(id)
-            .unwrap_or_default()
-    });
+    let verification_method_ids = patch
+        .verification_method_ids
+        .unwrap_or_else(|| service.get_verification_method_ids(id).unwrap_or_default());
     let verification_method_ids: Vec<i32> = verification_method_ids
         .into_iter()
         .filter(|&id| id > 0)

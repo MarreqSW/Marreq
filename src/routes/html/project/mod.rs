@@ -4,6 +4,7 @@ mod matrix;
 mod members;
 mod project;
 mod reports;
+pub mod reqif;
 pub mod requirements;
 #[cfg(any(test, feature = "test-helpers"))]
 pub mod test_helpers;
@@ -44,6 +45,7 @@ pub fn routes() -> Vec<Route> {
     routes.extend(matrix::routes());
     routes.extend(members::routes());
     routes.extend(reports::routes());
+    routes.extend(reqif::routes());
     routes.extend(requirements::routes());
     routes.extend(tests::routes());
     routes.extend(project::routes());

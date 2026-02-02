@@ -17,6 +17,7 @@ pub mod helper_functions;
 pub mod html;
 pub mod importers;
 pub mod logger;
+pub mod reqif;
 pub mod models;
 pub mod repository;
 pub mod routes;

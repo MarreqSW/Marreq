@@ -400,6 +400,7 @@ async fn get_edit_requirement(
         .unwrap_or_else(|| "Unknown author".to_string());
 
     let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
+    let statuses = StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
     let users = UserService::new(state.inner()).get_by_project(project_id)?;
     let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
     let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
@@ -427,6 +428,7 @@ async fn get_edit_requirement(
     let ctx = json!({
         "req": req,
         "categories": categories,
+        "statuses": statuses,
         "parent": parent,
         "users": users,
         "verification": verifications,

@@ -121,19 +121,19 @@ struct RequirementEditForm {
 }
 
 impl RequirementEditForm {
-    fn to_new_requirement(self) -> NewRequirement {
+    fn to_new_requirement(&self) -> NewRequirement {
         NewRequirement {
             id: self.id,
-            title: self.title,
-            description: self.description,
+            title: self.title.clone(),
+            description: self.description.clone(),
             author_id: self.author_id,
             category_id: self.category_id,
             status_id: self.status_id,
             parent_id: self.parent_id,
-            reference_code: self.reference_code,
+            reference_code: self.reference_code.clone(),
             reviewer_id: self.reviewer_id,
             applicability_id: self.applicability_id,
-            justification: self.justification,
+            justification: self.justification.clone(),
             project_id: self.project_id,
         }
     }

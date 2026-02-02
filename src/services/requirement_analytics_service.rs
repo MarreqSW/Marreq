@@ -101,13 +101,14 @@ impl<'a> RequirementAnalyticsService<'a> {
         }
 
         // Execute the grouped aggregation with optional filters expressed as bind parameters.
+        // Verification filter uses the junction table requirement_verification_methods.
         let query = diesel::sql_query(
             "SELECT LOWER(TRIM(rs.title)) AS status, COUNT(*)::BIGINT AS total
              FROM requirements r
              INNER JOIN requirement_status rs ON rs.id = r.status_id
              WHERE r.project_id = $1
                AND ($2 IS NULL OR r.status_id = $2)
-               AND ($3 IS NULL OR r.verification_method_id = $3)
+               AND ($3 IS NULL OR r.id IN (SELECT requirement_id FROM requirement_verification_methods WHERE verification_method_id = $3))
                AND ($4 IS NULL OR r.category_id = $4)
                AND ($5 IS NULL OR r.applicability_id = $5)
              GROUP BY status",
@@ -138,6 +139,13 @@ impl<'a> RequirementAnalyticsService<'a> {
         let repo_guard = self.state.repo_read();
         let requirements = repo_guard.get_requirements_by_project(project_id)?;
         let statuses = repo_guard.get_requirement_status_all()?;
+        let verification_requirement_ids = verification_filter
+            .map(|vid| {
+                repo_guard
+                    .get_requirement_ids_by_verification_method(vid)
+                    .unwrap_or_default()
+            })
+            .unwrap_or_default();
         drop(repo_guard);
 
         let status_lookup: HashMap<i32, String> = statuses
@@ -154,8 +162,8 @@ impl<'a> RequirementAnalyticsService<'a> {
                     continue;
                 }
             }
-            if let Some(filter) = verification_filter {
-                if requirement.verification_method_id != filter {
+            if let Some(_filter) = verification_filter {
+                if !verification_requirement_ids.contains(&requirement.id) {
                     continue;
                 }
             }
@@ -240,15 +248,14 @@ mod tests {
         id: i32,
         project_id: i32,
         status_id: i32,
-        verification_method_id: i32,
+        _verification_method_id: i32,
         category_id: i32,
     ) -> Requirement {
         Requirement {
             id,
             title: format!("Req {id}"),
             description: "desc".into(),
-            verification_method_id,
-            status_id,
+            status_id: status_id,
             author_id: 1,
             reviewer_id: 1,
             reference_code: format!("REF-{id}"),
@@ -316,6 +323,9 @@ mod tests {
             .insert(2, make_requirement(2, 1, 2, 1, 11));
         repo.requirements
             .insert(3, make_requirement(3, 1, 2, 2, 10));
+        repo.requirement_verification_methods.push((1, 1));
+        repo.requirement_verification_methods.push((2, 5));
+        repo.requirement_verification_methods.push((3, 2));
 
         let state = state_with_repo(repo);
         let service = RequirementAnalyticsService::new(&state);
@@ -337,6 +347,37 @@ mod tests {
             .metrics(1, None, None, Some(10), None)
             .expect("category filtered metrics");
         assert_eq!(category_filtered.total, 2);
+    }
+
+    /// Verification filter uses the junction table: a requirement linked to multiple
+    /// verification methods is counted when filtering by any of those methods.
+    #[test]
+    fn metrics_verification_filter_counts_requirement_with_multiple_verification_methods() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(1, status(1, "Draft"));
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        repo.requirements
+            .insert(1, make_requirement(1, 1, 2, 1, 10)); // Accepted
+        repo.requirements
+            .insert(2, make_requirement(2, 1, 2, 1, 10)); // Accepted
+                                                          // Req 1 has both verification 1 and 2; Req 2 has only verification 1
+        repo.requirement_verification_methods.push((1, 1));
+        repo.requirement_verification_methods.push((1, 2));
+        repo.requirement_verification_methods.push((2, 1));
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let by_verification_1 = service
+            .metrics(1, None, Some(1), None, None)
+            .expect("filter by verification 1");
+        assert_eq!(by_verification_1.total, 2, "both reqs have verification 1");
+
+        let by_verification_2 = service
+            .metrics(1, None, Some(2), None, None)
+            .expect("filter by verification 2");
+        assert_eq!(by_verification_2.total, 1, "only req 1 has verification 2");
     }
 
     #[test]
@@ -430,6 +471,9 @@ mod tests {
             .insert(2, make_requirement(2, 1, 2, 5, 11)); // status=2, verification=5, category=11 (wrong)
         repo.requirements
             .insert(3, make_requirement(3, 1, 2, 6, 10)); // status=2, verification=6 (wrong), category=10
+        repo.requirement_verification_methods.push((1, 5));
+        repo.requirement_verification_methods.push((2, 5));
+        repo.requirement_verification_methods.push((3, 6));
 
         let state = state_with_repo(repo);
         let service = RequirementAnalyticsService::new(&state);

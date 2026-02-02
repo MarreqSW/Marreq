@@ -87,7 +87,6 @@ impl<'a> ReqIFService<'a> {
                 id: None,
                 title: title.clone(),
                 description,
-                verification_method_id: config.default_verification_method_id,
                 author_id: config.author_id,
                 category_id: config.default_category_id,
                 status_id,
@@ -99,7 +98,8 @@ impl<'a> ReqIFService<'a> {
                 project_id: config.project_id,
             };
 
-            match req_service.create(actor, payload) {
+            let verification_method_ids = [config.default_verification_method_id];
+            match req_service.create(actor, payload, &verification_method_ids) {
                 Ok(id) => {
                     imported_count += 1;
                     imported_requirement_ids.push(id);
@@ -125,11 +125,13 @@ impl<'a> ReqIFService<'a> {
             let req = req_service
                 .get_by_id(child_reqman_id)
                 .map_err(|e| e.to_string())?;
+            let verification_method_ids = req_service
+                .get_verification_method_ids(child_reqman_id)
+                .unwrap_or_default();
             let payload = NewRequirement {
                 id: Some(req.id),
                 title: req.title.clone(),
                 description: req.description.clone(),
-                verification_method_id: req.verification_method_id,
                 author_id: req.author_id,
                 category_id: req.category_id,
                 status_id: req.status_id,
@@ -140,7 +142,7 @@ impl<'a> ReqIFService<'a> {
                 justification: req.justification.clone(),
                 project_id: req.project_id,
             };
-            let _ = req_service.update(actor, child_reqman_id, payload);
+            let _ = req_service.update(actor, child_reqman_id, payload, &verification_method_ids);
         }
 
         Ok(ImportResult {

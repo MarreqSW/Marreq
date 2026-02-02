@@ -85,11 +85,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    requirement_verification_methods (requirement_id, verification_method_id) {
+        requirement_id -> Int4,
+        verification_method_id -> Int4,
+    }
+}
+
+diesel::table! {
     requirements (id) {
         id -> Int4,
         title -> Varchar,
         description -> Varchar,
-        verification_method_id -> Int4,
         status_id -> Int4,
         author_id -> Int4,
         reviewer_id -> Int4,
@@ -185,6 +191,8 @@ diesel::joinable!(applicability -> projects (project_id));
 diesel::joinable!(requirement_embeddings -> requirements (requirement_id));
 diesel::joinable!(requirement_embeddings -> projects (project_id));
 diesel::joinable!(embedding_index_queue -> requirements (requirement_id));
+diesel::joinable!(requirement_verification_methods -> requirements (requirement_id));
+diesel::joinable!(requirement_verification_methods -> verification (verification_method_id));
 diesel::joinable!(categories -> projects (project_id));
 diesel::joinable!(logs -> projects (project_id));
 diesel::joinable!(logs -> users (user_id));
@@ -212,6 +220,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     projects,
     requirement_embeddings,
     requirement_status,
+    requirement_verification_methods,
     requirements,
     test_status,
     tests,

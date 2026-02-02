@@ -208,7 +208,6 @@ mod tests {
                 id: 3,
                 title: "Req".into(),
                 description: String::new(),
-                verification_method_id: 0,
                 status_id: 0,
                 author_id: 0,
                 reviewer_id: 0,

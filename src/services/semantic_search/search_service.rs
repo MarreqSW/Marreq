@@ -14,7 +14,7 @@ use super::llm_provider::{
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{RagAnswerResponse, SemanticSearchResult};
 use crate::repository::errors::RepoError;
-use crate::schema::requirements;
+use crate::schema::{requirement_verification_methods, requirements};
 use crate::services::DecoratedRequirementService;
 use diesel::prelude::*;
 use diesel::sql_types::{Float4, Integer, Text};
@@ -136,8 +136,12 @@ impl<'a> SemanticSearchService<'a> {
                 query_builder.filter(requirements::applicability_id.eq(applicability_id));
         }
         if let Some(verification_id) = filters.verification_id {
-            query_builder =
-                query_builder.filter(requirements::verification_method_id.eq(verification_id));
+            let subquery = requirement_verification_methods::table
+                .filter(
+                    requirement_verification_methods::verification_method_id.eq(verification_id),
+                )
+                .select(requirement_verification_methods::requirement_id);
+            query_builder = query_builder.filter(requirements::id.eq_any(subquery));
         }
 
         let result: Option<(i32, String, String, String)> = query_builder
@@ -284,7 +288,12 @@ impl<'a> SemanticSearchService<'a> {
             query = query.filter(requirements::applicability_id.eq(applicability_id));
         }
         if let Some(verification_id) = filters.verification_id {
-            query = query.filter(requirements::verification_method_id.eq(verification_id));
+            let subquery = requirement_verification_methods::table
+                .filter(
+                    requirement_verification_methods::verification_method_id.eq(verification_id),
+                )
+                .select(requirement_verification_methods::requirement_id);
+            query = query.filter(requirements::id.eq_any(subquery));
         }
 
         let filtered_ids: Vec<i32> = query

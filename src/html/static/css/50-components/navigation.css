@@ -10,7 +10,7 @@
   top: 0;
   transition: background-color 0.2s ease, border-color 0.2s ease;
   width: 100%;
-  z-index: var(--z-sticky);
+  z-index: 1200;
 }
 
 [data-theme='dark'] .c-navbar {
@@ -117,7 +117,7 @@
   padding: 0;
 }
 
-.c-navbar__menu > .c-navbar__item {
+.c-navbar__menu>.c-navbar__item {
   align-items: center;
   display: flex;
   position: relative;
@@ -261,6 +261,7 @@
   border-radius: var(--radius-lg);
   box-shadow: 0 24px 45px -25px rgb(15 23 42 / 0.35);
   padding: var(--space-2) 0;
+  z-index: 1201;
 }
 
 [data-theme='dark'] .c-navbar__dropdown-menu {

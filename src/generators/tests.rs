@@ -8,6 +8,7 @@
 //! - Workbook structure is correct
 
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use crate::models::*;
     use chrono::{NaiveDate, NaiveDateTime};
@@ -152,12 +153,12 @@ mod tests {
 
         #[test]
         fn requirement_sorting_by_id() {
-            let mut reqs = vec![
+            let mut reqs = [
                 sample_requirement(3, 1),
                 sample_requirement(1, 1),
                 sample_requirement(2, 1),
             ];
-            reqs.sort_by(|a, b| a.id.cmp(&b.id));
+            reqs.sort_by_key(|a| a.id);
             assert_eq!(reqs[0].id, 1);
             assert_eq!(reqs[1].id, 2);
             assert_eq!(reqs[2].id, 3);
@@ -165,12 +166,12 @@ mod tests {
 
         #[test]
         fn test_case_sorting_by_id() {
-            let mut tests = vec![
+            let mut tests = [
                 sample_test_case(3, 1),
                 sample_test_case(1, 1),
                 sample_test_case(2, 1),
             ];
-            tests.sort_by(|a, b| a.id.cmp(&b.id));
+            tests.sort_by_key(|a| a.id);
             assert_eq!(tests[0].id, 1);
             assert_eq!(tests[1].id, 2);
             assert_eq!(tests[2].id, 3);
@@ -266,7 +267,7 @@ mod tests {
         #[test]
         fn matrix_workbook_headers() {
             // Test that headers are correctly defined
-            let headers = vec!["Title", "Reference", "Category", "Status"];
+            let headers = ["Title", "Reference", "Category", "Status"];
             assert_eq!(headers.len(), 4);
             assert_eq!(headers[0], "Title");
             assert_eq!(headers[1], "Reference");
@@ -301,7 +302,7 @@ mod tests {
         #[test]
         fn tests_workbook_headers() {
             // Test that headers are correctly defined
-            let headers = vec![
+            let headers = [
                 "ID",
                 "Name",
                 "Description",
@@ -330,7 +331,7 @@ mod tests {
             assert!(test_present > 0);
 
             let test_absent: i64 = 0;
-            assert!(!(test_absent > 0));
+            assert!(test_absent <= 0);
         }
 
         #[test]
@@ -455,12 +456,12 @@ mod tests {
 
             // Verify data is sorted
             let mut sorted_reqs = reqs.clone();
-            sorted_reqs.sort_by(|a, b| a.id.cmp(&b.id));
+            sorted_reqs.sort_by_key(|a| a.id);
             assert_eq!(sorted_reqs[0].id, 1);
             assert_eq!(sorted_reqs[1].id, 2);
 
             let mut sorted_tests = tests.clone();
-            sorted_tests.sort_by(|a, b| a.id.cmp(&b.id));
+            sorted_tests.sort_by_key(|a| a.id);
             assert_eq!(sorted_tests[0].id, 1);
             assert_eq!(sorted_tests[1].id, 2);
         }
@@ -518,8 +519,8 @@ mod tests {
         #[test]
         fn single_requirement_single_test_scenario() {
             // Test behavior with one requirement and one test
-            let reqs = vec![sample_decorated_requirement(1)];
-            let tests = vec![sample_decorated_test_case(1)];
+            let reqs = [sample_decorated_requirement(1)];
+            let tests = [sample_decorated_test_case(1)];
 
             assert_eq!(reqs.len(), 1);
             assert_eq!(tests.len(), 1);
@@ -530,12 +531,12 @@ mod tests {
         #[test]
         fn multiple_requirements_multiple_tests_scenario() {
             // Test behavior with multiple requirements and tests
-            let reqs = vec![
+            let reqs = [
                 sample_decorated_requirement(1),
                 sample_decorated_requirement(2),
                 sample_decorated_requirement(3),
             ];
-            let tests = vec![sample_decorated_test_case(1), sample_decorated_test_case(2)];
+            let tests = [sample_decorated_test_case(1), sample_decorated_test_case(2)];
 
             assert_eq!(reqs.len(), 3);
             assert_eq!(tests.len(), 2);

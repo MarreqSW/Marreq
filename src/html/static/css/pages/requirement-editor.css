@@ -26,7 +26,7 @@
   padding: var(--space-4);
   position: sticky;
   top: calc(var(--header-height) + var(--space-2));
-  z-index: var(--z-sticky);
+  z-index: 1100;
 }
 
 .c-editor-topbar__context {
@@ -94,7 +94,7 @@
   padding: var(--space-1);
   position: absolute;
   top: calc(100% + var(--space-2));
-  z-index: 10;
+  z-index: 1101;
 }
 
 .c-editor-status__menu button {
@@ -174,6 +174,8 @@
 .c-editor-layout {
   display: flex;
   gap: var(--space-6);
+  position: relative;
+  z-index: 0;
 }
 
 .c-editor-main {
@@ -464,7 +466,7 @@
   }
 
   .c-editor-topbar {
-    position: static;
+    position: relative;
   }
 
   .c-editor-topbar__context,

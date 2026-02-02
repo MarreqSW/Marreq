@@ -50,10 +50,22 @@ fn decorate_requirements_impl<R: Repository>(
 ) -> Vec<DecoratedRequirement> {
     reqs.into_iter()
         .map(|r| {
-            let verification = repo
-                .get_verification_by_id(r.verification_method_id)
-                .map(|v| v.title)
-                .unwrap_or_else(|_| format!("Unknown Verification ({})", r.verification_method_id));
+            let verification_ids = repo
+                .get_verification_method_ids_for_requirement(r.id)
+                .unwrap_or_default();
+            let verification = if verification_ids.is_empty() {
+                "—".to_string()
+            } else {
+                verification_ids
+                    .iter()
+                    .map(|id| {
+                        repo.get_verification_by_id(*id)
+                            .map(|v| v.title)
+                            .unwrap_or_else(|_| format!("Unknown Verification ({})", id))
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            };
 
             let status = repo
                 .get_requirement_status_by_id(r.status_id)
@@ -99,7 +111,7 @@ fn decorate_requirements_impl<R: Repository>(
                 id: r.id,
                 title: r.title,
                 verification_method_id: verification,
-                req_verification_id: r.verification_method_id,
+                req_verification_ids: verification_ids,
                 description: r.description,
                 status_id: status,
                 req_current_status_id: r.status_id,
@@ -226,6 +238,9 @@ mod tests {
                 project_id: 1,
             },
         );
+        repo.requirement_verification_methods.push((1, 1));
+        repo.requirement_verification_methods.push((2, 1));
+        repo.requirement_verification_methods.push((3, 99));
         repo.categories.insert(
             1,
             Category {
@@ -281,7 +296,6 @@ mod tests {
                 id: 31,
                 title: "Parent".into(),
                 description: String::new(),
-                verification_method_id: 1,
                 status_id: 1,
                 author_id: 1,
                 reviewer_id: 2,
@@ -301,7 +315,6 @@ mod tests {
             id: 1,
             title: "R1".into(),
             description: String::new(),
-            verification_method_id: 1,
             status_id: 1,
             author_id: 1,
             reviewer_id: 2,
@@ -320,7 +333,6 @@ mod tests {
             id: 2,
             title: "R2".into(),
             description: String::new(),
-            verification_method_id: 1,
             status_id: 1,
             author_id: 0,
             reviewer_id: 0,
@@ -339,7 +351,6 @@ mod tests {
             id: 3,
             title: "R3".into(),
             description: String::new(),
-            verification_method_id: 99,
             status_id: 99,
             author_id: 99,
             reviewer_id: 98,
@@ -479,7 +490,6 @@ mod tests {
             id: 1,
             title: "R".into(),
             description: String::new(),
-            verification_method_id: 0,
             status_id: 0,
             author_id: 0,
             reviewer_id: 0,
@@ -526,7 +536,6 @@ mod tests {
             id: 2,
             title: "R".into(),
             description: String::new(),
-            verification_method_id: 0,
             status_id: 0,
             author_id: 0,
             reviewer_id: 0,
@@ -568,7 +577,6 @@ mod tests {
             id: 3,
             title: "R".into(),
             description: String::new(),
-            verification_method_id: 0,
             status_id: 0,
             author_id: 0,
             reviewer_id: 0,

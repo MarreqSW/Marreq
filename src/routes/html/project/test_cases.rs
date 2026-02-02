@@ -1,7 +1,8 @@
 use super::helpers::*;
 use super::prelude::*;
 use crate::helper_functions::decorators::decorate_requirements_with_repo;
-use crate::services::TestService;
+use crate::models::EntityType;
+use crate::services::{LogService, TestService};
 use crate::status_enums::TestStatusEnum;
 
 #[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>&<search>")]
@@ -153,11 +154,16 @@ async fn show_test_id(
     let repo = state.repo_read();
     let decorated_requirements = decorate_requirements_with_repo(&*repo, linked_requirements);
 
+    let history_entries = LogService::new(state.inner())
+        .entity_logs(&EntityType::Test.to_string(), test_id)
+        .unwrap_or_default();
+
     let mut ctx_map = serde_json::Map::new();
     ctx_map.insert("project_id".into(), json!(project_id));
     ctx_map.insert("selected_project_id".into(), json!(project_id));
     ctx_map.insert("linked_requirements".into(), json!(decorated_requirements));
     ctx_map.insert("user".into(), json!(user));
+    ctx_map.insert("history".into(), json!({ "entries": history_entries }));
 
     if let Ok(serde_json::Value::Object(test_obj)) = serde_json::to_value(test) {
         for (key, value) in test_obj {

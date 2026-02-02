@@ -55,13 +55,7 @@ pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError>
         }
     }
 
-    // Validate IDs are positive
-    if req.verification_method_id <= 0 {
-        return Err(ValidationError::Custom(
-            "Verification method ID must be positive".to_string(),
-        ));
-    }
-
+    // Validate IDs are positive (verification methods are validated separately as a list)
     if req.status_id <= 0 {
         return Err(ValidationError::Custom(
             "Status ID must be positive".to_string(),

@@ -15,8 +15,10 @@ pub struct DecoratedRequirement {
     pub id: i32,
     pub title: String,
     pub description: String,
+    /// Comma-separated verification method names for display
     pub verification_method_id: String,
-    pub req_verification_id: i32,
+    /// Verification method IDs for filtering and form pre-selection
+    pub req_verification_ids: Vec<i32>,
     pub status_id: String,
     pub req_current_status_id: i32, // Add numeric status ID for access control
     pub author_id: String,

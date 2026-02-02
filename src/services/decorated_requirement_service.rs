@@ -77,8 +77,14 @@ impl<'a> DecoratedRequirementService<'a> {
     }
 
     /// Create a new requirement entry and log the action.
-    pub fn create(&self, actor: &User, payload: NewRequirement) -> Result<i32, RepoError> {
-        self.requirement_service.create(actor, payload)
+    pub fn create(
+        &self,
+        actor: &User,
+        payload: NewRequirement,
+        verification_method_ids: &[i32],
+    ) -> Result<i32, RepoError> {
+        self.requirement_service
+            .create(actor, payload, verification_method_ids)
     }
 
     /// Update an existing requirement entry and log the change.
@@ -87,8 +93,10 @@ impl<'a> DecoratedRequirementService<'a> {
         actor: &User,
         id: i32,
         payload: NewRequirement,
+        verification_method_ids: &[i32],
     ) -> Result<Requirement, RepoError> {
-        self.requirement_service.update(actor, id, payload)
+        self.requirement_service
+            .update(actor, id, payload, verification_method_ids)
     }
 
     /// Delete an requirement entry and log the removal.
@@ -101,11 +109,24 @@ impl<'a> DecoratedRequirementService<'a> {
     }
 
     fn decorate(&self, req: &Requirement) -> Result<DecoratedRequirement, RepoError> {
-        let verification = self
-            .verification_service
-            .get_by_id(req.verification_method_id)
-            .map(|v| v.title)
-            .unwrap_or_else(|_| format!("Unknown Verification ({})", req.verification_method_id));
+        let verification_ids = self
+            .requirement_service
+            .get_verification_method_ids(req.id)
+            .unwrap_or_default();
+        let verification = if verification_ids.is_empty() {
+            "—".to_string()
+        } else {
+            verification_ids
+                .iter()
+                .map(|id| {
+                    self.verification_service
+                        .get_by_id(*id)
+                        .map(|v| v.title)
+                        .unwrap_or_else(|_| format!("Unknown Verification ({})", id))
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
 
         let status = self
             .status_service
@@ -150,7 +171,7 @@ impl<'a> DecoratedRequirementService<'a> {
             id: req.id,
             title: req.title.clone(),
             verification_method_id: verification,
-            req_verification_id: req.verification_method_id,
+            req_verification_ids: verification_ids,
             description: req.description.clone(),
             status_id: status,
             req_current_status_id: req.status_id,
@@ -203,7 +224,6 @@ mod tests {
             id,
             title: format!("Requirement {id}"),
             description: "Description".into(),
-            verification_method_id: 1,
             status_id: 1,
             author_id: 1,
             reviewer_id: 2,
@@ -305,6 +325,7 @@ mod tests {
     fn decorate_includes_all_related_data() {
         let mut repo = setup_repo_with_lookup_data();
         repo.requirements.insert(1, requirement(1, 1));
+        repo.requirement_verification_methods.push((1, 1));
 
         let state = state_with_repo(repo);
         let service = DecoratedRequirementService::new(&state);
@@ -326,6 +347,7 @@ mod tests {
         let mut repo = setup_repo_with_lookup_data();
         repo.verifications.remove(&1);
         repo.requirements.insert(1, requirement(1, 1));
+        repo.requirement_verification_methods.push((1, 1));
 
         let state = state_with_repo(repo);
         let service = DecoratedRequirementService::new(&state);
@@ -565,7 +587,6 @@ mod tests {
             id: None,
             title: "New Requirement".into(),
             description: "Description".into(),
-            verification_method_id: 1,
             author_id: 1,
             category_id: 1,
             status_id: 1,
@@ -577,7 +598,7 @@ mod tests {
             project_id: 1,
         };
 
-        let id = service.create(&actor, payload).unwrap();
+        let id = service.create(&actor, payload, &[1]).unwrap();
         assert!(id > 0);
     }
 
@@ -594,7 +615,6 @@ mod tests {
             id: Some(1),
             title: "Updated".into(),
             description: "Updated Description".into(),
-            verification_method_id: 1,
             author_id: 1,
             category_id: 1,
             status_id: 1,
@@ -606,7 +626,7 @@ mod tests {
             project_id: 1,
         };
 
-        let updated = service.update(&actor, 1, payload).unwrap();
+        let updated = service.update(&actor, 1, payload, &[1]).unwrap();
         assert_eq!(updated.title, "Updated");
     }
 

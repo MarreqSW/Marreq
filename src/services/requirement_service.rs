@@ -8,12 +8,37 @@
 //! embedding generation on create/update operations.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::logger::{LogCtx, Logger};
-use crate::models::{NewRequirement, Requirement, TestCase, User};
+use crate::logger::{LogCtx, Loggable, Logger};
+use crate::models::{EntityType, NewRequirement, Requirement, TestCase, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository};
 use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
+use serde::Serialize;
+
+/// Wrapper used when logging requirement updates so that verification method IDs
+/// are included in old_values/new_values (they live in a separate junction table).
+#[derive(Serialize)]
+struct RequirementWithVerification<'a> {
+    #[serde(flatten)]
+    requirement: &'a Requirement,
+    verification_method_ids: Vec<i32>,
+}
+
+impl Loggable for RequirementWithVerification<'_> {
+    fn entity_type() -> EntityType {
+        EntityType::Requirement
+    }
+    fn id(&self) -> i32 {
+        self.requirement.id
+    }
+    fn project_id(&self) -> Option<i32> {
+        Some(self.requirement.project_id)
+    }
+    fn display_name(&self) -> String {
+        self.requirement.reference_code.clone()
+    }
+}
 
 /// High level operations for requirements backed by the shared [`AppState`].
 pub struct RequirementService<'a> {
@@ -126,6 +151,7 @@ impl<'a> RequirementService<'a> {
         payload.id = Some(id);
 
         let before = self.get_by_id(id)?;
+        let before_verification_ids = self.get_verification_method_ids(id)?;
 
         {
             let mut repo = self.repo_write();
@@ -137,7 +163,18 @@ impl<'a> RequirementService<'a> {
         }
 
         let after = self.get_by_id(id)?;
-        self.log_updated(actor, &before, &after);
+        let after_verification_ids = verification_method_ids.to_vec();
+        self.log_updated(
+            actor,
+            &RequirementWithVerification {
+                requirement: &before,
+                verification_method_ids: before_verification_ids,
+            },
+            &RequirementWithVerification {
+                requirement: &after,
+                verification_method_ids: after_verification_ids,
+            },
+        );
         self.queue_for_indexing(id, after.project_id);
         Ok(after)
     }
@@ -238,15 +275,12 @@ impl<'a> RequirementService<'a> {
         }
     }
 
-    fn log_updated(&self, actor: &User, before: &Requirement, after: &Requirement) {
+    fn log_updated<T: serde::Serialize + Loggable>(&self, actor: &User, before: &T, after: &T) {
         if let Ok(mut conn) = self.db_connection() {
             let ctx = LogCtx::new(actor.id);
             if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
                 #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log requirement update {} -> {}: {_err}",
-                    before.id, after.id
-                );
+                eprintln!("Failed to log requirement update: {_err}");
             }
         }
     }

@@ -85,7 +85,7 @@
 }
 
 .c-editor-status__menu {
-  background: var(--surface);
+  background-color: var(--surface-color, #fff);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -489,6 +489,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .c-editor-status__chip,
   .c-editor-toolbar__btn,
   .c-editor-dropzone {

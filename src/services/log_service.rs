@@ -1,10 +1,287 @@
+use std::collections::HashMap;
+
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::LoggerError;
 use crate::models::Log;
 use crate::repository::errors::RepoError;
 use crate::repository::{LogRepository, UserRepository};
 use serde::Serialize;
+use serde_json::Value as JsonValue;
 use thiserror::Error;
+
+/// Human-readable labels for common entity fields in change logs.
+fn field_label(key: &str) -> &'static str {
+    match key {
+        "title" => "Title",
+        "name" => "Name",
+        "description" => "Description",
+        "status_id" => "Status",
+        "category_id" => "Category",
+        "applicability_id" => "Applicability",
+        "justification" => "Rationale",
+        "deadline_date" => "Deadline",
+        "reference_code" => "Reference",
+        "parent_id" => "Parent",
+        "source" => "Source",
+        "verification_method_ids" => "Verification",
+        _ => "Details",
+    }
+}
+
+/// Returns a brief summary of what changed, derived from old_values and new_values.
+/// Strips generic "via API" descriptions and uses CREATE/UPDATE/DELETE plus changed fields.
+pub fn change_summary(log: &Log) -> String {
+    let action = log.action_type.to_uppercase();
+    match action.as_str() {
+        "CREATE" => return "Created".to_string(),
+        "DELETE" => return "Deleted".to_string(),
+        _ => {}
+    }
+
+    let changed = changed_field_labels(log.old_values.as_deref(), log.new_values.as_deref());
+    if changed.is_empty() {
+        return "Updated".to_string();
+    }
+    format!("{} updated", changed.join(", "))
+}
+
+fn changed_field_labels(old_json: Option<&str>, new_json: Option<&str>) -> Vec<String> {
+    let old_obj = old_json.and_then(|s| serde_json::from_str::<JsonValue>(s).ok());
+    let new_obj = new_json.and_then(|s| serde_json::from_str::<JsonValue>(s).ok());
+    let (old_obj, new_obj) = match (old_obj, new_obj) {
+        (Some(JsonValue::Object(a)), Some(JsonValue::Object(b))) => (a, b),
+        _ => return vec![],
+    };
+
+    let mut labels = Vec::new();
+    let skip_keys = [
+        "id",
+        "author_id",
+        "reviewer_id",
+        "project_id",
+        "creation_date",
+        "update_date",
+    ];
+    for (key, new_val) in new_obj.iter() {
+        if skip_keys.contains(&key.as_str()) {
+            continue;
+        }
+        let old_val = old_obj.get(key);
+        if old_val != Some(new_val) {
+            labels.push(field_label(key).to_string());
+        }
+    }
+    for key in old_obj.keys() {
+        if !new_obj.contains_key(key) && !skip_keys.contains(&key.as_str()) {
+            labels.push(field_label(key).to_string());
+        }
+    }
+    labels.sort();
+    labels.dedup();
+    labels
+}
+
+/// Maximum length for a displayed value in change details (longer values are truncated).
+const CHANGE_VALUE_MAX_LEN: usize = 120;
+
+fn value_to_display(v: Option<&JsonValue>) -> String {
+    let s = match v {
+        None => return "—".to_string(),
+        Some(JsonValue::Null) => return "—".to_string(),
+        Some(JsonValue::Bool(b)) => return b.to_string(),
+        Some(JsonValue::Number(n)) => return n.to_string(),
+        Some(JsonValue::String(s)) => s.as_str(),
+        Some(other) => return serde_json::to_string(other).unwrap_or_else(|_| "—".into()),
+    };
+    if s.len() <= CHANGE_VALUE_MAX_LEN {
+        s.to_string()
+    } else {
+        format!("{}…", &s[..CHANGE_VALUE_MAX_LEN])
+    }
+}
+
+/// One field change: label and old/new values for display.
+#[derive(Debug, Clone, Serialize)]
+pub struct ChangeDetail {
+    pub field: String,
+    pub old_value: String,
+    pub new_value: String,
+}
+
+/// Returns per-field change details (old value and updated value) for a log entry.
+/// Used to show what changed in the requirement changelog.
+pub fn log_change_details(log: &Log) -> Vec<ChangeDetail> {
+    let action = log.action_type.to_uppercase();
+    let old_obj = log
+        .old_values
+        .as_deref()
+        .and_then(|s| serde_json::from_str::<JsonValue>(s).ok());
+    let new_obj = log
+        .new_values
+        .as_deref()
+        .and_then(|s| serde_json::from_str::<JsonValue>(s).ok());
+
+    let skip_keys = [
+        "id",
+        "author_id",
+        "reviewer_id",
+        "project_id",
+        "creation_date",
+        "update_date",
+    ];
+
+    match action.as_str() {
+        "CREATE" => {
+            let new_obj = match new_obj {
+                Some(JsonValue::Object(o)) => o,
+                _ => return vec![],
+            };
+            let mut out: Vec<ChangeDetail> = new_obj
+                .iter()
+                .filter(|(k, _)| !skip_keys.contains(&k.as_str()))
+                .map(|(k, v)| ChangeDetail {
+                    field: field_label(k).to_string(),
+                    old_value: "—".to_string(),
+                    new_value: value_to_display(Some(v)),
+                })
+                .collect();
+            out.sort_by(|a, b| a.field.cmp(&b.field));
+            out
+        }
+        "DELETE" => {
+            let old_obj = match old_obj {
+                Some(JsonValue::Object(o)) => o,
+                _ => return vec![],
+            };
+            let mut out: Vec<ChangeDetail> = old_obj
+                .iter()
+                .filter(|(k, _)| !skip_keys.contains(&k.as_str()))
+                .map(|(k, v)| ChangeDetail {
+                    field: field_label(k).to_string(),
+                    old_value: value_to_display(Some(v)),
+                    new_value: "—".to_string(),
+                })
+                .collect();
+            out.sort_by(|a, b| a.field.cmp(&b.field));
+            out
+        }
+        _ => {
+            let (old_obj, new_obj) = match (old_obj, new_obj) {
+                (Some(JsonValue::Object(a)), Some(JsonValue::Object(b))) => (a, b),
+                _ => return vec![],
+            };
+            let mut out = Vec::new();
+            for (key, new_val) in new_obj.iter() {
+                if skip_keys.contains(&key.as_str()) {
+                    continue;
+                }
+                let old_val = old_obj.get(key);
+                if old_val != Some(new_val) {
+                    out.push(ChangeDetail {
+                        field: field_label(key).to_string(),
+                        old_value: value_to_display(old_val),
+                        new_value: value_to_display(Some(new_val)),
+                    });
+                }
+            }
+            for key in old_obj.keys() {
+                if !new_obj.contains_key(key) && !skip_keys.contains(&key.as_str()) {
+                    out.push(ChangeDetail {
+                        field: field_label(key).to_string(),
+                        old_value: value_to_display(old_obj.get(key)),
+                        new_value: "—".to_string(),
+                    });
+                }
+            }
+            out.sort_by(|a, b| a.field.cmp(&b.field));
+            out
+        }
+    }
+}
+
+fn parse_id_for_label(s: &str) -> Option<i32> {
+    s.trim().parse().ok()
+}
+
+fn parse_ids_array_for_labels(s: &str) -> Vec<i32> {
+    serde_json::from_str::<Vec<i32>>(s).unwrap_or_default()
+}
+
+fn resolve_verification_ids_to_labels(s: &str, verification_map: &HashMap<i32, String>) -> String {
+    let ids = parse_ids_array_for_labels(s);
+    if ids.is_empty() {
+        return "—".to_string();
+    }
+    let labels: Vec<String> = ids
+        .iter()
+        .filter_map(|id| verification_map.get(id).cloned())
+        .collect();
+    if labels.is_empty() {
+        s.to_string()
+    } else {
+        labels.join(", ")
+    }
+}
+
+/// Resolves ID values to human-readable labels for Status, Category, Applicability, and Verification.
+/// Returns a new vec of change details with old_value/new_value replaced by labels when applicable.
+pub fn resolve_change_details_labels(
+    details: Vec<ChangeDetail>,
+    entity_type: &str,
+    req_status_map: &HashMap<i32, String>,
+    test_status_map: &HashMap<i32, String>,
+    category_map: &HashMap<i32, String>,
+    applicability_map: &HashMap<i32, String>,
+    verification_map: &HashMap<i32, String>,
+) -> Vec<ChangeDetail> {
+    let status_map = if entity_type.eq_ignore_ascii_case("TEST") {
+        test_status_map
+    } else {
+        req_status_map
+    };
+
+    details
+        .into_iter()
+        .map(|d| {
+            let (old_value, new_value) = match d.field.as_str() {
+                "Status" => (
+                    parse_id_for_label(&d.old_value)
+                        .and_then(|id| status_map.get(&id).cloned())
+                        .unwrap_or(d.old_value),
+                    parse_id_for_label(&d.new_value)
+                        .and_then(|id| status_map.get(&id).cloned())
+                        .unwrap_or(d.new_value),
+                ),
+                "Category" => (
+                    parse_id_for_label(&d.old_value)
+                        .and_then(|id| category_map.get(&id).cloned())
+                        .unwrap_or(d.old_value),
+                    parse_id_for_label(&d.new_value)
+                        .and_then(|id| category_map.get(&id).cloned())
+                        .unwrap_or(d.new_value),
+                ),
+                "Applicability" => (
+                    parse_id_for_label(&d.old_value)
+                        .and_then(|id| applicability_map.get(&id).cloned())
+                        .unwrap_or(d.old_value),
+                    parse_id_for_label(&d.new_value)
+                        .and_then(|id| applicability_map.get(&id).cloned())
+                        .unwrap_or(d.new_value),
+                ),
+                "Verification" => (
+                    resolve_verification_ids_to_labels(&d.old_value, verification_map),
+                    resolve_verification_ids_to_labels(&d.new_value, verification_map),
+                ),
+                _ => (d.old_value, d.new_value),
+            };
+            ChangeDetail {
+                field: d.field,
+                old_value,
+                new_value,
+            }
+        })
+        .collect()
+}
 
 /// Errors that may occur while performing log related operations.
 #[derive(Debug, Error)]

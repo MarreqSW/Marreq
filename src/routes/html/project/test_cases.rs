@@ -2,7 +2,7 @@ use super::helpers::*;
 use super::prelude::*;
 use crate::helper_functions::decorators::decorate_requirements_with_repo;
 use crate::models::EntityType;
-use crate::services::{LogService, TestService};
+use crate::services::{change_summary, LogService, TestService};
 use crate::status_enums::TestStatusEnum;
 
 #[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>&<search>")]
@@ -158,12 +158,23 @@ async fn show_test_id(
         .entity_logs(&EntityType::Test.to_string(), test_id)
         .unwrap_or_default();
 
+    let entries_with_summary: Vec<serde_json::Value> = history_entries
+        .iter()
+        .map(|e| {
+            let mut v = serde_json::to_value(e).unwrap_or_else(|_| json!({}));
+            if let Some(obj) = v.as_object_mut() {
+                obj.insert("summary".into(), json!(change_summary(&e.log)));
+            }
+            v
+        })
+        .collect();
+
     let mut ctx_map = serde_json::Map::new();
     ctx_map.insert("project_id".into(), json!(project_id));
     ctx_map.insert("selected_project_id".into(), json!(project_id));
     ctx_map.insert("linked_requirements".into(), json!(decorated_requirements));
     ctx_map.insert("user".into(), json!(user));
-    ctx_map.insert("history".into(), json!({ "entries": history_entries }));
+    ctx_map.insert("history".into(), json!({ "entries": entries_with_summary }));
 
     if let Ok(serde_json::Value::Object(test_obj)) = serde_json::to_value(test) {
         for (key, value) in test_obj {

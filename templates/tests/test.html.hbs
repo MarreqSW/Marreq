@@ -170,9 +170,9 @@
               {{#each history.entries}}
               <li
                 class="d-flex flex-column gap-1 py-2 border-bottom border-light border-opacity-50 requirement-timeline-item">
-                <span class="small fw-medium text-body">{{#if
-                  this.log.description}}{{this.log.description}}{{else}}{{this.log.action_type}}{{/if}}</span>
-                <span class="small text-muted">{{this.log.created_at}} · {{this.username}}</span>
+                <span class="small fw-medium text-body">{{#if this.summary}}{{this.summary}}{{else}}{{#if
+                  this.description}}{{this.description}}{{else}}{{this.action_type}}{{/if}}{{/if}}</span>
+                <span class="small text-muted">{{this.created_at}} · {{this.username}}</span>
               </li>
               {{/each}}
               {{else}}

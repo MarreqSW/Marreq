@@ -123,7 +123,7 @@ mod tests {
             title: "System shall process inputs".into(),
             description: "The system shall process all valid inputs within 100ms".into(),
             verification_method_id: "Analysis".into(),
-            req_verification_id: 1,
+            req_verification_ids: vec![1],
             status_id: "Draft".into(),
             req_current_status_id: 1,
             author_id: "John Doe".into(),

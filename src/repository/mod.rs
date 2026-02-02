@@ -33,6 +33,20 @@ pub trait RequirementsRepository {
     fn get_requirements_all(&self) -> Result<Vec<Requirement>, RepoError>;
     fn get_requirements_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError>;
 
+    fn get_verification_method_ids_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<i32>, RepoError>;
+    fn get_requirement_ids_by_verification_method(
+        &self,
+        verification_method_id: i32,
+    ) -> Result<Vec<i32>, RepoError>;
+    fn set_requirement_verification_methods(
+        &mut self,
+        requirement_id: i32,
+        verification_method_ids: &[i32],
+    ) -> Result<(), RepoError>;
+
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError>;
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError>;
     fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError>;

@@ -6,11 +6,29 @@ use crate::services::RequirementService;
 
 #[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct RequirementCreateRequest {
+    pub title: String,
+    pub description: String,
+    pub author_id: i32,
+    pub category_id: i32,
+    pub status_id: i32,
+    pub parent_id: Option<i32>,
+    pub reference_code: String,
+    pub reviewer_id: i32,
+    pub applicability_id: i32,
+    pub justification: Option<String>,
+    pub project_id: i32,
+    #[serde(default)]
+    pub verification_method_ids: Vec<i32>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct RequirementPatch {
     pub title: Option<String>,
     pub description: Option<String>,
     pub status_id: Option<i32>,
-    pub verification_method_id: Option<i32>,
+    pub verification_method_ids: Option<Vec<i32>>,
     pub author_id: Option<i32>,
     pub reviewer_id: Option<i32>,
     pub category_id: Option<i32>,
@@ -35,10 +53,35 @@ pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<
 pub async fn create(
     user: ApiUser,
     state: &State<AppState>,
-    payload: Json<NewRequirement>,
+    payload: Json<RequirementCreateRequest>,
 ) -> ApiResult<Value> {
+    let payload = payload.into_inner();
+    let verification_method_ids: Vec<i32> = payload
+        .verification_method_ids
+        .into_iter()
+        .filter(|&id| id > 0)
+        .collect();
+    if verification_method_ids.is_empty() {
+        return Err(ApiError::BadRequest(
+            "at least one verification_method_id required".into(),
+        ));
+    }
+    let new_req = NewRequirement {
+        id: None,
+        title: payload.title,
+        description: payload.description,
+        author_id: payload.author_id,
+        category_id: payload.category_id,
+        status_id: payload.status_id,
+        parent_id: payload.parent_id,
+        reference_code: payload.reference_code,
+        reviewer_id: payload.reviewer_id,
+        applicability_id: payload.applicability_id,
+        justification: payload.justification,
+        project_id: payload.project_id,
+    };
     let service = RequirementService::new(state.inner());
-    let id = service.create(user.user(), payload.into_inner())?;
+    let id = service.create(user.user(), new_req, &verification_method_ids)?;
 
     Ok(json!({ "status": "ok", "id": id }))
 }
@@ -61,7 +104,7 @@ pub async fn patch_requirement(
     let any_updates = patch.title.is_some()
         || patch.description.is_some()
         || patch.status_id.is_some()
-        || patch.verification_method_id.is_some()
+        || patch.verification_method_ids.is_some()
         || patch.author_id.is_some()
         || patch.reviewer_id.is_some()
         || patch.category_id.is_some()
@@ -83,9 +126,6 @@ pub async fn patch_requirement(
     if let Some(v) = patch.status_id {
         requirement.status_id = v;
     }
-    if let Some(v) = patch.verification_method_id {
-        requirement.verification_method_id = v;
-    }
     if let Some(v) = patch.author_id {
         requirement.author_id = v;
     }
@@ -99,11 +139,18 @@ pub async fn patch_requirement(
         requirement.applicability_id = v;
     }
 
+    let verification_method_ids = patch
+        .verification_method_ids
+        .unwrap_or_else(|| service.get_verification_method_ids(id).unwrap_or_default());
+    let verification_method_ids: Vec<i32> = verification_method_ids
+        .into_iter()
+        .filter(|&id| id > 0)
+        .collect();
+
     let payload = NewRequirement {
         id: Some(requirement.id),
         title: requirement.title.clone(),
         description: requirement.description.clone(),
-        verification_method_id: requirement.verification_method_id,
         author_id: requirement.author_id,
         category_id: requirement.category_id,
         status_id: requirement.status_id,
@@ -115,7 +162,7 @@ pub async fn patch_requirement(
         project_id: requirement.project_id,
     };
 
-    service.update(user.user(), id, payload)?;
+    service.update(user.user(), id, payload, &verification_method_ids)?;
 
     Ok(json!({
         "success": true,
@@ -162,10 +209,9 @@ mod tests {
 
     fn sample_requirement(title: &str) -> Value {
         json!({
-            "id": null,
             "title": title,
             "description": format!("{title} description"),
-            "verification_method_id": 1,
+            "verification_method_ids": [1],
             "author_id": 1,
             "category_id": 1,
             "status_id": 1,

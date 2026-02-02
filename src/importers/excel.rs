@@ -356,7 +356,6 @@ impl ExcelImporter {
             category_id,
             applicability_id,
             status_id,
-            verification_method_id,
             author_id,
             reviewer_id,
             parent_id,
@@ -364,8 +363,11 @@ impl ExcelImporter {
             project_id,
         };
 
-        let id = DieselRepo::new()
+        let mut repo = DieselRepo::new();
+        let id = repo
             .insert_new_requirement(&new_req)
+            .map_err(|e| anyhow!("{}", e))?;
+        repo.set_requirement_verification_methods(id, &[verification_method_id])
             .map_err(|e| anyhow!("{}", e))?;
         Ok(Some(id))
     }

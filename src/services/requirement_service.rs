@@ -203,7 +203,7 @@ impl<'a> RequirementService<'a> {
             .filter(|req| {
                 let status_match = status_filter.is_none_or(|status_id| req.status_id == status_id);
                 let verification_match = verification_filter
-                    .map_or(true, |_| verification_requirement_ids.contains(&req.id));
+                    .is_none_or(|_| verification_requirement_ids.contains(&req.id));
                 let category_match =
                     category_filter.is_none_or(|category_id| req.category_id == category_id);
                 let applicability_match = applicability_filter

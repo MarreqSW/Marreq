@@ -70,7 +70,8 @@ impl<'a> RequirementService<'a> {
 
     /// Verification method IDs linked to this requirement.
     pub fn get_verification_method_ids(&self, requirement_id: i32) -> Result<Vec<i32>, RepoError> {
-        self.repo_read().get_verification_method_ids_for_requirement(requirement_id)
+        self.repo_read()
+            .get_verification_method_ids_for_requirement(requirement_id)
     }
 
     pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<Requirement>, RepoError> {
@@ -164,9 +165,8 @@ impl<'a> RequirementService<'a> {
             .into_iter()
             .filter(|req| {
                 let status_match = status_filter.is_none_or(|status_id| req.status_id == status_id);
-                let verification_match = verification_filter.map_or(true, |_| {
-                    verification_requirement_ids.contains(&req.id)
-                });
+                let verification_match = verification_filter
+                    .map_or(true, |_| verification_requirement_ids.contains(&req.id));
                 let category_match =
                     category_filter.is_none_or(|category_id| req.category_id == category_id);
                 let applicability_match = applicability_filter

@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 use super::prelude::*;
 use crate::services::LogService;
 use std::path::Path;

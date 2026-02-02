@@ -198,6 +198,7 @@ struct InlineVerificationPayload {
 }
 
 #[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<applicability_filter>&<view>")]
+#[allow(clippy::too_many_arguments)]
 async fn show_requirements(
     project_access: ProjectAccess,
     project_id: i32,
@@ -686,10 +687,7 @@ async fn new_requirement(
         .to_string();
 
     // Check if user is admin or project owner
-    let is_admin_or_owner = user.is_admin
-        || project
-            .owner_id
-            .map_or(false, |owner_id| owner_id == user.id);
+    let is_admin_or_owner = user.is_admin || project.owner_id == Some(user.id);
 
     let verification_with_selected: Vec<serde_json::Value> = verifications
         .iter()

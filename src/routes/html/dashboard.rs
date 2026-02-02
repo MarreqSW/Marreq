@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 use super::helpers::decorate_projects_for_listing;
 use super::prelude::*;
 use crate::services::{ProjectService, StatusService};
@@ -145,7 +147,7 @@ mod tests {
 
         fn requirement(id: i32, project_id: i32, created: NaiveDateTime) -> Requirement {
             Requirement {
-                id: id,
+                id,
                 title: format!("Requirement {id}"),
                 description: "Ensure feature works".into(),
                 status_id: 1,
@@ -165,7 +167,7 @@ mod tests {
 
         fn test_case(id: i32, project_id: i32) -> TestCase {
             TestCase {
-                id: id,
+                id,
                 name: format!("Test {id}"),
                 description: "Covers core scenario".into(),
                 source: "manual".into(),

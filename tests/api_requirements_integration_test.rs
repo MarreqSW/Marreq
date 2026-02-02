@@ -147,6 +147,16 @@ mod test_support {
                 project_id: 1,
             },
         );
+        repo.verifications.insert(
+            2,
+            VerificationMethod {
+                id: 2,
+                title: "Test".into(),
+                description: "".into(),
+                tag: "TEST".into(),
+                project_id: 1,
+            },
+        );
 
         repo.applicability.insert(
             1,
@@ -167,7 +177,6 @@ mod test_support {
             id: id,
             title: title.to_string(),
             description: format!("{} description", title),
-            verification_method_id: 1,
             status_id: 1,
             author_id: 1,
             reviewer_id: 1,
@@ -184,10 +193,18 @@ mod test_support {
     }
 
     pub fn new_requirement_json(title: &str, project_id: i32) -> Value {
+        new_requirement_json_with_verification(title, project_id, &[1])
+    }
+
+    pub fn new_requirement_json_with_verification(
+        title: &str,
+        project_id: i32,
+        verification_method_ids: &[i32],
+    ) -> Value {
         json!({
             "title": title,
             "description": format!("{} description", title),
-            "verification_method_id": 1,
+            "verification_method_ids": verification_method_ids,
             "author_id": 1,
             "category_id": 1,
             "status_id": 1,
@@ -368,6 +385,41 @@ async fn post_requirement_requires_authentication() {
 }
 
 #[rocket::async_test]
+async fn post_requirement_creates_with_multiple_verification_method_ids() {
+    let client = test_client(base_repo()).await;
+
+    let body = new_requirement_json_with_verification("Multi Verification Req", 1, &[1, 2]);
+    let response = client
+        .post("/api/requirements")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(body.to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let result: Value = response.into_json().await.expect("json");
+    assert_eq!(result["status"], "ok");
+    assert_eq!(result["id"], 1);
+}
+
+#[rocket::async_test]
+async fn post_requirement_rejects_empty_verification_method_ids() {
+    let client = test_client(base_repo()).await;
+
+    let body = new_requirement_json_with_verification("No Verification", 1, &[]);
+    let response = client
+        .post("/api/requirements")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(body.to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::BadRequest);
+}
+
+#[rocket::async_test]
 async fn post_requirement_with_invalid_json_returns_error() {
     let client = test_client(base_repo()).await;
 
@@ -456,6 +508,30 @@ async fn patch_requirement_updates_multiple_fields() {
     assert_eq!(requirement.title, "Updated Title");
     assert_eq!(requirement.description, "Updated description");
     assert_eq!(requirement.status_id, 2);
+}
+
+#[rocket::async_test]
+async fn patch_requirement_updates_verification_method_ids() {
+    let mut repo = base_repo();
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Original"));
+    repo.requirement_verification_methods.push((1, 1));
+
+    let client = test_client(repo).await;
+
+    let patch = json!({
+        "verification_method_ids": [2]
+    });
+
+    let response = client
+        .patch("/api/requirements/1")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(patch.to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
 }
 
 #[rocket::async_test]

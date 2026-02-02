@@ -218,7 +218,6 @@ mod tests {
             id,
             title: format!("Requirement {id}"),
             description: "Test requirement".to_string(),
-            verification_method_id: 1,
             status_id: 1,
             author_id: ADMIN_ID,
             reviewer_id: ADMIN_ID,

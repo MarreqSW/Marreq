@@ -1,3 +1,5 @@
+#![allow(clippy::result_large_err)]
+
 use super::helpers::*;
 use super::prelude::*;
 use crate::repository::errors::RepoError;
@@ -138,7 +140,7 @@ mod tests {
 
     fn project(id: i32, name: &str, owner_id: i32) -> Project {
         Project {
-            id: id,
+            id,
             name: name.into(),
             description: Some("Mission critical project".into()),
             creation_date: Some(timestamp()),

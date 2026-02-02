@@ -115,6 +115,8 @@ echo ""
 
 echo "🧹 Cleaning existing tables (if any)..."
 psqlc -U rust -d reqman <<'SQL' >/dev/null 2>&1 || true
+DROP TABLE IF EXISTS embedding_index_queue CASCADE;
+DROP TABLE IF EXISTS requirement_embeddings CASCADE;
 DROP TABLE IF EXISTS matrix CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;
 DROP TABLE IF EXISTS requirements CASCADE;
@@ -137,24 +139,6 @@ echo "🚀 Initializing database with complete schema and data..."
 # Feed the SQL file into psql inside the container
 docker exec -i "${DB_CID}" psql -v ON_ERROR_STOP=1 -U rust -d reqman < "${INIT_SQL}"
 echo "✅ Database initialization completed successfully!"
-echo ""
-
-# Apply semantic search migrations
-SEMANTIC_SEARCH_MIGRATION="${PROJECT_ROOT}/migrations/2026-01-29-000001_add_semantic_search/up.sql"
-EMBEDDING_FIX_MIGRATION="${PROJECT_ROOT}/migrations/2026-01-30-144348-0000_fix_embedding_dimensions/up.sql"
-
-echo "🔍 Setting up semantic search tables..."
-if [[ -f "${SEMANTIC_SEARCH_MIGRATION}" ]]; then
-  docker exec -i "${DB_CID}" psql -v ON_ERROR_STOP=1 -U rust -d reqman < "${SEMANTIC_SEARCH_MIGRATION}"
-  echo "✅ Semantic search tables created"
-else
-  echo "⚠️  Semantic search migration not found at ${SEMANTIC_SEARCH_MIGRATION}"
-fi
-
-if [[ -f "${EMBEDDING_FIX_MIGRATION}" ]]; then
-  docker exec -i "${DB_CID}" psql -v ON_ERROR_STOP=1 -U rust -d reqman < "${EMBEDDING_FIX_MIGRATION}"
-  echo "✅ Embedding dimensions fixed"
-fi
 echo ""
 
 echo "🔍 Verifying database setup..."

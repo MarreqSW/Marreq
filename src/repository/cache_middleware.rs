@@ -124,6 +124,34 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         })
     }
 
+    fn get_verification_method_ids_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        self.inner.get_verification_method_ids_for_requirement(requirement_id)
+    }
+
+    fn get_requirement_ids_by_verification_method(
+        &self,
+        verification_method_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        self.inner.get_requirement_ids_by_verification_method(verification_method_id)
+    }
+
+    fn set_requirement_verification_methods(
+        &mut self,
+        requirement_id: i32,
+        verification_method_ids: &[i32],
+    ) -> Result<(), RepoError> {
+        let res = self
+            .inner
+            .set_requirement_verification_methods(requirement_id, verification_method_ids);
+        if res.is_ok() {
+            self.cache.invalidate_requirement(requirement_id);
+        }
+        res
+    }
+
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_requirement(new)?;
         self.cache.invalidate_requirement(id);
@@ -627,7 +655,6 @@ mod tests {
             id: 1,
             title: "Req".into(),
             description: "".into(),
-            verification_method_id: 1,
             status_id: 1,
             author_id: 1,
             reviewer_id: 1,
@@ -687,6 +714,7 @@ mod tests {
             categories,
             applicability,
             requirements,
+            requirement_verification_methods: Vec::new(),
             tests,
             projects,
             matrices: vec![matrix],
@@ -911,7 +939,6 @@ mod tests {
             id: None,
             title: "R2".into(),
             description: "".into(),
-            verification_method_id: 1,
             author_id: 1,
             category_id: 1,
             status_id: 1,
@@ -929,7 +956,6 @@ mod tests {
             id: Some(rid),
             title: "R2".into(),
             description: "".into(),
-            verification_method_id: 1,
             author_id: 1,
             category_id: 1,
             status_id: 1,

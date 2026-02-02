@@ -96,7 +96,7 @@ async fn workflow_traceability_lifecycle() {
             json!({
                 "title": "Login Feature",
                 "description": "User must be able to login",
-                "verification_method_id": 1,
+                "verification_method_ids": [1],
                 "status_id": 1,
                 "reference_code": "REQ-001",
                 "category_id": 1,
@@ -235,7 +235,7 @@ async fn workflow_project_isolation() {
             json!({
                 "title": "Secret Feature",
                 "description": "Should fail",
-                "verification_method_id": 1,
+                "verification_method_ids": [1],
                 "status_id": 1,
                 "reference_code": "SEC-001",
                 "category_id": 1,

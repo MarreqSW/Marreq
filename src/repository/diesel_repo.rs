@@ -667,7 +667,6 @@ impl RequirementsRepository for DieselRepo {
                 id,
                 title,
                 description,
-                verification_method_id,
                 status_id,
                 author_id,
                 reviewer_id,
@@ -700,7 +699,6 @@ impl RequirementsRepository for DieselRepo {
                 id,
                 title,
                 description,
-                verification_method_id,
                 status_id,
                 author_id,
                 reviewer_id,
@@ -730,7 +728,6 @@ impl RequirementsRepository for DieselRepo {
                 id,
                 title,
                 description,
-                verification_method_id,
                 status_id,
                 author_id,
                 reviewer_id,
@@ -757,7 +754,6 @@ impl RequirementsRepository for DieselRepo {
                 id,
                 title,
                 description,
-                verification_method_id,
                 status_id,
                 author_id,
                 reviewer_id,
@@ -773,6 +769,57 @@ impl RequirementsRepository for DieselRepo {
             ))
             .get_result(conn.as_mut())?;
         Ok(res.id)
+    }
+
+    fn get_verification_method_ids_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        use schema::requirement_verification_methods::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::requirement_verification_methods
+            .filter(dsl::requirement_id.eq(requirement_id))
+            .select(dsl::verification_method_id)
+            .order(dsl::verification_method_id)
+            .load::<i32>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn get_requirement_ids_by_verification_method(
+        &self,
+        verification_method_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        use schema::requirement_verification_methods::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::requirement_verification_methods
+            .filter(dsl::verification_method_id.eq(verification_method_id))
+            .select(dsl::requirement_id)
+            .load::<i32>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn set_requirement_verification_methods(
+        &mut self,
+        requirement_id: i32,
+        verification_method_ids: &[i32],
+    ) -> Result<(), RepoError> {
+        use schema::requirement_verification_methods;
+        let mut conn = self.get_conn()?;
+        diesel::delete(requirement_verification_methods::table)
+            .filter(requirement_verification_methods::requirement_id.eq(requirement_id))
+            .execute(conn.as_mut())?;
+        for &verification_method_id in verification_method_ids {
+            if verification_method_id <= 0 {
+                continue;
+            }
+            diesel::insert_into(requirement_verification_methods::table)
+                .values((
+                    requirement_verification_methods::requirement_id.eq(requirement_id),
+                    requirement_verification_methods::verification_method_id.eq(verification_method_id),
+                ))
+                .execute(conn.as_mut())?;
+        }
+        Ok(())
     }
 
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError> {
@@ -797,7 +844,6 @@ impl RequirementsRepository for DieselRepo {
                 id,
                 title,
                 description,
-                verification_method_id,
                 status_id,
                 author_id,
                 reviewer_id,
@@ -902,7 +948,6 @@ impl TestsCaseRepository for DieselRepo {
                 requirements::dsl::id,
                 requirements::dsl::title,
                 requirements::dsl::description,
-                requirements::dsl::verification_method_id,
                 requirements::dsl::status_id,
                 requirements::dsl::author_id,
                 requirements::dsl::reviewer_id,

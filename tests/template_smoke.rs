@@ -201,7 +201,7 @@ fn render_core_templates() {
                         "reference_code": "REQ-101",
                         "category_id": 1,
                         "req_current_status": 1,
-                        "verification_method_id": 1,
+                        "verification_method_ids": [1],
                         "author_id": 1,
                         "reviewer_id": 1,
                         "creation_date": "2024-01-01",

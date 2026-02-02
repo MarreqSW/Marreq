@@ -430,24 +430,24 @@ mod tests {
     #[test]
     fn embedding_index_status_from_str() {
         assert_eq!(
-            EmbeddingIndexStatus::from_str("pending"),
+            EmbeddingIndexStatus::parse("pending"),
             Some(EmbeddingIndexStatus::Pending)
         );
         assert_eq!(
-            EmbeddingIndexStatus::from_str("processing"),
+            EmbeddingIndexStatus::parse("processing"),
             Some(EmbeddingIndexStatus::Processing)
         );
         assert_eq!(
-            EmbeddingIndexStatus::from_str("completed"),
+            EmbeddingIndexStatus::parse("completed"),
             Some(EmbeddingIndexStatus::Completed)
         );
         assert_eq!(
-            EmbeddingIndexStatus::from_str("failed"),
+            EmbeddingIndexStatus::parse("failed"),
             Some(EmbeddingIndexStatus::Failed)
         );
-        assert_eq!(EmbeddingIndexStatus::from_str("unknown"), None);
-        assert_eq!(EmbeddingIndexStatus::from_str(""), None);
-        assert_eq!(EmbeddingIndexStatus::from_str("PENDING"), None); // Case sensitive
+        assert_eq!(EmbeddingIndexStatus::parse("unknown"), None);
+        assert_eq!(EmbeddingIndexStatus::parse(""), None);
+        assert_eq!(EmbeddingIndexStatus::parse("PENDING"), None); // Case sensitive
     }
 
     #[test]

@@ -39,11 +39,13 @@ impl PooledConnectionWrapper {
     }
 
     /// Get a mutable reference to the inner connection
+    #[allow(clippy::should_implement_trait)]
     pub fn as_mut(&mut self) -> &mut PgConnection {
         &mut self.inner
     }
 
     /// Get a reference to the inner connection
+    #[allow(clippy::should_implement_trait)]
     pub fn as_ref(&self) -> &PgConnection {
         &self.inner
     }
@@ -134,6 +136,12 @@ pub struct PoolInfo {
 #[derive(Clone)]
 pub struct DieselRepo {
     pool: Arc<ConnectionPool>,
+}
+
+impl Default for DieselRepo {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DieselRepo {
@@ -1034,8 +1042,8 @@ impl TestsCaseRepository for DieselRepo {
 
                     let new_matrix = NewMatrixLink {
                         req_id: *requirement_id,
-                        test_id: test_id,
-                        project_id: project_id,
+                        test_id,
+                        project_id,
                     };
                     diesel::insert_into(schema::matrix::table)
                         .values(&new_matrix)

@@ -1,9 +1,10 @@
 use crate::models::{Requirement, TestCase};
 
+/// When `verification_requirement_ids` is `Some`, only requirements whose id is in the slice are kept.
 pub fn filter_requirements(
     requirements: Vec<Requirement>,
     status_filter: Option<i32>,
-    verification_filter: Option<i32>,
+    verification_requirement_ids: Option<&[i32]>,
     category_filter: Option<i32>,
 ) -> Vec<Requirement> {
     let mut filtered_requirements: Vec<Requirement> = requirements
@@ -11,7 +12,7 @@ pub fn filter_requirements(
         .filter(|req| {
             let status_match = status_filter.is_none_or(|status_id| req.status_id == status_id);
             let verification_match =
-                verification_filter.is_none_or(|id| req.verification_method_id == id);
+                verification_requirement_ids.map_or(true, |ids| ids.contains(&req.id));
             let category_match =
                 category_filter.is_none_or(|category_id| req.category_id == category_id);
             status_match && verification_match && category_match
@@ -55,18 +56,11 @@ mod tests {
             .unwrap()
     }
 
-    fn sample_requirement(
-        id: i32,
-        status: i32,
-        verification: i32,
-        category: i32,
-        reference: &str,
-    ) -> Requirement {
+    fn sample_requirement(id: i32, status: i32, category: i32, reference: &str) -> Requirement {
         Requirement {
             id,
             title: format!("Req {}", id),
             description: String::new(),
-            verification_method_id: verification,
             status_id: status,
             author_id: 0,
             reviewer_id: 0,
@@ -85,9 +79,9 @@ mod tests {
     #[test]
     fn filter_requirements_filters_and_sorts() {
         let reqs = vec![
-            sample_requirement(1, 1, 1, 1, "REF-A"),
-            sample_requirement(2, 1, 2, 1, ""),
-            sample_requirement(3, 2, 1, 2, "REF-B"),
+            sample_requirement(1, 1, 1, "REF-A"),
+            sample_requirement(2, 1, 1, ""),
+            sample_requirement(3, 2, 2, "REF-B"),
         ];
 
         let filtered = filter_requirements(reqs.clone(), Some(1), None, None);
@@ -95,7 +89,8 @@ mod tests {
         assert_eq!(filtered[0].id, 1);
         assert_eq!(filtered[1].id, 2);
 
-        let filtered2 = filter_requirements(reqs.clone(), None, Some(1), Some(1));
+        // verification_requirement_ids Some(&[1]) = only req 1 has that verification
+        let filtered2 = filter_requirements(reqs.clone(), None, Some(&[1]), Some(1));
         assert_eq!(filtered2.len(), 1);
         assert_eq!(filtered2[0].id, 1);
 

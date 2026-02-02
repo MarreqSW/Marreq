@@ -24,7 +24,6 @@ pub struct NewRequirement {
     pub id: Option<i32>,
     pub title: String,
     pub description: String,
-    pub verification_method_id: i32,
     pub author_id: i32,
     pub category_id: i32,
     pub status_id: i32,

@@ -33,11 +33,11 @@ pub fn import_reqif_page(
     project_id: i32,
     state: &State<AppState>,
     error: Option<String>,
-) -> Result<content::RawHtml<String>, Redirect> {
+) -> Result<content::RawHtml<String>, Box<Redirect>> {
     let _user = project_access.into_user();
     let project = crate::services::ProjectService::new(state.inner())
         .get_by_id(project_id)
-        .map_err(|_| Redirect::to(format!("/p/{}", project_id)))?;
+        .map_err(|_| Box::new(Redirect::to(format!("/p/{}", project_id))))?;
     let html = format!(
         r#"<!doctype html>
 <html lang="en">

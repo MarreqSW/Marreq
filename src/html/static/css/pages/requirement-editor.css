@@ -84,6 +84,36 @@
   width: 8px;
 }
 
+.c-editor-status__menu {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  left: 0;
+  min-width: 10rem;
+  padding: var(--space-1);
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  z-index: 10;
+}
+
+.c-editor-status__menu button {
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  width: 100%;
+}
+
+.c-editor-status__menu button:hover,
+.c-editor-status__menu button:focus-visible {
+  background: var(--surface-accent);
+  outline: none;
+}
+
 .c-editor-topbar__actions {
   align-items: center;
   display: flex;

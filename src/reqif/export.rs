@@ -22,10 +22,7 @@ pub fn to_reqif(
     let mut out = String::new();
     out.push_str(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
     out.push_str("\n");
-    out.push_str(&format!(
-        r#"<REQ-IF xmlns="{}">"#,
-        REQIF_NS
-    ));
+    out.push_str(&format!(r#"<REQ-IF xmlns="{}">"#, REQIF_NS));
     out.push_str("\n  <THE-HEADER>");
     out.push_str("\n    <REPOSITORY-ID>ReqMan-");
     out.push_str(&escape_xml(project_name));
@@ -42,7 +39,9 @@ pub fn to_reqif(
 
     // Datatype definitions (STRING)
     out.push_str("\n      <DATATYPES>");
-    out.push_str("\n        <DATATYPE-DEFINITION-STRING IDENTIFIER=\"dt-string\" LONG-NAME=\"String\"/>");
+    out.push_str(
+        "\n        <DATATYPE-DEFINITION-STRING IDENTIFIER=\"dt-string\" LONG-NAME=\"String\"/>",
+    );
     out.push_str("\n      </DATATYPES>");
 
     // Spec object type "Requirement" with attributes

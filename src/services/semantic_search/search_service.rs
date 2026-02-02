@@ -141,8 +141,7 @@ impl<'a> SemanticSearchService<'a> {
                     requirement_verification_methods::verification_method_id.eq(verification_id),
                 )
                 .select(requirement_verification_methods::requirement_id);
-            query_builder =
-                query_builder.filter(requirements::id.eq_any(subquery));
+            query_builder = query_builder.filter(requirements::id.eq_any(subquery));
         }
 
         let result: Option<(i32, String, String, String)> = query_builder

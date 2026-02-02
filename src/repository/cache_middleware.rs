@@ -128,14 +128,16 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         &self,
         requirement_id: i32,
     ) -> Result<Vec<i32>, RepoError> {
-        self.inner.get_verification_method_ids_for_requirement(requirement_id)
+        self.inner
+            .get_verification_method_ids_for_requirement(requirement_id)
     }
 
     fn get_requirement_ids_by_verification_method(
         &self,
         verification_method_id: i32,
     ) -> Result<Vec<i32>, RepoError> {
-        self.inner.get_requirement_ids_by_verification_method(verification_method_id)
+        self.inner
+            .get_requirement_ids_by_verification_method(verification_method_id)
     }
 
     fn set_requirement_verification_methods(

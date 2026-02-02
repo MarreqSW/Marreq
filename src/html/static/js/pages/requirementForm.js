@@ -79,8 +79,9 @@ function initStatusControls(form) {
     closeMenu();
   });
 
+  const statusControl = form.querySelector('[data-role="status-control"]');
   document.addEventListener('click', (event) => {
-    if (!menu.hidden && !menu.contains(event.target) && event.target !== toggle) {
+    if (!menu.hidden && statusControl && !statusControl.contains(event.target)) {
       closeMenu();
     }
   });

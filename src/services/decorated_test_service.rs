@@ -139,7 +139,7 @@ mod tests {
 
     fn make_test(id: i32, parent: i32, status: i32) -> TestCase {
         TestCase {
-            id: id,
+            id,
             name: format!("Test {id}"),
             description: "desc".into(),
             source: "manual".into(),

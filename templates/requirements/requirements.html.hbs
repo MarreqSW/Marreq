@@ -1,12 +1,12 @@
 {{!--
-  Depends on: css/pages/requirements.css, js/pages/requirements.js
-  Dynamic classes: reqman-requirements-status-badge--{variant}
+Depends on: css/pages/requirements.css, js/pages/requirements.js
+Dynamic classes: reqman-requirements-status-badge--{variant}
 --}}
 
 {{!-- ============================================================
-     MAIN PAGE COMPOSITION
-     Assembles all partials into the complete page structure
-     ============================================================ --}}
+MAIN PAGE COMPOSITION
+Assembles all partials into the complete page structure
+============================================================ --}}
 {{#*inline "page"}}
 <div class="reqman-requirements-page">
   {{> requirements/_page_header}}
@@ -20,7 +20,8 @@
 </div>
 
 {{!-- Duplicate Requirement Modal --}}
-<div class="modal fade" id="duplicateRequirementModal" tabindex="-1" aria-labelledby="duplicateRequirementModalLabel" aria-hidden="true">
+<div class="modal fade" id="duplicateRequirementModal" tabindex="-1" aria-labelledby="duplicateRequirementModalLabel"
+  aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -30,15 +31,17 @@
       <form id="duplicateRequirementForm">
         <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
           <p class="text-muted mb-4">Review and modify the requirement details before creating the duplicate.</p>
-          
+
           <div class="mb-3">
             <label for="dup_req_title" class="form-label">Title <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="dup_req_title" name="title" required>
           </div>
 
           <div class="mb-3">
-            <label for="dup_req_reference" class="form-label">Reference <span class="text-muted small">(optional)</span></label>
-            <input type="text" class="form-control" id="dup_req_reference" name="reference_code" placeholder="Auto-generated if left blank">
+            <label for="dup_req_reference" class="form-label">Reference <span
+                class="text-muted small">(optional)</span></label>
+            <input type="text" class="form-control" id="dup_req_reference" name="reference_code"
+              placeholder="Auto-generated if left blank">
             <div class="form-text">Leave blank to auto-generate a new reference</div>
           </div>
 
@@ -48,7 +51,8 @@
           </div>
 
           <div class="mb-3">
-            <label for="dup_req_justification" class="form-label">Rationale <span class="text-muted small">(optional)</span></label>
+            <label for="dup_req_justification" class="form-label">Rationale <span
+                class="text-muted small">(optional)</span></label>
             <textarea class="form-control" id="dup_req_justification" name="justification" rows="3"></textarea>
           </div>
 
@@ -58,7 +62,7 @@
               <select class="form-select" id="dup_req_category" name="category_id" required>
                 <option value="">Select category...</option>
                 {{#each categories}}
-                  <option value="{{id}}">{{title}}</option>
+                <option value="{{id}}">{{title}}</option>
                 {{/each}}
               </select>
             </div>
@@ -68,7 +72,7 @@
               <select class="form-select" id="dup_req_current_status" name="status_id" required>
                 <option value="">Select status...</option>
                 {{#each statuses}}
-                  <option value="{{id}}">{{title}}</option>
+                <option value="{{id}}">{{title}}</option>
                 {{/each}}
               </select>
             </div>
@@ -76,21 +80,24 @@
 
           <div class="row">
             <div class="col-md-6 mb-3">
-              <label for="dup_req_verification" class="form-label">Verification <span class="text-danger">*</span></label>
-              <select class="form-select" id="dup_req_verification" name="verification_method_id" required>
-                <option value="">Select verification...</option>
+              <label for="dup_req_verification" class="form-label">Verification methods <span
+                  class="text-danger">*</span></label>
+              <select class="form-select" id="dup_req_verification" name="verification_method_ids" multiple required
+                size="3">
                 {{#each verifications}}
-                  <option value="{{id}}">{{name}}</option>
+                <option value="{{id}}">{{#if title}}{{title}}{{else}}{{name}}{{/if}}</option>
                 {{/each}}
               </select>
+              <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple. At least one required.</small>
             </div>
 
             <div class="col-md-6 mb-3">
-              <label for="dup_req_applicability" class="form-label">Applicability <span class="text-danger">*</span></label>
+              <label for="dup_req_applicability" class="form-label">Applicability <span
+                  class="text-danger">*</span></label>
               <select class="form-select" id="dup_req_applicability" name="applicability_id" required>
                 <option value="">Select applicability...</option>
                 {{#each applicability}}
-                  <option value="{{id}}">{{title}}</option>
+                <option value="{{id}}">{{title}}</option>
                 {{/each}}
               </select>
             </div>
@@ -102,7 +109,7 @@
               <select class="form-select" id="dup_req_reviewer" name="reviewer_id">
                 <option value="">Select reviewer...</option>
                 {{#each users}}
-                  <option value="{{id}}">{{name}}</option>
+                <option value="{{id}}">{{name}}</option>
                 {{/each}}
               </select>
             </div>
@@ -125,20 +132,22 @@
             Create New
           </button>
         </div>
-        </div>
-      </form>
     </div>
+    </form>
   </div>
+</div>
 </div>
 
 {{!-- Semantic Search Modal --}}
-<div class="modal fade" id="semanticSearchModal" tabindex="-1" aria-labelledby="semanticSearchModalLabel" aria-hidden="true">
+<div class="modal fade" id="semanticSearchModal" tabindex="-1" aria-labelledby="semanticSearchModalLabel"
+  aria-hidden="true">
   <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="semanticSearchModalLabel">
           <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16" class="me-2">
-            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+            <path
+              d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
           </svg>
           Semantic Search (AI)
         </h5>
@@ -156,12 +165,8 @@
           <div class="mb-3">
             <label for="semanticSearchQuery" class="form-label visually-hidden">Search query</label>
             <div class="input-group input-group-lg">
-              <input type="text" 
-                     class="form-control" 
-                     id="semanticSearchQuery" 
-                     placeholder="Ask a question about requirements or search by meaning..."
-                     autocomplete="off"
-                     autofocus>
+              <input type="text" class="form-control" id="semanticSearchQuery"
+                placeholder="Ask a question about requirements or search by meaning..." autocomplete="off" autofocus>
               <button class="btn btn-primary" type="button" id="semanticSearchSubmit">
                 Search
               </button>
@@ -173,14 +178,11 @@
 
           {{!-- Optional filters (collapsible) --}}
           <div class="mb-3">
-            <button class="btn btn-sm btn-link text-decoration-none p-0" 
-                    type="button" 
-                    data-bs-toggle="collapse" 
-                    data-bs-target="#semanticSearchFilters" 
-                    aria-expanded="false" 
-                    aria-controls="semanticSearchFilters">
+            <button class="btn btn-sm btn-link text-decoration-none p-0" type="button" data-bs-toggle="collapse"
+              data-bs-target="#semanticSearchFilters" aria-expanded="false" aria-controls="semanticSearchFilters">
               <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" class="me-1">
-                <path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5v-2z"/>
+                <path
+                  d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5v-2z" />
               </svg>
               Filters
             </button>
@@ -190,7 +192,7 @@
                   <select class="form-select form-select-sm" id="semanticStatusFilter">
                     <option value="">All Statuses</option>
                     {{#each statuses}}
-                      <option value="{{id}}">{{title}}</option>
+                    <option value="{{id}}">{{title}}</option>
                     {{/each}}
                   </select>
                 </div>
@@ -198,7 +200,7 @@
                   <select class="form-select form-select-sm" id="semanticCategoryFilter">
                     <option value="">All Categories</option>
                     {{#each categories}}
-                      <option value="{{id}}">{{title}}</option>
+                    <option value="{{id}}">{{title}}</option>
                     {{/each}}
                   </select>
                 </div>
@@ -206,7 +208,7 @@
                   <select class="form-select form-select-sm" id="semanticApplicabilityFilter">
                     <option value="">All Applicability</option>
                     {{#each applicability}}
-                      <option value="{{id}}">{{title}}</option>
+                    <option value="{{id}}">{{title}}</option>
                     {{/each}}
                   </select>
                 </div>
@@ -214,7 +216,7 @@
                   <select class="form-select form-select-sm" id="semanticVerificationFilter">
                     <option value="">All Verification</option>
                     {{#each verifications}}
-                      <option value="{{id}}">{{name}}</option>
+                    <option value="{{id}}">{{name}}</option>
                     {{/each}}
                   </select>
                 </div>
@@ -242,7 +244,8 @@
           <div class="card border-primary">
             <div class="card-header bg-primary text-white">
               <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" class="me-2">
-                <path d="M8.39 12.648a1.32 1.32 0 0 0-.015.18c0 .305.21.508.5.508.266 0 .492-.172.555-.477l.554-2.703h1.204c.421 0 .617-.234.617-.547 0-.312-.188-.53-.617-.53h-.985l.516-2.524h1.265c.43 0 .618-.227.618-.547 0-.313-.188-.524-.618-.524h-1.046l.476-2.304a1.06 1.06 0 0 0 .016-.164.51.51 0 0 0-.516-.516.54.54 0 0 0-.539.43l-.523 2.554H7.617l.477-2.304c.008-.04.015-.118.015-.164a.512.512 0 0 0-.523-.516.539.539 0 0 0-.531.43L6.53 5.484H5.414c-.43 0-.617.22-.617.532 0 .312.187.539.617.539h.906l-.515 2.523H4.609c-.421 0-.609.219-.609.531 0 .313.188.547.61.547h.976l-.516 2.492c-.008.04-.015.125-.015.18 0 .305.21.508.5.508.265 0 .492-.172.554-.477l.555-2.703h2.242l-.515 2.492zm-1-6.109h2.266l-.515 2.563H6.859l.532-2.563z"/>
+                <path
+                  d="M8.39 12.648a1.32 1.32 0 0 0-.015.18c0 .305.21.508.5.508.266 0 .492-.172.555-.477l.554-2.703h1.204c.421 0 .617-.234.617-.547 0-.312-.188-.53-.617-.53h-.985l.516-2.524h1.265c.43 0 .618-.227.618-.547 0-.313-.188-.524-.618-.524h-1.046l.476-2.304a1.06 1.06 0 0 0 .016-.164.51.51 0 0 0-.516-.516.54.54 0 0 0-.539.43l-.523 2.554H7.617l.477-2.304c.008-.04.015-.118.015-.164a.512.512 0 0 0-.523-.516.539.539 0 0 0-.531.43L6.53 5.484H5.414c-.43 0-.617.22-.617.532 0 .312.187.539.617.539h.906l-.515 2.523H4.609c-.421 0-.609.219-.609.531 0 .313.188.547.61.547h.976l-.516 2.492c-.008.04-.015.125-.015.18 0 .305.21.508.5.508.265 0 .492-.172.554-.477l.555-2.703h2.242l-.515 2.492zm-1-6.109h2.266l-.515 2.563H6.859l.532-2.563z" />
               </svg>
               AI Answer
             </div>
@@ -266,7 +269,8 @@
         {{!-- Empty state --}}
         <div id="semanticSearchEmpty" class="text-center py-5 d-none">
           <svg width="48" height="48" fill="currentColor" class="text-muted mb-3" viewBox="0 0 16 16">
-            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+            <path
+              d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
           </svg>
           <p class="text-muted">No matching requirements found.<br>Try a different search query.</p>
         </div>

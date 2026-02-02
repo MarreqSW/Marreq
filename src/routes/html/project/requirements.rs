@@ -30,8 +30,8 @@ struct RequirementCreateForm {
     title: String,
     #[field(name = uncased("description"))]
     description: String,
-    #[field(name = uncased("verification_method_id"))]
-    verification_method_id: i32,
+    #[field(name = uncased("verification_method_ids"))]
+    verification_method_ids: Vec<i32>,
     #[field(name = uncased("category_id"))]
     category_id: i32,
     #[field(name = uncased("status_id"))]
@@ -49,12 +49,16 @@ struct RequirementCreateForm {
 }
 
 impl RequirementCreateForm {
-    fn into_payload(self, author_id: i32, project_id: i32) -> (NewRequirement, Option<String>) {
+    fn into_payload(
+        self,
+        author_id: i32,
+        project_id: i32,
+    ) -> (NewRequirement, Vec<i32>, Option<String>) {
         let RequirementCreateForm {
             intent,
             id,
             description,
-            verification_method_id,
+            verification_method_ids,
             category_id,
             status_id,
             parent_id,
@@ -69,8 +73,7 @@ impl RequirementCreateForm {
             id,
             title,
             description,
-            verification_method_id,
-            author_id: author_id,
+            author_id,
             category_id,
             status_id,
             parent_id: Some(parent_id),
@@ -81,7 +84,57 @@ impl RequirementCreateForm {
             project_id,
         };
 
-        (requirement, intent)
+        (requirement, verification_method_ids, intent)
+    }
+}
+
+/// Form for editing a requirement; includes multiple verification method IDs.
+#[derive(FromForm)]
+struct RequirementEditForm {
+    #[field(name = uncased("id"))]
+    id: Option<i32>,
+    #[field(name = uncased("title"))]
+    title: String,
+    #[field(name = uncased("description"))]
+    description: String,
+    #[field(name = uncased("status_id"))]
+    status_id: i32,
+    #[field(name = uncased("author_id"))]
+    author_id: i32,
+    #[field(name = uncased("reviewer_id"))]
+    reviewer_id: i32,
+    #[field(name = uncased("reference_code"))]
+    reference_code: String,
+    #[field(name = uncased("category_id"))]
+    category_id: i32,
+    #[field(name = uncased("applicability_id"))]
+    applicability_id: i32,
+    #[field(name = uncased("justification"))]
+    justification: Option<String>,
+    #[field(name = uncased("project_id"))]
+    project_id: i32,
+    #[field(name = uncased("parent_id"))]
+    parent_id: Option<i32>,
+    #[field(name = uncased("verification_method_ids"))]
+    verification_method_ids: Vec<i32>,
+}
+
+impl RequirementEditForm {
+    fn to_new_requirement(self) -> NewRequirement {
+        NewRequirement {
+            id: self.id,
+            title: self.title,
+            description: self.description,
+            author_id: self.author_id,
+            category_id: self.category_id,
+            status_id: self.status_id,
+            parent_id: self.parent_id,
+            reference_code: self.reference_code,
+            reviewer_id: self.reviewer_id,
+            applicability_id: self.applicability_id,
+            justification: self.justification,
+            project_id: self.project_id,
+        }
     }
 }
 
@@ -316,7 +369,8 @@ async fn show_requirement_id(
         },
         "linked_tests": linked_tests,
         "verification": {
-            "tool_id": requirement.req_verification_id,
+            "tool_ids": requirement.req_verification_ids,
+            "tool_id": requirement.req_verification_ids.first().copied(),
             "tool_name": requirement.verification_method_id.clone(),
             "counts": {
                 "total": linked_tests.len() as i32,
@@ -399,7 +453,8 @@ async fn get_edit_requirement(
         .unwrap_or_else(|| "Unknown author".to_string());
 
     let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
-    let statuses = StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
+    let statuses =
+        StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
     let users = UserService::new(state.inner()).get_by_project(project_id)?;
     let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
     let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
@@ -424,6 +479,20 @@ async fn get_edit_requirement(
         req.reference_code.clone()
     };
 
+    let verification_with_selected: Vec<serde_json::Value> = verifications
+        .iter()
+        .map(|v| {
+            json!({
+                "id": v.id,
+                "title": v.title,
+                "description": v.description,
+                "tag": v.tag,
+                "project_id": v.project_id,
+                "selected": req.req_verification_ids.contains(&v.id),
+            })
+        })
+        .collect();
+
     let ctx = json!({
         "req": req,
         "categories": categories,
@@ -431,6 +500,7 @@ async fn get_edit_requirement(
         "parent": parent,
         "users": users,
         "verification": verifications,
+        "verification_with_selected": verification_with_selected,
         "applicability": applicability,
         "linked_requirement_options": linked_requirement_options,
         "user": user,
@@ -454,12 +524,12 @@ async fn get_edit_requirement(
     Ok(Template::render("requirements/edit_requirement", ctx))
 }
 
-#[post("/<project_id>/requirements/edit/<requirement_id>", data = "<new_req>")]
+#[post("/<project_id>/requirements/edit/<requirement_id>", data = "<form>")]
 async fn post_edit_requirement(
     project_access: ProjectAccess,
     project_id: i32,
     requirement_id: i32,
-    new_req: Form<NewRequirement>,
+    form: Form<RequirementEditForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let service = RequirementService::new(state.inner());
@@ -469,8 +539,20 @@ async fn post_edit_requirement(
         return Err(redir);
     }
 
+    let form = form.into_inner();
+    let verification_ids: Vec<i32> = form
+        .verification_method_ids
+        .iter()
+        .filter(|&&id| id > 0)
+        .copied()
+        .collect();
     let user = project_access.into_user();
-    service.update(&user, requirement_id, new_req.into_inner())?;
+    service.update(
+        &user,
+        requirement_id,
+        form.to_new_requirement(),
+        &verification_ids,
+    )?;
     Ok(Redirect::to(uri!(
         "/p",
         show_requirement_id(project_id, requirement_id)
@@ -551,11 +633,18 @@ async fn new_requirement(
 
     let tr = template_requirement.as_ref(); // Option<&Requirement>
 
+    let template_verification_ids: Vec<i32> = match &template_requirement {
+        Some(r) => state
+            .repo_read()
+            .get_verification_method_ids_for_requirement(r.id)
+            .unwrap_or_default(),
+        None => vec![],
+    };
+
     let mut new_requirement = NewRequirement {
         id: None,
         title: tr.map(|r| r.title.clone()).unwrap_or_default(),
         description: tr.map(|r| r.description.clone()).unwrap_or_default(),
-        verification_method_id: tr.map(|r| r.verification_method_id).unwrap_or_default(),
         author_id: user.id,
         category_id: tr.map(|r| r.category_id).unwrap_or_default(),
         status_id: 0, // Draft
@@ -602,12 +691,27 @@ async fn new_requirement(
             .owner_id
             .map_or(false, |owner_id| owner_id == user.id);
 
+    let verification_with_selected: Vec<serde_json::Value> = verifications
+        .iter()
+        .map(|v| {
+            json!({
+                "id": v.id,
+                "title": v.title,
+                "description": v.description,
+                "tag": v.tag,
+                "project_id": v.project_id,
+                "selected": template_verification_ids.contains(&v.id),
+            })
+        })
+        .collect();
+
     let ctx = json!({
         "categories": categories,
         "status": statuses,
         "parent": parents,
         "users": users,
         "verification": verifications,
+        "verification_with_selected": verification_with_selected,
         "applicability": applicability,
         "project_id": project_id,
         "project": {
@@ -615,6 +719,7 @@ async fn new_requirement(
             "name": project.name,
         },
         "template": new_requirement,
+        "template_verification_ids": template_verification_ids,
         "created_timestamp": created_timestamp,
         "user": user,
         "is_admin_or_owner": is_admin_or_owner,
@@ -648,9 +753,19 @@ async fn post_requirement(
     );
 
     // Take ownership and enforce project_id from the route
-    let (mut req, intent) = new_req.into_inner().into_payload(user.id, project_id);
+    let (mut req, verification_method_ids, intent) =
+        new_req.into_inner().into_payload(user.id, project_id);
     req.project_id = project_id;
     req.author_id = user.id;
+
+    // Require at least one verification method
+    let verification_method_ids: Vec<i32> = verification_method_ids
+        .into_iter()
+        .filter(|&id| id > 0)
+        .collect();
+    if verification_method_ids.is_empty() {
+        return Err(Redirect::to(new_url));
+    }
 
     // --- Reference validation / generation ---
     if !req.reference_code.is_empty() {
@@ -705,7 +820,7 @@ async fn post_requirement(
 
     // --- Insert ---
     let service = RequirementService::new(state.inner());
-    let id = match service.create(&user, req) {
+    let id = match service.create(&user, req, &verification_method_ids) {
         Ok(id) => id,
         Err(crate::repository::errors::RepoError::BadInput(_)) => {
             return Err(Redirect::to(new_url))
@@ -1039,10 +1154,9 @@ mod tests {
 
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
-            id: id,
+            id,
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
-            verification_method_id: 1,
             status_id: 1,
             author_id: ADMIN_ID,
             reviewer_id: ADMIN_ID,
@@ -1241,7 +1355,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "title=Test&description=Description&verification_method_id=1&\
+            "title=Test&description=Description&verification_method_ids=1&\
              status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&reference_code=&\
              justification=Testing",
@@ -1267,7 +1381,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "title=Next+Requirement&description=Body&verification_method_id=1&\
+            "title=Next+Requirement&description=Body&verification_method_ids=1&\
              status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&reference_code=&\
              justification=&intent=add_another",
@@ -1357,7 +1471,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/edit/1",
-            "id=1&title=Updated&description=New+desc&verification_method_id=1&\
+            "id=1&title=Updated&description=New+desc&verification_method_ids=1&\
              status_id=1&author_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
              justification=Changed&project_id=1&reference_code=REQ-SYS-1",
@@ -1443,7 +1557,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "title=&description=Test&verification_method_id=1&\
+            "title=&description=Test&verification_method_ids=1&\
              status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&reference_code=",
             ADMIN_ID,
@@ -1460,7 +1574,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "title=Test&description=Body&verification_method_id=1&\
+            "title=Test&description=Body&verification_method_ids=1&\
              status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
              reference_code=INVALID-FORMAT",
@@ -1480,7 +1594,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/new",
-            "title=Custom&description=Test&verification_method_id=1&\
+            "title=Custom&description=Test&verification_method_ids=1&\
              status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
              reference_code=REQ-SYS-999",
@@ -1605,7 +1719,7 @@ mod tests {
             &client,
             "/p/1/requirements/edit/1",
             "id=1&title=Updated+Title&description=Updated+Description&\
-             verification_method_id=1&status_id=1&author_id=1&reviewer_id=1&\
+             verification_method_ids=1&status_id=1&author_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
              justification=Updated+Justification&project_id=1&reference_code=REQ-SYS-1",
             ADMIN_ID,
@@ -1628,15 +1742,15 @@ mod tests {
         let mut req1 = sample_requirement(1);
         req1.status_id = 1;
         req1.category_id = 1;
-        req1.verification_method_id = 1;
         repo.requirements.insert(1, req1);
 
         let mut req2 = sample_requirement(2);
         req2.status_id = 2;
         req2.category_id = 1;
-        req2.verification_method_id = 1;
         req2.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, req2);
+        repo.requirement_verification_methods.push((1, 1));
+        repo.requirement_verification_methods.push((2, 1));
 
         let client = test_client(repo).await;
 
@@ -1812,7 +1926,7 @@ mod tests {
         let response = post_form_with_session(
             &client,
             "/p/1/requirements/edit/1",
-            "id=1&title=Hack&description=Test&verification_method_id=1&\
+            "id=1&title=Hack&description=Test&verification_method_ids=1&\
              status_id=1&author_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
              justification=&project_id=1&reference_code=REQ-SYS-1",

@@ -44,10 +44,20 @@ impl<'a> RequirementService<'a> {
         category_filter: Option<i32>,
         applicability_filter: Option<i32>,
     ) -> Result<Vec<Requirement>, RepoError> {
+        let reqs = self.list_by_project(project_id)?;
+        let verification_requirement_ids = match verification_filter {
+            Some(vid) => self
+                .repo_read()
+                .get_requirement_ids_by_verification_method(vid)
+                .ok()
+                .unwrap_or_default(),
+            None => vec![],
+        };
         Ok(Self::filter(
-            self.list_by_project(project_id)?,
+            reqs,
             status_filter,
             verification_filter,
+            &verification_requirement_ids,
             category_filter,
             applicability_filter,
         ))
@@ -56,6 +66,11 @@ impl<'a> RequirementService<'a> {
     /// Retrieve a single requirement by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
         self.repo_read().get_requirement_by_id(id)
+    }
+
+    /// Verification method IDs linked to this requirement.
+    pub fn get_verification_method_ids(&self, requirement_id: i32) -> Result<Vec<i32>, RepoError> {
+        self.repo_read().get_verification_method_ids_for_requirement(requirement_id)
     }
 
     pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<Requirement>, RepoError> {
@@ -73,13 +88,21 @@ impl<'a> RequirementService<'a> {
     /// Create a new requirement entry and log the action.
     ///
     /// If semantic search is enabled, the requirement is queued for embedding generation.
-    pub fn create(&self, actor: &User, mut payload: NewRequirement) -> Result<i32, RepoError> {
+    /// `verification_method_ids` are written to the requirement–verification junction table.
+    pub fn create(
+        &self,
+        actor: &User,
+        mut payload: NewRequirement,
+        verification_method_ids: &[i32],
+    ) -> Result<i32, RepoError> {
         self.prepare_payload(&mut payload)?;
 
         let project_id = payload.project_id;
         let id = {
             let mut repo = self.repo_write();
-            repo.insert_new_requirement(&payload)?
+            let id = repo.insert_new_requirement(&payload)?;
+            repo.set_requirement_verification_methods(id, verification_method_ids)?;
+            id
         };
 
         self.log_created(actor, id, &payload);
@@ -90,11 +113,13 @@ impl<'a> RequirementService<'a> {
     /// Update an existing requirement entry and log the change.
     ///
     /// If semantic search is enabled, the requirement is queued for re-embedding.
+    /// `verification_method_ids` replace the requirement's verification methods.
     pub fn update(
         &self,
         actor: &User,
         id: i32,
         mut payload: NewRequirement,
+        verification_method_ids: &[i32],
     ) -> Result<Requirement, RepoError> {
         self.prepare_payload(&mut payload)?;
         payload.id = Some(id);
@@ -107,6 +132,7 @@ impl<'a> RequirementService<'a> {
             if !updated {
                 return Err(RepoError::NotFound);
             }
+            repo.set_requirement_verification_methods(id, verification_method_ids)?;
         }
 
         let after = self.get_by_id(id)?;
@@ -130,6 +156,7 @@ impl<'a> RequirementService<'a> {
         requirements: Vec<Requirement>,
         status_filter: Option<i32>,
         verification_filter: Option<i32>,
+        verification_requirement_ids: &[i32],
         category_filter: Option<i32>,
         applicability_filter: Option<i32>,
     ) -> Vec<Requirement> {
@@ -138,8 +165,9 @@ impl<'a> RequirementService<'a> {
             .filter(|req| {
                 let status_match =
                     status_filter.map_or(true, |status_id| req.status_id == status_id);
-                let verification_match =
-                    verification_filter.map_or(true, |id| req.verification_method_id == id);
+                let verification_match = verification_filter.map_or(true, |_| {
+                    verification_requirement_ids.contains(&req.id)
+                });
                 let category_match =
                     category_filter.map_or(true, |category_id| req.category_id == category_id);
                 let applicability_match = applicability_filter.map_or(true, |applicability_id| {
@@ -266,7 +294,6 @@ mod tests {
             id: id,
             title: format!("Requirement {id}"),
             description: "Existing description".into(),
-            verification_method_id: 1,
             status_id: 1,
             author_id: 1,
             reviewer_id: 1,
@@ -287,7 +314,6 @@ mod tests {
             id: None,
             title: "  Title  ".into(),
             description: "  Description  ".into(),
-            verification_method_id: 1,
             author_id: 1,
             category_id: 1,
             status_id: 1,
@@ -307,7 +333,7 @@ mod tests {
         let service = RequirementService::new(&state);
 
         let payload = new_payload();
-        let id = service.create(&actor(), payload).unwrap();
+        let id = service.create(&actor(), payload, &[1]).unwrap();
 
         let stored = service.get_by_id(id).unwrap();
         assert_eq!(stored.title, "Title");
@@ -325,7 +351,7 @@ mod tests {
         let mut payload = new_payload();
         payload.reference_code = "invalid".into();
 
-        let err = service.create(&actor(), payload).unwrap_err();
+        let err = service.create(&actor(), payload, &[1]).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
     }
 
@@ -341,7 +367,7 @@ mod tests {
         payload.description = "  New Description  ".into();
         payload.reference_code = "  REQ-999  ".into();
 
-        let updated = service.update(&actor(), 1, payload).unwrap();
+        let updated = service.update(&actor(), 1, payload, &[1]).unwrap();
         assert_eq!(updated.title, "Updated");
         assert_eq!(updated.description, "New Description");
         assert_eq!(updated.reference_code, "REQ-999");
@@ -394,12 +420,10 @@ mod tests {
     #[test]
     fn list_by_project_filtered_with_verification_filter() {
         let mut repo = DieselRepoMock::default();
-        let mut req1 = requirement(1, 7, "REQ-001");
-        req1.verification_method_id = 10;
-        let mut req2 = requirement(2, 7, "REQ-002");
-        req2.verification_method_id = 20;
-        repo.requirements.insert(1, req1);
-        repo.requirements.insert(2, req2);
+        repo.requirements.insert(1, requirement(1, 7, "REQ-001"));
+        repo.requirements.insert(2, requirement(2, 7, "REQ-002"));
+        repo.requirement_verification_methods.push((1, 10));
+        repo.requirement_verification_methods.push((2, 20));
         let state = state_with_repo(repo);
         let service = RequirementService::new(&state);
 
@@ -407,7 +431,7 @@ mod tests {
             .list_by_project_filtered(7, None, Some(10), None, None)
             .unwrap();
         assert_eq!(items.len(), 1);
-        assert_eq!(items[0].verification_method_id, 10);
+        assert_eq!(items[0].id, 1);
     }
 
     #[test]
@@ -453,19 +477,19 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         let mut req1 = requirement(1, 7, "REQ-001");
         req1.status_id = 1;
-        req1.verification_method_id = 10;
         req1.category_id = 100;
         let mut req2 = requirement(2, 7, "REQ-002");
         req2.status_id = 1;
-        req2.verification_method_id = 20; // Different verification
         req2.category_id = 100;
         let mut req3 = requirement(3, 7, "REQ-003");
         req3.status_id = 2; // Different status
-        req3.verification_method_id = 10;
         req3.category_id = 100;
         repo.requirements.insert(1, req1);
         repo.requirements.insert(2, req2);
         repo.requirements.insert(3, req3);
+        repo.requirement_verification_methods.push((1, 10));
+        repo.requirement_verification_methods.push((2, 20));
+        repo.requirement_verification_methods.push((3, 10));
         let state = state_with_repo(repo);
         let service = RequirementService::new(&state);
 
@@ -604,7 +628,7 @@ mod tests {
         let mut payload = new_payload();
         payload.title = "".to_string(); // Empty title should fail validation
 
-        let result = service.create(&actor(), payload);
+        let result = service.create(&actor(), payload, &[1]);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), RepoError::BadInput(_)));
     }
@@ -616,7 +640,7 @@ mod tests {
         let service = RequirementService::new(&state);
 
         let payload = new_payload();
-        let result = service.update(&actor(), 999, payload);
+        let result = service.update(&actor(), 999, payload, &[1]);
         assert!(matches!(result, Err(RepoError::NotFound)));
     }
 

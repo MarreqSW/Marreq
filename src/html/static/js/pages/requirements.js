@@ -643,7 +643,17 @@ function showDuplicateModal(requirement) {
   document.getElementById('dup_req_justification').value = requirement.justification || '';
   document.getElementById('dup_req_category').value = requirement.category_id || '';
   document.getElementById('dup_req_current_status').value = requirement.status_id || '';
-  document.getElementById('dup_req_verification').value = requirement.verification_method_id || '';
+  const dupVerification = document.getElementById('dup_req_verification');
+  if (dupVerification) {
+    const ids = requirement.req_verification_ids || (requirement.verification_method_id ? [requirement.verification_method_id] : []);
+    if (dupVerification.multiple) {
+      Array.from(dupVerification.options).forEach((o) => {
+        o.selected = ids.includes(parseInt(o.value, 10));
+      });
+    } else {
+      dupVerification.value = ids.length ? String(ids[0]) : '';
+    }
+  }
   document.getElementById('dup_req_applicability').value = requirement.applicability_id || '';
   document.getElementById('dup_req_reviewer').value = requirement.reviewer_id || '';
   document.getElementById('dup_req_parent').value = requirement.parent_id || '0';
@@ -774,7 +784,7 @@ function initDuplicateForm() {
         justification: formData.get('justification') || '',
         category_id: parseInt(formData.get('category_id'), 10),
         status_id: parseInt(formData.get('status_id'), 10),
-        verification_method_id: parseInt(formData.get('verification_method_id'), 10),
+        verification_method_ids: formData.getAll('verification_method_ids').map((id) => parseInt(id, 10)).filter((n) => !Number.isNaN(n)),
         applicability_id: parseInt(formData.get('applicability_id'), 10),
         reviewer_id: parseInt(formData.get('reviewer_id'), 10) || 0,
         parent_id: parseInt(formData.get('parent_id'), 10) || 0,

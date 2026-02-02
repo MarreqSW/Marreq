@@ -1,12 +1,7 @@
 {{!-- Depends on: css/pages/requirement-editor.css, js/pages/requirementForm.js --}}
 {{#*inline "page"}}
-<form
-  method="post"
-  data-requirement-form
-  data-allow-soft-mismatch="true"
-  id="requirement-edit-form"
-  class="c-requirement-editor"
->
+<form method="post" data-requirement-form data-allow-soft-mismatch="true" id="requirement-edit-form"
+  class="c-requirement-editor">
   <header class="c-editor-topbar sticky-top" data-editor-topbar>
     <div class="c-editor-topbar__context">
       <nav class="c-editor-breadcrumb" aria-label="Breadcrumb">
@@ -14,10 +9,8 @@
           {{#if project}}{{project.name}}{{else}}Project{{/if}}
         </a>
         <span class="c-editor-breadcrumb__sep">›</span>
-        <a
-          href="/p/{{req.project_id}}/requirements/show/{{req.id}}"
-          class="c-editor-breadcrumb__link"
-        >{{display_reference}}</a>
+        <a href="/p/{{req.project_id}}/requirements/show/{{req.id}}"
+          class="c-editor-breadcrumb__link">{{display_reference}}</a>
       </nav>
 
       <h1 class="u-visually-hidden">Editing requirement {{display_reference}}</h1>
@@ -26,19 +19,14 @@
     <div class="c-editor-topbar__actions">
       <div class="c-editor-topbar__status">
         <div class="c-editor-status" data-role="status-control">
-          <button
-            type="button"
-            class="c-editor-status__chip"
-            data-role="status-toggle"
-            aria-haspopup="true"
-            aria-expanded="false"
-          >
+          <button type="button" class="c-editor-status__chip" data-role="status-toggle" aria-haspopup="true"
+            aria-expanded="false">
             <span class="c-editor-status__dot"></span>
             <span class="c-editor-status__label editor-status__label">{{req.status_id}}</span>
           </button>
           <div class="c-editor-status__menu" data-role="status-menu" hidden>
             {{#each statuses}}
-              <button type="button" data-status-id="{{id}}">{{title}}</button>
+            <button type="button" data-status-id="{{id}}">{{title}}</button>
             {{/each}}
           </div>
         </div>
@@ -48,22 +36,15 @@
         </div>
       </div>
 
-        <div class="c-editor-actions">
-          <div class="c-editor-autosave" aria-live="polite">
-            <span class="c-editor-autosave__dot" data-unsaved-indicator hidden></span>
-            <span class="c-editor-autosave__text" data-role="autosave-text">All changes saved</span>
-          </div>
+      <div class="c-editor-actions">
+        <div class="c-editor-autosave" aria-live="polite">
+          <span class="c-editor-autosave__dot" data-unsaved-indicator hidden></span>
+          <span class="c-editor-autosave__text" data-role="autosave-text">All changes saved</span>
+        </div>
 
-        <button
-          type="submit"
-          class="btn btn-primary editor-actions__save"
-          data-role="submit-requirement"
-        >Save</button>
+        <button type="submit" class="btn btn-primary editor-actions__save" data-role="submit-requirement">Save</button>
 
-        <a
-          href="/p/{{req.project_id}}/requirements/show/{{req.id}}"
-          class="c-editor-actions__cancel"
-        >Cancel</a>
+        <a href="/p/{{req.project_id}}/requirements/show/{{req.id}}" class="c-editor-actions__cancel">Cancel</a>
       </div>
     </div>
   </header>
@@ -72,16 +53,9 @@
     <main class="c-editor-main">
       <section class="c-editor-section editor-section--title">
         <label for="title" class="c-editor-field__label">Title</label>
-        <input
-          type="text"
-          name="title"
-          id="title"
-          value="{{req.title}}"
-          class="c-editor-field__input editor-field__input--headline"
-          autofocus
-          required
-          placeholder="The system shall…"
-        >
+        <input type="text" name="title" id="title" value="{{req.title}}"
+          class="c-editor-field__input editor-field__input--headline" autofocus required
+          placeholder="The system shall…">
         <p class="c-editor-hint">Lead with the promise — what value does this deliver?</p>
       </section>
 
@@ -106,15 +80,8 @@
             <button type="button" class="c-editor-toolbar__btn" data-format="link">Link</button>
           </div>
 
-          <textarea
-            name="description"
-            id="description"
-            class="c-editor-field__textarea"
-            rows="10"
-            data-role="requirement-input"
-            required
-            placeholder="The system shall…"
-          >{{req.description}}</textarea>
+          <textarea name="description" id="description" class="c-editor-field__textarea" rows="10"
+            data-role="requirement-input" required placeholder="The system shall…">{{req.description}}</textarea>
 
           <div class="c-editor-preview" data-role="preview" hidden>
             <div class="c-editor-preview__content" data-role="preview-content"></div>
@@ -127,28 +94,16 @@
       </section>
 
       <section class="c-editor-section editor-section--rationale">
-        <button
-          type="button"
-          class="c-editor-collapsible__trigger"
-          data-role="rationale-toggle"
-          aria-expanded="{{#if req.justification}}true{{else}}false{{/if}}"
-        >
+        <button type="button" class="c-editor-collapsible__trigger" data-role="rationale-toggle"
+          aria-expanded="{{#if req.justification}}true{{else}}false{{/if}}">
           Rationale / Notes
           <span class="c-editor-collapsible__hint">Optional</span>
         </button>
 
-        <div
-          class="c-editor-collapsible__panel"
-          data-role="rationale-panel"
-          {{#unless req.justification}}hidden{{/unless}}
-        >
-          <textarea
-            name="justification"
-            id="justification"
-            class="c-editor-field__textarea"
-            rows="6"
-            placeholder="Why is this required?"
-          >{{req.justification}}</textarea>
+        <div class="c-editor-collapsible__panel" data-role="rationale-panel" {{#unless
+          req.justification}}hidden{{/unless}}>
+          <textarea name="justification" id="justification" class="c-editor-field__textarea" rows="6"
+            placeholder="Why is this required?">{{req.justification}}</textarea>
         </div>
       </section>
 
@@ -173,16 +128,8 @@
 
         <div class="c-editor-field">
           <label for="reference_code" class="c-editor-field__label">Reference</label>
-          <input
-            type="text"
-            name="reference_code"
-            id="reference_code"
-            value="{{req.reference_code}}"
-            class="c-editor-field__input"
-            placeholder="REQ-SYS-42"
-            readonly
-            disabled
-          >
+          <input type="text" name="reference_code" id="reference_code" value="{{req.reference_code}}"
+            class="c-editor-field__input" placeholder="REQ-SYS-42" readonly disabled>
           <small class="c-editor-field__help">
             System-generated identifier.
           </small>
@@ -190,50 +137,35 @@
 
         <div class="c-editor-field">
           <label for="category_id" class="c-editor-field__label">Category</label>
-          <select
-            name="category_id"
-            id="category_id"
-            class="c-editor-field__input"
-            required
-          >
+          <select name="category_id" id="category_id" class="c-editor-field__input" required>
             {{#each categories}}
-              <option value="{{id}}" data-tag="{{tag}}" {{#if (eq id ../req.req_category_id)}}selected{{/if}}>
-                {{title}}
-              </option>
+            <option value="{{id}}" data-tag="{{tag}}" {{#if (eq id ../req.req_category_id)}}selected{{/if}}>
+              {{title}}
+            </option>
             {{/each}}
           </select>
         </div>
 
         <div class="c-editor-field">
           <label for="applicability_id" class="c-editor-field__label">Applicability</label>
-          <select
-            name="applicability_id"
-            id="applicability_id"
-            class="c-editor-field__input"
-            required
-          >
+          <select name="applicability_id" id="applicability_id" class="c-editor-field__input" required>
             {{#each applicability}}
-              <option value="{{id}}" {{#if (eq id ../req.req_applicability_id)}}selected{{/if}}>
-                {{title}}
-              </option>
+            <option value="{{id}}" {{#if (eq id ../req.req_applicability_id)}}selected{{/if}}>
+              {{title}}
+            </option>
             {{/each}}
           </select>
         </div>
 
         <div class="c-editor-field">
-          <label for="verification_method_id" class="c-editor-field__label">Verification method</label>
-          <select
-            name="verification_method_id"
-            id="verification_method_id"
-            class="c-editor-field__input"
-            required
-          >
-            {{#each verification}}
-              <option value="{{id}}" {{#if (eq id ../req.req_verification_id)}}selected{{/if}}>
-                {{title}}
-              </option>
+          <label for="verification_method_ids" class="c-editor-field__label">Verification methods</label>
+          <select name="verification_method_ids" id="verification_method_ids" class="c-editor-field__input" multiple
+            required size="4">
+            {{#each verification_with_selected}}
+            <option value="{{id}}" {{#if selected}}selected{{/if}}>{{title}}</option>
             {{/each}}
           </select>
+          <small class="c-editor-field__help">Hold Ctrl/Cmd to select multiple.</small>
         </div>
       </section>
 
@@ -242,14 +174,8 @@
 
         <div class="c-editor-field">
           <label for="author_id" class="c-editor-field__label">Author</label>
-          <input
-            type="text"
-            id="req_author_display"
-            class="c-editor-field__input"
-            value="{{req.author_id}}"
-            readonly
-            disabled
-          >
+          <input type="text" id="req_author_display" class="c-editor-field__input" value="{{req.author_id}}" readonly
+            disabled>
           <input type="hidden" name="author_id" value="{{req.req_author_id}}">
           <small class="c-editor-field__help">
             Original author cannot be changed.
@@ -258,16 +184,11 @@
 
         <div class="c-editor-field">
           <label for="reviewer_id" class="c-editor-field__label">Reviewer</label>
-          <select
-            name="reviewer_id"
-            id="reviewer_id"
-            class="c-editor-field__input"
-            required
-          >
+          <select name="reviewer_id" id="reviewer_id" class="c-editor-field__input" required>
             {{#each users}}
-              <option value="{{id}}" {{#if (eq id ../req.req_reviewer_id)}}selected{{/if}}>
-                {{name}}
-              </option>
+            <option value="{{id}}" {{#if (eq id ../req.req_reviewer_id)}}selected{{/if}}>
+              {{name}}
+            </option>
             {{/each}}
           </select>
         </div>
@@ -277,21 +198,13 @@
         <h2 class="c-editor-meta__title">Upstream Trace</h2>
         <div class="c-editor-field">
           <label for="parent_id" class="c-editor-field__label">Parent requirement</label>
-          <select
-            name="parent_id"
-            id="parent_id"
-            class="c-editor-field__input"
-          >
+          <select name="parent_id" id="parent_id" class="c-editor-field__input">
             <option value="0" {{#if (eq 0 ../req.req_parent_id)}}selected{{/if}}>None</option>
             {{#each linked_requirement_options}}
-              <option
-                value="{{id}}"
-                data-reference="{{reference}}"
-                data-title="{{title}}"
-                {{#if (eq id ../req.req_parent_id)}}selected{{/if}}
-              >
-                {{#if reference}}{{reference}}{{else}}RM-{{id}}{{/if}} — {{title}}
-              </option>
+            <option value="{{id}}" data-reference="{{reference}}" data-title="{{title}}" {{#if (eq id
+              ../req.req_parent_id)}}selected{{/if}}>
+              {{#if reference}}{{reference}}{{else}}RM-{{id}}{{/if}} — {{title}}
+            </option>
             {{/each}}
           </select>
         </div>
@@ -304,7 +217,7 @@
   <input type="hidden" name="reference_code" value="{{req.reference_code}}">
   <select id="status_id" name="status_id" class="u-visually-hidden" aria-hidden="true" required>
     {{#each statuses}}
-      <option value="{{id}}" {{#if (eq id ../req.req_current_status_id)}}selected{{/if}}>{{title}}</option>
+    <option value="{{id}}" {{#if (eq id ../req.req_current_status_id)}}selected{{/if}}>{{title}}</option>
     {{/each}}
   </select>
   <input type="hidden" id="project_id" name="project_id" value="{{req.project_id}}">

@@ -8,6 +8,7 @@
 //! - Regex patterns work correctly
 
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use crate::errors::ValidationError;
     use crate::status_enums::ProjectStatus;
@@ -1580,9 +1581,8 @@ mod tests {
             let result = validate_requirement(&req);
             assert!(result.is_err());
             // Should return first error (title required)
-            match result.unwrap_err() {
-                ValidationError::Required { field } => assert_eq!(field, "title"),
-                _ => {}
+            if let ValidationError::Required { field } = result.unwrap_err() {
+                assert_eq!(field, "title");
             }
         }
 

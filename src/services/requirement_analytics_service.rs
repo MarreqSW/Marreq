@@ -255,7 +255,7 @@ mod tests {
             id,
             title: format!("Req {id}"),
             description: "desc".into(),
-            status_id: status_id,
+            status_id,
             author_id: 1,
             reviewer_id: 1,
             reference_code: format!("REF-{id}"),

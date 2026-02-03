@@ -8,6 +8,7 @@
 //! - All struct fields are accessible
 
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use super::super::*;
     use crate::logger::Loggable;
@@ -380,7 +381,7 @@ mod tests {
 
             assert_eq!(user.id, 1);
             assert_eq!(user.username, "user");
-            assert_eq!(user.is_admin, true);
+            assert!(user.is_admin);
         }
 
         #[test]
@@ -777,7 +778,7 @@ mod tests {
 
             assert_eq!(req.username, "user");
             assert_eq!(req.password, "plaintext");
-            assert_eq!(req.is_admin, true);
+            assert!(req.is_admin);
         }
 
         #[test]
@@ -851,7 +852,7 @@ mod tests {
 
             assert_eq!(update.id, Some(1));
             assert_eq!(update.username, "user");
-            assert_eq!(update.is_admin, true);
+            assert!(update.is_admin);
         }
 
         #[test]
@@ -1120,7 +1121,7 @@ mod tests {
         #[test]
         fn action_type_all_variants() {
             // Test all variants are distinct
-            let variants = vec![
+            let variants = [
                 ActionType::Create,
                 ActionType::Update,
                 ActionType::Delete,

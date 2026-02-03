@@ -11,15 +11,14 @@
           </div>
           <nav class="ms-lg-auto" aria-label="Test actions">
             <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
-              <a href="/p/{{selected_project_id}}/tests/edit/{{id}}"
-                class="btn btn-primary btn-sm" aria-label="Edit test">
+              <a href="/p/{{selected_project_id}}/tests/edit/{{id}}" class="btn btn-primary btn-sm"
+                aria-label="Edit test">
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                   <use href="#icon-pencil" />
                 </svg>
                 <span class="ms-1">Edit</span>
               </a>
-              <a href="/logs/TEST/{{id}}"
-                class="btn btn-outline-secondary btn-sm" aria-label="View test history">
+              <a href="/logs/TEST/{{id}}" class="btn btn-outline-secondary btn-sm" aria-label="View test history">
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                   <use href="#icon-clock-history" />
                 </svg>
@@ -32,16 +31,20 @@
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li>
-                    <button class="dropdown-item" type="button" data-action="copy-requirement-link" data-requirement-url="/p/{{selected_project_id}}/tests/show/{{id}}">
+                    <button class="dropdown-item" type="button" data-action="copy-requirement-link"
+                      data-requirement-url="/p/{{selected_project_id}}/tests/show/{{id}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-link" />
                       </svg>
                       <span class="ms-2">Copy link</span>
                     </button>
                   </li>
-                  <li><hr class="dropdown-divider"></li>
                   <li>
-                    <button class="dropdown-item text-danger" type="button" data-action="delete-test" data-project-id="{{selected_project_id}}" data-test-id="{{id}}" data-test-name="{{name}}">
+                    <hr class="dropdown-divider">
+                  </li>
+                  <li>
+                    <button class="dropdown-item text-danger" type="button" data-action="delete-test"
+                      data-project-id="{{selected_project_id}}" data-test-id="{{id}}" data-test-name="{{name}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-trash" />
                       </svg>
@@ -58,9 +61,9 @@
           <div class="text-uppercase small text-muted mb-2">Test Description</div>
           <div class="reqman-requirement-header__statement fs-5 lh-base text-break fw-semibold mb-3">
             {{#if description}}
-              <p class="mb-0">{{description}}</p>
+            <p class="mb-0">{{description}}</p>
             {{else}}
-              <p class="mb-0 text-muted"><em>No test description provided yet.</em></p>
+            <p class="mb-0 text-muted"><em>No test description provided yet.</em></p>
             {{/if}}
           </div>
 
@@ -70,7 +73,9 @@
             <div class="col-lg-6">
               <div class="h-100">
                 <div class="d-flex align-items-center gap-2 mb-3">
-                  <svg class="text-primary" width="20" height="20" fill="currentColor" aria-hidden="true"><use href="#icon-lightbulb"/></svg>
+                  <svg class="text-primary" width="20" height="20" fill="currentColor" aria-hidden="true">
+                    <use href="#icon-lightbulb" />
+                  </svg>
                   <h2 class="h5 mb-0 fw-semibold">Source</h2>
                 </div>
                 <div class="text-muted lh-lg">{{source}}</div>
@@ -80,10 +85,13 @@
             <div class="col-lg-6">
               <div class="h-100">
                 <div class="d-flex align-items-center gap-2 mb-3">
-                  <svg class="text-secondary" width="20" height="20" fill="currentColor" aria-hidden="true"><use href="#icon-file-text"/></svg>
+                  <svg class="text-secondary" width="20" height="20" fill="currentColor" aria-hidden="true">
+                    <use href="#icon-file-text" />
+                  </svg>
                   <h2 class="h5 mb-0 fw-semibold">Notes</h2>
                 </div>
-                <div class="text-muted lh-lg">{{#if test_notes}}<p class="mb-0">{{test_notes}}</p>{{else}}<p class="mb-0 fst-italic">No notes recorded.</p>{{/if}}</div>
+                <div class="text-muted lh-lg">{{#if test_notes}}<p class="mb-0">{{test_notes}}</p>{{else}}<p
+                    class="mb-0 fst-italic">No notes recorded.</p>{{/if}}</div>
               </div>
             </div>
           </div>
@@ -98,13 +106,13 @@
         <div class="card-header requirement-card-header border-0 d-flex justify-content-between align-items-center">
           <div class="text-uppercase small text-muted">Verification</div>
           {{#if status_id}}
-            {{#if (eq status_id "passed")}}
-              <span class="badge" style="background-color: #d4edda; color: #155724;">Passed</span>
-            {{else if (eq status_id "failed")}}
-              <span class="badge bg-danger">Failed</span>
-            {{else}}
-              <span class="badge bg-secondary">{{status_id}}</span>
-            {{/if}}
+          {{#if (eq status_id "passed")}}
+          <span class="badge" style="background-color: #d4edda; color: #155724;">Passed</span>
+          {{else if (eq status_id "failed")}}
+          <span class="badge bg-danger">Failed</span>
+          {{else}}
+          <span class="badge bg-secondary">{{status_id}}</span>
+          {{/if}}
           {{/if}}
         </div>
         <div class="card-body">
@@ -120,17 +128,18 @@
           <h5 class="mb-3">Linked Requirements</h5>
           <div class="list-group list-group-flush">
             {{#each linked_requirements}}
-            <a href="/p/{{project_id}}/requirements/show/{{id}}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+            <a href="/p/{{project_id}}/requirements/show/{{id}}"
+              class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
               <div class="me-3">
                 <span class="fw-semibold">REQ-{{id}}</span>
                 <span class="small text-muted ms-2">{{title}}</span>
               </div>
               {{#if category_id}}
-                <span class="badge bg-secondary">{{category_id}}</span>
+              <span class="badge bg-secondary">{{category_id}}</span>
               {{else if applicability_id}}
-                <span class="badge bg-info">{{applicability_id}}</span>
+              <span class="badge bg-info">{{applicability_id}}</span>
               {{else}}
-                <span class="badge bg-light text-dark border">—</span>
+              <span class="badge bg-light text-dark border">—</span>
               {{/if}}
             </a>
             {{/each}}
@@ -140,13 +149,47 @@
           {{/if}}
         </div>
       </section>
+
+      <section class="card shadow-sm border-0 requirement-main-card mt-3" aria-labelledby="test-history-heading">
+        <div
+          class="card-header requirement-card-header border-0 d-flex flex-wrap gap-3 justify-content-between align-items-center">
+          <div>
+            <div class="text-uppercase small text-muted mb-1">Change Log</div>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse"
+            data-bs-target="#testHistoryContent" aria-expanded="true" aria-controls="testHistoryContent"
+            aria-label="Toggle change log section">
+            <span aria-hidden="true">▼</span>
+            <span class="visually-hidden">Collapse</span>
+          </button>
+        </div>
+        <div class="collapse show" id="testHistoryContent">
+          <div class="card-body">
+            <ul class="list-unstyled requirement-timeline mb-0">
+              {{#if history.entries}}
+              {{#each history.entries}}
+              <li
+                class="d-flex flex-column gap-1 py-2 border-bottom border-light border-opacity-50 requirement-timeline-item">
+                <span class="small fw-medium text-body">{{#if this.summary}}{{this.summary}}{{else}}{{#if
+                  this.description}}{{this.description}}{{else}}{{this.action_type}}{{/if}}{{/if}}</span>
+                <span class="small text-muted">{{this.created_at}} · {{this.username}}</span>
+              </li>
+              {{/each}}
+              {{else}}
+              <li class="text-muted">No change history recorded yet.</li>
+              {{/if}}
+            </ul>
+          </div>
+        </div>
+      </section>
     </div>
 
     <aside class="reqman-requirement-detail-sidebar" aria-label="Test metadata and relationships">
       <section class="card shadow-sm border-0 requirement-side-card mb-3">
         <div class="card-header requirement-card-header border-0 d-flex justify-content-between align-items-center">
           <div class="text-uppercase small text-muted mb-0">Key Info</div>
-          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#testMetadataContent" aria-expanded="true" aria-controls="testMetadataContent">▼</button>
+          <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse"
+            data-bs-target="#testMetadataContent" aria-expanded="true" aria-controls="testMetadataContent">▼</button>
         </div>
         <div class="collapse show" id="testMetadataContent">
           <div class="card-body">
@@ -154,10 +197,10 @@
               <dt class="col-6 text-uppercase small text-muted">Status</dt>
               <dd class="col-6 fw-semibold text-end text-lg-start">{{status_id}}</dd>
               <dt class="col-6 text-uppercase small text-muted">Parent</dt>
-              <dd class="col-6 fw-semibold text-end text-lg-start">{{#if test_parent_id}}<a href="/p/{{selected_project_id}}/tests/show/{{test_parent_id}}">{{test_parent_title}}</a>{{else}}—{{/if}}</dd>
-              <dt class="col-6 text-uppercase small text-muted">TODO: Add verification type</dt>
-              <dd class="col-6 fw-semibold text-end text-lg-start">—</dd>
-              <dt class="col-6 text-uppercase small text-muted">TODO: Add date/Changelog</dt>
+              <dd class="col-6 fw-semibold text-end text-lg-start">{{#if test_parent_id}}<a
+                  href="/p/{{selected_project_id}}/tests/show/{{test_parent_id}}">{{test_parent_title}}</a>{{else}}—{{/if}}
+              </dd>
+              <dt class="col-6 text-uppercase small text-muted">Verification type</dt>
               <dd class="col-6 fw-semibold text-end text-lg-start">—</dd>
             </dl>
           </div>

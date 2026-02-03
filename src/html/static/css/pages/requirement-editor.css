@@ -491,7 +491,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .c-editor-status__chip,
   .c-editor-toolbar__btn,
   .c-editor-dropzone {

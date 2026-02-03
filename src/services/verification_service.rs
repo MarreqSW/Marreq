@@ -47,6 +47,33 @@ impl<'a> VerificationService<'a> {
 
         Ok(id)
     }
+
+    /// Update an existing verification method.
+    pub fn update(
+        &self,
+        id: i32,
+        mut payload: NewVerificationMethod,
+    ) -> Result<VerificationMethod, RepoError> {
+        sanitize(&mut payload.title);
+        sanitize(&mut payload.description);
+        validate(&payload)?;
+
+        payload.id = Some(id);
+
+        let mut repo = self.state.repo_write();
+        let updated = repo.edit_verification(&payload)?;
+        if !updated {
+            return Err(RepoError::NotFound);
+        }
+        drop(repo);
+        self.get_by_id(id)
+    }
+
+    /// Delete a verification method. Requirement–verification links are removed by the database (CASCADE).
+    pub fn delete(&self, id: i32) -> Result<VerificationMethod, RepoError> {
+        let mut repo = self.state.repo_write();
+        repo.delete_verification(id)
+    }
 }
 
 fn sanitize(value: &mut String) {
@@ -325,5 +352,158 @@ mod tests {
         let stored = service.get_by_id(id).unwrap();
         assert_eq!(stored.title, "Valid Title");
         assert_eq!(stored.description, "Valid description");
+    }
+
+    #[test]
+    fn update_modifies_existing_verification() {
+        let mut repo = DieselRepoMock::default();
+        repo.projects.insert(
+            1,
+            crate::models::Project {
+                id: 1,
+                name: "Demo".into(),
+                description: None,
+                creation_date: None,
+                update_date: None,
+                status: ProjectStatus::Active,
+                owner_id: None,
+            },
+        );
+        repo.verifications.insert(
+            1,
+            VerificationMethod {
+                id: 1,
+                title: "Analysis".into(),
+                description: "Original".into(),
+                tag: "ANALYSIS".into(),
+                project_id: 1,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let payload = NewVerificationMethod {
+            id: Some(1),
+            title: "Updated Title".into(),
+            description: "Updated description".into(),
+            tag: "UPDATED".into(),
+            project_id: 1,
+        };
+
+        let updated = service.update(1, payload).unwrap();
+        assert_eq!(updated.title, "Updated Title");
+        assert_eq!(updated.description, "Updated description");
+        assert_eq!(updated.tag, "UPDATED");
+
+        let stored = service.get_by_id(1).unwrap();
+        assert_eq!(stored.title, "Updated Title");
+    }
+
+    #[test]
+    fn update_returns_not_found_for_missing_id() {
+        let mut repo = DieselRepoMock::default();
+        repo.projects.insert(
+            1,
+            crate::models::Project {
+                id: 1,
+                name: "Demo".into(),
+                description: None,
+                creation_date: None,
+                update_date: None,
+                status: ProjectStatus::Active,
+                owner_id: None,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let payload = NewVerificationMethod {
+            id: Some(99),
+            title: "Title".into(),
+            description: "Description".into(),
+            tag: "TAG".into(),
+            project_id: 1,
+        };
+
+        let result = service.update(99, payload);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn update_rejects_invalid_payload() {
+        let mut repo = DieselRepoMock::default();
+        repo.projects.insert(
+            1,
+            crate::models::Project {
+                id: 1,
+                name: "Demo".into(),
+                description: None,
+                creation_date: None,
+                update_date: None,
+                status: ProjectStatus::Active,
+                owner_id: None,
+            },
+        );
+        repo.verifications.insert(
+            1,
+            VerificationMethod {
+                id: 1,
+                title: "Analysis".into(),
+                description: "Desc".into(),
+                tag: "ANALYSIS".into(),
+                project_id: 1,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let payload = NewVerificationMethod {
+            id: Some(1),
+            title: "".into(),
+            description: "Description".into(),
+            tag: "TAG".into(),
+            project_id: 1,
+        };
+
+        let result = service.update(1, payload);
+        assert!(matches!(result, Err(RepoError::BadInput(_))));
+    }
+
+    #[test]
+    fn delete_removes_verification() {
+        let mut repo = DieselRepoMock::default();
+        repo.verifications.insert(
+            1,
+            VerificationMethod {
+                id: 1,
+                title: "Analysis".into(),
+                description: "Analysis method".into(),
+                tag: "ANALYSIS".into(),
+                project_id: 1,
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let deleted = service.delete(1).unwrap();
+        assert_eq!(deleted.title, "Analysis");
+        assert_eq!(deleted.id, 1);
+
+        let result = service.get_by_id(1);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn delete_returns_not_found_for_missing_id() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let result = service.delete(999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
     }
 }

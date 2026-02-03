@@ -5,7 +5,8 @@ use super::prelude::*;
 use crate::helper_functions::decorators::decorate_requirements_with_repo;
 use crate::models::EntityType;
 use crate::services::{
-    change_summary, log_change_details, resolve_change_details_labels, LogService, TestService,
+    change_summary, log_change_details, resolve_change_details_labels, LabelResolvers, LogService,
+    TestService,
 };
 use crate::status_enums::TestStatusEnum;
 
@@ -208,16 +209,15 @@ async fn show_test_id(
             if let Some(obj) = v.as_object_mut() {
                 obj.insert("summary".into(), json!(change_summary(&e.log)));
                 let details = log_change_details(&e.log);
-                let details = resolve_change_details_labels(
-                    details,
-                    "TEST",
-                    &req_status_map,
-                    &test_status_map,
-                    &category_map,
-                    &applicability_map,
-                    &verification_map,
-                    &parent_label_map,
-                );
+                let resolvers = LabelResolvers {
+                    req_status_map: &req_status_map,
+                    test_status_map: &test_status_map,
+                    category_map: &category_map,
+                    applicability_map: &applicability_map,
+                    verification_map: &verification_map,
+                    parent_label_map: &parent_label_map,
+                };
+                let details = resolve_change_details_labels(details, "TEST", &resolvers);
                 obj.insert("changes".into(), json!(details));
             }
             v

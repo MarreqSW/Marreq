@@ -16,101 +16,126 @@
       </div>
       <div class="c-dashboard-card__actions">
         {{#if selected_project_id}}
-          <a href="/p/{{selected_project_id}}/requirements" class="btn btn-primary c-dashboard-card__action">View Requirements</a>
-          <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success c-dashboard-card__action">Export Excel</a>
-          {{#if user.is_admin}}
-          <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
-          {{/if}}
-          <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-outline c-dashboard-card__action">New Requirement</a>
+        <a href="/p/{{selected_project_id}}/requirements" class="btn btn-primary c-dashboard-card__action">View
+          Requirements</a>
+        <a href="/p/{{selected_project_id}}/requirements.xls" class="btn btn-success c-dashboard-card__action">Export
+          Excel</a>
+        {{#if user.is_admin}}
+        <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import
+          File</a>
+        {{/if}}
+        <a href="/p/{{selected_project_id}}/requirements/new" class="btn btn-outline c-dashboard-card__action">New
+          Requirement</a>
         {{else}}
-          <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Requirements</span>
-          <span class="btn btn-success disabled c-dashboard-card__action" aria-disabled="true">Export Excel</span>
-          {{#if user.is_admin}}
-          <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
-          {{/if}}
-          <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Requirement</span>
+        <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Requirements</span>
+        <span class="btn btn-success disabled c-dashboard-card__action" aria-disabled="true">Export Excel</span>
+        {{#if user.is_admin}}
+        <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import
+          File</a>
+        {{/if}}
+        <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Requirement</span>
         {{/if}}
       </div>
     </div>
   </div>
 
   {{#> partials/metrics_card title="Tests" badge=tests_count badge_class="bg-primary"}}
-    <div class="c-dashboard-card__description">
-      <p>Manage test cases and verification methods</p>
-    </div>
-    <div class="c-dashboard-card__actions">
-      {{#if selected_project_id}}
-        <a href="/p/{{selected_project_id}}/tests" class="btn btn-primary c-dashboard-card__action">View Tests</a>
-        <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success c-dashboard-card__action">Export Excel</a>
-        {{#if user.is_admin}}
-        <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
-        {{/if}}
-        <a href="/p/{{selected_project_id}}/tests/new" class="btn btn-outline c-dashboard-card__action">New Test</a>
-      {{else}}
-        <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Tests</span>
-        <span class="btn btn-success disabled c-dashboard-card__action" aria-disabled="true">Export Excel</span>
-        {{#if user.is_admin}}
-        <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
-        {{/if}}
-        <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Test</span>
-      {{/if}}
-    </div>
+  <div class="c-dashboard-card__description">
+    <p>Manage test cases and verification methods</p>
+  </div>
+  <div class="c-dashboard-card__actions">
+    {{#if selected_project_id}}
+    <a href="/p/{{selected_project_id}}/tests" class="btn btn-primary c-dashboard-card__action">View Tests</a>
+    <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success c-dashboard-card__action">Export Excel</a>
+    {{#if user.is_admin}}
+    <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
+    {{/if}}
+    <a href="/p/{{selected_project_id}}/tests/new" class="btn btn-outline c-dashboard-card__action">New Test</a>
+    {{else}}
+    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Tests</span>
+    <span class="btn btn-success disabled c-dashboard-card__action" aria-disabled="true">Export Excel</span>
+    {{#if user.is_admin}}
+    <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
+    {{/if}}
+    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Test</span>
+    {{/if}}
+  </div>
   {{/partials/metrics_card}}
 
   {{#> partials/metrics_card title="Traceability Matrix"}}
-    <div class="c-dashboard-card__description">
-      <p>Link requirements to tests and generate reports</p>
-    </div>
-    <div class="c-dashboard-card__actions">
-      <a href="/p/{{selected_project_id}}/matrix" class="btn btn-primary c-dashboard-card__action">View Matrix</a>
-      <a href="/p/{{selected_project_id}}/matrix.xls" class="btn btn-success c-dashboard-card__action">Export Excel</a>
-    </div>
+  <div class="c-dashboard-card__description">
+    <p>Link requirements to tests and generate reports</p>
+  </div>
+  <div class="c-dashboard-card__actions">
+    <a href="/p/{{selected_project_id}}/matrix" class="btn btn-primary c-dashboard-card__action">View Matrix</a>
+    <a href="/p/{{selected_project_id}}/matrix.xls" class="btn btn-success c-dashboard-card__action">Export Excel</a>
+  </div>
   {{/partials/metrics_card}}
 
   {{#> partials/metrics_card title="Categories"}}
-    <div class="c-dashboard-card__description">
-      <p>Organize requirements with categories</p>
-    </div>
-    <div class="c-dashboard-card__actions">
-      {{#if selected_project_id}}
-        <a href="/p/{{selected_project_id}}/categories" class="btn btn-primary c-dashboard-card__action">View Categories</a>
-        <a href="/p/{{selected_project_id}}/categories/new" class="btn btn-outline c-dashboard-card__action">New Category</a>
-      {{else}}
-        <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Categories</span>
-        <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Category</span>
-      {{/if}}
-    </div>
+  <div class="c-dashboard-card__description">
+    <p>Organize requirements with categories</p>
+  </div>
+  <div class="c-dashboard-card__actions">
+    {{#if selected_project_id}}
+    <a href="/p/{{selected_project_id}}/categories" class="btn btn-primary c-dashboard-card__action">View Categories</a>
+    <a href="/p/{{selected_project_id}}/categories/new" class="btn btn-outline c-dashboard-card__action">New
+      Category</a>
+    {{else}}
+    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Categories</span>
+    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Category</span>
+    {{/if}}
+  </div>
   {{/partials/metrics_card}}
 
   {{#> partials/metrics_card title="Applicability"}}
-    <div class="c-dashboard-card__description">
-      <p>Define which products/systems requirements apply to</p>
-    </div>
-    <div class="c-dashboard-card__actions">
-      {{#if selected_project_id}}
-        <a href="/p/{{selected_project_id}}/applicability" class="btn btn-primary c-dashboard-card__action">View Applicability</a>
-        <a href="/p/{{selected_project_id}}/applicability/new" class="btn btn-outline c-dashboard-card__action">New Applicability</a>
-      {{else}}
-        <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Applicability</span>
-        <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Applicability</span>
-      {{/if}}
-    </div>
+  <div class="c-dashboard-card__description">
+    <p>Define which products/systems requirements apply to</p>
+  </div>
+  <div class="c-dashboard-card__actions">
+    {{#if selected_project_id}}
+    <a href="/p/{{selected_project_id}}/applicability" class="btn btn-primary c-dashboard-card__action">View
+      Applicability</a>
+    <a href="/p/{{selected_project_id}}/applicability/new" class="btn btn-outline c-dashboard-card__action">New
+      Applicability</a>
+    {{else}}
+    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Applicability</span>
+    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Applicability</span>
+    {{/if}}
+  </div>
+  {{/partials/metrics_card}}
+
+  {{#> partials/metrics_card title="Verification methods"}}
+  <div class="c-dashboard-card__description">
+    <p>Define how requirements are verified (e.g. analysis, test, review)</p>
+  </div>
+  <div class="c-dashboard-card__actions">
+    {{#if selected_project_id}}
+    <a href="/p/{{selected_project_id}}/verification" class="btn btn-primary c-dashboard-card__action">View
+      Verification</a>
+    <a href="/p/{{selected_project_id}}/verification/new" class="btn btn-outline c-dashboard-card__action">New
+      Verification</a>
+    {{else}}
+    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Verification</span>
+    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Verification</span>
+    {{/if}}
+  </div>
   {{/partials/metrics_card}}
 
   {{#> partials/metrics_card title="Project Members"}}
-    <div class="c-dashboard-card__description">
-      <p>See who has access to your active project and manage participation.</p>
-    </div>
-    <div class="c-dashboard-card__actions d-flex flex-wrap gap-2">
-      {{#if selected_project_id}}
-        <a href="/p/{{selected_project_id}}/members" class="btn btn-primary c-dashboard-card__action">View Members</a>
-      {{else}}
-        <span class="btn btn-outline disabled c-dashboard-card__action">Select a project to view members</span>
-      {{/if}}
-      {{#if user.is_admin}}
-        <a href="/admin/users" class="btn btn-outline c-dashboard-card__action">Manage Users</a>
-      {{/if}}
-    </div>
+  <div class="c-dashboard-card__description">
+    <p>See who has access to your active project and manage participation.</p>
+  </div>
+  <div class="c-dashboard-card__actions d-flex flex-wrap gap-2">
+    {{#if selected_project_id}}
+    <a href="/p/{{selected_project_id}}/members" class="btn btn-primary c-dashboard-card__action">View Members</a>
+    {{else}}
+    <span class="btn btn-outline disabled c-dashboard-card__action">Select a project to view members</span>
+    {{/if}}
+    {{#if user.is_admin}}
+    <a href="/admin/users" class="btn btn-outline c-dashboard-card__action">Manage Users</a>
+    {{/if}}
+  </div>
   {{/partials/metrics_card}}
 </div>
 {{/inline}}

@@ -100,6 +100,11 @@ pub trait LookupRepository {
     fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError>;
 
     fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError>;
+    fn edit_verification(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError>;
+    fn delete_verification(
+        &mut self,
+        verification_id: i32,
+    ) -> Result<VerificationMethod, RepoError>;
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError>;
     fn edit_category(&mut self, new: &NewCategory) -> Result<bool, RepoError>;
     fn delete_category(&mut self, category_id: i32) -> Result<Category, RepoError>;

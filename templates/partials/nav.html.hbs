@@ -97,6 +97,17 @@
               <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New Applicability</span>
               {{/if}}
             </li>
+            <li>
+              {{#if project.id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/verification/new">New
+                Verification</a>
+              {{else if selected_project_id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/verification/new">New
+                Verification</a>
+              {{else}}
+              <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New Verification</span>
+              {{/if}}
+            </li>
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/user/new">New User</a></li>
             <li>
               <hr class="dropdown-divider c-navbar__dropdown-divider">

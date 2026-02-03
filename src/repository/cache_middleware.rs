@@ -485,6 +485,25 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         Ok(id)
     }
 
+    fn edit_verification(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError> {
+        let res = self.inner.edit_verification(new)?;
+        if let Some(id) = new.id {
+            self.cache.invalidate_verification(id);
+        }
+        self.cache.invalidate_project(new.project_id);
+        Ok(res)
+    }
+
+    fn delete_verification(
+        &mut self,
+        verification_id: i32,
+    ) -> Result<VerificationMethod, RepoError> {
+        let verification = self.inner.delete_verification(verification_id)?;
+        self.cache.invalidate_verification(verification_id);
+        self.cache.invalidate_project(verification.project_id);
+        Ok(verification)
+    }
+
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_category(new)?;
         self.cache.invalidate_category(id);

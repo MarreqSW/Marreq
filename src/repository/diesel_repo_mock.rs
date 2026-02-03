@@ -293,6 +293,33 @@ impl LookupRepository for DieselRepoMock {
         Ok(id)
     }
 
+    fn edit_verification(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError> {
+        let id = new.id.ok_or(RepoError::NotFound)?;
+        match self.verifications.get_mut(&id) {
+            Some(v) => {
+                v.title = new.title.clone();
+                v.description = new.description.clone();
+                v.tag = new.tag.clone();
+                v.project_id = new.project_id;
+                Ok(true)
+            }
+            None => Err(RepoError::NotFound),
+        }
+    }
+
+    fn delete_verification(
+        &mut self,
+        verification_id: i32,
+    ) -> Result<VerificationMethod, RepoError> {
+        let verification = self
+            .verifications
+            .remove(&verification_id)
+            .ok_or(RepoError::NotFound)?;
+        self.requirement_verification_methods
+            .retain(|(_, vid)| *vid != verification_id);
+        Ok(verification)
+    }
+
     fn insert_new_category(&mut self, _new: &NewCategory) -> Result<i32, RepoError> {
         let id = _new
             .id

@@ -223,7 +223,7 @@ fn resolve_verification_ids_to_labels(s: &str, verification_map: &HashMap<i32, S
     }
 }
 
-/// Resolves ID values to human-readable labels for Status, Category, Applicability, and Verification.
+/// Resolves ID values to human-readable labels for Status, Category, Applicability, Verification, and Parent.
 /// Returns a new vec of change details with old_value/new_value replaced by labels when applicable.
 pub fn resolve_change_details_labels(
     details: Vec<ChangeDetail>,
@@ -233,6 +233,7 @@ pub fn resolve_change_details_labels(
     category_map: &HashMap<i32, String>,
     applicability_map: &HashMap<i32, String>,
     verification_map: &HashMap<i32, String>,
+    parent_label_map: &HashMap<i32, String>,
 ) -> Vec<ChangeDetail> {
     let status_map = if entity_type.eq_ignore_ascii_case("TEST") {
         test_status_map
@@ -271,6 +272,14 @@ pub fn resolve_change_details_labels(
                 "Verification" => (
                     resolve_verification_ids_to_labels(&d.old_value, verification_map),
                     resolve_verification_ids_to_labels(&d.new_value, verification_map),
+                ),
+                "Parent" => (
+                    parse_id_for_label(&d.old_value)
+                        .and_then(|id| parent_label_map.get(&id).cloned())
+                        .unwrap_or_else(|| d.old_value.clone()),
+                    parse_id_for_label(&d.new_value)
+                        .and_then(|id| parent_label_map.get(&id).cloned())
+                        .unwrap_or_else(|| d.new_value.clone()),
                 ),
                 _ => (d.old_value, d.new_value),
             };

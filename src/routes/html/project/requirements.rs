@@ -393,6 +393,12 @@ async fn show_requirement_id(
         .into_iter()
         .map(|v| (v.id, v.title))
         .collect();
+    let parent_label_map: HashMap<i32, String> = repo
+        .get_requirements_by_project(project_id)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|r| (r.id, r.reference_code))
+        .collect();
     drop(repo);
 
     let entries_with_summary: Vec<serde_json::Value> = history_entries
@@ -410,6 +416,7 @@ async fn show_requirement_id(
                     &category_map,
                     &applicability_map,
                     &verification_map,
+                    &parent_label_map,
                 );
                 obj.insert("changes".into(), json!(details));
             }

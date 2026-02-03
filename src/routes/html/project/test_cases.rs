@@ -478,22 +478,20 @@ async fn get_requirements_xls(
         user.username, user.id, project_id
     );
 
-    let _file = excel::create_requirements_workbook().expect("file can be created");
+    excel::create_requirements_workbook(project_id).map_err(|e| {
+        eprintln!("Error creating requirements workbook: {e:?}");
+        Redirect::to(format!("/p/{}/requirements", project_id))
+    })?;
     let path_to_file = path::Path::new("target/requirements.xls");
-    let res = NamedFile::open(&path_to_file)
-        .await
-        .map_err(|e| NotFound(e.to_string()));
-    match res {
-        Ok(file) => {
-            let content_type = ContentType::new(
-                "application",
-                "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            );
-            Ok((content_type, file))
-        }
-
-        Err(error) => panic!("Problem with file {:?}", error),
-    }
+    let file = NamedFile::open(&path_to_file).await.map_err(|e| {
+        eprintln!("Error opening requirements export file: {e:?}");
+        Redirect::to(format!("/p/{}/requirements", project_id))
+    })?;
+    let content_type = ContentType::new(
+        "application",
+        "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    Ok((content_type, file))
 }
 
 #[get("/<project_id>/tests.xls")]
@@ -503,25 +501,23 @@ async fn get_tests_xls(
 ) -> Result<(ContentType, NamedFile), Redirect> {
     let user = project_access.into_user();
     println!(
-        "User [{} - id:{}] requested requirements export for project_id={}",
+        "User [{} - id:{}] requested tests export for project_id={}",
         user.username, user.id, project_id
     );
-    let _file = excel::create_tests_workbook().expect("file can be created");
+    excel::create_tests_workbook(project_id).map_err(|e| {
+        eprintln!("Error creating tests workbook: {e:?}");
+        Redirect::to(format!("/p/{}/tests", project_id))
+    })?;
     let path_to_file = path::Path::new("target/tests.xls");
-    let res = NamedFile::open(&path_to_file)
-        .await
-        .map_err(|e| NotFound(e.to_string()));
-    match res {
-        Ok(file) => {
-            let content_type = ContentType::new(
-                "application",
-                "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            );
-            Ok((content_type, file))
-        }
-
-        Err(error) => panic!("Problem with file {:?}", error),
-    }
+    let file = NamedFile::open(&path_to_file).await.map_err(|e| {
+        eprintln!("Error opening tests export file: {e:?}");
+        Redirect::to(format!("/p/{}/tests", project_id))
+    })?;
+    let content_type = ContentType::new(
+        "application",
+        "vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    Ok((content_type, file))
 }
 
 pub fn routes() -> Vec<Route> {

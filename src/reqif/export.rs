@@ -21,7 +21,7 @@ pub fn to_reqif(
 ) -> String {
     let mut out = String::new();
     out.push_str(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
-    out.push_str("\n");
+    out.push('\n');
     out.push_str(&format!(r#"<REQ-IF xmlns="{}">"#, REQIF_NS));
     out.push_str("\n  <THE-HEADER>");
     out.push_str("\n    <REPOSITORY-ID>ReqMan-");

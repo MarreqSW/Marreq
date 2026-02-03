@@ -14,9 +14,10 @@ use crate::helper_functions::generate_requirement_reference;
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::services::{
-    ApplicabilityService, CategoryService, DecoratedRequirementService, DecoratedTestService,
-    LogService, ProjectService, RequirementAnalyticsService, RequirementService, StatusService,
-    UserService, VerificationService,
+    change_summary, log_change_details, resolve_change_details_labels, ApplicabilityService,
+    CategoryService, DecoratedRequirementService, DecoratedTestService, LogService, ProjectService,
+    RequirementAnalyticsService, RequirementService, StatusService, UserService,
+    VerificationService,
 };
 use crate::status_enums::RequirementStatusEnum;
 
@@ -120,19 +121,19 @@ struct RequirementEditForm {
 }
 
 impl RequirementEditForm {
-    fn to_new_requirement(self) -> NewRequirement {
+    fn to_new_requirement(&self) -> NewRequirement {
         NewRequirement {
             id: self.id,
-            title: self.title,
-            description: self.description,
+            title: self.title.clone(),
+            description: self.description.clone(),
             author_id: self.author_id,
             category_id: self.category_id,
             status_id: self.status_id,
             parent_id: self.parent_id,
-            reference_code: self.reference_code,
+            reference_code: self.reference_code.clone(),
             reviewer_id: self.reviewer_id,
             applicability_id: self.applicability_id,
-            justification: self.justification,
+            justification: self.justification.clone(),
             project_id: self.project_id,
         }
     }
@@ -361,6 +362,61 @@ async fn show_requirement_id(
         .entity_logs(&EntityType::Requirement.to_string(), requirement_id)
         .unwrap_or_default();
 
+    let repo = state.repo_read();
+    let req_status_map: HashMap<i32, String> = repo
+        .get_requirement_status_all()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|s| (s.id, s.title))
+        .collect();
+    let test_status_map: HashMap<i32, String> = repo
+        .get_test_status_all()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|s| (s.id, s.title))
+        .collect();
+    let category_map: HashMap<i32, String> = repo
+        .get_categories_by_project(project_id)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|c| (c.id, c.title))
+        .collect();
+    let applicability_map: HashMap<i32, String> = repo
+        .get_applicability_by_project(project_id)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|a| (a.id, a.title))
+        .collect();
+    let verification_map: HashMap<i32, String> = repo
+        .get_verification_by_project(project_id)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|v| (v.id, v.title))
+        .collect();
+    drop(repo);
+
+    let entries_with_summary: Vec<serde_json::Value> = history_entries
+        .iter()
+        .map(|e| {
+            let mut v = serde_json::to_value(e).unwrap_or_else(|_| json!({}));
+            if let Some(obj) = v.as_object_mut() {
+                obj.insert("summary".into(), json!(change_summary(&e.log)));
+                let details = log_change_details(&e.log);
+                let details = resolve_change_details_labels(
+                    details,
+                    "REQUIREMENT",
+                    &req_status_map,
+                    &test_status_map,
+                    &category_map,
+                    &applicability_map,
+                    &verification_map,
+                );
+                obj.insert("changes".into(), json!(details));
+            }
+            v
+        })
+        .collect();
+
     let canonical_data = json!({
         "project_id": project_id,
         "requirement": requirement,
@@ -381,7 +437,7 @@ async fn show_requirement_id(
             }
         },
         "history": {
-            "entries": history_entries,
+            "entries": entries_with_summary,
         },
         "comments": {
             "items": Vec::<serde_json::Value>::new(), // TODO: load comments

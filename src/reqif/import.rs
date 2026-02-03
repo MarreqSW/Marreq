@@ -75,8 +75,8 @@ pub fn parse_reqif(xml: &[u8]) -> Result<ParsedDocument, String> {
                         }
                     }
                     "ATTRIBUTE-VALUE-STRING" | "ATTRIBUTE-VALUE-XHTML" => {
-                        current_attr_value_def = attr(&e, "DEFINITION").map(String::from);
-                        current_attr_value = attr(&e, "THE-VALUE").map(String::from);
+                        current_attr_value_def = attr(&e, "DEFINITION");
+                        current_attr_value = attr(&e, "THE-VALUE");
                     }
                     "SPEC-RELATION" => {
                         let id = attr(&e, "IDENTIFIER").unwrap_or_default();
@@ -154,26 +154,25 @@ pub fn parse_reqif(xml: &[u8]) -> Result<ParsedDocument, String> {
 
 fn attr(e: &quick_xml::events::BytesStart<'_>, key: &str) -> Option<String> {
     let key_bytes = key.as_bytes();
-    for a in e.attributes() {
-        if let Ok(a) = a {
-            if a.key.as_ref() == key_bytes || a.key.local_name().as_ref() == key_bytes {
-                return String::from_utf8(a.value.into_owned()).ok();
-            }
+    for a in e.attributes().flatten() {
+        if a.key.as_ref() == key_bytes || a.key.local_name().as_ref() == key_bytes {
+            return String::from_utf8(a.value.into_owned()).ok();
         }
     }
     None
 }
 
+/// Tuple of (title, reference_code, description, status, justification) from a parsed SpecObject.
+pub type ReqifObjectFields = (
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+);
+
 /// Build ReqMan field map from a parsed SpecObject using default attribute mapping.
-pub fn object_to_fields(
-    obj: &ParsedSpecObject,
-) -> (
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-    Option<String>,
-) {
+pub fn object_to_fields(obj: &ParsedSpecObject) -> ReqifObjectFields {
     let title = mapping::get_attr(&obj.attributes, "title");
     let reference_code = mapping::get_attr(&obj.attributes, "reference_code");
     let description = mapping::get_attr(&obj.attributes, "description");

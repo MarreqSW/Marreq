@@ -223,21 +223,28 @@ fn resolve_verification_ids_to_labels(s: &str, verification_map: &HashMap<i32, S
     }
 }
 
-/// Resolves ID values to human-readable labels for Status, Category, Applicability, and Verification.
+/// Maps used to resolve entity IDs to human-readable labels in change details.
+#[derive(Clone)]
+pub struct LabelResolvers<'a> {
+    pub req_status_map: &'a HashMap<i32, String>,
+    pub test_status_map: &'a HashMap<i32, String>,
+    pub category_map: &'a HashMap<i32, String>,
+    pub applicability_map: &'a HashMap<i32, String>,
+    pub verification_map: &'a HashMap<i32, String>,
+    pub parent_label_map: &'a HashMap<i32, String>,
+}
+
+/// Resolves ID values to human-readable labels for Status, Category, Applicability, Verification, and Parent.
 /// Returns a new vec of change details with old_value/new_value replaced by labels when applicable.
 pub fn resolve_change_details_labels(
     details: Vec<ChangeDetail>,
     entity_type: &str,
-    req_status_map: &HashMap<i32, String>,
-    test_status_map: &HashMap<i32, String>,
-    category_map: &HashMap<i32, String>,
-    applicability_map: &HashMap<i32, String>,
-    verification_map: &HashMap<i32, String>,
+    resolvers: &LabelResolvers<'_>,
 ) -> Vec<ChangeDetail> {
     let status_map = if entity_type.eq_ignore_ascii_case("TEST") {
-        test_status_map
+        resolvers.test_status_map
     } else {
-        req_status_map
+        resolvers.req_status_map
     };
 
     details
@@ -254,23 +261,31 @@ pub fn resolve_change_details_labels(
                 ),
                 "Category" => (
                     parse_id_for_label(&d.old_value)
-                        .and_then(|id| category_map.get(&id).cloned())
+                        .and_then(|id| resolvers.category_map.get(&id).cloned())
                         .unwrap_or(d.old_value),
                     parse_id_for_label(&d.new_value)
-                        .and_then(|id| category_map.get(&id).cloned())
+                        .and_then(|id| resolvers.category_map.get(&id).cloned())
                         .unwrap_or(d.new_value),
                 ),
                 "Applicability" => (
                     parse_id_for_label(&d.old_value)
-                        .and_then(|id| applicability_map.get(&id).cloned())
+                        .and_then(|id| resolvers.applicability_map.get(&id).cloned())
                         .unwrap_or(d.old_value),
                     parse_id_for_label(&d.new_value)
-                        .and_then(|id| applicability_map.get(&id).cloned())
+                        .and_then(|id| resolvers.applicability_map.get(&id).cloned())
                         .unwrap_or(d.new_value),
                 ),
                 "Verification" => (
-                    resolve_verification_ids_to_labels(&d.old_value, verification_map),
-                    resolve_verification_ids_to_labels(&d.new_value, verification_map),
+                    resolve_verification_ids_to_labels(&d.old_value, resolvers.verification_map),
+                    resolve_verification_ids_to_labels(&d.new_value, resolvers.verification_map),
+                ),
+                "Parent" => (
+                    parse_id_for_label(&d.old_value)
+                        .and_then(|id| resolvers.parent_label_map.get(&id).cloned())
+                        .unwrap_or_else(|| d.old_value.clone()),
+                    parse_id_for_label(&d.new_value)
+                        .and_then(|id| resolvers.parent_label_map.get(&id).cloned())
+                        .unwrap_or_else(|| d.new_value.clone()),
                 ),
                 _ => (d.old_value, d.new_value),
             };

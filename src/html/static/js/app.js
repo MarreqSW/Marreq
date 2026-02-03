@@ -10,6 +10,9 @@ const pageControllers = {
   'requirements-tree': () => import('./pages/requirementsTree.js'),
   categories: () => import('./pages/categories.js'),
   applicability: () => import('./pages/applicability.js'),
+  verification: () => import('./pages/verification.js'),
+  new_verification: () => Promise.resolve({}),
+  edit_verification: () => Promise.resolve({}),
   'requirement-form': () => import('./pages/requirementForm.js'),
   'requirement-detail': () => import('./pages/requirementDetail.js'),
   'log-analytics': () => import('./pages/logAnalytics.js'),
@@ -91,6 +94,23 @@ function initGlobalDeleteHandlers() {
     getMessage: (button) => {
       const title = button.getAttribute('data-applicability-title') || 'this applicability';
       return `Are you sure you want to delete ${title}? This action cannot be undone.`;
+    },
+  });
+
+  registerDeleteAction({
+    selector: '[data-action="delete-verification"]',
+    getUrl: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      const verificationId = button.getAttribute('data-verification-id');
+      return `/p/${projectId}/verification/delete/${verificationId}`;
+    },
+    getMessage: (button) => {
+      const title = button.getAttribute('data-verification-title') || 'this verification method';
+      return `Are you sure you want to delete ${title}? Requirements linked to it will have that link removed.`;
+    },
+    onSuccess: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      window.location.href = `/p/${projectId}/verification`;
     },
   });
 }

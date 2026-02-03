@@ -563,6 +563,43 @@ impl LookupRepository for DieselRepo {
         Ok(result.id)
     }
 
+    fn edit_verification(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError> {
+        use schema::verification::dsl;
+        let mut conn = self.get_conn()?;
+        let verification_id = new
+            .id
+            .ok_or(RepoError::Db(diesel::result::Error::NotFound))?;
+        let updated = diesel::update(dsl::verification.filter(dsl::id.eq(verification_id)))
+            .set((
+                dsl::title.eq(&new.title),
+                dsl::description.eq(&new.description),
+                dsl::tag.eq(&new.tag),
+            ))
+            .execute(conn.as_mut())?;
+        Ok(updated > 0)
+    }
+
+    fn delete_verification(
+        &mut self,
+        verification_id: i32,
+    ) -> Result<VerificationMethod, RepoError> {
+        use schema::verification::dsl;
+        let mut conn = self.get_conn()?;
+        let verification = dsl::verification
+            .filter(dsl::id.eq(verification_id))
+            .get_result::<VerificationMethod>(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })?;
+        diesel::delete(dsl::verification.filter(dsl::id.eq(verification_id)))
+            .execute(conn.as_mut())?;
+        Ok(verification)
+    }
+
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError> {
         use schema::categories::dsl;
         let mut conn = self.get_conn()?;

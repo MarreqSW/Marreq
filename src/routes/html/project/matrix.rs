@@ -222,7 +222,6 @@ fn build_pagination_context(
 async fn get_matrix_xls(
     project_access: ProjectAccess,
     project_id: i32,
-    cookies: &CookieJar<'_>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
     let user = project_access.into_user();
 
@@ -231,7 +230,7 @@ async fn get_matrix_xls(
         user.username, user.id, project_id
     );
 
-    excel::create_matrix_workbook(cookies).map_err(|e| {
+    excel::create_matrix_workbook(project_id).map_err(|e| {
         eprintln!("Error creating matrix workbook: {e:?}");
         Redirect::to(format!("/p/{}/matrix", project_id))
     })?;

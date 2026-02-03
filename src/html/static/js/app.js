@@ -33,6 +33,10 @@ function initGlobalDeleteHandlers() {
       const title = button.getAttribute('data-requirement-title') || 'Requirement';
       return `Are you sure you want to delete requirement "${title}"? This action cannot be undone.`;
     },
+    onSuccess: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      window.location.href = `/p/${projectId}/requirements`;
+    },
   });
 
   registerDeleteAction({
@@ -45,6 +49,10 @@ function initGlobalDeleteHandlers() {
     getMessage: (button) => {
       const name = button.getAttribute('data-test-name') || 'Test';
       return `Are you sure you want to delete test "${name}"? This action cannot be undone.`;
+    },
+    onSuccess: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      window.location.href = `/p/${projectId}/tests`;
     },
   });
 

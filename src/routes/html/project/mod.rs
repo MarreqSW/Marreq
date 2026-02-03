@@ -16,7 +16,6 @@ pub(crate) mod prelude {
     pub(crate) use rocket::form::Form;
     pub(crate) use rocket::fs::NamedFile;
     pub(crate) use rocket::http::{ContentType, Cookie, CookieJar};
-    pub(crate) use rocket::response::status::NotFound;
     pub(crate) use rocket::response::Redirect;
     pub(crate) use rocket::serde::json::json;
     pub(crate) use rocket::Route;

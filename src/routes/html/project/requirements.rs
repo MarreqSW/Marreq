@@ -15,8 +15,8 @@ use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::services::{
     change_summary, log_change_details, resolve_change_details_labels, ApplicabilityService,
-    CategoryService, DecoratedRequirementService, DecoratedTestService, LogService, ProjectService,
-    RequirementAnalyticsService, RequirementService, StatusService, UserService,
+    CategoryService, DecoratedRequirementService, DecoratedTestService, LabelResolvers, LogService,
+    ProjectService, RequirementAnalyticsService, RequirementService, StatusService, UserService,
     VerificationService,
 };
 use crate::status_enums::RequirementStatusEnum;
@@ -393,6 +393,12 @@ async fn show_requirement_id(
         .into_iter()
         .map(|v| (v.id, v.title))
         .collect();
+    let parent_label_map: HashMap<i32, String> = repo
+        .get_requirements_by_project(project_id)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|r| (r.id, r.reference_code))
+        .collect();
     drop(repo);
 
     let entries_with_summary: Vec<serde_json::Value> = history_entries
@@ -402,15 +408,15 @@ async fn show_requirement_id(
             if let Some(obj) = v.as_object_mut() {
                 obj.insert("summary".into(), json!(change_summary(&e.log)));
                 let details = log_change_details(&e.log);
-                let details = resolve_change_details_labels(
-                    details,
-                    "REQUIREMENT",
-                    &req_status_map,
-                    &test_status_map,
-                    &category_map,
-                    &applicability_map,
-                    &verification_map,
-                );
+                let resolvers = LabelResolvers {
+                    req_status_map: &req_status_map,
+                    test_status_map: &test_status_map,
+                    category_map: &category_map,
+                    applicability_map: &applicability_map,
+                    verification_map: &verification_map,
+                    parent_label_map: &parent_label_map,
+                };
+                let details = resolve_change_details_labels(details, "REQUIREMENT", &resolvers);
                 obj.insert("changes".into(), json!(details));
             }
             v

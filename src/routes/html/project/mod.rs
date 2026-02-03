@@ -9,6 +9,7 @@ pub mod requirements;
 mod test_cases;
 #[cfg(any(test, feature = "test-helpers"))]
 pub mod test_helpers;
+mod verification;
 
 use super::helpers;
 use super::projects;
@@ -47,6 +48,7 @@ pub fn routes() -> Vec<Route> {
     routes.extend(reqif::routes());
     routes.extend(requirements::routes());
     routes.extend(test_cases::routes());
+    routes.extend(verification::routes());
     routes.extend(project_routes::routes());
     routes
 }

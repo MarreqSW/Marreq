@@ -19,14 +19,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Rust (nightly + rustfmt)
+      - name: Set up Rust (nightly + rustfmt + clippy)
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: nightly
-          components: rustfmt
+          components: rustfmt, clippy
 
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: Set up Node.js (for stylelint)
         uses: actions/setup-node@v4

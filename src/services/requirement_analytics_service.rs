@@ -101,13 +101,14 @@ impl<'a> RequirementAnalyticsService<'a> {
         }
 
         // Execute the grouped aggregation with optional filters expressed as bind parameters.
+        // Verification filter uses the junction table requirement_verification_methods.
         let query = diesel::sql_query(
             "SELECT LOWER(TRIM(rs.title)) AS status, COUNT(*)::BIGINT AS total
              FROM requirements r
              INNER JOIN requirement_status rs ON rs.id = r.status_id
              WHERE r.project_id = $1
                AND ($2 IS NULL OR r.status_id = $2)
-               AND ($3 IS NULL OR r.verification_method_id = $3)
+               AND ($3 IS NULL OR r.id IN (SELECT requirement_id FROM requirement_verification_methods WHERE verification_method_id = $3))
                AND ($4 IS NULL OR r.category_id = $4)
                AND ($5 IS NULL OR r.applicability_id = $5)
              GROUP BY status",
@@ -138,6 +139,13 @@ impl<'a> RequirementAnalyticsService<'a> {
         let repo_guard = self.state.repo_read();
         let requirements = repo_guard.get_requirements_by_project(project_id)?;
         let statuses = repo_guard.get_requirement_status_all()?;
+        let verification_requirement_ids = verification_filter
+            .map(|vid| {
+                repo_guard
+                    .get_requirement_ids_by_verification_method(vid)
+                    .unwrap_or_default()
+            })
+            .unwrap_or_default();
         drop(repo_guard);
 
         let status_lookup: HashMap<i32, String> = statuses
@@ -154,8 +162,8 @@ impl<'a> RequirementAnalyticsService<'a> {
                     continue;
                 }
             }
-            if let Some(filter) = verification_filter {
-                if requirement.verification_method_id != filter {
+            if let Some(_filter) = verification_filter {
+                if !verification_requirement_ids.contains(&requirement.id) {
                     continue;
                 }
             }
@@ -240,19 +248,18 @@ mod tests {
         id: i32,
         project_id: i32,
         status_id: i32,
-        verification_method_id: i32,
+        _verification_method_id: i32,
         category_id: i32,
     ) -> Requirement {
         Requirement {
             id,
             title: format!("Req {id}"),
             description: "desc".into(),
-            verification_method_id,
-            status_id: status_id,
+            status_id,
             author_id: 1,
             reviewer_id: 1,
             reference_code: format!("REF-{id}"),
-            category_id: category_id,
+            category_id,
             parent_id: None,
             creation_date: naive_datetime(),
             update_date: naive_datetime(),
@@ -265,7 +272,7 @@ mod tests {
 
     fn status(id: i32, title: &str) -> RequirementStatus {
         RequirementStatus {
-            id: id,
+            id,
             title: title.into(),
             description: format!("{title} description"),
             tag: title.chars().take(3).collect(),
@@ -316,6 +323,9 @@ mod tests {
             .insert(2, make_requirement(2, 1, 2, 1, 11));
         repo.requirements
             .insert(3, make_requirement(3, 1, 2, 2, 10));
+        repo.requirement_verification_methods.push((1, 1));
+        repo.requirement_verification_methods.push((2, 5));
+        repo.requirement_verification_methods.push((3, 2));
 
         let state = state_with_repo(repo);
         let service = RequirementAnalyticsService::new(&state);
@@ -337,5 +347,181 @@ mod tests {
             .metrics(1, None, None, Some(10), None)
             .expect("category filtered metrics");
         assert_eq!(category_filtered.total, 2);
+    }
+
+    /// Verification filter uses the junction table: a requirement linked to multiple
+    /// verification methods is counted when filtering by any of those methods.
+    #[test]
+    fn metrics_verification_filter_counts_requirement_with_multiple_verification_methods() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(1, status(1, "Draft"));
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        repo.requirements
+            .insert(1, make_requirement(1, 1, 2, 1, 10)); // Accepted
+        repo.requirements
+            .insert(2, make_requirement(2, 1, 2, 1, 10)); // Accepted
+                                                          // Req 1 has both verification 1 and 2; Req 2 has only verification 1
+        repo.requirement_verification_methods.push((1, 1));
+        repo.requirement_verification_methods.push((1, 2));
+        repo.requirement_verification_methods.push((2, 1));
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let by_verification_1 = service
+            .metrics(1, None, Some(1), None, None)
+            .expect("filter by verification 1");
+        assert_eq!(by_verification_1.total, 2, "both reqs have verification 1");
+
+        let by_verification_2 = service
+            .metrics(1, None, Some(2), None, None)
+            .expect("filter by verification 2");
+        assert_eq!(by_verification_2.total, 1, "only req 1 has verification 2");
+    }
+
+    #[test]
+    fn metrics_returns_zero_for_empty_project() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service.metrics(999, None, None, None, None).unwrap();
+        assert_eq!(metrics.total, 0);
+        assert_eq!(metrics.draft, 0);
+        assert_eq!(metrics.accepted, 0);
+        assert_eq!(metrics.rejected, 0);
+        assert_eq!(metrics.coverage_verified, 0);
+        assert_eq!(metrics.coverage_percent, 0);
+    }
+
+    #[test]
+    fn metrics_computes_coverage_percent_correctly() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(1, status(1, "Draft"));
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        // 3 accepted out of 10 total = 30%
+        for i in 1..=3 {
+            repo.requirements
+                .insert(i, make_requirement(i, 1, 2, 1, 10)); // Accepted
+        }
+        for i in 4..=10 {
+            repo.requirements
+                .insert(i, make_requirement(i, 1, 1, 1, 10)); // Draft
+        }
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service.metrics(1, None, None, None, None).unwrap();
+        assert_eq!(metrics.total, 10);
+        assert_eq!(metrics.accepted, 3);
+        assert_eq!(metrics.coverage_verified, 3);
+        assert_eq!(metrics.coverage_percent, 30);
+    }
+
+    #[test]
+    fn metrics_handles_100_percent_coverage() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        for i in 1..=5 {
+            repo.requirements
+                .insert(i, make_requirement(i, 1, 2, 1, 10)); // All Accepted
+        }
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service.metrics(1, None, None, None, None).unwrap();
+        assert_eq!(metrics.total, 5);
+        assert_eq!(metrics.accepted, 5);
+        assert_eq!(metrics.coverage_percent, 100);
+    }
+
+    #[test]
+    fn metrics_handles_unknown_status() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(1, status(1, "Draft"));
+        // Requirement with status_id that doesn't exist in statuses
+        repo.requirements
+            .insert(1, make_requirement(1, 1, 999, 1, 10));
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service.metrics(1, None, None, None, None).unwrap();
+        assert_eq!(metrics.total, 1);
+        // Unknown status should not be counted in draft/accepted/rejected
+        assert_eq!(metrics.draft, 0);
+        assert_eq!(metrics.accepted, 0);
+        assert_eq!(metrics.rejected, 0);
+    }
+
+    #[test]
+    fn metrics_applies_multiple_filters() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        // Only this one matches all filters
+        repo.requirements
+            .insert(1, make_requirement(1, 1, 2, 5, 10)); // status=2, verification=5, category=10
+        repo.requirements
+            .insert(2, make_requirement(2, 1, 2, 5, 11)); // status=2, verification=5, category=11 (wrong)
+        repo.requirements
+            .insert(3, make_requirement(3, 1, 2, 6, 10)); // status=2, verification=6 (wrong), category=10
+        repo.requirement_verification_methods.push((1, 5));
+        repo.requirement_verification_methods.push((2, 5));
+        repo.requirement_verification_methods.push((3, 6));
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service
+            .metrics(1, Some(2), Some(5), Some(10), None)
+            .unwrap();
+        assert_eq!(metrics.total, 1);
+        assert_eq!(metrics.accepted, 1);
+    }
+
+    #[test]
+    fn metrics_applies_applicability_filter() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        let mut req1 = make_requirement(1, 1, 2, 1, 10);
+        req1.applicability_id = 20;
+        let mut req2 = make_requirement(2, 1, 2, 1, 10);
+        req2.applicability_id = 21;
+
+        repo.requirements.insert(1, req1);
+        repo.requirements.insert(2, req2);
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics = service.metrics(1, None, None, None, Some(20)).unwrap();
+        assert_eq!(metrics.total, 1);
+    }
+
+    #[test]
+    fn metrics_handles_different_projects() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(2, status(2, "Accepted"));
+
+        repo.requirements
+            .insert(1, make_requirement(1, 1, 2, 1, 10)); // Project 1
+        repo.requirements
+            .insert(2, make_requirement(2, 2, 2, 1, 10)); // Project 2
+
+        let state = state_with_repo(repo);
+        let service = RequirementAnalyticsService::new(&state);
+
+        let metrics1 = service.metrics(1, None, None, None, None).unwrap();
+        assert_eq!(metrics1.total, 1);
+
+        let metrics2 = service.metrics(2, None, None, None, None).unwrap();
+        assert_eq!(metrics2.total, 1);
     }
 }

@@ -1,0 +1,29 @@
+{{!--
+Depends on: css/pages/verification.css, js/pages/verification.js
+Dynamic classes: reqman-list-page__row[hidden]
+--}}
+{{#*inline "page"}}
+<section class="reqman-list-page reqman-verification-page">
+  <div class="reqman-list-page__header">
+    <h1 class="reqman-list-page__title">Verification methods</h1>
+    <a href="/p/{{selected_project_id}}/verification/new" class="btn btn-primary">New Verification Method</a>
+  </div>
+
+  <div class="reqman-list-page__toolbar">
+    <label for="verification-search-input" class="u-sr-only">Search verification methods</label>
+    <input id="verification-search-input" type="search" class="form-control reqman-list-page__search c-form-control"
+      placeholder="Search by title, tag, or description" autocomplete="off">
+  </div>
+
+  <div class="reqman-list-page__list" id="verification-list">
+    {{#each verifications}}
+    {{> verification/verification_item}}
+    {{else}}
+    <p class="reqman-list-page__empty" id="verification-empty-state">No verification methods yet.</p>
+    {{/each}}
+  </div>
+  <p class="reqman-list-page__empty" id="verification-empty-filter" hidden>No verification methods match your search.
+  </p>
+</section>
+{{/inline}}
+{{> layout page_id="verification"}}

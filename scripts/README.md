@@ -15,7 +15,7 @@ This directory contains utility scripts for managing the ReqMan application data
 - Waits for PostgreSQL to be ready to accept connections (up to 30 retries)
 - Creates the `reqman` database if it doesn't exist
 - Cleans existing tables (drops all ReqMan-related tables)
-- Initializes the database with complete schema and sample data from `init_complete.sql`
+- Initializes the database with complete schema and sample data from `scripts/init_complete.sql`
 - Verifies the setup by showing:
   - Created tables
   - Sample users (all with password: 'password')
@@ -31,7 +31,7 @@ This directory contains utility scripts for managing the ReqMan application data
 **Prerequisites**:
 - Docker must be running
 - Database service must be started: `docker compose up -d`
-- `init_complete.sql` file must exist in the project root (or set `INIT_SQL` environment variable)
+- `scripts/init_complete.sql` must exist (or set `INIT_SQL` to a custom SQL file)
 
 #### 👥 Pre-configured Users
 

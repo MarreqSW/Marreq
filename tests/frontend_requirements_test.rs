@@ -151,7 +151,6 @@ mod test_support {
             id: id,
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
-            verification_method_id: 1,
             status_id: 1,
             author_id: 1,
             reviewer_id: 1,
@@ -336,7 +335,7 @@ async fn new_requirement_form_has_required_fields() {
         "Missing category field"
     );
     assert!(
-        html.contains("name=\"verification_method_id\""),
+        html.contains("name=\"verification_method_ids\""),
         "Missing verification field"
     );
     assert!(html.contains("name=\"status_id\""), "Missing status field");
@@ -435,7 +434,7 @@ async fn create_requirement_redirects_to_detail_page() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "title=New+Req&description=Body&verification_method_id=1&\
+            "title=New+Req&description=Body&verification_method_ids=1&\
                status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
                applicability_id=1&reference_code=&justification=",
         )
@@ -462,7 +461,7 @@ async fn create_requirement_with_add_another_redirects_to_form() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "title=Test&description=Body&verification_method_id=1&\
+            "title=Test&description=Body&verification_method_ids=1&\
                status_id=1&reviewer_id=1&category_id=1&parent_id=0&\
                applicability_id=1&reference_code=&justification=&intent=add_another",
         )
@@ -495,7 +494,7 @@ async fn edit_requirement_redirects_to_detail_page() {
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
-            "id=1&title=Updated&description=Body&verification_method_id=1&\
+            "id=1&title=Updated&description=Body&verification_method_ids=1&\
                status_id=1&author_id=1&reviewer_id=1&category_id=1&\
                parent_id=0&applicability_id=1&justification=&project_id=1&\
                reference_code=REQ-SYS-001",

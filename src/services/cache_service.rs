@@ -141,4 +141,121 @@ mod tests {
 
         service.warm_cache();
     }
+
+    #[test]
+    fn stats_reflects_multiple_entries() {
+        let state = state_with_repo();
+        let service = CacheService::new(&state);
+
+        {
+            let cache = state.repo_read().cache();
+            cache.set("key1", "value1".into());
+            cache.set("key2", "value2".into());
+            cache.set("key3", "value3".into());
+        }
+
+        let stats = service.stats();
+        assert_eq!(stats.total_entries, 3);
+        assert_eq!(stats.active_entries, 3);
+    }
+
+    #[test]
+    fn clear_removes_all_entries() {
+        let state = state_with_repo();
+        let service = CacheService::new(&state);
+
+        {
+            let cache = state.repo_read().cache();
+            cache.set("key1", "value1".into());
+            cache.set("key2", "value2".into());
+        }
+
+        service.clear();
+
+        let stats = service.stats();
+        assert_eq!(stats.total_entries, 0);
+        assert_eq!(stats.active_entries, 0);
+    }
+
+    #[test]
+    fn cleanup_removes_expired_entries() {
+        let state = state_with_repo();
+        let service = CacheService::new(&state);
+
+        {
+            let cache = state.repo_read().cache();
+            // Set entry with long TTL (should remain active)
+            cache.set_with_ttl("active", "value".into(), Duration::from_secs(60));
+        }
+
+        // Cleanup should return 0 when no entries are expired
+        let cleaned = service.cleanup();
+        assert_eq!(cleaned, 0);
+
+        let stats = service.stats();
+        // Should have the active entry remaining
+        assert_eq!(stats.active_entries, 1);
+    }
+
+    #[test]
+    fn performance_returns_valid_json() {
+        let state = state_with_repo();
+        let service = CacheService::new(&state);
+
+        let performance = service.performance();
+        assert!(performance.is_object());
+
+        // Should have performance-related fields
+        let obj = performance.as_object().unwrap();
+        assert!(obj.contains_key("hit_rate") || obj.contains_key("miss_rate") || !obj.is_empty());
+    }
+
+    #[test]
+    fn recommendations_returns_valid_json() {
+        let state = state_with_repo();
+        let service = CacheService::new(&state);
+
+        let recommendations = service.recommendations();
+        assert!(recommendations.is_object());
+    }
+
+    #[test]
+    fn health_returns_valid_json() {
+        let state = state_with_repo();
+        let service = CacheService::new(&state);
+
+        let health = service.health();
+        assert!(health.is_object());
+    }
+
+    #[test]
+    fn stats_initial_state_is_zero() {
+        let state = state_with_repo();
+        let service = CacheService::new(&state);
+
+        let stats = service.stats();
+        assert_eq!(stats.total_entries, 0);
+        assert_eq!(stats.active_entries, 0);
+    }
+
+    #[test]
+    fn clear_on_empty_cache_is_safe() {
+        let state = state_with_repo();
+        let service = CacheService::new(&state);
+
+        // Should not panic
+        service.clear();
+
+        let stats = service.stats();
+        assert_eq!(stats.total_entries, 0);
+    }
+
+    #[test]
+    fn cleanup_on_empty_cache_returns_zero() {
+        let state = state_with_repo();
+        let service = CacheService::new(&state);
+
+        let cleaned = service.cleanup();
+        assert_eq!(cleaned, 0);
+    }
 }

@@ -1,9 +1,12 @@
-use crate::models::{NewApplicability, NewCategory, NewRequirement, NewTestCase};
+use crate::models::{
+    NewApplicability, NewCategory, NewRequirement, NewTestCase, NewVerificationMethod,
+};
 use crate::repository::{
     DieselRepo, LookupRepository, RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use anyhow::{anyhow, Result};
 use calamine::{open_workbook, DataType, Reader, Xlsx};
+use csv::ReaderBuilder;
 use diesel::{Connection, PgConnection};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -35,6 +38,9 @@ pub struct ImportResult {
     pub message: String,
     pub imported_count: usize,
     pub errors: Vec<String>,
+    /// IDs of imported requirements (for semantic search indexing)
+    #[serde(default)]
+    pub imported_requirement_ids: Vec<i32>,
 }
 
 pub struct ExcelImporter {
@@ -45,7 +51,18 @@ pub struct ExcelImporter {
 
 impl ExcelImporter {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let mut workbook: Xlsx<_> = open_workbook(path)?;
+        let path_ref = path.as_ref();
+        let extension = path_ref
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+
+        if extension == "csv" {
+            return Self::from_csv(path_ref);
+        }
+
+        let mut workbook: Xlsx<_> = open_workbook(path_ref)?;
 
         // Get the first sheet
         let sheet_name = workbook.sheet_names()[0].clone();
@@ -78,7 +95,7 @@ impl ExcelImporter {
             // Store sample values from first few rows
             if data.len() < 3 {
                 for (i, cell) in row.iter().enumerate() {
-                    if i < columns.len() && data.len() == 0 {
+                    if i < columns.len() && data.is_empty() {
                         columns[i].sample_value = cell.to_string();
                     }
                 }
@@ -111,6 +128,60 @@ impl ExcelImporter {
         })
     }
 
+    fn from_csv(path: &Path) -> Result<Self> {
+        let mut reader = ReaderBuilder::new().flexible(true).from_path(path)?;
+        let headers = reader.headers()?.clone();
+
+        let mut columns = headers
+            .iter()
+            .enumerate()
+            .map(|(index, name)| ExcelColumn {
+                index,
+                name: name.to_string(),
+                sample_value: String::new(),
+            })
+            .collect::<Vec<_>>();
+
+        let mut data = Vec::new();
+
+        for result in reader.records() {
+            let record = result?;
+            if record.iter().all(|cell| cell.trim().is_empty()) {
+                continue;
+            }
+
+            if data.is_empty() {
+                for (i, cell) in record.iter().enumerate() {
+                    if i < columns.len() {
+                        columns[i].sample_value = cell.to_string();
+                    }
+                }
+            }
+
+            data.push(record.iter().map(|cell| cell.to_string()).collect());
+        }
+
+        let import_type = if columns
+            .iter()
+            .any(|col| col.name.to_lowercase().contains("req"))
+        {
+            "requirements".to_string()
+        } else if columns
+            .iter()
+            .any(|col| col.name.to_lowercase().contains("test"))
+        {
+            "tests".to_string()
+        } else {
+            "requirements".to_string()
+        };
+
+        Ok(ExcelImporter {
+            columns,
+            data,
+            import_type,
+        })
+    }
+
     pub fn get_available_fields(&self) -> Vec<String> {
         match self.import_type.as_str() {
             "requirements" => vec![
@@ -127,6 +198,7 @@ impl ExcelImporter {
                 "justification".to_string(),
             ],
             "tests" => vec![
+                "reference_code".to_string(),
                 "name".to_string(),
                 "description".to_string(),
                 "status_id".to_string(),
@@ -144,6 +216,7 @@ impl ExcelImporter {
     ) -> Result<ImportResult> {
         let mut imported_count = 0;
         let mut errors = Vec::new();
+        let mut imported_requirement_ids = Vec::new();
 
         // Start transaction
         conn.transaction(|conn| {
@@ -155,17 +228,19 @@ impl ExcelImporter {
                         config.project_id,
                         conn,
                     ),
-                    "tests" => self.import_test_row(
-                        row_data,
-                        &config.column_mappings,
-                        config.project_id,
-                        conn,
-                    ),
+                    "tests" => self
+                        .import_test_row(row_data, &config.column_mappings, config.project_id, conn)
+                        .map(|_| None), // Tests don't need indexing
                     _ => Err(anyhow!("Unknown import type: {}", config.import_type)),
                 };
 
                 match result {
-                    Ok(_) => imported_count += 1,
+                    Ok(opt_id) => {
+                        imported_count += 1;
+                        if let Some(id) = opt_id {
+                            imported_requirement_ids.push(id);
+                        }
+                    }
                     Err(e) => {
                         errors.push(format!("Row {}: {}", row_index + 2, e));
                         // Continue processing other rows
@@ -189,6 +264,7 @@ impl ExcelImporter {
             },
             imported_count,
             errors,
+            imported_requirement_ids,
         })
     }
 
@@ -198,7 +274,7 @@ impl ExcelImporter {
         mappings: &[ColumnMapping],
         project_id: i32,
         conn: &mut PgConnection,
-    ) -> Result<()> {
+    ) -> Result<Option<i32>> {
         let mut req_data = HashMap::new();
 
         // Map Excel columns to requirement fields
@@ -228,10 +304,17 @@ impl ExcelImporter {
         };
 
         let status_id = if let Some(status_name) = req_data.get("status_id") {
-            self.resolve_requirement_status_id(status_name, conn)?
+            self.resolve_requirement_status_id(status_name, project_id)?
         } else {
             1 // Default status
         };
+
+        let verification_method_id =
+            if let Some(verification_name) = req_data.get("verification_method_id") {
+                self.resolve_verification_id(verification_name, project_id)?
+            } else {
+                1 // Default verification
+            };
 
         let author_id = if let Some(author_name) = req_data.get("author_id") {
             self.resolve_user_id(author_name, project_id, conn)?
@@ -256,7 +339,6 @@ impl ExcelImporter {
             None
         };
 
-        // Create new requirement
         let new_req = NewRequirement {
             id: None,
             title: req_data
@@ -271,21 +353,23 @@ impl ExcelImporter {
                 .get("reference_code")
                 .unwrap_or(&"".to_string())
                 .clone(),
-            category_id: category_id,
-            applicability_id: applicability_id,
-            status_id: status_id,
-            verification_method_id: 1, // Default verification
-            author_id: author_id,
-            reviewer_id: reviewer_id,
-            parent_id: parent_id,
+            category_id,
+            applicability_id,
+            status_id,
+            author_id,
+            reviewer_id,
+            parent_id,
             justification: req_data.get("justification").cloned(),
             project_id,
         };
 
-        DieselRepo::new()
+        let mut repo = DieselRepo::new();
+        let id = repo
             .insert_new_requirement(&new_req)
             .map_err(|e| anyhow!("{}", e))?;
-        Ok(())
+        repo.set_requirement_verification_methods(id, &[verification_method_id])
+            .map_err(|e| anyhow!("{}", e))?;
+        Ok(Some(id))
     }
 
     fn import_test_row(
@@ -312,7 +396,7 @@ impl ExcelImporter {
 
         // Resolve foreign key references
         let status_id = if let Some(status_name) = test_data.get("status_id") {
-            self.resolve_test_status_id(status_name, conn)?
+            self.resolve_test_status_id(status_name, project_id)?
         } else {
             1 // Default status
         };
@@ -344,8 +428,8 @@ impl ExcelImporter {
                 .get("reference_code")
                 .unwrap_or(&format!("TEST-{}", chrono::Utc::now().timestamp()))
                 .clone(),
-            status_id: status_id,
-            parent_id: parent_id,
+            status_id,
+            parent_id,
             project_id,
         };
 
@@ -404,36 +488,73 @@ impl ExcelImporter {
             .map_err(|e| anyhow!("{}", e))
     }
 
-    fn resolve_requirement_status_id(
-        &self,
-        status_name: &str,
-        _conn: &mut PgConnection,
-    ) -> Result<i32> {
+    fn resolve_requirement_status_id(&self, status_name: &str, project_id: i32) -> Result<i32> {
         let repo = DieselRepo::new();
         let statuses = repo
             .get_requirement_status_all()
             .map_err(|e| anyhow!("{}", e))?;
-        for status in statuses {
-            if status.title == status_name {
-                return Ok(status.id);
-            }
+
+        // Prefer matching within the selected project first.
+        if let Some(status) = statuses
+            .iter()
+            .find(|status| status.project_id == project_id && status.title == status_name)
+        {
+            return Ok(status.id);
         }
 
-        // Return default status ID if not found
+        // Fallback: allow matching across projects (legacy behavior).
+        if let Some(status) = statuses.iter().find(|status| status.title == status_name) {
+            return Ok(status.id);
+        }
+
+        // Return default status ID if not found (legacy behavior).
         Ok(1)
     }
 
-    fn resolve_test_status_id(&self, status_name: &str, _conn: &mut PgConnection) -> Result<i32> {
+    fn resolve_test_status_id(&self, status_name: &str, project_id: i32) -> Result<i32> {
         let repo = DieselRepo::new();
         let statuses = repo.get_test_status_all().map_err(|e| anyhow!("{}", e))?;
-        for status in statuses {
-            if status.title == status_name {
-                return Ok(status.id);
-            }
+
+        // Prefer matching within the selected project first.
+        if let Some(status) = statuses
+            .iter()
+            .find(|status| status.project_id == project_id && status.title == status_name)
+        {
+            return Ok(status.id);
         }
 
-        // Return default status ID if not found
+        // Fallback: allow matching across projects (legacy behavior).
+        if let Some(status) = statuses.iter().find(|status| status.title == status_name) {
+            return Ok(status.id);
+        }
+
+        // Return default status ID if not found (legacy behavior).
         Ok(1)
+    }
+
+    fn resolve_verification_id(&self, verification_name: &str, project_id: i32) -> Result<i32> {
+        let repo = DieselRepo::new();
+
+        // Prefer matching within the selected project first.
+        let methods = repo
+            .get_verification_by_project(project_id)
+            .map_err(|e| anyhow!("{}", e))?;
+        if let Some(method) = methods.iter().find(|m| m.title == verification_name) {
+            return Ok(method.id);
+        }
+
+        // Create a new verification method in the project if not found.
+        let new_verification = NewVerificationMethod {
+            id: None,
+            title: verification_name.to_string(),
+            description: format!("Imported verification method: {}", verification_name),
+            tag: verification_name.to_uppercase().replace(" ", "_"),
+            project_id,
+        };
+
+        DieselRepo::new()
+            .insert_new_verification(&new_verification)
+            .map_err(|e| anyhow!("{}", e))
     }
 
     fn resolve_user_id(

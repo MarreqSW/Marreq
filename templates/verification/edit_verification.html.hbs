@@ -1,0 +1,46 @@
+{{!-- Depends on: css/index.css, js/app.js --}}
+{{#*inline "page"}}
+<div class="mb-4">
+  <h1>Edit Verification Method</h1>
+  <p class="text-secondary">Update verification method details</p>
+</div>
+
+<section id="Verification">
+  <div class="card c-card">
+    <div class="card-header c-card__header">
+      <h3>Verification Method Details</h3>
+    </div>
+    <div class="card-body c-card__body">
+      <form method="post">
+        <div class="form-group c-form-group">
+          <label for="title" class="form-label c-form-label">Title</label>
+          <input type="text" name="title" id="title" value="{{verification.title}}" class="form-control c-form-control"
+            required>
+        </div>
+
+        <div class="form-group c-form-group">
+          <label for="description" class="form-label c-form-label">Description</label>
+          <textarea name="description" id="description" class="form-control c-form-control c-form-control--textarea"
+            rows="4" required>{{verification.description}}</textarea>
+        </div>
+
+        <div class="form-group c-form-group">
+          <label for="tag" class="form-label c-form-label">Tag</label>
+          <input type="text" name="tag" id="tag" value="{{verification.tag}}" class="form-control c-form-control"
+            placeholder="e.g., ANALYSIS, TEST, REVIEW" required>
+          <small class="text-secondary">A short identifier for the verification method</small>
+        </div>
+
+        <input type="hidden" id="id" name="id" value="{{verification.id}}">
+        <input type="hidden" id="project_id" name="project_id" value="{{verification.project_id}}">
+
+        <div class="mt-4">
+          <button type="submit" class="btn btn-primary">Update Verification Method</button>
+          <a href="/p/{{verification.project_id}}/verification" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+{{/inline}}
+{{> layout page_id="edit_verification"}}

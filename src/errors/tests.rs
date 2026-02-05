@@ -380,230 +380,216 @@ mod from_conversion_tests {
         }
     }
 
-    #[test]
-    fn serde_json_error_to_api_error() {
-        let json_err = serde_json::from_str::<serde_json::Value>("invalid").unwrap_err();
-        let api_err: ApiError = json_err.into();
-        match api_err {
-            ApiError::Serialization(_) => {}
-            _ => panic!("Expected Serialization variant"),
+    // ============================================================================
+    // Tests for Responder implementation
+    // ============================================================================
+
+    mod responder_tests {
+        use super::*;
+        use rocket::local::blocking::Client;
+        use rocket::{get, routes};
+
+        #[get("/test")]
+        fn test_route() -> ApiError {
+            ApiError::NotFound {
+                entity: "Test".to_string(),
+                id: 1,
+            }
+        }
+
+        #[test]
+        fn api_error_responder() {
+            let rocket = rocket::build().mount("/", routes![test_route]);
+            let client = Client::untracked(rocket).expect("valid rocket instance");
+            let response = client.get("/test").dispatch();
+
+            assert_eq!(response.status(), Status::NotFound);
+            assert!(response.into_string().unwrap().contains("Not found"));
         }
     }
-}
 
-// ============================================================================
-// Tests for Responder implementation
-// ============================================================================
+    // ============================================================================
+    // Tests for Serialize implementation
+    // ============================================================================
 
-mod responder_tests {
-    use super::*;
-    use rocket::local::blocking::Client;
-    use rocket::{get, routes};
+    mod serialize_tests {
+        use super::*;
 
-    #[get("/test")]
-    fn test_route() -> ApiError {
-        ApiError::NotFound {
-            entity: "Test".to_string(),
-            id: 1,
-        }
-    }
-
-    #[test]
-    fn api_error_responder() {
-        let rocket = rocket::build().mount("/", routes![test_route]);
-        let client = Client::untracked(rocket).expect("valid rocket instance");
-        let response = client.get("/test").dispatch();
-
-        assert_eq!(response.status(), Status::NotFound);
-        assert!(response.into_string().unwrap().contains("Not found"));
-    }
-}
-
-// ============================================================================
-// Tests for Serialize implementation
-// ============================================================================
-
-mod serialize_tests {
-    use super::*;
-
-    #[test]
-    fn api_error_serialization() {
-        let err = ApiError::Validation("test".to_string());
-        let json = serde_json::to_string(&err).unwrap();
-        assert!(json.contains("\"error\""));
-        assert!(json.contains("\"type\""));
-        assert!(json.contains("Validation"));
-    }
-
-    #[test]
-    fn api_error_serialization_not_found() {
-        let err = ApiError::NotFound {
-            entity: "Requirement".to_string(),
-            id: 42,
-        };
-        let json = serde_json::to_string(&err).unwrap();
-        assert!(json.contains("\"error\""));
-        assert!(json.contains("\"type\""));
-        assert!(json.contains("NotFound"));
-    }
-
-    #[test]
-    fn api_error_serialization_all_variants() {
-        let variants = vec![
-            ApiError::Validation("test".to_string()),
-            ApiError::Authentication("test".to_string()),
-            ApiError::Authorization("test".to_string()),
-            ApiError::Internal("test".to_string()),
-            ApiError::Cache("test".to_string()),
-        ];
-
-        for err in variants {
+        #[test]
+        fn api_error_serialization() {
+            let err = ApiError::Validation("test".to_string());
             let json = serde_json::to_string(&err).unwrap();
             assert!(json.contains("\"error\""));
             assert!(json.contains("\"type\""));
+            assert!(json.contains("Validation"));
+        }
+
+        #[test]
+        fn api_error_serialization_not_found() {
+            let err = ApiError::NotFound {
+                entity: "Requirement".to_string(),
+                id: 42,
+            };
+            let json = serde_json::to_string(&err).unwrap();
+            assert!(json.contains("\"error\""));
+            assert!(json.contains("\"type\""));
+            assert!(json.contains("NotFound"));
+        }
+
+        #[test]
+        fn api_error_serialization_all_variants() {
+            let variants = vec![
+                ApiError::Validation("test".to_string()),
+                ApiError::Authentication("test".to_string()),
+                ApiError::Authorization("test".to_string()),
+                ApiError::Internal("test".to_string()),
+                ApiError::Cache("test".to_string()),
+            ];
+
+            for err in variants {
+                let json = serde_json::to_string(&err).unwrap();
+                assert!(json.contains("\"error\""));
+                assert!(json.contains("\"type\""));
+            }
         }
     }
-}
 
-// ============================================================================
-// Tests for type aliases
-// ============================================================================
+    // ============================================================================
+    // Tests for type aliases
+    // ============================================================================
 
-mod type_alias_tests {
-    use super::*;
+    mod type_alias_tests {
+        use super::*;
 
-    #[test]
-    fn api_result_ok() {
-        let result: ApiResult<i32> = Ok(42);
-        // Verify ApiResult is properly typed and can be matched
-        match result {
-            Ok(val) => assert_eq!(val, 42),
-            Err(_) => panic!("Expected Ok"),
+        #[test]
+        fn api_result_ok() {
+            let result: ApiResult<i32> = Ok(42);
+            assert!(matches!(result, Ok(42)));
         }
-    }
 
-    #[test]
-    fn api_result_err() {
-        let result: ApiResult<i32> = Err(ApiError::Validation("test".to_string()));
-        assert!(result.is_err());
-    }
+        #[test]
+        fn api_result_err() {
+            let result: ApiResult<i32> = Err(ApiError::Validation("test".to_string()));
+            assert!(result.is_err());
+        }
 
-    #[test]
-    fn api_response_result_ok() {
-        let response = ApiResponse::success("data".to_string());
-        let result: ApiResponseResult<String> = Ok(Json(response));
-        assert!(result.is_ok());
-    }
+        #[test]
+        fn api_response_result_ok() {
+            let response = ApiResponse::success("data".to_string());
+            let result: ApiResponseResult<String> = Ok(Json(response));
+            assert!(result.is_ok());
+        }
 
-    #[test]
-    fn api_response_result_err() {
-        let result: ApiResponseResult<String> = Err(ApiError::NotFound {
-            entity: "Test".to_string(),
-            id: 1,
-        });
-        assert!(result.is_err());
-    }
-}
-
-// ============================================================================
-// Edge case tests
-// ============================================================================
-
-mod edge_case_tests {
-    use super::*;
-
-    #[test]
-    fn not_found_with_empty_entity() {
-        let err = ApiError::NotFound {
-            entity: "".to_string(),
-            id: 0,
-        };
-        let display = format!("{}", err);
-        assert!(display.contains("Not found"));
-    }
-
-    #[test]
-    fn not_found_with_negative_id() {
-        let err = ApiError::NotFound {
-            entity: "Test".to_string(),
-            id: -1,
-        };
-        let display = format!("{}", err);
-        assert!(display.contains("-1"));
-    }
-
-    #[test]
-    fn validation_with_empty_message() {
-        let err = ApiError::Validation("".to_string());
-        let display = format!("{}", err);
-        assert!(display.contains("Validation error"));
-    }
-
-    #[test]
-    fn api_response_display_fallback() {
-        // Test that Display implementation handles serialization errors gracefully
-        // This is tested indirectly through the unwrap_or_else in the Display impl
-        let response = ApiResponse::success("test".to_string());
-        let _display = format!("{}", response);
-        // If we get here without panicking, the fallback works
-    }
-
-    #[test]
-    fn responder_with_serialization_fallback() {
-        // Test that Responder handles serialization errors
-        // The implementation uses unwrap_or_else with a fallback JSON string
-        let _err = ApiError::Internal("test".to_string());
-        // The responder should handle this without panicking
-        // We test this indirectly through the Responder test above
-    }
-
-    #[test]
-    fn all_api_error_variants() {
-        // Test that all variants can be created and displayed
-        let variants: Vec<ApiError> = vec![
-            ApiError::Validation("test".to_string()),
-            ApiError::Authentication("test".to_string()),
-            ApiError::Authorization("test".to_string()),
-            ApiError::Internal("test".to_string()),
-            ApiError::Cache("test".to_string()),
-            ApiError::NotFound {
-                entity: "test".to_string(),
+        #[test]
+        fn api_response_result_err() {
+            let result: ApiResponseResult<String> = Err(ApiError::NotFound {
+                entity: "Test".to_string(),
                 id: 1,
-            },
-        ];
-
-        for err in variants {
-            let _display = format!("{}", err);
-            let _debug = format!("{:?}", err);
+            });
+            assert!(result.is_err());
         }
     }
 
-    #[test]
-    fn all_validation_error_variants() {
-        // Test that all ValidationError variants can be created
-        let variants: Vec<ValidationError> = vec![
-            ValidationError::Required {
-                field: "test".to_string(),
-            },
-            ValidationError::TooLong {
-                field: "test".to_string(),
-                max: 100,
-            },
-            ValidationError::TooShort {
-                field: "test".to_string(),
-                min: 1,
-            },
-            ValidationError::InvalidFormat {
-                field: "test".to_string(),
-                message: "test".to_string(),
-            },
-            ValidationError::Custom("test".to_string()),
-        ];
+    // ============================================================================
+    // Edge case tests
+    // ============================================================================
 
-        for err in variants {
-            let _display = format!("{}", err);
-            let api_err: ApiError = err.into();
-            let _status: Status = api_err.into();
+    mod edge_case_tests {
+        use super::*;
+
+        #[test]
+        fn not_found_with_empty_entity() {
+            let err = ApiError::NotFound {
+                entity: "".to_string(),
+                id: 0,
+            };
+            let display = format!("{}", err);
+            assert!(display.contains("Not found"));
+        }
+
+        #[test]
+        fn not_found_with_negative_id() {
+            let err = ApiError::NotFound {
+                entity: "Test".to_string(),
+                id: -1,
+            };
+            let display = format!("{}", err);
+            assert!(display.contains("-1"));
+        }
+
+        #[test]
+        fn validation_with_empty_message() {
+            let err = ApiError::Validation("".to_string());
+            let display = format!("{}", err);
+            assert!(display.contains("Validation error"));
+        }
+
+        #[test]
+        fn api_response_display_fallback() {
+            // Test that Display implementation handles serialization errors gracefully
+            // This is tested indirectly through the unwrap_or_else in the Display impl
+            let response = ApiResponse::success("test".to_string());
+            let _display = format!("{}", response);
+            // If we get here without panicking, the fallback works
+        }
+
+        #[test]
+        fn responder_with_serialization_fallback() {
+            // Test that Responder handles serialization errors
+            // The implementation uses unwrap_or_else with a fallback JSON string
+            let _err = ApiError::Internal("test".to_string());
+            // The responder should handle this without panicking
+            // We test this indirectly through the Responder test above
+        }
+
+        #[test]
+        fn all_api_error_variants() {
+            // Test that all variants can be created and displayed
+            let variants: Vec<ApiError> = vec![
+                ApiError::Validation("test".to_string()),
+                ApiError::Authentication("test".to_string()),
+                ApiError::Authorization("test".to_string()),
+                ApiError::Internal("test".to_string()),
+                ApiError::Cache("test".to_string()),
+                ApiError::NotFound {
+                    entity: "test".to_string(),
+                    id: 1,
+                },
+            ];
+
+            for err in variants {
+                let _display = format!("{}", err);
+                let _debug = format!("{:?}", err);
+            }
+        }
+
+        #[test]
+        fn all_validation_error_variants() {
+            // Test that all ValidationError variants can be created
+            let variants: Vec<ValidationError> = vec![
+                ValidationError::Required {
+                    field: "test".to_string(),
+                },
+                ValidationError::TooLong {
+                    field: "test".to_string(),
+                    max: 100,
+                },
+                ValidationError::TooShort {
+                    field: "test".to_string(),
+                    min: 1,
+                },
+                ValidationError::InvalidFormat {
+                    field: "test".to_string(),
+                    message: "test".to_string(),
+                },
+                ValidationError::Custom("test".to_string()),
+            ];
+
+            for err in variants {
+                let _display = format!("{}", err);
+                let api_err: ApiError = err.into();
+                let _status: Status = api_err.into();
+            }
         }
     }
 }

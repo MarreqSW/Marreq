@@ -1339,6 +1339,7 @@ mod tests {
     fn test_get_or_fetch_with_serialization_error_handling() {
         // Test that if serialization fails, we still return the value
         let repo = CacheRepository::new(populated_repo(), 60);
+        let _cache = repo.cache();
 
         // Insert a value that will fail to serialize (this is hard to test without custom types)
         // But we can test the error path by ensuring fetch errors are propagated

@@ -63,7 +63,7 @@ export function initProjectSelector() {
     .some((cookie) => cookie.startsWith(`${COOKIE_NAME}=`));
 
   if (!hasCookie) {
-    const firstOption = selector.querySelector('option[value]');
+    const firstOption = Array.from(selector.options).find((o) => o.value);
     if (firstOption) {
       selector.value = firstOption.value;
       setCookie(COOKIE_NAME, firstOption.value);

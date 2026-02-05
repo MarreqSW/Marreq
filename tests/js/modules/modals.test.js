@@ -203,7 +203,6 @@ describe('Modals', () => {
       <form id="form"></form>
     `;
 
-    const modalInstance = window.bootstrap.Modal.mock.results[0].value;
     bindModalForm({
       triggerSelector: '#trigger',
       modalSelector: '#modal',
@@ -212,6 +211,7 @@ describe('Modals', () => {
       successMessage: 'Custom success',
     });
 
+    const modalInstance = window.bootstrap.Modal.mock.results[0].value;
     const form = document.getElementById('form');
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
 

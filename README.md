@@ -1,5 +1,7 @@
 # Requirement Manager (ReqMan)
 
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/972f03dc70864d4e807afd7d2adcd1b0)](https://app.codacy.com?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
+
 A comprehensive web-based requirements and test management system built with Rust, Rocket, and PostgreSQL. This software provides a complete solution for managing hierarchical requirements, tests, traceability matrices, and generating reports.
 
 ## ✨ Features

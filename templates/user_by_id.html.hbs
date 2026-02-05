@@ -19,6 +19,12 @@
             <div class="user-details-actions c-user-details__actions">
                 <a href="/admin/users" class="btn btn-outline-secondary btn-sm c-user-details__action">Back to User Management</a>
                 <a href="/user/{{id}}/edit" class="btn btn-primary btn-sm c-user-details__action">Edit User</a>
+                {{#if can_delete}}
+                <button type="button" class="btn btn-outline-danger btn-sm c-user-details__action" data-action="delete-user"
+                    data-user-id="{{id}}" data-user-name="{{name}}" title="Delete user">
+                    <i class="fas fa-trash"></i> Delete User
+                </button>
+                {{/if}}
             </div>
         </div>
         <div class="user-details-body c-user-details__body">

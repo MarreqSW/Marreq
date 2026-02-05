@@ -2,12 +2,14 @@ mod applicability;
 mod categories;
 mod matrix;
 mod members;
-mod project;
+mod project_routes;
 mod reports;
+pub mod reqif;
 pub mod requirements;
+mod test_cases;
 #[cfg(any(test, feature = "test-helpers"))]
 pub mod test_helpers;
-mod tests;
+mod verification;
 
 use super::helpers;
 use super::projects;
@@ -15,7 +17,6 @@ pub(crate) mod prelude {
     pub(crate) use rocket::form::Form;
     pub(crate) use rocket::fs::NamedFile;
     pub(crate) use rocket::http::{ContentType, Cookie, CookieJar};
-    pub(crate) use rocket::response::status::NotFound;
     pub(crate) use rocket::response::Redirect;
     pub(crate) use rocket::serde::json::json;
     pub(crate) use rocket::Route;
@@ -44,8 +45,10 @@ pub fn routes() -> Vec<Route> {
     routes.extend(matrix::routes());
     routes.extend(members::routes());
     routes.extend(reports::routes());
+    routes.extend(reqif::routes());
     routes.extend(requirements::routes());
-    routes.extend(tests::routes());
-    routes.extend(project::routes());
+    routes.extend(test_cases::routes());
+    routes.extend(verification::routes());
+    routes.extend(project_routes::routes());
     routes
 }

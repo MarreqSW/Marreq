@@ -10,6 +10,9 @@ const pageControllers = {
   'requirements-tree': () => import('./pages/requirementsTree.js'),
   categories: () => import('./pages/categories.js'),
   applicability: () => import('./pages/applicability.js'),
+  verification: () => import('./pages/verification.js'),
+  new_verification: () => Promise.resolve({}),
+  edit_verification: () => Promise.resolve({}),
   'requirement-form': () => import('./pages/requirementForm.js'),
   'requirement-detail': () => import('./pages/requirementDetail.js'),
   'log-analytics': () => import('./pages/logAnalytics.js'),
@@ -33,6 +36,10 @@ function initGlobalDeleteHandlers() {
       const title = button.getAttribute('data-requirement-title') || 'Requirement';
       return `Are you sure you want to delete requirement "${title}"? This action cannot be undone.`;
     },
+    onSuccess: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      window.location.href = `/p/${projectId}/requirements`;
+    },
   });
 
   registerDeleteAction({
@@ -45,6 +52,10 @@ function initGlobalDeleteHandlers() {
     getMessage: (button) => {
       const name = button.getAttribute('data-test-name') || 'Test';
       return `Are you sure you want to delete test "${name}"? This action cannot be undone.`;
+    },
+    onSuccess: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      window.location.href = `/p/${projectId}/tests`;
     },
   });
 
@@ -83,6 +94,38 @@ function initGlobalDeleteHandlers() {
     getMessage: (button) => {
       const title = button.getAttribute('data-applicability-title') || 'this applicability';
       return `Are you sure you want to delete ${title}? This action cannot be undone.`;
+    },
+  });
+
+  registerDeleteAction({
+    selector: '[data-action="delete-verification"]',
+    getUrl: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      const verificationId = button.getAttribute('data-verification-id');
+      return `/p/${projectId}/verification/delete/${verificationId}`;
+    },
+    getMessage: (button) => {
+      const title = button.getAttribute('data-verification-title') || 'this verification method';
+      return `Are you sure you want to delete ${title}? Requirements linked to it will have that link removed.`;
+    },
+    onSuccess: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      window.location.href = `/p/${projectId}/verification`;
+    },
+  });
+
+  registerDeleteAction({
+    selector: '[data-action="delete-user"]',
+    getUrl: (button) => {
+      const userId = button.getAttribute('data-user-id');
+      return `/user/${userId}/delete`;
+    },
+    getMessage: (button) => {
+      const name = button.getAttribute('data-user-name') || 'this user';
+      return `Are you sure you want to delete user "${name}"? This action cannot be undone.`;
+    },
+    onSuccess: () => {
+      window.location.href = '/admin/users';
     },
   });
 }

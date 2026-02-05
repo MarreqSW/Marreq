@@ -147,7 +147,7 @@ mod tests {
 
     fn test_case(id: i32, project_id: i32, reference: &str) -> TestCase {
         TestCase {
-            id: id,
+            id,
             name: format!("Test {id}"),
             description: "desc".into(),
             source: "manual".into(),
@@ -225,5 +225,98 @@ mod tests {
         let items = service.list_by_project(8).unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].reference_code, "TEST-1");
+    }
+
+    #[test]
+    fn create_handles_missing_required_fields() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        // Create payload with missing required field
+        let mut payload = new_payload(1);
+        payload.name = "".to_string(); // Empty name should fail validation
+
+        // Note: TestService doesn't validate, so this will succeed
+        // But we can test that the service handles the creation
+        let result = service.create(&actor(), payload);
+        // The service doesn't validate, so this should succeed
+        // If validation is added later, this test will catch it
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn update_returns_not_found_when_test_does_not_exist() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        let payload = new_payload(1);
+        let result = service.update(&actor(), 999, payload);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn update_handles_missing_test() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        let payload = new_payload(1);
+        let result = service.update(&actor(), 999, payload);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn delete_returns_not_found_when_test_does_not_exist() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        let result = service.delete(&actor(), 999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_by_project_returns_empty_for_nonexistent_project() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        let items = service.list_by_project(999).unwrap();
+        assert_eq!(items.len(), 0);
+    }
+
+    #[test]
+    fn get_by_id_returns_not_found_for_nonexistent_id() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        let result = service.get_by_id(999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_all_returns_all_tests() {
+        let mut repo = DieselRepoMock::default();
+        repo.tests.insert(1, test_case(1, 7, "TEST-1"));
+        repo.tests.insert(2, test_case(2, 8, "TEST-2"));
+        repo.tests.insert(3, test_case(3, 9, "TEST-3"));
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        let items = service.list_all().unwrap();
+        assert_eq!(items.len(), 3);
+    }
+
+    #[test]
+    fn list_all_returns_empty_when_no_tests() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = TestService::new(&state);
+
+        let items = service.list_all().unwrap();
+        assert_eq!(items.len(), 0);
     }
 }

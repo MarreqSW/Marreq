@@ -92,7 +92,8 @@
           </div>
         </div>
         <div class="d-flex align-items-center gap-3">
-          <span class="reqman-requirement-avatar bg-secondary-subtle text-muted border" data-field="reviewer-initial">–</span>
+          <span class="reqman-requirement-avatar bg-secondary-subtle text-muted border"
+            data-field="reviewer-initial">–</span>
           <div>
             <div class="text-uppercase small text-muted">Reviewer</div>
             <div class="fw-semibold" data-field="reviewer-name">Unassigned</div>
@@ -158,7 +159,24 @@
       <ul class="list-unstyled requirement-timeline mb-0" data-slot="timeline">
         {{#if requirement_data.history.entries}}
         {{#each requirement_data.history.entries}}
-        <li class="text-muted small">Updated {{this.log.created_at}} by {{this.username}}</li>
+        <li
+          class="d-flex flex-column gap-2 py-2 border-bottom border-light border-opacity-50 requirement-timeline-item">
+          <span class="small fw-medium text-body">{{#if this.summary}}{{this.summary}}{{else}}{{#if
+            this.description}}{{this.description}}{{else}}{{this.action_type}}{{/if}}{{/if}}</span>
+          <span class="small text-muted">{{this.created_at}} · {{this.username}}</span>
+          {{#if this.changes}}
+          <ul class="list-unstyled small mb-0 ms-2 ps-2 border-start border-2 border-light">
+            {{#each this.changes}}
+            <li class="py-1 text-muted">
+              <span class="fw-medium text-body">{{this.field}}:</span>
+              <span class="text-decoration-line-through">{{this.old_value}}</span>
+              <span class="text-muted" aria-hidden="true"> → </span>
+              <span class="text-success">{{this.new_value}}</span>
+            </li>
+            {{/each}}
+          </ul>
+          {{/if}}
+        </li>
         {{/each}}
         {{else}}
         <li class="text-muted">No change history recorded yet.</li>
@@ -198,8 +216,8 @@
                 </svg>
                 <span class="ms-1">Edit</span>
               </a>
-              <a href="/logs/REQUIREMENT/{{requirement_data.requirement.id}}"
-                class="btn btn-outline-secondary btn-sm" aria-label="View requirement history">
+              <a href="/logs/REQUIREMENT/{{requirement_data.requirement.id}}" class="btn btn-outline-secondary btn-sm"
+                aria-label="View requirement history">
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                   <use href="#icon-clock-history" />
                 </svg>

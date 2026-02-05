@@ -11,6 +11,7 @@ export { init as initRequirements } from './requirements.js';
 export { init as initRequirementForm } from './requirementForm.js';
 export { init as initRequirementsTree } from './requirementsTree.js';
 export { init as initRequirementDetail } from './requirementDetail.js';
+export { init as initSemanticSearch } from './semanticSearch.js';
 
 // Other pages
 export { init as initTests } from './tests.js';

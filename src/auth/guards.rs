@@ -214,12 +214,16 @@ impl<'r> FromRequest<'r> for ProjectAccess {
 
         let project_id_segment = match request_segments.get(project_index).copied() {
             Some(segment) => segment,
-            None => return Outcome::Error((Status::BadRequest, ())),
+            None => {
+                return Outcome::Error((Status::BadRequest, ()));
+            }
         };
 
         let project_id = match project_id_segment.parse::<i32>() {
             Ok(project_id) => project_id,
-            Err(_) => return Outcome::Error((Status::BadRequest, ())),
+            Err(_) => {
+                return Outcome::Error((Status::BadRequest, ()));
+            }
         };
 
         let state = match request.rocket().state::<AppState>() {

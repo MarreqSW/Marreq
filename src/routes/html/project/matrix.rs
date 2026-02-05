@@ -6,6 +6,7 @@ use crate::services::{
 };
 
 #[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<page>&<per_page>&<search>")]
+#[allow(clippy::too_many_arguments)]
 async fn get_matrix(
     project_access: ProjectAccess,
     project_id: i32,
@@ -221,7 +222,6 @@ fn build_pagination_context(
 async fn get_matrix_xls(
     project_access: ProjectAccess,
     project_id: i32,
-    cookies: &CookieJar<'_>,
 ) -> Result<(ContentType, NamedFile), Redirect> {
     let user = project_access.into_user();
 
@@ -230,7 +230,7 @@ async fn get_matrix_xls(
         user.username, user.id, project_id
     );
 
-    excel::create_matrix_workbook(cookies).map_err(|e| {
+    excel::create_matrix_workbook(project_id).map_err(|e| {
         eprintln!("Error creating matrix workbook: {e:?}");
         Redirect::to(format!("/p/{}/matrix", project_id))
     })?;
@@ -299,7 +299,7 @@ mod tests {
 
     fn sample_project(id: i32, name: &str) -> Project {
         Project {
-            id: id,
+            id,
             name: name.to_string(),
             description: Some(format!("{name} project")),
             creation_date: Some(timestamp()),
@@ -311,7 +311,7 @@ mod tests {
 
     fn sample_category(id: i32, title: &str) -> Category {
         Category {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{title} systems"),
             tag: title.to_ascii_uppercase(),
@@ -321,7 +321,7 @@ mod tests {
 
     fn sample_status(id: i32, title: &str) -> RequirementStatus {
         RequirementStatus {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{title} status"),
             tag: title.to_ascii_uppercase(),
@@ -331,7 +331,7 @@ mod tests {
 
     fn sample_test_status(id: i32, title: &str) -> TestStatus {
         TestStatus {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{title} status"),
             tag: title.to_ascii_uppercase(),
@@ -341,7 +341,7 @@ mod tests {
 
     fn sample_applicability(id: i32, title: &str) -> Applicability {
         Applicability {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{title} applicability"),
             tag: title.to_ascii_uppercase(),
@@ -351,7 +351,7 @@ mod tests {
 
     fn sample_verification(id: i32, title: &str) -> VerificationMethod {
         VerificationMethod {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{title} verification"),
             tag: title.to_uppercase().replace(" ", "_"),
@@ -361,10 +361,9 @@ mod tests {
 
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
-            id: id,
+            id,
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
-            verification_method_id: 1,
             status_id: 1,
             author_id: ADMIN_ID,
             reviewer_id: ADMIN_ID,
@@ -461,7 +460,6 @@ mod tests {
                     id: i,
                     title: format!("Req {}", i),
                     description: String::new(),
-                    verification_method_id: 1,
                     status_id: 1,
                     author_id: 1,
                     reviewer_id: 1,
@@ -513,7 +511,6 @@ mod tests {
                 id: 1,
                 title: "Authentication Requirement".to_string(),
                 description: String::new(),
-                verification_method_id: 1,
                 status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
@@ -535,7 +532,6 @@ mod tests {
                 id: 2,
                 title: "Database Requirement".to_string(),
                 description: String::new(),
-                verification_method_id: 1,
                 status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
@@ -581,7 +577,6 @@ mod tests {
                 id: 1,
                 title: "Test Requirement".to_string(),
                 description: String::new(),
-                verification_method_id: 1,
                 status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
@@ -632,7 +627,6 @@ mod tests {
                 id: 1,
                 title: "Test, with \"quotes\"".to_string(),
                 description: String::new(),
-                verification_method_id: 1,
                 status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
@@ -682,7 +676,6 @@ mod tests {
                 id: 1,
                 title: "Unlinked Requirement".to_string(),
                 description: String::new(),
-                verification_method_id: 1,
                 status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,

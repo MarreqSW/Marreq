@@ -134,7 +134,6 @@ mod test_support {
             id: id,
             title: title.to_string(),
             description: format!("{} description", title),
-            verification_method_id: 1,
             status_id: 1,
             author_id: 1,
             reviewer_id: 1,

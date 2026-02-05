@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 /// Repository wrapper that checks the cache before hitting the database
+#[derive(Clone)]
 pub struct CacheRepository<R> {
     inner: R,
     cache: Arc<Cache>,
@@ -121,6 +122,36 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         self.get_or_fetch(&key, Duration::from_secs(300), || {
             self.inner.get_requirements_by_project(project_id)
         })
+    }
+
+    fn get_verification_method_ids_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        self.inner
+            .get_verification_method_ids_for_requirement(requirement_id)
+    }
+
+    fn get_requirement_ids_by_verification_method(
+        &self,
+        verification_method_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        self.inner
+            .get_requirement_ids_by_verification_method(verification_method_id)
+    }
+
+    fn set_requirement_verification_methods(
+        &mut self,
+        requirement_id: i32,
+        verification_method_ids: &[i32],
+    ) -> Result<(), RepoError> {
+        let res = self
+            .inner
+            .set_requirement_verification_methods(requirement_id, verification_method_ids);
+        if res.is_ok() {
+            self.cache.invalidate_requirement(requirement_id);
+        }
+        res
     }
 
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError> {
@@ -454,6 +485,25 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         Ok(id)
     }
 
+    fn edit_verification(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError> {
+        let res = self.inner.edit_verification(new)?;
+        if let Some(id) = new.id {
+            self.cache.invalidate_verification(id);
+        }
+        self.cache.invalidate_project(new.project_id);
+        Ok(res)
+    }
+
+    fn delete_verification(
+        &mut self,
+        verification_id: i32,
+    ) -> Result<VerificationMethod, RepoError> {
+        let verification = self.inner.delete_verification(verification_id)?;
+        self.cache.invalidate_verification(verification_id);
+        self.cache.invalidate_project(verification.project_id);
+        Ok(verification)
+    }
+
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_category(new)?;
         self.cache.invalidate_category(id);
@@ -626,7 +676,6 @@ mod tests {
             id: 1,
             title: "Req".into(),
             description: "".into(),
-            verification_method_id: 1,
             status_id: 1,
             author_id: 1,
             reviewer_id: 1,
@@ -686,6 +735,7 @@ mod tests {
             categories,
             applicability,
             requirements,
+            requirement_verification_methods: Vec::new(),
             tests,
             projects,
             matrices: vec![matrix],
@@ -910,7 +960,6 @@ mod tests {
             id: None,
             title: "R2".into(),
             description: "".into(),
-            verification_method_id: 1,
             author_id: 1,
             category_id: 1,
             status_id: 1,
@@ -928,7 +977,6 @@ mod tests {
             id: Some(rid),
             title: "R2".into(),
             description: "".into(),
-            verification_method_id: 1,
             author_id: 1,
             category_id: 1,
             status_id: 1,
@@ -1369,8 +1417,7 @@ mod tests {
         let _ = repo.get_logs_recent(10);
         let _ = repo.get_logs_by_entity("requirement", 1);
 
-        // If we get here, all methods are accessible
-        assert!(true);
+        // If we get here without panic, all methods are accessible
     }
 
     #[test]

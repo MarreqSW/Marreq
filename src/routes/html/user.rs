@@ -106,7 +106,10 @@ async fn delete_user_route(
     if current_user.id == user_id {
         return Err(Redirect::to(uri!(
             "/user",
-            edit_user(user_id = user_id, error = Some("You cannot delete your own account.".to_string()))
+            edit_user(
+                user_id = user_id,
+                error = Some("You cannot delete your own account.".to_string())
+            )
         )));
     }
     let service = UserService::new(state.inner());
@@ -153,10 +156,13 @@ async fn post_edit_user(
 
     match service.update_without_password(&admin.into_inner(), &user_data) {
         Ok(_) => Ok(Redirect::to(uri!("/user", show_user_id(user_id)))),
-        Err(_) => Ok(Redirect::to(uri!("/user", edit_user(
-            user_id = user_id,
-            error = Some("Failed to update user".to_string())
-        )))),
+        Err(_) => Ok(Redirect::to(uri!(
+            "/user",
+            edit_user(
+                user_id = user_id,
+                error = Some("Failed to update user".to_string())
+            )
+        ))),
     }
 }
 
@@ -202,9 +208,10 @@ async fn post_user(
 
     match service.create(&admin.into_inner(), request) {
         Ok(id) => Ok(Redirect::to(uri!("/user", show_user_id(id)))),
-        Err(_) => Ok(Redirect::to(uri!("/user", new_user(
-            error = Some("Failed to create user".to_string())
-        )))),
+        Err(_) => Ok(Redirect::to(uri!(
+            "/user",
+            new_user(error = Some("Failed to create user".to_string()))
+        ))),
     }
 }
 
@@ -342,7 +349,11 @@ mod tests {
         let response = delete_with_admin(&client, "/user/1/delete").await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        assert!(response.headers().get_one("Location").map(|l| l.contains("/user/1/edit")).unwrap_or(false));
+        assert!(response
+            .headers()
+            .get_one("Location")
+            .map(|l| l.contains("/user/1/edit"))
+            .unwrap_or(false));
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo_read();

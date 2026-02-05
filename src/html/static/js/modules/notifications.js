@@ -1,3 +1,9 @@
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 export function showNotification(message, type = 'info', options = {}) {
   const container = document.createElement('div');
   const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-danger' : 'alert-info';
@@ -6,7 +12,7 @@ export function showNotification(message, type = 'info', options = {}) {
   container.style.right = options.right || '20px';
   container.style.zIndex = options.zIndex || '9999';
   container.innerHTML = `
-    ${message}
+    ${escapeHtml(message)}
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
   `;
 

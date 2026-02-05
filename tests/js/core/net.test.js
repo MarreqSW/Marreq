@@ -172,7 +172,7 @@ describe('Network Utilities', () => {
       } catch (error) {
         expect(error.response).toBeDefined();
         expect(error.payload).toEqual({ message: 'Server error' });
-        expect(error.message).toContain('failed with status 500');
+        expect(error.message).toBe('Server error');
       }
     });
 

@@ -4,8 +4,10 @@ function defaultAccessor(cell) {
 
   const select = cell.querySelector('select');
   if (select) {
-    const option = select.options[select.selectedIndex];
-    return option ? option.text : '';
+    const option = Array.from(select.options).find((o) => o.selected)
+      ?? select.options[select.selectedIndex];
+    if (!option) return '';
+    return option.textContent ?? option.label ?? option.text ?? '';
   }
 
   const span = cell.querySelector('span');

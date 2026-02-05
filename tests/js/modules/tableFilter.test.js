@@ -56,7 +56,7 @@ describe('Table Filter', () => {
     input.dispatchEvent(new Event('input'));
 
     const items = document.querySelectorAll('.item');
-    expect(items[0].hidden).toBe(false); // Apple - contains 'an'
+    expect(items[0].hidden).toBe(true); // Apple - doesn't contain 'an'
     expect(items[1].hidden).toBe(false); // Banana - contains 'an'
     expect(items[2].hidden).toBe(true); // Cherry - doesn't contain 'an'
   });
@@ -80,7 +80,7 @@ describe('Table Filter', () => {
     input.dispatchEvent(new Event('input'));
 
     let items = document.querySelectorAll('.item');
-    expect(items[0].hidden).toBe(false);
+    expect(items[0].hidden).toBe(true);
     expect(items[1].hidden).toBe(false);
 
     input.value = '';

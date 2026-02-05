@@ -113,6 +113,21 @@ function initGlobalDeleteHandlers() {
       window.location.href = `/p/${projectId}/verification`;
     },
   });
+
+  registerDeleteAction({
+    selector: '[data-action="delete-user"]',
+    getUrl: (button) => {
+      const userId = button.getAttribute('data-user-id');
+      return `/user/${userId}/delete`;
+    },
+    getMessage: (button) => {
+      const name = button.getAttribute('data-user-name') || 'this user';
+      return `Are you sure you want to delete user "${name}"? This action cannot be undone.`;
+    },
+    onSuccess: () => {
+      window.location.href = '/admin/users';
+    },
+  });
 }
 
 function initConfirmations() {

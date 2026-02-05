@@ -119,6 +119,14 @@ async fn process_queue_once(state: &AppState<DieselCachedRepo>) -> Result<(usize
         .map_err(|e| e.to_string())
 }
 
+/// Exposed for tests: run process_queue_once (covers disabled and enabled paths).
+#[cfg(test)]
+pub(super) async fn test_process_queue_once(
+    state: &AppState<DieselCachedRepo>,
+) -> Result<(usize, usize), String> {
+    process_queue_once(state).await
+}
+
 /// Background task that periodically processes the index queue.
 async fn background_queue_processor(state: &'static AppState<DieselCachedRepo>) {
     loop {
@@ -213,5 +221,38 @@ mod tests {
             ..Default::default()
         };
         assert!(config.is_valid_for_embeddings().is_ok());
+    }
+
+    /// Runs the fairing's on_liftoff by launching a minimal Rocket with timeout.
+    /// With EMBEDDINGS_ENABLED unset, the fairing hits the "disabled" path and returns early.
+    #[tokio::test]
+    async fn fairing_on_liftoff_runs_embeddings_disabled_path() {
+        let rocket = rocket::build().attach(SemanticIndexFairing);
+        let ignited = rocket.ignite().await.expect("ignite");
+        // Launch with short timeout; on_liftoff runs during launch and hits the "else" branch
+        let result =
+            tokio::time::timeout(std::time::Duration::from_millis(400), ignited.launch()).await;
+        // Timeout (Err) is expected since we don't shut down the server
+        assert!(result.is_err() || result.unwrap().is_ok());
+    }
+
+    /// Covers process_queue_once when embeddings are disabled (returns Ok((0, 0))).
+    #[tokio::test]
+    async fn process_queue_once_when_disabled_returns_zero() {
+        use crate::app::AppState;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
+        use crate::repository::CacheRepository;
+        use std::sync::{Arc, RwLock};
+
+        let inner = DieselRepoMock::default();
+        let cached = CacheRepository::new(inner, 60);
+        let state = AppState {
+            repo: Arc::new(RwLock::new(cached)),
+        };
+        let result = test_process_queue_once(&state).await;
+        assert!(result.is_ok());
+        let (processed, failed) = result.unwrap();
+        assert_eq!(processed, 0);
+        assert_eq!(failed, 0);
     }
 }

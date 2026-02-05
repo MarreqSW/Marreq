@@ -251,9 +251,9 @@ ReqMan/
 │   │   └── api_client.rs   # API integration
 │   └── README.md           # Parser documentation
 ├── doc/                   # Documentation
-├── init_complete.sql      # Complete database initialization script
-├── init_simple.sql        # Simplified database initialization
-├── setup_database.sh      # Automated database setup script
+├── scripts/               # Dev tooling & DB setup
+│   ├── init_complete.sql  # Complete DB init (schema + sample data)
+│   └── setup_database.sh  # Automated database setup
 ├── DATABASE_SETUP_README.md # Database setup documentation
 └── docker-compose.yml     # Docker database configuration
 ```
@@ -326,7 +326,7 @@ cargo run --bin req_man
 ```bash
 # Complete database reset
 docker exec reqman_db_1 psql -U rust -d postgres -c "DROP DATABASE IF EXISTS reqman;"
-./setup_database.sh
+./scripts/setup_database.sh
 ```
 
 ### Verification Commands
@@ -359,4 +359,3 @@ For issues and questions, please open an issue on the project repository.
 3. **Verify database setup** using verification commands
 4. **Check Docker container status**
 5. **Open an issue** with detailed error information
-

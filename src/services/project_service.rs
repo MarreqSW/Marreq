@@ -2,7 +2,7 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{NewProject, Project, UpdateProject, User};
+use crate::models::{NewProject, NewProjectMember, Project, UpdateProject, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, ProjectMembersRepository, ProjectsRepository};
 use crate::services::status_service::StatusService;
@@ -44,7 +44,7 @@ impl<'a> ProjectService<'a> {
             }
         }
 
-        projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        projects.sort_by_key(|a| a.name.to_lowercase());
 
         Ok(projects)
     }
@@ -61,9 +61,16 @@ impl<'a> ProjectService<'a> {
 
         self.prepare_new_payload(&mut payload)?;
 
+        let owner_id = payload.owner_id.unwrap_or(actor.id);
         let id = {
             let mut repo = self.state.repo_write();
-            repo.insert_new_project(&payload)?
+            let id = repo.insert_new_project(&payload)?;
+            repo.add_project_member(&NewProjectMember {
+                project_id: id,
+                user_id: owner_id,
+                role: 1, // Owner
+            })?;
+            id
         };
 
         // Initialize default statuses for the new project
@@ -204,7 +211,7 @@ mod tests {
 
     fn project(id: i32, name: &str) -> Project {
         Project {
-            id: id,
+            id,
             name: name.into(),
             description: Some("Existing description".into()),
             creation_date: Some(timestamp()),

@@ -1,22 +1,14 @@
 {{!--
-  Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
+Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
 --}}
 {{#*inline "page"}}
-<form
-  method="post"
-  data-requirement-form
-  data-allow-soft-mismatch="false"
-  class="c-create-form create-form"
-  data-project-id="{{project_id}}"
-  {{#if flash_success}}data-flash-success="{{flash_success}}"{{/if}}
->
+<form method="post" data-requirement-form data-allow-soft-mismatch="false" class="c-create-form create-form"
+  data-project-id="{{project_id}}" {{#if flash_success}}data-flash-success="{{flash_success}}" {{/if}}>
   <header class="c-create-topbar">
     <div class="c-create-topbar__context">
       <nav class="c-create-breadcrumb" aria-label="Breadcrumb">
-        <a
-          href="/p/{{#if project}}{{project.id}}{{else}}{{project_id}}{{/if}}/requirements"
-          class="c-create-breadcrumb__link"
-        >
+        <a href="/p/{{#if project}}{{project.id}}{{else}}{{project_id}}{{/if}}/requirements"
+          class="c-create-breadcrumb__link">
           {{#if project}}{{project.name}}{{else}}Project{{/if}}
         </a>
         <span class="c-create-breadcrumb__sep">›</span>
@@ -31,16 +23,9 @@
         <span class="c-create-autosave__dot" data-role="autosave-indicator" hidden></span>
         <span class="c-create-autosave__text" data-role="autosave-text"></span>
       </div>
-      <button
-        type="submit"
-        class="btn btn-primary c-create-topbar__save"
-        data-role="submit-requirement"
-      >Save</button>
-      <a
-        href="/p/{{#if project}}{{project.id}}{{else}}{{project_id}}{{/if}}/requirements"
-        class="btn btn-outline-secondary c-create-topbar__cancel"
-        data-role="cancel-create"
-      >Cancel</a>
+      <button type="submit" class="btn btn-primary c-create-topbar__save" data-role="submit-requirement">Save</button>
+      <a href="/p/{{#if project}}{{project.id}}{{else}}{{project_id}}{{/if}}/requirements"
+        class="btn btn-outline-secondary c-create-topbar__cancel" data-role="cancel-create">Cancel</a>
     </div>
   </header>
 
@@ -57,29 +42,16 @@
           <label for="title" class="c-create-field__label">
             Title <span class="c-create-field__required">*</span>
           </label>
-          <input
-            type="text"
-            name="title"
-            id="title"
-            class="c-create-field__input"
-            value="{{template.title}}"
-            placeholder="Control system shall…"
-            required
-          >
+          <input type="text" name="title" id="title" class="c-create-field__input" value="{{template.title}}"
+            placeholder="Control system shall…" required>
         </div>
 
         <div class="c-create-field">
           <label for="reference_code" class="c-create-field__label">
             Reference <span class="c-create-field__optional">(optional)</span>
           </label>
-          <input
-            type="text"
-            name="reference_code"
-            id="reference_code"
-            class="c-create-field__input"
-            value="{{template.reference_code}}"
-            placeholder="REQ-CAT-001 (auto-generated if left blank)"
-          >
+          <input type="text" name="reference_code" id="reference_code" class="c-create-field__input"
+            value="{{template.reference_code}}" placeholder="REQ-CAT-001 (auto-generated if left blank)">
           <div id="reference-error" class="c-create-field__error" hidden></div>
         </div>
 
@@ -87,27 +59,17 @@
           <label for="description" class="c-create-field__label">
             Statement <span class="c-create-field__required">*</span>
           </label>
-          <textarea
-            name="description"
-            id="description"
-            class="c-create-field__textarea c-create-field__textarea--statement"
-            rows="6"
-            required
-            placeholder="The system shall…"
-          >{{template.description}}</textarea>
+          <textarea name="description" id="description"
+            class="c-create-field__textarea c-create-field__textarea--statement" rows="6" required
+            placeholder="The system shall…">{{template.description}}</textarea>
         </div>
 
         <div class="c-create-field">
           <label for="justification" class="c-create-field__label">
             Rationale <span class="c-create-field__optional">(optional)</span>
           </label>
-          <textarea
-            name="justification"
-            id="justification"
-            class="c-create-field__textarea"
-            rows="4"
-            placeholder="What evidence or reasoning supports this?"
-          >{{template.justification}}</textarea>
+          <textarea name="justification" id="justification" class="c-create-field__textarea" rows="4"
+            placeholder="What evidence or reasoning supports this?">{{template.justification}}</textarea>
         </div>
       </div>
     </section>
@@ -122,13 +84,8 @@
       <div class="c-create-card__body">
         <div class="c-create-field">
           <label for="req_author_display" class="c-create-field__label">Author</label>
-          <input
-            type="text"
-            id="req_author_display"
-            class="c-create-field__input c-create-field__input--readonly"
-            value="{{user.name}}"
-            readonly
-          >
+          <input type="text" id="req_author_display" class="c-create-field__input c-create-field__input--readonly"
+            value="{{user.name}}" readonly>
         </div>
 
         <div class="c-create-field">
@@ -143,19 +100,19 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each users}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
-                    {{name}}
-                  </button>
+                <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
+                  {{name}}
+                </button>
                 {{else}}
-                  <div class="c-custom-dropdown__empty">
-                    No reviewers available yet
-                  </div>
+                <div class="c-custom-dropdown__empty">
+                  No reviewers available yet
+                </div>
                 {{/each}}
               </div>
             </div>
             <select name="reviewer_id" id="reviewer_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each users}}
-                <option value="{{id}}" {{#if (eq id ../reviewer_id)}}selected{{/if}}>{{name}}</option>
+              <option value="{{id}}" {{#if (eq id ../reviewer_id)}}selected{{/if}}>{{name}}</option>
               {{/each}}
             </select>
           </div>
@@ -173,13 +130,13 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each categories}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}" data-tag="{{tag}}">
-                    {{title}}
-                  </button>
+                <button type="button" class="c-custom-dropdown__item" data-value="{{id}}" data-tag="{{tag}}">
+                  {{title}}
+                </button>
                 {{else}}
-                  <div class="c-custom-dropdown__empty">
-                    No categories available yet
-                  </div>
+                <div class="c-custom-dropdown__empty">
+                  No categories available yet
+                </div>
                 {{/each}}
               </div>
               <div class="c-custom-dropdown__footer">
@@ -190,7 +147,7 @@
             </div>
             <select name="category_id" id="category_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each categories}}
-                <option value="{{id}}" data-tag="{{tag}}" {{#if (eq id ../category_id)}}selected{{/if}}>{{title}}</option>
+              <option value="{{id}}" data-tag="{{tag}}" {{#if (eq id ../category_id)}}selected{{/if}}>{{title}}</option>
               {{/each}}
             </select>
           </div>
@@ -208,13 +165,13 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each applicability}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
-                    {{title}}
-                  </button>
+                <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
+                  {{title}}
+                </button>
                 {{else}}
-                  <div class="c-custom-dropdown__empty">
-                    No applicability options available yet
-                  </div>
+                <div class="c-custom-dropdown__empty">
+                  No applicability options available yet
+                </div>
                 {{/each}}
               </div>
               <div class="c-custom-dropdown__footer">
@@ -225,44 +182,27 @@
             </div>
             <select name="applicability_id" id="applicability_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each applicability}}
-                <option value="{{id}}" {{#if (eq id ../applicability_id)}}selected{{/if}}>{{title}}</option>
+              <option value="{{id}}" {{#if (eq id ../applicability_id)}}selected{{/if}}>{{title}}</option>
               {{/each}}
             </select>
           </div>
         </div>
 
         <div class="c-create-field">
-          <label for="verification_method_id" class="c-create-field__label">
-            Verification Method <span class="c-create-field__required">*</span>
+          <label for="verification_method_ids" class="c-create-field__label">
+            Verification methods <span class="c-create-field__required">*</span>
           </label>
-          <div class="c-custom-dropdown" data-dropdown="verification">
-            <button type="button" class="c-custom-dropdown__trigger" data-role="dropdown-trigger">
-              <span class="c-custom-dropdown__value" data-role="dropdown-value">Select verification method...</span>
-              <span class="c-custom-dropdown__arrow">▼</span>
+          <select name="verification_method_ids" id="verification_method_ids" class="c-create-field__input" multiple
+            required size="4">
+            {{#each verification_with_selected}}
+            <option value="{{id}}" {{#if selected}}selected{{/if}}>{{title}}</option>
+            {{/each}}
+          </select>
+          <small class="c-create-field__help">Hold Ctrl/Cmd to select multiple. At least one required.</small>
+          <div class="c-custom-dropdown__footer" style="margin-top: 0.25rem;">
+            <button type="button" class="c-custom-dropdown__action" data-action="create-verification">
+              + Create verification method
             </button>
-            <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
-              <div class="c-custom-dropdown__list" data-role="dropdown-list">
-                {{#each verification}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
-                    {{title}}
-                  </button>
-                {{else}}
-                  <div class="c-custom-dropdown__empty">
-                    No verification methods available yet
-                  </div>
-                {{/each}}
-              </div>
-              <div class="c-custom-dropdown__footer">
-                <button type="button" class="c-custom-dropdown__action" data-action="create-verification">
-                  + Create verification method
-                </button>
-              </div>
-            </div>
-            <select name="verification_method_id" id="verification_method_id" class="c-custom-dropdown__hidden" required hidden>
-              {{#each verification}}
-                <option value="{{id}}" {{#if (eq id ../verification_method_id)}}selected{{/if}}>{{title}}</option>
-              {{/each}}
-            </select>
           </div>
         </div>
 
@@ -279,25 +219,27 @@
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each status}}
-                  {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title "Deprecated"))))}}
-                    <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
-                      {{title}}
-                    </button>
-                  {{/if}}
+                {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title
+                "Deprecated"))))}}
+                <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
+                  {{title}}
+                </button>
+                {{/if}}
                 {{else}}
-                  <div class="c-custom-dropdown__empty">
-                    No status options available yet
-                  </div>
+                <div class="c-custom-dropdown__empty">
+                  No status options available yet
+                </div>
                 {{/each}}
               </div>
             </div>
             <select name="status_id" id="status_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each status}}
-                {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title "Deprecated"))))}}
-                  <option value="{{id}}" {{#if (eq id ../status_id)}}selected{{/if}}>
-                    {{title}}
-                  </option>
-                {{/if}}
+              {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title
+              "Deprecated"))))}}
+              <option value="{{id}}" {{#if (eq id ../status_id)}}selected{{/if}}>
+                {{title}}
+              </option>
+              {{/if}}
               {{/each}}
             </select>
           </div>
@@ -315,30 +257,27 @@
             </button>
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__search">
-                <input 
-                  type="text" 
-                  class="c-custom-dropdown__search-input" 
-                  placeholder="Search requirements..." 
-                  data-role="dropdown-search"
-                  autocomplete="off"
-                >
+                <input type="text" class="c-custom-dropdown__search-input" placeholder="Search requirements..."
+                  data-role="dropdown-search" autocomplete="off">
               </div>
               <div class="c-custom-dropdown__list c-custom-dropdown__list--scrollable" data-role="dropdown-list">
                 <button type="button" class="c-custom-dropdown__item" data-value="0" data-search-text="none">
                   <span class="c-custom-dropdown__item-label">None</span>
                 </button>
                 {{#each parent}}
-                  <button type="button" class="c-custom-dropdown__item" data-value="{{id}}" data-search-text="{{reference}} {{title}}">
-                    <span class="c-custom-dropdown__item-ref">{{reference}}</span>
-                    <span class="c-custom-dropdown__item-label">{{title}}</span>
-                  </button>
+                <button type="button" class="c-custom-dropdown__item" data-value="{{id}}"
+                  data-search-text="{{reference}} {{title}}">
+                  <span class="c-custom-dropdown__item-ref">{{reference}}</span>
+                  <span class="c-custom-dropdown__item-label">{{title}}</span>
+                </button>
                 {{/each}}
               </div>
             </div>
             <select name="parent_id" id="parent_id" class="c-custom-dropdown__hidden" hidden>
               <option value="0" {{#if (not template.parent_id)}}selected{{/if}}>None</option>
               {{#each parent}}
-                <option value="{{id}}" {{#if (eq id ../template.parent_id)}}selected{{/if}}>{{reference}} - {{title}}</option>
+              <option value="{{id}}" {{#if (eq id ../template.parent_id)}}selected{{/if}}>{{reference}} - {{title}}
+              </option>
               {{/each}}
             </select>
           </div>
@@ -353,13 +292,7 @@
 
 {{> partials/modals}}
 
-<div
-  class="modal fade"
-  id="categoryModal"
-  tabindex="-1"
-  aria-labelledby="categoryModalLabel"
-  aria-hidden="true"
->
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-labelledby="categoryModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -390,13 +323,8 @@
   </div>
 </div>
 
-<div
-  class="modal fade"
-  id="applicabilityModal"
-  tabindex="-1"
-  aria-labelledby="applicabilityModalLabel"
-  aria-hidden="true"
->
+<div class="modal fade" id="applicabilityModal" tabindex="-1" aria-labelledby="applicabilityModalLabel"
+  aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -427,13 +355,8 @@
   </div>
 </div>
 
-<div
-  class="modal fade"
-  id="verificationModal"
-  tabindex="-1"
-  aria-labelledby="verificationModalLabel"
-  aria-hidden="true"
->
+<div class="modal fade" id="verificationModal" tabindex="-1" aria-labelledby="verificationModalLabel"
+  aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
@@ -444,33 +367,16 @@
         <div class="modal-body">
           <div class="mb-3">
             <label for="inline_verification_title" class="form-label">Title</label>
-            <input
-              type="text"
-              class="form-control"
-              id="inline_verification_title"
-              name="title"
-              required
-            >
+            <input type="text" class="form-control" id="inline_verification_title" name="title" required>
           </div>
           <div class="mb-3">
             <label for="inline_verification_tag" class="form-label">Tag</label>
-            <input
-              type="text"
-              class="form-control"
-              id="inline_verification_tag"
-              name="tag"
-              required
-            >
+            <input type="text" class="form-control" id="inline_verification_tag" name="tag" required>
           </div>
           <div class="mb-3">
             <label for="inline_verification_description" class="form-label">Description</label>
-            <textarea
-              class="form-control"
-              id="inline_verification_description"
-              name="description"
-              rows="3"
-              required
-            ></textarea>
+            <textarea class="form-control" id="inline_verification_description" name="description" rows="3"
+              required></textarea>
           </div>
         </div>
         <div class="modal-footer">

@@ -8,11 +8,16 @@ pub struct ProjectMemberForm {
     pub role: i32,
 }
 
-fn is_project_owner(state: &State<AppState>, project_id: i32, id: i32) -> bool {
+fn is_project_owner(state: &State<AppState>, project_id: i32, user_id: i32) -> bool {
+    if let Ok(project) = state.repo_read().get_project_by_id(project_id) {
+        if project.owner_id == Some(user_id) {
+            return true;
+        }
+    }
     if let Ok(members) = state.repo_read().get_members_by_project(project_id) {
         members
             .into_iter()
-            .any(|member| member.user_id == id && member.role == 1)
+            .any(|member| member.user_id == user_id && member.role == 1)
     } else {
         false
     }
@@ -173,7 +178,7 @@ async fn add_project_member(
     let user = project_access.into_user();
 
     if !is_project_owner(state, project_id, user.id) {
-        return Redirect::to(uri!(show_project_members(project_id = project_id)));
+        return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
     }
 
     let payload = form.into_inner();
@@ -187,7 +192,7 @@ async fn add_project_member(
         eprintln!("Error adding project member: {:?}", error);
     }
 
-    Redirect::to(uri!(show_project_members(project_id = project_id)))
+    Redirect::to(uri!("/p", show_project_members(project_id = project_id)))
 }
 
 #[post("/<project_id>/members/<member_id>/remove")]
@@ -200,7 +205,7 @@ async fn remove_project_member(
     let user = project_access.into_user();
 
     if !is_project_owner(state, project_id, user.id) {
-        return Redirect::to(uri!(show_project_members(project_id = project_id)));
+        return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
     }
 
     let allow_removal = {
@@ -214,7 +219,7 @@ async fn remove_project_member(
     };
 
     if !allow_removal {
-        return Redirect::to(uri!(show_project_members(project_id = project_id)));
+        return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
     }
 
     if let Err(error) = state
@@ -224,7 +229,7 @@ async fn remove_project_member(
         eprintln!("Error removing project member: {:?}", error);
     }
 
-    Redirect::to(uri!(show_project_members(project_id = project_id)))
+    Redirect::to(uri!("/p", show_project_members(project_id = project_id)))
 }
 
 pub fn routes() -> Vec<Route> {
@@ -348,7 +353,7 @@ mod tests {
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Project Members"));
-        assert!(body.contains("Only project owners can modify the membership list."));
+        assert!(body.contains("Only project owners can add or remove members"));
         assert!(!body.contains("Add a Member"));
     }
 
@@ -359,7 +364,7 @@ mod tests {
             post_form_with_session(&client, "/p/1/members", "id=3&role=2", OWNER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+        assert_eq!(response.headers().get_one("Location"), Some("/p/1/members"));
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
@@ -376,7 +381,7 @@ mod tests {
             post_form_with_session(&client, "/p/1/members", "id=3&role=2", MEMBER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+        assert_eq!(response.headers().get_one("Location"), Some("/p/1/members"));
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
@@ -399,7 +404,7 @@ mod tests {
         let response = post_form_with_session(&client, "/p/1/members/2/remove", "", OWNER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+        assert_eq!(response.headers().get_one("Location"), Some("/p/1/members"));
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
@@ -415,7 +420,7 @@ mod tests {
         let response = post_form_with_session(&client, "/p/1/members/1/remove", "", OWNER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/1/members"));
+        assert_eq!(response.headers().get_one("Location"), Some("/p/1/members"));
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");

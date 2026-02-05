@@ -26,7 +26,7 @@
   padding: var(--space-4);
   position: sticky;
   top: calc(var(--header-height) + var(--space-2));
-  z-index: var(--z-sticky);
+  z-index: 1100;
 }
 
 .c-editor-topbar__context {
@@ -82,6 +82,36 @@
   display: inline-block;
   height: 8px;
   width: 8px;
+}
+
+.c-editor-status__menu {
+  background-color: var(--surface-color, #fff);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  left: 0;
+  min-width: 10rem;
+  padding: var(--space-1);
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  z-index: 1101;
+}
+
+.c-editor-status__menu button {
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  width: 100%;
+}
+
+.c-editor-status__menu button:hover,
+.c-editor-status__menu button:focus-visible {
+  background: var(--surface-accent);
+  outline: none;
 }
 
 .c-editor-topbar__actions {
@@ -144,6 +174,8 @@
 .c-editor-layout {
   display: flex;
   gap: var(--space-6);
+  position: relative;
+  z-index: 0;
 }
 
 .c-editor-main {
@@ -434,7 +466,7 @@
   }
 
   .c-editor-topbar {
-    position: static;
+    position: relative;
   }
 
   .c-editor-topbar__context,

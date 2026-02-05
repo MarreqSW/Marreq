@@ -19,7 +19,6 @@ pub struct Requirement {
     pub id: i32,
     pub title: String,
     pub description: String,
-    pub verification_method_id: i32,
     pub status_id: i32,
     pub author_id: i32,
     pub reviewer_id: i32,
@@ -32,6 +31,14 @@ pub struct Requirement {
     pub applicability_id: i32,
     pub justification: Option<String>,
     pub project_id: i32,
+}
+
+/// Link between a requirement and a verification method (many-to-many).
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug)]
+#[diesel(table_name = crate::schema::requirement_verification_methods)]
+pub struct RequirementVerificationMethod {
+    pub requirement_id: i32,
+    pub verification_method_id: i32,
 }
 
 /// Link between a requirement and a test in the traceability matrix.

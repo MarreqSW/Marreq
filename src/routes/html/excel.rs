@@ -1,35 +1,60 @@
+#![allow(clippy::result_large_err)]
+
 use super::helpers::*;
 use super::prelude::*;
+use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
+use std::path::Path;
 
-#[get("/import_excel")]
+/// Queue imported requirements for semantic search indexing.
+///
+/// This is a best-effort operation - failures are logged but don't affect the import.
+fn queue_requirements_for_indexing(
+    state: &State<AppState>,
+    project_id: i32,
+    requirement_ids: &[i32],
+) {
+    let config = SemanticSearchConfig::global();
+    if !config.embeddings_enabled || requirement_ids.is_empty() {
+        return;
+    }
+
+    let indexing_service = IndexingService::new(state.inner());
+    let mut queued = 0;
+    for &req_id in requirement_ids {
+        if indexing_service
+            .queue_for_indexing(req_id, project_id)
+            .is_ok()
+        {
+            queued += 1;
+        }
+    }
+
+    if queued > 0 {
+        eprintln!(
+            "📊 Queued {} imported requirements for semantic indexing",
+            queued
+        );
+    }
+}
+
+#[get("/p/<project_id>/import_excel?<error>")]
 pub fn import_excel_page(
     session_user: SessionUser,
-    cookies: &CookieJar<'_>,
+    project_id: i32,
     state: &State<AppState>,
+    error: Option<String>,
 ) -> Result<content::RawHtml<String>, Redirect> {
     let _user = session_user.into_inner();
 
-    // Get selected project ID and name
-    let selected_project_id = get_selected_project_id(cookies);
-    let (project_id, name) = if let Some(pid) = selected_project_id {
-        let project = get_project_by_id_pooled_safe(state, pid);
-        (pid, project.name)
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            (first_project.id, first_project.name.clone())
-        } else {
-            (1, "Default Project".to_string())
-        }
-    };
+    let project = get_project_by_id_pooled_safe(state, project_id);
+    let name = project.name;
 
     let html = format!(
         r#"
     <!doctype html>
     <html lang='en'>
     <head>
-        <title>ReqMan - Import Excel</title>
+        <title>ReqMan - Import File</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -41,7 +66,7 @@ pub fn import_excel_page(
                 <div class="col-md-8 offset-md-2">
                     <div class="card">
                         <div class="card-header">
-                            <h3>Import Excel File</h3>
+                            <h3>Import File</h3>
                         </div>
                         <div class="card-body">
                             <div class="alert alert-info">
@@ -49,12 +74,13 @@ pub fn import_excel_page(
                                 <br>
                                 <small class="text-muted">Requirements and tests will be imported into this project. You can change the project using the dropdown in the navigation bar above.</small>
                             </div>
-                            <p>Upload an Excel file to import requirements or tests into the selected project.</p>
-                            <form action="/import_excel/upload" method="post" enctype="multipart/form-data">
+                            {}
+                            <p>Upload a file to import requirements or tests into the selected project.</p>
+                            <form action="/p/{}/import_excel/upload" method="post" enctype="multipart/form-data">
                                 <div class="mb-3">
-                                    <label for="excel_file" class="form-label">Select Excel File</label>
-                                    <input type="file" class="form-control" id="excel_file" name="file" accept=".xlsx,.xls" required>
-                                    <div class="form-text">Supported formats: .xlsx, .xls</div>
+                                    <label for="excel_file" class="form-label">Select File</label>
+                                    <input type="file" class="form-control" id="excel_file" name="file" accept=".xlsx,.xls,.csv" required>
+                                    <div class="form-text">Supported formats: .xlsx, .xls, .csv</div>
                                 </div>
                                 <div class="mt-3">
                                     <button type="submit" class="btn btn-primary">Upload File</button>
@@ -69,29 +95,80 @@ pub fn import_excel_page(
     </body>
     </html>
     "#,
-        name, project_id
+        name,
+        project_id,
+        error
+            .as_ref()
+            .map(|message| format!("<div class=\"alert alert-danger\">{}</div>", message))
+            .unwrap_or_default(),
+        project_id
     );
 
     Ok(content::RawHtml(html))
 }
 
-#[post("/import_excel/upload", data = "<upload>")]
+#[post("/p/<project_id>/import_excel/upload", data = "<upload>")]
 pub async fn upload_excel_file(
     session_user: SessionUser,
+    project_id: i32,
     mut upload: rocket::form::Form<rocket::fs::TempFile<'_>>,
 ) -> Result<content::RawHtml<String>, Redirect> {
     let _user = session_user.into_inner();
 
     // Save uploaded file temporarily
-    let temp_path = format!("/tmp/upload_{}.xlsx", chrono::Utc::now().timestamp());
-    upload
-        .persist_to(&temp_path)
-        .await
-        .map_err(|_| Redirect::to(uri!(import_excel_page)))?;
+    let filename = upload.name().unwrap_or("upload");
+    let mut extension = Path::new(filename)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+
+    if extension.is_empty() {
+        if let Some(content_type) = upload.content_type() {
+            let content_type = content_type.to_string().to_ascii_lowercase();
+            if content_type.contains("text/csv") {
+                extension = "csv".to_string();
+            } else if content_type.contains("application/vnd.ms-excel") {
+                extension = "xls".to_string();
+            } else if content_type
+                .contains("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            {
+                extension = "xlsx".to_string();
+            }
+        }
+    }
+
+    if extension.is_empty() {
+        extension = "xlsx".to_string();
+    }
+
+    let is_supported = matches!(extension.as_str(), "xlsx" | "xls" | "csv");
+    if !is_supported {
+        return Err(Redirect::to(uri!(import_excel_page(
+            project_id = project_id,
+            error = Some("Unsupported file type. Use .xlsx, .xls, or .csv".to_string())
+        ))));
+    }
+
+    let temp_path = format!(
+        "/tmp/upload_{}.{}",
+        chrono::Utc::now().timestamp(),
+        extension
+    );
+    upload.persist_to(&temp_path).await.map_err(|_| {
+        Redirect::to(uri!(import_excel_page(
+            project_id = project_id,
+            error = Some("Failed to store upload. Please try again.".to_string())
+        )))
+    })?;
 
     // Parse Excel file
-    let importer = crate::importers::excel::ExcelImporter::new(&temp_path)
-        .map_err(|_| Redirect::to(uri!(import_excel_page)))?;
+    let importer = crate::importers::excel::ExcelImporter::new(&temp_path).map_err(|e| {
+        Redirect::to(uri!(import_excel_page(
+            project_id = project_id,
+            error = Some(format!("Failed to parse file: {}", e))
+        )))
+    })?;
 
     // Create HTML for column mapping
     let _columns_html = importer
@@ -113,7 +190,7 @@ pub async fn upload_excel_file(
     <!doctype html>
     <html lang='en'>
     <head>
-        <title>ReqMan - Map Excel Columns</title>
+        <title>ReqMan - Map Columns</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -125,11 +202,11 @@ pub async fn upload_excel_file(
                 <div class="col-md-10 offset-md-1">
                     <div class="card">
                         <div class="card-header">
-                            <h3>Map Excel Columns</h3>
+                            <h3>Map Columns</h3>
                             <p class="mb-0">Import Type: <strong>{}</strong> | Data Rows: <strong>{}</strong></p>
                         </div>
                         <div class="card-body">
-                            <form action="/import_excel/process" method="post" id="mapping-form">
+                            <form action="/p/{}/import_excel/process" method="post" id="mapping-form">
                                 <input type="hidden" name="import_type" value="{}">
                                 <input type="hidden" name="temp_file" value="{}">
                                 <input type="hidden" name="column_mappings" id="column_mappings" value="">
@@ -151,7 +228,7 @@ pub async fn upload_excel_file(
                                 
                                 <div class="mt-3">
                                     <button type="submit" class="btn btn-primary">Import Data</button>
-                                    <a href="/import_excel" class="btn btn-secondary">Cancel</a>
+                                    <a href="/p/{}/import_excel" class="btn btn-secondary">Cancel</a>
                                 </div>
                             </form>
                         </div>
@@ -189,6 +266,7 @@ pub async fn upload_excel_file(
     "#,
         importer.import_type,
         importer.data.len(),
+        project_id,
         importer.import_type,
         temp_path,
         importer
@@ -214,17 +292,18 @@ pub async fn upload_excel_file(
                 )
             })
             .collect::<Vec<_>>()
-            .join("")
+            .join(""),
+        project_id
     );
 
     Ok(content::RawHtml(html))
 }
 
-#[post("/import_excel/process", data = "<mapping_data>")]
+#[post("/p/<project_id>/import_excel/process", data = "<mapping_data>")]
 pub fn process_excel_import(
     session_user: SessionUser,
+    project_id: i32,
     mapping_data: Form<crate::models::ImportMappingForm>,
-    cookies: &CookieJar<'_>,
     state: &State<AppState>,
 ) -> Result<content::RawHtml<String>, Redirect> {
     let _user = session_user.into_inner();
@@ -235,29 +314,21 @@ pub fn process_excel_import(
     let column_mappings: Vec<crate::importers::excel::ColumnMapping> =
         serde_json::from_str(&mapping_data.column_mappings).map_err(|e| {
             eprintln!("JSON parsing error: {}", e);
-            Redirect::to(uri!(import_excel_page))
+            Redirect::to(uri!(import_excel_page(
+                project_id = project_id,
+                error = Some("Invalid column mapping data.".to_string())
+            )))
         })?;
 
     // Create importer and import data
     let importer =
         crate::importers::excel::ExcelImporter::new(&mapping_data.temp_file).map_err(|e| {
             eprintln!("Excel importer creation error: {}", e);
-            Redirect::to(uri!(import_excel_page))
+            Redirect::to(uri!(import_excel_page(
+                project_id = project_id,
+                error = Some("Unable to read uploaded file. Please re-upload.".to_string())
+            )))
         })?;
-
-    // Get selected project ID from cookies
-    let selected_project_id = get_selected_project_id(cookies);
-    let project_id = if let Some(pid) = selected_project_id {
-        pid
-    } else {
-        // Default to the first project if no project is selected
-        let projects = state.repo_read().get_projects_all().unwrap_or_default();
-        if let Some(first_project) = projects.first() {
-            first_project.id
-        } else {
-            1 // Fallback to project 1 if no projects exist
-        }
-    };
 
     // Create import configuration
     let config = crate::importers::excel::ImportConfig {
@@ -268,7 +339,10 @@ pub fn process_excel_import(
 
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(import_excel_page))
+        Redirect::to(uri!(import_excel_page(
+            project_id = project_id,
+            error = Some("Database connection failed.".to_string())
+        )))
     })?;
     let result = importer.import_data(&config, connection);
 
@@ -278,6 +352,13 @@ pub fn process_excel_import(
         Ok(import_result) => {
             // Invalidate all caches after successful import since we don't know exactly what was imported
             state.repo_read().cache().clear();
+
+            // Queue imported requirements for semantic search indexing
+            queue_requirements_for_indexing(
+                state,
+                project_id,
+                &import_result.imported_requirement_ids,
+            );
 
             // Get project name for display
             let name = get_project_by_id_pooled_safe(state, project_id).name;
@@ -311,7 +392,7 @@ pub fn process_excel_import(
                                     
                                     <div class="mt-3">
                                         <a href="/" class="btn btn-primary">Back to Home</a>
-                                        <a href="/import_excel" class="btn btn-outline-primary">Import Another File</a>
+                                        <a href="/p/{}/import_excel" class="btn btn-outline-primary">Import Another File</a>
                                     </div>
                                 </div>
                             </div>
@@ -321,7 +402,11 @@ pub fn process_excel_import(
             </body>
             </html>
             "#,
-                import_result.imported_count, mapping_data.import_type, name, project_id
+                import_result.imported_count,
+                mapping_data.import_type,
+                name,
+                project_id,
+                project_id
             )
         }
         Err(e) => {
@@ -355,7 +440,7 @@ pub fn process_excel_import(
                                     </div>
                                     
                                     <div class="mt-3">
-                                        <a href="/import_excel" class="btn btn-primary">Try Again</a>
+                                        <a href="/p/{}/import_excel" class="btn btn-primary">Try Again</a>
                                         <a href="/" class="btn btn-secondary">Back to Home</a>
                                     </div>
                                 </div>
@@ -366,7 +451,7 @@ pub fn process_excel_import(
             </body>
             </html>
             "#,
-                e, name, project_id
+                e, name, project_id, project_id
             )
         }
     };

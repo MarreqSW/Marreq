@@ -139,7 +139,7 @@ mod tests {
 
     fn make_test(id: i32, parent: i32, status: i32) -> TestCase {
         TestCase {
-            id: id,
+            id,
             name: format!("Test {id}"),
             description: "desc".into(),
             source: "manual".into(),
@@ -208,7 +208,6 @@ mod tests {
                 id: 3,
                 title: "Req".into(),
                 description: String::new(),
-                verification_method_id: 0,
                 status_id: 0,
                 author_id: 0,
                 reviewer_id: 0,
@@ -237,5 +236,204 @@ mod tests {
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].status_id, "Ready");
         assert_eq!(items[0].reference_code, "TEST-10");
+    }
+
+    #[test]
+    fn list_all_decorates_all_tests() {
+        let mut repo = DieselRepoMock::default();
+        repo.test_statuses.insert(
+            1,
+            TestStatus {
+                id: 1,
+                title: "Open".into(),
+                description: String::new(),
+                tag: String::new(),
+                project_id: 1,
+            },
+        );
+        repo.tests.insert(1, make_test(1, 0, 1));
+        repo.tests.insert(2, make_test(2, 0, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedTestService::new(&state);
+
+        let decorated = service.list_all().unwrap();
+        assert_eq!(decorated.len(), 2);
+        // Order may vary, so check that both IDs are present
+        let ids: Vec<i32> = decorated.iter().map(|t| t.id).collect();
+        assert!(ids.contains(&1));
+        assert!(ids.contains(&2));
+    }
+
+    #[test]
+    fn list_by_project_decorates_filtered_tests() {
+        let mut repo = DieselRepoMock::default();
+        repo.test_statuses.insert(
+            1,
+            TestStatus {
+                id: 1,
+                title: "Open".into(),
+                description: String::new(),
+                tag: String::new(),
+                project_id: 1,
+            },
+        );
+        let mut test1 = make_test(1, 0, 1);
+        test1.project_id = 1;
+        let mut test2 = make_test(2, 0, 1);
+        test2.project_id = 2;
+
+        repo.tests.insert(1, test1);
+        repo.tests.insert(2, test2);
+
+        let state = state_with_repo(repo);
+        let service = DecoratedTestService::new(&state);
+
+        let decorated = service.list_by_project(1).unwrap();
+        assert_eq!(decorated.len(), 1);
+        assert_eq!(decorated[0].project_id, 1);
+    }
+
+    #[test]
+    fn get_by_parent_id_decorates_children() {
+        let mut repo = DieselRepoMock::default();
+        repo.test_statuses.insert(
+            1,
+            TestStatus {
+                id: 1,
+                title: "Open".into(),
+                description: String::new(),
+                tag: String::new(),
+                project_id: 1,
+            },
+        );
+        repo.tests.insert(1, make_test(1, 0, 1));
+        repo.tests.insert(2, make_test(2, 1, 1));
+        repo.tests.insert(3, make_test(3, 1, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedTestService::new(&state);
+
+        let decorated = service.get_by_parent_id(1).unwrap();
+        assert_eq!(decorated.len(), 2);
+        assert!(decorated.iter().any(|t| t.id == 2));
+        assert!(decorated.iter().any(|t| t.id == 3));
+    }
+
+    #[test]
+    fn get_by_parent_id_returns_empty_when_no_children() {
+        let mut repo = DieselRepoMock::default();
+        repo.test_statuses.insert(
+            1,
+            TestStatus {
+                id: 1,
+                title: "Open".into(),
+                description: String::new(),
+                tag: String::new(),
+                project_id: 1,
+            },
+        );
+        repo.tests.insert(1, make_test(1, 0, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedTestService::new(&state);
+
+        let decorated = service.get_by_parent_id(999).unwrap();
+        assert_eq!(decorated.len(), 0);
+    }
+
+    #[test]
+    fn decorate_handles_no_parent() {
+        let mut repo = DieselRepoMock::default();
+        repo.test_statuses.insert(
+            1,
+            TestStatus {
+                id: 1,
+                title: "Open".into(),
+                description: String::new(),
+                tag: String::new(),
+                project_id: 1,
+            },
+        );
+        let mut test = make_test(1, 0, 1);
+        test.parent_id = None;
+
+        repo.tests.insert(1, test);
+
+        let state = state_with_repo(repo);
+        let service = DecoratedTestService::new(&state);
+
+        let decorated = service.get_by_id(1).unwrap();
+        assert_eq!(decorated.test_parent_id, None);
+        assert_eq!(decorated.test_parent_title, "");
+    }
+
+    #[test]
+    fn create_delegates_to_test_service() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = DecoratedTestService::new(&state);
+
+        let actor = DieselRepoMock::make_user(1, "actor", "");
+        let payload = NewTestCase {
+            id: None,
+            reference_code: "TEST-NEW".into(),
+            name: "New Test".into(),
+            description: "Description".into(),
+            source: "manual".into(),
+            status_id: 1,
+            parent_id: None,
+            project_id: 1,
+        };
+
+        let id = service.create(&actor, payload).unwrap();
+        assert!(id >= 0);
+    }
+
+    #[test]
+    fn update_delegates_to_test_service() {
+        let mut repo = DieselRepoMock::default();
+        repo.tests.insert(1, make_test(1, 0, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedTestService::new(&state);
+
+        let actor = DieselRepoMock::make_user(1, "actor", "");
+        let payload = NewTestCase {
+            id: Some(1),
+            reference_code: "TEST-1".into(),
+            name: "Updated Test".into(),
+            description: "Updated Description".into(),
+            source: "automated".into(),
+            status_id: 1,
+            parent_id: None,
+            project_id: 99,
+        };
+
+        let updated = service.update(&actor, 1, payload).unwrap();
+        assert_eq!(updated.name, "Updated Test");
+    }
+
+    #[test]
+    fn delete_delegates_to_test_service() {
+        let mut repo = DieselRepoMock::default();
+        repo.tests.insert(1, make_test(1, 0, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedTestService::new(&state);
+
+        let actor = DieselRepoMock::make_user(1, "actor", "");
+        let deleted = service.delete(&actor, 1).unwrap();
+        assert_eq!(deleted.id, 1);
+    }
+
+    #[test]
+    fn get_linked_to_requirement_returns_empty_when_no_links() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = DecoratedTestService::new(&state);
+
+        let items = service.get_linked_to_requirement(999).unwrap();
+        assert_eq!(items.len(), 0);
     }
 }

@@ -381,130 +381,6 @@ mod from_conversion_tests {
     }
 
     // ============================================================================
-    // Tests for From conversions
-    // ============================================================================
-
-    mod from_conversion_tests {
-        use super::*;
-
-        #[test]
-        fn api_error_to_status_not_found() {
-            let err = ApiError::NotFound {
-                entity: "Test".to_string(),
-                id: 1,
-            };
-            let status: Status = err.into();
-            assert_eq!(status, Status::NotFound);
-        }
-
-        #[test]
-        fn api_error_to_status_validation() {
-            let err = ApiError::Validation("test".to_string());
-            let status: Status = err.into();
-            assert_eq!(status, Status::BadRequest);
-        }
-
-        #[test]
-        fn api_error_to_status_authentication() {
-            let err = ApiError::Authentication("test".to_string());
-            let status: Status = err.into();
-            assert_eq!(status, Status::Unauthorized);
-        }
-
-        #[test]
-        fn api_error_to_status_authorization() {
-            let err = ApiError::Authorization("test".to_string());
-            let status: Status = err.into();
-            assert_eq!(status, Status::Forbidden);
-        }
-
-        #[test]
-        fn api_error_to_status_database() {
-            use diesel::result::Error as DieselError;
-            let diesel_err = DieselError::DatabaseError(
-                diesel::result::DatabaseErrorKind::UniqueViolation,
-                Box::new("test".to_string()),
-            );
-            let err = ApiError::Database(diesel_err);
-            let status: Status = err.into();
-            assert_eq!(status, Status::InternalServerError);
-        }
-
-        #[test]
-        fn api_error_to_status_repository() {
-            let repo_err = RepoError::NotFound;
-            let err = ApiError::Repository(repo_err);
-            let status: Status = err.into();
-            assert_eq!(status, Status::InternalServerError);
-        }
-
-        #[test]
-        fn api_error_to_status_internal() {
-            let err = ApiError::Internal("test".to_string());
-            let status: Status = err.into();
-            assert_eq!(status, Status::InternalServerError);
-        }
-
-        #[test]
-        fn api_error_to_status_cache() {
-            let err = ApiError::Cache("test".to_string());
-            let status: Status = err.into();
-            assert_eq!(status, Status::ServiceUnavailable);
-        }
-
-        #[test]
-        fn api_error_to_status_serialization() {
-            let json_err = serde_json::from_str::<serde_json::Value>("invalid").unwrap_err();
-            let err = ApiError::Serialization(json_err);
-            let status: Status = err.into();
-            assert_eq!(status, Status::BadRequest);
-        }
-
-        #[test]
-        fn api_error_to_json_response() {
-            let err = ApiError::Validation("test error".to_string());
-            let json: Json<ApiResponse<()>> = err.into();
-            let response = json.into_inner();
-            assert!(!response.success);
-            assert!(response.error.unwrap().contains("test error"));
-        }
-
-        #[test]
-        fn diesel_error_to_api_error() {
-            use diesel::result::Error as DieselError;
-            let diesel_err = DieselError::DatabaseError(
-                diesel::result::DatabaseErrorKind::UniqueViolation,
-                Box::new("test".to_string()),
-            );
-            let api_err: ApiError = diesel_err.into();
-            match api_err {
-                ApiError::Database(_) => {}
-                _ => panic!("Expected Database variant"),
-            }
-        }
-
-        #[test]
-        fn repo_error_to_api_error() {
-            let repo_err = RepoError::NotFound;
-            let api_err: ApiError = repo_err.into();
-            match api_err {
-                ApiError::Repository(_) => {}
-                _ => panic!("Expected Repository variant"),
-            }
-        }
-
-        #[test]
-        fn serde_json_error_to_api_error() {
-            let json_err = serde_json::from_str::<serde_json::Value>("invalid").unwrap_err();
-            let api_err: ApiError = json_err.into();
-            match api_err {
-                ApiError::Serialization(_) => {}
-                _ => panic!("Expected Serialization variant"),
-            }
-        }
-    }
-
-    // ============================================================================
     // Tests for Responder implementation
     // ============================================================================
 
@@ -588,7 +464,7 @@ mod from_conversion_tests {
         #[test]
         fn api_result_ok() {
             let result: ApiResult<i32> = Ok(42);
-            assert_eq!(result.unwrap(), 42);
+            assert!(matches!(result, Ok(42)));
         }
 
         #[test]

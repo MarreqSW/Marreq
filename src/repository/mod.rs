@@ -223,3 +223,79 @@ where
         .map_err(|_| RepoError::Pool("async task join error".into()))?
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{RepoError, RepoLockExt};
+    use std::sync::{Arc, RwLock};
+
+    fn block_on<F: std::future::Future>(f: F) -> F::Output {
+        rocket::tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(f)
+    }
+
+    #[test]
+    fn repo_lock_ext_async_read_join_error_on_panic() {
+        let data: Arc<RwLock<i32>> = Arc::new(RwLock::new(42));
+        let result: Result<i32, RepoError> =
+            block_on(data.async_read(|_| -> Result<i32, RepoError> { panic!("test panic") }));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match &err {
+            RepoError::Pool(msg) => assert!(msg.contains("async task join error")),
+            _ => panic!("expected Pool error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn repo_lock_ext_async_write_join_error_on_panic() {
+        let data: Arc<RwLock<i32>> = Arc::new(RwLock::new(42));
+        let result: Result<(), RepoError> =
+            block_on(data.async_write(|_| -> Result<(), RepoError> { panic!("test panic") }));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match &err {
+            RepoError::Pool(msg) => assert!(msg.contains("async task join error")),
+            _ => panic!("expected Pool error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn repo_lock_ext_async_read_poisoned_lock() {
+        let data: Arc<RwLock<i32>> = Arc::new(RwLock::new(42));
+        let data_clone = Arc::clone(&data);
+        let _ = std::thread::spawn(move || {
+            let _guard = data_clone.write().unwrap();
+            panic!("poison");
+        })
+        .join();
+        let result = block_on(data.async_read(|_| Ok::<i32, RepoError>(0)));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match &err {
+            RepoError::Pool(msg) => assert!(msg.contains("poisoned")),
+            _ => panic!("expected Pool error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn repo_lock_ext_async_write_poisoned_lock() {
+        let data: Arc<RwLock<i32>> = Arc::new(RwLock::new(42));
+        let data_clone = Arc::clone(&data);
+        let _ = std::thread::spawn(move || {
+            let _guard = data_clone.write().unwrap();
+            panic!("poison");
+        })
+        .join();
+        let result = block_on(data.async_write(|_| Ok::<(), RepoError>(())));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match &err {
+            RepoError::Pool(msg) => assert!(msg.contains("poisoned")),
+            _ => panic!("expected Pool error, got {:?}", err),
+        }
+    }
+}

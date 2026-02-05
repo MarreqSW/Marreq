@@ -227,15 +227,11 @@ mod tests {
     /// With EMBEDDINGS_ENABLED unset, the fairing hits the "disabled" path and returns early.
     #[tokio::test]
     async fn fairing_on_liftoff_runs_embeddings_disabled_path() {
-        let rocket = rocket::build()
-            .attach(SemanticIndexFairing);
+        let rocket = rocket::build().attach(SemanticIndexFairing);
         let ignited = rocket.ignite().await.expect("ignite");
         // Launch with short timeout; on_liftoff runs during launch and hits the "else" branch
-        let result = tokio::time::timeout(
-            std::time::Duration::from_millis(400),
-            ignited.launch(),
-        )
-        .await;
+        let result =
+            tokio::time::timeout(std::time::Duration::from_millis(400), ignited.launch()).await;
         // Timeout (Err) is expected since we don't shut down the server
         assert!(result.is_err() || result.unwrap().is_ok());
     }
@@ -244,8 +240,8 @@ mod tests {
     #[tokio::test]
     async fn process_queue_once_when_disabled_returns_zero() {
         use crate::app::AppState;
-        use crate::repository::CacheRepository;
         use crate::repository::diesel_repo_mock::DieselRepoMock;
+        use crate::repository::CacheRepository;
         use std::sync::{Arc, RwLock};
 
         let inner = DieselRepoMock::default();

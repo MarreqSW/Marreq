@@ -207,7 +207,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{RepoLockExt, RepoError};
+    use super::{RepoError, RepoLockExt};
     use std::sync::{Arc, RwLock};
 
     fn block_on<F: std::future::Future>(f: F) -> F::Output {

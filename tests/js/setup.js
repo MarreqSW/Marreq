@@ -2,6 +2,9 @@
  * Global test setup for Vitest
  */
 
+// Keep reference to real console before mocking to avoid recursion
+const realConsole = { ...console };
+
 // Mock console methods to reduce test noise
 global.console = {
   ...console,
@@ -10,8 +13,7 @@ global.console = {
   info: vi.fn(),
   warn: vi.fn(),
   error: (...args) => {
-    // Still log errors to help with debugging
-    console.error(...args);
+    realConsole.error(...args);
   },
 };
 

@@ -79,8 +79,9 @@ function initStatusControls(form) {
     closeMenu();
   });
 
+  const statusControl = form.querySelector('[data-role="status-control"]');
   document.addEventListener('click', (event) => {
-    if (!menu.hidden && !menu.contains(event.target) && event.target !== toggle) {
+    if (!menu.hidden && statusControl && !statusControl.contains(event.target)) {
       closeMenu();
     }
   });
@@ -407,8 +408,8 @@ function initInlineCreation(form) {
       },
     },
     verification: {
-      label: 'Verification method',
-      select: form.querySelector('#verification_method_id'),
+      label: 'Verification methods',
+      select: form.querySelector('#verification_method_ids') || form.querySelector('#verification_method_id'),
       modal: document.querySelector('#verificationModal'),
       form: document.querySelector('#inlineVerificationForm'),
       dropdown: form.querySelector('[data-dropdown="verification"]'),
@@ -419,60 +420,57 @@ function initInlineCreation(form) {
         tag: (fd.get('tag') || '').toString().trim(),
       }),
       apply: (data) => {
-        const select = form.querySelector('#verification_method_id');
+        const select = form.querySelector('#verification_method_ids') || form.querySelector('#verification_method_id');
         const dropdown = form.querySelector('[data-dropdown="verification"]');
-        
-        if (!select || !dropdown) {
+
+        if (!select) {
           return;
         }
 
-        // Add to hidden select
         const option = document.createElement('option');
         option.value = String(data.id);
         option.textContent = data.label;
         select.append(option);
-        select.value = String(data.id);
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-        
-        // Add to dropdown list
-        const list = dropdown.querySelector('[data-role="dropdown-list"]');
-        if (list) {
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'c-custom-dropdown__item';
-          button.setAttribute('data-value', String(data.id));
-          button.textContent = data.label;
-          
-          // Add click handler
-          button.addEventListener('click', (event) => {
-            event.preventDefault();
-            select.value = String(data.id);
-            select.dispatchEvent(new Event('change', { bubbles: true }));
-            
-            const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
-            const menu = dropdown.querySelector('[data-role="dropdown-menu"]');
-            const trigger = dropdown.querySelector('[data-role="dropdown-trigger"]');
-            
-            if (valueDisplay) {
-              valueDisplay.textContent = data.label;
-              valueDisplay.classList.remove('c-custom-dropdown__value--placeholder');
-            }
-            if (menu) {
-              menu.hidden = true;
-            }
-            if (trigger) {
-              trigger.setAttribute('aria-expanded', 'false');
-            }
-          });
-          
-          list.append(button);
+        if (select.multiple) {
+          option.selected = true;
+        } else {
+          select.value = String(data.id);
         }
-        
-        // Update display
-        const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
-        if (valueDisplay) {
-          valueDisplay.textContent = data.label;
-          valueDisplay.classList.remove('c-custom-dropdown__value--placeholder');
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+
+        if (dropdown) {
+          const list = dropdown.querySelector('[data-role="dropdown-list"]');
+          if (list) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'c-custom-dropdown__item';
+            button.setAttribute('data-value', String(data.id));
+            button.textContent = data.label;
+            button.addEventListener('click', (event) => {
+              event.preventDefault();
+              if (select.multiple) {
+                option.selected = true;
+              } else {
+                select.value = String(data.id);
+              }
+              select.dispatchEvent(new Event('change', { bubbles: true }));
+              const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
+              const menu = dropdown.querySelector('[data-role="dropdown-menu"]');
+              const trigger = dropdown.querySelector('[data-role="dropdown-trigger"]');
+              if (valueDisplay) {
+                valueDisplay.textContent = data.label;
+                valueDisplay.classList.remove('c-custom-dropdown__value--placeholder');
+              }
+              if (menu) menu.hidden = true;
+              if (trigger) trigger.setAttribute('aria-expanded', 'false');
+            });
+            list.append(button);
+          }
+          const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
+          if (valueDisplay) {
+            valueDisplay.textContent = data.label;
+            valueDisplay.classList.remove('c-custom-dropdown__value--placeholder');
+          }
         }
       },
     },

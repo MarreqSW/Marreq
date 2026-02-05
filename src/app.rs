@@ -12,7 +12,6 @@ pub type DieselCachedRepo = CacheRepository<crate::repository::diesel_repo::Dies
 #[cfg(any(test, feature = "test-helpers"))]
 pub type DieselCachedRepo = CacheRepository<crate::repository::diesel_repo_mock::DieselRepoMock>;
 
-#[derive(Clone)]
 pub struct AppState<R = DieselCachedRepo> {
     pub repo: Arc<RwLock<R>>,
 }
@@ -58,6 +57,7 @@ pub fn build() -> Rocket<Build> {
             rocket::fs::FileServer::from(rocket::fs::relative!("src/html/static")),
         )
         .attach(crate::html::cors::CorsFairing)
+        .attach(crate::fairings::SemanticIndexFairing)
         .attach(rocket_dyn_templates::Template::fairing())
         .attach(crate::app::MyDbConn::fairing())
 }

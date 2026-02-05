@@ -8,6 +8,7 @@
 //! - Regex patterns work correctly
 
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use crate::errors::ValidationError;
     use crate::status_enums::ProjectStatus;
@@ -25,7 +26,6 @@ mod tests {
                 id: None,
                 title: "Valid Requirement Title".to_string(),
                 description: "Valid description text".to_string(),
-                verification_method_id: 1,
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
@@ -214,28 +214,6 @@ mod tests {
         fn requirement_reference_code_invalid_special_chars() {
             let mut req = valid_requirement();
             req.reference_code = "REQ-001!".to_string();
-            let result = validate_requirement(&req);
-            assert!(result.is_err());
-        }
-
-        #[test]
-        fn requirement_verification_method_id_zero() {
-            let mut req = valid_requirement();
-            req.verification_method_id = 0;
-            let result = validate_requirement(&req);
-            assert!(result.is_err());
-            match result.unwrap_err() {
-                ValidationError::Custom(msg) => {
-                    assert!(msg.contains("Verification method ID"));
-                }
-                _ => panic!("Expected Custom error"),
-            }
-        }
-
-        #[test]
-        fn requirement_verification_method_id_negative() {
-            let mut req = valid_requirement();
-            req.verification_method_id = -1;
             let result = validate_requirement(&req);
             assert!(result.is_err());
         }
@@ -1499,7 +1477,6 @@ mod tests {
                 id: Some(1),
                 title: "Complete Requirement".to_string(),
                 description: "Full description".to_string(),
-                verification_method_id: 1,
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
@@ -1534,7 +1511,6 @@ mod tests {
                 id: None,
                 title: "ABC".to_string(), // Exactly 3
                 description: "Desc".to_string(),
-                verification_method_id: 1,
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
@@ -1554,7 +1530,6 @@ mod tests {
                 id: None,
                 title: "A".repeat(255),
                 description: "Desc".to_string(),
-                verification_method_id: 1,
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
@@ -1574,7 +1549,6 @@ mod tests {
                 id: None,
                 title: "Title".to_string(),
                 description: "A".repeat(2000),
-                verification_method_id: 1,
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
@@ -1594,7 +1568,6 @@ mod tests {
                 id: None,
                 title: "".to_string(),       // Error 1
                 description: "".to_string(), // Error 2
-                verification_method_id: 0,   // Error 3
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
@@ -1608,9 +1581,8 @@ mod tests {
             let result = validate_requirement(&req);
             assert!(result.is_err());
             // Should return first error (title required)
-            match result.unwrap_err() {
-                ValidationError::Required { field } => assert_eq!(field, "title"),
-                _ => {}
+            if let ValidationError::Required { field } = result.unwrap_err() {
+                assert_eq!(field, "title");
             }
         }
 
@@ -1620,7 +1592,6 @@ mod tests {
                 id: None,
                 title: "Título con ñ".to_string(),
                 description: "Descripción".to_string(),
-                verification_method_id: 1,
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,

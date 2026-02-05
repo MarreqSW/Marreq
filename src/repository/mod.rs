@@ -33,6 +33,20 @@ pub trait RequirementsRepository {
     fn get_requirements_all(&self) -> Result<Vec<Requirement>, RepoError>;
     fn get_requirements_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError>;
 
+    fn get_verification_method_ids_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<i32>, RepoError>;
+    fn get_requirement_ids_by_verification_method(
+        &self,
+        verification_method_id: i32,
+    ) -> Result<Vec<i32>, RepoError>;
+    fn set_requirement_verification_methods(
+        &mut self,
+        requirement_id: i32,
+        verification_method_ids: &[i32],
+    ) -> Result<(), RepoError>;
+
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError>;
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError>;
     fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError>;
@@ -86,6 +100,11 @@ pub trait LookupRepository {
     fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError>;
 
     fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError>;
+    fn edit_verification(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError>;
+    fn delete_verification(
+        &mut self,
+        verification_id: i32,
+    ) -> Result<VerificationMethod, RepoError>;
     fn insert_new_category(&mut self, new: &NewCategory) -> Result<i32, RepoError>;
     fn edit_category(&mut self, new: &NewCategory) -> Result<bool, RepoError>;
     fn delete_category(&mut self, category_id: i32) -> Result<Category, RepoError>;
@@ -202,5 +221,81 @@ where
         })
         .await
         .map_err(|_| RepoError::Pool("async task join error".into()))?
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{RepoError, RepoLockExt};
+    use std::sync::{Arc, RwLock};
+
+    fn block_on<F: std::future::Future>(f: F) -> F::Output {
+        rocket::tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(f)
+    }
+
+    #[test]
+    fn repo_lock_ext_async_read_join_error_on_panic() {
+        let data: Arc<RwLock<i32>> = Arc::new(RwLock::new(42));
+        let result: Result<i32, RepoError> =
+            block_on(data.async_read(|_| -> Result<i32, RepoError> { panic!("test panic") }));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match &err {
+            RepoError::Pool(msg) => assert!(msg.contains("async task join error")),
+            _ => panic!("expected Pool error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn repo_lock_ext_async_write_join_error_on_panic() {
+        let data: Arc<RwLock<i32>> = Arc::new(RwLock::new(42));
+        let result: Result<(), RepoError> =
+            block_on(data.async_write(|_| -> Result<(), RepoError> { panic!("test panic") }));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match &err {
+            RepoError::Pool(msg) => assert!(msg.contains("async task join error")),
+            _ => panic!("expected Pool error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn repo_lock_ext_async_read_poisoned_lock() {
+        let data: Arc<RwLock<i32>> = Arc::new(RwLock::new(42));
+        let data_clone = Arc::clone(&data);
+        let _ = std::thread::spawn(move || {
+            let _guard = data_clone.write().unwrap();
+            panic!("poison");
+        })
+        .join();
+        let result = block_on(data.async_read(|_| Ok::<i32, RepoError>(0)));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match &err {
+            RepoError::Pool(msg) => assert!(msg.contains("poisoned")),
+            _ => panic!("expected Pool error, got {:?}", err),
+        }
+    }
+
+    #[test]
+    fn repo_lock_ext_async_write_poisoned_lock() {
+        let data: Arc<RwLock<i32>> = Arc::new(RwLock::new(42));
+        let data_clone = Arc::clone(&data);
+        let _ = std::thread::spawn(move || {
+            let _guard = data_clone.write().unwrap();
+            panic!("poison");
+        })
+        .join();
+        let result = block_on(data.async_write(|_| Ok::<(), RepoError>(())));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match &err {
+            RepoError::Pool(msg) => assert!(msg.contains("poisoned")),
+            _ => panic!("expected Pool error, got {:?}", err),
+        }
     }
 }

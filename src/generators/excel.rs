@@ -5,11 +5,10 @@ use diesel::prelude::*;
 use std::fs;
 
 pub fn create_matrix_workbook(
-    cookies: &rocket::http::CookieJar<'_>,
+    project_id: i32,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-    eprintln!("Creating matrix workbook");
+    eprintln!("Creating matrix workbook for project {}", project_id);
 
-    use crate::helper_functions::*;
     use crate::schema::matrix::dsl::{matrix, req_id};
     use crate::schema::requirements::dsl::requirements;
     use crate::schema::tests::dsl::tests;
@@ -18,32 +17,17 @@ pub fn create_matrix_workbook(
         .get_conn()
         .map_err(|e| format!("Database connection error: {}", e))?;
 
-    // Get selected project ID
-    let selected_project_id = get_selected_project_id(cookies);
+    // Get requirements for the project
+    let all_reqs = requirements
+        .filter(crate::schema::requirements::project_id.eq(project_id))
+        .load::<Requirement>(connection.as_mut())
+        .map_err(|e| format!("Error querying requirements by project: {:?}", e))?;
 
-    // Get requirements for the selected project
-    let all_reqs = if let Some(selected_pid) = selected_project_id {
-        requirements
-            .filter(crate::schema::requirements::project_id.eq(selected_pid))
-            .load::<Requirement>(connection.as_mut())
-            .map_err(|e| format!("Error querying requirements by project: {:?}", e))?
-    } else {
-        requirements
-            .load::<Requirement>(connection.as_mut())
-            .map_err(|e| format!("Error querying requirements: {:?}", e))?
-    };
-
-    // Get tests for the selected project
-    let all_tests = if let Some(selected_pid) = selected_project_id {
-        tests
-            .filter(crate::schema::tests::project_id.eq(selected_pid))
-            .load::<TestCase>(connection.as_mut())
-            .map_err(|e| format!("Error querying tests by project: {:?}", e))?
-    } else {
-        tests
-            .load::<TestCase>(connection.as_mut())
-            .map_err(|e| format!("Error querying tests: {:?}", e))?
-    };
+    // Get tests for the project
+    let all_tests = tests
+        .filter(crate::schema::tests::project_id.eq(project_id))
+        .load::<TestCase>(connection.as_mut())
+        .map_err(|e| format!("Error querying tests by project: {:?}", e))?;
 
     eprintln!(
         "Found {} requirements and {} tests",
@@ -56,10 +40,10 @@ pub fn create_matrix_workbook(
     let mut decorated_tests = decorators::decorate_tests(all_tests);
 
     // Sort requirements by ID
-    decorated_reqs.sort_by(|a, b| a.id.cmp(&b.id));
+    decorated_reqs.sort_by_key(|req| req.id);
 
     // Sort tests by ID
-    decorated_tests.sort_by(|a, b| a.id.cmp(&b.id));
+    decorated_tests.sort_by_key(|test| test.id);
 
     let workbook = xlsxwriter::Workbook::new("target/matrix.xls")?;
     let mut sheet1 = workbook.add_worksheet(None)?;
@@ -124,12 +108,13 @@ pub fn create_matrix_workbook(
     Ok(result)
 }
 
-pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     use crate::schema::requirements::dsl::*;
 
     let mut connection = DieselRepo::new().get_conn()?;
 
     let all_requirements = requirements
+        .filter(crate::schema::requirements::project_id.eq(pid))
         .load::<Requirement>(connection.as_mut())
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
@@ -172,7 +157,7 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
         worksheet.write_string(row, 10, &req.creation_date, None)?;
         worksheet.write_string(row, 11, &req.update_date, None)?;
         worksheet.write_string(row, 12, &req.deadline_date, None)?;
-        worksheet.write_string(row, 13, &req.justification.as_deref().unwrap_or(""), None)?;
+        worksheet.write_string(row, 13, req.justification.as_deref().unwrap_or(""), None)?;
     }
 
     workbook.close()?;
@@ -180,12 +165,13 @@ pub fn create_requirements_workbook() -> Result<Vec<u8>, Box<dyn std::error::Err
     Ok(result)
 }
 
-pub fn create_tests_workbook() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+pub fn create_tests_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     use crate::schema::tests::dsl::*;
 
     let mut connection = DieselRepo::new().get_conn()?;
 
     let all_tests = tests
+        .filter(crate::schema::tests::project_id.eq(pid))
         .load::<TestCase>(connection.as_mut())
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 

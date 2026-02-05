@@ -199,7 +199,7 @@ mod tests {
 
     fn sample_app(id: i32, title: &str) -> Applicability {
         Applicability {
-            id: id,
+            id,
             title: title.into(),
             description: "desc".into(),
             tag: "TAG".into(),
@@ -298,5 +298,265 @@ mod tests {
         let items = service.list_by_project(1).unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].title, "Alpha");
+    }
+
+    #[test]
+    fn list_all_returns_all_applicability_entries() {
+        let mut repo = DieselRepoMock::default();
+        repo.applicability.insert(1, sample_app(1, "Alpha"));
+        repo.applicability.insert(2, sample_app(2, "Beta"));
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let items = service.list_all().unwrap();
+        assert_eq!(items.len(), 2);
+    }
+
+    #[test]
+    fn list_all_returns_empty_when_no_entries() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let items = service.list_all().unwrap();
+        assert_eq!(items.len(), 0);
+    }
+
+    #[test]
+    fn get_by_id_returns_not_found_for_nonexistent_entry() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let result = service.get_by_id(999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn create_rejects_empty_title() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "".into(),
+            description: "Description".into(),
+            tag: "TAG".into(),
+            project_id: 1,
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_rejects_title_too_short() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "A".into(), // Too short (min 2 chars)
+            description: "Description".into(),
+            tag: "TAG".into(),
+            project_id: 1,
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_rejects_title_too_long() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "A".repeat(101), // Too long (max 100 chars)
+            description: "Description".into(),
+            tag: "TAG".into(),
+            project_id: 1,
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_rejects_empty_description() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "Title".into(),
+            description: "".into(),
+            tag: "TAG".into(),
+            project_id: 1,
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_rejects_description_too_long() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "Title".into(),
+            description: "A".repeat(501), // Too long (max 500 chars)
+            tag: "TAG".into(),
+            project_id: 1,
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_rejects_empty_tag() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "Title".into(),
+            description: "Description".into(),
+            tag: "".into(),
+            project_id: 1,
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_rejects_tag_too_long() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "Title".into(),
+            description: "Description".into(),
+            tag: "A".repeat(51), // Too long (max 50 chars)
+            project_id: 1,
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_rejects_tag_with_special_characters() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "Title".into(),
+            description: "Description".into(),
+            tag: "TAG-1".into(), // Contains hyphen
+            project_id: 1,
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_rejects_invalid_project_id() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "Title".into(),
+            description: "Description".into(),
+            tag: "TAG1".into(),
+            project_id: 0, // Invalid (must be positive)
+        };
+
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_accepts_valid_tag_with_underscores() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "Title".into(),
+            description: "Description".into(),
+            tag: "PROD_1".into(), // Valid with underscore
+            project_id: 1,
+        };
+
+        let id = service.create(&actor(), payload).unwrap();
+        let stored = service.get_by_id(id).unwrap();
+        assert_eq!(stored.tag, "PROD_1");
+    }
+
+    #[test]
+    fn update_returns_not_found_for_missing_entry() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "Title".into(),
+            description: "Description".into(),
+            tag: "TAG1".into(),
+            project_id: 1,
+        };
+
+        let result = service.update(&actor(), 999, payload);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn delete_returns_not_found_for_missing_entry() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let result = service.delete(&actor(), 999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn update_validates_payload() {
+        let mut repo = DieselRepoMock::default();
+        repo.applicability.insert(1, sample_app(1, "Existing"));
+        let state = state_with_repo(repo);
+        let service = ApplicabilityService::new(&state);
+
+        let payload = NewApplicability {
+            id: None,
+            title: "".into(), // Invalid empty title
+            description: "Description".into(),
+            tag: "TAG1".into(),
+            project_id: 1,
+        };
+
+        let result = service.update(&actor(), 1, payload);
+        assert!(matches!(result, Err(RepoError::BadInput(_))));
     }
 }

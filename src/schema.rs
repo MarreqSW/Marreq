@@ -1,4 +1,5 @@
 // @generated automatically by Diesel CLI.
+// NOTE: Additional tables for semantic search added manually below
 
 diesel::table! {
     applicability (id) {
@@ -84,11 +85,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    requirement_verification_methods (requirement_id, verification_method_id) {
+        requirement_id -> Int4,
+        verification_method_id -> Int4,
+    }
+}
+
+diesel::table! {
     requirements (id) {
         id -> Int4,
         title -> Varchar,
         description -> Varchar,
-        verification_method_id -> Int4,
         status_id -> Int4,
         author_id -> Int4,
         reviewer_id -> Int4,
@@ -151,7 +158,41 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::Vector;
+
+    requirement_embeddings (requirement_id) {
+        requirement_id -> Int4,
+        project_id -> Int4,
+        embedding -> Nullable<Vector>,
+        #[max_length = 100]
+        embedding_model -> Varchar,
+        #[max_length = 64]
+        content_hash -> Varchar,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    embedding_index_queue (id) {
+        id -> Int4,
+        requirement_id -> Int4,
+        project_id -> Int4,
+        #[max_length = 20]
+        status -> Varchar,
+        error_message -> Nullable<Text>,
+        created_at -> Timestamp,
+        processed_at -> Nullable<Timestamp>,
+    }
+}
+
 diesel::joinable!(applicability -> projects (project_id));
+diesel::joinable!(requirement_embeddings -> requirements (requirement_id));
+diesel::joinable!(requirement_embeddings -> projects (project_id));
+diesel::joinable!(embedding_index_queue -> requirements (requirement_id));
+diesel::joinable!(requirement_verification_methods -> requirements (requirement_id));
+diesel::joinable!(requirement_verification_methods -> verification (verification_method_id));
 diesel::joinable!(categories -> projects (project_id));
 diesel::joinable!(logs -> projects (project_id));
 diesel::joinable!(logs -> users (user_id));
@@ -172,11 +213,14 @@ diesel::joinable!(verification -> projects (project_id));
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
     categories,
+    embedding_index_queue,
     logs,
     matrix,
     project_members,
     projects,
+    requirement_embeddings,
     requirement_status,
+    requirement_verification_methods,
     requirements,
     test_status,
     tests,

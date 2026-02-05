@@ -15,6 +15,8 @@ pub struct DieselRepoMock {
     pub categories: HashMap<i32, Category>,
     pub applicability: HashMap<i32, Applicability>,
     pub requirements: HashMap<i32, Requirement>,
+    /// (requirement_id, verification_method_id) pairs for many-to-many
+    pub requirement_verification_methods: Vec<(i32, i32)>,
     pub tests: HashMap<i32, TestCase>,
     pub projects: HashMap<i32, Project>,
     pub matrices: Vec<MatrixLink>,
@@ -45,6 +47,7 @@ impl DieselRepoMock {
             categories: HashMap::new(),
             applicability: HashMap::new(),
             requirements: HashMap::new(),
+            requirement_verification_methods: Vec::new(),
             tests: HashMap::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
@@ -63,6 +66,7 @@ impl DieselRepoMock {
             categories: HashMap::new(),
             applicability: HashMap::new(),
             requirements: HashMap::new(),
+            requirement_verification_methods: Vec::new(),
             tests: HashMap::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
@@ -75,15 +79,13 @@ impl DieselRepoMock {
     pub fn with_admin_user(mut self) -> Self {
         let mut admin = Self::make_user(1, "admin", "");
         admin.is_admin = true;
-        if !self.users.contains_key(&admin.id) {
-            self.users.insert(admin.id, admin);
-        }
+        self.users.entry(admin.id).or_insert(admin);
         self
     }
 
     pub fn make_user(id: i32, username: &str, stored_pw: &str) -> User {
         User {
-            id: id,
+            id,
             username: username.to_string(),
             name: "name".into(),
             email: "email@example.com".into(),
@@ -135,7 +137,7 @@ impl UserRepository for DieselRepoMock {
             .id
             .unwrap_or_else(|| self.users.keys().max().map(|i| i + 1).unwrap_or(1));
         let user = User {
-            id: id,
+            id,
             username: new.username.clone(),
             name: new.name.clone(),
             email: new.email.clone(),
@@ -281,7 +283,7 @@ impl LookupRepository for DieselRepoMock {
             .id
             .unwrap_or_else(|| self.verifications.keys().max().map(|i| i + 1).unwrap_or(1));
         let verification = VerificationMethod {
-            id: id,
+            id,
             title: new.title.clone(),
             description: new.description.clone(),
             tag: new.tag.clone(),
@@ -291,12 +293,39 @@ impl LookupRepository for DieselRepoMock {
         Ok(id)
     }
 
+    fn edit_verification(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError> {
+        let id = new.id.ok_or(RepoError::NotFound)?;
+        match self.verifications.get_mut(&id) {
+            Some(v) => {
+                v.title = new.title.clone();
+                v.description = new.description.clone();
+                v.tag = new.tag.clone();
+                v.project_id = new.project_id;
+                Ok(true)
+            }
+            None => Err(RepoError::NotFound),
+        }
+    }
+
+    fn delete_verification(
+        &mut self,
+        verification_id: i32,
+    ) -> Result<VerificationMethod, RepoError> {
+        let verification = self
+            .verifications
+            .remove(&verification_id)
+            .ok_or(RepoError::NotFound)?;
+        self.requirement_verification_methods
+            .retain(|(_, vid)| *vid != verification_id);
+        Ok(verification)
+    }
+
     fn insert_new_category(&mut self, _new: &NewCategory) -> Result<i32, RepoError> {
         let id = _new
             .id
             .unwrap_or_else(|| self.categories.keys().max().map(|i| i + 1).unwrap_or(1));
         let cat = Category {
-            id: id,
+            id,
             title: _new.title.clone(),
             description: _new.description.clone(),
             tag: _new.tag.clone(),
@@ -328,7 +357,7 @@ impl LookupRepository for DieselRepoMock {
             .id
             .unwrap_or_else(|| self.applicability.keys().max().map(|i| i + 1).unwrap_or(1));
         let app = Applicability {
-            id: id,
+            id,
             title: _new.title.clone(),
             description: _new.description.clone(),
             tag: _new.tag.clone(),
@@ -413,16 +442,57 @@ impl RequirementsRepository for DieselRepoMock {
             .collect())
     }
 
+    fn get_verification_method_ids_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        let mut ids: Vec<i32> = self
+            .requirement_verification_methods
+            .iter()
+            .filter(|(req_id, _)| *req_id == requirement_id)
+            .map(|(_, ver_id)| *ver_id)
+            .collect();
+        ids.sort_unstable();
+        Ok(ids)
+    }
+
+    fn get_requirement_ids_by_verification_method(
+        &self,
+        verification_method_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        Ok(self
+            .requirement_verification_methods
+            .iter()
+            .filter(|(_, ver_id)| *ver_id == verification_method_id)
+            .map(|(req_id, _)| *req_id)
+            .collect())
+    }
+
+    fn set_requirement_verification_methods(
+        &mut self,
+        requirement_id: i32,
+        verification_method_ids: &[i32],
+    ) -> Result<(), RepoError> {
+        self.requirement_verification_methods
+            .retain(|(req_id, _)| *req_id != requirement_id);
+        for &ver_id in verification_method_ids {
+            if ver_id > 0 {
+                self.requirement_verification_methods
+                    .push((requirement_id, ver_id));
+            }
+        }
+        Ok(())
+    }
+
     fn insert_new_requirement(&mut self, _new: &NewRequirement) -> Result<i32, RepoError> {
         let id = _new
             .id
             .unwrap_or_else(|| self.requirements.keys().max().map(|i| i + 1).unwrap_or(1));
         let now = epoch();
         let req = Requirement {
-            id: id,
+            id,
             title: _new.title.clone(),
             description: _new.description.clone(),
-            verification_method_id: _new.verification_method_id,
             status_id: _new.status_id,
             author_id: _new.author_id,
             reviewer_id: _new.reviewer_id,
@@ -446,7 +516,6 @@ impl RequirementsRepository for DieselRepoMock {
             Some(req) => {
                 req.title = _new.title.clone();
                 req.description = _new.description.clone();
-                req.verification_method_id = _new.verification_method_id;
                 req.status_id = _new.status_id;
                 req.author_id = _new.author_id;
                 req.reviewer_id = _new.reviewer_id;
@@ -529,7 +598,7 @@ impl TestsCaseRepository for DieselRepoMock {
             .id
             .unwrap_or_else(|| self.tests.keys().max().map(|i| i + 1).unwrap_or(1));
         let test = TestCase {
-            id: id,
+            id,
             name: _new.name.clone(),
             description: _new.description.clone(),
             source: _new.source.clone(),
@@ -595,13 +664,13 @@ impl ProjectsRepository for DieselRepoMock {
         let id = self.projects.keys().max().map(|i| i + 1).unwrap_or(1);
         let now = epoch();
         let proj = Project {
-            id: id,
+            id,
             name: _new.name.clone(),
             description: _new.description.clone(),
             creation_date: Some(now),
             update_date: Some(now),
             owner_id: _new.owner_id,
-            status: _new.status.clone(),
+            status: _new.status,
         };
         self.projects.insert(id, proj);
         Ok(id)

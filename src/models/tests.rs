@@ -8,6 +8,7 @@
 //! - All struct fields are accessible
 
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use super::super::*;
     use crate::logger::Loggable;
@@ -35,7 +36,6 @@ mod tests {
                 id: 42,
                 title: "Test Requirement".to_string(),
                 description: "Test Description".to_string(),
-                verification_method_id: 1,
                 status_id: 2,
                 author_id: 10,
                 reviewer_id: 11,
@@ -60,7 +60,6 @@ mod tests {
                 id: 100,
                 title: "Child Requirement".to_string(),
                 description: "Child".to_string(),
-                verification_method_id: 1,
                 status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
@@ -231,7 +230,6 @@ mod tests {
                 id: 42,
                 title: "Test Req".to_string(),
                 description: "Desc".to_string(),
-                verification_method_id: 1,
                 status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
@@ -347,7 +345,6 @@ mod tests {
                 id: 1,
                 title: "Title".to_string(),
                 description: "Desc".to_string(),
-                verification_method_id: 2,
                 status_id: 3,
                 author_id: 4,
                 reviewer_id: 5,
@@ -364,7 +361,6 @@ mod tests {
 
             assert_eq!(req.id, 1);
             assert_eq!(req.title, "Title");
-            assert_eq!(req.verification_method_id, 2);
             assert_eq!(req.status_id, 3);
             assert_eq!(req.parent_id, Some(7));
             assert_eq!(req.justification, Some("Just".to_string()));
@@ -385,7 +381,7 @@ mod tests {
 
             assert_eq!(user.id, 1);
             assert_eq!(user.username, "user");
-            assert_eq!(user.is_admin, true);
+            assert!(user.is_admin);
         }
 
         #[test]
@@ -465,7 +461,6 @@ mod tests {
                 id: 1,
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
-                verification_method_id: 1,
                 status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
@@ -540,7 +535,6 @@ mod tests {
                 id: Some(1),
                 title: "New Requirement".to_string(),
                 description: "Description".to_string(),
-                verification_method_id: 1,
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
@@ -562,7 +556,6 @@ mod tests {
                 id: Some(42),
                 title: "Test Req".to_string(),
                 description: "Desc".to_string(),
-                verification_method_id: 1,
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
@@ -586,7 +579,6 @@ mod tests {
                 id: None,
                 title: "New Req".to_string(),
                 description: "Desc".to_string(),
-                verification_method_id: 1,
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
@@ -786,7 +778,7 @@ mod tests {
 
             assert_eq!(req.username, "user");
             assert_eq!(req.password, "plaintext");
-            assert_eq!(req.is_admin, true);
+            assert!(req.is_admin);
         }
 
         #[test]
@@ -860,7 +852,7 @@ mod tests {
 
             assert_eq!(update.id, Some(1));
             assert_eq!(update.username, "user");
-            assert_eq!(update.is_admin, true);
+            assert!(update.is_admin);
         }
 
         #[test]
@@ -903,7 +895,6 @@ mod tests {
                 id: Some(1),
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
-                verification_method_id: 1,
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
@@ -954,7 +945,7 @@ mod tests {
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
                 verification_method_id: "Test".to_string(),
-                req_verification_id: 1,
+                req_verification_ids: vec![1],
                 status_id: "Accepted".to_string(),
                 req_current_status_id: 3,
                 author_id: "John Doe".to_string(),
@@ -990,7 +981,7 @@ mod tests {
                 title: "Child".to_string(),
                 description: "Desc".to_string(),
                 verification_method_id: "Test".to_string(),
-                req_verification_id: 1,
+                req_verification_ids: vec![1],
                 status_id: "Draft".to_string(),
                 req_current_status_id: 1,
                 author_id: "User".to_string(),
@@ -1062,7 +1053,7 @@ mod tests {
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
                 verification_method_id: "Test".to_string(),
-                req_verification_id: 1,
+                req_verification_ids: vec![1],
                 status_id: "Accepted".to_string(),
                 req_current_status_id: 3,
                 author_id: "Author".to_string(),
@@ -1130,7 +1121,7 @@ mod tests {
         #[test]
         fn action_type_all_variants() {
             // Test all variants are distinct
-            let variants = vec![
+            let variants = [
                 ActionType::Create,
                 ActionType::Update,
                 ActionType::Delete,
@@ -1158,7 +1149,6 @@ mod tests {
                 id: 1,
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
-                verification_method_id: 1,
                 status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
@@ -1217,7 +1207,6 @@ mod tests {
                 id: 1,
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
-                verification_method_id: 1,
                 status_id: 1,
                 author_id: 1,
                 reviewer_id: 1,
@@ -1291,7 +1280,6 @@ mod tests {
                 id: Some(1),
                 title: "Title".to_string(),
                 description: "Desc".to_string(),
-                verification_method_id: 1,
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,

@@ -89,10 +89,31 @@ async fn show_user_id(
         "creation_date": user.creation_date,
         "last_login": user.last_login,
         "is_admin": user.is_admin,
+        "can_delete": current_user.id != user.id,
         "page_title": format!("{} - User Profile", user.name)
     });
 
     Ok(Template::render("user_by_id", ctx))
+}
+
+#[delete("/<user_id>/delete")]
+async fn delete_user_route(
+    admin: AdminOnly,
+    user_id: i32,
+    state: &State<AppState>,
+) -> Result<Redirect, Redirect> {
+    let current_user = admin.into_inner();
+    if current_user.id == user_id {
+        return Err(Redirect::to(uri!(
+            "/user",
+            edit_user(user_id = user_id, error = Some("You cannot delete your own account.".to_string()))
+        )));
+    }
+    let service = UserService::new(state.inner());
+    match service.delete(&current_user, user_id) {
+        Ok(_) => Ok(Redirect::to("/admin/users")),
+        Err(_) => Err(Redirect::to("/admin/users")),
+    }
 }
 
 #[get("/<user_id>/edit?<error>")]
@@ -131,8 +152,8 @@ async fn post_edit_user(
     let service = UserService::new(state.inner());
 
     match service.update_without_password(&admin.into_inner(), &user_data) {
-        Ok(_) => Ok(Redirect::to(uri!(show_user_id(user_id)))),
-        Err(_) => Ok(Redirect::to(uri!(edit_user(
+        Ok(_) => Ok(Redirect::to(uri!("/user", show_user_id(user_id)))),
+        Err(_) => Ok(Redirect::to(uri!("/user", edit_user(
             user_id = user_id,
             error = Some("Failed to update user".to_string())
         )))),
@@ -180,8 +201,8 @@ async fn post_user(
     };
 
     match service.create(&admin.into_inner(), request) {
-        Ok(id) => Ok(Redirect::to(uri!(show_user_id(id)))),
-        Err(_) => Ok(Redirect::to(uri!(new_user(
+        Ok(id) => Ok(Redirect::to(uri!("/user", show_user_id(id)))),
+        Err(_) => Ok(Redirect::to(uri!("/user", new_user(
             error = Some("Failed to create user".to_string())
         )))),
     }
@@ -193,6 +214,7 @@ pub fn routes() -> Vec<Route> {
         edit_profile,
         post_edit_profile,
         show_user_id,
+        delete_user_route,
         edit_user,
         post_edit_user,
         new_user,
@@ -255,6 +277,7 @@ mod tests {
                     edit_profile,
                     post_edit_profile,
                     show_user_id,
+                    delete_user_route,
                     edit_user,
                     post_edit_user,
                     new_user,
@@ -290,6 +313,40 @@ mod tests {
             .private_cookie(user_cookie())
             .dispatch()
             .await
+    }
+
+    async fn delete_with_admin<'c>(client: &'c Client, path: &'c str) -> LocalResponse<'c> {
+        client
+            .delete(path)
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await
+    }
+
+    #[rocket::async_test]
+    async fn delete_user_route_removes_user() {
+        let client = test_client(base_repo()).await;
+        let response = delete_with_admin(&client, "/user/2/delete").await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/admin/users"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo_read();
+        assert!(repo.get_user_by_id(USER_ID).is_err());
+    }
+
+    #[rocket::async_test]
+    async fn delete_user_route_forbids_self_delete() {
+        let client = test_client(base_repo()).await;
+        let response = delete_with_admin(&client, "/user/1/delete").await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        assert!(response.headers().get_one("Location").map(|l| l.contains("/user/1/edit")).unwrap_or(false));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo_read();
+        assert!(repo.get_user_by_id(ADMIN_ID).is_ok());
     }
 
     #[rocket::async_test]

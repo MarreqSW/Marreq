@@ -430,6 +430,9 @@ async fn filter_and_search_requirements() {
         };
         repo.requirements.insert(i, req);
     }
+    // Link even-numbered requirements to verification method 1 so verification_filter=1 returns them
+    repo.requirement_verification_methods.push((2, 1));
+    repo.requirement_verification_methods.push((4, 1));
 
     let client = test_client(repo).await;
 

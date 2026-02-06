@@ -105,11 +105,15 @@ fn decorate_requirements_impl<R: Repository>(
                             let p_status = repo
                                 .get_requirement_status_by_id(parent_req.status_id)
                                 .map(|s| s.title)
-                                .unwrap_or_else(|_| format!("Unknown Status ({})", parent_req.status_id));
+                                .unwrap_or_else(|_| {
+                                    format!("Unknown Status ({})", parent_req.status_id)
+                                });
                             let p_category = repo
                                 .get_category_by_id(parent_req.category_id)
                                 .map(|c| c.title)
-                                .unwrap_or_else(|_| format!("Unknown Category ({})", parent_req.category_id));
+                                .unwrap_or_else(|_| {
+                                    format!("Unknown Category ({})", parent_req.category_id)
+                                });
                             (
                                 parent_req.title,
                                 parent_req.reference_code,
@@ -127,7 +131,13 @@ fn decorate_requirements_impl<R: Repository>(
                         ),
                     }
                 } else {
-                    (String::new(), String::new(), String::new(), String::new(), String::new())
+                    (
+                        String::new(),
+                        String::new(),
+                        String::new(),
+                        String::new(),
+                        String::new(),
+                    )
                 };
 
             DecoratedRequirement {

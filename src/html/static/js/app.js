@@ -3,6 +3,7 @@ import { initSidebar } from './modules/sidebar.js';
 import { initProjectSelector } from './modules/projectSelector.js';
 import { initProjectPreview } from './modules/projectPreview.js';
 import { initRequirementPreview } from './modules/requirementPreview.js';
+import { initTestPreview } from './modules/testPreview.js';
 import { registerDeleteAction } from './modules/deleteActions.js';
 
 const pageControllers = {
@@ -181,6 +182,7 @@ initSidebar();
 initProjectSelector();
 initProjectPreview();
 initRequirementPreview();
+initTestPreview();
 initGlobalDeleteHandlers();
 initConfirmations();
 initHistoryBack();

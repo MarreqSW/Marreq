@@ -1023,9 +1023,15 @@ mod tests {
                 description: "Desc".to_string(),
                 source: "test.rs".to_string(),
                 status_id: "Passed".to_string(),
+                status_variant: "passed".to_string(),
                 test_status_id: 1,
                 test_parent_id: None,
                 test_parent_title: "".to_string(),
+                test_parent_reference_code: "".to_string(),
+                test_parent_description: "".to_string(),
+                test_parent_status_id: "".to_string(),
+                test_parent_status_variant: "".to_string(),
+                test_parent_source: "".to_string(),
                 project_id: 1,
             };
 
@@ -1044,9 +1050,15 @@ mod tests {
                 description: "Desc".to_string(),
                 source: "child.rs".to_string(),
                 status_id: "Pending".to_string(),
+                status_variant: "proposal".to_string(),
                 test_status_id: 3,
                 test_parent_id: Some(1),
                 test_parent_title: "Parent Test".to_string(),
+                test_parent_reference_code: "".to_string(),
+                test_parent_description: "".to_string(),
+                test_parent_status_id: "".to_string(),
+                test_parent_status_variant: "".to_string(),
+                test_parent_source: "".to_string(),
                 project_id: 1,
             };
 
@@ -1102,9 +1114,15 @@ mod tests {
                 description: "Desc".to_string(),
                 source: "test.rs".to_string(),
                 status_id: "Passed".to_string(),
+                status_variant: "passed".to_string(),
                 test_status_id: 1,
                 test_parent_id: None,
                 test_parent_title: "".to_string(),
+                test_parent_reference_code: "".to_string(),
+                test_parent_description: "".to_string(),
+                test_parent_status_id: "".to_string(),
+                test_parent_status_variant: "".to_string(),
+                test_parent_source: "".to_string(),
                 project_id: 1,
             };
 

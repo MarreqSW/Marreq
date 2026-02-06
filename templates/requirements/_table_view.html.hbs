@@ -16,6 +16,14 @@
             Title
             <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
           </th>
+          <th scope="col" data-sort-key="category" class="is-sortable">
+            Category
+            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+          </th>
+          <th scope="col" data-sort-key="parent" class="is-sortable">
+            Parent
+            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+          </th>
           <th scope="col" data-sort-key="status" class="is-sortable">
             Status
             <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
@@ -61,11 +69,33 @@
             <a
               href="/p/{{../project.id}}/requirements/show/{{id}}"
               class="reqman-requirements-title"
-              title="{{title}}">
+              title="{{title}}"
+              data-requirement-preview
+              data-requirement-preview-project-id="{{../project.id}}"
+              data-requirement-preview-id="{{id}}"
+              data-requirement-preview-ref="{{reference_code}}"
+              data-requirement-preview-title="{{title}}"
+              data-requirement-preview-description="{{description}}"
+              data-requirement-preview-status="{{status_id}}"
+              data-requirement-preview-category="{{category_id}}">
               {{title}}
             </a>
             {{#if reference_code}}
             <span class="reqman-requirements-title__reference">({{reference_code}})</span>
+            {{/if}}
+          </td>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--category">
+            {{#if category_id}}
+              <span class="reqman-requirements-cell-muted">{{category_id}}</span>
+            {{else}}
+              <span class="reqman-requirements-cell-muted">—</span>
+            {{/if}}
+          </td>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--parent">
+            {{#if req_parent_id}}
+              <a href="/p/{{../project.id}}/requirements/show/{{req_parent_id}}" class="reqman-requirements-parent-link" title="View parent requirement" data-requirement-preview data-requirement-preview-project-id="{{../project.id}}" data-requirement-preview-id="{{req_parent_id}}" data-requirement-preview-ref="{{req_parent_reference_code}}" data-requirement-preview-title="{{req_parent_title}}" data-requirement-preview-description="{{req_parent_description}}" data-requirement-preview-status="{{req_parent_status_id}}" data-requirement-preview-category="{{req_parent_category_id}}">{{req_parent_title}}</a>
+            {{else}}
+              <span class="reqman-requirements-cell-muted">—</span>
             {{/if}}
           </td>
           <td class="reqman-requirements-row__cell reqman-requirements-row__cell--status">
@@ -129,7 +159,7 @@
           class="reqman-requirements-row__details"
           data-details-for="{{id}}"
           hidden>
-          <td colspan="7">
+          <td colspan="9">
             <dl class="reqman-requirements-details-grid">
               <div>
                 <dt>Category</dt>

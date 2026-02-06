@@ -32,6 +32,14 @@ pub struct DecoratedRequirement {
     pub req_applicability_id: i32,
     pub req_parent_id: Option<i32>,
     pub req_parent_title: String,
+    /// Parent's reference code (for hover preview when parent link is shown).
+    pub req_parent_reference_code: String,
+    /// Parent's description (for hover preview).
+    pub req_parent_description: String,
+    /// Parent's status title (for hover preview).
+    pub req_parent_status_id: String,
+    /// Parent's category title (for hover preview).
+    pub req_parent_category_id: String,
     pub creation_date: String,
     pub update_date: String,
     pub deadline_date: String,

@@ -46,11 +46,6 @@
   text-transform: uppercase;
 }
 
-[class~='status-approved'] {
-  background-color: #d1fae5;
-  color: #059669;
-}
-
 [data-theme='dark'] .c-card {
   background-color: var(--surface-color);
   border-color: var(--border-color);

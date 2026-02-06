@@ -166,12 +166,16 @@ impl<'a> DecoratedRequirementService<'a> {
                             .status_service
                             .get_requirement_status(parent_req.status_id)
                             .map(|s| s.title)
-                            .unwrap_or_else(|_| format!("Unknown Status ({})", parent_req.status_id));
+                            .unwrap_or_else(|_| {
+                                format!("Unknown Status ({})", parent_req.status_id)
+                            });
                         let p_category = self
                             .category_service
                             .get_by_id(parent_req.category_id)
                             .map(|c| c.title)
-                            .unwrap_or_else(|_| format!("Unknown Category ({})", parent_req.category_id));
+                            .unwrap_or_else(|_| {
+                                format!("Unknown Category ({})", parent_req.category_id)
+                            });
                         (
                             parent_req.title,
                             parent_req.reference_code,
@@ -189,7 +193,13 @@ impl<'a> DecoratedRequirementService<'a> {
                     ),
                 }
             } else {
-                (String::new(), String::new(), String::new(), String::new(), String::new())
+                (
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                )
             };
 
         Ok(DecoratedRequirement {

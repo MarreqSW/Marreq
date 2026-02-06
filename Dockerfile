@@ -28,6 +28,7 @@ RUN cargo install diesel_cli --no-default-features --features postgres
 RUN rm -rf src
 COPY src ./src
 COPY migrations ./migrations
+COPY scripts  ./scripts
 
 # Build the application (overwrite the dummy binary)
 RUN touch src/main.rs && cargo build --release
@@ -37,6 +38,7 @@ FROM debian:bookworm-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    postgresql-client \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
@@ -44,7 +46,8 @@ WORKDIR /app
 
 # Copy binary and migrations from builder
 COPY --from=builder /app/target/release/req_man /app/req_man
-COPY --from=builder /app/migrations /app/migrations
+COPY --from=builder /app/migrations /app/migrations 
+COPY --from=builder /app/scripts /app/scripts
 COPY --from=builder /usr/local/cargo/bin/diesel /usr/local/bin/diesel
 
 # Copy Rocket.toml for secret_key etc. (database url overridden by env in compose)

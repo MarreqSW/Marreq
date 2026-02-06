@@ -270,6 +270,19 @@ async fn show_requirements(
     // Determine current view (default to card)
     let current_view = view.as_deref().unwrap_or("card");
 
+    let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
+    let statuses =
+        StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
+    let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
+
+    let inline_edit_config = json!({
+        "categories": categories.iter().map(|c| json!({"id": c.id, "title": c.title})).collect::<Vec<_>>(),
+        "statuses": statuses.iter().map(|s| json!({"id": s.id, "title": s.title})).collect::<Vec<_>>(),
+        "verifications": verifications.iter().map(|v| json!({"id": v.id, "title": v.title})).collect::<Vec<_>>(),
+    });
+    let inline_edit_config_json =
+        serde_json::to_string(&inline_edit_config).unwrap_or_else(|_| "{}".to_string());
+
     let ctx = json!({
         "user": user,
         "requirements": json!(requirements),
@@ -284,9 +297,9 @@ async fn show_requirements(
                 "percent": metrics.coverage_percent
             }
         }),
-        "statuses": StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?,
-        "verifications": VerificationService::new(state.inner()).list_by_project(project_id)?,
-        "categories": CategoryService::new(state.inner()).list_by_project(project_id)?,
+        "statuses": statuses,
+        "verifications": verifications,
+        "categories": categories,
         "applicability": ApplicabilityService::new(state.inner()).list_by_project(project_id)?,
         "users": UserService::new(state.inner()).get_by_project(project_id)?,
         "current_status_filter": json!(status_filter),
@@ -300,6 +313,7 @@ async fn show_requirements(
         }),
         "is_admin": user.is_admin,
         "page_title": format!("{} - Requirements", selected_project.name),
+        "inline_edit_config_json": inline_edit_config_json,
     });
 
     Ok(Template::render("requirements/requirements", ctx))
@@ -522,11 +536,15 @@ async fn get_edit_requirement(
     let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
     let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
 
-    // Lightweight list of other requirements for linking (excluding current requirement)
-    let linked_requirement_options = RequirementService::new(state.inner())
+    // Lightweight list of other requirements for linking (excluding current requirement), sorted by ID
+    let mut candidates: Vec<_> = RequirementService::new(state.inner())
         .list_by_project(project_id)?
         .into_iter()
         .filter(|candidate| candidate.id != requirement_id) // Don't allow self-reference
+        .collect();
+    candidates.sort_by_key(|c| c.id);
+    let linked_requirement_options: Vec<_> = candidates
+        .into_iter()
         .map(|candidate| {
             json!({
                 "id": candidate.id,
@@ -534,7 +552,7 @@ async fn get_edit_requirement(
                 "reference": candidate.reference_code,
             })
         })
-        .collect::<Vec<_>>();
+        .collect();
 
     let display_reference = if req.reference_code.trim().is_empty() {
         format!("RM-{:03}", req.id)

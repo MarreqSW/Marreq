@@ -224,7 +224,7 @@ mod tests {
         assert!(body.contains("Mars Lander"));
         assert!(!body.contains("Venus Rover"));
         assert!(body.contains("Role: Manager"));
-        assert!(body.contains("Owner: Mission Owner"));
+        assert!(body.contains("Owned by Mission Owner"));
     }
 
     #[rocket::async_test]

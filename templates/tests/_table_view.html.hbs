@@ -57,15 +57,25 @@
             <a
               href="/p/{{../project.id}}/tests/show/{{id}}"
               class="reqman-requirements-title"
-              title="{{name}}">
+              title="{{name}}"
+              data-test-preview
+              data-test-preview-project-id="{{../project.id}}"
+              data-test-preview-id="{{id}}"
+              data-test-preview-ref="{{reference_code}}"
+              data-test-preview-title="{{name}}"
+              data-test-preview-description="{{description}}"
+              data-test-preview-status="{{status_id}}"
+              data-test-preview-category="{{test_category}}"
+              data-test-preview-source="{{source}}">
               {{name}}
             </a>
           </td>
-          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--status">
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--status reqman-requirements-cell--editable" data-inline-edit="status" title="Click to change">
             <span
-              class="reqman-requirements-status-badge"
+              class="reqman-requirements-status-badge reqman-requirements-status-badge--{{status_variant}} reqman-requirements-cell__display"
               data-status-id="{{test_status_id}}"
-              data-status="{{status_id}}">
+              data-status="{{status_id}}"
+              data-status-variant="{{status_variant}}">
               {{status_id}}
             </span>
           </td>
@@ -74,7 +84,19 @@
           </td>
           <td class="reqman-requirements-row__cell reqman-requirements-row__cell--parent">
             {{#if test_parent_title}}
-              <a href="/p/{{../project.id}}/tests/show/{{test_parent_id}}">{{test_parent_title}}</a>
+              <a
+                href="/p/{{../project.id}}/tests/show/{{test_parent_id}}"
+                title="{{test_parent_title}}"
+                data-test-preview
+                data-test-preview-project-id="{{../project.id}}"
+                data-test-preview-id="{{test_parent_id}}"
+                data-test-preview-ref="{{test_parent_reference_code}}"
+                data-test-preview-title="{{test_parent_title}}"
+                data-test-preview-description="{{test_parent_description}}"
+                data-test-preview-status="{{test_parent_status_id}}"
+                data-test-preview-source="{{test_parent_source}}">
+                {{test_parent_title}}
+              </a>
             {{else}}
               <span class="reqman-requirements-cell-muted">—</span>
             {{/if}}

@@ -176,6 +176,17 @@ fn decorate_requirements_impl<R: Repository>(
         .collect()
 }
 
+/// Maps test status title to CSS class variant: passed, failed, proposal, draft, default.
+fn test_status_title_to_variant(title: &str) -> &'static str {
+    match title.trim().to_lowercase().as_str() {
+        "passed" => "passed",
+        "failed" => "failed",
+        "pending" => "proposal",
+        "in progress" => "draft",
+        _ => "default",
+    }
+}
+
 /// Decorate a list of tests using repository lookups.
 fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<DecoratedTestCase> {
     tests
@@ -186,12 +197,40 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
                 .map(|s| s.title)
                 .unwrap_or_else(|_| format!("Unknown Status ({})", t.status_id));
 
-            let parent_title = if let Some(parent_id) = t.parent_id {
+            let empty = (
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+            );
+            let (
+                parent_title,
+                parent_ref,
+                parent_desc,
+                parent_status,
+                parent_status_variant,
+                parent_source,
+            ) = if let Some(parent_id) = t.parent_id {
                 repo.get_test_by_id(parent_id)
-                    .map(|p| p.name)
-                    .unwrap_or_default()
+                    .map(|p| {
+                        let p_status = repo
+                            .get_test_status_by_id(p.status_id)
+                            .map(|s| s.title)
+                            .unwrap_or_else(|_| format!("Unknown Status ({})", p.status_id));
+                        (
+                            p.name,
+                            p.reference_code,
+                            p.description,
+                            p_status.clone(),
+                            test_status_title_to_variant(&p_status).to_string(),
+                            p.source,
+                        )
+                    })
+                    .unwrap_or(empty)
             } else {
-                String::new()
+                empty
             };
 
             DecoratedTestCase {
@@ -200,10 +239,16 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
                 description: t.description,
                 source: t.source,
                 reference_code: t.reference_code,
-                status_id: status,
+                status_id: status.clone(),
+                status_variant: test_status_title_to_variant(&status).to_string(),
                 test_status_id: t.status_id,
                 test_parent_id: t.parent_id,
                 test_parent_title: parent_title,
+                test_parent_reference_code: parent_ref,
+                test_parent_description: parent_desc,
+                test_parent_status_id: parent_status,
+                test_parent_status_variant: parent_status_variant,
+                test_parent_source: parent_source,
                 project_id: t.project_id,
             }
         })

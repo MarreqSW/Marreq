@@ -1,32 +1,4 @@
 /* Projects page */
-.c-project-card {
-  border: 1px solid var(--border-color);
-  transition: box-shadow 0.2s, transform 0.2s;
-}
-
-.c-project-card:hover {
-  box-shadow: 0 4px 8px rgb(0 0 0 / 0.1);
-  transform: translateY(-2px);
-}
-
-.c-project-card__meta {
-  border-top: 1px solid var(--border-color);
-  margin-top: 1rem;
-  padding-top: 1rem;
-}
-
-.c-project-card__footer {
-  border-top: 1px solid var(--border-color);
-}
-
-.c-project-card__action {
-  flex: 1;
-}
-
-.c-project-card__title-link:hover {
-  color: var(--bs-primary);
-}
-
 .c-project-info-list__item {
   border-bottom: 1px solid var(--border-color);
   padding: 0.25rem 0;

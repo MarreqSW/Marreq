@@ -294,3 +294,327 @@ impl_loggable!(NewTestCase, EntityType::Test, name);
 impl_loggable!(NewUser, EntityType::User, username, no_project);
 impl_loggable!(NewRequirementStatus, EntityType::Requirement, title);
 impl_loggable!(NewTestStatus, EntityType::Test, title);
+
+#[cfg(test)]
+mod forms_tests {
+    use super::*;
+    use crate::models::entities::EntityType;
+
+    #[test]
+    fn new_requirement_display() {
+        let req = NewRequirement {
+            id: Some(1),
+            title: "Safety requirement".into(),
+            description: "Desc".into(),
+            author_id: 1,
+            category_id: 1,
+            status_id: 1,
+            parent_id: None,
+            reference_code: "REQ-001".into(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: None,
+            project_id: 10,
+        };
+        assert_eq!(req.to_string(), "New Requirement: Safety requirement");
+    }
+
+    #[test]
+    fn new_requirement_loggable() {
+        let req = NewRequirement {
+            id: Some(5),
+            title: "Title".into(),
+            description: "D".into(),
+            author_id: 1,
+            category_id: 1,
+            status_id: 1,
+            parent_id: None,
+            reference_code: "R".into(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: None,
+            project_id: 7,
+        };
+        assert_eq!(NewRequirement::entity_type(), EntityType::Requirement);
+        assert_eq!(req.id(), 5);
+        assert_eq!(req.project_id(), Some(7));
+        assert_eq!(req.display_name(), "Title");
+    }
+
+    #[test]
+    fn new_category_loggable() {
+        let cat = NewCategory {
+            id: None,
+            title: "Systems".into(),
+            description: "D".into(),
+            tag: "systems".into(),
+            project_id: 1,
+        };
+        assert_eq!(NewCategory::entity_type(), EntityType::Category);
+        assert_eq!(cat.id(), 0);
+        assert_eq!(cat.project_id(), Some(1));
+        assert_eq!(cat.display_name(), "Systems");
+    }
+
+    #[test]
+    fn new_user_loggable_no_project() {
+        let u = NewUser {
+            id: Some(2),
+            username: "alice".into(),
+            name: "Alice".into(),
+            email: "a@b.com".into(),
+            password_hash: "hash".into(),
+            is_admin: false,
+        };
+        assert_eq!(NewUser::entity_type(), EntityType::User);
+        assert_eq!(u.id(), 2);
+        assert_eq!(u.project_id(), None);
+        assert_eq!(u.display_name(), "alice");
+    }
+
+    #[test]
+    fn new_matrix_link_fields() {
+        let link = NewMatrixLink {
+            req_id: 1,
+            test_id: 2,
+            project_id: 10,
+        };
+        assert_eq!(link.req_id, 1);
+        assert_eq!(link.test_id, 2);
+        assert_eq!(link.project_id, 10);
+    }
+
+    #[test]
+    fn login_form_fields() {
+        let form = LoginForm {
+            username: "user".into(),
+            password: "secret".into(),
+        };
+        assert_eq!(form.username, "user");
+        assert_eq!(form.password, "secret");
+    }
+
+    #[test]
+    fn change_password_form_fields() {
+        let form = ChangePasswordForm {
+            current_password: "old".into(),
+            new_password: "new".into(),
+            confirm_password: "new".into(),
+        };
+        assert_eq!(form.current_password, "old");
+        assert_eq!(form.new_password, "new");
+    }
+
+    #[test]
+    fn user_create_request_has_plain_password() {
+        let req = UserCreateRequest {
+            username: "u".into(),
+            name: "N".into(),
+            email: "e@e.com".into(),
+            password: "plain".into(),
+            is_admin: false,
+        };
+        assert_eq!(req.password, "plain");
+        assert!(!req.is_admin);
+    }
+
+    #[test]
+    fn new_project_serialization_roundtrip() {
+        let project = NewProject {
+            name: "Proj".into(),
+            description: Some("Desc".into()),
+            owner_id: Some(1),
+            status: ProjectStatus::Active,
+        };
+        let json = serde_json::to_string(&project).unwrap();
+        let parsed: NewProject = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.name, project.name);
+        assert_eq!(parsed.description, project.description);
+    }
+
+    #[test]
+    fn update_project_optional_status() {
+        let upd = UpdateProject {
+            name: "N".into(),
+            description: None,
+            owner_id: None,
+            status: Some(ProjectStatus::Completed),
+        };
+        assert_eq!(upd.name, "N");
+        assert_eq!(upd.status, Some(ProjectStatus::Completed));
+    }
+
+    #[test]
+    fn new_project_member_debug_clone() {
+        let m = NewProjectMember {
+            project_id: 1,
+            user_id: 2,
+            role: 3,
+        };
+        let m2 = m.clone();
+        assert_eq!(m2.project_id, m.project_id);
+        assert_eq!(format!("{:?}", m), format!("{:?}", m2));
+    }
+
+    #[test]
+    fn new_test_form_fields() {
+        let form = NewTestForm {
+            name: "T1".into(),
+            reference_code: "T-001".into(),
+            description: "D".into(),
+            source: "Spec".into(),
+            status_id: 1,
+            parent_id: None,
+            test_req: vec![1, 2],
+            project_id: 10,
+        };
+        assert_eq!(form.test_req.len(), 2);
+        assert_eq!(form.project_id, 10);
+    }
+
+    #[test]
+    fn edit_test_form_linked_requirements() {
+        let form = EditTestForm {
+            id: 5,
+            reference_code: "T-005".into(),
+            name: "Test".into(),
+            description: "D".into(),
+            source: "S".into(),
+            status_id: 1,
+            parent_id: None,
+            linked_requirements: vec![10, 20],
+            project_id: 1,
+        };
+        assert_eq!(form.id, 5);
+        assert_eq!(form.linked_requirements, vec![10, 20]);
+    }
+
+    #[test]
+    fn new_requirement_loggable_id_none() {
+        let req = NewRequirement {
+            id: None,
+            title: "T".into(),
+            description: "D".into(),
+            author_id: 1,
+            category_id: 1,
+            status_id: 1,
+            parent_id: None,
+            reference_code: "R".into(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: None,
+            project_id: 2,
+        };
+        assert_eq!(req.id(), 0);
+        assert_eq!(req.display_name(), "T");
+    }
+
+    #[test]
+    fn new_applicability_loggable() {
+        let a = NewApplicability {
+            id: Some(3),
+            title: "App Title".into(),
+            description: "D".into(),
+            tag: "tag".into(),
+            project_id: 1,
+        };
+        assert_eq!(NewApplicability::entity_type(), EntityType::Applicability);
+        assert_eq!(a.id(), 3);
+        assert_eq!(a.project_id(), Some(1));
+        assert_eq!(a.display_name(), "App Title");
+    }
+
+    #[test]
+    fn new_verification_method_loggable() {
+        let v = NewVerificationMethod {
+            id: None,
+            title: "Verification".into(),
+            description: "D".into(),
+            tag: "V".into(),
+            project_id: 1,
+        };
+        assert_eq!(
+            NewVerificationMethod::entity_type(),
+            EntityType::Verification
+        );
+        assert_eq!(v.id(), 0);
+        assert_eq!(v.display_name(), "Verification");
+    }
+
+    #[test]
+    fn new_requirement_status_loggable() {
+        let s = NewRequirementStatus {
+            id: Some(1),
+            title: "Draft".into(),
+            description: "D".into(),
+            tag: "D".into(),
+            project_id: 1,
+        };
+        assert_eq!(NewRequirementStatus::entity_type(), EntityType::Requirement);
+        assert_eq!(s.display_name(), "Draft");
+    }
+
+    #[test]
+    fn new_test_status_loggable() {
+        let s = NewTestStatus {
+            id: Some(1),
+            title: "Pass".into(),
+            description: "D".into(),
+            tag: "P".into(),
+            project_id: 1,
+        };
+        assert_eq!(NewTestStatus::entity_type(), EntityType::Test);
+        assert_eq!(s.display_name(), "Pass");
+    }
+
+    #[test]
+    fn new_test_case_loggable() {
+        let t = NewTestCase {
+            id: Some(7),
+            reference_code: "T-007".into(),
+            name: "Test Case".into(),
+            description: "D".into(),
+            source: "S".into(),
+            status_id: 1,
+            parent_id: None,
+            project_id: 1,
+        };
+        assert_eq!(NewTestCase::entity_type(), EntityType::Test);
+        assert_eq!(t.id(), 7);
+        assert_eq!(t.project_id(), Some(1));
+        assert_eq!(t.display_name(), "Test Case");
+    }
+
+    #[test]
+    fn update_user_fields() {
+        let u = UpdateUser {
+            id: Some(10),
+            username: "u".into(),
+            name: "Name".into(),
+            email: "e@e.com".into(),
+            is_admin: true,
+        };
+        assert_eq!(u.id, Some(10));
+        assert_eq!(u.username, "u");
+        assert!(u.is_admin);
+    }
+
+    #[test]
+    fn new_log_fields() {
+        let log = NewLog {
+            user_id: 1,
+            action_type: "CREATE".into(),
+            entity_type: "Requirement".into(),
+            entity_id: Some(5),
+            project_id: Some(10),
+            old_values: None,
+            new_values: Some("{}".into()),
+            description: Some("Created".into()),
+            ip_address: Some("127.0.0.1".into()),
+            user_agent: None,
+        };
+        assert_eq!(log.user_id, 1);
+        assert_eq!(log.entity_id, Some(5));
+        assert_eq!(log.new_values.as_deref(), Some("{}"));
+    }
+}

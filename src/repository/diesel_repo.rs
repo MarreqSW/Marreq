@@ -15,6 +15,7 @@ use crate::repository::{
 use crate::schema;
 use diesel::pg::{upsert::excluded, PgConnection};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+use diesel::sql_types::{BigInt, Nullable};
 use diesel::{Connection, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
 use lazy_static::lazy_static;
 use std::sync::Arc;
@@ -788,6 +789,44 @@ impl RequirementsRepository for DieselRepo {
             ))
             .load::<Requirement>(conn.as_mut())
             .map_err(|e| e.into())
+    }
+
+    fn get_requirements_by_project_filtered_paginated(
+        &self,
+        project_id: i32,
+        status_filter: Option<i32>,
+        verification_filter: Option<i32>,
+        category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        use diesel::sql_types::Integer;
+        let mut conn = self.get_conn()?;
+        let query = diesel::sql_query(
+            "SELECT r.id, r.title, r.description, r.status_id, r.author_id, r.reviewer_id,
+                    r.reference_code, r.category_id, r.parent_id, r.creation_date, r.update_date,
+                    r.deadline_date, r.applicability_id, r.justification, r.project_id
+             FROM requirements r
+             WHERE r.project_id = $1
+               AND ($2 IS NULL OR r.status_id = $2)
+               AND ($3 IS NULL OR r.id IN (SELECT requirement_id FROM requirement_verification_methods WHERE verification_method_id = $3))
+               AND ($4 IS NULL OR r.category_id = $4)
+               AND ($5 IS NULL OR r.applicability_id = $5)
+             ORDER BY (CASE WHEN TRIM(r.reference_code) = '' THEN 1 ELSE 0 END), r.reference_code, r.id
+             LIMIT $6 OFFSET $7",
+        );
+        let rows: Vec<Requirement> = query
+            .bind::<Integer, _>(project_id)
+            .bind::<Nullable<Integer>, _>(status_filter)
+            .bind::<Nullable<Integer>, _>(verification_filter)
+            .bind::<Nullable<Integer>, _>(category_filter)
+            .bind::<Nullable<Integer>, _>(applicability_filter)
+            .bind::<BigInt, _>(limit)
+            .bind::<BigInt, _>(offset)
+            .load::<Requirement>(conn.as_mut())
+            .map_err(RepoError::from)?;
+        Ok(rows)
     }
 
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError> {

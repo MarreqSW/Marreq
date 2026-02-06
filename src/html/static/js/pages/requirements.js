@@ -1,4 +1,4 @@
-import { jsonFetch, postJson } from '../core/net.js';
+import { jsonFetch, postJson, patchJson } from '../core/net.js';
 import { showNotification } from '../modules/notifications.js';
 import { searchTree, filterTree, initTreeControls } from '../modules/tree.js';
 import { init as initSemanticSearch } from './semanticSearch.js';
@@ -29,6 +29,8 @@ const SORTERS = {
     return a.keyValue.localeCompare(b.keyValue);
   },
   title: (a, b) => a.titleValue.localeCompare(b.titleValue),
+  category: (a, b) => a.categoryValue.localeCompare(b.categoryValue),
+  parent: (a, b) => a.parentValue.localeCompare(b.parentValue),
   status: (a, b) => a.statusValue.localeCompare(b.statusValue),
   verification: (a, b) => a.verificationValue.localeCompare(b.verificationValue),
   updated: (a, b) => a.updatedValue - b.updatedValue,
@@ -145,6 +147,8 @@ function collectRows(table) {
 
     const keyText = textFrom(row, '.reqman-requirements-key__value');
     const titleText = textFrom(row, '.reqman-requirements-title');
+    const categoryText = textFrom(row, '.reqman-requirements-row__cell--category');
+    const parentText = textFrom(row, '.reqman-requirements-row__cell--parent');
     const statusText = (row.dataset.statusLabel || '').trim();
     const verificationText = textFrom(row, '.reqman-requirements-row__cell--verification');
     const updatedNode = row.querySelector('.reqman-requirements-row__cell--updated time');
@@ -158,6 +162,8 @@ function collectRows(table) {
     const searchText = [
       keyText,
       titleText,
+      categoryText,
+      parentText,
       statusText,
       verificationText,
       updatedDisplay,
@@ -175,6 +181,8 @@ function collectRows(table) {
       keyValue: keyText.toLowerCase(),
       keyNumeric: extractNumber(keyText),
       titleValue: titleText.toLowerCase(),
+      categoryValue: categoryText.toLowerCase(),
+      parentValue: parentText.toLowerCase(),
       statusValue: statusText.toLowerCase(),
       verificationValue: verificationText.toLowerCase(),
       updatedValue,
@@ -758,6 +766,266 @@ function loadParentRequirementOptionsFromPage(currentReqId, selectedValue) {
   });
 }
 
+/**
+ * Updates data-requirement-preview-* attributes on the row's links so the hover card shows
+ * current values after an inline edit.
+ */
+function updateRequirementPreviewInRow(row, field, displayText, projectId, parentId) {
+  const titleLink = row.querySelector('a.reqman-requirements-title[data-requirement-preview]');
+  if (field === 'status' && titleLink && displayText != null) {
+    titleLink.setAttribute('data-requirement-preview-status', displayText);
+  }
+  if (field === 'category' && titleLink && displayText != null) {
+    titleLink.setAttribute('data-requirement-preview-category', displayText);
+  }
+  if (field === 'parent') {
+    const parentLink = row.querySelector('.reqman-requirements-row__cell--parent a[data-requirement-preview]');
+    if (parentLink && projectId != null) {
+      parentLink.setAttribute('data-requirement-preview-id', String(parentId ?? 0));
+      parentLink.setAttribute('data-requirement-preview-project-id', String(projectId));
+      if (parentId === 0 || !displayText) {
+        parentLink.setAttribute('data-requirement-preview-title', '');
+        parentLink.setAttribute('data-requirement-preview-ref', '');
+        parentLink.removeAttribute('data-requirement-preview-description');
+        parentLink.removeAttribute('data-requirement-preview-status');
+        parentLink.removeAttribute('data-requirement-preview-category');
+      } else {
+        const parts = (displayText || '').split(/\s*—\s*/);
+        const ref = parts.length > 1 ? parts[0].trim() : '';
+        const title = parts.length > 1 ? parts.slice(1).join(' — ').trim() : displayText;
+        parentLink.setAttribute('data-requirement-preview-title', title || '');
+        parentLink.setAttribute('data-requirement-preview-ref', ref);
+        parentLink.setAttribute('data-requirement-preview-description', '');
+        parentLink.setAttribute('data-requirement-preview-status', '');
+        parentLink.setAttribute('data-requirement-preview-category', '');
+      }
+    }
+  }
+}
+
+function getInlineEditConfig() {
+  const script = document.getElementById('requirementsInlineEditConfig');
+  if (!script?.textContent) return { categories: [], statuses: [], verifications: [] };
+  try {
+    return JSON.parse(script.textContent.trim());
+  } catch {
+    return { categories: [], statuses: [], verifications: [] };
+  }
+}
+
+function getParentOptionsForInlineEdit(currentReqId) {
+  const options = [];
+  const add = (list, getKey, getTitle, getRef) => {
+    (list || []).forEach((entry) => {
+      const row = entry.row || entry.card || entry.node;
+      const reqId = parseInt(row?.dataset?.requirementId, 10);
+      if (!reqId || reqId === currentReqId) return;
+      const keyEl = row.querySelector?.('.reqman-requirements-key__value, .reqman-requirement-card__key, .c-tree__key');
+      const titleEl = row.querySelector?.('.reqman-requirements-title, .reqman-requirement-card__title, .c-tree__title');
+      const reference = keyEl?.textContent?.trim() || '';
+      const title = titleEl?.textContent?.trim() || '';
+      if (options.some((o) => o.id === reqId)) return;
+      options.push({ id: reqId, reference, title });
+    });
+  };
+  add(state.rows);
+  add(state.cards);
+  add(state.treeNodes);
+  options.sort((a, b) => a.id - b.id);
+  return options;
+}
+
+function openInlineEdit(cell, field, row, config) {
+  const requirementId = parseInt(row.dataset.requirementId, 10);
+  if (!requirementId) return;
+  const displayEl = cell.querySelector('.reqman-requirements-cell__display');
+  if (!displayEl || cell.querySelector('.reqman-inline-edit-select')) return;
+
+  const select = document.createElement('select');
+  select.className = 'reqman-inline-edit-select';
+  select.setAttribute('aria-label', `Change ${field}`);
+
+  if (field === 'category') {
+    const currentId = parseInt(row.dataset.categoryId, 10) || 0;
+    (config.categories || []).forEach((c) => {
+      select.appendChild(new Option(c.title, String(c.id), false, c.id === currentId));
+    });
+    if (select.options.length === 0) select.appendChild(new Option('—', '0', false, true));
+  } else if (field === 'status') {
+    const currentId = parseInt(row.dataset.statusId, 10) || 0;
+    (config.statuses || []).forEach((s) => {
+      select.appendChild(new Option(s.title, String(s.id), false, s.id === currentId));
+    });
+  } else if (field === 'verification') {
+    select.multiple = true;
+    select.size = Math.min(5, (config.verifications || []).length + 1);
+    const idsStr = (row.dataset.verificationIds || '').trim();
+    const currentIds = idsStr ? idsStr.split(/\s+/).map((n) => parseInt(n, 10)).filter((n) => !Number.isNaN(n)) : [];
+    (config.verifications || []).forEach((v) => {
+      const opt = new Option(v.title, String(v.id), false, currentIds.includes(v.id));
+      select.appendChild(opt);
+    });
+  } else if (field === 'parent') {
+    const currentId = parseInt(row.dataset.parentId, 10) || 0;
+    select.appendChild(new Option('None', '0', false, currentId === 0));
+    getParentOptionsForInlineEdit(requirementId).forEach((req) => {
+      const label = req.reference ? `${req.reference} — ${req.title}` : `RM-${req.id} — ${req.title}`;
+      select.appendChild(new Option(label, String(req.id), false, req.id === currentId));
+    });
+  }
+
+  const getCurrentValue = () => {
+    if (field === 'verification') {
+      return Array.from(select.selectedOptions).map((o) => o.value).sort().join(',');
+    }
+    return select.value;
+  };
+  const initialValue = getCurrentValue();
+
+  let applied = false;
+  const apply = async () => {
+    if (applied) return;
+    let payload;
+    let displayText;
+    let categoryId;
+    let statusId;
+    let verificationIds;
+    let parentId;
+    if (field === 'category') {
+      const v = parseInt(select.value, 10) || 0;
+      categoryId = v;
+      payload = { category_id: v };
+      const c = (config.categories || []).find((x) => x.id === v);
+      displayText = c ? c.title : '—';
+    } else if (field === 'status') {
+      const v = parseInt(select.value, 10);
+      if (Number.isNaN(v)) return;
+      statusId = v;
+      payload = { status_id: v };
+      const s = (config.statuses || []).find((x) => x.id === v);
+      displayText = s ? s.title : '—';
+    } else if (field === 'verification') {
+      const ids = Array.from(select.selectedOptions).map((o) => parseInt(o.value, 10)).filter((n) => n > 0);
+      if (ids.length === 0) {
+        showNotification('At least one verification method is required', 'error');
+        return;
+      }
+      verificationIds = ids;
+      payload = { verification_method_ids: ids };
+      displayText = (config.verifications || []).filter((v) => ids.includes(v.id)).map((v) => v.title).join(', ') || '—';
+    } else if (field === 'parent') {
+      const v = parseInt(select.value, 10);
+      if (Number.isNaN(v)) return;
+      parentId = v;
+      payload = { parent_id: v === 0 ? 0 : v };
+      if (v === 0) {
+        displayText = '—';
+      } else {
+        const opt = select.options[select.selectedIndex];
+        displayText = opt ? opt.textContent.trim() : '—';
+      }
+    }
+    applied = true;
+    if (select.parentNode) select.remove();
+    displayEl.hidden = false;
+    try {
+      await patchJson(`/api/requirements/${requirementId}`, payload);
+      const projectId = window.__reqmanProjectId || '';
+      if (field === 'category') {
+        row.dataset.categoryId = String(categoryId ?? '');
+        displayEl.textContent = displayText;
+        updateRequirementPreviewInRow(row, 'category', displayText, projectId);
+      } else if (field === 'status') {
+        row.dataset.statusId = String(statusId);
+        row.dataset.statusLabel = displayText;
+        displayEl.textContent = displayText;
+        displayEl.dataset.status = displayText;
+        displayEl.dataset.statusId = String(statusId);
+        displayEl.className = 'reqman-requirements-status-badge reqman-requirements-cell__display reqman-requirements-status-badge--' + statusVariant(displayText);
+        updateRequirementPreviewInRow(row, 'status', displayText, projectId);
+      } else if (field === 'verification') {
+        row.dataset.verificationIds = (verificationIds || []).join(' ');
+        displayEl.textContent = displayText;
+      } else if (field === 'parent') {
+        row.dataset.parentId = parentId === 0 ? '0' : String(parentId);
+        displayEl.textContent = displayText;
+        if (displayEl.tagName === 'A') {
+          displayEl.href = parentId === 0 ? '#' : `/p/${projectId}/requirements/show/${parentId}`;
+          displayEl.style.pointerEvents = parentId === 0 ? 'none' : 'auto';
+        }
+        updateRequirementPreviewInRow(row, 'parent', displayText, projectId, parentId);
+      }
+      showNotification('Updated successfully', 'success');
+      if (field === 'status') decorateStatusBadges();
+    } catch (err) {
+      applied = false;
+      const status = err?.response?.status;
+      const msg = err?.message || 'Update failed';
+      const detail = status ? ` (${status})` : '';
+      showNotification(msg + detail, 'error');
+      console.error('Requirement inline update failed:', err?.payload || err);
+      window.location.reload();
+    }
+  };
+
+  const onValueChange = () => {
+    if (field !== 'verification') apply();
+  };
+  select.addEventListener('change', onValueChange);
+  select.addEventListener('input', onValueChange);
+  select.addEventListener('blur', () => {
+    if (applied) return;
+    if (field === 'verification') {
+      apply();
+      return;
+    }
+    if (getCurrentValue() !== initialValue) apply();
+    else {
+      if (select.parentNode) select.remove();
+      displayEl.hidden = false;
+    }
+  });
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') {
+      select.remove();
+      displayEl.hidden = false;
+      document.removeEventListener('keydown', esc);
+    }
+  });
+
+  if (field === 'verification') {
+    select.addEventListener('dblclick', () => apply());
+  }
+
+  displayEl.hidden = true;
+  cell.appendChild(select);
+  select.focus();
+}
+
+function initInlineEdit(table) {
+  if (!table) return;
+  const config = getInlineEditConfig();
+  const sc = document.getElementById('semanticSearchConfig');
+  if (sc?.textContent) {
+    try {
+      const c = JSON.parse(sc.textContent.trim());
+      window.__reqmanProjectId = c.projectId ?? '';
+    } catch {
+      window.__reqmanProjectId = '';
+    }
+  }
+  table.addEventListener('click', (e) => {
+    if (e.target.closest('.reqman-inline-edit-select')) return;
+    const cell = e.target.closest('[data-inline-edit]');
+    if (!cell || !table.contains(cell)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const row = cell.closest('.reqman-requirements-row');
+    if (!row) return;
+    openInlineEdit(cell, cell.dataset.inlineEdit, row, config);
+  });
+}
+
 function initDuplicateForm() {
   const form = document.getElementById('duplicateRequirementForm');
   if (!form) return;
@@ -982,6 +1250,7 @@ export function init() {
     initSorting(table);
     initRowDetails(table);
     initDuplicateButtons(table);
+    initInlineEdit(table);
     applySearch('');
   }
 

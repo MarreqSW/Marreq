@@ -34,7 +34,15 @@
         <h3 class="reqman-requirement-card__title">
           <a 
             href="/p/{{../project.id}}/requirements/show/{{id}}"
-            class="reqman-requirement-card__title-link">
+            class="reqman-requirement-card__title-link"
+            data-requirement-preview
+            data-requirement-preview-project-id="{{../project.id}}"
+            data-requirement-preview-id="{{id}}"
+            data-requirement-preview-ref="{{reference_code}}"
+            data-requirement-preview-title="{{title}}"
+            data-requirement-preview-description="{{description}}"
+            data-requirement-preview-status="{{status_id}}"
+            data-requirement-preview-category="{{category_id}}">
             {{title}}
           </a>
         </h3>
@@ -73,12 +81,12 @@
           </span>
           {{/if}}
           {{#if req_parent_title}}
-          <span class="reqman-requirement-card__badge reqman-requirement-card__badge--parent" data-badge title="Parent: {{req_parent_title}}">
+          <a href="/p/{{../project.id}}/requirements/show/{{req_parent_id}}" class="reqman-requirement-card__badge reqman-requirement-card__badge--parent" data-badge data-requirement-preview data-requirement-preview-project-id="{{../project.id}}" data-requirement-preview-id="{{req_parent_id}}" data-requirement-preview-ref="{{req_parent_reference_code}}" data-requirement-preview-title="{{req_parent_title}}" data-requirement-preview-description="{{req_parent_description}}" data-requirement-preview-status="{{req_parent_status_id}}" data-requirement-preview-category="{{req_parent_category_id}}" title="Parent: {{req_parent_title}}">
             <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
               <path d="M1 0a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5v-1H2v-1h4v-9H2V2h4v3h9a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1H1z"/>
             </svg>
             {{req_parent_title}}
-          </span>
+          </a>
           {{/if}}
         </div>
         <span class="reqman-requirement-card__badge-overflow" data-overflow hidden></span>

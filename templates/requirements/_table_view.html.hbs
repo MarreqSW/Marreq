@@ -16,6 +16,14 @@
             Title
             <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
           </th>
+          <th scope="col" data-sort-key="category" class="is-sortable">
+            Category
+            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+          </th>
+          <th scope="col" data-sort-key="parent" class="is-sortable">
+            Parent
+            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+          </th>
           <th scope="col" data-sort-key="status" class="is-sortable">
             Status
             <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
@@ -41,7 +49,10 @@
           class="reqman-requirements-row"
           data-requirement-id="{{id}}"
           data-status-id="{{req_current_status_id}}"
-          data-status-label="{{status_id}}">
+          data-status-label="{{status_id}}"
+          data-category-id="{{req_category_id}}"
+          data-verification-ids="{{#each req_verification_ids}} {{this}} {{/each}}"
+          data-parent-id="{{#if req_parent_id}}{{req_parent_id}}{{else}}0{{/if}}">
           <td class="reqman-requirements-row__cell reqman-requirements-row__cell--key">
             <div class="reqman-requirements-key">
               <span class="reqman-requirements-key__value">
@@ -61,23 +72,45 @@
             <a
               href="/p/{{../project.id}}/requirements/show/{{id}}"
               class="reqman-requirements-title"
-              title="{{title}}">
+              title="{{title}}"
+              data-requirement-preview
+              data-requirement-preview-project-id="{{../project.id}}"
+              data-requirement-preview-id="{{id}}"
+              data-requirement-preview-ref="{{reference_code}}"
+              data-requirement-preview-title="{{title}}"
+              data-requirement-preview-description="{{description}}"
+              data-requirement-preview-status="{{status_id}}"
+              data-requirement-preview-category="{{category_id}}">
               {{title}}
             </a>
             {{#if reference_code}}
             <span class="reqman-requirements-title__reference">({{reference_code}})</span>
             {{/if}}
           </td>
-          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--status">
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--category reqman-requirements-cell--editable" data-inline-edit="category" title="Click to change">
+            {{#if category_id}}
+              <span class="reqman-requirements-cell__display">{{category_id}}</span>
+            {{else}}
+              <span class="reqman-requirements-cell__display reqman-requirements-cell-muted">—</span>
+            {{/if}}
+          </td>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--parent reqman-requirements-cell--editable" data-inline-edit="parent" title="Click to change">
+            {{#if req_parent_id}}
+              <a href="/p/{{../project.id}}/requirements/show/{{req_parent_id}}" class="reqman-requirements-parent-link reqman-requirements-cell__display" title="View parent requirement" data-requirement-preview data-requirement-preview-project-id="{{../project.id}}" data-requirement-preview-id="{{req_parent_id}}" data-requirement-preview-ref="{{req_parent_reference_code}}" data-requirement-preview-title="{{req_parent_title}}" data-requirement-preview-description="{{req_parent_description}}" data-requirement-preview-status="{{req_parent_status_id}}" data-requirement-preview-category="{{req_parent_category_id}}">{{req_parent_title}}</a>
+            {{else}}
+              <span class="reqman-requirements-cell__display reqman-requirements-cell-muted">—</span>
+            {{/if}}
+          </td>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--status reqman-requirements-cell--editable" data-inline-edit="status" title="Click to change">
             <span
-              class="reqman-requirements-status-badge"
+              class="reqman-requirements-status-badge reqman-requirements-cell__display"
               data-status-id="{{req_current_status_id}}"
               data-status="{{status_id}}">
               {{status_id}}
             </span>
           </td>
-          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--verification">
-            <span class="reqman-requirements-cell-muted">{{verification_method_id}}</span>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--verification reqman-requirements-cell--editable" data-inline-edit="verification" title="Click to change">
+            <span class="reqman-requirements-cell__display reqman-requirements-cell-muted">{{verification_method_id}}</span>
           </td>
           <td class="reqman-requirements-row__cell reqman-requirements-row__cell--updated">
             <time>{{update_date}}</time>
@@ -129,7 +162,7 @@
           class="reqman-requirements-row__details"
           data-details-for="{{id}}"
           hidden>
-          <td colspan="7">
+          <td colspan="9">
             <dl class="reqman-requirements-details-grid">
               <div>
                 <dt>Category</dt>

@@ -1,6 +1,8 @@
 import { initThemeControls } from './modules/theme.js';
 import { initSidebar } from './modules/sidebar.js';
 import { initProjectSelector } from './modules/projectSelector.js';
+import { initProjectPreview } from './modules/projectPreview.js';
+import { initRequirementPreview } from './modules/requirementPreview.js';
 import { registerDeleteAction } from './modules/deleteActions.js';
 
 const pageControllers = {
@@ -177,6 +179,8 @@ function initPageController() {
 initThemeControls();
 initSidebar();
 initProjectSelector();
+initProjectPreview();
+initRequirementPreview();
 initGlobalDeleteHandlers();
 initConfirmations();
 initHistoryBack();

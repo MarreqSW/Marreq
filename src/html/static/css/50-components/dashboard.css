@@ -678,3 +678,96 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Project link hover preview card */
+.reqman-project-preview {
+  background: var(--surface-color, #fff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.12);
+  max-width: 320px;
+  min-width: 260px;
+  overflow: hidden;
+  pointer-events: auto;
+  position: fixed;
+  z-index: 9999;
+}
+
+.reqman-project-preview[hidden] {
+  display: none !important;
+}
+
+.reqman-project-preview__bar {
+  background: var(--primary-color, #3b82f6);
+  height: 4px;
+  width: 100%;
+}
+
+.reqman-project-preview__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-md);
+}
+
+.reqman-project-preview__header {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.reqman-project-preview__icon {
+  align-items: center;
+  background: var(--primary-surface, #eff6ff);
+  border-radius: 50%;
+  color: var(--primary-color, #3b82f6);
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  height: 36px;
+  justify-content: center;
+  text-transform: uppercase;
+  width: 36px;
+}
+
+.reqman-project-preview__title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reqman-project-preview__description {
+  color: var(--text-secondary, #64748b);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.reqman-project-preview__action {
+  align-items: center;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  font-size: 0.875rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  justify-content: center;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--primary-color, #3b82f6);
+  color: var(--text-inverse, #fff);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.reqman-project-preview__action:hover {
+  background: var(--primary-hover, #2563eb);
+  color: var(--text-inverse, #fff);
+}

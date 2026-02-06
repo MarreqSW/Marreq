@@ -225,6 +225,15 @@
   margin-bottom: 0;
 }
 
+a.c-tree__requirement-title {
+  text-decoration: none;
+}
+
+a.c-tree__requirement-title:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
 .c-tree__requirement-description {
   -webkit-box-orient: vertical;
   color: var(--text-secondary);

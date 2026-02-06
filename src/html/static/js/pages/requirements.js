@@ -29,6 +29,8 @@ const SORTERS = {
     return a.keyValue.localeCompare(b.keyValue);
   },
   title: (a, b) => a.titleValue.localeCompare(b.titleValue),
+  category: (a, b) => a.categoryValue.localeCompare(b.categoryValue),
+  parent: (a, b) => a.parentValue.localeCompare(b.parentValue),
   status: (a, b) => a.statusValue.localeCompare(b.statusValue),
   verification: (a, b) => a.verificationValue.localeCompare(b.verificationValue),
   updated: (a, b) => a.updatedValue - b.updatedValue,
@@ -145,6 +147,8 @@ function collectRows(table) {
 
     const keyText = textFrom(row, '.reqman-requirements-key__value');
     const titleText = textFrom(row, '.reqman-requirements-title');
+    const categoryText = textFrom(row, '.reqman-requirements-row__cell--category');
+    const parentText = textFrom(row, '.reqman-requirements-row__cell--parent');
     const statusText = (row.dataset.statusLabel || '').trim();
     const verificationText = textFrom(row, '.reqman-requirements-row__cell--verification');
     const updatedNode = row.querySelector('.reqman-requirements-row__cell--updated time');
@@ -158,6 +162,8 @@ function collectRows(table) {
     const searchText = [
       keyText,
       titleText,
+      categoryText,
+      parentText,
       statusText,
       verificationText,
       updatedDisplay,
@@ -175,6 +181,8 @@ function collectRows(table) {
       keyValue: keyText.toLowerCase(),
       keyNumeric: extractNumber(keyText),
       titleValue: titleText.toLowerCase(),
+      categoryValue: categoryText.toLowerCase(),
+      parentValue: parentText.toLowerCase(),
       statusValue: statusText.toLowerCase(),
       verificationValue: verificationText.toLowerCase(),
       updatedValue,

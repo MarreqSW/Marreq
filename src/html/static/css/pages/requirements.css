@@ -967,6 +967,23 @@
   background-color: rgb(148 163 184 / 0.18);
 }
 
+.reqman-requirement-card__badge--muted {
+  color: var(--text-tertiary, #94a3b8);
+}
+
+.reqman-requirement-card__description--empty {
+  color: var(--text-tertiary, #94a3b8);
+  font-style: italic;
+}
+
+a.reqman-requirement-card__badge {
+  text-decoration: none;
+}
+
+a.reqman-requirement-card__badge:hover {
+  color: inherit;
+}
+
 .reqman-requirement-card__badge-icon {
   flex-shrink: 0;
   opacity: 0.75;
@@ -1185,4 +1202,33 @@
   .reqman-requirements-row__details td {
     border-top: 1px solid var(--border-color);
   }
+}
+
+/* Requirement link hover preview: same card view as the list, in a fixed-position wrapper */
+.reqman-requirement-preview {
+  max-width: 380px;
+  min-width: 280px;
+  pointer-events: auto;
+  position: fixed;
+  z-index: 9999;
+}
+
+.reqman-requirement-preview[hidden] {
+  display: none !important;
+}
+
+.reqman-requirement-preview .reqman-requirement-card--preview {
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.12);
+  pointer-events: auto;
+}
+
+.reqman-requirement-preview .reqman-requirement-card--preview:hover {
+  transform: none;
+}
+
+.reqman-requirement-preview .reqman-requirement-card__description {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }

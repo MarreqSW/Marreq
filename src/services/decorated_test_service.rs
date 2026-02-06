@@ -92,13 +92,63 @@ impl<'a> DecoratedTestService<'a> {
             .map(|s| s.title)
             .unwrap_or_else(|_| format!("Unknown Status ({})", test.status_id));
 
-        let parent_title = if let Some(parent_id) = test.parent_id {
+        let status_variant = match status.trim().to_lowercase().as_str() {
+            "passed" => "passed",
+            "failed" => "failed",
+            "pending" => "proposal",
+            "in progress" => "draft",
+            _ => "default",
+        };
+
+        let (
+            parent_title,
+            parent_ref,
+            parent_desc,
+            parent_status,
+            parent_status_variant,
+            parent_source,
+        ) = if let Some(parent_id) = test.parent_id {
             match self.test_service.get_by_id(parent_id) {
-                Ok(parent_test) => parent_test.name,
-                Err(_) => "[Deleted Parent]".to_string(),
+                Ok(p) => {
+                    let p_status = self
+                        .status_service
+                        .get_test_status(p.status_id)
+                        .map(|s| s.title)
+                        .unwrap_or_else(|_| format!("Unknown Status ({})", p.status_id));
+                    let p_variant = match p_status.trim().to_lowercase().as_str() {
+                        "passed" => "passed",
+                        "failed" => "failed",
+                        "pending" => "proposal",
+                        "in progress" => "draft",
+                        _ => "default",
+                    };
+                    (
+                        p.name,
+                        p.reference_code,
+                        p.description,
+                        p_status,
+                        p_variant.to_string(),
+                        p.source,
+                    )
+                }
+                Err(_) => (
+                    "[Deleted Parent]".to_string(),
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                ),
             }
         } else {
-            String::new()
+            (
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+            )
         };
 
         Ok(DecoratedTestCase {
@@ -108,9 +158,15 @@ impl<'a> DecoratedTestService<'a> {
             description: test.description.clone(),
             source: test.source.clone(),
             status_id: status,
+            status_variant: status_variant.to_string(),
             test_status_id: test.status_id,
             test_parent_id: test.parent_id,
             test_parent_title: parent_title,
+            test_parent_reference_code: parent_ref,
+            test_parent_description: parent_desc,
+            test_parent_status_id: parent_status,
+            test_parent_status_variant: parent_status_variant,
+            test_parent_source: parent_source,
             project_id: test.project_id,
         })
     }

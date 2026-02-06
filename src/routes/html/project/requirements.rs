@@ -19,7 +19,7 @@ use crate::services::{
     ProjectService, RequirementAnalyticsService, RequirementService, StatusService, UserService,
     VerificationService,
 };
-use crate::status_enums::RequirementStatusEnum;
+use crate::status_enums::{RequirementStatusEnum, TestStatusEnum};
 
 #[derive(FromForm)]
 struct RequirementCreateForm {
@@ -415,6 +415,20 @@ async fn show_requirement_id(
         .collect();
     drop(repo);
 
+    let mut test_status_list = StatusService::new(state.inner())
+        .list_test_statuses_by_project(project_id)
+        .unwrap_or_default();
+    test_status_list.retain(|s| TestStatusEnum::from_title(&s.title).is_some());
+    test_status_list.sort_by_key(|s| {
+        TestStatusEnum::from_title(&s.title)
+            .map(|e| e.id())
+            .unwrap_or(i32::MAX)
+    });
+    let test_statuses: Vec<serde_json::Value> = test_status_list
+        .into_iter()
+        .map(|s| json!({ "id": s.id, "title": s.title }))
+        .collect();
+
     let entries_with_summary: Vec<serde_json::Value> = history_entries
         .iter()
         .map(|e| {
@@ -445,6 +459,7 @@ async fn show_requirement_id(
             "children": child_requirements,
         },
         "linked_tests": linked_tests,
+        "test_statuses": test_statuses,
         "verification": {
             "tool_ids": requirement.req_verification_ids,
             "tool_id": requirement.req_verification_ids.first().copied(),

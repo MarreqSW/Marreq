@@ -17,7 +17,9 @@
                     <div class="card h-100 c-project-card c-card">
                         <div class="card-body c-card__body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title mb-0">{{name}}</h5>
+                                <h5 class="card-title mb-0">
+                                    <a href="/p/{{project_id}}" class="text-decoration-none text-dark c-project-card__title-link" data-project-preview data-project-preview-id="{{project_id}}" data-project-preview-name="{{name}}" data-project-preview-description="{{description}}">{{name}}</a>
+                                </h5>
                                 <span class="badge {{project_status_badge}}">
                                     {{status_id}}
                                 </span>
@@ -52,7 +54,7 @@
                         
                         <div class="card-footer bg-transparent c-card__footer c-project-card__footer">
                             <div class="btn-group w-100 c-project-card__actions" role="group">
-                                <a href="/p/{{project_id}}" class="btn btn-outline-primary btn-sm c-project-card__action">
+                                <a href="/p/{{project_id}}" class="btn btn-outline-primary btn-sm c-project-card__action" data-project-preview data-project-preview-id="{{project_id}}" data-project-preview-name="{{name}}" data-project-preview-description="{{description}}">
                                     <i class="fas fa-eye"></i> View
                                 </a>
                                 {{#if ../user.is_admin}}

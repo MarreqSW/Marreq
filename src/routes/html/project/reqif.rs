@@ -260,3 +260,78 @@ pub async fn process_reqif_import(
 pub fn routes() -> Vec<Route> {
     routes![export_reqif, import_reqif_page, process_reqif_import]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rocket::http::Method;
+
+    #[test]
+    fn routes_returns_three_routes() {
+        let r = routes();
+        assert_eq!(r.len(), 3);
+    }
+
+    #[test]
+    fn routes_include_export_and_import() {
+        let r = routes();
+        let paths: Vec<String> = r.iter().map(|route| route.uri.to_string()).collect();
+        let has_export = paths.iter().any(|p| p.contains("export_reqif"));
+        let has_import = paths.iter().any(|p| p.contains("import_reqif"));
+        assert!(
+            has_export,
+            "expected a route containing export_reqif, got {:?}",
+            paths
+        );
+        assert!(
+            has_import,
+            "expected a route containing import_reqif, got {:?}",
+            paths
+        );
+    }
+
+    #[test]
+    fn export_route_is_get() {
+        let r = routes();
+        let export_route = r
+            .iter()
+            .find(|route| route.uri.to_string().contains("export_reqif"));
+        assert!(export_route.is_some());
+        assert_eq!(export_route.unwrap().method, Method::Get);
+    }
+
+    #[test]
+    fn process_import_route_is_post() {
+        let r = routes();
+        let process_route = r
+            .iter()
+            .find(|route| route.uri.to_string().contains("process"));
+        assert!(process_route.is_some());
+        assert_eq!(process_route.unwrap().method, Method::Post);
+    }
+
+    #[test]
+    fn import_reqif_route_has_error_query_param() {
+        let r = routes();
+        let import_page_route = r.iter().find(|route| {
+            let u = route.uri.to_string();
+            u.contains("import_reqif") && !u.contains("process")
+        });
+        assert!(
+            import_page_route.is_some(),
+            "import_reqif page route should exist"
+        );
+        let uri = import_page_route.unwrap().uri.to_string();
+        assert!(
+            uri.contains("error"),
+            "import_reqif page should accept optional error query param, got uri: {}",
+            uri
+        );
+    }
+
+    #[test]
+    fn reqif_upload_struct_used_in_process_route() {
+        // ReqIFUpload is the form data type for process_reqif_import; ensure it's present in module
+        let _: Option<ReqIFUpload<'_>> = None;
+    }
+}

@@ -1297,6 +1297,28 @@ mod tests {
     }
 
     #[test]
+    fn utilization_percentage_full() {
+        let stats = PoolStats {
+            max_size: 10,
+            min_idle: 0,
+            current_size: 10,
+            available: 0,
+        };
+        assert_eq!(stats.utilization_percentage(), 100.0);
+    }
+
+    #[test]
+    fn efficiency_full_available() {
+        let stats = PoolStats {
+            max_size: 10,
+            min_idle: 0,
+            current_size: 5,
+            available: 5,
+        };
+        assert_eq!(stats.efficiency(), 100.0);
+    }
+
+    #[test]
     fn health_assessment() {
         let healthy = PoolStats {
             max_size: 10,

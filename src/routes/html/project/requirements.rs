@@ -300,7 +300,7 @@ async fn show_requirements(
     let total_pages = if total_count == 0 {
         1u64
     } else {
-        (total_count + per_page - 1) / per_page
+        total_count.div_ceil(per_page)
     };
     let total_pages_u32 = total_pages.min(u32::MAX as u64) as u32;
     let current_page = current_page.min(total_pages_u32.max(1));

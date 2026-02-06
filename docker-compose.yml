@@ -68,9 +68,3 @@ services:
 volumes:
   pgdata:
   ollama_data:
-
-# networks:
-#     default:
-#         external:
-#             name: somename_default
-

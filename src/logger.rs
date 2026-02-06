@@ -399,3 +399,94 @@ fn calculate_cutoff(days: i64) -> Result<NaiveDateTime, LoggerError> {
         .ok_or_else(|| LoggerError::Other("Invalid cutoff interval".into()))
         .map(|dt| dt.naive_utc())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::Serialize;
+
+    #[test]
+    fn logger_error_display() {
+        let err = LoggerError::Other("test message".into());
+        assert!(err.to_string().contains("logger error"));
+        assert!(err.to_string().contains("test message"));
+    }
+
+    #[test]
+    fn logger_error_db_display() {
+        let err = LoggerError::Db(diesel::result::Error::NotFound);
+        assert!(err.to_string().contains("database error"));
+    }
+
+    #[test]
+    fn logger_error_json_display() {
+        let bad_json = serde_json::from_str::<serde_json::Value>("invalid");
+        let err = bad_json.unwrap_err();
+        let logger_err = LoggerError::Json(err);
+        assert!(logger_err.to_string().contains("serialization error"));
+    }
+
+    #[test]
+    fn logger_error_from_diesel() {
+        let e = diesel::result::Error::NotFound;
+        let le: LoggerError = e.into();
+        assert!(matches!(le, LoggerError::Db(_)));
+    }
+
+    #[test]
+    fn logger_error_from_serde_json() {
+        let e = serde_json::from_str::<serde_json::Value>("{").unwrap_err();
+        let le: LoggerError = e.into();
+        assert!(matches!(le, LoggerError::Json(_)));
+    }
+
+    #[test]
+    fn log_ctx_new_and_accessors() {
+        let ctx = LogCtx::new(42);
+        assert_eq!(ctx.id(), 42);
+        assert_eq!(ctx.ip_address(), None);
+        assert_eq!(ctx.user_agent(), None);
+    }
+
+    #[test]
+    fn log_ctx_default() {
+        let ctx = LogCtx::default();
+        assert_eq!(ctx.id(), 0);
+    }
+
+    #[test]
+    fn log_ctx_clone() {
+        let ctx = LogCtx::new(1);
+        let c2 = ctx.clone();
+        assert_eq!(c2.id(), 1);
+    }
+
+    #[test]
+    fn logger_to_json_string() {
+        #[derive(Serialize)]
+        struct Sample {
+            id: i32,
+            name: String,
+        }
+        let s = Sample {
+            id: 1,
+            name: "test".into(),
+        };
+        let json = Logger::to_json_string(&s).unwrap();
+        assert!(json.contains("\"id\": 1"));
+        assert!(json.contains("\"name\": \"test\""));
+    }
+
+    #[test]
+    fn log_entity_variants() {
+        assert_eq!(LogEntity::Project, LogEntity::Project);
+        assert_ne!(LogEntity::Requirement, LogEntity::Test);
+    }
+
+    #[test]
+    fn log_action_variants() {
+        let _ = LogAction::Create(LogEntity::Requirement);
+        let _ = LogAction::Login;
+        let _ = LogAction::Export;
+    }
+}

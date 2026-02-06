@@ -377,6 +377,85 @@
   transform: scale(0.98);
 }
 
+/* Pagination */
+.reqman-requirements-pagination {
+  align-items: center;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+}
+
+.reqman-requirements-pagination__info {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.reqman-requirements-pagination__range {
+  white-space: nowrap;
+}
+
+.reqman-requirements-pagination__links {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.reqman-requirements-pagination__link {
+  color: var(--primary-color);
+  font-size: 0.875rem;
+  padding: var(--space-1) var(--space-2);
+  text-decoration: none;
+}
+
+.reqman-requirements-pagination__link:hover {
+  text-decoration: underline;
+}
+
+.reqman-requirements-pagination__link--disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.reqman-requirements-pagination__pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.reqman-requirements-pagination__page {
+  border-radius: var(--radius-md);
+  display: inline-block;
+  font-size: 0.875rem;
+  min-width: 2rem;
+  padding: var(--space-1) var(--space-2);
+  text-align: center;
+  text-decoration: none;
+}
+
+.reqman-requirements-pagination__page[href] {
+  color: var(--primary-color);
+}
+
+.reqman-requirements-pagination__page[href]:hover {
+  background-color: var(--surface-muted);
+  text-decoration: none;
+}
+
+.reqman-requirements-pagination__page--current {
+  background-color: var(--primary-color);
+  color: var(--text-on-primary, #fff);
+  font-weight: 600;
+}
+
 .reqman-requirements-filter-chips {
   display: flex;
   flex-wrap: wrap;
@@ -688,16 +767,6 @@
   font-weight: 500;
   margin: 0;
   word-break: break-word;
-}
-
-.reqman-requirements-pagination {
-  align-items: center;
-  color: var(--text-secondary);
-  display: flex;
-  font-size: 0.9rem;
-  gap: var(--space-3);
-  justify-content: center;
-  padding: var(--space-4);
 }
 
 .reqman-requirements-pagination__button {

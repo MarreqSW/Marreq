@@ -442,6 +442,50 @@ impl RequirementsRepository for DieselRepoMock {
             .collect())
     }
 
+    fn get_requirements_by_project_filtered_paginated(
+        &self,
+        project_id: i32,
+        status_filter: Option<i32>,
+        verification_filter: Option<i32>,
+        category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        let verification_ids = verification_filter
+            .map(|vid| {
+                self.get_requirement_ids_by_verification_method(vid)
+                    .unwrap_or_default()
+            })
+            .unwrap_or_default();
+        let mut reqs: Vec<Requirement> = self
+            .requirements
+            .values()
+            .filter(|r| {
+                r.project_id == project_id
+                    && status_filter.is_none_or(|s| r.status_id == s)
+                    && verification_filter.is_none_or(|_| verification_ids.contains(&r.id))
+                    && category_filter.is_none_or(|c| r.category_id == c)
+                    && applicability_filter.is_none_or(|a| r.applicability_id == a)
+            })
+            .cloned()
+            .collect();
+        reqs.sort_by(|a, b| {
+            match (
+                a.reference_code.trim().is_empty(),
+                b.reference_code.trim().is_empty(),
+            ) {
+                (false, false) => a.reference_code.cmp(&b.reference_code),
+                (false, true) => std::cmp::Ordering::Less,
+                (true, false) => std::cmp::Ordering::Greater,
+                (true, true) => a.id.cmp(&b.id),
+            }
+        });
+        let offset = offset as usize;
+        let limit = limit as usize;
+        Ok(reqs.into_iter().skip(offset).take(limit).collect())
+    }
+
     fn get_verification_method_ids_for_requirement(
         &self,
         requirement_id: i32,

@@ -157,7 +157,8 @@ fn requirements_list_redirect(project_id: i32) -> Redirect {
             verification_filter = Option::<i32>::None,
             category_filter = Option::<i32>::None,
             applicability_filter = Option::<i32>::None,
-            view = Option::<String>::None
+            view = Option::<String>::None,
+            page = Option::<u32>::None
         )
     ))
 }
@@ -198,7 +199,77 @@ struct InlineVerificationPayload {
     tag: String,
 }
 
-#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<applicability_filter>&<view>")]
+const REQUIREMENTS_PER_PAGE: i64 = 25;
+
+/// Build query string for requirements list (view + filters), without `page`.
+fn build_requirements_query(
+    view: Option<&str>,
+    status_filter: Option<i32>,
+    verification_filter: Option<i32>,
+    category_filter: Option<i32>,
+    applicability_filter: Option<i32>,
+) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(v) = view.filter(|s| !s.is_empty()) {
+        parts.push(format!("view={}", v));
+    }
+    if let Some(id) = status_filter {
+        parts.push(format!("status_filter={}", id));
+    }
+    if let Some(id) = verification_filter {
+        parts.push(format!("verification_filter={}", id));
+    }
+    if let Some(id) = category_filter {
+        parts.push(format!("category_filter={}", id));
+    }
+    if let Some(id) = applicability_filter {
+        parts.push(format!("applicability_filter={}", id));
+    }
+    parts.join("&")
+}
+
+/// Build pagination context for the template (start/end range, prev/next, page numbers).
+fn build_pagination_ctx(
+    current_page: u32,
+    total_pages: u64,
+    total_count: u64,
+    per_page: u64,
+    query: &str,
+) -> serde_json::Value {
+    let start = if total_count == 0 {
+        0
+    } else {
+        ((current_page - 1) * per_page as u32) as u64 + 1
+    };
+    let end = (start + per_page - 1).min(total_count);
+    let has_prev = current_page > 1;
+    let has_next = current_page < total_pages as u32;
+    let prev_page = current_page.saturating_sub(1).max(1);
+    let next_page = (current_page + 1).min(total_pages as u32).max(1);
+    let total_pages_u = total_pages as u32;
+    let window = 4;
+    let lo = (current_page.saturating_sub(window)).max(1);
+    let hi = (current_page + window).min(total_pages_u);
+    let page_numbers: Vec<serde_json::Value> = (lo..=hi)
+        .map(|n| json!({ "num": n, "is_current": n == current_page }))
+        .collect();
+    json!({
+        "current_page": current_page,
+        "total_pages": total_pages,
+        "total_count": total_count,
+        "per_page": per_page,
+        "query": query,
+        "start": start,
+        "end": end,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_page": prev_page,
+        "next_page": next_page,
+        "page_numbers": page_numbers,
+    })
+}
+
+#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<applicability_filter>&<view>&<page>")]
 #[allow(clippy::too_many_arguments)]
 async fn show_requirements(
     project_access: ProjectAccess,
@@ -208,19 +279,12 @@ async fn show_requirements(
     category_filter: Option<i32>,
     applicability_filter: Option<i32>,
     view: Option<String>,
+    page: Option<u32>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
 
     let selected_project = ProjectService::new(state.inner()).get_by_id(project_id)?;
-
-    let requirements = DecoratedRequirementService::new(state.inner()).list_by_project_filtered(
-        project_id,
-        status_filter,
-        verification_filter,
-        category_filter,
-        applicability_filter,
-    )?;
 
     let metrics = RequirementAnalyticsService::new(state.inner()).metrics(
         project_id,
@@ -229,6 +293,30 @@ async fn show_requirements(
         category_filter,
         applicability_filter,
     )?;
+
+    let current_page = page.unwrap_or(1).max(1);
+    let total_count = metrics.total.max(0) as u64;
+    let per_page = REQUIREMENTS_PER_PAGE as u64;
+    let total_pages = if total_count == 0 {
+        1u64
+    } else {
+        total_count.div_ceil(per_page)
+    };
+    let total_pages_u32 = total_pages.min(u32::MAX as u64) as u32;
+    let current_page = current_page.min(total_pages_u32.max(1));
+    let offset = ((current_page as u64 - 1) * per_page) as i64;
+    let limit = REQUIREMENTS_PER_PAGE;
+
+    let requirements = DecoratedRequirementService::new(state.inner())
+        .list_by_project_filtered_paginated(
+            project_id,
+            status_filter,
+            verification_filter,
+            category_filter,
+            applicability_filter,
+            limit,
+            offset,
+        )?;
 
     // Build tree data for tree view
     let mut children: HashMap<i32, Vec<&DecoratedRequirement>> = HashMap::new();
@@ -314,6 +402,13 @@ async fn show_requirements(
         "is_admin": user.is_admin,
         "page_title": format!("{} - Requirements", selected_project.name),
         "inline_edit_config_json": inline_edit_config_json,
+        "pagination": json!(build_pagination_ctx(
+            current_page,
+            total_pages,
+            total_count,
+            per_page,
+            &build_requirements_query(view.as_deref(), status_filter, verification_filter, category_filter, applicability_filter),
+        )),
     });
 
     Ok(Template::render("requirements/requirements", ctx))

@@ -141,6 +141,16 @@ CREATE TABLE requirements (
     search_vector tsvector
 );
 
+-- Junction table: requirements can have multiple verification methods
+CREATE TABLE requirement_verification_methods (
+    requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+    verification_method_id INTEGER NOT NULL REFERENCES verification(id) ON DELETE CASCADE,
+    PRIMARY KEY (requirement_id, verification_method_id)
+);
+
+CREATE INDEX idx_req_verification_methods_verification_id
+    ON requirement_verification_methods(verification_method_id);
+
 -- Tests table
 CREATE TABLE tests (
     id SERIAL PRIMARY KEY,
@@ -505,6 +515,14 @@ INSERT INTO matrix (req_id, test_id, project_id) VALUES
     (4, 4, 1),  -- REQ-ACS-001 -> TEST-ACS-001
     (5, 5, 1);  -- REQ-THERM-001 -> TEST-THERM-001
 
+-- Requirement–verification links (Space Project: req 1–5 linked to verification methods 1–4)
+INSERT INTO requirement_verification_methods (requirement_id, verification_method_id) VALUES
+    (1, 1),  -- REQ-PWR-001 -> Inspection
+    (2, 2),  -- REQ-PWR-002 -> Analysis
+    (3, 1),  -- REQ-COMM-001 -> Inspection
+    (4, 2),  -- REQ-ACS-001 -> Analysis
+    (5, 4);  -- REQ-THERM-001 -> Test
+
 -- Sample audit logs
 INSERT INTO logs (user_id, action_type, entity_type, entity_id, project_id, description, created_at) VALUES
     (1, 'CREATE', 'PROJECT', 1, 1, 'Space Project created by system administrator', NOW() - INTERVAL '1 day'),
@@ -532,6 +550,7 @@ BEGIN
     RAISE NOTICE '- 6 Applicability definitions';
     RAISE NOTICE '- 4 Verification methods';
     RAISE NOTICE '- 5 Requirements for Space Project';
+    RAISE NOTICE '- 5 Requirement–verification method links';
     RAISE NOTICE '- 5 Tests for Space Project';
     RAISE NOTICE '- 5 Traceability matrix entries';
     RAISE NOTICE '- 9 Project membership assignments';
@@ -549,17 +568,16 @@ BEGIN
     RAISE NOTICE '========================================';
 END $$;
 
--- Junction table: requirements can have multiple verification methods
-CREATE TABLE requirement_verification_methods (
-    requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
-    verification_method_id INTEGER NOT NULL REFERENCES verification(id) ON DELETE CASCADE,
-    PRIMARY KEY (requirement_id, verification_method_id)
+-- =============================================================================
+-- DIESEL MIGRATION HISTORY
+-- =============================================================================
+-- So "diesel migration run" in the app does not re-apply migrations already
+-- reflected in this script (runs only when DB is created for the first time).
+CREATE TABLE IF NOT EXISTS __diesel_schema_migrations (
+    version VARCHAR(100) PRIMARY KEY NOT NULL
 );
 
--- Migrate existing single verification_method_id into the junction table
-INSERT INTO requirement_verification_methods (requirement_id, verification_method_id)
-SELECT id, verification_method_id FROM requirements;
-
--- Index for filtering requirements by verification method
-CREATE INDEX idx_req_verification_methods_verification_id
-ON requirement_verification_methods(verification_method_id);
+INSERT INTO __diesel_schema_migrations (version) VALUES
+    ('2026-01-31-000001_baseline_schema'),
+    ('2026-02-06-000001_seed_default_user')
+ON CONFLICT (version) DO NOTHING;

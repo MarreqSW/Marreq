@@ -45,7 +45,7 @@
           <option value="">Verification · All</option>
           {{#each verifications}}
             <option value="{{id}}" {{#if (eq id ../current_verification_filter)}}selected{{/if}}>
-              {{name}}
+              {{title}}
             </option>
           {{/each}}
         </select>

@@ -1,0 +1,12 @@
+target/
+.git/
+.github/
+node_modules/
+*.xlsx
+.env
+.env.*
+*.md
+doc/
+tests/
+coverage.xml
+.gitignore

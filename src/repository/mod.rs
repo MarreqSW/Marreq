@@ -33,6 +33,18 @@ pub trait RequirementsRepository {
     fn get_requirements_all(&self) -> Result<Vec<Requirement>, RepoError>;
     fn get_requirements_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError>;
 
+    /// Filtered list with same semantics as metrics; ordered by reference_code (empty last), then id.
+    fn get_requirements_by_project_filtered_paginated(
+        &self,
+        project_id: i32,
+        status_filter: Option<i32>,
+        verification_filter: Option<i32>,
+        category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<Requirement>, RepoError>;
+
     fn get_verification_method_ids_for_requirement(
         &self,
         requirement_id: i32,

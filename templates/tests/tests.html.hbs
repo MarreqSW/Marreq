@@ -1,6 +1,6 @@
 {{!--
-  Tests List Page - Redesigned
-  Depends on: css/pages/requirements.css, js/pages/requirements.js
+  Tests List Page - Redesigned (aligned with requirements UI)
+  Depends on: css/pages/requirements.css, js/pages/tests.js
   Dynamic classes: reqman-requirements-status-badge--{variant}
 --}}
 
@@ -9,7 +9,7 @@
      Assembles all partials into the complete page structure
      ============================================================ --}}
 {{#*inline "page"}}
-<div class="reqman-requirements-page">
+<div class="reqman-requirements-page" data-project-id="{{project.id}}">
   {{> tests/_page_header}}
   <div class="reqman-requirements-main">
     {{> tests/_metrics_section}}
@@ -18,6 +18,8 @@
     {{> tests/_table_view}}
   </div>
 </div>
+{{!-- Hidden data for JS --}}
+<script type="application/json" id="testsInlineEditConfig">{{{inline_edit_config_json}}}</script>
 {{/inline}}
 
 {{> layout page_id="tests"}}

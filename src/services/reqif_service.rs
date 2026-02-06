@@ -162,3 +162,97 @@ impl<'a> ReqIFService<'a> {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::{AppState, DieselCachedRepo};
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::repository::CacheRepository;
+    use crate::status_enums::ProjectStatus;
+    use chrono::{NaiveDate, NaiveDateTime};
+    use std::sync::{Arc, RwLock};
+
+    fn epoch() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(1970, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    #[test]
+    fn reqif_service_new_constructs() {
+        let mock = DieselRepoMock::default();
+        let cached = CacheRepository::new(mock, 0);
+        let state = AppState {
+            repo: Arc::new(RwLock::new(cached)),
+        };
+        let _service = ReqIFService::new(&state);
+    }
+
+    #[test]
+    fn export_project_returns_xml_with_project_name_and_requirements() {
+        let mut mock = DieselRepoMock::default();
+        let proj = crate::models::Project {
+            id: 1,
+            name: "Export Test Project".to_string(),
+            description: Some("Desc".into()),
+            creation_date: Some(epoch()),
+            update_date: Some(epoch()),
+            status: ProjectStatus::Active,
+            owner_id: Some(1),
+        };
+        mock.projects.insert(1, proj);
+        mock.requirement_statuses.insert(
+            1,
+            crate::models::RequirementStatus {
+                id: 1,
+                title: "Draft".into(),
+                description: "".into(),
+                tag: "D".into(),
+                project_id: 1,
+            },
+        );
+        let req = crate::models::Requirement {
+            id: 10,
+            title: "Req Title".into(),
+            description: "Desc".into(),
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: "REQ-001".into(),
+            category_id: 1,
+            parent_id: None,
+            creation_date: epoch(),
+            update_date: epoch(),
+            deadline_date: None,
+            applicability_id: 1,
+            justification: None,
+            project_id: 1,
+        };
+        mock.requirements.insert(10, req);
+
+        let cached = CacheRepository::new(mock, 0);
+        let state = AppState::<DieselCachedRepo> {
+            repo: Arc::new(RwLock::new(cached)),
+        };
+        let service = ReqIFService::new(&state);
+        let xml = service.export_project(1).unwrap();
+        assert!(xml.contains("Export Test Project"));
+        assert!(xml.contains("Req Title"));
+        assert!(xml.contains("REQ-001"));
+        assert!(xml.contains("REQ-IF"));
+    }
+
+    #[test]
+    fn export_project_not_found_returns_err() {
+        let mock = DieselRepoMock::default();
+        let cached = CacheRepository::new(mock, 0);
+        let state = AppState::<DieselCachedRepo> {
+            repo: Arc::new(RwLock::new(cached)),
+        };
+        let service = ReqIFService::new(&state);
+        let result = service.export_project(999);
+        assert!(result.is_err());
+    }
+}

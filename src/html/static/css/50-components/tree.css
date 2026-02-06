@@ -223,13 +223,10 @@
   font-weight: 600;
   line-height: 1.4;
   margin-bottom: 0;
-}
-
-a.c-tree__requirement-title {
   text-decoration: none;
 }
 
-a.c-tree__requirement-title:hover {
+.c-tree__requirement-title:hover {
   color: var(--primary-color);
   text-decoration: underline;
 }

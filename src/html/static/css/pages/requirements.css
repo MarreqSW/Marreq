@@ -380,8 +380,10 @@
 /* Pagination */
 .reqman-requirements-pagination {
   align-items: center;
+  color: var(--text-secondary);
   display: flex;
   flex-wrap: wrap;
+  font-size: 0.9rem;
   gap: var(--space-4);
   justify-content: space-between;
   padding: var(--space-3) 0;
@@ -765,16 +767,6 @@
   font-weight: 500;
   margin: 0;
   word-break: break-word;
-}
-
-.reqman-requirements-pagination {
-  align-items: center;
-  color: var(--text-secondary);
-  display: flex;
-  font-size: 0.9rem;
-  gap: var(--space-3);
-  justify-content: center;
-  padding: var(--space-4);
 }
 
 .reqman-requirements-pagination__button {

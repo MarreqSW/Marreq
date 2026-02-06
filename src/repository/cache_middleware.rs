@@ -124,6 +124,27 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         })
     }
 
+    fn get_requirements_by_project_filtered_paginated(
+        &self,
+        project_id: i32,
+        status_filter: Option<i32>,
+        verification_filter: Option<i32>,
+        category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        self.inner.get_requirements_by_project_filtered_paginated(
+            project_id,
+            status_filter,
+            verification_filter,
+            category_filter,
+            applicability_filter,
+            limit,
+            offset,
+        )
+    }
+
     fn get_verification_method_ids_for_requirement(
         &self,
         requirement_id: i32,

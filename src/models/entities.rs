@@ -14,7 +14,8 @@ use std::fmt;
 ///
 /// Mirrors the database representation and is used when fetching or updating
 /// existing requirements.
-#[derive(Serialize, Deserialize, Queryable, AsChangeset, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, QueryableByName, AsChangeset, Clone, Debug)]
+#[diesel(table_name = crate::schema::requirements)]
 pub struct Requirement {
     pub id: i32,
     pub title: String,

@@ -126,7 +126,6 @@ CREATE TABLE requirements (
     id SERIAL PRIMARY KEY,
     title VARCHAR NOT NULL DEFAULT ' ',
     description VARCHAR NOT NULL DEFAULT ' ',
-    verification_method_id INTEGER NOT NULL DEFAULT 1,
     status_id INTEGER NOT NULL DEFAULT 1,
     author_id INTEGER NOT NULL DEFAULT 0,
     reviewer_id INTEGER NOT NULL DEFAULT 0,
@@ -483,12 +482,12 @@ INSERT INTO verification (title, description, tag, project_id) VALUES
 
 
 -- Requirements for Space Project
-INSERT INTO requirements (title, description, reference_code, category_id, applicability_id, status_id, verification_method_id, author_id, reviewer_id, parent_id, creation_date, update_date, deadline_date, project_id) VALUES
-    ('REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations under AM0 illumination conditions', 'REQ-PWR-001', 1, 1, 1, 1, 1, 2, NULL, '2024-01-15', '2024-01-15', '2024-06-30', 1),
-    ('REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse periods', 'REQ-PWR-002', 1, 1, 2, 1, 1, 2, NULL, '2024-01-15', '2024-01-20', '2024-07-15', 1),
-    ('REQ-COMM-001', 'The satellite shall maintain continuous communication with ground stations during 90% of each orbit period', 'REQ-COMM-001', 2, 1, 3, 1, 1, 2, NULL, '2024-01-16', '2024-01-16', '2024-08-15', 1),
-    ('REQ-ACS-001', 'The satellite shall maintain pointing accuracy of ±0.1 degrees in all three axes during normal operations', 'REQ-ACS-001', 3, 1, 2, 1, 1, 2, NULL, '2024-01-17', '2024-01-17', '2024-06-15', 1),
-    ('REQ-THERM-001', 'All electronic components shall operate within -20°C to +60°C temperature range throughout the mission', 'REQ-THERM-001', 4, 1, 2, 1, 1, 2, NULL, '2024-01-18', '2024-01-18', '2024-07-15', 1);
+INSERT INTO requirements (title, description, reference_code, category_id, applicability_id, status_id,  author_id, reviewer_id, parent_id, creation_date, update_date, deadline_date, project_id) VALUES
+    ('REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations under AM0 illumination conditions', 'REQ-PWR-001', 1, 1, 1, 1, 2, NULL, '2024-01-15', '2024-01-15', '2024-06-30', 1),
+    ('REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse periods', 'REQ-PWR-002', 1, 1, 2, 1, 2, NULL, '2024-01-15', '2024-01-20', '2024-07-15', 1),
+    ('REQ-COMM-001', 'The satellite shall maintain continuous communication with ground stations during 90% of each orbit period', 'REQ-COMM-001', 2, 1, 1, 1, 2, NULL, '2024-01-16', '2024-01-16', '2024-08-15', 1),
+    ('REQ-ACS-001', 'The satellite shall maintain pointing accuracy of ±0.1 degrees in all three axes during normal operations', 'REQ-ACS-001', 3, 1, 1, 1, 2, NULL, '2024-01-17', '2024-01-17', '2024-06-15', 1),
+    ('REQ-THERM-001', 'All electronic components shall operate within -20°C to +60°C temperature range throughout the mission', 'REQ-THERM-001', 4, 1, 1, 1, 2, NULL, '2024-01-18', '2024-01-18', '2024-07-15', 1);
 
 -- Tests for Space Project
 INSERT INTO tests (reference_code, name, description, status_id, source, project_id) VALUES
@@ -549,3 +548,18 @@ BEGIN
     RAISE NOTICE 'The database is ready for use!';
     RAISE NOTICE '========================================';
 END $$;
+
+-- Junction table: requirements can have multiple verification methods
+CREATE TABLE requirement_verification_methods (
+    requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+    verification_method_id INTEGER NOT NULL REFERENCES verification(id) ON DELETE CASCADE,
+    PRIMARY KEY (requirement_id, verification_method_id)
+);
+
+-- Migrate existing single verification_method_id into the junction table
+INSERT INTO requirement_verification_methods (requirement_id, verification_method_id)
+SELECT id, verification_method_id FROM requirements;
+
+-- Index for filtering requirements by verification method
+CREATE INDEX idx_req_verification_methods_verification_id
+ON requirement_verification_methods(verification_method_id);

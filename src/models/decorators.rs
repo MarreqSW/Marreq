@@ -56,8 +56,16 @@ pub struct DecoratedTestCase {
     pub description: String,
     pub source: String,
     pub status_id: String,
+    /// CSS variant for status badge: passed, failed, proposal, draft, default
+    pub status_variant: String,
     pub test_status_id: i32, // Add numeric status ID for access control
     pub test_parent_id: Option<i32>,
     pub test_parent_title: String,
+    /// Parent test fields for hover preview card (same shape as main test).
+    pub test_parent_reference_code: String,
+    pub test_parent_description: String,
+    pub test_parent_status_id: String,
+    pub test_parent_status_variant: String,
+    pub test_parent_source: String,
     pub project_id: i32,
 }

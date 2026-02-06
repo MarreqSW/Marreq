@@ -98,9 +98,15 @@ mod tests {
             description: format!("Test description {}", id),
             source: format!("test_{}.rs", id),
             status_id: "Passed".to_string(),
+            status_variant: "passed".to_string(),
             test_status_id: 1,
             test_parent_id: None,
             test_parent_title: "".to_string(),
+            test_parent_reference_code: "".to_string(),
+            test_parent_description: "".to_string(),
+            test_parent_status_id: "".to_string(),
+            test_parent_status_variant: "".to_string(),
+            test_parent_source: "".to_string(),
             project_id: 1,
         }
     }

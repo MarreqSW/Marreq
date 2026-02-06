@@ -289,13 +289,16 @@ impl<'a> MatrixService<'a> {
             }
         }
 
-        // Sort by requirement fields
+        // Sort by requirement fields or linked tests count
         match sort_by {
             "title" => {
                 reqs.sort_by(|a, b| a.title.cmp(&b.title));
             }
             "reference_code" => {
                 reqs.sort_by(|a, b| a.reference_code.cmp(&b.reference_code));
+            }
+            "linked_tests_count" => {
+                reqs.sort_by_key(|r| links.iter().filter(|(req_id, _)| *req_id == r.id).count());
             }
             _ => {
                 reqs.sort_by_key(|r| r.id);

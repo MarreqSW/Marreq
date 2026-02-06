@@ -98,14 +98,37 @@ fn decorate_requirements_impl<R: Repository>(
                 .map(|a| a.title)
                 .unwrap_or_else(|_| format!("Unknown Applicability ({})", r.applicability_id));
 
-            let parent_title = if let Some(parent_id) = r.parent_id {
-                match repo.get_requirement_by_id(parent_id) {
-                    Ok(parent_req) => parent_req.title,
-                    Err(_) => "[Deleted Parent]".to_string(),
-                }
-            } else {
-                String::new()
-            };
+            let (parent_title, parent_ref, parent_desc, parent_status, parent_category) =
+                if let Some(parent_id) = r.parent_id {
+                    match repo.get_requirement_by_id(parent_id) {
+                        Ok(parent_req) => {
+                            let p_status = repo
+                                .get_requirement_status_by_id(parent_req.status_id)
+                                .map(|s| s.title)
+                                .unwrap_or_else(|_| format!("Unknown Status ({})", parent_req.status_id));
+                            let p_category = repo
+                                .get_category_by_id(parent_req.category_id)
+                                .map(|c| c.title)
+                                .unwrap_or_else(|_| format!("Unknown Category ({})", parent_req.category_id));
+                            (
+                                parent_req.title,
+                                parent_req.reference_code,
+                                parent_req.description,
+                                p_status,
+                                p_category,
+                            )
+                        }
+                        Err(_) => (
+                            "[Deleted Parent]".to_string(),
+                            String::new(),
+                            String::new(),
+                            String::new(),
+                            String::new(),
+                        ),
+                    }
+                } else {
+                    (String::new(), String::new(), String::new(), String::new(), String::new())
+                };
 
             DecoratedRequirement {
                 id: r.id,
@@ -126,6 +149,10 @@ fn decorate_requirements_impl<R: Repository>(
                 req_applicability_id: r.applicability_id,
                 req_parent_id: r.parent_id,
                 req_parent_title: parent_title,
+                req_parent_reference_code: parent_ref,
+                req_parent_description: parent_desc,
+                req_parent_status_id: parent_status,
+                req_parent_category_id: parent_category,
                 creation_date: r.creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
                 update_date: r.update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
                 deadline_date: r

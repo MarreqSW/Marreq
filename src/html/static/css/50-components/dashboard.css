@@ -694,7 +694,7 @@
 }
 
 .reqman-project-preview[hidden] {
-  display: none !important;
+  display: none;
 }
 
 .reqman-project-preview__bar {
@@ -741,19 +741,21 @@
 }
 
 .reqman-project-preview__description {
+  -webkit-box-orient: vertical;
   color: var(--text-secondary, #64748b);
+  display: -webkit-box;
   font-size: 0.8125rem;
+  -webkit-line-clamp: 3;
   line-height: 1.45;
   margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
 .reqman-project-preview__action {
   align-items: center;
+  background: var(--primary-color, #3b82f6);
   border-radius: var(--radius-md);
+  color: var(--text-inverse, #fff);
   display: inline-flex;
   font-size: 0.875rem;
   font-weight: 600;
@@ -761,8 +763,6 @@
   justify-content: center;
   margin-top: 0.25rem;
   padding: 0.5rem 0.75rem;
-  background: var(--primary-color, #3b82f6);
-  color: var(--text-inverse, #fff);
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
 }

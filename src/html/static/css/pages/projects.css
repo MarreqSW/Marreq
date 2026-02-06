@@ -24,7 +24,7 @@
 }
 
 .c-project-card__title-link:hover {
-  color: var(--bs-primary) !important;
+  color: var(--bs-primary);
 }
 
 .c-project-info-list__item {

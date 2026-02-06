@@ -23,6 +23,10 @@
   flex: 1;
 }
 
+.c-project-card__title-link:hover {
+  color: var(--bs-primary);
+}
+
 .c-project-info-list__item {
   border-bottom: 1px solid var(--border-color);
   padding: 0.25rem 0;

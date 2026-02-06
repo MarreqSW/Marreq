@@ -47,11 +47,11 @@
       {{/if}}
     </div>
     <div class="reqman-project-card__actions">
-      <a href="/p/{{project_id}}" class="reqman-btn reqman-btn--primary">
+      <a href="/p/{{project_id}}" class="reqman-btn reqman-btn--primary" data-project-preview data-project-preview-id="{{project_id}}" data-project-preview-name="{{name}}" data-project-preview-description="{{description}}">
         <i class="fas fa-eye" aria-hidden="true"></i>
         Open
       </a>
-      <a href="/p/{{project_id}}/requirements" class="reqman-btn reqman-btn--outline">
+      <a href="/p/{{project_id}}/requirements" class="reqman-btn reqman-btn--outline" data-project-preview data-project-preview-id="{{project_id}}" data-project-preview-name="{{name}}" data-project-preview-description="{{description}}">
         <i class="fas fa-clipboard-list" aria-hidden="true"></i>
         Requirements
       </a>

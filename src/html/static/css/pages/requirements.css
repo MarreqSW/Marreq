@@ -607,6 +607,39 @@
   font-size: 0.875rem;
 }
 
+.reqman-requirements-cell--editable {
+  cursor: pointer;
+  position: relative;
+}
+
+.reqman-requirements-cell--editable:hover {
+  background-color: var(--surface-muted);
+  outline: 1px dashed var(--border-color);
+  outline-offset: -1px;
+}
+
+.reqman-requirements-cell--editable[title] {
+  cursor: pointer;
+}
+
+.reqman-inline-edit-select {
+  appearance: auto;
+  background: var(--surface-color);
+  border: 1px solid var(--primary-color);
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 0.875rem;
+  max-width: 100%;
+  min-width: 120px;
+  padding: var(--space-1) var(--space-2);
+  width: 100%;
+}
+
+.reqman-inline-edit-select:focus {
+  box-shadow: 0 0 0 2px var(--primary-color);
+  outline: none;
+}
+
 .reqman-requirements-row__actions {
   align-items: center;
   display: inline-flex;
@@ -921,11 +954,13 @@
   height: 20px;
   line-height: 1;
   padding: 2px 6px;
+  text-decoration: none;
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
 .reqman-requirement-card__badge:hover {
   background-color: rgb(148 163 184 / 0.18);
+  color: inherit;
 }
 
 .reqman-requirement-card__badge--category {
@@ -965,6 +1000,15 @@
 
 .reqman-requirement-card__badge--parent:hover {
   background-color: rgb(148 163 184 / 0.18);
+}
+
+.reqman-requirement-card__badge--muted {
+  color: var(--text-tertiary, #94a3b8);
+}
+
+.reqman-requirement-card__description--empty {
+  color: var(--text-tertiary, #94a3b8);
+  font-style: italic;
 }
 
 .reqman-requirement-card__badge-icon {
@@ -1185,4 +1229,33 @@
   .reqman-requirements-row__details td {
     border-top: 1px solid var(--border-color);
   }
+}
+
+/* Requirement link hover preview: same card view as the list, in a fixed-position wrapper */
+.reqman-requirement-preview {
+  max-width: 380px;
+  min-width: 280px;
+  pointer-events: auto;
+  position: fixed;
+  z-index: 9999;
+}
+
+.reqman-requirement-preview[hidden] {
+  display: none;
+}
+
+.reqman-requirement-preview .reqman-requirement-card--preview {
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.12);
+  pointer-events: auto;
+}
+
+.reqman-requirement-preview .reqman-requirement-card--preview:hover {
+  transform: none;
+}
+
+.reqman-requirement-preview .reqman-requirement-card__description {
+  -webkit-box-orient: vertical;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }

@@ -77,6 +77,10 @@ fn register_partials(hb: &mut Handlebars) {
             "requirements/_view_controls",
             "templates/requirements/_view_controls.html.hbs",
         ),
+        (
+            "requirements/_pagination",
+            "templates/requirements/_pagination.html.hbs",
+        ),
     ];
 
     for (name, path) in entries {

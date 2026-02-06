@@ -63,6 +63,7 @@ impl<'a> DecoratedRequirementService<'a> {
     }
 
     /// Paginated filtered list; loads only one page from the database (e.g. 25 items).
+    #[allow(clippy::too_many_arguments)]
     pub fn list_by_project_filtered_paginated(
         &self,
         project_id: i32,
@@ -74,15 +75,16 @@ impl<'a> DecoratedRequirementService<'a> {
         offset: i64,
     ) -> Result<Vec<DecoratedRequirement>, RepoError> {
         self.decorate_vec(
-            self.requirement_service.list_by_project_filtered_paginated(
-                project_id,
-                status_filter,
-                verification_filter,
-                category_filter,
-                applicability_filter,
-                limit,
-                offset,
-            )?,
+            self.requirement_service
+                .list_by_project_filtered_paginated(
+                    project_id,
+                    status_filter,
+                    verification_filter,
+                    category_filter,
+                    applicability_filter,
+                    limit,
+                    offset,
+                )?,
         )
     }
 

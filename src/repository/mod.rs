@@ -34,6 +34,7 @@ pub trait RequirementsRepository {
     fn get_requirements_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError>;
 
     /// Filtered list with same semantics as metrics; ordered by reference_code (empty last), then id.
+    #[allow(clippy::too_many_arguments)]
     fn get_requirements_by_project_filtered_paginated(
         &self,
         project_id: i32,

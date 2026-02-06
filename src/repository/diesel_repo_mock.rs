@@ -453,17 +453,20 @@ impl RequirementsRepository for DieselRepoMock {
         offset: i64,
     ) -> Result<Vec<Requirement>, RepoError> {
         let verification_ids = verification_filter
-            .map(|vid| self.get_requirement_ids_by_verification_method(vid).unwrap_or_default())
+            .map(|vid| {
+                self.get_requirement_ids_by_verification_method(vid)
+                    .unwrap_or_default()
+            })
             .unwrap_or_default();
         let mut reqs: Vec<Requirement> = self
             .requirements
             .values()
             .filter(|r| {
                 r.project_id == project_id
-                    && status_filter.map_or(true, |s| r.status_id == s)
-                    && verification_filter.map_or(true, |_| verification_ids.contains(&r.id))
-                    && category_filter.map_or(true, |c| r.category_id == c)
-                    && applicability_filter.map_or(true, |a| r.applicability_id == a)
+                    && status_filter.is_none_or(|s| r.status_id == s)
+                    && verification_filter.is_none_or(|_| verification_ids.contains(&r.id))
+                    && category_filter.is_none_or(|c| r.category_id == c)
+                    && applicability_filter.is_none_or(|a| r.applicability_id == a)
             })
             .cloned()
             .collect();

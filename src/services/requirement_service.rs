@@ -89,6 +89,7 @@ impl<'a> RequirementService<'a> {
     }
 
     /// Paginated filtered list; loads only one page from the database.
+    #[allow(clippy::too_many_arguments)]
     pub fn list_by_project_filtered_paginated(
         &self,
         project_id: i32,
@@ -99,15 +100,16 @@ impl<'a> RequirementService<'a> {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Requirement>, RepoError> {
-        self.repo_read().get_requirements_by_project_filtered_paginated(
-            project_id,
-            status_filter,
-            verification_filter,
-            category_filter,
-            applicability_filter,
-            limit,
-            offset,
-        )
+        self.repo_read()
+            .get_requirements_by_project_filtered_paginated(
+                project_id,
+                status_filter,
+                verification_filter,
+                category_filter,
+                applicability_filter,
+                limit,
+                offset,
+            )
     }
 
     /// Retrieve a single requirement by identifier.

@@ -35,6 +35,20 @@
   transition: all 0.3s ease;
 }
 
+.c-matrix-fullscreen-btn {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.c-matrix-fullscreen-btn svg {
+  height: 20px;
+  width: 20px;
+}
+
 .c-matrix-table thead th,
 .c-matrix-table thead th:first-child,
 .c-matrix-table thead th:last-child,
@@ -47,6 +61,45 @@
 .c-matrix-table-container {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+
+/* Status icon size in matrix cells - fixed box so ● ◐ ✕ ○ all appear the same size */
+.c-matrix-cell .c-matrix-link-indicator {
+  align-items: center;
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  min-height: 2rem;
+  min-width: 2rem;
+  width: 2rem;
+}
+
+.c-matrix-table .c-matrix-cell .c-matrix-status-dot {
+  align-items: center;
+  display: inline-flex;
+  font-size: 1.75rem;
+  height: 2rem;
+  justify-content: center;
+  line-height: 1;
+  min-height: 2rem;
+  min-width: 2rem;
+  text-align: center;
+  width: 2rem;
+}
+
+/* Passed (●) and Pending (○) glyphs often render smaller than ◐ and ✕; bump size so all match */
+.c-matrix-cell .c-matrix-status-dot.status-passed,
+.c-matrix-cell .c-matrix-status-dot.status-pending {
+  font-size: 2.25rem;
+}
+
+.c-matrix-col--count {
+  color: var(--text-secondary, #6c757d);
+  font-weight: 600;
+}
+
+.c-matrix-tests-count {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Cell interaction styles */

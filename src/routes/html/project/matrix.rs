@@ -111,7 +111,7 @@ async fn get_matrix(
     ctx["applicabilities"] = json!(ApplicabilityService::new(state.inner())
         .list_by_project(project_id)
         .unwrap_or_default());
-    ctx["total_test_columns"] = json!(view.tests.len() + 1);
+    ctx["total_test_columns"] = json!(view.tests.len() + 2); /* requirement + test columns + tests count column */
 
     // Add page title
     if let Some(proj) = ctx
@@ -147,12 +147,17 @@ fn build_matrix_rows(
                     })
                 })
                 .collect();
+            let linked_tests_count = tests
+                .iter()
+                .filter(|test| links.contains(&(req.id, test.id)))
+                .count();
 
             json!({
                 "id": req.id,
                 "title": req.title,
                 "reference_code": req.reference_code,
-                "matrix": row
+                "matrix": row,
+                "linked_tests_count": linked_tests_count
             })
         })
         .collect();

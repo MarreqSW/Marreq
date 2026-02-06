@@ -2,8 +2,8 @@
 <div class="card c-card c-matrix-card">
   <div class="card-header c-card__header c-matrix-card__header" style="padding: 0.5rem 1rem;">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <button id="toggleFullscreen" class="btn btn-sm btn-outline-secondary" title="Toggle fullscreen" style="padding: 0.25rem 0.5rem;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <button id="toggleFullscreen" class="btn btn-outline-secondary c-matrix-fullscreen-btn" title="Toggle fullscreen">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
         </svg>
       </button>
@@ -47,6 +47,23 @@
               </a>
             </th>
           {{/each}}
+          <th class="text-center sortable c-table-sortable c-matrix-col c-matrix-col--count u-text-center" data-sort="linked_tests_count" scope="col" role="columnheader" style="min-width: 4rem;" title="Number of tests linked to this requirement">
+            <a
+              href="/p/{{selected_project_id}}/matrix?sort_by=linked_tests_count&sort_order={{#if (eq current_sort_by "linked_tests_count")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}desc{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
+              class="text-decoration-none d-inline-flex align-items-center justify-content-center gap-1"
+              data-matrix-sort-link
+              aria-label="Sort by number of linked tests"
+            >
+              <span>#</span>
+              <span class="sort-indicator c-table-sort-indicator" aria-hidden="true">
+                {{#if (eq current_sort_by "linked_tests_count")}}
+                  {{#if (eq current_sort_order "asc")}}↑{{else}}↓{{/if}}
+                {{else}}
+                  ↕
+                {{/if}}
+              </span>
+            </a>
+          </th>
         </tr>
       </thead>
       <tbody role="rowgroup" class="c-matrix-tbody" style="border-radius: 0;">
@@ -71,19 +88,17 @@
                   data-linked="{{this.linked}}"
                   data-test-status="{{this.status_id}}">
                 {{#if this.linked}}
-                  <div class="c-matrix-link-indicator" data-tooltip="Linked - Status: {{#if (eq this.status_id 7)}}Passed{{else if (eq this.status_id 6)}}Approved{{else if (eq this.status_id 1)}}Passed{{else}}In Progress{{/if}}">
-                    {{#if (eq this.status_id 7)}}
-                      <span class="c-matrix-status-dot status-passed" aria-label="Test passed" title="Test Passed">●</span>
-                    {{else if (eq this.status_id 1)}}
-                      <span class="c-matrix-status-dot status-passed" aria-label="Test passed" title="Test Passed">●</span>
-                    {{else if (eq this.status_id 6)}}
-                      <span class="c-matrix-status-dot status-approved" aria-label="Test approved" title="Test Approved">●</span>
+                  <div class="c-matrix-link-indicator" data-tooltip="Linked – {{#if (eq this.status_id 1)}}Passed{{else if (eq this.status_id 2)}}Failed{{else if (eq this.status_id 3)}}Pending{{else if (eq this.status_id 4)}}In Progress{{else}}Unknown{{/if}}">
+                    {{#if (eq this.status_id 1)}}
+                      <span class="c-matrix-status-dot status-passed" aria-label="Test passed" title="Passed">●</span>
                     {{else if (eq this.status_id 2)}}
-                      <span class="c-matrix-status-dot status-in-progress" aria-label="Test in progress" title="In Progress">◐</span>
+                      <span class="c-matrix-status-dot status-failed" aria-label="Test failed" title="Failed">✕</span>
                     {{else if (eq this.status_id 3)}}
-                      <span class="c-matrix-status-dot status-failed" aria-label="Test failed" title="Test Failed">✕</span>
-                    {{else}}
                       <span class="c-matrix-status-dot status-pending" aria-label="Test pending" title="Pending">○</span>
+                    {{else if (eq this.status_id 4)}}
+                      <span class="c-matrix-status-dot status-in-progress" aria-label="Test in progress" title="In Progress">◐</span>
+                    {{else}}
+                      <span class="c-matrix-status-dot status-pending" aria-label="Test status" title="Unknown">○</span>
                     {{/if}}
                   </div>
                 {{else}}
@@ -91,6 +106,9 @@
                 {{/if}}
               </td>
             {{/each}}
+            <td class="text-center u-text-center c-matrix-cell c-matrix-col c-matrix-col--count" role="cell" data-req-id="{{id}}" title="Number of tests linked to this requirement">
+              <span class="c-matrix-tests-count">{{linked_tests_count}}</span>
+            </td>
           </tr>
         {{/each}}
         {{#unless requirements}}

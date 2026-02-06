@@ -88,6 +88,28 @@ impl<'a> RequirementService<'a> {
         ))
     }
 
+    /// Paginated filtered list; loads only one page from the database.
+    pub fn list_by_project_filtered_paginated(
+        &self,
+        project_id: i32,
+        status_filter: Option<i32>,
+        verification_filter: Option<i32>,
+        category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        self.repo_read().get_requirements_by_project_filtered_paginated(
+            project_id,
+            status_filter,
+            verification_filter,
+            category_filter,
+            applicability_filter,
+            limit,
+            offset,
+        )
+    }
+
     /// Retrieve a single requirement by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
         self.repo_read().get_requirement_by_id(id)

@@ -4,8 +4,167 @@ import { bindModalForm } from '../modules/modals.js';
 import { showNotification } from '../modules/notifications.js';
 import { postJson } from '../core/net.js';
 
-async function updateTestField(id, field, value) {
-  await postJson(`/api/v1/tests/${id}/field`, { field, value });
+function getTestsInlineEditConfig() {
+  const script = document.getElementById('testsInlineEditConfig');
+  if (!script?.textContent) return { statuses: [], categories: [], verifications: [] };
+  try {
+    return JSON.parse(script.textContent.trim());
+  } catch {
+    return { statuses: [], categories: [], verifications: [] };
+  }
+}
+
+/** Maps status label to CSS variant (must match server status_variant). */
+function testStatusVariant(statusLabel) {
+  if (!statusLabel) return 'default';
+  const s = String(statusLabel).toLowerCase();
+  if (s.includes('pass')) return 'passed';
+  if (s.includes('fail')) return 'failed';
+  if (s.includes('pending')) return 'proposal';
+  if (s.includes('progress')) return 'draft';
+  return 'default';
+}
+
+/** Update data-test-preview-status on the row's title link after inline status edit */
+function updateTestPreviewInRow(row, displayText) {
+  const titleLink = row.querySelector('a.reqman-requirements-title[data-test-preview]');
+  if (titleLink && displayText != null) {
+    titleLink.setAttribute('data-test-preview-status', displayText);
+  }
+}
+
+/** Update the matching card's status badge when inline edit succeeds (keeps card/table in sync) */
+function updateCardStatusBadge(testId, displayText, variant) {
+  const card = document.querySelector(`#cardView .reqman-requirement-card[data-test-id="${testId}"]`);
+  if (!card) return;
+  const badge = card.querySelector('.reqman-requirement-card__header .reqman-requirements-status-badge');
+  if (badge) {
+    badge.textContent = displayText;
+    badge.className = `reqman-requirements-status-badge reqman-requirements-status-badge--${variant}`;
+    badge.dataset.status = displayText;
+    badge.dataset.statusVariant = variant;
+  }
+  const cardTitleLink = card.querySelector('a.reqman-requirement-card__title-link[data-test-preview]');
+  if (cardTitleLink && displayText != null) {
+    cardTitleLink.setAttribute('data-test-preview-status', displayText);
+  }
+}
+
+/** Update any parent links that point to this test (so their hover card shows the updated status). */
+function updateParentLinkPreviewsForTest(testId, displayText) {
+  const links = document.querySelectorAll(
+    `[data-test-preview][data-test-preview-id="${testId}"]`
+  );
+  links.forEach((link) => {
+    if (displayText != null) {
+      link.setAttribute('data-test-preview-status', displayText);
+    }
+  });
+}
+
+/**
+ * Open inline edit for test status (same pattern as requirements openInlineEdit).
+ * Uses postJson from core/net.js so errors and success are handled like requirements.
+ */
+function openInlineEditForTest(cell, row, config) {
+  const testId = parseInt(row.dataset.testId, 10);
+  if (!testId) return;
+  const projectId = config.projectId;
+  if (!projectId) return;
+  const displayEl = cell.querySelector('.reqman-requirements-cell__display');
+  if (!displayEl || cell.querySelector('.reqman-inline-edit-select')) return;
+
+  const select = document.createElement('select');
+  select.className = 'reqman-inline-edit-select';
+  select.setAttribute('aria-label', 'Change status');
+
+  const currentId = parseInt(row.dataset.statusId, 10) || 0;
+  (config.statuses || []).forEach((s) => {
+    const sid = typeof s.id === 'number' ? s.id : parseInt(s.id, 10);
+    select.appendChild(new Option(s.title, String(sid), false, sid === currentId));
+  });
+
+  const initialValue = select.value;
+  let applied = false;
+
+  const apply = async () => {
+    if (applied) return;
+    const v = parseInt(select.value, 10);
+    if (Number.isNaN(v)) return;
+    const s = (config.statuses || []).find((x) => (typeof x.id === 'number' ? x.id : parseInt(x.id, 10)) === v);
+    const displayText = s ? s.title : '—';
+    applied = true;
+    if (select.parentNode) select.remove();
+    displayEl.hidden = false;
+    try {
+      await postJson(`/p/${projectId}/tests/update-status/${testId}`, { status_id: v });
+      const variant = testStatusVariant(displayText);
+      row.dataset.statusId = String(v);
+      row.dataset.statusLabel = displayText;
+      displayEl.textContent = displayText;
+      displayEl.dataset.status = displayText;
+      displayEl.dataset.statusId = String(v);
+      displayEl.dataset.statusVariant = variant;
+      displayEl.className = `reqman-requirements-status-badge reqman-requirements-status-badge--${variant} reqman-requirements-cell__display`;
+      updateTestPreviewInRow(row, displayText);
+      updateCardStatusBadge(testId, displayText, variant);
+      updateParentLinkPreviewsForTest(testId, displayText);
+      showNotification('Status updated successfully', 'success');
+    } catch (err) {
+      applied = false;
+      const status = err?.response?.status;
+      const msg = err?.message || 'Update failed';
+      const detail = status ? ` (${status})` : '';
+      showNotification(msg + detail, 'error');
+      console.error('Test status update failed:', err?.payload || err);
+      window.location.reload();
+    }
+  };
+
+  select.addEventListener('change', () => apply());
+  select.addEventListener('blur', () => {
+    if (applied) return;
+    if (select.value !== initialValue) apply();
+    else {
+      if (select.parentNode) select.remove();
+      displayEl.hidden = false;
+    }
+  });
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') {
+      select.remove();
+      displayEl.hidden = false;
+      document.removeEventListener('keydown', esc);
+    }
+  });
+
+  displayEl.hidden = true;
+  cell.appendChild(select);
+  select.focus();
+}
+
+/** Init inline status edit on the tests table (same pattern as requirements initInlineEdit). */
+function initInlineStatusEdit() {
+  const table = document.getElementById('testsTable');
+  if (!table) return;
+  const config = getTestsInlineEditConfig();
+  if (!config.statuses?.length) return;
+
+  const pageEl = document.querySelector('.reqman-requirements-page[data-project-id]');
+  const projectId = pageEl?.getAttribute('data-project-id');
+  if (!projectId) return;
+  const configWithProject = { ...config, projectId };
+
+  table.addEventListener('click', (e) => {
+    if (e.target.closest('.reqman-inline-edit-select')) return;
+    const cell = e.target.closest('[data-inline-edit="status"]');
+    if (!cell || !table.contains(cell)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const row = cell.closest('tr');
+    if (!row || !row.classList.contains('reqman-requirements-row')) return;
+    openInlineEditForTest(cell, row, configWithProject);
+  });
 }
 
 function initTestTable() {
@@ -54,7 +213,7 @@ function initCreateTestModal() {
     successMessage: 'Test added successfully',
     errorMessage: 'Error adding test',
     handleSubmit: async ({ data }) => {
-      await postJson('/api/v1/tests', data);
+      await postJson('/api/tests', data);
       setTimeout(() => window.location.reload(), 600);
     },
   });
@@ -224,6 +383,7 @@ export function init() {
   initCreateTestModal();
   initFilterToggle();
   initViewSwitcher();
+  initInlineStatusEdit();
   initDeleteButtons();
   initRowDetails();
   initFilterClear();

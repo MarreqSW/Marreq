@@ -1,14 +1,41 @@
 use std::collections::HashMap;
 
+use rocket::serde::json::Json;
+use rocket::serde::json::Value;
+
 use super::helpers::*;
 use super::prelude::*;
 use crate::helper_functions::decorators::decorate_requirements_with_repo;
 use crate::models::EntityType;
 use crate::services::{
     change_summary, log_change_details, resolve_change_details_labels, LabelResolvers, LogService,
-    TestService,
+    StatusService, TestService,
 };
 use crate::status_enums::TestStatusEnum;
+
+/// Payload for inline status update (POST from tests list page). Accepts JSON for reliable parsing.
+#[derive(rocket::serde::Deserialize)]
+#[serde(crate = "rocket::serde")]
+struct UpdateTestStatusForm {
+    status_id: i32,
+}
+
+/// Returns only the four canonical test statuses (Passed, Failed, Pending, In Progress) for the project.
+fn canonical_test_statuses(state: &AppState, project_id: i32) -> Vec<crate::models::TestStatus> {
+    let statuses = StatusService::new(state)
+        .list_test_statuses_by_project(project_id)
+        .unwrap_or_default();
+    let mut out: Vec<_> = statuses
+        .into_iter()
+        .filter(|s| TestStatusEnum::from_title(&s.title).is_some())
+        .collect();
+    out.sort_by_key(|s| {
+        TestStatusEnum::from_title(&s.title)
+            .map(|e| e.id())
+            .unwrap_or(i32::MAX)
+    });
+    out
+}
 
 #[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>&<search>")]
 #[allow(clippy::too_many_arguments)]
@@ -99,14 +126,28 @@ async fn show_tests(
         }
     });
 
-    // Common data lookups
-    ctx["statuses"] = json!(repo.get_test_status_all().unwrap_or_default());
-    ctx["verifications"] = json!(repo
+    // Common data lookups (for filters and inline edit). Only the four canonical statuses.
+    let statuses = canonical_test_statuses(state.inner(), project_id);
+
+    let verifications = repo
         .get_verification_by_project(project_id)
-        .unwrap_or_default());
-    ctx["categories"] = json!(repo
+        .unwrap_or_default();
+    let categories = repo
         .get_categories_by_project(project_id)
-        .unwrap_or_default());
+        .unwrap_or_default();
+
+    let inline_edit_config = json!({
+        "statuses": statuses.iter().map(|s| json!({"id": s.id, "title": s.title})).collect::<Vec<_>>(),
+        "verifications": verifications.iter().map(|v| json!({"id": v.id, "title": v.title})).collect::<Vec<_>>(),
+        "categories": categories.iter().map(|c| json!({"id": c.id, "title": c.title})).collect::<Vec<_>>(),
+    });
+    let inline_edit_config_json =
+        serde_json::to_string(&inline_edit_config).unwrap_or_else(|_| "{}".to_string());
+
+    ctx["statuses"] = json!(statuses);
+    ctx["verifications"] = json!(verifications);
+    ctx["categories"] = json!(categories);
+    ctx["inline_edit_config_json"] = json!(inline_edit_config_json);
 
     // Active filter values
     ctx["current_status_filter"] = json!(status_filter);
@@ -267,7 +308,7 @@ async fn new_test(
     ctx["categories"] = json!(repo
         .get_categories_by_project(project_id)
         .unwrap_or_default());
-    ctx["status"] = json!(repo.get_test_status_all().unwrap_or_default());
+    ctx["status"] = json!(canonical_test_statuses(state.inner(), project_id));
     ctx["parents"] = json!(repo.get_tests_by_project(project_id).unwrap_or_default());
     ctx["users"] = json!(repo.get_users_all().unwrap_or_default());
     ctx["requirements"] = json!(repo
@@ -376,7 +417,7 @@ async fn get_edit_test(
         "tests": test0,
         "test_status_id": test0.test_status_id,
         "categories": repo.get_categories_by_project(project_id).unwrap_or_default(),
-        "status": repo.get_test_status_all().unwrap_or_default(),
+        "status": canonical_test_statuses(state.inner(), project_id),
         "parent": repo.get_tests_by_project(project_id).unwrap_or_default(),
         "users": repo.get_users_all().unwrap_or_default(),
         "verification": repo.get_verification_by_project(project_id).unwrap_or_default(),
@@ -467,6 +508,52 @@ async fn delete_test_route(
     Ok(Redirect::to(format!("/p/{}/tests", project_id)))
 }
 
+/// POST /p/<project_id>/tests/update-status/<test_id> — inline status update (uses same session as page).
+/// Accepts JSON body: { "status_id": 1 } for reliable parsing.
+#[post("/<project_id>/tests/update-status/<test_id>", data = "<payload>")]
+async fn update_test_status_route(
+    project_access: ProjectAccess,
+    project_id: i32,
+    test_id: i32,
+    payload: Json<UpdateTestStatusForm>,
+    state: &State<AppState>,
+) -> Result<Json<Value>, (rocket::http::Status, String)> {
+    use rocket::http::Status;
+
+    let user = project_access.into_user();
+    let service = TestService::new(state.inner());
+
+    let test = service
+        .get_by_id(test_id)
+        .map_err(|_| (Status::NotFound, "Test not found".to_string()))?;
+
+    if test.project_id != project_id {
+        return Err((
+            Status::Forbidden,
+            "Test does not belong to this project".to_string(),
+        ));
+    }
+
+    let status_id = payload.status_id;
+    let updated = NewTestCase {
+        id: Some(test.id),
+        reference_code: test.reference_code,
+        name: test.name,
+        description: test.description,
+        source: test.source,
+        status_id,
+        parent_id: test.parent_id,
+        project_id: test.project_id,
+    };
+
+    service.update(&user, test_id, updated).map_err(|e| {
+        eprintln!("Error updating test status: {:?}", e);
+        (Status::InternalServerError, "Update failed".to_string())
+    })?;
+
+    Ok(Json(serde_json::json!({ "success": true })))
+}
+
 #[get("/<project_id>/requirements.xls")]
 async fn get_requirements_xls(
     project_access: ProjectAccess,
@@ -523,6 +610,7 @@ async fn get_tests_xls(
 pub fn routes() -> Vec<Route> {
     routes![
         delete_test_route,
+        update_test_status_route,
         show_tests,
         show_test_id,
         new_test,

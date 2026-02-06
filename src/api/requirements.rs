@@ -33,6 +33,7 @@ pub struct RequirementPatch {
     pub reviewer_id: Option<i32>,
     pub category_id: Option<i32>,
     pub applicability_id: Option<i32>,
+    pub parent_id: Option<i32>,
 }
 
 #[get("/requirements")]
@@ -108,7 +109,8 @@ pub async fn patch_requirement(
         || patch.author_id.is_some()
         || patch.reviewer_id.is_some()
         || patch.category_id.is_some()
-        || patch.applicability_id.is_some();
+        || patch.applicability_id.is_some()
+        || patch.parent_id.is_some();
 
     if !any_updates {
         return Err(ApiError::BadRequest("no fields provided".into()));
@@ -137,6 +139,9 @@ pub async fn patch_requirement(
     }
     if let Some(v) = patch.applicability_id {
         requirement.applicability_id = v;
+    }
+    if let Some(v) = patch.parent_id {
+        requirement.parent_id = if v == 0 { None } else { Some(v) };
     }
 
     let verification_method_ids = patch

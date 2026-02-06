@@ -28,16 +28,32 @@
         <div class="c-tree__requirement-title-wrapper">
           <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.id}}"
             class="reqman-requirement-card__reference-text"
-            title="View requirement details">
+            title="View requirement details"
+            data-requirement-preview
+            data-requirement-preview-project-id="{{requirement.project_id}}"
+            data-requirement-preview-id="{{requirement.id}}"
+            data-requirement-preview-ref="{{requirement.reference_code}}"
+            data-requirement-preview-title="{{requirement.title}}"
+            data-requirement-preview-description="{{requirement.description}}"
+            data-requirement-preview-status="{{requirement.status_id}}"
+            data-requirement-preview-category="{{requirement.category_id}}">
             {{#if requirement.reference_code}}
               {{requirement.reference_code}}
             {{else}}
               RM-{{requirement.id}}
             {{/if}}
           </a>
-          <div class="c-tree__requirement-title c-linked-requirements__title" title="{{requirement.title}}">
-            {{requirement.title}}
-          </div>
+          <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.id}}"
+            class="c-tree__requirement-title c-linked-requirements__title"
+            title="{{requirement.title}}"
+            data-requirement-preview
+            data-requirement-preview-project-id="{{requirement.project_id}}"
+            data-requirement-preview-id="{{requirement.id}}"
+            data-requirement-preview-ref="{{requirement.reference_code}}"
+            data-requirement-preview-title="{{requirement.title}}"
+            data-requirement-preview-description="{{requirement.description}}"
+            data-requirement-preview-status="{{requirement.status_id}}"
+            data-requirement-preview-category="{{requirement.category_id}}">{{requirement.title}}</a>
         </div>
         <div class="c-tree__actions">
           <a href="/p/{{requirement.project_id}}/requirements/edit/{{requirement.id}}" 

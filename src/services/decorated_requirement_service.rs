@@ -158,14 +158,49 @@ impl<'a> DecoratedRequirementService<'a> {
             .map(|a| a.title)
             .unwrap_or_else(|_| format!("Unknown Applicability ({})", req.applicability_id));
 
-        let parent_title = if let Some(parent_id) = req.parent_id {
-            match self.requirement_service.get_by_id(parent_id) {
-                Ok(parent_req) => parent_req.title,
-                Err(_) => "[Deleted Parent]".to_string(),
-            }
-        } else {
-            String::new()
-        };
+        let (parent_title, parent_ref, parent_desc, parent_status, parent_category) =
+            if let Some(parent_id) = req.parent_id {
+                match self.requirement_service.get_by_id(parent_id) {
+                    Ok(parent_req) => {
+                        let p_status = self
+                            .status_service
+                            .get_requirement_status(parent_req.status_id)
+                            .map(|s| s.title)
+                            .unwrap_or_else(|_| {
+                                format!("Unknown Status ({})", parent_req.status_id)
+                            });
+                        let p_category = self
+                            .category_service
+                            .get_by_id(parent_req.category_id)
+                            .map(|c| c.title)
+                            .unwrap_or_else(|_| {
+                                format!("Unknown Category ({})", parent_req.category_id)
+                            });
+                        (
+                            parent_req.title,
+                            parent_req.reference_code,
+                            parent_req.description,
+                            p_status,
+                            p_category,
+                        )
+                    }
+                    Err(_) => (
+                        "[Deleted Parent]".to_string(),
+                        String::new(),
+                        String::new(),
+                        String::new(),
+                        String::new(),
+                    ),
+                }
+            } else {
+                (
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                )
+            };
 
         Ok(DecoratedRequirement {
             id: req.id,
@@ -186,6 +221,10 @@ impl<'a> DecoratedRequirementService<'a> {
             req_applicability_id: req.applicability_id,
             req_parent_id: req.parent_id,
             req_parent_title: parent_title,
+            req_parent_reference_code: parent_ref,
+            req_parent_description: parent_desc,
+            req_parent_status_id: parent_status,
+            req_parent_category_id: parent_category,
             creation_date: req.creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
             update_date: req.update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
             deadline_date: req

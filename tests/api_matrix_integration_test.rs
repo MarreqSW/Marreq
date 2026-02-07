@@ -132,6 +132,7 @@ mod test_support {
     pub fn sample_requirement(id: i32, project_id: i32, title: &str) -> Requirement {
         Requirement {
             id: id,
+            current_version_id: None,
             title: title.to_string(),
             description: format!("{} description", title),
             status_id: 1,

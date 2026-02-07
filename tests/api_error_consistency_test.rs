@@ -267,6 +267,7 @@ async fn bad_request_has_error_message() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Test".into(),
             description: "Test".into(),
             reference_code: "REQ-001".into(),
@@ -374,6 +375,7 @@ async fn error_messages_are_clear_and_actionable() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Test".into(),
             description: "Test".into(),
             reference_code: "REQ-001".into(),

@@ -121,35 +121,41 @@ CREATE TABLE verification (
     project_id INTEGER NOT NULL
 );
 
--- Requirements table
+-- Requirements table (logical container; current content in requirement_versions)
 CREATE TABLE requirements (
     id SERIAL PRIMARY KEY,
+    project_id INTEGER NOT NULL,
+    stable_code VARCHAR NOT NULL DEFAULT ' ',
+    current_version_id INTEGER
+);
+
+-- Immutable version rows per requirement (issue #94)
+CREATE TABLE requirement_versions (
+    id SERIAL PRIMARY KEY,
+    requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
     title VARCHAR NOT NULL DEFAULT ' ',
     description VARCHAR NOT NULL DEFAULT ' ',
     status_id INTEGER NOT NULL DEFAULT 1,
     author_id INTEGER NOT NULL DEFAULT 0,
     reviewer_id INTEGER NOT NULL DEFAULT 0,
-    reference_code VARCHAR NOT NULL DEFAULT ' ',
     category_id INTEGER NOT NULL DEFAULT 1,
     parent_id INTEGER,
-    creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    update_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deadline_date TIMESTAMP,
     applicability_id INTEGER NOT NULL DEFAULT 1,
     justification TEXT,
-    project_id INTEGER NOT NULL,
+    deadline_date TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     search_vector tsvector
 );
 
--- Junction table: requirements can have multiple verification methods
-CREATE TABLE requirement_verification_methods (
-    requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
-    verification_method_id INTEGER NOT NULL REFERENCES verification(id) ON DELETE CASCADE,
-    PRIMARY KEY (requirement_id, verification_method_id)
-);
+ALTER TABLE requirement_versions
+    ADD CONSTRAINT requirement_versions_title_not_blank CHECK (btrim(title) <> '');
 
-CREATE INDEX idx_req_verification_methods_verification_id
-    ON requirement_verification_methods(verification_method_id);
+-- Verification methods per version (M:N)
+CREATE TABLE requirement_version_verification_methods (
+    requirement_version_id INTEGER NOT NULL REFERENCES requirement_versions(id) ON DELETE CASCADE,
+    verification_method_id INTEGER NOT NULL REFERENCES verification(id),
+    PRIMARY KEY (requirement_version_id, verification_method_id)
+);
 
 -- Tests table
 CREATE TABLE tests (
@@ -207,14 +213,15 @@ ALTER TABLE requirement_status ADD CONSTRAINT fk_requirement_status_project
 ALTER TABLE test_status ADD CONSTRAINT fk_test_status_project
     FOREIGN KEY (project_id) REFERENCES projects(id);
 
-ALTER TABLE requirements ADD CONSTRAINT fk_requirements_project 
+ALTER TABLE requirements ADD CONSTRAINT fk_requirements_project
     FOREIGN KEY (project_id) REFERENCES projects(id);
 
-ALTER TABLE requirements ADD CONSTRAINT fk_requirements_applicability 
-    FOREIGN KEY (applicability_id) REFERENCES applicability(id);
-
-ALTER TABLE requirements ADD CONSTRAINT fk_requirements_status 
+ALTER TABLE requirement_versions ADD CONSTRAINT fk_requirement_versions_requirement
+    FOREIGN KEY (requirement_id) REFERENCES requirements(id) ON DELETE CASCADE;
+ALTER TABLE requirement_versions ADD CONSTRAINT fk_requirement_versions_status
     FOREIGN KEY (status_id) REFERENCES requirement_status(id);
+ALTER TABLE requirement_versions ADD CONSTRAINT fk_requirement_versions_applicability
+    FOREIGN KEY (applicability_id) REFERENCES applicability(id);
 
 ALTER TABLE tests ADD CONSTRAINT fk_tests_project 
     FOREIGN KEY (project_id) REFERENCES projects(id);
@@ -251,13 +258,40 @@ CREATE INDEX idx_logs_project_id ON logs(project_id);
 CREATE INDEX idx_logs_created_at ON logs(created_at);
 CREATE INDEX idx_logs_action_type ON logs(action_type);
 
--- Requirements indexes
+-- Requirements (container) indexes
 CREATE INDEX idx_requirements_project_id ON requirements(project_id);
-CREATE INDEX idx_requirements_category ON requirements(category_id);
-CREATE INDEX idx_requirements_status ON requirements(status_id);
-CREATE INDEX idx_requirements_author ON requirements(author_id);
-CREATE INDEX idx_requirements_reviewer ON requirements(reviewer_id);
-CREATE INDEX idx_requirements_parent ON requirements(parent_id);
+CREATE INDEX idx_requirements_current_version_id ON requirements(current_version_id);
+CREATE INDEX idx_requirements_project_stable ON requirements(project_id, stable_code);
+
+-- Full-text search on requirement_versions (lexical search)
+CREATE OR REPLACE FUNCTION requirement_versions_search_vector_update() RETURNS trigger AS $$
+DECLARE
+    stable_code_val VARCHAR;
+BEGIN
+    SELECT COALESCE(r.stable_code, '') INTO stable_code_val
+    FROM requirements r WHERE r.id = NEW.requirement_id;
+    NEW.search_vector :=
+        setweight(to_tsvector('english', COALESCE(stable_code_val, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.title, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.description, '')), 'B') ||
+        setweight(to_tsvector('english', COALESCE(NEW.justification, '')), 'C');
+    RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS requirement_versions_search_vector_trigger ON requirement_versions;
+CREATE TRIGGER requirement_versions_search_vector_trigger
+    BEFORE INSERT OR UPDATE OF title, description, justification, requirement_id
+    ON requirement_versions
+    FOR EACH ROW
+    EXECUTE FUNCTION requirement_versions_search_vector_update();
+
+-- Requirement versions indexes
+CREATE INDEX idx_requirement_versions_requirement_id ON requirement_versions(requirement_id);
+CREATE INDEX idx_requirement_versions_requirement_created ON requirement_versions(requirement_id, created_at DESC);
+CREATE INDEX idx_requirement_versions_created_at ON requirement_versions(created_at DESC);
+CREATE INDEX idx_requirement_versions_search_vector ON requirement_versions USING gin(search_vector);
+CREATE INDEX idx_requirement_version_verification_version ON requirement_version_verification_methods(requirement_version_id);
 
 -- Tests indexes
 CREATE INDEX idx_tests_project_id ON tests(project_id);
@@ -286,8 +320,9 @@ CREATE INDEX idx_applicability_tag ON applicability(tag);
 -- =============================================================================
 
 ALTER TABLE requirements
-    ADD CONSTRAINT requirements_reference_code_unique UNIQUE (reference_code),
-    ADD CONSTRAINT requirements_title_not_blank CHECK (btrim(title) <> '');
+    ADD CONSTRAINT requirements_current_version_fk
+        FOREIGN KEY (current_version_id) REFERENCES requirement_versions(id),
+    ADD CONSTRAINT requirements_stable_code_unique UNIQUE (project_id, stable_code);
 
 ALTER TABLE tests
     ADD CONSTRAINT tests_reference_code_unique UNIQUE (reference_code),
@@ -297,9 +332,6 @@ ALTER TABLE projects
     ADD CONSTRAINT projects_name_not_blank CHECK (btrim(name) <> '');
 
 -- Composite indexes (from performance tuning migrations)
-CREATE INDEX IF NOT EXISTS idx_requirements_project_status
-    ON requirements (project_id, status_id);
-
 CREATE INDEX IF NOT EXISTS idx_tests_project_status
     ON tests (project_id, status_id);
 
@@ -327,28 +359,6 @@ CREATE INDEX idx_requirement_embeddings_vector_hnsw
     ON requirement_embeddings
     USING hnsw (embedding vector_cosine_ops)
     WITH (m = 16, ef_construction = 64);
-
--- Full-text search trigger on requirements
-CREATE OR REPLACE FUNCTION requirements_search_vector_update() RETURNS trigger AS $$
-BEGIN
-    NEW.search_vector :=
-        setweight(to_tsvector('english', COALESCE(NEW.reference_code, '')), 'A') ||
-        setweight(to_tsvector('english', COALESCE(NEW.title, '')), 'A') ||
-        setweight(to_tsvector('english', COALESCE(NEW.description, '')), 'B') ||
-        setweight(to_tsvector('english', COALESCE(NEW.justification, '')), 'C');
-    RETURN NEW;
-END
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER requirements_search_vector_trigger
-    BEFORE INSERT OR UPDATE OF title, description, justification, reference_code
-    ON requirements
-    FOR EACH ROW
-    EXECUTE FUNCTION requirements_search_vector_update();
-
-CREATE INDEX idx_requirements_search_vector
-    ON requirements
-    USING gin(search_vector);
 
 -- Table for tracking embedding indexing jobs (for async processing)
 CREATE TABLE embedding_index_queue (
@@ -491,13 +501,32 @@ INSERT INTO verification (title, description, tag, project_id) VALUES
     ('Manual Test', 'Manual testing by QA team', 'MANUAL', 2);
 
 
--- Requirements for Space Project
-INSERT INTO requirements (title, description, reference_code, category_id, applicability_id, status_id,  author_id, reviewer_id, parent_id, creation_date, update_date, deadline_date, project_id) VALUES
-    ('REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations under AM0 illumination conditions', 'REQ-PWR-001', 1, 1, 1, 1, 2, NULL, '2024-01-15', '2024-01-15', '2024-06-30', 1),
-    ('REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse periods', 'REQ-PWR-002', 1, 1, 2, 1, 2, NULL, '2024-01-15', '2024-01-20', '2024-07-15', 1),
-    ('REQ-COMM-001', 'The satellite shall maintain continuous communication with ground stations during 90% of each orbit period', 'REQ-COMM-001', 2, 1, 1, 1, 2, NULL, '2024-01-16', '2024-01-16', '2024-08-15', 1),
-    ('REQ-ACS-001', 'The satellite shall maintain pointing accuracy of ±0.1 degrees in all three axes during normal operations', 'REQ-ACS-001', 3, 1, 1, 1, 2, NULL, '2024-01-17', '2024-01-17', '2024-06-15', 1),
-    ('REQ-THERM-001', 'All electronic components shall operate within -20°C to +60°C temperature range throughout the mission', 'REQ-THERM-001', 4, 1, 1, 1, 2, NULL, '2024-01-18', '2024-01-18', '2024-07-15', 1);
+-- Requirements for Space Project (containers only; content in requirement_versions)
+INSERT INTO requirements (id, project_id, stable_code) VALUES
+    (1, 1, 'REQ-PWR-001'),
+    (2, 1, 'REQ-PWR-002'),
+    (3, 1, 'REQ-COMM-001'),
+    (4, 1, 'REQ-ACS-001'),
+    (5, 1, 'REQ-THERM-001');
+
+SELECT setval('requirements_id_seq', (SELECT COALESCE(MAX(id), 1) FROM requirements));
+
+-- Initial versions (v1) for each requirement
+INSERT INTO requirement_versions (requirement_id, title, description, category_id, applicability_id, status_id, author_id, reviewer_id, parent_id, created_at, deadline_date) VALUES
+    (1, 'REQ-PWR-001', 'The satellite shall generate minimum 500W of electrical power during daylight operations under AM0 illumination conditions', 1, 1, 1, 1, 2, NULL, '2024-01-15', '2024-06-30'),
+    (2, 'REQ-PWR-002', 'The battery system shall provide 200W continuous power for 45 minutes during eclipse periods', 1, 1, 2, 1, 2, NULL, '2024-01-15', '2024-07-15'),
+    (3, 'REQ-COMM-001', 'The satellite shall maintain continuous communication with ground stations during 90% of each orbit period', 2, 1, 1, 1, 2, NULL, '2024-01-16', '2024-08-15'),
+    (4, 'REQ-ACS-001', 'The satellite shall maintain pointing accuracy of ±0.1 degrees in all three axes during normal operations', 3, 1, 1, 1, 2, NULL, '2024-01-17', '2024-06-15'),
+    (5, 'REQ-THERM-001', 'All electronic components shall operate within -20°C to +60°C temperature range throughout the mission', 4, 1, 1, 1, 2, NULL, '2024-01-18', '2024-07-15');
+
+-- Point each requirement container to its current (first) version
+UPDATE requirements r
+SET current_version_id = (
+    SELECT rv.id FROM requirement_versions rv
+    WHERE rv.requirement_id = r.id
+    ORDER BY rv.id ASC
+    LIMIT 1
+);
 
 -- Tests for Space Project
 INSERT INTO tests (reference_code, name, description, status_id, source, project_id) VALUES
@@ -515,13 +544,13 @@ INSERT INTO matrix (req_id, test_id, project_id) VALUES
     (4, 4, 1),  -- REQ-ACS-001 -> TEST-ACS-001
     (5, 5, 1);  -- REQ-THERM-001 -> TEST-THERM-001
 
--- Requirement–verification links (Space Project: req 1–5 linked to verification methods 1–4)
-INSERT INTO requirement_verification_methods (requirement_id, verification_method_id) VALUES
-    (1, 1),  -- REQ-PWR-001 -> Inspection
-    (2, 2),  -- REQ-PWR-002 -> Analysis
-    (3, 1),  -- REQ-COMM-001 -> Inspection
-    (4, 2),  -- REQ-ACS-001 -> Analysis
-    (5, 4);  -- REQ-THERM-001 -> Test
+-- Requirement version–verification links (Space Project: version 1–5 linked to verification methods 1–4)
+INSERT INTO requirement_version_verification_methods (requirement_version_id, verification_method_id) VALUES
+    (1, 1),  -- REQ-PWR-001 v1 -> Inspection
+    (2, 2),  -- REQ-PWR-002 v1 -> Analysis
+    (3, 1),  -- REQ-COMM-001 v1 -> Inspection
+    (4, 2),  -- REQ-ACS-001 v1 -> Analysis
+    (5, 4);  -- REQ-THERM-001 v1 -> Test
 
 -- Sample audit logs
 INSERT INTO logs (user_id, action_type, entity_type, entity_id, project_id, description, created_at) VALUES
@@ -549,8 +578,8 @@ BEGIN
     RAISE NOTICE '- 8 Categories for Space Project';
     RAISE NOTICE '- 6 Applicability definitions';
     RAISE NOTICE '- 4 Verification methods';
-    RAISE NOTICE '- 5 Requirements for Space Project';
-    RAISE NOTICE '- 5 Requirement–verification method links';
+    RAISE NOTICE '- 5 Requirements (with initial versions) for Space Project';
+    RAISE NOTICE '- 5 Requirement version–verification method links';
     RAISE NOTICE '- 5 Tests for Space Project';
     RAISE NOTICE '- 5 Traceability matrix entries';
     RAISE NOTICE '- 9 Project membership assignments';
@@ -579,5 +608,6 @@ CREATE TABLE IF NOT EXISTS __diesel_schema_migrations (
 
 INSERT INTO __diesel_schema_migrations (version) VALUES
     ('2026-01-31-000001_baseline_schema'),
-    ('2026-02-06-000001_seed_default_user')
+    ('2026-02-06-000001_seed_default_user'),
+    ('2026-02-07-000001_requirement_versioning')
 ON CONFLICT (version) DO NOTHING;

@@ -155,6 +155,19 @@ docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT COUNT(*) as requiremen
    docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT 1;"
    ```
 
+5. **"relation already exists" when running `diesel migration run`**
+   This happens when the database was created with `scripts/init_complete.sql` (or `setup_database.sh`) but Diesel’s migration history table is missing those runs. Mark the baseline and seed migrations as applied, then run migrations:
+   ```bash
+   # With Docker (replace reqman_db_1 if your container name differs):
+   docker exec -i reqman_db_1 psql -U rust -d reqman < scripts/backfill_diesel_migrations.sql
+   diesel migration run
+   ```
+   If you connect with `DATABASE_URL` (e.g. local PostgreSQL), run the backfill against that database first:
+   ```bash
+   psql "$DATABASE_URL" -f scripts/backfill_diesel_migrations.sql
+   diesel migration run
+   ```
+
 ### Reset Database
 
 To completely reset the database:

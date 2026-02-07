@@ -35,6 +35,7 @@ mod tests {
     fn create_test_requirement() -> Requirement {
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Test Requirement".to_string(),
             description: "Test Description".to_string(),
             status_id: 1,

@@ -16,6 +16,8 @@ pub fn routes() -> Vec<Route> {
     routes![
         requirements::list,
         requirements::get,
+        requirements::list_versions,
+        requirements::get_version,
         requirements::create,
         requirements::delete,
         requirements::patch_requirement,

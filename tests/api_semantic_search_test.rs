@@ -164,6 +164,7 @@ mod document_builder_tests {
     fn sample_requirement() -> DecoratedRequirement {
         DecoratedRequirement {
             id: 1,
+            current_version_id: None,
             title: "System shall process inputs".into(),
             description: "The system shall process all valid inputs within 100ms".into(),
             verification_method_id: "Analysis".into(),

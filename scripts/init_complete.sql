@@ -143,7 +143,8 @@ CREATE TABLE requirement_versions (
     applicability_id INTEGER NOT NULL DEFAULT 1,
     justification TEXT,
     deadline_date TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    search_vector tsvector
 );
 
 ALTER TABLE requirement_versions
@@ -262,10 +263,34 @@ CREATE INDEX idx_requirements_project_id ON requirements(project_id);
 CREATE INDEX idx_requirements_current_version_id ON requirements(current_version_id);
 CREATE INDEX idx_requirements_project_stable ON requirements(project_id, stable_code);
 
+-- Full-text search on requirement_versions (lexical search)
+CREATE OR REPLACE FUNCTION requirement_versions_search_vector_update() RETURNS trigger AS $$
+DECLARE
+    stable_code_val VARCHAR;
+BEGIN
+    SELECT COALESCE(r.stable_code, '') INTO stable_code_val
+    FROM requirements r WHERE r.id = NEW.requirement_id;
+    NEW.search_vector :=
+        setweight(to_tsvector('english', COALESCE(stable_code_val, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.title, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(NEW.description, '')), 'B') ||
+        setweight(to_tsvector('english', COALESCE(NEW.justification, '')), 'C');
+    RETURN NEW;
+END
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS requirement_versions_search_vector_trigger ON requirement_versions;
+CREATE TRIGGER requirement_versions_search_vector_trigger
+    BEFORE INSERT OR UPDATE OF title, description, justification, requirement_id
+    ON requirement_versions
+    FOR EACH ROW
+    EXECUTE FUNCTION requirement_versions_search_vector_update();
+
 -- Requirement versions indexes
 CREATE INDEX idx_requirement_versions_requirement_id ON requirement_versions(requirement_id);
 CREATE INDEX idx_requirement_versions_requirement_created ON requirement_versions(requirement_id, created_at DESC);
 CREATE INDEX idx_requirement_versions_created_at ON requirement_versions(created_at DESC);
+CREATE INDEX idx_requirement_versions_search_vector ON requirement_versions USING gin(search_vector);
 CREATE INDEX idx_requirement_version_verification_version ON requirement_version_verification_methods(requirement_version_id);
 
 -- Tests indexes

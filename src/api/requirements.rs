@@ -1,7 +1,7 @@
 use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
-use crate::models::{NewRequirement, Requirement};
+use crate::models::{NewRequirement, Requirement, RequirementVersion};
 use crate::services::RequirementService;
 
 #[derive(Debug, Deserialize)]
@@ -48,6 +48,36 @@ pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<
     let service = RequirementService::new(state.inner());
     let requirement = service.get_by_id(id)?;
     Ok(Json(requirement))
+}
+
+/// List all versions for a requirement (newest first).
+#[get("/requirements/<id>/versions")]
+pub async fn list_versions(
+    _user: ApiUser,
+    id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<RequirementVersion>>> {
+    let service = RequirementService::new(state.inner());
+    let versions = service.list_versions(id)?;
+    Ok(Json(versions))
+}
+
+/// Get a single requirement version by id (version must belong to the given requirement).
+#[get("/requirements/<req_id>/versions/<version_id>")]
+pub async fn get_version(
+    _user: ApiUser,
+    req_id: i32,
+    version_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<RequirementVersion>> {
+    let service = RequirementService::new(state.inner());
+    let version = service.get_version_by_id(version_id)?;
+    if version.requirement_id != req_id {
+        return Err(ApiError::NotFound(
+            "version does not belong to requirement".into(),
+        ));
+    }
+    Ok(Json(version))
 }
 
 #[post("/requirements", data = "<payload>")]
@@ -201,7 +231,15 @@ mod tests {
             .manage(state_from_repo(repo.with_admin_user()))
             .mount(
                 "/api",
-                routes![list, get, create, delete, patch_requirement],
+                routes![
+                    list,
+                    get,
+                    list_versions,
+                    get_version,
+                    create,
+                    delete,
+                    patch_requirement,
+                ],
             );
         Client::tracked(rocket).await.unwrap()
     }
@@ -298,6 +336,73 @@ mod tests {
         let requirement: Requirement = get_response.into_json().await.unwrap();
         assert_eq!(requirement.title, "Updated");
         assert_eq!(requirement.description, "Updated description");
+    }
+
+    #[rocket::async_test]
+    async fn patch_creates_new_version_and_versions_list_returns_history() {
+        let client = client_with_repo(DieselRepoMock::default()).await;
+        let mut req = sample_requirement("V1 Title");
+        req["reference_code"] = serde_json::Value::from("REQ-001");
+        let create_response = client
+            .post("/api/requirements")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(req.to_string())
+            .dispatch()
+            .await;
+        assert_eq!(
+            create_response.status(),
+            Status::Ok,
+            "create should succeed"
+        );
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created
+            .get("id")
+            .and_then(Value::as_i64)
+            .expect("create response should have id") as i32;
+
+        let versions_after_create = client
+            .get(format!("/api/requirements/{id}/versions"))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(versions_after_create.status(), Status::Ok);
+        let versions: Vec<RequirementVersion> = versions_after_create.into_json().await.unwrap();
+        assert_eq!(versions.len(), 1);
+        assert_eq!(versions[0].title, "V1 Title");
+
+        client
+            .patch(format!("/api/requirements/{id}"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(json!({ "title": "V2 Updated" }).to_string())
+            .dispatch()
+            .await;
+
+        let versions_after_patch = client
+            .get(format!("/api/requirements/{id}/versions"))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(versions_after_patch.status(), Status::Ok);
+        let versions: Vec<RequirementVersion> = versions_after_patch.into_json().await.unwrap();
+        assert_eq!(versions.len(), 2);
+        assert_eq!(versions[0].title, "V2 Updated");
+        assert_eq!(versions[1].title, "V1 Title");
+
+        let first_version_id = versions[1].id;
+        let single = client
+            .get(format!(
+                "/api/requirements/{id}/versions/{first_version_id}"
+            ))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(single.status(), Status::Ok);
+        let v: RequirementVersion = single.into_json().await.unwrap();
+        assert_eq!(v.id, first_version_id);
+        assert_eq!(v.requirement_id, id);
+        assert_eq!(v.title, "V1 Title");
     }
 
     #[rocket::async_test]

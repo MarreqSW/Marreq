@@ -142,6 +142,7 @@ fn decorate_requirements_impl<R: Repository>(
 
             DecoratedRequirement {
                 id: r.id,
+                current_version_id: r.current_version_id,
                 title: r.title,
                 verification_method_id: verification,
                 req_verification_ids: verification_ids,
@@ -376,6 +377,7 @@ mod tests {
             31,
             Requirement {
                 id: 31,
+                current_version_id: None,
                 title: "Parent".into(),
                 description: String::new(),
                 status_id: 1,
@@ -395,6 +397,7 @@ mod tests {
 
         let r1 = Requirement {
             id: 1,
+            current_version_id: None,
             title: "R1".into(),
             description: String::new(),
             status_id: 1,
@@ -413,6 +416,7 @@ mod tests {
 
         let r2 = Requirement {
             id: 2,
+            current_version_id: None,
             title: "R2".into(),
             description: String::new(),
             status_id: 1,
@@ -431,6 +435,7 @@ mod tests {
 
         let r3 = Requirement {
             id: 3,
+            current_version_id: None,
             title: "R3".into(),
             description: String::new(),
             status_id: 99,
@@ -570,6 +575,7 @@ mod tests {
         );
         let req = Requirement {
             id: 1,
+            current_version_id: None,
             title: "R".into(),
             description: String::new(),
             status_id: 0,
@@ -616,6 +622,7 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         let req = Requirement {
             id: 2,
+            current_version_id: None,
             title: "R".into(),
             description: String::new(),
             status_id: 0,
@@ -657,6 +664,7 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         let req = Requirement {
             id: 3,
+            current_version_id: None,
             title: "R".into(),
             description: String::new(),
             status_id: 0,

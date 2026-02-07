@@ -101,16 +101,17 @@ impl<'a> RequirementAnalyticsService<'a> {
         }
 
         // Execute the grouped aggregation with optional filters expressed as bind parameters.
-        // Verification filter uses the junction table requirement_verification_methods.
+        // Verification filter uses requirement_version_verification_methods (current version).
         let query = diesel::sql_query(
             "SELECT LOWER(TRIM(rs.title)) AS status, COUNT(*)::BIGINT AS total
              FROM requirements r
-             INNER JOIN requirement_status rs ON rs.id = r.status_id
+             INNER JOIN requirement_versions rv ON r.current_version_id = rv.id
+             INNER JOIN requirement_status rs ON rs.id = rv.status_id
              WHERE r.project_id = $1
-               AND ($2 IS NULL OR r.status_id = $2)
-               AND ($3 IS NULL OR r.id IN (SELECT requirement_id FROM requirement_verification_methods WHERE verification_method_id = $3))
-               AND ($4 IS NULL OR r.category_id = $4)
-               AND ($5 IS NULL OR r.applicability_id = $5)
+               AND ($2 IS NULL OR rv.status_id = $2)
+               AND ($3 IS NULL OR r.current_version_id IN (SELECT requirement_version_id FROM requirement_version_verification_methods WHERE verification_method_id = $3))
+               AND ($4 IS NULL OR rv.category_id = $4)
+               AND ($5 IS NULL OR rv.applicability_id = $5)
              GROUP BY status",
         );
 
@@ -253,6 +254,7 @@ mod tests {
     ) -> Requirement {
         Requirement {
             id,
+            current_version_id: None,
             title: format!("Req {id}"),
             description: "desc".into(),
             status_id,

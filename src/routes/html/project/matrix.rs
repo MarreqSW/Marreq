@@ -367,6 +367,7 @@ mod tests {
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
             id,
+            current_version_id: None,
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
             status_id: 1,
@@ -463,6 +464,7 @@ mod tests {
                 i,
                 Requirement {
                     id: i,
+                    current_version_id: None,
                     title: format!("Req {}", i),
                     description: String::new(),
                     status_id: 1,
@@ -514,6 +516,7 @@ mod tests {
             1,
             Requirement {
                 id: 1,
+                current_version_id: None,
                 title: "Authentication Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -535,6 +538,7 @@ mod tests {
             2,
             Requirement {
                 id: 2,
+                current_version_id: None,
                 title: "Database Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -580,6 +584,7 @@ mod tests {
             1,
             Requirement {
                 id: 1,
+                current_version_id: None,
                 title: "Test Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -630,6 +635,7 @@ mod tests {
             1,
             Requirement {
                 id: 1,
+                current_version_id: None,
                 title: "Test, with \"quotes\"".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -679,6 +685,7 @@ mod tests {
             1,
             Requirement {
                 id: 1,
+                current_version_id: None,
                 title: "Unlinked Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,

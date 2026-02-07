@@ -261,6 +261,19 @@ function makeSection(title, value, fallback = EMPTY_MESSAGE) {
   return { title, content: fallback, empty: true };
 }
 
+function versionLabelFromCanonical(canonical = {}) {
+  const versions = canonical.versions;
+  const viewingId = canonical.viewing_past_version ? canonical.viewing_version_id : canonical.current_version_id;
+  if (Array.isArray(versions) && versions.length > 0 && viewingId != null) {
+    const index = versions.findIndex((v) => v.id === viewingId);
+    const vNum = index >= 0 ? index + 1 : versions.length;
+    const suffix = canonical.viewing_past_version ? ' (past)' : ' (current)';
+    return `v${vNum}${suffix}`;
+  }
+  const timelineEntries = timeline({ requirement: canonical.requirement ?? {}, historyEntries: canonical.history?.entries ?? [] });
+  return timelineEntries[0]?.version ?? 'v1';
+}
+
 export function buildRequirementViewModel(canonical = {}) {
   if (!canonical || typeof canonical !== 'object') {
     return null;
@@ -287,6 +300,7 @@ export function buildRequirementViewModel(canonical = {}) {
   const reviewerName = normalise(requirement.reviewer_id);
   const reviewerAssigned = Boolean(reviewerName);
 
+  const versionLabel = versionLabelFromCanonical(canonical);
   const metadata = {
     author: {
       name: authorName,
@@ -303,7 +317,7 @@ export function buildRequirementViewModel(canonical = {}) {
     },
     updated: requirement.update_date,
     deadline: requirement.deadline_date,
-    version: timelineEntries[0]?.version ?? 'v1',
+    version: versionLabel,
   };
 
   const bodySections = [

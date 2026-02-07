@@ -9,7 +9,7 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Loggable, Logger};
-use crate::models::{EntityType, NewRequirement, Requirement, TestCase, User};
+use crate::models::{EntityType, NewRequirement, Requirement, RequirementVersion, TestCase, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository};
 use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
@@ -115,6 +115,16 @@ impl<'a> RequirementService<'a> {
     /// Retrieve a single requirement by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
         self.repo_read().get_requirement_by_id(id)
+    }
+
+    /// List all versions for a requirement (newest first).
+    pub fn list_versions(&self, requirement_id: i32) -> Result<Vec<RequirementVersion>, RepoError> {
+        self.repo_read().list_requirement_versions(requirement_id)
+    }
+
+    /// Fetch a single version by id.
+    pub fn get_version_by_id(&self, version_id: i32) -> Result<RequirementVersion, RepoError> {
+        self.repo_read().get_requirement_version_by_id(version_id)
     }
 
     /// Verification method IDs linked to this requirement.
@@ -348,6 +358,7 @@ mod tests {
     fn requirement(id: i32, project_id: i32, reference: &str) -> Requirement {
         Requirement {
             id,
+            current_version_id: None,
             title: format!("Requirement {id}"),
             description: "Existing description".into(),
             status_id: 1,

@@ -707,6 +707,7 @@ mod tests {
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
             id,
+            current_version_id: None,
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
             status_id: 1,

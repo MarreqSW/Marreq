@@ -432,6 +432,7 @@ async fn patch_requirement_with_invalid_foreign_keys_returns_error() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Test".into(),
             description: "Test".into(),
             reference_code: "REQ-001".into(),
@@ -763,6 +764,7 @@ async fn delete_category_that_has_requirements_handles_gracefully() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Test".into(),
             description: "Test".into(),
             reference_code: "REQ-001".into(),
@@ -806,6 +808,7 @@ async fn delete_applicability_that_has_requirements_handles_gracefully() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Test".into(),
             description: "Test".into(),
             reference_code: "REQ-001".into(),
@@ -847,6 +850,7 @@ async fn delete_status_that_has_requirements_handles_gracefully() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Test".into(),
             description: "Test".into(),
             reference_code: "REQ-001".into(),

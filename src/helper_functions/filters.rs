@@ -59,6 +59,7 @@ mod tests {
     fn sample_requirement(id: i32, status: i32, category: i32, reference: &str) -> Requirement {
         Requirement {
             id,
+            current_version_id: None,
             title: format!("Req {}", id),
             description: String::new(),
             status_id: status,

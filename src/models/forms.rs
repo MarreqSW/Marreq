@@ -12,14 +12,11 @@ use rocket::form::FromForm;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-/// Data required to insert or update a requirement.
+/// Data required to create or update a requirement (version content).
 ///
-/// Typically populated from HTTP forms when creating or editing requirements.
-#[derive(Serialize, Deserialize, Insertable, AsChangeset, FromForm)]
+/// Used as API/form payload; converted to [`NewRequirementVersion`] when inserting a version.
+#[derive(Serialize, Deserialize, FromForm, Clone, Debug)]
 #[serde(crate = "rocket::serde")]
-#[diesel(table_name = requirements)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-#[diesel(primary_key(id))]
 pub struct NewRequirement {
     pub id: Option<i32>,
     pub title: String,
@@ -33,6 +30,54 @@ pub struct NewRequirement {
     pub applicability_id: i32,
     pub justification: Option<String>,
     pub project_id: i32,
+}
+
+/// Insertable row for a new requirement version (immutable snapshot).
+#[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = requirement_versions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewRequirementVersion {
+    pub requirement_id: i32,
+    pub title: String,
+    pub description: String,
+    pub status_id: i32,
+    pub author_id: i32,
+    pub reviewer_id: i32,
+    pub category_id: i32,
+    pub parent_id: Option<i32>,
+    pub applicability_id: i32,
+    pub justification: Option<String>,
+    pub deadline_date: Option<chrono::NaiveDateTime>,
+}
+
+/// Insertable row for the logical requirement container (no version content).
+#[derive(Insertable, Clone, Debug)]
+#[diesel(table_name = requirements)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewRequirementContainer {
+    pub project_id: i32,
+    pub stable_code: String,
+    pub current_version_id: Option<i32>,
+}
+
+impl NewRequirement {
+    /// Build an insertable version row from this payload for the given logical requirement.
+    pub fn to_new_version(&self, requirement_id: i32) -> NewRequirementVersion {
+        NewRequirementVersion {
+            requirement_id,
+            title: self.title.clone(),
+            description: self.description.clone(),
+            status_id: self.status_id,
+            author_id: self.author_id,
+            reviewer_id: self.reviewer_id,
+            category_id: self.category_id,
+            parent_id: self.parent_id,
+            applicability_id: self.applicability_id,
+            justification: self.justification.clone(),
+            deadline_date: None,
+        }
+    }
 }
 
 /// Macro to define tagged form entities with common structure.

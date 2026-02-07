@@ -113,13 +113,17 @@ fi
 echo "✅ Database 'reqman' is ready"
 echo ""
 
-echo "🧹 Cleaning existing tables (if any)..."
+echo "🧹 Cleaning existing tables and related objects (if any)..."
 psqlc -U rust -d reqman <<'SQL' >/dev/null 2>&1 || true
 DROP TABLE IF EXISTS embedding_index_queue CASCADE;
 DROP TABLE IF EXISTS requirement_embeddings CASCADE;
 DROP TABLE IF EXISTS matrix CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;
+DROP TABLE IF EXISTS requirement_version_verification_methods CASCADE;
+DROP TRIGGER IF EXISTS requirement_versions_search_vector_trigger ON requirement_versions;
+DROP TABLE IF EXISTS requirement_versions CASCADE;
 DROP TABLE IF EXISTS requirements CASCADE;
+DROP FUNCTION IF EXISTS requirement_versions_search_vector_update() CASCADE;
 DROP TABLE IF EXISTS tests CASCADE;
 DROP TABLE IF EXISTS project_members CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
@@ -144,7 +148,13 @@ echo ""
 echo "🔍 Verifying database setup..."
 echo "📋 Tables created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "\dt" \
-  | grep -E "(projects|users|requirements|tests|matrix|logs|categories|applicability|verification|requirement_status|status_id)" || true
+  | grep -E "(projects|users|requirements|requirement_versions|requirement_version_verification|tests|matrix|logs|categories|applicability|verification|requirement_status|status_id)" || true
+echo ""
+echo "📋 Full-text search (requirement_versions.search_vector):"
+docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
+  SELECT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'requirement_versions_search_vector_trigger') AS trigger_exists,
+         EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_requirement_versions_search_vector') AS index_exists;
+" 2>/dev/null || true
 echo ""
 
 echo "👥 Users created:"
@@ -181,6 +191,8 @@ echo ""
 echo "📊 Sample data counts:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
 SELECT 'Requirements' AS entity, COUNT(*) FROM requirements
+UNION ALL
+SELECT 'Requirement versions', COUNT(*) FROM requirement_versions
 UNION ALL
 SELECT 'Tests', COUNT(*) FROM tests
 UNION ALL

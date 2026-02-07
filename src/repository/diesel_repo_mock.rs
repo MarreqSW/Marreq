@@ -1,6 +1,7 @@
 // This is just for testing purposes
 
 use super::*;
+use crate::models::RequirementVersion;
 use crate::repository::errors::RepoError;
 use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
@@ -15,8 +16,12 @@ pub struct DieselRepoMock {
     pub categories: HashMap<i32, Category>,
     pub applicability: HashMap<i32, Applicability>,
     pub requirements: HashMap<i32, Requirement>,
-    /// (requirement_id, verification_method_id) pairs for many-to-many
+    /// (requirement_id, verification_method_id) pairs for current version (mock)
     pub requirement_verification_methods: Vec<(i32, i32)>,
+    /// Version history for tests (version id -> RequirementVersion)
+    pub requirement_versions: HashMap<i32, RequirementVersion>,
+    /// Next version id when creating versions
+    pub next_version_id: i32,
     pub tests: HashMap<i32, TestCase>,
     pub projects: HashMap<i32, Project>,
     pub matrices: Vec<MatrixLink>,
@@ -30,6 +35,10 @@ fn epoch() -> NaiveDateTime {
         .unwrap()
         .and_hms_opt(0, 0, 0)
         .unwrap()
+}
+
+fn version_created_at(version_id: i32) -> NaiveDateTime {
+    epoch() + chrono::Duration::seconds(version_id as i64)
 }
 
 impl DieselRepoMock {
@@ -48,6 +57,8 @@ impl DieselRepoMock {
             applicability: HashMap::new(),
             requirements: HashMap::new(),
             requirement_verification_methods: Vec::new(),
+            requirement_versions: HashMap::new(),
+            next_version_id: 1,
             tests: HashMap::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
@@ -67,6 +78,8 @@ impl DieselRepoMock {
             applicability: HashMap::new(),
             requirements: HashMap::new(),
             requirement_verification_methods: Vec::new(),
+            requirement_versions: HashMap::new(),
+            next_version_id: 1,
             tests: HashMap::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
@@ -533,8 +546,28 @@ impl RequirementsRepository for DieselRepoMock {
             .id
             .unwrap_or_else(|| self.requirements.keys().max().map(|i| i + 1).unwrap_or(1));
         let now = epoch();
+        let version_id = self.next_version_id;
+        self.next_version_id += 1;
+        let created_at = version_created_at(version_id);
+        let version = RequirementVersion {
+            id: version_id,
+            requirement_id: id,
+            title: _new.title.clone(),
+            description: _new.description.clone(),
+            status_id: _new.status_id,
+            author_id: _new.author_id,
+            reviewer_id: _new.reviewer_id,
+            category_id: _new.category_id,
+            parent_id: _new.parent_id,
+            applicability_id: _new.applicability_id,
+            justification: _new.justification.clone(),
+            deadline_date: Some(now),
+            created_at,
+        };
+        self.requirement_versions.insert(version_id, version);
         let req = Requirement {
             id,
+            current_version_id: Some(version_id),
             title: _new.title.clone(),
             description: _new.description.clone(),
             status_id: _new.status_id,
@@ -558,6 +591,27 @@ impl RequirementsRepository for DieselRepoMock {
         let id = _new.id.ok_or(RepoError::NotFound)?;
         match self.requirements.get_mut(&id) {
             Some(req) => {
+                let now = epoch();
+                let version_id = self.next_version_id;
+                self.next_version_id += 1;
+                let created_at = version_created_at(version_id);
+                let version = RequirementVersion {
+                    id: version_id,
+                    requirement_id: id,
+                    title: _new.title.clone(),
+                    description: _new.description.clone(),
+                    status_id: _new.status_id,
+                    author_id: _new.author_id,
+                    reviewer_id: _new.reviewer_id,
+                    category_id: _new.category_id,
+                    parent_id: _new.parent_id,
+                    applicability_id: _new.applicability_id,
+                    justification: _new.justification.clone(),
+                    deadline_date: Some(now),
+                    created_at,
+                };
+                self.requirement_versions.insert(version_id, version);
+                req.current_version_id = Some(version_id);
                 req.title = _new.title.clone();
                 req.description = _new.description.clone();
                 req.status_id = _new.status_id;
@@ -569,7 +623,7 @@ impl RequirementsRepository for DieselRepoMock {
                 req.applicability_id = _new.applicability_id;
                 req.justification = _new.justification.clone();
                 req.project_id = _new.project_id;
-                req.update_date = epoch();
+                req.update_date = now;
                 Ok(true)
             }
             None => Err(RepoError::NotFound),
@@ -590,6 +644,30 @@ impl RequirementsRepository for DieselRepoMock {
             }
             None => Err(RepoError::NotFound),
         }
+    }
+
+    fn list_requirement_versions(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<RequirementVersion>, RepoError> {
+        let mut versions: Vec<RequirementVersion> = self
+            .requirement_versions
+            .values()
+            .filter(|v| v.requirement_id == requirement_id)
+            .cloned()
+            .collect();
+        versions.sort_by_key(|b| std::cmp::Reverse(b.created_at));
+        Ok(versions)
+    }
+
+    fn get_requirement_version_by_id(
+        &self,
+        version_id: i32,
+    ) -> Result<RequirementVersion, RepoError> {
+        self.requirement_versions
+            .get(&version_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
     }
 }
 

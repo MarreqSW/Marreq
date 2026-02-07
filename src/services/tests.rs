@@ -16,6 +16,7 @@ fn timestamp() -> NaiveDateTime {
 fn sample_requirement() -> Requirement {
     Requirement {
         id: 1,
+        current_version_id: None,
         title: "Sample".into(),
         description: "Description".into(),
         status_id: 1,

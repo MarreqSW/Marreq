@@ -229,15 +229,17 @@ impl<'a> SemanticSearchService<'a> {
             return Ok(vec![]);
         }
 
-        // Execute with parameters using to_tsquery with OR logic
+        // Execute with parameters using to_tsquery with OR logic.
+        // Search uses requirement_versions.search_vector (current version content); return requirement id.
         let results: Vec<(i32, f32)> = diesel::sql_query(
             r#"
-            SELECT 
+            SELECT
                 r.id,
-                ts_rank_cd(r.search_vector, to_tsquery('english', $1)) as rank
+                ts_rank_cd(rv.search_vector, to_tsquery('english', $1)) AS rank
             FROM requirements r
+            INNER JOIN requirement_versions rv ON r.current_version_id = rv.id
             WHERE r.project_id = $2
-                AND r.search_vector @@ to_tsquery('english', $1)
+                AND rv.search_vector @@ to_tsquery('english', $1)
             ORDER BY rank DESC
             LIMIT $3
             "#,

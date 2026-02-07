@@ -14,7 +14,7 @@ use super::llm_provider::{
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{RagAnswerResponse, SemanticSearchResult};
 use crate::repository::errors::RepoError;
-use crate::schema::{requirement_verification_methods, requirements};
+use crate::schema::{requirement_version_verification_methods, requirement_versions, requirements};
 use crate::services::DecoratedRequirementService;
 use diesel::prelude::*;
 use diesel::sql_types::{Float4, Integer, Text};
@@ -119,37 +119,42 @@ impl<'a> SemanticSearchService<'a> {
         let repo = self.state.repo_read();
         let mut conn = repo.inner_repo().get_conn().map_err(SearchError::Repo)?;
 
-        // Build query
+        // Build query: join requirements with current version; optional verification via subquery
         let mut query_builder = requirements::table
+            .inner_join(
+                requirement_versions::table
+                    .on(requirements::current_version_id.eq(requirement_versions::id.nullable())),
+            )
             .filter(requirements::project_id.eq(project_id))
-            .filter(requirements::reference_code.ilike(&query_upper))
+            .filter(requirements::stable_code.ilike(&query_upper))
             .into_boxed();
+        if let Some(verification_id) = filters.verification_id {
+            let subquery = requirement_version_verification_methods::table
+                .filter(
+                    requirement_version_verification_methods::verification_method_id
+                        .eq(verification_id),
+                )
+                .select(requirement_version_verification_methods::requirement_version_id);
+            query_builder = query_builder.filter(requirement_versions::id.eq_any(subquery));
+        }
 
         if let Some(status_id) = filters.status_id {
-            query_builder = query_builder.filter(requirements::status_id.eq(status_id));
+            query_builder = query_builder.filter(requirement_versions::status_id.eq(status_id));
         }
         if let Some(category_id) = filters.category_id {
-            query_builder = query_builder.filter(requirements::category_id.eq(category_id));
+            query_builder = query_builder.filter(requirement_versions::category_id.eq(category_id));
         }
         if let Some(applicability_id) = filters.applicability_id {
             query_builder =
-                query_builder.filter(requirements::applicability_id.eq(applicability_id));
-        }
-        if let Some(verification_id) = filters.verification_id {
-            let subquery = requirement_verification_methods::table
-                .filter(
-                    requirement_verification_methods::verification_method_id.eq(verification_id),
-                )
-                .select(requirement_verification_methods::requirement_id);
-            query_builder = query_builder.filter(requirements::id.eq_any(subquery));
+                query_builder.filter(requirement_versions::applicability_id.eq(applicability_id));
         }
 
         let result: Option<(i32, String, String, String)> = query_builder
             .select((
                 requirements::id,
-                requirements::reference_code,
-                requirements::title,
-                requirements::description,
+                requirements::stable_code,
+                requirement_versions::title,
+                requirement_versions::description,
             ))
             .first(conn.as_mut())
             .optional()
@@ -275,25 +280,30 @@ impl<'a> SemanticSearchService<'a> {
         let mut conn = repo.inner_repo().get_conn().map_err(SearchError::Repo)?;
 
         let mut query = requirements::table
+            .inner_join(
+                requirement_versions::table
+                    .on(requirements::current_version_id.eq(requirement_versions::id.nullable())),
+            )
             .filter(requirements::id.eq_any(&ids))
             .into_boxed();
+        if let Some(verification_id) = filters.verification_id {
+            let subquery = requirement_version_verification_methods::table
+                .filter(
+                    requirement_version_verification_methods::verification_method_id
+                        .eq(verification_id),
+                )
+                .select(requirement_version_verification_methods::requirement_version_id);
+            query = query.filter(requirement_versions::id.eq_any(subquery));
+        }
 
         if let Some(status_id) = filters.status_id {
-            query = query.filter(requirements::status_id.eq(status_id));
+            query = query.filter(requirement_versions::status_id.eq(status_id));
         }
         if let Some(category_id) = filters.category_id {
-            query = query.filter(requirements::category_id.eq(category_id));
+            query = query.filter(requirement_versions::category_id.eq(category_id));
         }
         if let Some(applicability_id) = filters.applicability_id {
-            query = query.filter(requirements::applicability_id.eq(applicability_id));
-        }
-        if let Some(verification_id) = filters.verification_id {
-            let subquery = requirement_verification_methods::table
-                .filter(
-                    requirement_verification_methods::verification_method_id.eq(verification_id),
-                )
-                .select(requirement_verification_methods::requirement_id);
-            query = query.filter(requirements::id.eq_any(subquery));
+            query = query.filter(requirement_versions::applicability_id.eq(applicability_id));
         }
 
         let filtered_ids: Vec<i32> = query

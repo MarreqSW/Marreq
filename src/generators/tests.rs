@@ -25,6 +25,7 @@ mod tests {
     fn sample_requirement(id: i32, project_id: i32) -> Requirement {
         Requirement {
             id,
+            current_version_id: None,
             title: format!("Requirement {}", id),
             description: format!("Description {}", id),
             status_id: 1,
@@ -60,6 +61,7 @@ mod tests {
     fn sample_decorated_requirement(id: i32) -> DecoratedRequirement {
         DecoratedRequirement {
             id,
+            current_version_id: None,
             title: format!("Requirement {}", id),
             description: format!("Description {}", id),
             verification_method_id: "Test".to_string(),

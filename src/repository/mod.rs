@@ -64,6 +64,17 @@ pub trait RequirementsRepository {
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError>;
     fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError>;
     fn update_requirement(&mut self, requirement_id: i32) -> Result<(), RepoError>;
+
+    /// List all versions for a requirement (newest first).
+    fn list_requirement_versions(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<RequirementVersion>, RepoError>;
+    /// Fetch a single version by id (any requirement).
+    fn get_requirement_version_by_id(
+        &self,
+        version_id: i32,
+    ) -> Result<RequirementVersion, RepoError>;
 }
 
 pub trait TestsCaseRepository {

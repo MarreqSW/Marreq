@@ -34,6 +34,7 @@ mod tests {
         fn requirement_display() {
             let req = Requirement {
                 id: 42,
+                current_version_id: None,
                 title: "Test Requirement".to_string(),
                 description: "Test Description".to_string(),
                 status_id: 2,
@@ -58,6 +59,7 @@ mod tests {
         fn requirement_display_with_parent() {
             let req = Requirement {
                 id: 100,
+                current_version_id: None,
                 title: "Child Requirement".to_string(),
                 description: "Child".to_string(),
                 status_id: 1,
@@ -228,6 +230,7 @@ mod tests {
         fn requirement_loggable() {
             let req = Requirement {
                 id: 42,
+                current_version_id: None,
                 title: "Test Req".to_string(),
                 description: "Desc".to_string(),
                 status_id: 1,
@@ -343,6 +346,7 @@ mod tests {
         fn requirement_field_access() {
             let req = Requirement {
                 id: 1,
+                current_version_id: None,
                 title: "Title".to_string(),
                 description: "Desc".to_string(),
                 status_id: 3,
@@ -459,6 +463,7 @@ mod tests {
         fn requirement_serialization() {
             let req = Requirement {
                 id: 1,
+                current_version_id: None,
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
                 status_id: 1,
@@ -942,6 +947,7 @@ mod tests {
         fn decorated_requirement_field_access() {
             let decorated = DecoratedRequirement {
                 id: 1,
+                current_version_id: None,
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
                 verification_method_id: "Test".to_string(),
@@ -982,6 +988,7 @@ mod tests {
         fn decorated_requirement_with_parent() {
             let decorated = DecoratedRequirement {
                 id: 2,
+                current_version_id: None,
                 title: "Child".to_string(),
                 description: "Desc".to_string(),
                 verification_method_id: "Test".to_string(),
@@ -1070,6 +1077,7 @@ mod tests {
         fn decorated_requirement_serialization() {
             let decorated = DecoratedRequirement {
                 id: 1,
+                current_version_id: None,
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
                 verification_method_id: "Test".to_string(),
@@ -1177,6 +1185,7 @@ mod tests {
         fn requirement_clone() {
             let req = Requirement {
                 id: 1,
+                current_version_id: None,
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
                 status_id: 1,
@@ -1235,6 +1244,7 @@ mod tests {
         fn requirement_with_all_option_fields() {
             let req = Requirement {
                 id: 1,
+                current_version_id: None,
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
                 status_id: 1,

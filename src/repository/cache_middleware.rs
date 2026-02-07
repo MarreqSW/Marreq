@@ -204,6 +204,20 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         self.cache.invalidate_requirement(requirement_id);
         Ok(())
     }
+
+    fn list_requirement_versions(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<RequirementVersion>, RepoError> {
+        self.inner.list_requirement_versions(requirement_id)
+    }
+
+    fn get_requirement_version_by_id(
+        &self,
+        version_id: i32,
+    ) -> Result<RequirementVersion, RepoError> {
+        self.inner.get_requirement_version_by_id(version_id)
+    }
 }
 
 impl<R: Repository> UserRepository for CacheRepository<R> {
@@ -695,6 +709,7 @@ mod tests {
         };
         let requirement = Requirement {
             id: 1,
+            current_version_id: None,
             title: "Req".into(),
             description: "".into(),
             status_id: 1,
@@ -757,6 +772,8 @@ mod tests {
             applicability,
             requirements,
             requirement_verification_methods: Vec::new(),
+            requirement_versions: HashMap::new(),
+            next_version_id: 1,
             tests,
             projects,
             matrices: vec![matrix],

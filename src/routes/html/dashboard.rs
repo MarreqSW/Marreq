@@ -148,6 +148,7 @@ mod tests {
         fn requirement(id: i32, project_id: i32, created: NaiveDateTime) -> Requirement {
             Requirement {
                 id,
+                current_version_id: None,
                 title: format!("Requirement {id}"),
                 description: "Ensure feature works".into(),
                 status_id: 1,

@@ -1,6 +1,6 @@
 use crate::helper_functions::decorators;
 use crate::models::*;
-use crate::repository::DieselRepo;
+use crate::repository::{DieselRepo, RequirementsRepository, TestsCaseRepository};
 use diesel::prelude::*;
 use std::fs;
 
@@ -10,23 +10,20 @@ pub fn create_matrix_workbook(
     eprintln!("Creating matrix workbook for project {}", project_id);
 
     use crate::schema::matrix::dsl::{matrix, req_id};
-    use crate::schema::requirements::dsl::requirements;
-    use crate::schema::tests::dsl::tests;
 
     let mut connection = DieselRepo::new()
         .get_conn()
         .map_err(|e| format!("Database connection error: {}", e))?;
 
-    // Get requirements for the project
-    let all_reqs = requirements
-        .filter(crate::schema::requirements::project_id.eq(project_id))
-        .load::<Requirement>(connection.as_mut())
+    // Get requirements for the project (via repository for versioned schema)
+    let repo = DieselRepo::new();
+    let all_reqs = repo
+        .get_requirements_by_project(project_id)
         .map_err(|e| format!("Error querying requirements by project: {:?}", e))?;
 
     // Get tests for the project
-    let all_tests = tests
-        .filter(crate::schema::tests::project_id.eq(project_id))
-        .load::<TestCase>(connection.as_mut())
+    let all_tests = repo
+        .get_tests_by_project(project_id)
         .map_err(|e| format!("Error querying tests by project: {:?}", e))?;
 
     eprintln!(
@@ -109,13 +106,9 @@ pub fn create_matrix_workbook(
 }
 
 pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    use crate::schema::requirements::dsl::*;
-
-    let mut connection = DieselRepo::new().get_conn()?;
-
-    let all_requirements = requirements
-        .filter(crate::schema::requirements::project_id.eq(pid))
-        .load::<Requirement>(connection.as_mut())
+    let repo = DieselRepo::new();
+    let all_requirements = repo
+        .get_requirements_by_project(pid)
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
     // Decorate requirements to get real names instead of IDs

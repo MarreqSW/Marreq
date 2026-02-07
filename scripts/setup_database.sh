@@ -119,6 +119,8 @@ DROP TABLE IF EXISTS embedding_index_queue CASCADE;
 DROP TABLE IF EXISTS requirement_embeddings CASCADE;
 DROP TABLE IF EXISTS matrix CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;
+DROP TABLE IF EXISTS requirement_version_verification_methods CASCADE;
+DROP TABLE IF EXISTS requirement_versions CASCADE;
 DROP TABLE IF EXISTS requirements CASCADE;
 DROP TABLE IF EXISTS tests CASCADE;
 DROP TABLE IF EXISTS project_members CASCADE;
@@ -144,7 +146,7 @@ echo ""
 echo "🔍 Verifying database setup..."
 echo "📋 Tables created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "\dt" \
-  | grep -E "(projects|users|requirements|tests|matrix|logs|categories|applicability|verification|requirement_status|status_id)" || true
+  | grep -E "(projects|users|requirements|requirement_versions|requirement_version_verification|tests|matrix|logs|categories|applicability|verification|requirement_status|status_id)" || true
 echo ""
 
 echo "👥 Users created:"
@@ -181,6 +183,8 @@ echo ""
 echo "📊 Sample data counts:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
 SELECT 'Requirements' AS entity, COUNT(*) FROM requirements
+UNION ALL
+SELECT 'Requirement versions', COUNT(*) FROM requirement_versions
 UNION ALL
 SELECT 'Tests', COUNT(*) FROM tests
 UNION ALL

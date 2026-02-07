@@ -267,6 +267,7 @@ async fn patch_requirement_with_empty_patch_returns_bad_request() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Test".into(),
             description: "Test".into(),
             reference_code: "REQ-001".into(),
@@ -306,6 +307,7 @@ async fn patch_requirement_with_invalid_field_type_returns_error() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Test".into(),
             description: "Test".into(),
             reference_code: "REQ-001".into(),
@@ -625,6 +627,7 @@ async fn sql_injection_in_id_parameter_is_handled_safely() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Test".into(),
             description: "Test".into(),
             reference_code: "REQ-001".into(),

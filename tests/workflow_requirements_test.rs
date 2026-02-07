@@ -413,6 +413,7 @@ async fn filter_and_search_requirements() {
     for i in 1..=5 {
         let req = Requirement {
             id: i,
+            current_version_id: None,
             title: format!("Requirement {}", i),
             description: format!("Description {}", i),
             status_id: if i <= 2 { 1 } else { 2 },
@@ -509,6 +510,7 @@ async fn non_admin_cannot_delete_released_requirement() {
 
     let req = Requirement {
         id: 1,
+        current_version_id: None,
         title: "Released Requirement".into(),
         description: "Cannot delete".into(),
         status_id: 3, // Released
@@ -663,6 +665,7 @@ async fn create_requirement_from_template() {
 
     let template_req = Requirement {
         id: 1,
+        current_version_id: None,
         title: "Template Requirement".into(),
         description: "Template description with specific format".into(),
         status_id: 1,

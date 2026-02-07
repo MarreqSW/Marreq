@@ -471,6 +471,23 @@ async fn show_requirement_id(
         .entity_logs(&EntityType::Requirement.to_string(), requirement_id)
         .unwrap_or_default();
 
+    let versions = RequirementService::new(state.inner())
+        .list_versions(requirement_id)
+        .unwrap_or_default();
+    let current_vid = requirement.current_version_id;
+    let versions_json: Vec<serde_json::Value> = versions
+        .iter()
+        .map(|v| {
+            json!({
+                "id": v.id,
+                "requirement_id": v.requirement_id,
+                "title": v.title,
+                "created_at": v.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                "is_current": current_vid == Some(v.id),
+            })
+        })
+        .collect();
+
     let repo = state.repo_read();
     let req_status_map: HashMap<i32, String> = repo
         .get_requirement_status_all()
@@ -549,6 +566,9 @@ async fn show_requirement_id(
     let canonical_data = json!({
         "project_id": project_id,
         "requirement": requirement,
+        "versions": versions_json,
+        "current_version_id": requirement.current_version_id,
+        "viewing_past_version": false,
         "relationships": {
             "parent": parent_requirement,
             "children": child_requirements,
@@ -586,6 +606,207 @@ async fn show_requirement_id(
         "page_title": format!("{} - Requirement", requirement.reference_code),
     });
 
+    Ok(Template::render("requirements/requirement", ctx))
+}
+
+/// View a specific immutable version of a requirement (read-only).
+#[get("/<project_id>/requirements/show/<requirement_id>/version/<version_id>")]
+async fn show_requirement_version(
+    project_access: ProjectAccess,
+    project_id: i32,
+    requirement_id: i32,
+    version_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user = project_access.into_user();
+    let selected_project = ProjectService::new(state.inner()).get_by_id(project_id)?;
+    let requirement_service = RequirementService::new(state.inner());
+    let version = requirement_service.get_version_by_id(version_id)?;
+    if version.requirement_id != requirement_id {
+        return Err(Redirect::to(uri!(show_requirement_id(
+            project_id,
+            requirement_id
+        ))));
+    }
+    let current = requirement_service.get_by_id(requirement_id)?;
+    if let Some(redir) = enforce_project_ownership(project_id, current.project_id) {
+        return Err(redir);
+    }
+    let req_from_version = Requirement {
+        id: current.id,
+        current_version_id: current.current_version_id,
+        title: version.title.clone(),
+        description: version.description.clone(),
+        status_id: version.status_id,
+        author_id: version.author_id,
+        reviewer_id: version.reviewer_id,
+        reference_code: current.reference_code.clone(),
+        category_id: version.category_id,
+        parent_id: version.parent_id,
+        creation_date: version.created_at,
+        update_date: version.created_at,
+        deadline_date: version.deadline_date,
+        applicability_id: version.applicability_id,
+        justification: version.justification.clone(),
+        project_id: current.project_id,
+    };
+    let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
+    let requirement = decorated_requirement_service.decorate_requirement(&req_from_version)?;
+    let parent_requirement = if let Some(parent_id) = requirement.req_parent_id {
+        if parent_id != 0 {
+            decorated_requirement_service.get_by_id(parent_id).ok()
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    let child_requirements = decorated_requirement_service.get_by_parent_id(requirement.id)?;
+    let linked_tests =
+        DecoratedTestService::new(state.inner()).get_linked_to_requirement(requirement_id)?;
+    let (tests_passed, tests_failed, tests_pending) =
+        linked_tests
+            .iter()
+            .fold((0_i32, 0_i32, 0_i32), |mut acc, test| {
+                if let Some(status_enum) =
+                    crate::status_enums::TestStatusEnum::from_title(&test.status_id)
+                {
+                    match status_enum {
+                        crate::status_enums::TestStatusEnum::Passed => acc.0 += 1,
+                        crate::status_enums::TestStatusEnum::Failed => acc.1 += 1,
+                        _ => acc.2 += 1,
+                    }
+                } else {
+                    acc.2 += 1;
+                }
+                acc
+            });
+    let versions = requirement_service
+        .list_versions(requirement_id)
+        .unwrap_or_default();
+    let current_vid = current.current_version_id;
+    let versions_json: Vec<serde_json::Value> = versions
+        .iter()
+        .map(|v| {
+            json!({
+                "id": v.id,
+                "requirement_id": v.requirement_id,
+                "title": v.title,
+                "created_at": v.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+                "is_current": current_vid == Some(v.id),
+            })
+        })
+        .collect();
+    let mut test_status_list = StatusService::new(state.inner())
+        .list_test_statuses_by_project(project_id)
+        .unwrap_or_default();
+    test_status_list.retain(|s| TestStatusEnum::from_title(&s.title).is_some());
+    test_status_list.sort_by_key(|s| {
+        TestStatusEnum::from_title(&s.title)
+            .map(|e| e.id())
+            .unwrap_or(i32::MAX)
+    });
+    let test_statuses: Vec<serde_json::Value> = test_status_list
+        .into_iter()
+        .map(|s| json!({ "id": s.id, "title": s.title }))
+        .collect();
+    let history_entries = LogService::new(state.inner())
+        .entity_logs(&EntityType::Requirement.to_string(), requirement_id)
+        .unwrap_or_default();
+    let repo = state.repo_read();
+    let req_status_map: HashMap<i32, String> = repo
+        .get_requirement_status_all()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|s| (s.id, s.title))
+        .collect();
+    let test_status_map: HashMap<i32, String> = repo
+        .get_test_status_all()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|s| (s.id, s.title))
+        .collect();
+    let category_map: HashMap<i32, String> = repo
+        .get_categories_by_project(project_id)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|c| (c.id, c.title))
+        .collect();
+    let applicability_map: HashMap<i32, String> = repo
+        .get_applicability_by_project(project_id)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|a| (a.id, a.title))
+        .collect();
+    let verification_map: HashMap<i32, String> = repo
+        .get_verification_by_project(project_id)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|v| (v.id, v.title))
+        .collect();
+    let parent_label_map: HashMap<i32, String> = repo
+        .get_requirements_by_project(project_id)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|r| (r.id, r.reference_code))
+        .collect();
+    drop(repo);
+    let entries_with_summary: Vec<serde_json::Value> = history_entries
+        .iter()
+        .map(|e| {
+            let mut v = serde_json::to_value(e).unwrap_or_else(|_| json!({}));
+            if let Some(obj) = v.as_object_mut() {
+                obj.insert("summary".into(), json!(change_summary(&e.log)));
+                let details = log_change_details(&e.log);
+                let resolvers = LabelResolvers {
+                    req_status_map: &req_status_map,
+                    test_status_map: &test_status_map,
+                    category_map: &category_map,
+                    applicability_map: &applicability_map,
+                    verification_map: &verification_map,
+                    parent_label_map: &parent_label_map,
+                };
+                obj.insert(
+                    "changes".into(),
+                    json!(resolve_change_details_labels(
+                        details,
+                        "REQUIREMENT",
+                        &resolvers
+                    )),
+                );
+            }
+            v
+        })
+        .collect();
+    let canonical_data = json!({
+        "project_id": project_id,
+        "requirement": requirement,
+        "versions": versions_json,
+        "current_version_id": current.current_version_id,
+        "viewing_past_version": true,
+        "viewing_version_id": version_id,
+        "relationships": { "parent": parent_requirement, "children": child_requirements },
+        "linked_tests": linked_tests,
+        "test_statuses": test_statuses,
+        "verification": {
+            "tool_ids": requirement.req_verification_ids,
+            "tool_id": requirement.req_verification_ids.first().copied(),
+            "tool_name": requirement.verification_method_id.clone(),
+            "counts": { "total": linked_tests.len() as i32, "passed": tests_passed, "failed": tests_failed, "pending": tests_pending }
+        },
+        "history": { "entries": entries_with_summary },
+        "comments": { "items": Vec::<serde_json::Value>::new() }
+    });
+    let ctx = json!({
+        "user": user,
+        "project_id": project_id,
+        "project": json!({ "id": selected_project.id, "name": selected_project.name }),
+        "requirement_data": canonical_data,
+        "requirement_data_json": serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string()),
+        "page_title": format!("{} - Requirement (v{})", requirement.reference_code, version_id),
+        "viewing_past_version": true,
+        "viewing_version_id": version_id,
+    });
     Ok(Template::render("requirements/requirement", ctx))
 }
 
@@ -1234,6 +1455,7 @@ pub fn routes() -> Vec<Route> {
     routes![
         show_requirements,
         show_requirement_id,
+        show_requirement_version,
         get_edit_requirement,
         post_edit_requirement,
         delete_requirement_route,
@@ -1343,6 +1565,7 @@ mod tests {
     fn sample_requirement(id: i32) -> Requirement {
         Requirement {
             id,
+            current_version_id: None,
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
             status_id: 1,

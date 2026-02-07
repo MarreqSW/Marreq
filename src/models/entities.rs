@@ -10,14 +10,43 @@ use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-/// A single requirement stored in the `requirements` table.
-///
-/// Mirrors the database representation and is used when fetching or updating
-/// existing requirements.
-#[derive(Serialize, Deserialize, Queryable, QueryableByName, AsChangeset, Clone, Debug)]
+/// Logical requirement container (id, project_id, stable_code, current_version_id).
+/// Content lives in [`RequirementVersion`]; the "current" requirement view is built from this + current version.
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(table_name = crate::schema::requirements)]
+pub struct RequirementContainer {
+    pub id: i32,
+    pub project_id: i32,
+    pub stable_code: String,
+    pub current_version_id: Option<i32>,
+}
+
+/// A single immutable requirement version (content snapshot).
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[diesel(table_name = crate::schema::requirement_versions)]
+pub struct RequirementVersion {
+    pub id: i32,
+    pub requirement_id: i32,
+    pub title: String,
+    pub description: String,
+    pub status_id: i32,
+    pub author_id: i32,
+    pub reviewer_id: i32,
+    pub category_id: i32,
+    pub parent_id: Option<i32>,
+    pub applicability_id: i32,
+    pub justification: Option<String>,
+    pub deadline_date: Option<chrono::NaiveDateTime>,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+/// Current view of a requirement (logical id + current version content).
+/// Built from [`RequirementContainer`] + current [`RequirementVersion`] for API/UI compatibility.
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Requirement {
     pub id: i32,
+    /// ID of the current requirement_version row (for version history UI).
+    pub current_version_id: Option<i32>,
     pub title: String,
     pub description: String,
     pub status_id: i32,
@@ -34,11 +63,11 @@ pub struct Requirement {
     pub project_id: i32,
 }
 
-/// Link between a requirement and a verification method (many-to-many).
+/// Link between a requirement version and a verification method (many-to-many).
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug)]
-#[diesel(table_name = crate::schema::requirement_verification_methods)]
-pub struct RequirementVerificationMethod {
-    pub requirement_id: i32,
+#[diesel(table_name = crate::schema::requirement_version_verification_methods)]
+pub struct RequirementVersionVerificationMethod {
+    pub requirement_version_id: i32,
     pub verification_method_id: i32,
 }
 

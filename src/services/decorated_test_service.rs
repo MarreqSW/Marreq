@@ -262,6 +262,7 @@ mod tests {
             3,
             Requirement {
                 id: 3,
+                current_version_id: None,
                 title: "Req".into(),
                 description: String::new(),
                 status_id: 0,

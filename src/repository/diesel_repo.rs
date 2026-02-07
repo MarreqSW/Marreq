@@ -1,21 +1,22 @@
 use super::errors::RepoError;
 use crate::models::entities::{
     Applicability, Category, Log, MatrixLink, Project, ProjectMember, Requirement,
-    RequirementStatus, TestCase, TestStatus, User, VerificationMethod,
+    RequirementContainer, RequirementStatus, RequirementVersion, TestCase, TestStatus, User,
+    VerificationMethod,
 };
 use crate::models::forms::{
     NewApplicability, NewCategory, NewLog, NewMatrixLink, NewProject, NewProjectMember,
-    NewRequirement, NewRequirementStatus, NewTestCase, NewTestStatus, NewUser,
-    NewVerificationMethod, UpdateProject, UpdateUser,
+    NewRequirement, NewRequirementContainer, NewRequirementStatus, NewTestCase, NewTestStatus,
+    NewUser, NewVerificationMethod, UpdateProject, UpdateUser,
 };
 use crate::repository::{
     LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository,
     RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use crate::schema;
+use diesel::expression_methods::NullableExpressionMethods;
 use diesel::pg::{upsert::excluded, PgConnection};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-use diesel::sql_types::{BigInt, Nullable};
 use diesel::{Connection, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
 use lazy_static::lazy_static;
 use std::sync::Arc;
@@ -703,29 +704,42 @@ impl LookupRepository for DieselRepo {
     }
 }
 
+fn requirement_from_current(
+    container: &RequirementContainer,
+    version: &RequirementVersion,
+) -> Requirement {
+    Requirement {
+        id: container.id,
+        current_version_id: container.current_version_id,
+        title: version.title.clone(),
+        description: version.description.clone(),
+        status_id: version.status_id,
+        author_id: version.author_id,
+        reviewer_id: version.reviewer_id,
+        reference_code: container.stable_code.clone(),
+        category_id: version.category_id,
+        parent_id: version.parent_id,
+        creation_date: version.created_at,
+        update_date: version.created_at,
+        deadline_date: version.deadline_date,
+        applicability_id: version.applicability_id,
+        justification: version.justification.clone(),
+        project_id: container.project_id,
+    }
+}
+
 impl RequirementsRepository for DieselRepo {
     fn get_requirement_by_id(&self, requirement_id: i32) -> Result<Requirement, RepoError> {
-        use schema::requirements::dsl::*;
+        use schema::requirement_versions;
+        use schema::requirements;
         let mut conn = self.get_conn()?;
-        requirements
-            .filter(id.eq(requirement_id))
-            .select((
-                id,
-                title,
-                description,
-                status_id,
-                author_id,
-                reviewer_id,
-                reference_code,
-                category_id,
-                parent_id,
-                creation_date,
-                update_date,
-                deadline_date,
-                applicability_id,
-                justification,
-                project_id,
-            ))
+        let (container, version): (RequirementContainer, RequirementVersion) = requirements::table
+            .inner_join(
+                requirement_versions::table
+                    .on(requirements::current_version_id.eq(requirement_versions::id.nullable())),
+            )
+            .filter(requirements::id.eq(requirement_id))
+            .select((requirements::all_columns, requirement_versions::all_columns))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -733,62 +747,50 @@ impl RequirementsRepository for DieselRepo {
                 } else {
                     e.into()
                 }
-            })
+            })?;
+        Ok(requirement_from_current(&container, &version))
     }
 
     fn get_requirements_all(&self) -> Result<Vec<Requirement>, RepoError> {
-        use schema::requirements::dsl::*;
+        use schema::requirement_versions;
+        use schema::requirements;
         let mut conn = self.get_conn()?;
-        requirements
-            .order(id)
-            .select((
-                id,
-                title,
-                description,
-                status_id,
-                author_id,
-                reviewer_id,
-                reference_code,
-                category_id,
-                parent_id,
-                creation_date,
-                update_date,
-                deadline_date,
-                applicability_id,
-                justification,
-                project_id,
-            ))
-            .load::<Requirement>(conn.as_mut())
-            .map_err(|e| e.into())
+        let rows: Vec<(RequirementContainer, RequirementVersion)> = requirements::table
+            .inner_join(
+                requirement_versions::table
+                    .on(requirements::current_version_id.eq(requirement_versions::id.nullable())),
+            )
+            .order(requirements::id)
+            .select((requirements::all_columns, requirement_versions::all_columns))
+            .load(conn.as_mut())
+            .map_err(RepoError::from)?;
+        Ok(rows
+            .into_iter()
+            .map(|(c, v)| requirement_from_current(&c, &v))
+            .collect())
     }
 
     fn get_requirements_by_project(
         &self,
         project_id_param: i32,
     ) -> Result<Vec<Requirement>, RepoError> {
-        use schema::requirements::dsl::*;
+        use schema::requirement_versions;
+        use schema::requirements;
         let mut conn = self.get_conn()?;
-        requirements
-            .filter(project_id.eq(project_id_param))
-            .select((
-                id,
-                title,
-                description,
-                status_id,
-                author_id,
-                reviewer_id,
-                reference_code,
-                category_id,
-                parent_id,
-                creation_date,
-                update_date,
-                deadline_date,
-                applicability_id,
-                justification,
-                project_id,
-            ))
-            .load::<Requirement>(conn.as_mut())
-            .map_err(|e| e.into())
+        let rows: Vec<(RequirementContainer, RequirementVersion)> = requirements::table
+            .inner_join(
+                requirement_versions::table
+                    .on(requirements::current_version_id.eq(requirement_versions::id.nullable())),
+            )
+            .filter(requirements::project_id.eq(project_id_param))
+            .order(requirements::id)
+            .select((requirements::all_columns, requirement_versions::all_columns))
+            .load(conn.as_mut())
+            .map_err(RepoError::from)?;
+        Ok(rows
+            .into_iter()
+            .map(|(c, v)| requirement_from_current(&c, &v))
+            .collect())
     }
 
     fn get_requirements_by_project_filtered_paginated(
@@ -801,85 +803,133 @@ impl RequirementsRepository for DieselRepo {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Requirement>, RepoError> {
-        use diesel::sql_types::Integer;
+        use schema::requirement_version_verification_methods::dsl as rvvm_dsl;
+        use schema::requirement_versions;
+        use schema::requirements;
         let mut conn = self.get_conn()?;
-        let query = diesel::sql_query(
-            "SELECT r.id, r.title, r.description, r.status_id, r.author_id, r.reviewer_id,
-                    r.reference_code, r.category_id, r.parent_id, r.creation_date, r.update_date,
-                    r.deadline_date, r.applicability_id, r.justification, r.project_id
-             FROM requirements r
-             WHERE r.project_id = $1
-               AND ($2 IS NULL OR r.status_id = $2)
-               AND ($3 IS NULL OR r.id IN (SELECT requirement_id FROM requirement_verification_methods WHERE verification_method_id = $3))
-               AND ($4 IS NULL OR r.category_id = $4)
-               AND ($5 IS NULL OR r.applicability_id = $5)
-             ORDER BY (CASE WHEN TRIM(r.reference_code) = '' THEN 1 ELSE 0 END), r.reference_code, r.id
-             LIMIT $6 OFFSET $7",
-        );
-        let rows: Vec<Requirement> = query
-            .bind::<Integer, _>(project_id)
-            .bind::<Nullable<Integer>, _>(status_filter)
-            .bind::<Nullable<Integer>, _>(verification_filter)
-            .bind::<Nullable<Integer>, _>(category_filter)
-            .bind::<Nullable<Integer>, _>(applicability_filter)
-            .bind::<BigInt, _>(limit)
-            .bind::<BigInt, _>(offset)
-            .load::<Requirement>(conn.as_mut())
+        let mut query = requirements::table
+            .inner_join(
+                requirement_versions::table
+                    .on(requirements::current_version_id.eq(requirement_versions::id.nullable())),
+            )
+            .filter(requirements::project_id.eq(project_id))
+            .into_boxed();
+        if let Some(s) = status_filter {
+            query = query.filter(requirement_versions::status_id.eq(s));
+        }
+        if let Some(c) = category_filter {
+            query = query.filter(requirement_versions::category_id.eq(c));
+        }
+        if let Some(a) = applicability_filter {
+            query = query.filter(requirement_versions::applicability_id.eq(a));
+        }
+        if let Some(v) = verification_filter {
+            query = query.filter(
+                requirement_versions::id.eq_any(
+                    rvvm_dsl::requirement_version_verification_methods
+                        .filter(rvvm_dsl::verification_method_id.eq(v))
+                        .select(rvvm_dsl::requirement_version_id),
+                ),
+            );
+        }
+        let rows: Vec<(RequirementContainer, RequirementVersion)> = query
+            .order(requirements::id)
+            .limit(limit)
+            .offset(offset)
+            .select((requirements::all_columns, requirement_versions::all_columns))
+            .load(conn.as_mut())
             .map_err(RepoError::from)?;
-        Ok(rows)
+        // Sort empty stable_code last (same as legacy)
+        let mut result: Vec<Requirement> = rows
+            .into_iter()
+            .map(|(c, v)| requirement_from_current(&c, &v))
+            .collect();
+        result.sort_by(|a, b| {
+            match (
+                a.reference_code.trim().is_empty(),
+                b.reference_code.trim().is_empty(),
+            ) {
+                (false, false) => a.reference_code.cmp(&b.reference_code),
+                (false, true) => std::cmp::Ordering::Less,
+                (true, false) => std::cmp::Ordering::Greater,
+                (true, true) => a.id.cmp(&b.id),
+            }
+        });
+        Ok(result)
     }
 
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError> {
-        use schema::requirements::dsl::*;
+        use schema::requirement_versions;
+        use schema::requirements;
         let mut conn = self.get_conn()?;
-        let res: Requirement = diesel::insert_into(schema::requirements::table)
-            .values(new)
-            .returning((
-                id,
-                title,
-                description,
-                status_id,
-                author_id,
-                reviewer_id,
-                reference_code,
-                category_id,
-                parent_id,
-                creation_date,
-                update_date,
-                deadline_date,
-                applicability_id,
-                justification,
-                project_id,
-            ))
-            .get_result(conn.as_mut())?;
-        Ok(res.id)
+        conn.as_mut().transaction::<i32, RepoError, _>(|conn| {
+            let container = NewRequirementContainer {
+                project_id: new.project_id,
+                stable_code: new.reference_code.clone(),
+                current_version_id: None,
+            };
+            let req_id: i32 = diesel::insert_into(requirements::table)
+                .values(&container)
+                .returning(requirements::id)
+                .get_result(conn)?;
+            let version = new.to_new_version(req_id);
+            let version_id: i32 = diesel::insert_into(requirement_versions::table)
+                .values(&version)
+                .returning(requirement_versions::id)
+                .get_result(conn)?;
+            diesel::update(requirements::table.filter(requirements::id.eq(req_id)))
+                .set(requirements::current_version_id.eq(version_id))
+                .execute(conn)?;
+            Ok(req_id)
+        })
     }
 
     fn get_verification_method_ids_for_requirement(
         &self,
         requirement_id: i32,
     ) -> Result<Vec<i32>, RepoError> {
-        use schema::requirement_verification_methods::dsl;
+        use schema::requirement_version_verification_methods::dsl as rvvm_dsl;
+        use schema::requirements;
         let mut conn = self.get_conn()?;
-        dsl::requirement_verification_methods
-            .filter(dsl::requirement_id.eq(requirement_id))
-            .select(dsl::verification_method_id)
-            .order(dsl::verification_method_id)
+        let current_version_id: Option<i32> = requirements::table
+            .filter(requirements::id.eq(requirement_id))
+            .select(requirements::current_version_id)
+            .get_result::<Option<i32>>(conn.as_mut())
+            .optional()
+            .map_err(RepoError::from)?
+            .flatten();
+        let Some(vid) = current_version_id else {
+            return Ok(vec![]);
+        };
+        rvvm_dsl::requirement_version_verification_methods
+            .filter(rvvm_dsl::requirement_version_id.eq(vid))
+            .select(rvvm_dsl::verification_method_id)
+            .order(rvvm_dsl::verification_method_id)
             .load::<i32>(conn.as_mut())
-            .map_err(|e| e.into())
+            .map_err(RepoError::from)
     }
 
     fn get_requirement_ids_by_verification_method(
         &self,
         verification_method_id: i32,
     ) -> Result<Vec<i32>, RepoError> {
-        use schema::requirement_verification_methods::dsl;
+        use schema::requirement_version_verification_methods::dsl as rvvm_dsl;
+        use schema::requirement_versions;
+        use schema::requirements;
         let mut conn = self.get_conn()?;
-        dsl::requirement_verification_methods
-            .filter(dsl::verification_method_id.eq(verification_method_id))
-            .select(dsl::requirement_id)
+        requirements::table
+            .inner_join(
+                requirement_versions::table
+                    .on(requirements::current_version_id.eq(requirement_versions::id.nullable())),
+            )
+            .inner_join(
+                rvvm_dsl::requirement_version_verification_methods
+                    .on(rvvm_dsl::requirement_version_id.eq(requirement_versions::id)),
+            )
+            .filter(rvvm_dsl::verification_method_id.eq(verification_method_id))
+            .select(requirements::id)
             .load::<i32>(conn.as_mut())
-            .map_err(|e| e.into())
+            .map_err(RepoError::from)
     }
 
     fn set_requirement_verification_methods(
@@ -887,19 +937,30 @@ impl RequirementsRepository for DieselRepo {
         requirement_id: i32,
         verification_method_ids: &[i32],
     ) -> Result<(), RepoError> {
-        use schema::requirement_verification_methods;
+        use schema::requirement_version_verification_methods;
+        use schema::requirements;
         let mut conn = self.get_conn()?;
-        diesel::delete(requirement_verification_methods::table)
-            .filter(requirement_verification_methods::requirement_id.eq(requirement_id))
+        let current_version_id: Option<i32> = requirements::table
+            .filter(requirements::id.eq(requirement_id))
+            .select(requirements::current_version_id)
+            .get_result::<Option<i32>>(conn.as_mut())
+            .optional()
+            .map_err(RepoError::from)?
+            .flatten();
+        let Some(vid) = current_version_id else {
+            return Ok(());
+        };
+        diesel::delete(requirement_version_verification_methods::table)
+            .filter(requirement_version_verification_methods::requirement_version_id.eq(vid))
             .execute(conn.as_mut())?;
         for &verification_method_id in verification_method_ids {
             if verification_method_id <= 0 {
                 continue;
             }
-            diesel::insert_into(requirement_verification_methods::table)
+            diesel::insert_into(requirement_version_verification_methods::table)
                 .values((
-                    requirement_verification_methods::requirement_id.eq(requirement_id),
-                    requirement_verification_methods::verification_method_id
+                    requirement_version_verification_methods::requirement_version_id.eq(vid),
+                    requirement_version_verification_methods::verification_method_id
                         .eq(verification_method_id),
                 ))
                 .execute(conn.as_mut())?;
@@ -908,61 +969,78 @@ impl RequirementsRepository for DieselRepo {
     }
 
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError> {
-        use crate::schema::requirements::dsl;
-        let mut conn = self.get_conn()?;
+        use schema::requirement_versions;
+        use schema::requirements;
         let id_val = new
             .id
             .ok_or(RepoError::Db(diesel::result::Error::NotFound))?;
-        diesel::update(dsl::requirements.filter(dsl::id.eq(id_val)))
-            .set(new)
-            .execute(conn.as_mut())
-            .map(|_| true)
-            .map_err(|e| e.into())
+        let mut conn = self.get_conn()?;
+        conn.as_mut().transaction::<bool, RepoError, _>(|conn| {
+            let current_version_id: Option<i32> = requirements::table
+                .filter(requirements::id.eq(id_val))
+                .select(requirements::current_version_id)
+                .get_result::<Option<i32>>(conn)
+                .optional()?
+                .flatten();
+            let Some(_) = current_version_id else {
+                return Err(diesel::result::Error::NotFound.into());
+            };
+            let version = new.to_new_version(id_val);
+            let new_version_id: i32 = diesel::insert_into(requirement_versions::table)
+                .values(&version)
+                .returning(requirement_versions::id)
+                .get_result(conn)?;
+            let affected = diesel::update(requirements::table.filter(requirements::id.eq(id_val)))
+                .set(requirements::current_version_id.eq(new_version_id))
+                .execute(conn)?;
+            Ok(affected > 0)
+        })
     }
 
     fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError> {
-        use crate::schema::requirements::dsl::*;
+        let req = self.get_requirement_by_id(requirement_id)?;
         let mut conn = self.get_conn()?;
-        let req = requirements
-            .filter(id.eq(requirement_id))
-            .select((
-                id,
-                title,
-                description,
-                status_id,
-                author_id,
-                reviewer_id,
-                reference_code,
-                category_id,
-                parent_id,
-                creation_date,
-                update_date,
-                deadline_date,
-                applicability_id,
-                justification,
-                project_id,
-            ))
-            .get_result::<Requirement>(conn.as_mut())
+        diesel::delete(
+            schema::requirements::table.filter(schema::requirements::id.eq(requirement_id)),
+        )
+        .execute(conn.as_mut())?;
+        Ok(req)
+    }
+
+    fn update_requirement(&mut self, _requirement_id: i32) -> Result<(), RepoError> {
+        // Versions are immutable; no update_date to touch. No-op for compatibility.
+        Ok(())
+    }
+
+    fn list_requirement_versions(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<RequirementVersion>, RepoError> {
+        use schema::requirement_versions::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::requirement_versions
+            .filter(dsl::requirement_id.eq(requirement_id))
+            .order(dsl::created_at.desc())
+            .load(conn.as_mut())
+            .map_err(RepoError::from)
+    }
+
+    fn get_requirement_version_by_id(
+        &self,
+        version_id: i32,
+    ) -> Result<RequirementVersion, RepoError> {
+        use schema::requirement_versions::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::requirement_versions
+            .filter(dsl::id.eq(version_id))
+            .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
                     RepoError::NotFound
                 } else {
                     e.into()
                 }
-            })?;
-        diesel::delete(requirements.filter(id.eq(requirement_id))).execute(conn.as_mut())?;
-        Ok(req)
-    }
-
-    fn update_requirement(&mut self, requirement_id: i32) -> Result<(), RepoError> {
-        use crate::schema::requirements::dsl;
-        use diesel::dsl::now;
-        let mut conn = self.get_conn()?;
-        diesel::update(dsl::requirements)
-            .filter(dsl::id.eq(requirement_id))
-            .set(dsl::update_date.eq(now))
-            .execute(conn.as_mut())?;
-        Ok(())
+            })
     }
 }
 
@@ -1022,32 +1100,24 @@ impl TestsCaseRepository for DieselRepo {
     }
 
     fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        use schema::{matrix, requirements};
+        use schema::matrix;
+        use schema::requirement_versions;
+        use schema::requirements;
         let mut conn = self.get_conn()?;
-        matrix::dsl::matrix
-            .filter(matrix::dsl::test_id.eq(test_id))
+        let rows: Vec<(RequirementContainer, RequirementVersion)> = matrix::table
+            .filter(matrix::test_id.eq(test_id))
+            .inner_join(requirements::table.on(matrix::req_id.eq(requirements::id)))
             .inner_join(
-                requirements::dsl::requirements.on(matrix::dsl::req_id.eq(requirements::dsl::id)),
+                requirement_versions::table
+                    .on(requirements::current_version_id.eq(requirement_versions::id.nullable())),
             )
-            .select((
-                requirements::dsl::id,
-                requirements::dsl::title,
-                requirements::dsl::description,
-                requirements::dsl::status_id,
-                requirements::dsl::author_id,
-                requirements::dsl::reviewer_id,
-                requirements::dsl::reference_code,
-                requirements::dsl::category_id,
-                requirements::dsl::parent_id,
-                requirements::dsl::creation_date,
-                requirements::dsl::update_date,
-                requirements::dsl::deadline_date,
-                requirements::dsl::applicability_id,
-                requirements::dsl::justification,
-                requirements::dsl::project_id,
-            ))
-            .load::<Requirement>(conn.as_mut())
-            .map_err(|e| e.into())
+            .select((requirements::all_columns, requirement_versions::all_columns))
+            .load(conn.as_mut())
+            .map_err(RepoError::from)?;
+        Ok(rows
+            .into_iter()
+            .map(|(c, v)| requirement_from_current(&c, &v))
+            .collect())
     }
 
     fn insert_test(&mut self, new: &NewTestCase) -> Result<i32, RepoError> {

@@ -140,6 +140,47 @@
 </div>
 {{/inline}}
 
+{{#*inline "versions_panel"}}
+<section class="card shadow-sm border-0 requirement-side-card" aria-labelledby="versions-heading">
+  <div class="card-header requirement-card-header border-0 d-flex justify-content-between align-items-center">
+    <div class="text-uppercase small text-muted mb-0" id="versions-heading">Version history</div>
+    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse"
+      data-bs-target="#requirementVersionsContent" aria-expanded="true" aria-controls="requirementVersionsContent"
+      aria-label="Toggle version history">
+      <span aria-hidden="true">▼</span>
+      <span class="visually-hidden">Collapse</span>
+    </button>
+  </div>
+  <div class="collapse show" id="requirementVersionsContent">
+    <div class="card-body">
+      <ul class="list-unstyled mb-0" data-slot="version-history">
+        {{#if requirement_data.versions}}
+        {{#each requirement_data.versions}}
+        <li class="d-flex align-items-center justify-content-between gap-2 py-2 border-bottom border-light border-opacity-50">
+          {{#if this.is_current}}
+          <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}"
+            class="text-decoration-none fw-semibold">{{this.title}}</a>
+          {{else}}
+          <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}/version/{{this.id}}"
+            class="text-decoration-none">{{this.title}}</a>
+          {{/if}}
+          {{#if this.is_current}}
+          <span class="badge bg-primary">Current</span>
+          {{else}}
+          <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}/version/{{this.id}}"
+            class="small text-muted">View</a>
+          {{/if}}
+        </li>
+        {{/each}}
+        {{else}}
+        <li class="text-muted small">No version history.</li>
+        {{/if}}
+      </ul>
+    </div>
+  </div>
+</section>
+{{/inline}}
+
 {{#*inline "history_panel"}}
 <section class="card shadow-sm border-0 requirement-main-card" aria-labelledby="history-heading">
   <div
@@ -192,6 +233,14 @@
   <script type="application/json" id="requirement-detail-data">
     {{{requirement_data_json}}}
   </script>
+
+  {{#if viewing_past_version}}
+  <div class="alert alert-info d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3" role="status">
+    <span>You are viewing a past version of this requirement.</span>
+    <a href="/p/{{project_id}}/requirements/show/{{requirement_data.requirement.id}}"
+      class="btn btn-sm btn-outline-primary">View current version</a>
+  </div>
+  {{/if}}
 
   <header class="reqman-requirement-header card shadow-sm border-0">
     <div class="reqman-requirement-header__body">
@@ -332,6 +381,7 @@
     </div>
     <aside class="reqman-requirement-detail-sidebar" aria-label="Requirement metadata and relationships">
       {{> metadata_panel}}
+      {{> versions_panel}}
       {{> relationships_panel}}
     </aside>
   </div>

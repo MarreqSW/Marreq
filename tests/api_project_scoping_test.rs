@@ -214,6 +214,7 @@ async fn list_requirements_returns_only_user_projects() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Req 1".into(),
             description: "Description".into(),
             reference_code: "REQ-001".into(),
@@ -236,6 +237,7 @@ async fn list_requirements_returns_only_user_projects() {
         2,
         Requirement {
             id: 2,
+            current_version_id: None,
             title: "Req 2".into(),
             description: "Description".into(),
             reference_code: "REQ-002".into(),
@@ -258,6 +260,7 @@ async fn list_requirements_returns_only_user_projects() {
         3,
         Requirement {
             id: 3,
+            current_version_id: None,
             title: "Req 3".into(),
             description: "Description".into(),
             reference_code: "REQ-003".into(),
@@ -309,6 +312,7 @@ async fn get_requirement_from_unauthorized_project_returns_forbidden() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Req 1".into(),
             description: "Description".into(),
             reference_code: "REQ-001".into(),
@@ -382,6 +386,7 @@ async fn delete_requirement_works_for_any_authenticated_user() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Req 1".into(),
             description: "Description".into(),
             reference_code: "REQ-001".into(),
@@ -641,6 +646,7 @@ async fn admin_can_access_all_projects() {
         1,
         Requirement {
             id: 1,
+            current_version_id: None,
             title: "Req 1".into(),
             description: "Description".into(),
             reference_code: "REQ-001".into(),

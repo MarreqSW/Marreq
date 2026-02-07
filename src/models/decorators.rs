@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone)]
 pub struct DecoratedRequirement {
     pub id: i32,
+    /// ID of the current requirement_version (for version history UI).
+    pub current_version_id: Option<i32>,
     pub title: String,
     pub description: String,
     /// Comma-separated verification method names for display

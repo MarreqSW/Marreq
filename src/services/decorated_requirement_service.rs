@@ -94,6 +94,14 @@ impl<'a> DecoratedRequirementService<'a> {
         self.decorate(&req)
     }
 
+    /// Build a decorated requirement from an arbitrary requirement (e.g. a past version).
+    pub fn decorate_requirement(
+        &self,
+        req: &Requirement,
+    ) -> Result<DecoratedRequirement, RepoError> {
+        self.decorate(req)
+    }
+
     pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<DecoratedRequirement>, RepoError> {
         self.decorate_vec(self.requirement_service.get_by_parent_id(parent_id)?)
     }
@@ -230,6 +238,7 @@ impl<'a> DecoratedRequirementService<'a> {
 
         Ok(DecoratedRequirement {
             id: req.id,
+            current_version_id: req.current_version_id,
             title: req.title.clone(),
             verification_method_id: verification,
             req_verification_ids: verification_ids,
@@ -287,6 +296,7 @@ mod tests {
     fn requirement(id: i32, project_id: i32) -> Requirement {
         Requirement {
             id,
+            current_version_id: None,
             title: format!("Requirement {id}"),
             description: "Description".into(),
             status_id: 1,

@@ -24,7 +24,15 @@ A comprehensive web-based requirements and test management system built with Rus
 ### 📊 Reporting & Export
 - **Excel Export**: Export requirements with all fields to Excel format
 - **Matrix Export**: Export traceability matrix to Excel
+- **ReqIF 1.2**: Import and export requirements as ReqIF XML; export current project or an immutable baseline
 - **Comprehensive Data**: All metadata included in exports (categories, applicability, dates, etc.)
+
+### 📸 Immutable Baselines
+- **Project Baselines**: Create point-in-time snapshots of all requirement versions and traceability
+- **Immutable**: Baselines and their contents cannot be updated or deleted (enforced at DB and API level)
+- **Version Snapshot**: Each baseline stores which `requirement_version` was current per requirement, plus the traceability matrix at creation time
+- **Export from Baseline**: ReqIF and UI support exporting a specific baseline for audits or releases
+- **API & UI**: Create/list/view baselines via REST API and web UI (project Baselines section, nav, requirements export dropdown)
 
 ### 🎨 Modern UI
 - **Responsive Design**: Works on desktop and mobile devices
@@ -78,7 +86,8 @@ A comprehensive web-based requirements and test management system built with Rus
 + [X] Security
   + [ ] Use https
   + [X] users/admin
-+ [ ] Snapshots
++ [X] Snapshots
+  + [X] Immutable project baselines (requirement versions + traceability)
   + [ ] Configuration management
 + [ ] Better error management (remove all unwrap())
 
@@ -110,22 +119,25 @@ For detailed database setup options (automated, manual, reset, verification) see
 
 ### Web Interface
 
-1. **Requirements**: Navigate to `/requirements` to view and manage requirements
-2. **Tests**: Go to `/tests` to manage test cases
-3. **Matrix**: Visit `/matrix` to view the traceability matrix
-4. **Categories**: Access `/categories` to manage requirement categories
-5. **Applicability**: Visit `/applicability` to manage applicability options
+1. **Requirements**: Navigate to project requirements to view and manage requirements (with version history)
+2. **Tests**: Go to project tests to manage test cases
+3. **Matrix**: Visit project matrix to view the traceability matrix
+4. **Baselines**: From project dashboard or nav, open **Baselines** to create immutable snapshots, view baseline contents, or export a baseline as ReqIF
+5. **Categories**: Access project categories to manage requirement categories
+6. **Applicability**: Visit project applicability to manage applicability options
 
 ### Export Features
 
 - **Requirements Export**: Click "Export Excel" on the requirements page or homepage
 - **Matrix Export**: Click "Export Excel" on the matrix page
-- **File Format**: Downloads as `.xls` files with all metadata included
+- **ReqIF Export**: Use "Export → ReqIF (current)" for live project, or "ReqIF (from baseline…)" to pick a baseline and download its snapshot as ReqIF 1.2 XML
+- **File Format**: Excel downloads as `.xls`; ReqIF as XML
 
 ### Import Features
 
 - **Excel Parser**: Standalone application to parse exported Excel files and import data via API
-- **Data Import**: Import requirements, tests, and traceability data from Excel files
+- **ReqIF 1.2 Import**: Import requirements from ReqIF XML into a project (project ReqIF/Import page)
+- **Data Import**: Import requirements, tests, and traceability data from Excel or ReqIF
 - **API Integration**: Seamless integration with the main application's REST API
 
 ## 🔌 API Reference
@@ -167,6 +179,13 @@ http://localhost:8000/api/v1
 #### Matrix
 - `GET /matrix` - Get traceability matrix data
 
+#### Baselines (immutable snapshots)
+- `GET /projects/{project_id}/baselines` - List baselines for a project
+- `GET /projects/{project_id}/baselines/{baseline_id}` - Get baseline metadata
+- `POST /projects/{project_id}/baselines` - Create baseline (body: `name`, `description`; captures current requirement versions and traceability)
+- `GET /projects/{project_id}/baselines/{baseline_id}/requirements` - Get requirements as stored in the baseline
+- `GET /projects/{project_id}/baselines/{baseline_id}/traceability` - Get traceability snapshot for the baseline
+
 #### Users
 - `GET /users` - List all users
 - `GET /users/{id}` - Get specific user
@@ -195,17 +214,16 @@ curl -O http://localhost:8000/requirements.xls
 ### Schema
 The application uses PostgreSQL with the following main entities:
 - **Projects**: Multi-project support with project metadata
-- **Requirements**: Core requirement data with metadata and project association
+- **Requirements**: Logical requirement containers; current content lives in **requirement_versions** (immutable version history)
+- **Requirement versions**: Immutable snapshots of requirement content (title, description, status, category, applicability, etc.)
 - **Tests**: Test cases with status and source information, project association
-- **Matrix**: Traceability links between requirements and tests, project-scoped
-- **Categories**: User-defined requirement categories, project-specific
-- **Applicability**: User-defined applicability options, project-specific
+- **Matrix**: Traceability links between requirements and tests (live), project-scoped
+- **Baselines**: Immutable project snapshots; **baseline_requirements** stores which requirement_version was current per requirement, **baseline_traceability** stores the matrix at baseline time
+- **Categories**, **Applicability**, **Requirement status**, **Test status**, **Verification**: Project-scoped lookup/config tables
 - **Users**: System users (authors, reviewers) with authentication
-- **Status**: Requirement and test status definitions
-- **Verification**: Verification method definitions
 - **Logs**: Audit trail for all system activities
 
-See the entity diagram: ![ER Diagram](doc/ER%20diagram.png)
+For a full entity-relationship diagram see [doc/database_schema.mmd](doc/database_schema.mmd) (Mermaid). Legacy: ![ER Diagram](doc/ER%20diagram.png)
 
 ### Database Initialization System
 
@@ -227,7 +245,7 @@ diesel migration run
 diesel migration redo
 ```
 
-**Note**: The initialization scripts provide a complete, working database setup that bypasses the need for individual migrations during initial setup.
+**Note**: The initialization scripts provide a complete, working database setup that bypasses the need for individual migrations during initial setup. If your database already has the schema (e.g. from `init_complete.sql`) and you need only the baselines tables, run `psql "$DATABASE_URL" -f scripts/apply_baselines_migration.sql`.
 
 ## 🛠️ Development
 

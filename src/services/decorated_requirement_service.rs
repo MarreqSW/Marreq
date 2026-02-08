@@ -268,6 +268,9 @@ impl<'a> DecoratedRequirementService<'a> {
                 .unwrap_or_default(),
             justification: req.justification.clone(),
             project_id: req.project_id,
+            approval_state: req.approval_state.clone(),
+            approved_by: req.approved_by,
+            approved_at: req.approved_at,
         })
     }
 }
@@ -311,6 +314,9 @@ mod tests {
             applicability_id: 1,
             justification: Some("Justification".into()),
             project_id,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         }
     }
 

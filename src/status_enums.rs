@@ -272,6 +272,65 @@ impl std::fmt::Display for TestStatusEnum {
     }
 }
 
+/// Approval workflow state for requirement versions (stored in requirement_versions.approval_state).
+///
+/// Valid transitions (enforced at API layer):
+/// - draft → reviewed
+/// - reviewed → approved
+/// - (no backwards transitions by default)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub enum ApprovalState {
+    #[default]
+    Draft,
+    Reviewed,
+    Approved,
+}
+
+impl ApprovalState {
+    /// Database string (lowercase).
+    pub fn to_db_string(&self) -> &'static str {
+        match self {
+            ApprovalState::Draft => "draft",
+            ApprovalState::Reviewed => "reviewed",
+            ApprovalState::Approved => "approved",
+        }
+    }
+
+    /// Parse from database or API string.
+    pub fn from_db_string(s: &str) -> Option<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "draft" => Some(ApprovalState::Draft),
+            "reviewed" => Some(ApprovalState::Reviewed),
+            "approved" => Some(ApprovalState::Approved),
+            _ => None,
+        }
+    }
+
+    /// Whether a transition from `self` to `target` is allowed.
+    /// Same-state (idempotent) transitions are allowed so stale UI or double-submit does not error.
+    pub fn can_transition_to(&self, target: ApprovalState) -> bool {
+        if *self == target {
+            return true;
+        }
+        matches!(
+            (self, target),
+            (ApprovalState::Draft, ApprovalState::Reviewed)
+                | (ApprovalState::Reviewed, ApprovalState::Approved)
+        )
+    }
+
+    /// Whether this state is considered approved for baselines.
+    pub fn is_approved(&self) -> bool {
+        matches!(self, ApprovalState::Approved)
+    }
+}
+
+impl std::fmt::Display for ApprovalState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_db_string())
+    }
+}
+
 /// Project status values representing the lifecycle states of a project.
 ///
 /// These statuses are stored directly in the database as VARCHAR text values

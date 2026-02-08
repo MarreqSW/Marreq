@@ -186,7 +186,10 @@ mod tests {
         assert_eq!(response.status(), Status::Ok);
         let baseline: Baseline = response.into_json().await.unwrap();
         assert_eq!(baseline.name, "Release 1.0");
-        assert_eq!(baseline.description.as_deref(), Some("Initial release baseline"));
+        assert_eq!(
+            baseline.description.as_deref(),
+            Some("Initial release baseline")
+        );
         assert_eq!(baseline.project_id, PROJECT_ID);
         assert_eq!(baseline.created_by, ADMIN_ID);
         assert!(baseline.id >= 1);

@@ -192,6 +192,7 @@ describe('Delete Actions', () => {
   });
 
   it('should use default onError handler', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     document.body.innerHTML = `
       <button data-action="delete" data-delete-url="/api/delete/1">Delete</button>
     `;
@@ -207,6 +208,7 @@ describe('Delete Actions', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(showNotification).toHaveBeenCalledWith('Delete failed', 'error');
+    consoleError.mockRestore();
   });
 
   it('should use default onSuccess handler (reload)', async () => {

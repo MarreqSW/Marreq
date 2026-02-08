@@ -1,6 +1,6 @@
 {{!-- Matrix Filter Controls --}}
 <div class="matrix-filter-card filter-card c-filter-card mt-3" style="padding: 1rem;">
-  <form method="get" class="filter-form c-filter-form" role="search" aria-label="Matrix filters" id="matrixFilterForm" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr auto; gap: 0.75rem; align-items: end;">
+  <form method="get" class="filter-form c-filter-form" role="search" aria-label="Matrix filters" id="matrixFilterForm" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr auto; gap: 0.75rem; align-items: end;">
     
     <!-- Search (wider) -->
     <div class="filter-group c-filter-group" style="margin: 0;">
@@ -69,6 +69,18 @@
         {{/each}}
       </select>
     </div>
+
+    <!-- Suspect -->
+    <div class="filter-group c-filter-group" style="margin: 0;">
+      <label for="suspect_filter" class="filter-label c-filter-label" style="font-size: 0.875rem; margin-bottom: 0.25rem;">
+        Suspect
+      </label>
+      <select name="suspect_filter" id="suspect_filter" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
+        <option value="">All</option>
+        <option value="true" {{#if (eq suspect_filter "true")}}selected{{/if}}>Suspect only</option>
+        <option value="false" {{#if (eq suspect_filter "false")}}selected{{/if}}>Not suspect</option>
+      </select>
+    </div>
     
     <!-- Per Page -->
     <div class="filter-group c-filter-group" style="margin: 0;">
@@ -88,7 +100,7 @@
       <button type="submit" class="btn btn-sm btn-primary" aria-label="Apply filters" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
         Apply
       </button>
-      {{#if (or test_status_filter req_status_filter category_filter applicability_filter search)}}
+      {{#if (or test_status_filter req_status_filter category_filter applicability_filter search suspect_filter)}}
         <a href="/p/{{selected_project_id}}/matrix" class="btn btn-sm btn-outline-secondary" aria-label="Clear all filters" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
           Clear
         </a>

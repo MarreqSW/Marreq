@@ -11,7 +11,9 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Loggable, Logger};
 use crate::models::{EntityType, NewRequirement, Requirement, RequirementVersion, TestCase, User};
 use crate::repository::errors::RepoError;
-use crate::repository::{PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository};
+use crate::repository::{
+    MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository,
+};
 use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
 use serde::Serialize;
@@ -194,6 +196,7 @@ impl<'a> RequirementService<'a> {
                 return Err(RepoError::NotFound);
             }
             repo.set_requirement_verification_methods(id, verification_method_ids)?;
+            let _project_ids = repo.mark_links_suspect_for_requirement(id, "Requirement updated")?;
         }
 
         let after = self.get_by_id(id)?;
@@ -676,6 +679,11 @@ mod tests {
             test_id: 10,
             creation_date: timestamp(),
             project_id: 7,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
         });
         let state = state_with_repo(repo);
         let service = RequirementService::new(&state);

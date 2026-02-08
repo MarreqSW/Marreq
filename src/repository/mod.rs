@@ -164,6 +164,21 @@ pub trait ProjectMembersRepository {
 pub trait MatrixRepository {
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<MatrixLink>, RepoError>;
     fn insert_new_matrix_item(&mut self, new: &NewMatrixLink) -> Result<(), RepoError>;
+    /// Mark all traceability links for a requirement as suspect (e.g. after requirement update).
+    /// Returns project IDs of affected links so callers can invalidate caches.
+    fn mark_links_suspect_for_requirement(
+        &mut self,
+        requirement_id: i32,
+        reason: &str,
+    ) -> Result<Vec<i32>, RepoError>;
+    /// Clear suspect flag for one link; records user and timestamp.
+    /// Returns (link existed and was updated, project_id of the link if updated) for cache invalidation.
+    fn clear_suspect(
+        &mut self,
+        req_id: i32,
+        test_id: i32,
+        cleared_by_user_id: i32,
+    ) -> Result<(bool, Option<i32>), RepoError>;
 }
 
 pub trait BaselineRepository {

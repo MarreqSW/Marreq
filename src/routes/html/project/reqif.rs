@@ -11,18 +11,25 @@ use rocket::form::Form;
 use rocket::fs::TempFile;
 use rocket::response::content;
 
-#[get("/<project_id>/export_reqif")]
+#[get("/<project_id>/export_reqif?<baseline_id>")]
 pub async fn export_reqif(
     project_access: ProjectAccess,
     project_id: i32,
+    baseline_id: Option<i32>,
     state: &State<AppState>,
 ) -> Result<(ContentType, String), Redirect> {
     let _user = project_access.into_user();
     let service = ReqIFService::new(state.inner());
-    let xml = service.export_project(project_id).map_err(|e| {
-        eprintln!("ReqIF export error: {:?}", e);
-        Redirect::to(format!("/p/{}/requirements", project_id))
-    })?;
+    let xml = match baseline_id {
+        Some(bid) => service.export_baseline(project_id, bid).map_err(|e| {
+            eprintln!("ReqIF baseline export error: {:?}", e);
+            Redirect::to(format!("/p/{}/requirements", project_id))
+        })?,
+        None => service.export_project(project_id).map_err(|e| {
+            eprintln!("ReqIF export error: {:?}", e);
+            Redirect::to(format!("/p/{}/requirements", project_id))
+        })?,
+    };
     let ct = ContentType::new("application", "xml");
     Ok((ct, xml))
 }

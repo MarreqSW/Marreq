@@ -3,8 +3,9 @@ use super::cache::{keys, Cache};
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    LogRepository, LookupRepository, MatrixRepository, ProjectMembersRepository,
-    ProjectsRepository, Repository, RequirementsRepository, TestsCaseRepository, UserRepository,
+    BaselineRepository, LogRepository, LookupRepository, MatrixRepository,
+    ProjectMembersRepository, ProjectsRepository, Repository, RequirementsRepository,
+    TestsCaseRepository, UserRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -635,6 +636,42 @@ impl<R: Repository> MatrixRepository for CacheRepository<R> {
     }
 }
 
+impl<R: Repository> BaselineRepository for CacheRepository<R> {
+    fn create_baseline(
+        &mut self,
+        project_id: i32,
+        created_by: i32,
+        payload: &crate::models::NewBaseline,
+    ) -> Result<crate::models::Baseline, RepoError> {
+        self.inner.create_baseline(project_id, created_by, payload)
+    }
+
+    fn list_baselines_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<crate::models::Baseline>, RepoError> {
+        self.inner.list_baselines_by_project(project_id)
+    }
+
+    fn get_baseline_by_id(&self, baseline_id: i32) -> Result<crate::models::Baseline, RepoError> {
+        self.inner.get_baseline_by_id(baseline_id)
+    }
+
+    fn get_requirements_for_baseline(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<crate::models::Requirement>, RepoError> {
+        self.inner.get_requirements_for_baseline(baseline_id)
+    }
+
+    fn get_baseline_traceability(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<crate::models::BaselineTraceability>, RepoError> {
+        self.inner.get_baseline_traceability(baseline_id)
+    }
+}
+
 impl<R: LogRepository> LogRepository for CacheRepository<R> {
     fn insert_log(&mut self, new: &NewLog) -> Result<(), RepoError> {
         self.inner.insert_log(new)
@@ -779,6 +816,10 @@ mod tests {
             matrices: vec![matrix],
             project_members: Vec::new(),
             force_err: false,
+            baselines: Vec::new(),
+            baseline_requirements: Vec::new(),
+            baseline_traceability: Vec::new(),
+            next_baseline_id: 1,
         }
     }
 

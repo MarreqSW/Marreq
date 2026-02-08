@@ -115,6 +115,46 @@ pub struct NewMatrixLink {
     pub project_id: i32,
 }
 
+/// Payload to create an immutable baseline (name, description). created_at/created_by set at insert.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+pub struct NewBaseline {
+    pub name: String,
+    pub description: Option<String>,
+}
+
+/// Insertable row for baselines table (id is SERIAL).
+#[derive(Insertable, Clone, Debug)]
+#[diesel(table_name = baselines)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewBaselineRow {
+    pub project_id: i32,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+    pub created_by: i32,
+}
+
+/// Insertable row for baseline_requirements.
+#[derive(Insertable, Clone, Debug)]
+#[diesel(table_name = baseline_requirements)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewBaselineRequirement {
+    pub baseline_id: i32,
+    pub requirement_id: i32,
+    pub version_id: i32,
+}
+
+/// Insertable row for baseline_traceability.
+#[derive(Insertable, Clone, Debug)]
+#[diesel(table_name = baseline_traceability)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewBaselineTraceability {
+    pub baseline_id: i32,
+    pub requirement_id: i32,
+    pub test_id: i32,
+}
+
 /// Form used to insert or update [`User`] records.
 ///
 /// # Security Note

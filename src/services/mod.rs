@@ -5,6 +5,7 @@
 
 pub mod applicability_service;
 pub mod base_service;
+pub mod baseline_service;
 pub mod cache_service;
 pub mod category_service;
 pub mod decorated_requirement_service;
@@ -26,6 +27,7 @@ mod tests;
 
 pub use applicability_service::*;
 pub use base_service::*;
+pub use baseline_service::*;
 pub use cache_service::*;
 pub use category_service::*;
 pub use decorated_requirement_service::*;

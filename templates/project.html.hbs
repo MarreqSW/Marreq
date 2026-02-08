@@ -72,6 +72,21 @@
   </div>
   {{/partials/metrics_card}}
 
+  {{#> partials/metrics_card title="Baselines"}}
+  <div class="c-dashboard-card__description">
+    <p>Immutable snapshots of requirements and traceability for export or comparison</p>
+  </div>
+  <div class="c-dashboard-card__actions">
+    {{#if selected_project_id}}
+    <a href="/p/{{selected_project_id}}/baselines" class="btn btn-primary c-dashboard-card__action">View Baselines</a>
+    <a href="/p/{{selected_project_id}}/baselines/new" class="btn btn-outline c-dashboard-card__action">New Baseline</a>
+    {{else}}
+    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Baselines</span>
+    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Baseline</span>
+    {{/if}}
+  </div>
+  {{/partials/metrics_card}}
+
   {{#> partials/metrics_card title="Categories"}}
   <div class="c-dashboard-card__description">
     <p>Organize requirements with categories</p>

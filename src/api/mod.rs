@@ -1,4 +1,5 @@
 pub mod applicability;
+pub mod baselines;
 pub mod cache;
 pub mod categories;
 pub mod error;
@@ -14,6 +15,11 @@ use rocket::Route;
 
 pub fn routes() -> Vec<Route> {
     routes![
+        baselines::list,
+        baselines::get,
+        baselines::create,
+        baselines::get_requirements,
+        baselines::get_traceability,
         requirements::list,
         requirements::get,
         requirements::list_versions,

@@ -166,6 +166,34 @@ pub trait MatrixRepository {
     fn insert_new_matrix_item(&mut self, new: &NewMatrixLink) -> Result<(), RepoError>;
 }
 
+pub trait BaselineRepository {
+    /// Create an immutable baseline: snapshot current requirement_versions and matrix for the project.
+    fn create_baseline(
+        &mut self,
+        project_id: i32,
+        created_by: i32,
+        payload: &crate::models::NewBaseline,
+    ) -> Result<crate::models::Baseline, RepoError>;
+
+    fn list_baselines_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<crate::models::Baseline>, RepoError>;
+
+    fn get_baseline_by_id(&self, baseline_id: i32) -> Result<crate::models::Baseline, RepoError>;
+
+    /// Requirements as at baseline time (built from baseline_requirements + requirement_versions + requirements).
+    fn get_requirements_for_baseline(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<Requirement>, RepoError>;
+
+    fn get_baseline_traceability(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<crate::models::BaselineTraceability>, RepoError>;
+}
+
 pub trait LogRepository {
     fn insert_log(&mut self, new: &NewLog) -> Result<(), RepoError>;
     fn get_logs_recent(&self, limit: i64) -> Result<Vec<Log>, RepoError>;
@@ -181,6 +209,7 @@ pub trait Repository:
     + ProjectsRepository
     + ProjectMembersRepository
     + MatrixRepository
+    + BaselineRepository
     + LogRepository
 {
 }
@@ -193,6 +222,7 @@ impl<T> Repository for T where
         + ProjectsRepository
         + ProjectMembersRepository
         + MatrixRepository
+        + BaselineRepository
         + LogRepository
 {
 }

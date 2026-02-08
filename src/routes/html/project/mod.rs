@@ -1,4 +1,5 @@
 mod applicability;
+mod baselines;
 mod categories;
 mod matrix;
 mod members;
@@ -41,6 +42,7 @@ use rocket::Route;
 pub fn routes() -> Vec<Route> {
     let mut routes = Vec::new();
     routes.extend(applicability::routes());
+    routes.extend(baselines::routes());
     routes.extend(categories::routes());
     routes.extend(matrix::routes());
     routes.extend(members::routes());

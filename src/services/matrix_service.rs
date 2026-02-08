@@ -196,7 +196,10 @@ impl<'a> MatrixService<'a> {
                 Some(description),
             ) {
                 #[cfg(debug_assertions)]
-                eprintln!("Failed to log suspect cleared {} -> {}: {_err}", req_id, test_id);
+                eprintln!(
+                    "Failed to log suspect cleared {} -> {}: {_err}",
+                    req_id, test_id
+                );
             }
         }
     }
@@ -233,10 +236,8 @@ impl<'a> MatrixService<'a> {
 
         // Load matrix links (with suspect state)
         let matrix_links = repo.get_matrix_by_project(project_id)?;
-        let links: HashSet<(i32, i32)> = matrix_links
-            .iter()
-            .map(|m| (m.req_id, m.test_id))
-            .collect();
+        let links: HashSet<(i32, i32)> =
+            matrix_links.iter().map(|m| (m.req_id, m.test_id)).collect();
         let suspect_links: HashSet<(i32, i32)> = matrix_links
             .iter()
             .filter(|m| m.suspect)
@@ -1186,6 +1187,182 @@ mod tests {
 
         let view = service.get_matrix_view(1, filters, pagination).unwrap();
         assert_eq!(view.total_links, 1);
+    }
+
+    #[test]
+    fn clear_suspect_returns_true_when_link_was_suspect() {
+        let mut repo = DieselRepoMock::default();
+        repo.matrices.push(MatrixLink {
+            req_id: 5,
+            test_id: 10,
+            creation_date: timestamp(),
+            project_id: 7,
+            suspect: true,
+            suspect_at: Some(timestamp()),
+            suspect_reason: Some("Requirement updated".into()),
+            cleared_by: None,
+            cleared_at: None,
+        });
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+        let actor = actor();
+
+        let result = service.clear_suspect(&actor, 5, 10).unwrap();
+        assert!(result);
+
+        let links = service.list_by_project(7).unwrap();
+        assert_eq!(links.len(), 1);
+        assert!(!links[0].suspect);
+        assert_eq!(links[0].cleared_by, Some(actor.id));
+    }
+
+    #[test]
+    fn clear_suspect_returns_false_when_link_missing() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+        let actor = actor();
+
+        let result = service.clear_suspect(&actor, 99, 99).unwrap();
+        assert!(!result);
+    }
+
+    #[test]
+    fn get_matrix_view_includes_suspect_links() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                current_version_id: None,
+                title: "Req 1".to_string(),
+                description: String::new(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REF-1".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: Some(timestamp()),
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+            },
+        );
+        repo.tests.insert(
+            10,
+            TestCase {
+                id: 10,
+                name: "Test 10".to_string(),
+                reference_code: "TST-10".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: None,
+                project_id: 1,
+            },
+        );
+        repo.matrices.push(MatrixLink {
+            req_id: 1,
+            test_id: 10,
+            creation_date: timestamp(),
+            project_id: 1,
+            suspect: true,
+            suspect_at: Some(timestamp()),
+            suspect_reason: Some("Requirement updated".into()),
+            cleared_by: None,
+            cleared_at: None,
+        });
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+        let filters = MatrixFilters::default();
+        let pagination = MatrixPagination::default();
+
+        let view = service.get_matrix_view(1, filters, pagination).unwrap();
+        assert!(view.suspect_links.contains(&(1, 10)));
+        assert_eq!(view.suspect_links.len(), 1);
+    }
+
+    #[test]
+    fn get_matrix_view_filter_suspect_only_shows_only_requirements_with_suspect_links() {
+        let mut repo = DieselRepoMock::default();
+        for (id, ref_code) in [(1, "REF-1"), (2, "REF-2"), (3, "REF-3")] {
+            repo.requirements.insert(
+                id,
+                Requirement {
+                    id,
+                    current_version_id: None,
+                    title: format!("Req {id}"),
+                    description: String::new(),
+                    status_id: 1,
+                    author_id: 1,
+                    reviewer_id: 1,
+                    reference_code: ref_code.to_string(),
+                    category_id: 1,
+                    parent_id: None,
+                    creation_date: timestamp(),
+                    update_date: timestamp(),
+                    deadline_date: Some(timestamp()),
+                    applicability_id: 1,
+                    justification: None,
+                    project_id: 1,
+                },
+            );
+        }
+        repo.tests.insert(
+            10,
+            TestCase {
+                id: 10,
+                name: "Test 10".to_string(),
+                reference_code: "TST-10".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: None,
+                project_id: 1,
+            },
+        );
+        repo.matrices.push(MatrixLink {
+            req_id: 1,
+            test_id: 10,
+            creation_date: timestamp(),
+            project_id: 1,
+            suspect: true,
+            suspect_at: Some(timestamp()),
+            suspect_reason: Some("Req updated".into()),
+            cleared_by: None,
+            cleared_at: None,
+        });
+        repo.matrices.push(MatrixLink {
+            req_id: 2,
+            test_id: 10,
+            creation_date: timestamp(),
+            project_id: 1,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
+        });
+
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+        let filters = MatrixFilters {
+            status_id: None,
+            req_status: None,
+            category: None,
+            applicability: None,
+            search: None,
+            suspect: Some(true),
+        };
+        let pagination = MatrixPagination::default();
+
+        let view = service.get_matrix_view(1, filters, pagination).unwrap();
+        assert_eq!(view.requirements.len(), 1);
+        assert_eq!(view.requirements[0].id, 1);
     }
 
     #[test]

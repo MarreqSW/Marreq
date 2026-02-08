@@ -129,6 +129,11 @@ mod tests {
                 test_id: 20,
                 creation_date: test_timestamp(),
                 project_id: 1,
+                suspect: false,
+                suspect_at: None,
+                suspect_reason: None,
+                cleared_by: None,
+                cleared_at: None,
             };
 
             let display = format!("{}", link);
@@ -413,6 +418,11 @@ mod tests {
                 test_id: 2,
                 creation_date: test_timestamp(),
                 project_id: 3,
+                suspect: false,
+                suspect_at: None,
+                suspect_reason: None,
+                cleared_by: None,
+                cleared_at: None,
             };
 
             assert_eq!(link.req_id, 1);
@@ -1233,6 +1243,11 @@ mod tests {
                 test_id: 2,
                 creation_date: test_timestamp(),
                 project_id: 3,
+                suspect: false,
+                suspect_at: None,
+                suspect_reason: None,
+                cleared_by: None,
+                cleared_at: None,
             };
 
             let cloned = link.clone();

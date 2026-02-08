@@ -428,6 +428,9 @@ async fn filter_and_search_requirements() {
             applicability_id: 1,
             justification: Some(format!("Justification {}", i)),
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
         repo.requirements.insert(i, req);
     }
@@ -525,6 +528,9 @@ async fn non_admin_cannot_delete_released_requirement() {
         applicability_id: 1,
         justification: Some("Released".into()),
         project_id: 1,
+        approval_state: "draft".to_string(),
+        approved_by: None,
+        approved_at: None,
     };
     repo.requirements.insert(1, req);
 
@@ -680,6 +686,9 @@ async fn create_requirement_from_template() {
         applicability_id: 1,
         justification: Some("Template justification".into()),
         project_id: 1,
+        approval_state: "draft".to_string(),
+        approved_by: None,
+        approved_at: None,
     };
     repo.requirements.insert(1, template_req);
 

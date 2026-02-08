@@ -79,6 +79,18 @@
             </option>
           {{/each}}
         </select>
+
+        <label for="approvalFilter" class="u-visually-hidden">Filter by approval</label>
+        <select
+          id="approvalFilter"
+          name="approval_filter"
+          class="reqman-requirements-filter-bar__select"
+          data-filter-control="approval"
+          data-filter-label="Approval">
+          <option value="">Approval · All</option>
+          <option value="approved" {{#if approval_filter_approved}}selected{{/if}}>Approved only</option>
+          <option value="not_approved" {{#if approval_filter_not_approved}}selected{{/if}}>Not approved</option>
+        </select>
       </div>
 
       <div class="reqman-requirements-filter-bar__actions">

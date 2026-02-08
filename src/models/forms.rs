@@ -49,6 +49,8 @@ pub struct NewRequirementVersion {
     pub applicability_id: i32,
     pub justification: Option<String>,
     pub deadline_date: Option<chrono::NaiveDateTime>,
+    /// New versions start as draft.
+    pub approval_state: String,
 }
 
 /// Insertable row for the logical requirement container (no version content).
@@ -76,6 +78,9 @@ impl NewRequirement {
             applicability_id: self.applicability_id,
             justification: self.justification.clone(),
             deadline_date: None,
+            approval_state: crate::status_enums::ApprovalState::Draft
+                .to_db_string()
+                .to_string(),
         }
     }
 }

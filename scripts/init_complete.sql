@@ -144,11 +144,21 @@ CREATE TABLE requirement_versions (
     justification TEXT,
     deadline_date TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    search_vector tsvector
+    search_vector tsvector,
+    approval_state VARCHAR(20) NOT NULL DEFAULT 'draft',
+    approved_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    approved_at TIMESTAMP
 );
 
 ALTER TABLE requirement_versions
     ADD CONSTRAINT requirement_versions_title_not_blank CHECK (btrim(title) <> '');
+ALTER TABLE requirement_versions
+    ADD CONSTRAINT requirement_versions_approval_state_check
+    CHECK (approval_state IN ('draft', 'reviewed', 'approved'));
+
+COMMENT ON COLUMN requirement_versions.approval_state IS 'Workflow: draft | reviewed | approved';
+COMMENT ON COLUMN requirement_versions.approved_by IS 'User who approved this version (set when approval_state = approved)';
+COMMENT ON COLUMN requirement_versions.approved_at IS 'When this version was approved';
 
 -- Verification methods per version (M:N)
 CREATE TABLE requirement_version_verification_methods (
@@ -303,6 +313,7 @@ CREATE INDEX idx_requirement_versions_requirement_id ON requirement_versions(req
 CREATE INDEX idx_requirement_versions_requirement_created ON requirement_versions(requirement_id, created_at DESC);
 CREATE INDEX idx_requirement_versions_created_at ON requirement_versions(created_at DESC);
 CREATE INDEX idx_requirement_versions_search_vector ON requirement_versions USING gin(search_vector);
+CREATE INDEX idx_requirement_versions_approval_state ON requirement_versions(approval_state);
 CREATE INDEX idx_requirement_version_verification_version ON requirement_version_verification_methods(requirement_version_id);
 
 -- Tests indexes
@@ -622,5 +633,6 @@ CREATE TABLE IF NOT EXISTS __diesel_schema_migrations (
 INSERT INTO __diesel_schema_migrations (version) VALUES
     ('2026-01-31-000001_baseline_schema'),
     ('2026-02-06-000001_seed_default_user'),
-    ('2026-02-07-000001_requirement_versioning')
+    ('2026-02-07-000001_requirement_versioning'),
+    ('2026-02-08-000003_requirement_version_approval')
 ON CONFLICT (version) DO NOTHING;

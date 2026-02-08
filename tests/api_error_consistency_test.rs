@@ -282,6 +282,9 @@ async fn bad_request_has_error_message() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -390,6 +393,9 @@ async fn error_messages_are_clear_and_actionable() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 

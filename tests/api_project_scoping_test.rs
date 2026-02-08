@@ -229,6 +229,9 @@ async fn list_requirements_returns_only_user_projects() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -252,6 +255,9 @@ async fn list_requirements_returns_only_user_projects() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 2,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -275,6 +281,9 @@ async fn list_requirements_returns_only_user_projects() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -327,6 +336,9 @@ async fn get_requirement_from_unauthorized_project_returns_forbidden() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -401,6 +413,9 @@ async fn delete_requirement_works_for_any_authenticated_user() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -661,6 +676,9 @@ async fn admin_can_access_all_projects() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 

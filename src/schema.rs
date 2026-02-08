@@ -139,6 +139,10 @@ diesel::table! {
         justification -> Nullable<Text>,
         deadline_date -> Nullable<Timestamp>,
         created_at -> Timestamp,
+        #[max_length = 20]
+        approval_state -> Varchar,
+        approved_by -> Nullable<Int4>,
+        approved_at -> Nullable<Timestamp>,
     }
 }
 

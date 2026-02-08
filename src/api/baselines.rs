@@ -101,9 +101,10 @@ mod tests {
     use super::*;
     use crate::app::AppState;
     use crate::auth::session::SESSION_COOKIE;
-    use crate::models::{Baseline, BaselineTraceability, Project, Requirement};
+    use crate::models::{Baseline, BaselineTraceability, Project, Requirement, RequirementVersion};
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use crate::status_enums::ProjectStatus;
+    use chrono::NaiveDate;
     use rocket::http::{ContentType, Cookie, Status};
     use rocket::local::asynchronous::Client;
     use serde_json::json;
@@ -148,6 +149,56 @@ mod tests {
                 update_date: None,
                 status: ProjectStatus::Active,
                 owner_id: Some(ADMIN_ID),
+            },
+        );
+        repo
+    }
+
+    /// Repo with one requirement and its snapshot version so baseline creation snapshots it.
+    fn repo_with_project_and_requirement() -> DieselRepoMock {
+        let created = NaiveDate::from_ymd_opt(2020, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+        const SNAPSHOT_VERSION_ID: i32 = 100;
+        let mut repo = repo_with_project();
+        repo.requirement_versions.insert(
+            SNAPSHOT_VERSION_ID,
+            RequirementVersion {
+                id: SNAPSHOT_VERSION_ID,
+                requirement_id: 1,
+                title: "Baseline snapshot title".into(),
+                description: "Snapshot description".into(),
+                status_id: 1,
+                author_id: ADMIN_ID,
+                reviewer_id: ADMIN_ID,
+                category_id: 1,
+                parent_id: None,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: created,
+            },
+        );
+        repo.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                current_version_id: Some(SNAPSHOT_VERSION_ID),
+                title: "Live title".into(),
+                description: "Live description".into(),
+                status_id: 1,
+                author_id: ADMIN_ID,
+                reviewer_id: ADMIN_ID,
+                reference_code: "REQ-1".into(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: created,
+                update_date: created,
+                deadline_date: None,
+                applicability_id: 1,
+                justification: None,
+                project_id: PROJECT_ID,
             },
         );
         repo
@@ -271,6 +322,41 @@ mod tests {
         assert_eq!(req_resp.status(), Status::Ok);
         let requirements: Vec<Requirement> = req_resp.into_json().await.unwrap();
         assert!(requirements.is_empty());
+    }
+
+    #[rocket::async_test]
+    async fn get_requirements_returns_snapshot_version_id_and_content() {
+        let client = client_with_repo(repo_with_project_and_requirement()).await;
+        let create_resp = client
+            .post(format!("/api/projects/{PROJECT_ID}/baselines"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(json!({ "name": "With req", "description": null }).to_string())
+            .dispatch()
+            .await;
+        assert_eq!(create_resp.status(), Status::Ok);
+        let created: Baseline = create_resp.into_json().await.unwrap();
+
+        let req_resp = client
+            .get(format!(
+                "/api/projects/{PROJECT_ID}/baselines/{}/requirements",
+                created.id
+            ))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(req_resp.status(), Status::Ok);
+        let requirements: Vec<Requirement> = req_resp.into_json().await.unwrap();
+        assert_eq!(requirements.len(), 1);
+        let r = &requirements[0];
+        assert_eq!(r.id, 1);
+        assert_eq!(
+            r.current_version_id,
+            Some(100),
+            "baseline requirements must expose snapshot version_id for versioned links"
+        );
+        assert_eq!(r.title, "Baseline snapshot title");
+        assert_eq!(r.description, "Snapshot description");
     }
 
     #[rocket::async_test]

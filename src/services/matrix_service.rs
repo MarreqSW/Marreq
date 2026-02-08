@@ -527,6 +527,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
 
@@ -610,6 +613,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
 
@@ -645,6 +651,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
 
@@ -709,6 +718,9 @@ mod tests {
             applicability_id: 5,
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
         let req2 = Requirement {
             id: 2,
@@ -727,6 +739,9 @@ mod tests {
             applicability_id: 5,
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
         repo.requirements.insert(1, req1);
         repo.requirements.insert(2, req2);
@@ -771,6 +786,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
         repo.requirements.insert(
@@ -792,6 +810,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
 
@@ -835,6 +856,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
 
@@ -877,6 +901,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
 
@@ -920,6 +947,9 @@ mod tests {
                     applicability_id: 1,
                     justification: None,
                     project_id: 1,
+                    approval_state: "draft".to_string(),
+                    approved_by: None,
+                    approved_at: None,
                 },
             );
         }
@@ -963,6 +993,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
         repo.requirements.insert(
@@ -984,6 +1017,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
 
@@ -1026,6 +1062,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
         repo.requirements.insert(
@@ -1047,6 +1086,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
 
@@ -1089,6 +1131,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
         repo.requirements.insert(
@@ -1110,6 +1155,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
 
@@ -1152,6 +1200,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
         repo.tests.insert(
@@ -1249,6 +1300,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
         repo.tests.insert(
@@ -1309,6 +1363,9 @@ mod tests {
                     applicability_id: 1,
                     justification: None,
                     project_id: 1,
+                    approval_state: "draft".to_string(),
+                    approved_by: None,
+                    approved_at: None,
                 },
             );
         }

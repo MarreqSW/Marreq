@@ -627,6 +627,9 @@ async fn admin_can_access_all_endpoints() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -664,6 +667,9 @@ async fn regular_user_can_access_endpoints() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 

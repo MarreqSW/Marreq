@@ -38,6 +38,10 @@ pub struct RequirementVersion {
     pub justification: Option<String>,
     pub deadline_date: Option<chrono::NaiveDateTime>,
     pub created_at: chrono::NaiveDateTime,
+    /// Approval workflow: draft | reviewed | approved
+    pub approval_state: String,
+    pub approved_by: Option<i32>,
+    pub approved_at: Option<chrono::NaiveDateTime>,
 }
 
 /// Current view of a requirement (logical id + current version content).
@@ -61,6 +65,10 @@ pub struct Requirement {
     pub applicability_id: i32,
     pub justification: Option<String>,
     pub project_id: i32,
+    /// Approval state of the current version (draft | reviewed | approved).
+    pub approval_state: String,
+    pub approved_by: Option<i32>,
+    pub approved_at: Option<chrono::NaiveDateTime>,
 }
 
 /// Link between a requirement version and a verification method (many-to-many).

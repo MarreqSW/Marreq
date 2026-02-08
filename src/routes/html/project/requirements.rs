@@ -13,6 +13,7 @@ use crate::app::AppState;
 use crate::helper_functions::generate_requirement_reference;
 use crate::models::*;
 use crate::repository::errors::RepoError;
+use crate::repository::ProjectMembersRepository;
 use crate::services::{
     change_summary, log_change_details, resolve_change_details_labels, ApplicabilityService,
     CategoryService, DecoratedRequirementService, DecoratedTestService, LabelResolvers, LogService,
@@ -157,6 +158,7 @@ fn requirements_list_redirect(project_id: i32) -> Redirect {
             verification_filter = Option::<i32>::None,
             category_filter = Option::<i32>::None,
             applicability_filter = Option::<i32>::None,
+            approval_filter = Option::<String>::None,
             view = Option::<String>::None,
             page = Option::<u32>::None
         )
@@ -208,6 +210,7 @@ fn build_requirements_query(
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
     applicability_filter: Option<i32>,
+    approval_filter: Option<&str>,
 ) -> String {
     let mut parts: Vec<String> = Vec::new();
     if let Some(v) = view.filter(|s| !s.is_empty()) {
@@ -224,6 +227,9 @@ fn build_requirements_query(
     }
     if let Some(id) = applicability_filter {
         parts.push(format!("applicability_filter={}", id));
+    }
+    if let Some(a) = approval_filter.filter(|s| !s.is_empty()) {
+        parts.push(format!("approval_filter={}", a));
     }
     parts.join("&")
 }
@@ -269,7 +275,7 @@ fn build_pagination_ctx(
     })
 }
 
-#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<applicability_filter>&<view>&<page>")]
+#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<applicability_filter>&<approval_filter>&<view>&<page>")]
 #[allow(clippy::too_many_arguments)]
 async fn show_requirements(
     project_access: ProjectAccess,
@@ -278,6 +284,7 @@ async fn show_requirements(
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
     applicability_filter: Option<i32>,
+    approval_filter: Option<String>,
     view: Option<String>,
     page: Option<u32>,
     state: &State<AppState>,
@@ -307,7 +314,7 @@ async fn show_requirements(
     let offset = ((current_page as u64 - 1) * per_page) as i64;
     let limit = REQUIREMENTS_PER_PAGE;
 
-    let requirements = DecoratedRequirementService::new(state.inner())
+    let mut requirements = DecoratedRequirementService::new(state.inner())
         .list_by_project_filtered_paginated(
             project_id,
             status_filter,
@@ -317,6 +324,15 @@ async fn show_requirements(
             limit,
             offset,
         )?;
+
+    // In-memory filter by approval (paginated count unchanged; page may show fewer items)
+    if let Some(ref af) = approval_filter {
+        if af.eq_ignore_ascii_case("approved") {
+            requirements.retain(|r| r.approval_state.eq_ignore_ascii_case("approved"));
+        } else if af.eq_ignore_ascii_case("not_approved") {
+            requirements.retain(|r| !r.approval_state.eq_ignore_ascii_case("approved"));
+        }
+    }
 
     // Build tree data for tree view
     let mut children: HashMap<i32, Vec<&DecoratedRequirement>> = HashMap::new();
@@ -394,6 +410,9 @@ async fn show_requirements(
         "current_verification_filter": json!(verification_filter),
         "current_category_filter": json!(category_filter),
         "current_applicability_filter": json!(applicability_filter),
+        "current_approval_filter": json!(approval_filter.as_deref().unwrap_or("")),
+        "approval_filter_approved": approval_filter.as_deref().map(|a| a.eq_ignore_ascii_case("approved")).unwrap_or(false),
+        "approval_filter_not_approved": approval_filter.as_deref().map(|a| a.eq_ignore_ascii_case("not_approved")).unwrap_or(false),
         "current_view": current_view,
         "project": json!({
             "id": selected_project.id,
@@ -407,7 +426,7 @@ async fn show_requirements(
             total_pages,
             total_count,
             per_page,
-            &build_requirements_query(view.as_deref(), status_filter, verification_filter, category_filter, applicability_filter),
+            &build_requirements_query(view.as_deref(), status_filter, verification_filter, category_filter, applicability_filter, approval_filter.as_deref()),
         )),
     });
 
@@ -475,15 +494,24 @@ async fn show_requirement_id(
         .list_versions(requirement_id)
         .unwrap_or_default();
     let current_vid = requirement.current_version_id;
+    let user_service = UserService::new(state.inner());
     let versions_json: Vec<serde_json::Value> = versions
         .iter()
         .map(|v| {
+            let approved_by_name = v
+                .approved_by
+                .and_then(|uid| user_service.get_by_id(uid).ok())
+                .map(|u| u.name);
             json!({
                 "id": v.id,
                 "requirement_id": v.requirement_id,
                 "title": v.title,
                 "created_at": v.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 "is_current": current_vid == Some(v.id),
+                "approval_state": v.approval_state,
+                "approved_by": v.approved_by,
+                "approved_at": v.approved_at.map(|t| t.format("%Y-%m-%d %H:%M UTC").to_string()),
+                "approved_by_name": approved_by_name,
             })
         })
         .collect();
@@ -525,7 +553,22 @@ async fn show_requirement_id(
         .into_iter()
         .map(|r| (r.id, r.reference_code))
         .collect();
+    let members = repo
+        .get_members_by_project(requirement.project_id)
+        .unwrap_or_default();
     drop(repo);
+
+    let can_approve = user.is_admin
+        || members
+            .iter()
+            .any(|m| m.user_id == user.id && (m.role == 1 || m.role == 2));
+    let approved_by_name = requirement
+        .approved_by
+        .and_then(|uid| user_service.get_by_id(uid).ok())
+        .map(|u| u.name);
+    let approved_at_formatted = requirement
+        .approved_at
+        .map(|t| t.format("%Y-%m-%d %H:%M UTC").to_string());
 
     let mut test_status_list = StatusService::new(state.inner())
         .list_test_statuses_by_project(project_id)
@@ -569,6 +612,12 @@ async fn show_requirement_id(
         "versions": versions_json,
         "current_version_id": requirement.current_version_id,
         "viewing_past_version": false,
+        "can_approve": can_approve,
+        "approved_by_name": approved_by_name,
+        "approved_at_formatted": approved_at_formatted,
+        "approval_is_draft": requirement.approval_state.eq_ignore_ascii_case("draft"),
+        "approval_is_reviewed": requirement.approval_state.eq_ignore_ascii_case("reviewed"),
+        "approval_is_approved": requirement.approval_state.eq_ignore_ascii_case("approved"),
         "relationships": {
             "parent": parent_requirement,
             "children": child_requirements,
@@ -604,6 +653,12 @@ async fn show_requirement_id(
         "requirement_data": canonical_data,
         "requirement_data_json": serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string()),
         "page_title": format!("{} - Requirement", requirement.reference_code),
+        "can_approve": can_approve,
+        "approved_by_name": approved_by_name,
+        "approved_at_formatted": approved_at_formatted,
+        "approval_is_draft": requirement.approval_state.eq_ignore_ascii_case("draft"),
+        "approval_is_reviewed": requirement.approval_state.eq_ignore_ascii_case("reviewed"),
+        "approval_is_approved": requirement.approval_state.eq_ignore_ascii_case("approved"),
     });
 
     Ok(Template::render("requirements/requirement", ctx))
@@ -649,6 +704,9 @@ async fn show_requirement_version(
         applicability_id: version.applicability_id,
         justification: version.justification.clone(),
         project_id: current.project_id,
+        approval_state: version.approval_state.clone(),
+        approved_by: version.approved_by,
+        approved_at: version.approved_at,
     };
     let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
     let requirement = decorated_requirement_service.decorate_requirement(&req_from_version)?;
@@ -685,18 +743,42 @@ async fn show_requirement_version(
         .list_versions(requirement_id)
         .unwrap_or_default();
     let current_vid = current.current_version_id;
+    let user_service = UserService::new(state.inner());
     let versions_json: Vec<serde_json::Value> = versions
         .iter()
         .map(|v| {
+            let approved_by_name = v
+                .approved_by
+                .and_then(|uid| user_service.get_by_id(uid).ok())
+                .map(|u| u.name);
             json!({
                 "id": v.id,
                 "requirement_id": v.requirement_id,
                 "title": v.title,
                 "created_at": v.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
                 "is_current": current_vid == Some(v.id),
+                "approval_state": v.approval_state,
+                "approved_by": v.approved_by,
+                "approved_at": v.approved_at.map(|t| t.format("%Y-%m-%d %H:%M UTC").to_string()),
+                "approved_by_name": approved_by_name,
             })
         })
         .collect();
+    let repo_version = state.repo_read();
+    let members_version = repo_version
+        .get_members_by_project(current.project_id)
+        .unwrap_or_default();
+    let can_approve_version = user.is_admin
+        || members_version
+            .iter()
+            .any(|m| m.user_id == user.id && (m.role == 1 || m.role == 2));
+    let approved_by_name_version = requirement
+        .approved_by
+        .and_then(|uid| user_service.get_by_id(uid).ok())
+        .map(|u| u.name);
+    let approved_at_formatted_version = requirement
+        .approved_at
+        .map(|t| t.format("%Y-%m-%d %H:%M UTC").to_string());
     let mut test_status_list = StatusService::new(state.inner())
         .list_test_statuses_by_project(project_id)
         .unwrap_or_default();
@@ -785,6 +867,12 @@ async fn show_requirement_version(
         "current_version_id": current.current_version_id,
         "viewing_past_version": true,
         "viewing_version_id": version_id,
+        "can_approve": can_approve_version,
+        "approved_by_name": approved_by_name_version,
+        "approved_at_formatted": approved_at_formatted_version,
+        "approval_is_draft": requirement.approval_state.eq_ignore_ascii_case("draft"),
+        "approval_is_reviewed": requirement.approval_state.eq_ignore_ascii_case("reviewed"),
+        "approval_is_approved": requirement.approval_state.eq_ignore_ascii_case("approved"),
         "relationships": { "parent": parent_requirement, "children": child_requirements },
         "linked_tests": linked_tests,
         "test_statuses": test_statuses,
@@ -806,6 +894,9 @@ async fn show_requirement_version(
         "page_title": format!("{} - Requirement (v{})", requirement.reference_code, version_id),
         "viewing_past_version": true,
         "viewing_version_id": version_id,
+        "can_approve": can_approve_version,
+        "approved_by_name": approved_by_name_version,
+        "approved_at_formatted": approved_at_formatted_version,
     });
     Ok(Template::render("requirements/requirement", ctx))
 }
@@ -1580,6 +1671,9 @@ mod tests {
             applicability_id: 1,
             justification: Some("For testing".into()),
             project_id: PRIMARY_PROJECT,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         }
     }
 

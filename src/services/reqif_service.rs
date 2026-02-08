@@ -246,6 +246,9 @@ mod tests {
             applicability_id: 1,
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
         mock.requirements.insert(10, req);
 

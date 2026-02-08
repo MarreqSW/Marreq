@@ -172,6 +172,9 @@ fn decorate_requirements_impl<R: Repository>(
                     .unwrap_or_default(),
                 justification: r.justification,
                 project_id: r.project_id,
+                approval_state: r.approval_state.clone(),
+                approved_by: r.approved_by,
+                approved_at: r.approved_at,
             }
         })
         .collect()
@@ -392,6 +395,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
 
@@ -412,6 +418,9 @@ mod tests {
             applicability_id: 1,
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
 
         let r2 = Requirement {
@@ -431,6 +440,9 @@ mod tests {
             applicability_id: 1,
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
 
         let r3 = Requirement {
@@ -450,6 +462,9 @@ mod tests {
             applicability_id: 99,
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
 
         let decorated = decorate_requirements_impl(&repo, vec![r1, r2, r3]);
@@ -590,6 +605,9 @@ mod tests {
             applicability_id: 0,
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
         let test = TestCase {
             id: 10,
@@ -642,6 +660,9 @@ mod tests {
             applicability_id: 0,
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
         repo.requirements.insert(2, req);
         // matrix for different requirement
@@ -689,6 +710,9 @@ mod tests {
             applicability_id: 0,
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
         repo.requirements.insert(3, req);
         repo.matrices.push(MatrixLink {

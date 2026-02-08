@@ -49,6 +49,9 @@ mod tests {
                 applicability_id: 3,
                 justification: Some("Important".to_string()),
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             };
 
             let display = format!("{}", req);
@@ -74,6 +77,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             };
 
             let display = format!("{}", req);
@@ -250,6 +256,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 5,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             };
 
             assert_eq!(Requirement::entity_type(), EntityType::Requirement);
@@ -366,6 +375,9 @@ mod tests {
                 applicability_id: 8,
                 justification: Some("Just".to_string()),
                 project_id: 9,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             };
 
             assert_eq!(req.id, 1);
@@ -488,6 +500,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             };
 
             let json = serde_json::to_string(&req).unwrap();
@@ -984,6 +999,9 @@ mod tests {
                 deadline_date: "2024-12-31".to_string(),
                 justification: Some("Important".to_string()),
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             };
 
             assert_eq!(decorated.id, 1);
@@ -1025,6 +1043,9 @@ mod tests {
                 deadline_date: "".to_string(),
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             };
 
             assert_eq!(decorated.req_parent_id, Some(1));
@@ -1114,6 +1135,9 @@ mod tests {
                 deadline_date: "".to_string(),
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             };
 
             let json = serde_json::to_string(&decorated).unwrap();
@@ -1210,6 +1234,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             };
 
             let cloned = req.clone();
@@ -1274,6 +1301,9 @@ mod tests {
                 applicability_id: 1,
                 justification: Some("Justification text".to_string()),
                 project_id: 1,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             };
 
             assert_eq!(req.parent_id, Some(10));

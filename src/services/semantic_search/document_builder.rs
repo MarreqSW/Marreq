@@ -147,6 +147,9 @@ mod tests {
             deadline_date: "".into(),
             justification: Some("Required for real-time operation".into()),
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         }
     }
 

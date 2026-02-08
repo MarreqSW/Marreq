@@ -602,6 +602,9 @@ impl RequirementsRepository for DieselRepoMock {
             justification: _new.justification.clone(),
             deadline_date: Some(now),
             created_at,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
         self.requirement_versions.insert(version_id, version);
         let req = Requirement {
@@ -621,6 +624,9 @@ impl RequirementsRepository for DieselRepoMock {
             applicability_id: _new.applicability_id,
             justification: _new.justification.clone(),
             project_id: _new.project_id,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
         self.requirements.insert(id, req);
         Ok(id)
@@ -648,6 +654,9 @@ impl RequirementsRepository for DieselRepoMock {
                     justification: _new.justification.clone(),
                     deadline_date: Some(now),
                     created_at,
+                    approval_state: "draft".to_string(),
+                    approved_by: None,
+                    approved_at: None,
                 };
                 self.requirement_versions.insert(version_id, version);
                 req.current_version_id = Some(version_id);
@@ -663,6 +672,9 @@ impl RequirementsRepository for DieselRepoMock {
                 req.justification = _new.justification.clone();
                 req.project_id = _new.project_id;
                 req.update_date = now;
+                req.approval_state = "draft".to_string();
+                req.approved_by = None;
+                req.approved_at = None;
                 Ok(true)
             }
             None => Err(RepoError::NotFound),
@@ -707,6 +719,52 @@ impl RequirementsRepository for DieselRepoMock {
             .get(&version_id)
             .cloned()
             .ok_or(RepoError::NotFound)
+    }
+
+    fn set_requirement_version_approval(
+        &mut self,
+        version_id: i32,
+        new_state: &str,
+        approved_by_user_id: i32,
+    ) -> Result<RequirementVersion, RepoError> {
+        use crate::status_enums::ApprovalState;
+        let mut version = self
+            .requirement_versions
+            .get(&version_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)?;
+        let current = ApprovalState::from_db_string(&version.approval_state).ok_or_else(|| {
+            RepoError::BadInput(format!(
+                "invalid approval_state: {}",
+                version.approval_state
+            ))
+        })?;
+        let target = ApprovalState::from_db_string(new_state)
+            .ok_or_else(|| RepoError::BadInput(format!("invalid approval_state: {}", new_state)))?;
+        if !current.can_transition_to(target) {
+            return Err(RepoError::BadInput(format!(
+                "invalid transition: {} -> {}",
+                version.approval_state, new_state
+            )));
+        }
+        if current == target {
+            return Ok(version);
+        }
+        version.approval_state = target.to_db_string().to_string();
+        if target == ApprovalState::Approved {
+            version.approved_by = Some(approved_by_user_id);
+            version.approved_at = Some(epoch());
+        }
+        self.requirement_versions
+            .insert(version_id, version.clone());
+        if let Some(req) = self.requirements.get_mut(&version.requirement_id) {
+            if req.current_version_id == Some(version_id) {
+                req.approval_state = version.approval_state.clone();
+                req.approved_by = version.approved_by;
+                req.approved_at = version.approved_at;
+            }
+        }
+        Ok(version)
     }
 }
 
@@ -964,6 +1022,7 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
             .filter(|r| r.project_id == project_id)
         {
             if let Some(version_id) = req.current_version_id {
+                // Include all current versions in baseline (point-in-time snapshot)
                 self.baseline_requirements
                     .push(crate::models::BaselineRequirement {
                         baseline_id: id,
@@ -1038,6 +1097,9 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
                 applicability_id: version.applicability_id,
                 justification: version.justification.clone(),
                 project_id: req.project_id,
+                approval_state: version.approval_state.clone(),
+                approved_by: version.approved_by,
+                approved_at: version.approved_at,
             });
         }
         Ok(out)

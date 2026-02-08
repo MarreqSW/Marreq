@@ -162,6 +162,12 @@ docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
          EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_matrix_suspect') AS suspect_index_exists;
 " 2>/dev/null || true
 echo ""
+echo "📋 Requirement version approval workflow:"
+docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'requirement_versions' AND column_name = 'approval_state') AS approval_state_exists,
+         EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_requirement_versions_approval_state') AS approval_index_exists;
+" 2>/dev/null || true
+echo ""
 
 echo "👥 Users created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c \

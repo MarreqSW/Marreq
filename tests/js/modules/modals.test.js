@@ -222,6 +222,7 @@ describe('Modals', () => {
   });
 
   it('should show error notification on failure', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     document.body.innerHTML = `
       <button id="trigger">Open</button>
       <div id="modal"></div>
@@ -243,6 +244,7 @@ describe('Modals', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(showNotification).toHaveBeenCalledWith('Submission failed', 'error');
+    consoleError.mockRestore();
   });
 
   it('should use default success message', async () => {
@@ -268,6 +270,7 @@ describe('Modals', () => {
   });
 
   it('should use default error message when error has no message', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
     document.body.innerHTML = `
       <button id="trigger">Open</button>
       <div id="modal"></div>
@@ -289,6 +292,7 @@ describe('Modals', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(showNotification).toHaveBeenCalledWith('Unable to complete action', 'error');
+    consoleError.mockRestore();
   });
 
   it('should log error to console', async () => {

@@ -705,6 +705,31 @@ impl LookupRepository for DieselRepo {
     }
 }
 
+/// Builds a Requirement for baseline context using the snapshot version id (so links point to the version).
+fn requirement_from_baseline_version(
+    container: &RequirementContainer,
+    version: &RequirementVersion,
+) -> Requirement {
+    Requirement {
+        id: container.id,
+        current_version_id: Some(version.id),
+        title: version.title.clone(),
+        description: version.description.clone(),
+        status_id: version.status_id,
+        author_id: version.author_id,
+        reviewer_id: version.reviewer_id,
+        reference_code: container.stable_code.clone(),
+        category_id: version.category_id,
+        parent_id: version.parent_id,
+        creation_date: version.created_at,
+        update_date: version.created_at,
+        deadline_date: version.deadline_date,
+        applicability_id: version.applicability_id,
+        justification: version.justification.clone(),
+        project_id: container.project_id,
+    }
+}
+
 fn requirement_from_current(
     container: &RequirementContainer,
     version: &RequirementVersion,
@@ -1458,7 +1483,7 @@ impl BaselineRepository for DieselRepo {
             .load(conn.as_mut())?;
         Ok(rows
             .into_iter()
-            .map(|(c, v)| requirement_from_current(&c, &v))
+            .map(|(c, v)| requirement_from_baseline_version(&c, &v))
             .collect())
     }
 

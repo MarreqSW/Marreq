@@ -12,6 +12,34 @@ diesel::table! {
 }
 
 diesel::table! {
+    baseline_requirements (baseline_id, requirement_id) {
+        baseline_id -> Int4,
+        requirement_id -> Int4,
+        version_id -> Int4,
+    }
+}
+
+diesel::table! {
+    baseline_traceability (baseline_id, requirement_id, test_id) {
+        baseline_id -> Int4,
+        requirement_id -> Int4,
+        test_id -> Int4,
+    }
+}
+
+diesel::table! {
+    baselines (id) {
+        id -> Int4,
+        project_id -> Int4,
+        #[max_length = 255]
+        name -> Varchar,
+        description -> Nullable<Text>,
+        created_at -> Timestamp,
+        created_by -> Int4,
+    }
+}
+
+diesel::table! {
     categories (id) {
         id -> Int4,
         title -> Varchar,
@@ -195,6 +223,14 @@ diesel::table! {
 }
 
 diesel::joinable!(applicability -> projects (project_id));
+diesel::joinable!(baseline_requirements -> baselines (baseline_id));
+diesel::joinable!(baseline_requirements -> requirement_versions (version_id));
+diesel::joinable!(baseline_requirements -> requirements (requirement_id));
+diesel::joinable!(baseline_traceability -> baselines (baseline_id));
+diesel::joinable!(baseline_traceability -> requirements (requirement_id));
+diesel::joinable!(baseline_traceability -> tests (test_id));
+diesel::joinable!(baselines -> projects (project_id));
+diesel::joinable!(baselines -> users (created_by));
 diesel::joinable!(requirement_embeddings -> requirements (requirement_id));
 diesel::joinable!(requirement_embeddings -> projects (project_id));
 diesel::joinable!(embedding_index_queue -> requirements (requirement_id));
@@ -220,6 +256,9 @@ diesel::joinable!(verification -> projects (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
+    baseline_requirements,
+    baseline_traceability,
+    baselines,
     categories,
     embedding_index_queue,
     logs,

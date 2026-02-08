@@ -47,7 +47,8 @@ View switcher buttons, export/import, and new requirement button
       </button>
       <ul class="dropdown-menu dropdown-menu-end">
         <li><a class="dropdown-item" href="/p/{{project.id}}/requirements.xls" title="Export to Excel">Excel</a></li>
-        <li><a class="dropdown-item" href="/p/{{project.id}}/export_reqif" title="Export as ReqIF 1.2">ReqIF</a></li>
+        <li><a class="dropdown-item" href="/p/{{project.id}}/export_reqif" title="Export current project as ReqIF 1.2">ReqIF (current)</a></li>
+        <li><a class="dropdown-item" href="/p/{{project.id}}/baselines" title="Export a baseline as ReqIF">ReqIF (from baseline…)</a></li>
       </ul>
     </div>
     {{#if is_admin}}

@@ -284,6 +284,11 @@ mod tests {
             test_id: 10,
             creation_date: ts(),
             project_id: 99,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
         });
 
         let state = state_with_repo(repo);

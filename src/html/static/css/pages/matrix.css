@@ -116,6 +116,16 @@
   background-color: rgb(59 130 246 / 0.1);
 }
 
+.c-matrix-link-indicator--suspect .status-suspect,
+.c-matrix-cell .c-matrix-status-dot.status-suspect {
+  color: var(--warning, #f59e0b);
+  font-size: 1.25rem;
+}
+
+.c-matrix-cell[data-suspect="true"] {
+  background-color: rgb(245 158 11 / 0.08);
+}
+
 .c-matrix-row.is-highlight {
   background-color: rgb(59 130 246 / 0.05);
 }

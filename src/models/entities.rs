@@ -72,6 +72,7 @@ pub struct RequirementVersionVerificationMethod {
 }
 
 /// Link between a requirement and a test in the traceability matrix.
+/// Suspect state: when a requirement changes, links are marked suspect until reviewed.
 #[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct MatrixLink {
@@ -79,6 +80,11 @@ pub struct MatrixLink {
     pub test_id: i32,
     pub creation_date: chrono::NaiveDateTime,
     pub project_id: i32,
+    pub suspect: bool,
+    pub suspect_at: Option<chrono::NaiveDateTime>,
+    pub suspect_reason: Option<String>,
+    pub cleared_by: Option<i32>,
+    pub cleared_at: Option<chrono::NaiveDateTime>,
 }
 
 /// Immutable project baseline (snapshot of requirement versions and traceability at creation time).

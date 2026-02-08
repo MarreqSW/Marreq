@@ -1,3 +1,5 @@
+use rocket::form::FromForm;
+
 use super::helpers::*;
 use super::prelude::*;
 use crate::services::{
@@ -5,7 +7,14 @@ use crate::services::{
     SortOrder, StatusService,
 };
 
-#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<page>&<per_page>&<search>")]
+#[derive(Debug, FromForm)]
+#[allow(dead_code)]
+struct ClearSuspectForm {
+    req_id: i32,
+    test_id: i32,
+}
+
+#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<page>&<per_page>&<search>&<suspect_filter>")]
 #[allow(clippy::too_many_arguments)]
 async fn get_matrix(
     project_access: ProjectAccess,
@@ -20,11 +29,19 @@ async fn get_matrix(
     page: Option<i64>,
     per_page: Option<i64>,
     search: Option<String>,
+    suspect_filter: Option<String>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     use serde_json::json;
 
     let user = project_access.into_user();
+
+    // suspect_filter: "true" = only suspect, "false" = only not suspect, missing = all
+    let suspect_filter_bool = match suspect_filter.as_deref() {
+        Some("true") => Some(true),
+        Some("false") => Some(false),
+        _ => None,
+    };
 
     // Build filter and pagination parameters
     let filters = MatrixFilters {
@@ -33,6 +50,7 @@ async fn get_matrix(
         category: category_filter,
         applicability: applicability_filter,
         search: search.clone(),
+        suspect: suspect_filter_bool,
     };
 
     let sort_by_value = sort_by.clone().unwrap_or_else(|| "id".to_string());
@@ -57,9 +75,9 @@ async fn get_matrix(
             Redirect::to(uri!(crate::routes::html::dashboard::index))
         })?;
 
-    // Build matrix cells for template
+    // Build matrix cells for template (with suspect state)
     let (requirements_with_matrix, _) =
-        build_matrix_rows(&view.requirements, &view.tests, &view.links);
+        build_matrix_rows(&view.requirements, &view.tests, &view.links, &view.suspect_links);
 
     // Build tests with status names
     let tests_with_status = build_tests_with_status(&view.tests, state);
@@ -85,6 +103,7 @@ async fn get_matrix(
     ctx["req_status_filter"] = json!(req_status_filter);
     ctx["category_filter"] = json!(category_filter);
     ctx["applicability_filter"] = json!(applicability_filter);
+    ctx["suspect_filter"] = json!(suspect_filter);
     ctx["search"] = json!(search);
     ctx["page"] = json!(pagination.page);
     ctx["per_page"] = json!(pagination.per_page);
@@ -127,11 +146,12 @@ async fn get_matrix(
     Ok(Template::render("matrix/matrix", ctx))
 }
 
-/// Build matrix rows with linkage information
+/// Build matrix rows with linkage and suspect information
 fn build_matrix_rows(
     reqs: &[Requirement],
     tests: &[TestCase],
     links: &HashSet<(i32, i32)>,
+    suspect_links: &HashSet<(i32, i32)>,
 ) -> (Vec<serde_json::Value>, usize) {
     use serde_json::json;
 
@@ -141,8 +161,12 @@ fn build_matrix_rows(
             let row: Vec<_> = tests
                 .iter()
                 .map(|test| {
+                    let key = (req.id, test.id);
+                    let linked = links.contains(&key);
+                    let suspect = linked && suspect_links.contains(&key);
                     json!({
-                        "linked": links.contains(&(req.id, test.id)),
+                        "linked": linked,
+                        "suspect": suspect,
                         "status_id": test.status_id
                     })
                 })
@@ -279,8 +303,31 @@ async fn get_matrix_csv(
     Ok((ContentType::new("text", "csv"), csv_data))
 }
 
+#[post("/<project_id>/matrix/clear_suspect", data = "<form>")]
+async fn post_clear_suspect(
+    project_access: ProjectAccess,
+    project_id: i32,
+    form: rocket::form::Form<ClearSuspectForm>,
+    state: &State<AppState>,
+) -> Result<Redirect, Redirect> {
+    let user = project_access.into_user();
+    let links = state
+        .repo_read()
+        .get_matrix_by_project(project_id)
+        .map_err(|_| Redirect::to(uri!(crate::routes::html::dashboard::index)))?;
+    let link_exists = links
+        .iter()
+        .any(|m| m.req_id == form.req_id && m.test_id == form.test_id);
+    if !link_exists {
+        return Err(Redirect::to(format!("/p/{}/matrix", project_id)));
+    }
+    let service = MatrixService::new(state.inner());
+    let _ = service.clear_suspect(&user, form.req_id, form.test_id);
+    Ok(Redirect::to(format!("/p/{}/matrix", project_id)))
+}
+
 pub fn routes() -> Vec<Route> {
-    routes![get_matrix, get_matrix_xls, get_matrix_csv]
+    routes![get_matrix, get_matrix_xls, get_matrix_csv, post_clear_suspect]
 }
 
 #[cfg(test)]

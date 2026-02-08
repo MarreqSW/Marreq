@@ -634,6 +634,33 @@ impl<R: Repository> MatrixRepository for CacheRepository<R> {
         self.cache.remove(&key);
         Ok(())
     }
+
+    fn mark_links_suspect_for_requirement(
+        &mut self,
+        requirement_id: i32,
+        reason: &str,
+    ) -> Result<Vec<i32>, RepoError> {
+        let project_ids = self
+            .inner
+            .mark_links_suspect_for_requirement(requirement_id, reason)?;
+        for &pid in &project_ids {
+            self.cache.remove(&keys::Matrix::by_project(pid));
+        }
+        Ok(project_ids)
+    }
+
+    fn clear_suspect(
+        &mut self,
+        req_id: i32,
+        test_id: i32,
+        cleared_by_user_id: i32,
+    ) -> Result<(bool, Option<i32>), RepoError> {
+        let (ok, project_id) = self.inner.clear_suspect(req_id, test_id, cleared_by_user_id)?;
+        if let Some(pid) = project_id {
+            self.cache.remove(&keys::Matrix::by_project(pid));
+        }
+        Ok((ok, project_id))
+    }
 }
 
 impl<R: Repository> BaselineRepository for CacheRepository<R> {
@@ -777,6 +804,11 @@ mod tests {
             test_id: 1,
             creation_date: epoch(),
             project_id: 1,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
         };
 
         let mut users = HashMap::new();

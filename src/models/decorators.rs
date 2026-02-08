@@ -47,6 +47,10 @@ pub struct DecoratedRequirement {
     pub deadline_date: String,
     pub justification: Option<String>,
     pub project_id: i32,
+    /// Approval workflow: draft | reviewed | approved (current version).
+    pub approval_state: String,
+    pub approved_by: Option<i32>,
+    pub approved_at: Option<chrono::NaiveDateTime>,
 }
 
 /// Test case information with resolved foreign keys for presentation.

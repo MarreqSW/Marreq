@@ -219,6 +219,24 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
     ) -> Result<RequirementVersion, RepoError> {
         self.inner.get_requirement_version_by_id(version_id)
     }
+
+    fn set_requirement_version_approval(
+        &mut self,
+        version_id: i32,
+        new_state: &str,
+        approved_by_user_id: i32,
+    ) -> Result<RequirementVersion, RepoError> {
+        let updated = self.inner.set_requirement_version_approval(
+            version_id,
+            new_state,
+            approved_by_user_id,
+        )?;
+        self.cache.invalidate_requirement(updated.requirement_id);
+        if let Ok(req) = self.inner.get_requirement_by_id(updated.requirement_id) {
+            self.cache.invalidate_project(req.project_id);
+        }
+        Ok(updated)
+    }
 }
 
 impl<R: Repository> UserRepository for CacheRepository<R> {
@@ -790,6 +808,9 @@ mod tests {
             applicability_id: 1,
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         };
         let test = TestCase {
             id: 1,

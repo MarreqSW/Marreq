@@ -2,7 +2,7 @@ import { buildRequirementViewModel } from '../presenters/requirement.js';
 import { verificationPercent, verificationBadge } from '../presenters/requirement.js';
 import { initDiffModal } from '../modules/diffModal.js';
 import { showNotification } from '../modules/notifications.js';
-import { postJson } from '../core/net.js';
+import { postJson, jsonFetch } from '../core/net.js';
 
 function parseCanonicalData() {
   const script = document.getElementById('requirement-detail-data');
@@ -599,5 +599,97 @@ export function init() {
     triggerSelector: '[data-action="show-changes"]',
     modalSelector: '#changesModal',
     contentSelector: '#changesContent',
+  });
+
+  initApprovalHandlers(canonical);
+  initEditApprovedHandler(canonical);
+}
+
+function initApprovalHandlers(canonical) {
+  const section = document.querySelector('[data-approval-section]');
+  if (!section) return;
+
+  const reqId = canonical?.requirement?.id;
+  const versionId = canonical?.current_version_id;
+  if (reqId == null || versionId == null) return;
+
+  const reviewedModal = document.getElementById('approvalReviewedModal');
+  const approveModal = document.getElementById('approvalApproveModal');
+  const reviewedConfirm = document.getElementById('approvalReviewedConfirm');
+  const approveConfirm = document.getElementById('approvalApproveConfirm');
+
+  section.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="approval-transition"][data-state]');
+    if (!btn) return;
+    e.preventDefault();
+    const state = btn.getAttribute('data-state');
+    if (state === 'reviewed' && reviewedModal && typeof bootstrap !== 'undefined') {
+      const modal = bootstrap.Modal.getOrCreateInstance(reviewedModal);
+      reviewedConfirm.dataset.pendingState = state;
+      modal.show();
+    } else if (state === 'approved' && approveModal && typeof bootstrap !== 'undefined') {
+      const modal = bootstrap.Modal.getOrCreateInstance(approveModal);
+      approveConfirm.dataset.pendingState = state;
+      modal.show();
+    }
+  });
+
+  const doTransition = async (state) => {
+    const url = `/api/requirements/${reqId}/versions/${versionId}/approval`;
+    try {
+      await jsonFetch(url, { method: 'PUT', body: { state } });
+      showNotification(state === 'approved' ? 'Requirement approved.' : 'Marked as reviewed.', 'success');
+      window.location.reload();
+    } catch (err) {
+      const msg = err?.payload?.message || err?.message || 'Request failed';
+      showNotification(msg, 'error');
+    }
+  };
+
+  if (reviewedConfirm) {
+    reviewedConfirm.addEventListener('click', () => {
+      const state = reviewedConfirm.dataset.pendingState || 'reviewed';
+      if (reviewedModal && bootstrap.Modal) {
+        bootstrap.Modal.getInstance(reviewedModal)?.hide();
+      }
+      doTransition(state);
+    });
+  }
+  if (approveConfirm) {
+    approveConfirm.addEventListener('click', () => {
+      const state = approveConfirm.dataset.pendingState || 'approved';
+      if (approveModal && bootstrap.Modal) {
+        bootstrap.Modal.getInstance(approveModal)?.hide();
+      }
+      doTransition(state);
+    });
+  }
+}
+
+function initEditApprovedHandler(canonical) {
+  const link = document.querySelector('[data-action="edit-approved-requirement"]');
+  if (!link) return;
+
+  const modalEl = document.getElementById('editApprovedWarningModal');
+  const confirmEl = document.getElementById('editApprovedConfirm');
+  if (!modalEl || !confirmEl) return;
+
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (typeof bootstrap !== 'undefined') {
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      const href = link.getAttribute('data-edit-href');
+      if (href) confirmEl.setAttribute('href', href);
+      modal.show();
+    } else {
+      const href = link.getAttribute('data-edit-href');
+      if (href) window.location.href = href;
+    }
+  });
+
+  confirmEl.addEventListener('click', (e) => {
+    e.preventDefault();
+    const href = confirmEl.getAttribute('href');
+    if (href) window.location.href = href;
   });
 }

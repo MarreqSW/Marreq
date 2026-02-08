@@ -282,6 +282,9 @@ async fn patch_requirement_with_empty_patch_returns_bad_request() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -322,6 +325,9 @@ async fn patch_requirement_with_invalid_field_type_returns_error() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -642,6 +648,9 @@ async fn sql_injection_in_id_parameter_is_handled_safely() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 

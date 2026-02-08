@@ -75,6 +75,15 @@ pub trait RequirementsRepository {
         &self,
         version_id: i32,
     ) -> Result<RequirementVersion, RepoError>;
+
+    /// Set approval state of a requirement version (draft→reviewed, reviewed→approved).
+    /// Returns the updated version. When transitioning to approved, sets approved_by and approved_at.
+    fn set_requirement_version_approval(
+        &mut self,
+        version_id: i32,
+        new_state: &str,
+        approved_by_user_id: i32,
+    ) -> Result<RequirementVersion, RepoError>;
 }
 
 pub trait TestsCaseRepository {

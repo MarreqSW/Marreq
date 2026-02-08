@@ -74,6 +74,9 @@ mod tests {
             applicability_id: 0,
             justification: None,
             project_id: 0,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         }
     }
 

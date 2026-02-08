@@ -157,18 +157,21 @@
         {{#if requirement_data.versions}}
         {{#each requirement_data.versions}}
         <li class="d-flex align-items-center justify-content-between gap-2 py-2 border-bottom border-light border-opacity-50">
+          <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
+            {{#if this.is_current}}
+            <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}"
+              class="text-decoration-none fw-semibold text-truncate">{{this.title}}</a>
+            {{else}}
+            <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}/version/{{this.id}}"
+              class="text-decoration-none text-truncate">{{this.title}}</a>
+            {{/if}}
+            <span class="badge reqman-approval-badge reqman-approval-badge--{{this.approval_state}} flex-shrink-0" aria-label="Approval: {{this.approval_state}}">{{this.approval_state}}</span>
+          </div>
           {{#if this.is_current}}
-          <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}"
-            class="text-decoration-none fw-semibold">{{this.title}}</a>
+          <span class="badge bg-primary flex-shrink-0">Current</span>
           {{else}}
           <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}/version/{{this.id}}"
-            class="text-decoration-none">{{this.title}}</a>
-          {{/if}}
-          {{#if this.is_current}}
-          <span class="badge bg-primary">Current</span>
-          {{else}}
-          <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}/version/{{this.id}}"
-            class="small text-muted">View</a>
+            class="small text-muted flex-shrink-0">View</a>
           {{/if}}
         </li>
         {{/each}}
@@ -255,11 +258,14 @@
           </div>
           <div class="d-flex flex-wrap align-items-center gap-2">
             <span class="badge" data-field="status-badge" role="status" aria-label="Requirement status">—</span>
+            <span class="badge reqman-approval-badge reqman-approval-badge--{{requirement_data.requirement.approval_state}}" data-field="approval-badge" role="status" aria-label="Approval state">{{requirement_data.requirement.approval_state}}</span>
           </div>
           <nav class="ms-lg-auto" aria-label="Requirement actions">
             <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
               <a href="/p/{{project_id}}/requirements/edit/{{requirement_data.requirement.id}}"
-                class="btn btn-primary btn-sm" aria-label="Edit requirement">
+                class="btn btn-primary btn-sm {{#if requirement_data.approval_is_approved}}reqman-edit-approved-link{{/if}}"
+                aria-label="Edit requirement"
+                {{#if requirement_data.approval_is_approved}}data-action="edit-approved-requirement" data-edit-href="/p/{{project_id}}/requirements/edit/{{requirement_data.requirement.id}}"{{/if}}>
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                   <use href="#icon-pencil" />
                 </svg>
@@ -323,6 +329,30 @@
             </div>
           </nav>
         </div>
+
+        {{!-- Approval section: badge, metadata, action buttons --}}
+        <section class="reqman-approval-section mb-4" data-approval-section aria-labelledby="approval-heading">
+          <h2 id="approval-heading" class="visually-hidden">Approval</h2>
+          <div class="d-flex flex-wrap align-items-center gap-3">
+            <span class="badge reqman-approval-badge reqman-approval-badge--{{requirement_data.requirement.approval_state}}" aria-label="Approval state">{{requirement_data.requirement.approval_state}}</span>
+            {{#if requirement_data.approval_is_approved}}
+              {{#if requirement_data.approved_by_name}}
+                <span class="text-muted small">Approved by {{requirement_data.approved_by_name}}{{#if requirement_data.approved_at_formatted}} on {{requirement_data.approved_at_formatted}}{{/if}}</span>
+              {{else}}
+                <span class="text-muted small">Approved</span>
+              {{/if}}
+            {{else}}
+              {{#if requirement_data.can_approve}}
+                {{#if requirement_data.approval_is_draft}}
+                  <button type="button" class="btn btn-outline-warning btn-sm" data-action="approval-transition" data-state="reviewed" aria-label="Mark as Reviewed">Mark as Reviewed</button>
+                {{/if}}
+                {{#if requirement_data.approval_is_reviewed}}
+                  <button type="button" class="btn btn-outline-success btn-sm" data-action="approval-transition" data-state="approved" aria-label="Approve Requirement">Approve Requirement</button>
+                {{/if}}
+              {{/if}}
+            {{/if}}
+          </div>
+        </section>
 
         <section class="reqman-requirement-statement-card p-4 p-lg-5 rounded-4">
           <div class="text-uppercase small text-muted mb-2">Requirement Statement</div>
@@ -449,6 +479,63 @@
           </small>
         </div>
         <div id="changesContent"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- Approval: Mark as Reviewed confirmation --}}
+<div class="modal fade" id="approvalReviewedModal" tabindex="-1" aria-labelledby="approvalReviewedModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="approvalReviewedModalLabel">Mark as Reviewed?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">This version will be marked as <strong>Reviewed</strong>. An approver can then promote it to Approved.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning" id="approvalReviewedConfirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- Approval: Approve Requirement confirmation --}}
+<div class="modal fade" id="approvalApproveModal" tabindex="-1" aria-labelledby="approvalApproveModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="approvalApproveModalLabel">Approve Requirement Version?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">This version becomes <strong>stable</strong>. Any future change will create a new Draft version requiring re-approval.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="approvalApproveConfirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{!-- Edit approved requirement: warning --}}
+<div class="modal fade" id="editApprovedWarningModal" tabindex="-1" aria-labelledby="editApprovedWarningModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editApprovedWarningModalLabel">This requirement is approved</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">Editing will create a new <strong>Draft</strong> version requiring re-approval.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <a href="#" class="btn btn-primary" id="editApprovedConfirm">Create New Version</a>
       </div>
     </div>
   </div>

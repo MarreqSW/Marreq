@@ -31,6 +31,9 @@ fn sample_requirement() -> Requirement {
         applicability_id: 1,
         justification: None,
         project_id: 1,
+        approval_state: "draft".to_string(),
+        approved_by: None,
+        approved_at: None,
     }
 }
 

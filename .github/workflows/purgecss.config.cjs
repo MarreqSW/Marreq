@@ -17,6 +17,8 @@ module.exports = {
       /^status-/,
       // Status badge variants (dynamically added)
       /^reqman-requirements-status-badge--/,
+      // Approval badge variants (draft, reviewed, approved from Handlebars)
+      /^reqman-approval-badge--/,
       // Editor states
       /^c-editor-dropzone--/,
       /^c-editor-dropzone__/,

@@ -28,6 +28,10 @@
             Status
             <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
           </th>
+          <th scope="col" data-sort-key="approval" class="is-sortable">
+            Approval
+            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+          </th>
           <th scope="col" data-sort-key="verification" class="is-sortable">
             Verification
             <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
@@ -109,6 +113,9 @@
               {{status_id}}
             </span>
           </td>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--approval">
+            <span class="badge reqman-approval-badge reqman-approval-badge--{{approval_state}}" aria-label="Approval: {{approval_state}}">{{approval_state}}</span>
+          </td>
           <td class="reqman-requirements-row__cell reqman-requirements-row__cell--verification reqman-requirements-cell--editable" data-inline-edit="verification" title="Click to change">
             <span class="reqman-requirements-cell__display reqman-requirements-cell-muted">{{verification_method_id}}</span>
           </td>
@@ -162,7 +169,7 @@
           class="reqman-requirements-row__details"
           data-details-for="{{id}}"
           hidden>
-          <td colspan="9">
+          <td colspan="10">
             <dl class="reqman-requirements-details-grid">
               <div>
                 <dt>Category</dt>

@@ -447,6 +447,9 @@ async fn patch_requirement_with_invalid_foreign_keys_returns_error() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -779,6 +782,9 @@ async fn delete_category_that_has_requirements_handles_gracefully() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -823,6 +829,9 @@ async fn delete_applicability_that_has_requirements_handles_gracefully() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 
@@ -865,6 +874,9 @@ async fn delete_status_that_has_requirements_handles_gracefully() {
             deadline_date: Some(timestamp()),
             justification: None,
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         },
     );
 

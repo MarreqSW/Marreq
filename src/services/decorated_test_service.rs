@@ -277,6 +277,9 @@ mod tests {
                 applicability_id: 0,
                 justification: None,
                 project_id: 99,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
             },
         );
         repo.matrices.push(MatrixLink {

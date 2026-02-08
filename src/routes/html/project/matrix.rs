@@ -76,8 +76,12 @@ async fn get_matrix(
         })?;
 
     // Build matrix cells for template (with suspect state)
-    let (requirements_with_matrix, _) =
-        build_matrix_rows(&view.requirements, &view.tests, &view.links, &view.suspect_links);
+    let (requirements_with_matrix, _) = build_matrix_rows(
+        &view.requirements,
+        &view.tests,
+        &view.links,
+        &view.suspect_links,
+    );
 
     // Build tests with status names
     let tests_with_status = build_tests_with_status(&view.tests, state);
@@ -327,7 +331,12 @@ async fn post_clear_suspect(
 }
 
 pub fn routes() -> Vec<Route> {
-    routes![get_matrix, get_matrix_xls, get_matrix_csv, post_clear_suspect]
+    routes![
+        get_matrix,
+        get_matrix_xls,
+        get_matrix_csv,
+        post_clear_suspect
+    ]
 }
 
 #[cfg(test)]

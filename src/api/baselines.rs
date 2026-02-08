@@ -178,6 +178,9 @@ mod tests {
                 justification: None,
                 deadline_date: None,
                 created_at: created,
+                approval_state: "approved".to_string(),
+                approved_by: Some(ADMIN_ID),
+                approved_at: Some(created),
             },
         );
         repo.requirements.insert(
@@ -199,6 +202,9 @@ mod tests {
                 applicability_id: 1,
                 justification: None,
                 project_id: PROJECT_ID,
+                approval_state: "approved".to_string(),
+                approved_by: Some(ADMIN_ID),
+                approved_at: Some(created),
             },
         );
         repo

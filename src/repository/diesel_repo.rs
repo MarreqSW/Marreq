@@ -727,6 +727,9 @@ fn requirement_from_baseline_version(
         applicability_id: version.applicability_id,
         justification: version.justification.clone(),
         project_id: container.project_id,
+        approval_state: version.approval_state.clone(),
+        approved_by: version.approved_by,
+        approved_at: version.approved_at,
     }
 }
 
@@ -751,6 +754,9 @@ fn requirement_from_current(
         applicability_id: version.applicability_id,
         justification: version.justification.clone(),
         project_id: container.project_id,
+        approval_state: version.approval_state.clone(),
+        approved_by: version.approved_by,
+        approved_at: version.approved_at,
     }
 }
 
@@ -1067,6 +1073,62 @@ impl RequirementsRepository for DieselRepo {
                     e.into()
                 }
             })
+    }
+
+    fn set_requirement_version_approval(
+        &mut self,
+        version_id: i32,
+        new_state: &str,
+        approved_by_user_id: i32,
+    ) -> Result<RequirementVersion, RepoError> {
+        use crate::status_enums::ApprovalState;
+        use schema::requirement_versions::dsl;
+        let mut conn = self.get_conn()?;
+        let version: RequirementVersion = dsl::requirement_versions
+            .filter(dsl::id.eq(version_id))
+            .get_result(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })?;
+        let current = ApprovalState::from_db_string(&version.approval_state).ok_or_else(|| {
+            RepoError::BadInput(format!(
+                "invalid approval_state in DB: {}",
+                version.approval_state
+            ))
+        })?;
+        let target = ApprovalState::from_db_string(new_state)
+            .ok_or_else(|| RepoError::BadInput(format!("invalid approval_state: {}", new_state)))?;
+        if !current.can_transition_to(target) {
+            return Err(RepoError::BadInput(format!(
+                "invalid transition: {} -> {}",
+                version.approval_state, new_state
+            )));
+        }
+        // Idempotent: already in target state — return version unchanged
+        if current == target {
+            return Ok(version);
+        }
+        let now = chrono::Utc::now().naive_utc();
+        let (approved_by, approved_at) = if target == ApprovalState::Approved {
+            (Some(approved_by_user_id), Some(now))
+        } else {
+            (version.approved_by, version.approved_at)
+        };
+        diesel::update(dsl::requirement_versions.filter(dsl::id.eq(version_id)))
+            .set((
+                dsl::approval_state.eq(target.to_db_string()),
+                dsl::approved_by.eq(approved_by),
+                dsl::approved_at.eq(approved_at),
+            ))
+            .execute(conn.as_mut())?;
+        dsl::requirement_versions
+            .filter(dsl::id.eq(version_id))
+            .get_result(conn.as_mut())
+            .map_err(RepoError::from)
     }
 }
 
@@ -1445,7 +1507,7 @@ impl BaselineRepository for DieselRepo {
                 .get_result(conn)?;
             let baseline_id = baseline.id;
 
-            // Snapshot: all requirements in project that have a current version
+            // Snapshot: all requirements in project with their current version (point-in-time)
             let rows: Vec<(RequirementContainer, RequirementVersion)> =
                 requirements::table
                     .inner_join(requirement_versions::table.on(

@@ -295,8 +295,32 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{RepoError, RepoLockExt};
+    use super::{MatrixRepository, RepoError, RepoLockExt};
+    use crate::models::MatrixLink;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
+
+    fn test_datetime() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2023, 1, 1)
+            .unwrap()
+            .and_hms_opt(12, 0, 0)
+            .unwrap()
+    }
+
+    fn create_test_matrix() -> MatrixLink {
+        MatrixLink {
+            req_id: 1,
+            test_id: 1,
+            creation_date: test_datetime(),
+            project_id: 1,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
+        }
+    }
 
     fn block_on<F: std::future::Future>(f: F) -> F::Output {
         rocket::tokio::runtime::Builder::new_current_thread()
@@ -366,5 +390,68 @@ mod tests {
             RepoError::Pool(msg) => assert!(msg.contains("poisoned")),
             _ => panic!("expected Pool error, got {:?}", err),
         }
+    }
+
+    #[test]
+    fn matrix_repository_mark_links_suspect_for_requirement() {
+        let mut repo = DieselRepoMock::default();
+        let mut link1 = create_test_matrix();
+        link1.project_id = 7;
+        repo.matrices.push(link1);
+        let mut link2 = create_test_matrix();
+        link2.req_id = 1;
+        link2.test_id = 2;
+        link2.project_id = 7;
+        repo.matrices.push(link2);
+        let mut link3 = create_test_matrix();
+        link3.req_id = 2;
+        link3.test_id = 1;
+        link3.project_id = 8;
+        repo.matrices.push(link3);
+
+        let result = repo.mark_links_suspect_for_requirement(1, "Requirement updated");
+        assert!(result.is_ok());
+        let project_ids = result.unwrap();
+        assert_eq!(project_ids.len(), 1);
+        assert!(project_ids.contains(&7));
+
+        let matrices = repo.get_matrix_by_project(7).unwrap();
+        assert_eq!(matrices.len(), 2);
+        for m in &matrices {
+            if m.req_id == 1 {
+                assert!(m.suspect, "link for req 1 should be suspect");
+                assert_eq!(m.suspect_reason.as_deref(), Some("Requirement updated"));
+            } else {
+                assert!(!m.suspect);
+            }
+        }
+    }
+
+    #[test]
+    fn matrix_repository_clear_suspect() {
+        let mut repo = DieselRepoMock::default();
+        let mut link = create_test_matrix();
+        link.suspect = true;
+        link.suspect_at = Some(test_datetime());
+        link.suspect_reason = Some("Requirement updated".into());
+        repo.matrices.push(link);
+
+        let (ok, project_id) = repo.clear_suspect(1, 1, 42).unwrap();
+        assert!(ok);
+        assert_eq!(project_id, Some(1));
+
+        let matrices = repo.get_matrix_by_project(1).unwrap();
+        assert_eq!(matrices.len(), 1);
+        assert!(!matrices[0].suspect);
+        assert_eq!(matrices[0].cleared_by, Some(42));
+        assert!(matrices[0].cleared_at.is_some());
+    }
+
+    #[test]
+    fn matrix_repository_clear_suspect_returns_false_when_link_missing() {
+        let mut repo = DieselRepoMock::default();
+        let (ok, project_id) = repo.clear_suspect(99, 99, 1).unwrap();
+        assert!(!ok);
+        assert_eq!(project_id, None);
     }
 }

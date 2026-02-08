@@ -655,7 +655,9 @@ impl<R: Repository> MatrixRepository for CacheRepository<R> {
         test_id: i32,
         cleared_by_user_id: i32,
     ) -> Result<(bool, Option<i32>), RepoError> {
-        let (ok, project_id) = self.inner.clear_suspect(req_id, test_id, cleared_by_user_id)?;
+        let (ok, project_id) = self
+            .inner
+            .clear_suspect(req_id, test_id, cleared_by_user_id)?;
         if let Some(pid) = project_id {
             self.cache.remove(&keys::Matrix::by_project(pid));
         }

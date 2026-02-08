@@ -132,9 +132,14 @@ mod tests {
     fn create_test_matrix() -> MatrixLink {
         MatrixLink {
             req_id: 1,
-            id: 1,
+            test_id: 1,
             creation_date: test_datetime(),
             project_id: 1,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
         }
     }
 
@@ -994,6 +999,7 @@ mod tests {
             test_id: 1,
             project_id: 1,
         };
+        // MatrixLink now also has suspect fields; create_test_matrix() and DB handle defaults
 
         let result = repo.insert_new_matrix_item(&new_matrix);
         assert!(result.is_ok());
@@ -1404,7 +1410,7 @@ mod tests {
         let matrix1 = create_test_matrix();
         let mut matrix2 = create_test_matrix();
         matrix2.req_id = 2;
-        matrix2.id = 2;
+        matrix2.test_id = 2;
 
         repo.matrices.push(matrix1);
         repo.matrices.push(matrix2);
@@ -1447,7 +1453,6 @@ mod tests {
         let mut matrix1 = create_test_matrix();
         let mut matrix2 = create_test_matrix();
         matrix2.test_id = 2;
-        matrix2.id = 2;
 
         repo.requirements.insert(1, requirement);
         repo.tests.insert(1, test1);
@@ -1572,7 +1577,7 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         let matrix1 = create_test_matrix();
         let mut matrix2 = create_test_matrix();
-        matrix2.id = 2;
+        matrix2.test_id = 2;
 
         repo.matrices.push(matrix1);
         repo.matrices.push(matrix2);

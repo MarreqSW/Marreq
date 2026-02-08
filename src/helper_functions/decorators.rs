@@ -608,6 +608,11 @@ mod tests {
             test_id: 10,
             creation_date: now,
             project_id: 1,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
         });
 
         let result = get_linked_tests_for_requirement_impl(&repo, 1).unwrap();
@@ -645,6 +650,11 @@ mod tests {
             test_id: 50,
             creation_date: now,
             project_id: 1,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
         });
 
         let result = get_linked_tests_for_requirement_impl(&repo, 2).unwrap();
@@ -686,6 +696,11 @@ mod tests {
             test_id: 999,
             creation_date: now,
             project_id: 1,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
         });
 
         assert!(get_linked_tests_for_requirement_impl(&repo, 3).is_err());

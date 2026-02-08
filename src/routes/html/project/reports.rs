@@ -267,6 +267,11 @@ mod tests {
             test_id: 1,
             creation_date: timestamp(),
             project_id: PROJECT_ID,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
         });
         repo.project_members.push(ProjectMember {
             project_id: PROJECT_ID,

@@ -40,6 +40,9 @@ mod tests {
             applicability_id: 1,
             justification: Some("Test justification".to_string()),
             project_id,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         }
     }
 
@@ -88,6 +91,9 @@ mod tests {
             deadline_date: "2024-12-31 23:59:59".to_string(),
             justification: Some("Test justification".to_string()),
             project_id: 1,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
         }
     }
 

@@ -1328,3 +1328,24 @@
   -webkit-line-clamp: 3;
   overflow: hidden;
 }
+
+/* Approval badges (requirement list and detail) */
+.reqman-approval-badge {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.reqman-approval-badge--draft {
+  background-color: #6c757d;
+  color: #fff;
+}
+
+.reqman-approval-badge--reviewed {
+  background-color: #ffc107;
+  color: #000;
+}
+
+.reqman-approval-badge--approved {
+  background-color: #198754;
+  color: #fff;
+}

@@ -1,17 +1,18 @@
 use super::errors::RepoError;
 use crate::models::entities::{
-    Applicability, Category, Log, MatrixLink, Project, ProjectMember, Requirement,
-    RequirementContainer, RequirementStatus, RequirementVersion, TestCase, TestStatus, User,
-    VerificationMethod,
+    Applicability, Baseline, BaselineTraceability, Category, Log, MatrixLink, Project,
+    ProjectMember, Requirement, RequirementContainer, RequirementStatus, RequirementVersion,
+    TestCase, TestStatus, User, VerificationMethod,
 };
 use crate::models::forms::{
-    NewApplicability, NewCategory, NewLog, NewMatrixLink, NewProject, NewProjectMember,
-    NewRequirement, NewRequirementContainer, NewRequirementStatus, NewTestCase, NewTestStatus,
-    NewUser, NewVerificationMethod, UpdateProject, UpdateUser,
+    NewApplicability, NewBaselineRequirement, NewBaselineRow, NewBaselineTraceability, NewCategory,
+    NewLog, NewMatrixLink, NewProject, NewProjectMember, NewRequirement, NewRequirementContainer,
+    NewRequirementStatus, NewTestCase, NewTestStatus, NewUser, NewVerificationMethod,
+    UpdateProject, UpdateUser,
 };
 use crate::repository::{
-    LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository,
-    RequirementsRepository, TestsCaseRepository, UserRepository,
+    BaselineRepository, LookupRepository, MatrixRepository, ProjectMembersRepository,
+    ProjectsRepository, RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use crate::schema;
 use diesel::expression_methods::NullableExpressionMethods;
@@ -1339,6 +1340,138 @@ impl MatrixRepository for DieselRepo {
             .values(new)
             .execute(conn.as_mut())?;
         Ok(())
+    }
+}
+
+impl BaselineRepository for DieselRepo {
+    fn create_baseline(
+        &mut self,
+        project_id: i32,
+        created_by: i32,
+        payload: &crate::models::NewBaseline,
+    ) -> Result<Baseline, RepoError> {
+        use schema::baseline_requirements;
+        use schema::baseline_traceability;
+        use schema::baselines;
+        use schema::matrix;
+        use schema::requirement_versions;
+        use schema::requirements;
+
+        let mut conn = self.get_conn()?;
+        conn.as_mut().transaction::<_, RepoError, _>(|conn| {
+            let now = chrono::Utc::now().naive_utc();
+            let new_row = NewBaselineRow {
+                project_id,
+                name: payload.name.clone(),
+                description: payload.description.clone(),
+                created_at: now,
+                created_by,
+            };
+            let baseline: Baseline = diesel::insert_into(baselines::table)
+                .values(&new_row)
+                .get_result(conn)?;
+            let baseline_id = baseline.id;
+
+            // Snapshot: all requirements in project that have a current version
+            let rows: Vec<(RequirementContainer, RequirementVersion)> =
+                requirements::table
+                    .inner_join(requirement_versions::table.on(
+                        requirements::current_version_id.eq(requirement_versions::id.nullable()),
+                    ))
+                    .filter(requirements::project_id.eq(project_id))
+                    .select((requirements::all_columns, requirement_versions::all_columns))
+                    .load(conn)?;
+            for (container, version) in rows {
+                let br = NewBaselineRequirement {
+                    baseline_id,
+                    requirement_id: container.id,
+                    version_id: version.id,
+                };
+                diesel::insert_into(baseline_requirements::table)
+                    .values(&br)
+                    .execute(conn)?;
+            }
+
+            // Snapshot: current traceability matrix
+            let matrix_links: Vec<MatrixLink> = matrix::table
+                .filter(matrix::project_id.eq(project_id))
+                .load(conn)?;
+            for link in matrix_links {
+                let bt = NewBaselineTraceability {
+                    baseline_id,
+                    requirement_id: link.req_id,
+                    test_id: link.test_id,
+                };
+                diesel::insert_into(baseline_traceability::table)
+                    .values(&bt)
+                    .execute(conn)?;
+            }
+
+            Ok(baseline)
+        })
+    }
+
+    fn list_baselines_by_project(&self, project_id: i32) -> Result<Vec<Baseline>, RepoError> {
+        use schema::baselines::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::baselines
+            .filter(dsl::project_id.eq(project_id))
+            .order(dsl::created_at.desc())
+            .load(conn.as_mut())
+            .map_err(RepoError::from)
+    }
+
+    fn get_baseline_by_id(&self, baseline_id: i32) -> Result<Baseline, RepoError> {
+        use schema::baselines::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::baselines
+            .filter(dsl::id.eq(baseline_id))
+            .get_result(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })
+    }
+
+    fn get_requirements_for_baseline(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        use schema::baseline_requirements;
+        use schema::requirement_versions;
+        use schema::requirements;
+
+        let mut conn = self.get_conn()?;
+        let rows: Vec<(RequirementContainer, RequirementVersion)> = baseline_requirements::table
+            .inner_join(
+                requirement_versions::table
+                    .on(baseline_requirements::version_id.eq(requirement_versions::id)),
+            )
+            .inner_join(
+                requirements::table.on(baseline_requirements::requirement_id.eq(requirements::id)),
+            )
+            .filter(baseline_requirements::baseline_id.eq(baseline_id))
+            .select((requirements::all_columns, requirement_versions::all_columns))
+            .load(conn.as_mut())?;
+        Ok(rows
+            .into_iter()
+            .map(|(c, v)| requirement_from_current(&c, &v))
+            .collect())
+    }
+
+    fn get_baseline_traceability(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<BaselineTraceability>, RepoError> {
+        use schema::baseline_traceability::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::baseline_traceability
+            .filter(dsl::baseline_id.eq(baseline_id))
+            .load(conn.as_mut())
+            .map_err(RepoError::from)
     }
 }
 

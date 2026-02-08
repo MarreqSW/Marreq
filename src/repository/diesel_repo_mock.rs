@@ -6,7 +6,6 @@ use crate::repository::errors::RepoError;
 use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
 
-#[derive(Default)]
 pub struct DieselRepoMock {
     pub users: HashMap<i32, User>,
     pub statuses: HashMap<i32, RequirementStatus>,
@@ -28,6 +27,10 @@ pub struct DieselRepoMock {
     pub project_members: Vec<ProjectMember>,
     pub logs: Vec<Log>,
     pub force_err: bool,
+    pub baselines: Vec<crate::models::Baseline>,
+    pub baseline_requirements: Vec<crate::models::BaselineRequirement>,
+    pub baseline_traceability: Vec<crate::models::BaselineTraceability>,
+    pub next_baseline_id: i32,
 }
 
 fn epoch() -> NaiveDateTime {
@@ -39,6 +42,34 @@ fn epoch() -> NaiveDateTime {
 
 fn version_created_at(version_id: i32) -> NaiveDateTime {
     epoch() + chrono::Duration::seconds(version_id as i64)
+}
+
+impl Default for DieselRepoMock {
+    fn default() -> Self {
+        Self {
+            users: HashMap::new(),
+            statuses: HashMap::new(),
+            requirement_statuses: HashMap::new(),
+            test_statuses: HashMap::new(),
+            verifications: HashMap::new(),
+            categories: HashMap::new(),
+            applicability: HashMap::new(),
+            requirements: HashMap::new(),
+            requirement_verification_methods: Vec::new(),
+            requirement_versions: HashMap::new(),
+            next_version_id: 1,
+            tests: HashMap::new(),
+            projects: HashMap::new(),
+            matrices: Vec::new(),
+            project_members: Vec::new(),
+            logs: Vec::new(),
+            force_err: false,
+            baselines: Vec::new(),
+            baseline_requirements: Vec::new(),
+            baseline_traceability: Vec::new(),
+            next_baseline_id: 1,
+        }
+    }
 }
 
 impl DieselRepoMock {
@@ -65,6 +96,10 @@ impl DieselRepoMock {
             project_members: Vec::new(),
             logs: Vec::new(),
             force_err: false,
+            baselines: Vec::new(),
+            baseline_requirements: Vec::new(),
+            baseline_traceability: Vec::new(),
+            next_baseline_id: 1,
         }
     }
     pub fn with_error() -> Self {
@@ -86,6 +121,10 @@ impl DieselRepoMock {
             project_members: Vec::new(),
             logs: Vec::new(),
             force_err: true,
+            baselines: Vec::new(),
+            baseline_requirements: Vec::new(),
+            baseline_traceability: Vec::new(),
+            next_baseline_id: 1,
         }
     }
 
@@ -843,6 +882,125 @@ impl MatrixRepository for DieselRepoMock {
             project_id: new.project_id,
         });
         Ok(())
+    }
+}
+
+impl crate::repository::BaselineRepository for DieselRepoMock {
+    fn create_baseline(
+        &mut self,
+        project_id: i32,
+        created_by: i32,
+        payload: &crate::models::NewBaseline,
+    ) -> Result<crate::models::Baseline, RepoError> {
+        if self.force_err {
+            return Err(RepoError::Db(diesel::result::Error::RollbackTransaction));
+        }
+        let id = self.next_baseline_id;
+        self.next_baseline_id += 1;
+        let baseline = crate::models::Baseline {
+            id,
+            project_id,
+            name: payload.name.clone(),
+            description: payload.description.clone(),
+            created_at: epoch(),
+            created_by,
+        };
+        self.baselines.push(baseline.clone());
+        for req in self
+            .requirements
+            .values()
+            .filter(|r| r.project_id == project_id)
+        {
+            if let Some(version_id) = req.current_version_id {
+                self.baseline_requirements
+                    .push(crate::models::BaselineRequirement {
+                        baseline_id: id,
+                        requirement_id: req.id,
+                        version_id,
+                    });
+            }
+        }
+        for link in self.matrices.iter().filter(|m| m.project_id == project_id) {
+            self.baseline_traceability
+                .push(crate::models::BaselineTraceability {
+                    baseline_id: id,
+                    requirement_id: link.req_id,
+                    test_id: link.test_id,
+                });
+        }
+        Ok(baseline)
+    }
+
+    fn list_baselines_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<crate::models::Baseline>, RepoError> {
+        Ok(self
+            .baselines
+            .iter()
+            .filter(|b| b.project_id == project_id)
+            .cloned()
+            .collect())
+    }
+
+    fn get_baseline_by_id(&self, baseline_id: i32) -> Result<crate::models::Baseline, RepoError> {
+        self.baselines
+            .iter()
+            .find(|b| b.id == baseline_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn get_requirements_for_baseline(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        let mut out = Vec::new();
+        for br in self
+            .baseline_requirements
+            .iter()
+            .filter(|br| br.baseline_id == baseline_id)
+        {
+            let req = self
+                .requirements
+                .get(&br.requirement_id)
+                .ok_or(RepoError::NotFound)?;
+            let version = self
+                .requirement_versions
+                .get(&br.version_id)
+                .ok_or(RepoError::NotFound)?;
+            out.push(Requirement {
+                id: req.id,
+                current_version_id: Some(version.id),
+                title: version.title.clone(),
+                description: version.description.clone(),
+                status_id: version.status_id,
+                author_id: version.author_id,
+                reviewer_id: version.reviewer_id,
+                reference_code: req.reference_code.clone(),
+                category_id: version.category_id,
+                parent_id: version.parent_id,
+                creation_date: version.created_at,
+                update_date: version.created_at,
+                deadline_date: version.deadline_date,
+                applicability_id: version.applicability_id,
+                justification: version.justification.clone(),
+                project_id: req.project_id,
+            });
+        }
+        Ok(out)
+    }
+
+    fn get_baseline_traceability(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<crate::models::BaselineTraceability>, RepoError> {
+        Ok(self
+            .baseline_traceability
+            .iter()
+            .filter(|bt| bt.baseline_id == baseline_id)
+            .cloned()
+            .collect())
     }
 }
 

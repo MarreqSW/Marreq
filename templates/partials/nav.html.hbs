@@ -42,11 +42,14 @@
         {{#if project.id}}
         <li class="c-navbar__item"><a href="/p/{{project.id}}/reports" class="nav-link c-navbar__link">Reports</a></li>
         <li class="c-navbar__item"><a href="/p/{{project.id}}/members" class="nav-link c-navbar__link">Members</a></li>
+        <li class="c-navbar__item"><a href="/p/{{project.id}}/baselines" class="nav-link c-navbar__link">Baselines</a></li>
         {{else if selected_project_id}}
         <li class="c-navbar__item"><a href="/p/{{selected_project_id}}/reports"
             class="nav-link c-navbar__link">Reports</a></li>
         <li class="c-navbar__item"><a href="/p/{{selected_project_id}}/members"
             class="nav-link c-navbar__link">Members</a></li>
+        <li class="c-navbar__item"><a href="/p/{{selected_project_id}}/baselines"
+            class="nav-link c-navbar__link">Baselines</a></li>
         {{/if}}
         {{#if user.is_admin}}
         <li class="nav-item dropdown c-navbar__item">

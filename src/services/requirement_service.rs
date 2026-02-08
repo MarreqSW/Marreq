@@ -196,7 +196,8 @@ impl<'a> RequirementService<'a> {
                 return Err(RepoError::NotFound);
             }
             repo.set_requirement_verification_methods(id, verification_method_ids)?;
-            let _project_ids = repo.mark_links_suspect_for_requirement(id, "Requirement updated")?;
+            let _project_ids =
+                repo.mark_links_suspect_for_requirement(id, "Requirement updated")?;
         }
 
         let after = self.get_by_id(id)?;
@@ -441,6 +442,46 @@ mod tests {
         assert_eq!(updated.title, "Updated");
         assert_eq!(updated.description, "New Description");
         assert_eq!(updated.reference_code, "REQ-999");
+    }
+
+    #[test]
+    fn update_marks_traceability_links_suspect() {
+        use crate::repository::MatrixRepository;
+
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, requirement(1, 7, "REQ-001"));
+        repo.matrices.push(crate::models::MatrixLink {
+            req_id: 1,
+            test_id: 10,
+            creation_date: timestamp(),
+            project_id: 7,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
+        });
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let mut payload = new_payload();
+        payload.id = Some(1);
+        payload.title = "Updated".into();
+        payload.description = "New".into();
+        payload.reference_code = "REQ-001".into();
+
+        let _ = service.update(&actor(), 1, payload, &[1]).unwrap();
+
+        let links = state.repo_read().get_matrix_by_project(7).unwrap();
+        assert_eq!(links.len(), 1);
+        assert!(
+            links[0].suspect,
+            "traceability link should be marked suspect after requirement update"
+        );
+        assert_eq!(
+            links[0].suspect_reason.as_deref(),
+            Some("Requirement updated")
+        );
     }
 
     #[test]

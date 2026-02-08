@@ -806,6 +806,11 @@ impl TestsCaseRepository for DieselRepoMock {
                 test_id: _test_id,
                 creation_date: epoch(),
                 project_id,
+                suspect: false,
+                suspect_at: None,
+                suspect_reason: None,
+                cleared_by: None,
+                cleared_at: None,
             });
         }
         Ok(())
@@ -880,8 +885,55 @@ impl MatrixRepository for DieselRepoMock {
             test_id: new.test_id,
             creation_date: epoch(),
             project_id: new.project_id,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
         });
         Ok(())
+    }
+
+    fn mark_links_suspect_for_requirement(
+        &mut self,
+        requirement_id: i32,
+        reason: &str,
+    ) -> Result<Vec<i32>, RepoError> {
+        let now = epoch();
+        let mut project_ids = Vec::new();
+        for link in self.matrices.iter_mut() {
+            if link.req_id == requirement_id {
+                link.suspect = true;
+                link.suspect_at = Some(now);
+                link.suspect_reason = Some(reason.to_string());
+                link.cleared_by = None;
+                link.cleared_at = None;
+                if !project_ids.contains(&link.project_id) {
+                    project_ids.push(link.project_id);
+                }
+            }
+        }
+        Ok(project_ids)
+    }
+
+    fn clear_suspect(
+        &mut self,
+        req_id: i32,
+        test_id: i32,
+        cleared_by_user_id: i32,
+    ) -> Result<(bool, Option<i32>), RepoError> {
+        let now = epoch();
+        for link in self.matrices.iter_mut() {
+            if link.req_id == req_id && link.test_id == test_id {
+                link.suspect = false;
+                link.suspect_at = None;
+                link.suspect_reason = None;
+                link.cleared_by = Some(cleared_by_user_id);
+                link.cleared_at = Some(now);
+                return Ok((true, Some(link.project_id)));
+            }
+        }
+        Ok((false, None))
     }
 }
 

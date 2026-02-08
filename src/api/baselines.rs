@@ -95,3 +95,235 @@ pub async fn get_traceability(
     let traceability = service.get_traceability(baseline_id)?;
     Ok(Json(traceability))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::models::{Baseline, BaselineTraceability, Project, Requirement};
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::status_enums::ProjectStatus;
+    use rocket::http::{ContentType, Cookie, Status};
+    use rocket::local::asynchronous::Client;
+    use serde_json::json;
+    use std::sync::{Arc, RwLock};
+
+    type TestState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
+    const PROJECT_ID: i32 = 1;
+
+    fn state_from_repo(repo: DieselRepoMock) -> TestState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn client_with_repo(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(state_from_repo(repo.with_admin_user()))
+            .mount(
+                "/api",
+                routes![list, get, create, get_requirements, get_traceability],
+            );
+        Client::tracked(rocket).await.unwrap()
+    }
+
+    fn auth_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    fn repo_with_project() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default().with_admin_user();
+        repo.projects.insert(
+            PROJECT_ID,
+            Project {
+                id: PROJECT_ID,
+                name: "Test Project".into(),
+                description: Some("Description".into()),
+                creation_date: None,
+                update_date: None,
+                status: ProjectStatus::Active,
+                owner_id: Some(ADMIN_ID),
+            },
+        );
+        repo
+    }
+
+    #[rocket::async_test]
+    async fn list_returns_empty_array() {
+        let client = client_with_repo(repo_with_project()).await;
+        let response = client
+            .get(format!("/api/projects/{PROJECT_ID}/baselines"))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Ok);
+        let baselines: Vec<Baseline> = response.into_json().await.unwrap();
+        assert!(baselines.is_empty());
+    }
+
+    #[rocket::async_test]
+    async fn create_returns_baseline() {
+        let client = client_with_repo(repo_with_project()).await;
+        let response = client
+            .post(format!("/api/projects/{PROJECT_ID}/baselines"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(
+                json!({
+                    "name": "Release 1.0",
+                    "description": "Initial release baseline"
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let baseline: Baseline = response.into_json().await.unwrap();
+        assert_eq!(baseline.name, "Release 1.0");
+        assert_eq!(baseline.description.as_deref(), Some("Initial release baseline"));
+        assert_eq!(baseline.project_id, PROJECT_ID);
+        assert_eq!(baseline.created_by, ADMIN_ID);
+        assert!(baseline.id >= 1);
+    }
+
+    #[rocket::async_test]
+    async fn get_returns_baseline_when_project_matches() {
+        let client = client_with_repo(repo_with_project()).await;
+        let create_resp = client
+            .post(format!("/api/projects/{PROJECT_ID}/baselines"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(json!({ "name": "Baseline A", "description": null }).to_string())
+            .dispatch()
+            .await;
+        assert_eq!(create_resp.status(), Status::Ok);
+        let created: Baseline = create_resp.into_json().await.unwrap();
+        let baseline_id = created.id;
+
+        let get_resp = client
+            .get(format!(
+                "/api/projects/{PROJECT_ID}/baselines/{baseline_id}"
+            ))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(get_resp.status(), Status::Ok);
+        let baseline: Baseline = get_resp.into_json().await.unwrap();
+        assert_eq!(baseline.id, baseline_id);
+        assert_eq!(baseline.name, "Baseline A");
+    }
+
+    #[rocket::async_test]
+    async fn get_returns_not_found_when_baseline_in_different_project() {
+        let client = client_with_repo(repo_with_project()).await;
+        let create_resp = client
+            .post(format!("/api/projects/{PROJECT_ID}/baselines"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(json!({ "name": "Baseline A", "description": null }).to_string())
+            .dispatch()
+            .await;
+        assert_eq!(create_resp.status(), Status::Ok);
+        let created: Baseline = create_resp.into_json().await.unwrap();
+        let baseline_id = created.id;
+        let other_project_id = 999;
+
+        let get_resp = client
+            .get(format!(
+                "/api/projects/{other_project_id}/baselines/{baseline_id}"
+            ))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(get_resp.status(), Status::NotFound);
+    }
+
+    #[rocket::async_test]
+    async fn get_requirements_returns_json_array() {
+        let client = client_with_repo(repo_with_project()).await;
+        let create_resp = client
+            .post(format!("/api/projects/{PROJECT_ID}/baselines"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(json!({ "name": "Empty baseline", "description": null }).to_string())
+            .dispatch()
+            .await;
+        assert_eq!(create_resp.status(), Status::Ok);
+        let created: Baseline = create_resp.into_json().await.unwrap();
+
+        let req_resp = client
+            .get(format!(
+                "/api/projects/{PROJECT_ID}/baselines/{}/requirements",
+                created.id
+            ))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(req_resp.status(), Status::Ok);
+        let requirements: Vec<Requirement> = req_resp.into_json().await.unwrap();
+        assert!(requirements.is_empty());
+    }
+
+    #[rocket::async_test]
+    async fn get_traceability_returns_json_array() {
+        let client = client_with_repo(repo_with_project()).await;
+        let create_resp = client
+            .post(format!("/api/projects/{PROJECT_ID}/baselines"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(json!({ "name": "Baseline", "description": null }).to_string())
+            .dispatch()
+            .await;
+        assert_eq!(create_resp.status(), Status::Ok);
+        let created: Baseline = create_resp.into_json().await.unwrap();
+
+        let trace_resp = client
+            .get(format!(
+                "/api/projects/{PROJECT_ID}/baselines/{}/traceability",
+                created.id
+            ))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(trace_resp.status(), Status::Ok);
+        let traceability: Vec<BaselineTraceability> = trace_resp.into_json().await.unwrap();
+        assert!(traceability.is_empty());
+    }
+
+    #[rocket::async_test]
+    async fn list_returns_created_baselines() {
+        let client = client_with_repo(repo_with_project()).await;
+        client
+            .post(format!("/api/projects/{PROJECT_ID}/baselines"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(json!({ "name": "First", "description": null }).to_string())
+            .dispatch()
+            .await;
+        client
+            .post(format!("/api/projects/{PROJECT_ID}/baselines"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(json!({ "name": "Second", "description": null }).to_string())
+            .dispatch()
+            .await;
+
+        let list_resp = client
+            .get(format!("/api/projects/{PROJECT_ID}/baselines"))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(list_resp.status(), Status::Ok);
+        let baselines: Vec<Baseline> = list_resp.into_json().await.unwrap();
+        assert_eq!(baselines.len(), 2);
+        let names: Vec<&str> = baselines.iter().map(|b| b.name.as_str()).collect();
+        assert!(names.contains(&"First"));
+        assert!(names.contains(&"Second"));
+    }
+}

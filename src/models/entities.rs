@@ -81,6 +81,36 @@ pub struct MatrixLink {
     pub project_id: i32,
 }
 
+/// Immutable project baseline (snapshot of requirement versions and traceability at creation time).
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[diesel(table_name = crate::schema::baselines)]
+pub struct Baseline {
+    pub id: i32,
+    pub project_id: i32,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+    pub created_by: i32,
+}
+
+/// Snapshot row: which requirement_version was in the baseline for each requirement.
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[diesel(table_name = crate::schema::baseline_requirements)]
+pub struct BaselineRequirement {
+    pub baseline_id: i32,
+    pub requirement_id: i32,
+    pub version_id: i32,
+}
+
+/// Snapshot row: requirement–test traceability at baseline time.
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[diesel(table_name = crate::schema::baseline_traceability)]
+pub struct BaselineTraceability {
+    pub baseline_id: i32,
+    pub requirement_id: i32,
+    pub test_id: i32,
+}
+
 /// A system user that can access projects and manage requirements.
 ///
 /// # Security Note

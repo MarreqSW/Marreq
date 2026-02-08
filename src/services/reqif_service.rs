@@ -5,7 +5,7 @@ use crate::models::{NewRequirement, User};
 use crate::repository::errors::RepoError;
 use crate::reqif::import::{object_to_fields, parse_reqif, ImportConfig, ImportResult};
 use crate::reqif::to_reqif;
-use crate::services::{ProjectService, RequirementService, StatusService};
+use crate::services::{BaselineService, ProjectService, RequirementService, StatusService};
 use std::collections::HashMap;
 
 pub struct ReqIFService<'a> {
@@ -23,13 +23,29 @@ impl<'a> ReqIFService<'a> {
         let project_service = ProjectService::new(self.state);
         let project = project_service.get_by_id(project_id)?;
         let requirements = req_service.list_by_project(project_id)?;
-        let mut parent_map = HashMap::new();
-        for r in &requirements {
-            if let Some(p) = r.parent_id {
-                parent_map.insert(r.id, p);
-            }
-        }
+        let parent_map = requirements
+            .iter()
+            .filter_map(|r| r.parent_id.map(|p| (r.id, p)))
+            .collect();
         Ok(to_reqif(&project.name, &requirements, &parent_map))
+    }
+
+    /// Export a baseline's requirements as ReqIF 1.2 XML (immutable snapshot).
+    pub fn export_baseline(&self, project_id: i32, baseline_id: i32) -> Result<String, RepoError> {
+        let project_service = ProjectService::new(self.state);
+        let baseline_service = BaselineService::new(self.state);
+        let project = project_service.get_by_id(project_id)?;
+        let baseline = baseline_service.get_by_id(baseline_id)?;
+        if baseline.project_id != project_id {
+            return Err(RepoError::NotFound);
+        }
+        let requirements = baseline_service.get_requirements(baseline_id)?;
+        let parent_map: HashMap<i32, i32> = requirements
+            .iter()
+            .filter_map(|r| r.parent_id.map(|p| (r.id, p)))
+            .collect();
+        let title = format!("{} (baseline: {})", project.name, baseline.name);
+        Ok(to_reqif(&title, &requirements, &parent_map))
     }
 
     /// Import ReqIF XML into a project. Creates requirements in topological order (parents before children).

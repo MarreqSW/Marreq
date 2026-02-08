@@ -86,9 +86,18 @@
                   data-req-id="{{../id}}"
                   data-test-id="{{#with (lookup @root.tests @index)}}{{id}}{{/with}}"
                   data-linked="{{this.linked}}"
+                  data-suspect="{{this.suspect}}"
                   data-test-status="{{this.status_id}}">
                 {{#if this.linked}}
-                  <div class="c-matrix-link-indicator" data-tooltip="Linked – {{#if (eq this.status_id 1)}}Passed{{else if (eq this.status_id 2)}}Failed{{else if (eq this.status_id 3)}}Pending{{else if (eq this.status_id 4)}}In Progress{{else}}Unknown{{/if}}">
+                  <div class="c-matrix-link-indicator {{#if this.suspect}}c-matrix-link-indicator--suspect{{/if}}" data-tooltip="{{#if this.suspect}}Suspect – re-review needed{{/if}}{{#unless this.suspect}}Linked – {{#if (eq this.status_id 1)}}Passed{{else if (eq this.status_id 2)}}Failed{{else if (eq this.status_id 3)}}Pending{{else if (eq this.status_id 4)}}In Progress{{else}}Unknown{{/if}}{{/unless}}">
+                    {{#if this.suspect}}
+                      <span class="c-matrix-status-dot status-suspect" aria-label="Suspect – re-review needed" title="Suspect">⚠</span>
+                      <form method="post" action="/p/{{@root.selected_project_id}}/matrix/clear_suspect" class="d-inline ms-1" style="display:inline;">
+                        <input type="hidden" name="req_id" value="{{../id}}" />
+                        <input type="hidden" name="test_id" value="{{#with (lookup @root.tests @index)}}{{id}}{{/with}}" />
+                        <button type="submit" class="btn btn-sm btn-outline-secondary" title="Clear suspect flag">Clear</button>
+                      </form>
+                    {{else}}
                     {{#if (eq this.status_id 1)}}
                       <span class="c-matrix-status-dot status-passed" aria-label="Test passed" title="Passed">●</span>
                     {{else if (eq this.status_id 2)}}
@@ -99,6 +108,7 @@
                       <span class="c-matrix-status-dot status-in-progress" aria-label="Test in progress" title="In Progress">◐</span>
                     {{else}}
                       <span class="c-matrix-status-dot status-pending" aria-label="Test status" title="Unknown">○</span>
+                    {{/if}}
                     {{/if}}
                   </div>
                 {{else}}

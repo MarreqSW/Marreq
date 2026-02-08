@@ -9,6 +9,7 @@ pub mod requirements;
 pub mod semantic_search;
 pub mod status;
 pub mod test_cases;
+pub mod traceability;
 pub mod users;
 
 use rocket::Route;
@@ -50,6 +51,7 @@ pub fn routes() -> Vec<Route> {
         users::create,
         users::delete,
         matrix::list,
+        traceability::clear_suspect,
         cache::stats,
         cache::clear,
         cache::cleanup,

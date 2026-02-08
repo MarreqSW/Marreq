@@ -156,6 +156,12 @@ docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
          EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_requirement_versions_search_vector') AS index_exists;
 " 2>/dev/null || true
 echo ""
+echo "📋 Matrix suspect links (change impact):"
+docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'matrix' AND column_name = 'suspect') AS suspect_column_exists,
+         EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_matrix_suspect') AS suspect_index_exists;
+" 2>/dev/null || true
+echo ""
 
 echo "👥 Users created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c \

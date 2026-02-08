@@ -170,13 +170,25 @@ CREATE TABLE tests (
 );
 
 -- Matrix table (traceability between requirements and tests)
+-- Suspect columns: when a requirement changes, links are marked suspect until reviewed.
 CREATE TABLE matrix (
     req_id INTEGER NOT NULL,
     test_id INTEGER NOT NULL,
     creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     project_id INTEGER NOT NULL,
+    suspect BOOLEAN NOT NULL DEFAULT false,
+    suspect_at TIMESTAMP,
+    suspect_reason TEXT,
+    cleared_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    cleared_at TIMESTAMP,
     PRIMARY KEY (req_id, test_id)
 );
+
+COMMENT ON COLUMN matrix.suspect IS 'True when the link needs re-review (e.g. requirement updated)';
+COMMENT ON COLUMN matrix.suspect_at IS 'When the link was marked suspect';
+COMMENT ON COLUMN matrix.suspect_reason IS 'Reason (e.g. Requirement updated)';
+COMMENT ON COLUMN matrix.cleared_by IS 'User who cleared the suspect flag';
+COMMENT ON COLUMN matrix.cleared_at IS 'When the suspect flag was cleared';
 
 -- Logs table (audit trail)
 CREATE TABLE logs (
@@ -302,6 +314,7 @@ CREATE INDEX idx_tests_parent ON tests(parent_id);
 CREATE INDEX idx_matrix_project_id ON matrix(project_id);
 CREATE INDEX idx_matrix_req_id ON matrix(req_id);
 CREATE INDEX idx_matrix_test_id ON matrix(test_id);
+CREATE INDEX idx_matrix_suspect ON matrix(suspect) WHERE suspect = true;
 
 -- Users indexes
 CREATE INDEX idx_users_username ON users(username);

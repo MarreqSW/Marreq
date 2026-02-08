@@ -75,6 +75,11 @@ diesel::table! {
         test_id -> Int4,
         creation_date -> Timestamp,
         project_id -> Int4,
+        suspect -> Bool,
+        suspect_at -> Nullable<Timestamp>,
+        suspect_reason -> Nullable<Text>,
+        cleared_by -> Nullable<Int4>,
+        cleared_at -> Nullable<Timestamp>,
     }
 }
 
@@ -246,6 +251,7 @@ diesel::joinable!(logs -> users (user_id));
 diesel::joinable!(matrix -> projects (project_id));
 diesel::joinable!(matrix -> requirements (req_id));
 diesel::joinable!(matrix -> tests (test_id));
+diesel::joinable!(matrix -> users (cleared_by));
 diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (user_id));
 diesel::joinable!(requirement_status -> projects (project_id));

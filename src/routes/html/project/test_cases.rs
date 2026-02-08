@@ -791,6 +791,11 @@ mod tests {
             test_id: 1,
             creation_date: timestamp(),
             project_id: PRIMARY_PROJECT,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
         });
         repo
     }

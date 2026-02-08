@@ -128,6 +128,21 @@ pub async fn show_baseline(
 
     let requirements = service.get_requirements(baseline_id).unwrap_or_default();
     let traceability = service.get_traceability(baseline_id).unwrap_or_default();
+    let version_by_req: std::collections::HashMap<i32, i32> = requirements
+        .iter()
+        .filter_map(|r| r.current_version_id.map(|vid| (r.id, vid)))
+        .collect();
+    let traceability_display: Vec<serde_json::Value> = traceability
+        .iter()
+        .map(|t| {
+            serde_json::json!({
+                "requirement_id": t.requirement_id,
+                "test_id": t.test_id,
+                "version_id": version_by_req.get(&t.requirement_id).copied(),
+            })
+        })
+        .collect();
+
     let repo = state.repo_read();
     let created_by_name = repo
         .get_user_by_id(baseline.created_by)
@@ -140,7 +155,7 @@ pub async fn show_baseline(
         "selected_project_id": project_id,
         "baseline": baseline,
         "requirements": requirements,
-        "traceability": traceability,
+        "traceability": traceability_display,
         "created_by_name": created_by_name,
         "page_title": format!("Baseline: {}", baseline.name)
     });

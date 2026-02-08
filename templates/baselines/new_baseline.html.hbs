@@ -27,6 +27,9 @@
       <div class="alert alert-info c-alert mb-3">
         This will snapshot all current requirement versions and the traceability matrix. The baseline cannot be changed later.
       </div>
+      <p class="text-muted small mb-3">
+        All requirements in the project are included (current version at creation time). Approval state does not filter baseline contents.
+      </p>
       <form method="post" action="/p/{{selected_project_id}}/baselines/new">
         <div class="form-group c-form-group">
           <label for="name" class="form-label c-form-label">Name</label>

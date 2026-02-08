@@ -46,6 +46,12 @@ A comprehensive web-based requirements and test management system built with Rus
 - **CRUD Operations**: Full Create, Read, Update, Delete support
 - **Project-Scoped**: All API operations respect project boundaries
 
+### ✅ Requirement approval workflow (UI)
+- **Detail page**: Approval badge (draft / reviewed / approved), metadata (approved by, date), and contextual actions: *Mark as Reviewed* and *Approve Requirement* (for project owners/managers). Confirmation modals before each transition.
+- **Edit when approved**: Clicking *Edit* on an approved requirement shows a warning that editing creates a new Draft version; user can cancel or proceed.
+- **Version history**: Each version shows its approval state; list and detail show approval consistently.
+- **List view**: Approval column and filters (*Approved only* / *Not approved*). Approval state is read-only once set; transitions are explicit and audit-friendly.
+
 ## ToDo List
 + [X] Hierarchy for
   + [X] Requirements

@@ -2,6 +2,7 @@ use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
 use crate::models::{NewRequirement, Requirement, RequirementVersion};
+use crate::repository::{ProjectMembersRepository, RequirementsRepository};
 use crate::services::RequirementService;
 
 #[derive(Debug, Deserialize)]
@@ -78,6 +79,60 @@ pub async fn get_version(
         ));
     }
     Ok(Json(version))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct SetApprovalRequest {
+    /// Target state: "reviewed" or "approved"
+    pub state: String,
+}
+
+/// Transition a requirement version's approval state (draft→reviewed, reviewed→approved).
+/// Restricted to project owners (role 1), managers (role 2), or admins.
+#[put(
+    "/requirements/<req_id>/versions/<version_id>/approval",
+    data = "<payload>"
+)]
+pub async fn set_version_approval(
+    user: ApiUser,
+    req_id: i32,
+    version_id: i32,
+    state: &State<AppState>,
+    payload: Json<SetApprovalRequest>,
+) -> ApiResult<Json<RequirementVersion>> {
+    let service = RequirementService::new(state.inner());
+    let version = service.get_version_by_id(version_id)?;
+    if version.requirement_id != req_id {
+        return Err(ApiError::NotFound(
+            "version does not belong to requirement".into(),
+        ));
+    }
+    let requirement = service.get_by_id(req_id)?;
+    let members = state
+        .repo_read()
+        .get_members_by_project(requirement.project_id)
+        .map_err(ApiError::from)?;
+    let u = user.user();
+    let can_approve = u.is_admin
+        || members
+            .iter()
+            .any(|m| m.user_id == u.id && (m.role == 1 || m.role == 2));
+    if !can_approve {
+        return Err(ApiError::Forbidden(
+            "only project owners or managers can approve requirement versions".into(),
+        ));
+    }
+    let new_state = payload.state.trim();
+    if new_state != "reviewed" && new_state != "approved" {
+        return Err(ApiError::BadRequest(
+            "state must be 'reviewed' or 'approved'".into(),
+        ));
+    }
+    let updated = state
+        .repo_write()
+        .set_requirement_version_approval(version_id, new_state, u.id)?;
+    Ok(Json(updated))
 }
 
 #[post("/requirements", data = "<payload>")]

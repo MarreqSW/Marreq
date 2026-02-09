@@ -25,6 +25,7 @@ pub fn routes() -> Vec<Route> {
         requirements::get,
         requirements::list_versions,
         requirements::get_version,
+        requirements::get_impacted_tests,
         requirements::set_version_approval,
         requirements::create,
         requirements::delete,

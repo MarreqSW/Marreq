@@ -5,6 +5,7 @@ pub mod categories;
 pub mod error;
 pub mod matrix;
 pub mod prelude;
+pub mod requirement_diff;
 pub mod requirements;
 pub mod semantic_search;
 pub mod status;
@@ -30,6 +31,8 @@ pub fn routes() -> Vec<Route> {
         requirements::create,
         requirements::delete,
         requirements::patch_requirement,
+        requirement_diff::diff_versions,
+        requirement_diff::diff_baseline_vs_current,
         test_cases::list,
         test_cases::get,
         test_cases::create,

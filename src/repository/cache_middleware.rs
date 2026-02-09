@@ -154,6 +154,14 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
             .get_verification_method_ids_for_requirement(requirement_id)
     }
 
+    fn get_verification_method_ids_for_version(
+        &self,
+        version_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        self.inner
+            .get_verification_method_ids_for_version(version_id)
+    }
+
     fn get_requirement_ids_by_verification_method(
         &self,
         verification_method_id: i32,
@@ -724,6 +732,15 @@ impl<R: Repository> BaselineRepository for CacheRepository<R> {
         self.inner.get_requirements_for_baseline(baseline_id)
     }
 
+    fn get_baseline_requirement_version_id(
+        &self,
+        baseline_id: i32,
+        requirement_id: i32,
+    ) -> Result<Option<i32>, RepoError> {
+        self.inner
+            .get_baseline_requirement_version_id(baseline_id, requirement_id)
+    }
+
     fn get_baseline_traceability(
         &self,
         baseline_id: i32,
@@ -807,6 +824,7 @@ mod tests {
         let requirement = Requirement {
             id: 1,
             current_version_id: None,
+            same_as_current: None,
             title: "Req".into(),
             description: "".into(),
             status_id: 1,

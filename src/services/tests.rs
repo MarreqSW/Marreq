@@ -17,6 +17,7 @@ fn sample_requirement() -> Requirement {
     Requirement {
         id: 1,
         current_version_id: None,
+        same_as_current: None,
         title: "Sample".into(),
         description: "Description".into(),
         status_id: 1,

@@ -255,6 +255,7 @@ mod tests {
         Requirement {
             id,
             current_version_id: None,
+            same_as_current: None,
             title: format!("Req {id}"),
             description: "desc".into(),
             status_id,

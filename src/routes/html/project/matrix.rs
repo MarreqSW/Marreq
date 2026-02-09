@@ -424,6 +424,7 @@ mod tests {
         Requirement {
             id,
             current_version_id: None,
+            same_as_current: None,
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
             status_id: 1,
@@ -524,6 +525,7 @@ mod tests {
                 Requirement {
                     id: i,
                     current_version_id: None,
+                    same_as_current: None,
                     title: format!("Req {}", i),
                     description: String::new(),
                     status_id: 1,
@@ -579,6 +581,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Authentication Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -604,6 +607,7 @@ mod tests {
             Requirement {
                 id: 2,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Database Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -653,6 +657,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Test Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -707,6 +712,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Test, with \"quotes\"".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -760,6 +766,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Unlinked Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,

@@ -138,9 +138,7 @@ pub async fn show_baseline(
         .collect();
 
     let repo = state.repo_read();
-    let tests = repo
-        .get_tests_by_project(project_id)
-        .unwrap_or_default();
+    let tests = repo.get_tests_by_project(project_id).unwrap_or_default();
     let test_reference: std::collections::HashMap<i32, String> = tests
         .iter()
         .map(|t| (t.id, t.reference_code.clone()))

@@ -153,14 +153,19 @@ For detailed database setup options (automated, manual, reset, verification) see
 
 ### Base URL
 ```
-http://localhost:8000/api/v1
+http://localhost:8000/api
 ```
+
+All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or changing API endpoints, update this section so the list stays in sync.
 
 ### Endpoints
 
 #### Requirements
 - `GET /requirements` - List all requirements
 - `GET /requirements/{id}` - Get specific requirement
+- `GET /requirements/{id}/versions` - List versions for a requirement (newest first)
+- `GET /requirements/{req_id}/versions/{version_id}` - Get a specific requirement version
+- `PUT /requirements/{req_id}/versions/{version_id}/approval` - Set approval state (body: `state`: "reviewed" | "approved"; project owners/managers only)
 - `POST /requirements` - Create new requirement
 - `PATCH /requirements/{id}` - Partially update supported requirement fields
 - `DELETE /requirements/{id}` - Delete requirement
@@ -169,6 +174,7 @@ http://localhost:8000/api/v1
 - `GET /tests` - List all tests
 - `GET /tests/{id}` - Get specific test
 - `POST /tests` - Create new test
+- `POST /tests/{id}/field` - Partially update a test field (body: `field`, `value`; supported fields: name, description, source, status_id, reference_code, parent_id)
 - `DELETE /tests/{id}` - Delete test
 
 #### Categories
@@ -198,19 +204,41 @@ http://localhost:8000/api/v1
 #### Users
 - `GET /users` - List all users
 - `GET /users/{id}` - Get specific user
+- `POST /users` - Create new user
+- `DELETE /users/{id}` - Delete user
 
 #### Status
 - `GET /status` - List all status options
+- `GET /status/{id}` - Get specific status
 - `POST /status` - Create new status
+
+#### Traceability
+- `POST /traceability/clear_suspect` - Clear suspect flag for a traceability link (body: `req_id`, `test_id`; records current user and timestamp)
+
+#### Semantic search (project-scoped; requires embeddings/RAG when enabled)
+- `GET /projects/{project_id}/requirements/semantic_search` - Search requirements by semantic similarity (query params: `q`, optional `k`, filters)
+- `POST /projects/{project_id}/requirements/ask` - RAG answer over project requirements (body: `query`, optional `k`, filters)
+- `POST /projects/{project_id}/requirements/reindex` - Reindex all requirements for the project (admin only)
+- `GET /projects/{project_id}/requirements/index_status` - Get indexing status for the project
+- `GET /projects/{project_id}/requirements/semantic_search/status` - Check if semantic search is enabled
+
+#### Cache (internal/operational)
+- `GET /cache/stats` - Cache statistics
+- `POST /cache/clear` - Clear cache
+- `POST /cache/cleanup` - Remove expired entries
+- `GET /cache/performance` - Cache performance metrics
+- `GET /cache/recommendations` - Cache tuning recommendations
+- `POST /cache/reset-counters` - Reset performance counters
+- `GET /cache/health` - Cache health check
 
 ### Example API Usage
 
 ```bash
 # Get all requirements
-curl http://localhost:8000/api/v1/requirements
+curl http://localhost:8000/api/requirements
 
 # Create a new category
-curl -X POST http://localhost:8000/api/v1/categories \
+curl -X POST http://localhost:8000/api/categories \
   -H "Content-Type: application/json" \
   -d '{"title": "API", "description": "API requirements", "tag": "API"}'
 

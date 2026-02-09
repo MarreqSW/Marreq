@@ -525,7 +525,7 @@ mod tests {
                 Requirement {
                     id: i,
                     current_version_id: None,
-                same_as_current: None,
+                    same_as_current: None,
                     title: format!("Req {}", i),
                     description: String::new(),
                     status_id: 1,

@@ -36,12 +36,7 @@ impl<'a> RequirementDiffService<'a> {
         }
         let verification_v1 = repo.get_verification_method_ids_for_version(v1_id)?;
         let verification_v2 = repo.get_verification_method_ids_for_version(v2_id)?;
-        let mut diff = compute_requirement_diff(
-            &v1,
-            &v2,
-            &verification_v1,
-            &verification_v2,
-        );
+        let mut diff = compute_requirement_diff(&v1, &v2, &verification_v1, &verification_v2);
         drop(repo);
         self.enrich_diff_with_labels(&mut diff);
         Ok(diff)
@@ -69,12 +64,7 @@ impl<'a> RequirementDiffService<'a> {
         let v2 = repo.get_requirement_version_by_id(current_version_id)?;
         let verification_v1 = repo.get_verification_method_ids_for_version(baseline_version_id)?;
         let verification_v2 = repo.get_verification_method_ids_for_version(current_version_id)?;
-        let mut diff = compute_requirement_diff(
-            &v1,
-            &v2,
-            &verification_v1,
-            &verification_v2,
-        );
+        let mut diff = compute_requirement_diff(&v1, &v2, &verification_v1, &verification_v2);
         drop(repo);
         self.enrich_diff_with_labels(&mut diff);
         Ok(diff)
@@ -111,16 +101,22 @@ impl<'a> RequirementDiffService<'a> {
         }
 
         if let Some(id) = diff.metadata.applicability.unchanged {
-            diff.metadata.applicability.unchanged_label =
-                repo.get_applicability_by_id(id).ok().map(|a| a.title.clone());
+            diff.metadata.applicability.unchanged_label = repo
+                .get_applicability_by_id(id)
+                .ok()
+                .map(|a| a.title.clone());
         }
         if let Some(id) = diff.metadata.applicability.old_id {
-            diff.metadata.applicability.old_label =
-                repo.get_applicability_by_id(id).ok().map(|a| a.title.clone());
+            diff.metadata.applicability.old_label = repo
+                .get_applicability_by_id(id)
+                .ok()
+                .map(|a| a.title.clone());
         }
         if let Some(id) = diff.metadata.applicability.new_id {
-            diff.metadata.applicability.new_label =
-                repo.get_applicability_by_id(id).ok().map(|a| a.title.clone());
+            diff.metadata.applicability.new_label = repo
+                .get_applicability_by_id(id)
+                .ok()
+                .map(|a| a.title.clone());
         }
 
         diff.metadata.verification.added_labels = Some(
@@ -128,7 +124,11 @@ impl<'a> RequirementDiffService<'a> {
                 .verification
                 .added_ids
                 .iter()
-                .filter_map(|&id| repo.get_verification_by_id(id).ok().map(|v| v.title.clone()))
+                .filter_map(|&id| {
+                    repo.get_verification_by_id(id)
+                        .ok()
+                        .map(|v| v.title.clone())
+                })
                 .collect(),
         );
         diff.metadata.verification.removed_labels = Some(
@@ -136,7 +136,11 @@ impl<'a> RequirementDiffService<'a> {
                 .verification
                 .removed_ids
                 .iter()
-                .filter_map(|&id| repo.get_verification_by_id(id).ok().map(|v| v.title.clone()))
+                .filter_map(|&id| {
+                    repo.get_verification_by_id(id)
+                        .ok()
+                        .map(|v| v.title.clone())
+                })
                 .collect(),
         );
         diff.metadata.verification.unchanged_labels = Some(
@@ -144,7 +148,11 @@ impl<'a> RequirementDiffService<'a> {
                 .verification
                 .unchanged_ids
                 .iter()
-                .filter_map(|&id| repo.get_verification_by_id(id).ok().map(|v| v.title.clone()))
+                .filter_map(|&id| {
+                    repo.get_verification_by_id(id)
+                        .ok()
+                        .map(|v| v.title.clone())
+                })
                 .collect(),
         );
     }

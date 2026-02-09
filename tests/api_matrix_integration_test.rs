@@ -133,6 +133,7 @@ mod test_support {
         Requirement {
             id: id,
             current_version_id: None,
+            same_as_current: None,
             title: title.to_string(),
             description: format!("{} description", title),
             status_id: 1,

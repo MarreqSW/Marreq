@@ -35,6 +35,7 @@ mod tests {
             let req = Requirement {
                 id: 42,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Test Requirement".to_string(),
                 description: "Test Description".to_string(),
                 status_id: 2,
@@ -63,6 +64,7 @@ mod tests {
             let req = Requirement {
                 id: 100,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Child Requirement".to_string(),
                 description: "Child".to_string(),
                 status_id: 1,
@@ -244,6 +246,7 @@ mod tests {
             let req = Requirement {
                 id: 42,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Test Req".to_string(),
                 description: "Desc".to_string(),
                 status_id: 1,
@@ -363,6 +366,7 @@ mod tests {
             let req = Requirement {
                 id: 1,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Title".to_string(),
                 description: "Desc".to_string(),
                 status_id: 3,
@@ -490,6 +494,7 @@ mod tests {
             let req = Requirement {
                 id: 1,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
                 status_id: 1,
@@ -1226,6 +1231,7 @@ mod tests {
             let req = Requirement {
                 id: 1,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
                 status_id: 1,
@@ -1295,6 +1301,7 @@ mod tests {
             let req = Requirement {
                 id: 1,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Test".to_string(),
                 description: "Desc".to_string(),
                 status_id: 1,

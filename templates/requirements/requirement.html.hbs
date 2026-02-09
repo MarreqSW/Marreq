@@ -170,8 +170,16 @@
           {{#if this.is_current}}
           <span class="badge bg-primary flex-shrink-0">Current</span>
           {{else}}
-          <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}/version/{{this.id}}"
-            class="small text-muted flex-shrink-0">View</a>
+          <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}/version/{{this.id}}"
+              class="small text-muted">View</a>
+            <button type="button" class="btn btn-link btn-sm p-0 small text-muted text-decoration-none"
+              data-action="show-version-diff"
+              data-req-id="{{../requirement_data.requirement.id}}"
+              data-v1="{{this.id}}"
+              data-v2="{{../requirement_data.current_version_id}}"
+              aria-label="Compare this version with current">Compare with current</button>
+          </div>
           {{/if}}
         </li>
         {{/each}}

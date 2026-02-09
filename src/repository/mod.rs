@@ -92,6 +92,11 @@ pub trait TestsCaseRepository {
     fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<TestCase>, RepoError>;
     fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError>;
     fn get_tests_for_requirement(&self, requirement_id: i32) -> Result<Vec<TestCase>, RepoError>;
+    /// Tests linked to the requirement that are currently marked suspect (impacted by requirement changes).
+    fn get_impacted_tests_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<TestCase>, RepoError>;
 
     fn insert_test(&mut self, new: &NewTestCase) -> Result<i32, RepoError>;
     fn edit_test(&mut self, new: &NewTestCase) -> Result<bool, RepoError>;
@@ -173,12 +178,14 @@ pub trait ProjectMembersRepository {
 pub trait MatrixRepository {
     fn get_matrix_by_project(&self, project_id: i32) -> Result<Vec<MatrixLink>, RepoError>;
     fn insert_new_matrix_item(&mut self, new: &NewMatrixLink) -> Result<(), RepoError>;
-    /// Mark all traceability links for a requirement as suspect (e.g. after requirement update).
+    /// Mark all traceability links for a requirement as suspect (e.g. after requirement update or approval).
     /// Returns project IDs of affected links so callers can invalidate caches.
     fn mark_links_suspect_for_requirement(
         &mut self,
         requirement_id: i32,
         reason: &str,
+        triggering_version_id: Option<i32>,
+        triggering_user_id: Option<i32>,
     ) -> Result<Vec<i32>, RepoError>;
     /// Clear suspect flag for one link; records user and timestamp.
     /// Returns (link existed and was updated, project_id of the link if updated) for cache invalidation.
@@ -304,7 +311,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{MatrixRepository, RepoError, RepoLockExt};
+    use super::{MatrixRepository, RepoError, RepoLockExt, RequirementsRepository};
     use crate::models::MatrixLink;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
@@ -328,6 +335,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         }
     }
 
@@ -418,7 +427,8 @@ mod tests {
         link3.project_id = 8;
         repo.matrices.push(link3);
 
-        let result = repo.mark_links_suspect_for_requirement(1, "Requirement updated");
+        let result =
+            repo.mark_links_suspect_for_requirement(1, "Requirement updated", Some(1), Some(42));
         assert!(result.is_ok());
         let project_ids = result.unwrap();
         assert_eq!(project_ids.len(), 1);
@@ -462,5 +472,80 @@ mod tests {
         let (ok, project_id) = repo.clear_suspect(99, 99, 1).unwrap();
         assert!(!ok);
         assert_eq!(project_id, None);
+    }
+
+    #[test]
+    fn set_requirement_version_approval_marks_links_suspect() {
+        use crate::models::{Requirement, RequirementVersion};
+        let mut repo = DieselRepoMock::default();
+        let version_id = 10;
+        let req_id = 1;
+        let project_id = 7;
+        repo.requirement_versions.insert(
+            version_id,
+            RequirementVersion {
+                id: version_id,
+                requirement_id: req_id,
+                title: "Req".into(),
+                description: String::new(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                parent_id: None,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: Some(test_datetime()),
+                created_at: test_datetime(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        repo.requirements.insert(
+            req_id,
+            Requirement {
+                id: req_id,
+                current_version_id: Some(version_id),
+                title: "Req".into(),
+                description: String::new(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "R1".into(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: test_datetime(),
+                update_date: test_datetime(),
+                deadline_date: Some(test_datetime()),
+                applicability_id: 1,
+                justification: None,
+                project_id,
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        let mut link = create_test_matrix();
+        link.req_id = req_id;
+        link.test_id = 1;
+        link.project_id = project_id;
+        link.suspect = false;
+        repo.matrices.push(link);
+
+        let _ = repo
+            .set_requirement_version_approval(version_id, "reviewed", 42)
+            .unwrap();
+
+        let matrices = repo.get_matrix_by_project(project_id).unwrap();
+        let req_link = matrices.iter().find(|m| m.req_id == req_id).unwrap();
+        assert!(
+            req_link.suspect,
+            "approval transition should mark requirement's links suspect"
+        );
+        assert_eq!(
+            req_link.suspect_reason.as_deref(),
+            Some("Approval state changed")
+        );
     }
 }

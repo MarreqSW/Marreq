@@ -118,6 +118,8 @@ pub struct NewMatrixLink {
     pub req_id: i32,
     pub test_id: i32,
     pub project_id: i32,
+    pub triggering_version_id: Option<i32>,
+    pub triggering_user_id: Option<i32>,
 }
 
 /// Payload to create an immutable baseline (name, description). created_at/created_by set at insert.
@@ -158,6 +160,9 @@ pub struct NewBaselineTraceability {
     pub baseline_id: i32,
     pub requirement_id: i32,
     pub test_id: i32,
+    pub suspect: bool,
+    pub suspect_at: Option<chrono::NaiveDateTime>,
+    pub suspect_reason: Option<String>,
 }
 
 /// Form used to insert or update [`User`] records.
@@ -468,6 +473,8 @@ mod forms_tests {
             req_id: 1,
             test_id: 2,
             project_id: 10,
+            triggering_version_id: None,
+            triggering_user_id: None,
         };
         assert_eq!(link.req_id, 1);
         assert_eq!(link.test_id, 2);

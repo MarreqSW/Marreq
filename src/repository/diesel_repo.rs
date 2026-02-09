@@ -19,8 +19,7 @@ use diesel::expression_methods::NullableExpressionMethods;
 use diesel::pg::{upsert::excluded, PgConnection};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::{Connection, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl};
-use lazy_static::lazy_static;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 /// Database connection wrapper for use in Rocket handlers
@@ -68,25 +67,36 @@ impl std::ops::DerefMut for PooledConnectionWrapper {
     }
 }
 
-lazy_static! {
-    /// Global connection pool instance
-    static ref CONNECTION_POOL: Arc<ConnectionPool> = {
-        dotenvy::dotenv().ok();
-        let database_url = std::env::var("DATABASE_URL")
-            .expect("DATABASE_URL must be set");
+static CONNECTION_POOL: OnceLock<Arc<ConnectionPool>> = OnceLock::new();
 
-        let manager = ConnectionManager::<PgConnection>::new(database_url);
-        let pool = Pool::builder()
-            .max_size(30) // Increased from 20 for better concurrency
-            .min_idle(Some(10))  // Increased from 5 for better performance
-            .connection_timeout(Duration::from_secs(30)) // Add timeout
-            .idle_timeout(Some(Duration::from_secs(600))) // 10 minutes idle timeout
-            .max_lifetime(Some(Duration::from_secs(1800))) // 30 minutes max lifetime
-            .build(manager)
-            .expect("Failed to create connection pool");
+/// Create the database connection pool. Returns an error if DATABASE_URL is unset or the pool cannot be built.
+/// Call this from `app::build()` before creating the repository; the pool is stored globally for `DieselRepo::new()`.
+pub fn create_connection_pool() -> Result<Arc<ConnectionPool>, Box<dyn std::error::Error>> {
+    dotenvy::dotenv().ok();
+    let database_url = std::env::var("DATABASE_URL").map_err(|_| "DATABASE_URL must be set")?;
+    let manager = ConnectionManager::<PgConnection>::new(database_url);
+    let pool = Pool::builder()
+        .max_size(30)
+        .min_idle(Some(10))
+        .connection_timeout(Duration::from_secs(30))
+        .idle_timeout(Some(Duration::from_secs(600)))
+        .max_lifetime(Some(Duration::from_secs(1800)))
+        .build(manager)
+        .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
+    Ok(Arc::new(pool))
+}
 
-        Arc::new(pool)
-    };
+/// Initialize the global connection pool. Must be called from `app::build()` before any `DieselRepo::new()`.
+pub fn init_connection_pool() -> Result<(), Box<dyn std::error::Error>> {
+    CONNECTION_POOL
+        .set(create_connection_pool()?)
+        .map_err(|_| "connection pool already initialized".into())
+}
+
+fn get_pool() -> Result<Arc<ConnectionPool>, Box<dyn std::error::Error>> {
+    CONNECTION_POOL.get().cloned().ok_or_else(|| {
+        "connection pool not initialized (call init_connection_pool from app::build())".into()
+    })
 }
 /// Pool statistics
 #[derive(Debug, Clone)]
@@ -143,15 +153,15 @@ pub struct DieselRepo {
 
 impl Default for DieselRepo {
     fn default() -> Self {
-        Self::new()
+        Self::new().expect("database connection pool not initialized")
     }
 }
 
 impl DieselRepo {
-    pub fn new() -> Self {
-        Self {
-            pool: CONNECTION_POOL.clone(),
-        }
+    /// Create a repository using the global connection pool. Fails if the pool has not been
+    /// initialized (e.g. by the first call to `new()` or by pre-initialization in `app::build()`).
+    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(Self { pool: get_pool()? })
     }
 
     pub fn get_conn(&self) -> Result<PooledConnectionWrapper, RepoError> {

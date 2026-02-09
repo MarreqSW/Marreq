@@ -10,10 +10,11 @@ A comprehensive web-based requirements and test management system built with Rus
 - **Multi-Project Support**: Manage multiple projects with isolated data
 - **Requirements Management**: Create, edit, and organize hierarchical requirements
 - **Test Management**: Manage tests with status tracking and source documentation
-- **Traceability Matrix**: Visual mapping between requirements and tests
+- **Traceability Matrix**: Visual mapping between requirements and tests; requirement detail page lists **all** linked tests per requirement (“Verified by” section with links to test pages)
 - **User Management**: Assign authors and reviewers to requirements with authentication
 
 ### 🏷️ Advanced Features
+- **Requirement version diff**: Compare two requirement versions or a baseline snapshot vs current; API returns structured diff (metadata, verification, text) with optional **labels** (e.g. Status “Draft”, verification method titles) in addition to IDs; UI diff modal shows these labels for easier reading
 - **Categories**: User-defined categories for organizing requirements (project-specific)
 - **Applicability**: Define product lines, system types, or project scopes (project-specific)
 - **Status Tracking**: Track requirement status (Draft, Accepted, Rejected, etc.)
@@ -33,6 +34,8 @@ A comprehensive web-based requirements and test management system built with Rus
 - **Version Snapshot**: Each baseline stores which `requirement_version` was current per requirement, plus the traceability matrix at creation time
 - **Export from Baseline**: ReqIF and UI support exporting a specific baseline for audits or releases
 - **API & UI**: Create/list/view baselines via REST API and web UI (project Baselines section, nav, requirements export dropdown)
+- **Baseline detail page**: View baseline metadata, requirements table, and full traceability list; requirement and test **references** (e.g. REQ-PWR-001, TEST-PWR-001) are shown instead of raw IDs, with one row per (requirement, test) link
+- **Diff vs current**: From a baseline view, compare a requirement’s snapshot to the current version in a **diff modal**; the “Diff vs current” action is hidden when the requirement is unchanged (same version as current)
 
 ### 🎨 Modern UI
 - **Responsive Design**: Works on desktop and mobile devices
@@ -131,7 +134,7 @@ For detailed database setup options (automated, manual, reset, verification) see
 1. **Requirements**: Navigate to project requirements to view and manage requirements (with version history)
 2. **Tests**: Go to project tests to manage test cases
 3. **Matrix**: Visit project matrix to view the traceability matrix
-4. **Baselines**: From project dashboard or nav, open **Baselines** to create immutable snapshots, view baseline contents, or export a baseline as ReqIF
+4. **Baselines**: From project dashboard or nav, open **Baselines** to create immutable snapshots, **view** a baseline (detail page with requirements and traceability), compare requirements to current via **Diff vs current** (opens diff modal; hidden when unchanged), or export a baseline as ReqIF
 5. **Categories**: Access project categories to manage requirement categories
 6. **Applicability**: Visit project applicability to manage applicability options
 
@@ -165,7 +168,7 @@ All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or
 - `GET /requirements/{id}` - Get specific requirement
 - `GET /requirements/{id}/versions` - List versions for a requirement (newest first)
 - `GET /requirements/{req_id}/versions/{version_id}` - Get a specific requirement version
-- `GET /requirements/{req_id}/versions/{v1}/diff/{v2}` - Diff two requirement versions (structured JSON: text and metadata added/removed/unchanged)
+- `GET /requirements/{req_id}/versions/{v1}/diff/{v2}` - Diff two requirement versions (structured JSON: text and metadata added/removed/unchanged; includes optional labels for status, category, applicability, verification)
 - `PUT /requirements/{req_id}/versions/{version_id}/approval` - Set approval state (body: `state`: "reviewed" | "approved"; project owners/managers only)
 - `POST /requirements` - Create new requirement
 - `PATCH /requirements/{id}` - Partially update supported requirement fields
@@ -200,7 +203,7 @@ All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or
 - `GET /projects/{project_id}/baselines/{baseline_id}` - Get baseline metadata
 - `POST /projects/{project_id}/baselines` - Create baseline (body: `name`, `description`; captures current requirement versions and traceability)
 - `GET /projects/{project_id}/baselines/{baseline_id}/requirements` - Get requirements as stored in the baseline
-- `GET /projects/{project_id}/baselines/{baseline_id}/requirements/{req_id}/diff/current` - Diff requirement in baseline vs current version (structured JSON)
+- `GET /projects/{project_id}/baselines/{baseline_id}/requirements/{req_id}/diff/current` - Diff requirement in baseline vs current version (structured JSON with optional labels for status, category, applicability, verification)
 - `GET /projects/{project_id}/baselines/{baseline_id}/traceability` - Get traceability snapshot for the baseline
 
 #### Users

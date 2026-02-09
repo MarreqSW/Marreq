@@ -3,6 +3,7 @@ use crate::models::*;
 use crate::repository::{DieselRepo, RequirementsRepository, TestsCaseRepository};
 use diesel::prelude::*;
 use std::fs;
+use std::path::PathBuf;
 
 pub fn create_matrix_workbook(
     project_id: i32,
@@ -12,11 +13,12 @@ pub fn create_matrix_workbook(
     use crate::schema::matrix::dsl::{matrix, req_id};
 
     let mut connection = DieselRepo::new()
+        .map_err(|e| format!("Database connection error: {}", e))?
         .get_conn()
         .map_err(|e| format!("Database connection error: {}", e))?;
 
     // Get requirements for the project (via repository for versioned schema)
-    let repo = DieselRepo::new();
+    let repo = DieselRepo::new().map_err(|e| format!("Database: {}", e))?;
     let all_reqs = repo
         .get_requirements_by_project(project_id)
         .map_err(|e| format!("Error querying requirements by project: {:?}", e))?;
@@ -106,7 +108,7 @@ pub fn create_matrix_workbook(
 }
 
 pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let repo = DieselRepo::new();
+    let repo = DieselRepo::new()?;
     let all_requirements = repo
         .get_requirements_by_project(pid)
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
@@ -114,8 +116,12 @@ pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::er
     // Decorate requirements to get real names instead of IDs
     let decorated_requirements = decorators::decorate_requirements(all_requirements);
 
-    // Create workbook
-    let workbook = xlsxwriter::Workbook::new("target/requirements.xls")?;
+    // Write to a temp file to avoid fixed path and propagate read errors
+    let temp_path: PathBuf = std::env::temp_dir().join(format!("reqman_requirements_{}.xls", pid));
+    let path_str = temp_path
+        .to_str()
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid temp path"))?;
+    let workbook = xlsxwriter::Workbook::new(path_str)?;
     let mut worksheet = workbook.add_worksheet(Some("Requirements"))?;
 
     // Write headers
@@ -154,14 +160,14 @@ pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::er
     }
 
     workbook.close()?;
-    let result = fs::read("target/requirements.xls").expect("can read file");
+    let result = fs::read(&temp_path)?;
     Ok(result)
 }
 
 pub fn create_tests_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     use crate::schema::tests::dsl::*;
 
-    let mut connection = DieselRepo::new().get_conn()?;
+    let mut connection = DieselRepo::new()?.get_conn()?;
 
     let all_tests = tests
         .filter(crate::schema::tests::project_id.eq(pid))
@@ -171,8 +177,12 @@ pub fn create_tests_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Er
     // Decorate tests to get real names instead of IDs
     let decorated_tests = decorators::decorate_tests(all_tests);
 
-    // Create workbook
-    let workbook = xlsxwriter::Workbook::new("target/tests.xls")?;
+    // Write to a temp file to avoid fixed path and propagate read errors
+    let temp_path: PathBuf = std::env::temp_dir().join(format!("reqman_tests_{}.xls", pid));
+    let path_str = temp_path
+        .to_str()
+        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid temp path"))?;
+    let workbook = xlsxwriter::Workbook::new(path_str)?;
     let mut worksheet = workbook.add_worksheet(Some("Tests"))?;
 
     // Write headers
@@ -197,6 +207,6 @@ pub fn create_tests_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Er
     }
 
     workbook.close()?;
-    let result = fs::read("target/tests.xls").expect("can read file");
+    let result = fs::read(&temp_path)?;
     Ok(result)
 }

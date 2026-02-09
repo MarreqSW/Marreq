@@ -3,7 +3,7 @@ use crate::repository::{errors::RepoError, DieselRepo, Repository};
 
 /// Decorate requirements using the default Diesel repository.
 pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement> {
-    let repo = DieselRepo::new();
+    let repo = DieselRepo::new().expect("Database connection not available");
     decorate_requirements_impl(&repo, reqs)
 }
 
@@ -17,7 +17,7 @@ pub fn decorate_requirements_with_repo<R: Repository>(
 
 /// Decorate tests using the default Diesel repository.
 pub fn decorate_tests(tests: Vec<TestCase>) -> Vec<DecoratedTestCase> {
-    let repo = DieselRepo::new();
+    let repo = DieselRepo::new().expect("Database connection not available");
     decorate_tests_impl(&repo, tests)
 }
 
@@ -31,7 +31,7 @@ pub fn decorate_tests_with_repo<R: Repository>(
 
 /// Get linked tests for a requirement using the default Diesel repository.
 pub fn get_linked_tests_for_requirement(id: i32) -> Result<Vec<DecoratedTestCase>, RepoError> {
-    let repo = DieselRepo::new();
+    let repo = DieselRepo::new().map_err(|e| RepoError::Pool(e.to_string()))?;
     get_linked_tests_for_requirement_impl(&repo, id)
 }
 

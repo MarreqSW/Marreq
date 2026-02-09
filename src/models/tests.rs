@@ -140,6 +140,8 @@ mod tests {
                 suspect_reason: None,
                 cleared_by: None,
                 cleared_at: None,
+                triggering_version_id: None,
+                triggering_user_id: None,
             };
 
             let display = format!("{}", link);
@@ -435,6 +437,8 @@ mod tests {
                 suspect_reason: None,
                 cleared_by: None,
                 cleared_at: None,
+                triggering_version_id: None,
+                triggering_user_id: None,
             };
 
             assert_eq!(link.req_id, 1);
@@ -749,6 +753,8 @@ mod tests {
                 req_id: 1,
                 test_id: 2,
                 project_id: 3,
+                triggering_version_id: None,
+                triggering_user_id: None,
             };
 
             assert_eq!(new_link.req_id, 1);
@@ -1275,6 +1281,8 @@ mod tests {
                 suspect_reason: None,
                 cleared_by: None,
                 cleared_at: None,
+                triggering_version_id: None,
+                triggering_user_id: None,
             };
 
             let cloned = link.clone();

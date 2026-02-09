@@ -613,6 +613,7 @@ async fn admin_can_access_all_endpoints() {
         Requirement {
             id: 1,
             current_version_id: None,
+            same_as_current: None,
             title: "Test".into(),
             description: "Test".into(),
             reference_code: "REQ-001".into(),
@@ -653,6 +654,7 @@ async fn regular_user_can_access_endpoints() {
         Requirement {
             id: 1,
             current_version_id: None,
+            same_as_current: None,
             title: "Test".into(),
             description: "Test".into(),
             reference_code: "REQ-001".into(),

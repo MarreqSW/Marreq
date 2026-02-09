@@ -9,8 +9,8 @@
 -- Usage (from project root, with DB reachable):
 --   psql "$DATABASE_URL" -f scripts/apply_baselines_migration.sql
 --
--- Or with Docker (replace CONTAINER and DB name if needed):
---   docker exec -i CONTAINER psql -U postgres -d reqman < scripts/apply_baselines_migration.sql
+-- Or with Docker Compose (from project root; uses db service and reqman DB):
+--   docker compose exec -T db psql -U rust -d reqman < scripts/apply_baselines_migration.sql
 -- =============================================================================
 
 -- Baselines: one row per snapshot (name, description, created_at, created_by).
@@ -75,6 +75,11 @@ DROP TRIGGER IF EXISTS baseline_traceability_immutable ON baseline_traceability;
 CREATE TRIGGER baseline_traceability_immutable
     BEFORE UPDATE OR DELETE ON baseline_traceability
     FOR EACH ROW EXECUTE FUNCTION forbid_baseline_update_delete();
+
+-- Ensure Diesel migrations table exists (e.g. when DB was not initialized via diesel)
+CREATE TABLE IF NOT EXISTS __diesel_schema_migrations (
+    version VARCHAR(100) PRIMARY KEY NOT NULL
+);
 
 -- Record that these migrations were applied
 INSERT INTO __diesel_schema_migrations (version) VALUES

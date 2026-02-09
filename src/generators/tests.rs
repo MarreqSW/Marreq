@@ -26,6 +26,7 @@ mod tests {
         Requirement {
             id,
             current_version_id: None,
+            same_as_current: None,
             title: format!("Requirement {}", id),
             description: format!("Description {}", id),
             status_id: 1,

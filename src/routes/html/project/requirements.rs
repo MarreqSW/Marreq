@@ -690,6 +690,7 @@ async fn show_requirement_version(
     let req_from_version = Requirement {
         id: current.id,
         current_version_id: current.current_version_id,
+        same_as_current: None,
         title: version.title.clone(),
         description: version.description.clone(),
         status_id: version.status_id,
@@ -1657,6 +1658,7 @@ mod tests {
         Requirement {
             id,
             current_version_id: None,
+            same_as_current: None,
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
             status_id: 1,

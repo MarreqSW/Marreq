@@ -50,6 +50,11 @@ pub trait RequirementsRepository {
         &self,
         requirement_id: i32,
     ) -> Result<Vec<i32>, RepoError>;
+    /// Verification method IDs for a specific requirement version (for diff).
+    fn get_verification_method_ids_for_version(
+        &self,
+        version_id: i32,
+    ) -> Result<Vec<i32>, RepoError>;
     fn get_requirement_ids_by_verification_method(
         &self,
         verification_method_id: i32,
@@ -218,6 +223,13 @@ pub trait BaselineRepository {
         &self,
         baseline_id: i32,
     ) -> Result<Vec<Requirement>, RepoError>;
+
+    /// Version id of a requirement as stored in the baseline, if present.
+    fn get_baseline_requirement_version_id(
+        &self,
+        baseline_id: i32,
+        requirement_id: i32,
+    ) -> Result<Option<i32>, RepoError>;
 
     fn get_baseline_traceability(
         &self,
@@ -507,6 +519,7 @@ mod tests {
             Requirement {
                 id: req_id,
                 current_version_id: Some(version_id),
+                same_as_current: None,
                 title: "Req".into(),
                 description: String::new(),
                 status_id: 1,

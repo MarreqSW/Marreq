@@ -51,6 +51,9 @@ pub struct Requirement {
     pub id: i32,
     /// ID of the current requirement_version row (for version history UI).
     pub current_version_id: Option<i32>,
+    /// When true (baseline view only), the baseline version is the same as current; hide "Diff vs current".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub same_as_current: Option<bool>,
     pub title: String,
     pub description: String,
     pub status_id: i32,
@@ -69,6 +72,15 @@ pub struct Requirement {
     pub approval_state: String,
     pub approved_by: Option<i32>,
     pub approved_at: Option<chrono::NaiveDateTime>,
+}
+
+impl Requirement {
+    /// Set same_as_current (baseline context only). Chainable for builder-style.
+    #[allow(dead_code)]
+    pub fn with_same_as_current(mut self, same: bool) -> Self {
+        self.same_as_current = Some(same);
+        self
+    }
 }
 
 /// Link between a requirement version and a verification method (many-to-many).

@@ -18,6 +18,7 @@ const pageControllers = {
   edit_verification: () => Promise.resolve({}),
   'requirement-form': () => import('./pages/requirementForm.js'),
   'requirement-detail': () => import('./pages/requirementDetail.js'),
+  baseline: () => import('./pages/baselineDetail.js'),
   'log-analytics': () => import('./pages/logAnalytics.js'),
   logs: () => import('./pages/logs.js'),
   'entity-logs': () => import('./pages/entityLogs.js'),

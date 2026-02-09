@@ -1,6 +1,7 @@
 import { buildRequirementViewModel } from '../presenters/requirement.js';
 import { verificationPercent, verificationBadge } from '../presenters/requirement.js';
 import { initDiffModal } from '../modules/diffModal.js';
+import { showRequirementDiff } from '../modules/requirementDiffModal.js';
 import { showNotification } from '../modules/notifications.js';
 import { postJson, jsonFetch } from '../core/net.js';
 
@@ -152,7 +153,7 @@ function renderBodySections(root, sections = []) {
   }
 }
 
-function renderRelationships(root, view, projectId) {
+function renderRelationships(root, view, projectId, linkedTests = []) {
   const container = getSlot(root, 'relationships');
   if (!container) {
     return;
@@ -160,7 +161,10 @@ function renderRelationships(root, view, projectId) {
 
   container.innerHTML = '';
 
-  if (!view?.has_links) {
+  const hasParentOrChildren = view?.has_links === true;
+  const hasLinkedTests = Array.isArray(linkedTests) && linkedTests.length > 0;
+
+  if (!hasParentOrChildren && !hasLinkedTests) {
     const empty = document.createElement('p');
     empty.className = 'mb-0 text-muted';
     empty.textContent = 'No upstream or downstream relationships recorded.';
@@ -168,7 +172,7 @@ function renderRelationships(root, view, projectId) {
     return;
   }
 
-  if (view.parent) {
+  if (view?.parent) {
     const wrapper = document.createElement('div');
     wrapper.className = 'mb-3';
 
@@ -216,6 +220,32 @@ function renderRelationships(root, view, projectId) {
       status.textContent = child.status;
 
       item.append(arrow, link, status);
+      list.appendChild(item);
+    });
+
+    container.appendChild(list);
+  }
+
+  // List all tests linked to this requirement (traceability req ↔ test)
+  if (hasLinkedTests) {
+    const label = document.createElement('div');
+    label.className = 'small text-muted text-uppercase mb-2 mt-3';
+    label.textContent = 'Verified by';
+    container.appendChild(label);
+
+    const list = document.createElement('ul');
+    list.className = 'list-unstyled mb-0';
+
+    linkedTests.forEach((test) => {
+      const item = document.createElement('li');
+      item.className = 'd-flex align-items-center mb-2';
+
+      const link = document.createElement('a');
+      link.className = 'fw-semibold';
+      link.href = `/p/${projectId}/tests/show/${test.id}`;
+      link.textContent = `${test.reference_code || `Test #${test.id}`} · ${test.name || ''}`.trim() || `Test #${test.id}`;
+
+      item.appendChild(link);
       list.appendChild(item);
     });
 
@@ -577,7 +607,7 @@ function hydratePage(view, canonical) {
   renderChips(root, view.chips);
   renderMetadata(root, view.metadata);
   renderBodySections(root, view.body_sections);
-  renderRelationships(root, view.relationships, canonical.project_id);
+  renderRelationships(root, view.relationships, canonical.project_id, view.linked_tests);
 }
 
 export function init() {
@@ -601,8 +631,33 @@ export function init() {
     contentSelector: '#changesContent',
   });
 
+  initVersionDiffHandler();
   initApprovalHandlers(canonical);
   initEditApprovedHandler(canonical);
+}
+
+function initVersionDiffHandler() {
+  const root = document.querySelector('[data-requirement-root]');
+  if (!root) return;
+  root.addEventListener('click', async (e) => {
+    const trigger = e.target.closest('[data-action="show-version-diff"]');
+    if (!trigger) return;
+    e.preventDefault();
+    const reqId = trigger.getAttribute('data-req-id');
+    const v1 = trigger.getAttribute('data-v1');
+    const v2 = trigger.getAttribute('data-v2');
+    if (!reqId || !v1 || !v2) return;
+    try {
+      const diff = await jsonFetch(
+        `/api/requirements/${reqId}/versions/${v1}/diff/${v2}`,
+        { credentials: 'same-origin' }
+      );
+      showRequirementDiff(diff);
+    } catch (err) {
+      const msg = err?.payload?.message || err?.message || 'Failed to load diff';
+      showNotification(msg, 'error');
+    }
+  });
 }
 
 function initApprovalHandlers(canonical) {

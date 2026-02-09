@@ -232,6 +232,7 @@ mod tests {
         let req = crate::models::Requirement {
             id: 10,
             current_version_id: None,
+            same_as_current: None,
             title: "Req Title".into(),
             description: "Desc".into(),
             status_id: 1,

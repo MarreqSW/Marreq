@@ -552,6 +552,33 @@ impl RequirementsRepository for DieselRepoMock {
         Ok(ids)
     }
 
+    fn get_verification_method_ids_for_version(
+        &self,
+        version_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        let version = self
+            .requirement_versions
+            .get(&version_id)
+            .ok_or(RepoError::NotFound)?;
+        let requirement_id = version.requirement_id;
+        let is_current = self
+            .requirements
+            .get(&requirement_id)
+            .map(|r| r.current_version_id == Some(version_id))
+            .unwrap_or(false);
+        if !is_current {
+            return Ok(vec![]);
+        }
+        let mut ids: Vec<i32> = self
+            .requirement_verification_methods
+            .iter()
+            .filter(|(req_id, _)| *req_id == requirement_id)
+            .map(|(_, ver_id)| *ver_id)
+            .collect();
+        ids.sort_unstable();
+        Ok(ids)
+    }
+
     fn get_requirement_ids_by_verification_method(
         &self,
         verification_method_id: i32,
@@ -610,6 +637,7 @@ impl RequirementsRepository for DieselRepoMock {
         let req = Requirement {
             id,
             current_version_id: Some(version_id),
+            same_as_current: None,
             title: _new.title.clone(),
             description: _new.description.clone(),
             status_id: _new.status_id,
@@ -1116,6 +1144,7 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
             out.push(Requirement {
                 id: req.id,
                 current_version_id: Some(version.id),
+                same_as_current: None,
                 title: version.title.clone(),
                 description: version.description.clone(),
                 status_id: version.status_id,
@@ -1136,6 +1165,18 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
             });
         }
         Ok(out)
+    }
+
+    fn get_baseline_requirement_version_id(
+        &self,
+        baseline_id: i32,
+        requirement_id: i32,
+    ) -> Result<Option<i32>, RepoError> {
+        Ok(self
+            .baseline_requirements
+            .iter()
+            .find(|br| br.baseline_id == baseline_id && br.requirement_id == requirement_id)
+            .map(|br| br.version_id))
     }
 
     fn get_baseline_traceability(

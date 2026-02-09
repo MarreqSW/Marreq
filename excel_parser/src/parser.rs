@@ -1,4 +1,4 @@
-use calamine::{open_workbook, DataType, Reader, Xlsx};
+use calamine::{open_workbook, Data, DataType, Reader, Xlsx};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use anyhow::{Result, anyhow};
@@ -64,7 +64,7 @@ fn parse_requirements_sheet(workbook: &mut Xlsx<std::io::BufReader<std::fs::File
     // Get the first sheet
     let sheet_name = workbook.sheet_names()[0].clone();
     let range = workbook.worksheet_range(&sheet_name)
-        .ok_or_else(|| anyhow!("Sheet '{}' not found", sheet_name))??;
+        .map_err(|e| anyhow!("Sheet '{}' not found: {}", sheet_name, e))?;
     
     let mut headers = Vec::new();
     let mut is_first_row = true;
@@ -73,13 +73,13 @@ fn parse_requirements_sheet(workbook: &mut Xlsx<std::io::BufReader<std::fs::File
         if is_first_row {
             // Parse headers
             headers = row.iter()
-                .map(|cell| cell.to_string().to_lowercase())
+                .map(|cell: &Data| cell.to_string().to_lowercase())
                 .collect();
             is_first_row = false;
             continue;
         }
         
-        if row.iter().all(|cell| cell.is_empty()) {
+        if row.iter().all(|cell: &Data| cell.is_empty()) {
             continue; // Skip empty rows
         }
         
@@ -96,7 +96,7 @@ fn parse_tests_sheet(workbook: &mut Xlsx<std::io::BufReader<std::fs::File>>) -> 
     // Get the first sheet
     let sheet_name = workbook.sheet_names()[0].clone();
     let range = workbook.worksheet_range(&sheet_name)
-        .ok_or_else(|| anyhow!("Sheet '{}' not found", sheet_name))??;
+        .map_err(|e| anyhow!("Sheet '{}' not found: {}", sheet_name, e))?;
     
     let mut headers = Vec::new();
     let mut is_first_row = true;
@@ -105,13 +105,13 @@ fn parse_tests_sheet(workbook: &mut Xlsx<std::io::BufReader<std::fs::File>>) -> 
         if is_first_row {
             // Parse headers
             headers = row.iter()
-                .map(|cell| cell.to_string().to_lowercase())
+                .map(|cell: &Data| cell.to_string().to_lowercase())
                 .collect();
             is_first_row = false;
             continue;
         }
         
-        if row.iter().all(|cell| cell.is_empty()) {
+        if row.iter().all(|cell: &Data| cell.is_empty()) {
             continue; // Skip empty rows
         }
         
@@ -122,7 +122,7 @@ fn parse_tests_sheet(workbook: &mut Xlsx<std::io::BufReader<std::fs::File>>) -> 
     Ok(data)
 }
 
-fn parse_requirement_row(row: &[DataType], headers: &[String]) -> Result<RequirementData> {
+fn parse_requirement_row(row: &[Data], headers: &[String]) -> Result<RequirementData> {
     let mut req = RequirementData {
         id: None,
         title: String::new(),
@@ -190,7 +190,7 @@ fn parse_requirement_row(row: &[DataType], headers: &[String]) -> Result<Require
     Ok(req)
 }
 
-fn parse_test_row(row: &[DataType], headers: &[String]) -> Result<TestData> {
+fn parse_test_row(row: &[Data], headers: &[String]) -> Result<TestData> {
     let mut test = TestData {
         id: None,
         name: String::new(),

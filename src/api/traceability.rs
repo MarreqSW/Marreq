@@ -74,6 +74,8 @@ mod tests {
             suspect_reason: Some("Requirement updated".into()),
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
         let client = client_with_repo(repo).await;
         let response = client

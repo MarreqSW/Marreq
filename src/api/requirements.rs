@@ -1,7 +1,7 @@
 use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
-use crate::models::{NewRequirement, Requirement, RequirementVersion};
+use crate::models::{NewRequirement, Requirement, RequirementVersion, TestCase};
 use crate::repository::{ProjectMembersRepository, RequirementsRepository};
 use crate::services::RequirementService;
 
@@ -79,6 +79,19 @@ pub async fn get_version(
         ));
     }
     Ok(Json(version))
+}
+
+/// List tests linked to the requirement that are currently marked suspect (impacted by requirement changes).
+#[get("/requirements/<id>/impacted_tests")]
+pub async fn get_impacted_tests(
+    _user: ApiUser,
+    id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<TestCase>>> {
+    let service = RequirementService::new(state.inner());
+    let _requirement = service.get_by_id(id)?;
+    let tests = service.get_impacted_tests(id)?;
+    Ok(Json(tests))
 }
 
 #[derive(Debug, Deserialize)]

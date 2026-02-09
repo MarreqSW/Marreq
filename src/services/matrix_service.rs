@@ -117,6 +117,8 @@ impl<'a> MatrixService<'a> {
             req_id: requirement_id,
             test_id: id,
             project_id,
+            triggering_version_id: None,
+            triggering_user_id: None,
         };
 
         {
@@ -468,6 +470,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
         repo.matrices.push(MatrixLink {
             req_id: 2,
@@ -479,6 +483,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
 
         let state = state_with_repo(repo);
@@ -572,6 +578,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
 
         let state = state_with_repo(repo);
@@ -1228,6 +1236,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
 
         let state = state_with_repo(repo);
@@ -1253,6 +1263,8 @@ mod tests {
             suspect_reason: Some("Requirement updated".into()),
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
         let state = state_with_repo(repo);
         let service = MatrixService::new(&state);
@@ -1328,6 +1340,8 @@ mod tests {
             suspect_reason: Some("Requirement updated".into()),
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
 
         let state = state_with_repo(repo);
@@ -1392,6 +1406,8 @@ mod tests {
             suspect_reason: Some("Req updated".into()),
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
         repo.matrices.push(MatrixLink {
             req_id: 2,
@@ -1403,6 +1419,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
 
         let state = state_with_repo(repo);

@@ -372,6 +372,8 @@ async fn post_test(
             req_id: *req,
             test_id: id,
             project_id: new_test.project_id,
+            triggering_version_id: None,
+            triggering_user_id: None,
         };
         state
             .repo_write()
@@ -800,6 +802,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
         repo
     }

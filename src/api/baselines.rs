@@ -188,6 +188,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: Some(SNAPSHOT_VERSION_ID),
+                same_as_current: None,
                 title: "Live title".into(),
                 description: "Live description".into(),
                 status_id: 1,

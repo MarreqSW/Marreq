@@ -36,6 +36,7 @@ mod tests {
         Requirement {
             id: 1,
             current_version_id: None,
+            same_as_current: None,
             title: "Test Requirement".to_string(),
             description: "Test Description".to_string(),
             status_id: 1,

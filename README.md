@@ -165,6 +165,7 @@ All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or
 - `GET /requirements/{id}` - Get specific requirement
 - `GET /requirements/{id}/versions` - List versions for a requirement (newest first)
 - `GET /requirements/{req_id}/versions/{version_id}` - Get a specific requirement version
+- `GET /requirements/{req_id}/versions/{v1}/diff/{v2}` - Diff two requirement versions (structured JSON: text and metadata added/removed/unchanged)
 - `PUT /requirements/{req_id}/versions/{version_id}/approval` - Set approval state (body: `state`: "reviewed" | "approved"; project owners/managers only)
 - `POST /requirements` - Create new requirement
 - `PATCH /requirements/{id}` - Partially update supported requirement fields
@@ -199,6 +200,7 @@ All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or
 - `GET /projects/{project_id}/baselines/{baseline_id}` - Get baseline metadata
 - `POST /projects/{project_id}/baselines` - Create baseline (body: `name`, `description`; captures current requirement versions and traceability)
 - `GET /projects/{project_id}/baselines/{baseline_id}/requirements` - Get requirements as stored in the baseline
+- `GET /projects/{project_id}/baselines/{baseline_id}/requirements/{req_id}/diff/current` - Diff requirement in baseline vs current version (structured JSON)
 - `GET /projects/{project_id}/baselines/{baseline_id}/traceability` - Get traceability snapshot for the baseline
 
 #### Users

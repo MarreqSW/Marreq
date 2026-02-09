@@ -37,13 +37,20 @@ CREATE TABLE IF NOT EXISTS baseline_requirements (
 CREATE INDEX IF NOT EXISTS idx_baseline_requirements_baseline_id ON baseline_requirements(baseline_id);
 CREATE INDEX IF NOT EXISTS idx_baseline_requirements_version_id ON baseline_requirements(version_id);
 
--- Snapshot of traceability matrix at baseline time.
+-- Snapshot of traceability matrix at baseline time (including suspect state at baseline time).
 CREATE TABLE IF NOT EXISTS baseline_traceability (
     baseline_id INTEGER NOT NULL REFERENCES baselines(id) ON DELETE CASCADE,
     requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
     test_id INTEGER NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
+    suspect BOOLEAN NOT NULL DEFAULT false,
+    suspect_at TIMESTAMP NULL,
+    suspect_reason TEXT NULL,
     PRIMARY KEY (baseline_id, requirement_id, test_id)
 );
+
+COMMENT ON COLUMN baseline_traceability.suspect IS 'Whether the link was marked suspect at baseline creation time';
+COMMENT ON COLUMN baseline_traceability.suspect_at IS 'When the link was marked suspect (at baseline time)';
+COMMENT ON COLUMN baseline_traceability.suspect_reason IS 'Reason the link was suspect (at baseline time)';
 
 CREATE INDEX IF NOT EXISTS idx_baseline_traceability_baseline_id ON baseline_traceability(baseline_id);
 
@@ -69,6 +76,8 @@ CREATE TRIGGER baseline_traceability_immutable
     BEFORE UPDATE OR DELETE ON baseline_traceability
     FOR EACH ROW EXECUTE FUNCTION forbid_baseline_update_delete();
 
--- Record that this migration was applied
-INSERT INTO __diesel_schema_migrations (version) VALUES ('2026-02-08-000001_immutable_baselines')
+-- Record that these migrations were applied
+INSERT INTO __diesel_schema_migrations (version) VALUES
+    ('2026-02-08-000001_immutable_baselines'),
+    ('2026-02-09-000002_baseline_traceability_suspect')
 ON CONFLICT (version) DO NOTHING;

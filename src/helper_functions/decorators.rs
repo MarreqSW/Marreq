@@ -631,6 +631,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
 
         let result = get_linked_tests_for_requirement_impl(&repo, 1).unwrap();
@@ -676,6 +678,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
 
         let result = get_linked_tests_for_requirement_impl(&repo, 2).unwrap();
@@ -725,6 +729,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
 
         assert!(get_linked_tests_for_requirement_impl(&repo, 3).is_err());

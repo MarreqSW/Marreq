@@ -1,5 +1,6 @@
 #[cfg(any(test, feature = "test-helpers"))]
 use crate::repository::diesel_repo_mock::DieselRepoMock;
+use crate::repository::errors::RepoError;
 use crate::repository::CacheRepository;
 #[cfg(not(any(test, feature = "test-helpers")))]
 use crate::repository::DieselRepo;
@@ -16,6 +17,14 @@ pub struct AppState<R = DieselCachedRepo> {
     pub repo: Arc<RwLock<R>>,
 }
 
+impl<R> Clone for AppState<R> {
+    fn clone(&self) -> Self {
+        Self {
+            repo: Arc::clone(&self.repo),
+        }
+    }
+}
+
 impl AppState<DieselCachedRepo> {
     pub fn repo_read(&self) -> RwLockReadGuard<'_, DieselCachedRepo> {
         self.repo.read().expect("repo lock poisoned")
@@ -24,13 +33,40 @@ impl AppState<DieselCachedRepo> {
     pub fn repo_write(&self) -> RwLockWriteGuard<'_, DieselCachedRepo> {
         self.repo.write().expect("repo lock poisoned")
     }
+
+    /// Non-panicking read access; use in request path (e.g. guards) to return 500 instead of panicking on poisoned lock.
+    pub fn try_repo_read(&self) -> Result<RwLockReadGuard<'_, DieselCachedRepo>, RepoError> {
+        self.repo
+            .read()
+            .map_err(|_| RepoError::Pool("repo lock poisoned".into()))
+    }
+
+    /// Non-panicking write access; use in request path when lock failure should yield 500 instead of panic.
+    pub fn try_repo_write(&self) -> Result<RwLockWriteGuard<'_, DieselCachedRepo>, RepoError> {
+        self.repo
+            .write()
+            .map_err(|_| RepoError::Pool("repo lock poisoned".into()))
+    }
 }
 
 #[rocket_sync_db_pools::database("my_db")]
 pub struct MyDbConn(rocket_sync_db_pools::diesel::PgConnection);
 
 pub fn build() -> Rocket<Build> {
-    let cached = DieselCachedRepo::new(default_inner_repo(), 5 * 60);
+    #[cfg(not(any(test, feature = "test-helpers")))]
+    let inner = {
+        crate::repository::diesel_repo::init_connection_pool().unwrap_or_else(|e| {
+            eprintln!("Database setup failed: {}", e);
+            std::process::exit(1);
+        });
+        default_inner_repo().unwrap_or_else(|e| {
+            eprintln!("Database setup failed: {}", e);
+            std::process::exit(1);
+        })
+    };
+    #[cfg(any(test, feature = "test-helpers"))]
+    let inner = default_inner_repo();
+    let cached = DieselCachedRepo::new(inner, 5 * 60);
     let repo = Arc::new(RwLock::new(cached));
 
     {
@@ -63,7 +99,7 @@ pub fn build() -> Rocket<Build> {
 }
 
 #[cfg(not(any(test, feature = "test-helpers")))]
-fn default_inner_repo() -> DieselRepo {
+fn default_inner_repo() -> Result<DieselRepo, Box<dyn std::error::Error>> {
     DieselRepo::new()
 }
 

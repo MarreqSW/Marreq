@@ -44,15 +44,14 @@ impl<'r> FromRequest<'r> for SessionUser {
             }
         };
 
-        let repo = match request.rocket().state::<AppState>() {
-            Some(state) => state.repo.clone(),
+        let state = match request.rocket().state::<AppState>() {
+            Some(s) => s.clone(),
             None => return Outcome::Error((Status::InternalServerError, ())),
         };
 
         let result = rocket::tokio::task::spawn_blocking(move || {
-            repo.read()
-                .expect("repo lock poisoned")
-                .get_user_by_id(user_id)
+            let guard = state.try_repo_read()?;
+            guard.get_user_by_id(user_id)
         })
         .await;
 

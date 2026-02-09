@@ -403,9 +403,10 @@ async fn get_edit_test(
     let user = project_access.into_user();
     let repo = state.repo_read();
 
-    let test = repo
-        .get_test_by_id(test_id)
-        .expect("Error reading table Tests");
+    let test = match repo.get_test_by_id(test_id) {
+        Ok(t) => t,
+        Err(_) => return Err(Redirect::to(format!("/p/{}/tests", project_id))),
+    };
 
     let decorated = decorate_tests_cached(state, vec![test]);
     let test0 = &decorated[0];

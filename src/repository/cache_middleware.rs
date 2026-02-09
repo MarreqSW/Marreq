@@ -383,6 +383,14 @@ impl<R: Repository> TestsCaseRepository for CacheRepository<R> {
         })
     }
 
+    fn get_impacted_tests_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<TestCase>, RepoError> {
+        self.inner
+            .get_impacted_tests_for_requirement(requirement_id)
+    }
+
     fn insert_test(&mut self, new: &NewTestCase) -> Result<i32, RepoError> {
         let id = self.inner.insert_test(new)?;
         self.cache.invalidate_test(id);
@@ -657,10 +665,15 @@ impl<R: Repository> MatrixRepository for CacheRepository<R> {
         &mut self,
         requirement_id: i32,
         reason: &str,
+        triggering_version_id: Option<i32>,
+        triggering_user_id: Option<i32>,
     ) -> Result<Vec<i32>, RepoError> {
-        let project_ids = self
-            .inner
-            .mark_links_suspect_for_requirement(requirement_id, reason)?;
+        let project_ids = self.inner.mark_links_suspect_for_requirement(
+            requirement_id,
+            reason,
+            triggering_version_id,
+            triggering_user_id,
+        )?;
         for &pid in &project_ids {
             self.cache.remove(&keys::Matrix::by_project(pid));
         }
@@ -832,6 +845,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         };
 
         let mut users = HashMap::new();
@@ -1279,6 +1294,8 @@ mod tests {
             req_id: 1,
             test_id: 1,
             project_id: 1,
+            triggering_version_id: None,
+            triggering_user_id: None,
         })
         .unwrap();
         assert!(cache.get(&keys::Matrix::by_project(1)).is_none());
@@ -1438,6 +1455,8 @@ mod tests {
             req_id: 1,
             test_id: 1,
             project_id: 1,
+            triggering_version_id: None,
+            triggering_user_id: None,
         })
         .unwrap();
 

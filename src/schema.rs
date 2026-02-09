@@ -24,6 +24,9 @@ diesel::table! {
         baseline_id -> Int4,
         requirement_id -> Int4,
         test_id -> Int4,
+        suspect -> Bool,
+        suspect_at -> Nullable<Timestamp>,
+        suspect_reason -> Nullable<Text>,
     }
 }
 
@@ -80,6 +83,8 @@ diesel::table! {
         suspect_reason -> Nullable<Text>,
         cleared_by -> Nullable<Int4>,
         cleared_at -> Nullable<Timestamp>,
+        triggering_version_id -> Nullable<Int4>,
+        triggering_user_id -> Nullable<Int4>,
     }
 }
 

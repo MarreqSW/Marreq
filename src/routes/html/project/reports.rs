@@ -275,6 +275,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
         repo.project_members.push(ProjectMember {
             project_id: PROJECT_ID,

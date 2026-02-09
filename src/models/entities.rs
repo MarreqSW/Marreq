@@ -93,6 +93,8 @@ pub struct MatrixLink {
     pub suspect_reason: Option<String>,
     pub cleared_by: Option<i32>,
     pub cleared_at: Option<chrono::NaiveDateTime>,
+    pub triggering_version_id: Option<i32>,
+    pub triggering_user_id: Option<i32>,
 }
 
 /// Immutable project baseline (snapshot of requirement versions and traceability at creation time).
@@ -123,6 +125,9 @@ pub struct BaselineTraceability {
     pub baseline_id: i32,
     pub requirement_id: i32,
     pub test_id: i32,
+    pub suspect: bool,
+    pub suspect_at: Option<chrono::NaiveDateTime>,
+    pub suspect_reason: Option<String>,
 }
 
 /// A system user that can access projects and manage requirements.

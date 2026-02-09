@@ -292,6 +292,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
 
         let state = state_with_repo(repo);

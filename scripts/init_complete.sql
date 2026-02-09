@@ -181,6 +181,7 @@ CREATE TABLE tests (
 
 -- Matrix table (traceability between requirements and tests)
 -- Suspect columns: when a requirement changes, links are marked suspect until reviewed.
+-- Triggering columns: which version/user caused the link to be marked suspect (audit and impacted-tests).
 CREATE TABLE matrix (
     req_id INTEGER NOT NULL,
     test_id INTEGER NOT NULL,
@@ -191,6 +192,8 @@ CREATE TABLE matrix (
     suspect_reason TEXT,
     cleared_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     cleared_at TIMESTAMP,
+    triggering_version_id INTEGER REFERENCES requirement_versions(id) ON DELETE SET NULL,
+    triggering_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     PRIMARY KEY (req_id, test_id)
 );
 
@@ -199,6 +202,8 @@ COMMENT ON COLUMN matrix.suspect_at IS 'When the link was marked suspect';
 COMMENT ON COLUMN matrix.suspect_reason IS 'Reason (e.g. Requirement updated)';
 COMMENT ON COLUMN matrix.cleared_by IS 'User who cleared the suspect flag';
 COMMENT ON COLUMN matrix.cleared_at IS 'When the suspect flag was cleared';
+COMMENT ON COLUMN matrix.triggering_version_id IS 'Requirement version that caused the link to be marked suspect';
+COMMENT ON COLUMN matrix.triggering_user_id IS 'User who triggered the change (edit or approval transition)';
 
 -- Logs table (audit trail)
 CREATE TABLE logs (
@@ -634,5 +639,6 @@ INSERT INTO __diesel_schema_migrations (version) VALUES
     ('2026-01-31-000001_baseline_schema'),
     ('2026-02-06-000001_seed_default_user'),
     ('2026-02-07-000001_requirement_versioning'),
-    ('2026-02-08-000003_requirement_version_approval')
+    ('2026-02-08-000003_requirement_version_approval'),
+    ('2026-02-09-000001_matrix_triggering_metadata')
 ON CONFLICT (version) DO NOTHING;

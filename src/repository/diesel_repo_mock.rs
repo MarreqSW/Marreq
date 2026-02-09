@@ -764,6 +764,12 @@ impl RequirementsRepository for DieselRepoMock {
                 req.approved_at = version.approved_at;
             }
         }
+        let _ = self.mark_links_suspect_for_requirement(
+            version.requirement_id,
+            "Approval state changed",
+            Some(version_id),
+            Some(approved_by_user_id),
+        )?;
         Ok(version)
     }
 }
@@ -804,6 +810,22 @@ impl TestsCaseRepository for DieselRepoMock {
             .matrices
             .iter()
             .filter(|m| m.req_id == requirement_id)
+            .map(|m| m.test_id)
+            .collect();
+        Ok(ids
+            .into_iter()
+            .filter_map(|id| self.tests.get(&id).cloned())
+            .collect())
+    }
+
+    fn get_impacted_tests_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<TestCase>, RepoError> {
+        let ids: Vec<i32> = self
+            .matrices
+            .iter()
+            .filter(|m| m.req_id == requirement_id && m.suspect)
             .map(|m| m.test_id)
             .collect();
         Ok(ids
@@ -869,6 +891,8 @@ impl TestsCaseRepository for DieselRepoMock {
                 suspect_reason: None,
                 cleared_by: None,
                 cleared_at: None,
+                triggering_version_id: None,
+                triggering_user_id: None,
             });
         }
         Ok(())
@@ -948,6 +972,8 @@ impl MatrixRepository for DieselRepoMock {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: new.triggering_version_id,
+            triggering_user_id: new.triggering_user_id,
         });
         Ok(())
     }
@@ -956,6 +982,8 @@ impl MatrixRepository for DieselRepoMock {
         &mut self,
         requirement_id: i32,
         reason: &str,
+        triggering_version_id: Option<i32>,
+        triggering_user_id: Option<i32>,
     ) -> Result<Vec<i32>, RepoError> {
         let now = epoch();
         let mut project_ids = Vec::new();
@@ -966,6 +994,8 @@ impl MatrixRepository for DieselRepoMock {
                 link.suspect_reason = Some(reason.to_string());
                 link.cleared_by = None;
                 link.cleared_at = None;
+                link.triggering_version_id = triggering_version_id;
+                link.triggering_user_id = triggering_user_id;
                 if !project_ids.contains(&link.project_id) {
                     project_ids.push(link.project_id);
                 }
@@ -1037,6 +1067,9 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
                     baseline_id: id,
                     requirement_id: link.req_id,
                     test_id: link.test_id,
+                    suspect: link.suspect,
+                    suspect_at: link.suspect_at,
+                    suspect_reason: link.suspect_reason.clone(),
                 });
         }
         Ok(baseline)

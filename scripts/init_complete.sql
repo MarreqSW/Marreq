@@ -222,6 +222,61 @@ CREATE TABLE logs (
 );
 
 -- =============================================================================
+-- IMMUTABLE BASELINES
+-- =============================================================================
+-- Snapshots of requirements and traceability at a point in time (2026-02-08
+-- immutable_baselines + 2026-02-09 baseline_traceability_suspect).
+-- =============================================================================
+
+CREATE TABLE baselines (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE baseline_requirements (
+    baseline_id INTEGER NOT NULL REFERENCES baselines(id) ON DELETE CASCADE,
+    requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+    version_id INTEGER NOT NULL REFERENCES requirement_versions(id) ON DELETE RESTRICT,
+    PRIMARY KEY (baseline_id, requirement_id)
+);
+
+CREATE TABLE baseline_traceability (
+    baseline_id INTEGER NOT NULL REFERENCES baselines(id) ON DELETE CASCADE,
+    requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+    test_id INTEGER NOT NULL REFERENCES tests(id) ON DELETE CASCADE,
+    suspect BOOLEAN NOT NULL DEFAULT false,
+    suspect_at TIMESTAMP NULL,
+    suspect_reason TEXT NULL,
+    PRIMARY KEY (baseline_id, requirement_id, test_id)
+);
+
+COMMENT ON COLUMN baseline_traceability.suspect IS 'Whether the link was marked suspect at baseline creation time';
+COMMENT ON COLUMN baseline_traceability.suspect_at IS 'When the link was marked suspect (at baseline time)';
+COMMENT ON COLUMN baseline_traceability.suspect_reason IS 'Reason the link was suspect (at baseline time)';
+
+CREATE OR REPLACE FUNCTION forbid_baseline_update_delete() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'Baselines are immutable: UPDATE and DELETE are not allowed';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER baselines_immutable
+    BEFORE UPDATE OR DELETE ON baselines
+    FOR EACH ROW EXECUTE FUNCTION forbid_baseline_update_delete();
+
+CREATE TRIGGER baseline_requirements_immutable
+    BEFORE UPDATE OR DELETE ON baseline_requirements
+    FOR EACH ROW EXECUTE FUNCTION forbid_baseline_update_delete();
+
+CREATE TRIGGER baseline_traceability_immutable
+    BEFORE UPDATE OR DELETE ON baseline_traceability
+    FOR EACH ROW EXECUTE FUNCTION forbid_baseline_update_delete();
+
+-- =============================================================================
 -- FOREIGN KEY CONSTRAINTS
 -- =============================================================================
 
@@ -331,6 +386,13 @@ CREATE INDEX idx_matrix_project_id ON matrix(project_id);
 CREATE INDEX idx_matrix_req_id ON matrix(req_id);
 CREATE INDEX idx_matrix_test_id ON matrix(test_id);
 CREATE INDEX idx_matrix_suspect ON matrix(suspect) WHERE suspect = true;
+
+-- Baselines indexes
+CREATE INDEX idx_baselines_project_id ON baselines(project_id);
+CREATE INDEX idx_baselines_created_at ON baselines(created_at DESC);
+CREATE INDEX idx_baseline_requirements_baseline_id ON baseline_requirements(baseline_id);
+CREATE INDEX idx_baseline_requirements_version_id ON baseline_requirements(version_id);
+CREATE INDEX idx_baseline_traceability_baseline_id ON baseline_traceability(baseline_id);
 
 -- Users indexes
 CREATE INDEX idx_users_username ON users(username);
@@ -639,6 +701,8 @@ INSERT INTO __diesel_schema_migrations (version) VALUES
     ('2026-01-31-000001_baseline_schema'),
     ('2026-02-06-000001_seed_default_user'),
     ('2026-02-07-000001_requirement_versioning'),
+    ('2026-02-08-000001_immutable_baselines'),
     ('2026-02-08-000003_requirement_version_approval'),
-    ('2026-02-09-000001_matrix_triggering_metadata')
+    ('2026-02-09-000001_matrix_triggering_metadata'),
+    ('2026-02-09-000002_baseline_traceability_suspect')
 ON CONFLICT (version) DO NOTHING;

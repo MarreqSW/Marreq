@@ -519,6 +519,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Test Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -607,6 +608,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Test, with \"quotes\"".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -645,6 +647,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Req 1".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -712,6 +715,7 @@ mod tests {
         let req1 = Requirement {
             id: 1,
             current_version_id: None,
+            same_as_current: None,
             title: "Req 1".to_string(),
             description: String::new(),
             status_id: 1,
@@ -733,6 +737,7 @@ mod tests {
         let req2 = Requirement {
             id: 2,
             current_version_id: None,
+            same_as_current: None,
             title: "Req 2".to_string(),
             description: String::new(),
             status_id: 2,
@@ -780,6 +785,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Alpha Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -804,6 +810,7 @@ mod tests {
             Requirement {
                 id: 2,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Beta Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -850,6 +857,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Alpha Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -895,6 +903,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Some Requirement".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -941,6 +950,7 @@ mod tests {
                 Requirement {
                     id: i,
                     current_version_id: None,
+            same_as_current: None,
                     title: format!("Req {}", i),
                     description: String::new(),
                     status_id: 1,
@@ -987,6 +997,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Zebra".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -1011,6 +1022,7 @@ mod tests {
             Requirement {
                 id: 2,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Alpha".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -1056,6 +1068,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Req 1".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -1080,6 +1093,7 @@ mod tests {
             Requirement {
                 id: 2,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Req 2".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -1125,6 +1139,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Alpha".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -1149,6 +1164,7 @@ mod tests {
             Requirement {
                 id: 2,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Zebra".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -1194,6 +1210,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Req 1".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -1298,6 +1315,7 @@ mod tests {
             Requirement {
                 id: 1,
                 current_version_id: None,
+            same_as_current: None,
                 title: "Req 1".to_string(),
                 description: String::new(),
                 status_id: 1,
@@ -1363,6 +1381,7 @@ mod tests {
                 Requirement {
                     id,
                     current_version_id: None,
+            same_as_current: None,
                     title: format!("Req {id}"),
                     description: String::new(),
                     status_id: 1,

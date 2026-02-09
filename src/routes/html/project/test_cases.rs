@@ -711,6 +711,7 @@ mod tests {
         Requirement {
             id,
             current_version_id: None,
+            same_as_current: None,
             title: format!("Requirement {id}"),
             description: "Test requirement".into(),
             status_id: 1,

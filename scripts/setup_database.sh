@@ -151,7 +151,15 @@ echo ""
 echo "🔍 Verifying database setup..."
 echo "📋 Tables created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "\dt" \
-  | grep -E "(projects|users|requirements|requirement_versions|requirement_version_verification|tests|matrix|logs|categories|applicability|verification|requirement_status|status_id)" || true
+  | grep -E "(projects|users|requirements|requirement_versions|requirement_version_verification|tests|matrix|logs|baselines|baseline_requirements|baseline_traceability|categories|applicability|verification|requirement_status|status_id)" || true
+echo ""
+echo "📋 Immutable baselines (snapshots):"
+docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
+  SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'baselines') AS baselines_exists,
+         EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'baseline_requirements') AS baseline_requirements_exists,
+         EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'baseline_traceability') AS baseline_traceability_exists,
+         EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'baselines_immutable') AS baselines_immutable_trigger;
+" 2>/dev/null || true
 echo ""
 echo "📋 Full-text search (requirement_versions.search_vector):"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "

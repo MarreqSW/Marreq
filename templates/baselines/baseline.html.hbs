@@ -33,6 +33,7 @@
                     <th>ID</th>
                     <th>Reference</th>
                     <th>Title</th>
+                    <th class="text-end">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -41,6 +42,16 @@
                       <td><a href="/p/{{../selected_project_id}}/requirements/show/{{id}}{{#if current_version_id}}/version/{{current_version_id}}{{/if}}">#{{id}}</a></td>
                       <td><code>{{reference_code}}</code></td>
                       <td><a href="/p/{{../selected_project_id}}/requirements/show/{{id}}{{#if current_version_id}}/version/{{current_version_id}}{{/if}}">{{title}}</a></td>
+                      <td class="text-end">
+                        {{#unless same_as_current}}
+                        <button type="button" class="btn btn-link btn-sm p-0 small text-muted text-decoration-none"
+                          data-action="show-baseline-diff"
+                          data-project-id="{{../selected_project_id}}"
+                          data-baseline-id="{{../baseline.id}}"
+                          data-req-id="{{id}}"
+                          aria-label="Diff this requirement vs current">Diff vs current</button>
+                        {{/unless}}
+                      </td>
                     </tr>
                   {{/each}}
                 </tbody>
@@ -61,7 +72,7 @@
           {{#if traceability.0}}
             <ul class="list-group list-group-flush mb-0">
               {{#each traceability}}
-                <li class="list-group-item"><a href="/p/{{../selected_project_id}}/requirements/show/{{requirement_id}}{{#if version_id}}/version/{{version_id}}{{/if}}">Req #{{requirement_id}}</a> ↔ <a href="/p/{{../selected_project_id}}/tests/show/{{test_id}}">Test #{{test_id}}</a></li>
+                <li class="list-group-item"><a href="/p/{{../selected_project_id}}/requirements/show/{{requirement_id}}{{#if version_id}}/version/{{version_id}}{{/if}}">{{requirement_reference}}</a> ↔ <a href="/p/{{../selected_project_id}}/tests/show/{{test_id}}">{{test_reference}}</a></li>
               {{/each}}
             </ul>
           {{else}}

@@ -126,7 +126,7 @@ pub fn parse_reqif(xml: &[u8]) -> Result<ParsedDocument, String> {
                 }
             }
             Ok(Event::Text(e)) => {
-                let text = e.unescape().unwrap_or_default().trim().to_string();
+                let text = e.xml10_content().unwrap_or_default().trim().to_string();
                 if let Some(ref mut obj) = current_object {
                     if let Some(ref def_id) = current_attr_value_def {
                         let long_name = attr_defs

@@ -140,6 +140,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         }
     }
 
@@ -998,6 +1000,8 @@ mod tests {
             req_id: 1,
             test_id: 1,
             project_id: 1,
+            triggering_version_id: None,
+            triggering_user_id: None,
         };
         // MatrixLink now also has suspect fields; create_test_matrix() and DB handle defaults
 
@@ -1022,7 +1026,12 @@ mod tests {
         link3.project_id = 8;
         repo.matrices.push(link3);
 
-        let result = repo.mark_links_suspect_for_requirement(1, "Requirement updated");
+        let result = repo.mark_links_suspect_for_requirement(
+            1,
+            "Requirement updated",
+            Some(1),
+            Some(42),
+        );
         assert!(result.is_ok());
         let project_ids = result.unwrap();
         assert_eq!(project_ids.len(), 1);

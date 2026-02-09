@@ -147,6 +147,12 @@ impl<'a> RequirementService<'a> {
         self.repo_read().get_tests_for_requirement(id)
     }
 
+    /// Tests linked to the requirement that are currently marked suspect (impacted by requirement changes).
+    pub fn get_impacted_tests(&self, requirement_id: i32) -> Result<Vec<TestCase>, RepoError> {
+        self.repo_read()
+            .get_impacted_tests_for_requirement(requirement_id)
+    }
+
     /// Create a new requirement entry and log the action.
     ///
     /// If semantic search is enabled, the requirement is queued for embedding generation.
@@ -196,8 +202,13 @@ impl<'a> RequirementService<'a> {
                 return Err(RepoError::NotFound);
             }
             repo.set_requirement_verification_methods(id, verification_method_ids)?;
-            let _project_ids =
-                repo.mark_links_suspect_for_requirement(id, "Requirement updated")?;
+            let requirement = repo.get_requirement_by_id(id)?;
+            let _project_ids = repo.mark_links_suspect_for_requirement(
+                id,
+                "Requirement updated",
+                requirement.current_version_id,
+                Some(actor.id),
+            )?;
         }
 
         let after = self.get_by_id(id)?;
@@ -463,6 +474,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
         let state = state_with_repo(repo);
         let service = RequirementService::new(&state);
@@ -728,6 +741,8 @@ mod tests {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         });
         let state = state_with_repo(repo);
         let service = RequirementService::new(&state);

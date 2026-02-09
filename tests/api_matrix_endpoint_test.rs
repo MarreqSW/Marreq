@@ -90,6 +90,8 @@ mod test_support {
             suspect_reason: None,
             cleared_by: None,
             cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
         }
     }
 }

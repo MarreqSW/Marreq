@@ -117,6 +117,9 @@ echo "🧹 Cleaning existing tables and related objects (if any)..."
 psqlc -U rust -d reqman <<'SQL' >/dev/null 2>&1 || true
 DROP TABLE IF EXISTS embedding_index_queue CASCADE;
 DROP TABLE IF EXISTS requirement_embeddings CASCADE;
+DROP TABLE IF EXISTS baseline_traceability CASCADE;
+DROP TABLE IF EXISTS baseline_requirements CASCADE;
+DROP TABLE IF EXISTS baselines CASCADE;
 DROP TABLE IF EXISTS matrix CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;
 DROP TABLE IF EXISTS requirement_version_verification_methods CASCADE;
@@ -159,6 +162,7 @@ echo ""
 echo "📋 Matrix suspect links (change impact):"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
   SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'matrix' AND column_name = 'suspect') AS suspect_column_exists,
+         EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'matrix' AND column_name = 'triggering_version_id') AS triggering_version_id_exists,
          EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_matrix_suspect') AS suspect_index_exists;
 " 2>/dev/null || true
 echo ""

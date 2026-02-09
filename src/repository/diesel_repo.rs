@@ -1135,6 +1135,14 @@ impl RequirementsRepository for DieselRepo {
                 dsl::approved_at.eq(approved_at),
             ))
             .execute(conn.as_mut())?;
+        drop(conn);
+        let _ = self.mark_links_suspect_for_requirement(
+            version.requirement_id,
+            "Approval state changed",
+            Some(version_id),
+            Some(approved_by_user_id),
+        )?;
+        let mut conn = self.get_conn()?;
         dsl::requirement_versions
             .filter(dsl::id.eq(version_id))
             .get_result(conn.as_mut())
@@ -1182,6 +1190,31 @@ impl TestsCaseRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         dsl::matrix
             .filter(dsl::req_id.eq(requirement_id))
+            .inner_join(t::tests.on(dsl::test_id.eq(t::id)))
+            .select((
+                t::id,
+                t::name,
+                t::reference_code,
+                t::description,
+                t::source,
+                t::status_id,
+                t::parent_id,
+                t::project_id,
+            ))
+            .load::<TestCase>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn get_impacted_tests_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<TestCase>, RepoError> {
+        use schema::matrix::dsl;
+        use schema::tests::dsl as t;
+        let mut conn = self.get_conn()?;
+        dsl::matrix
+            .filter(dsl::req_id.eq(requirement_id))
+            .filter(dsl::suspect.eq(true))
             .inner_join(t::tests.on(dsl::test_id.eq(t::id)))
             .select((
                 t::id,
@@ -1289,6 +1322,8 @@ impl TestsCaseRepository for DieselRepo {
                         req_id: *requirement_id,
                         test_id,
                         project_id,
+                        triggering_version_id: None,
+                        triggering_user_id: None,
                     };
                     diesel::insert_into(schema::matrix::table)
                         .values(&new_matrix)
@@ -1443,6 +1478,8 @@ impl MatrixRepository for DieselRepo {
         &mut self,
         requirement_id: i32,
         reason: &str,
+        triggering_version_id: Option<i32>,
+        triggering_user_id: Option<i32>,
     ) -> Result<Vec<i32>, RepoError> {
         use schema::matrix::dsl;
         let now = chrono::Utc::now().naive_utc();
@@ -1454,6 +1491,8 @@ impl MatrixRepository for DieselRepo {
                 dsl::suspect_reason.eq(reason),
                 dsl::cleared_by.eq(Option::<i32>::None),
                 dsl::cleared_at.eq(Option::<chrono::NaiveDateTime>::None),
+                dsl::triggering_version_id.eq(triggering_version_id),
+                dsl::triggering_user_id.eq(triggering_user_id),
             ))
             .returning(dsl::project_id)
             .get_results(conn.as_mut())?;
@@ -1537,7 +1576,7 @@ impl BaselineRepository for DieselRepo {
                     .execute(conn)?;
             }
 
-            // Snapshot: current traceability matrix
+            // Snapshot: current traceability matrix (including suspect state at baseline time)
             let matrix_links: Vec<MatrixLink> = matrix::table
                 .filter(matrix::project_id.eq(project_id))
                 .load(conn)?;
@@ -1546,6 +1585,9 @@ impl BaselineRepository for DieselRepo {
                     baseline_id,
                     requirement_id: link.req_id,
                     test_id: link.test_id,
+                    suspect: link.suspect,
+                    suspect_at: link.suspect_at,
+                    suspect_reason: link.suspect_reason.clone(),
                 };
                 diesel::insert_into(baseline_traceability::table)
                     .values(&bt)

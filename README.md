@@ -95,7 +95,10 @@ A comprehensive web-based requirements and test management system built with Rus
 + [X] Snapshots
   + [X] Immutable project baselines (requirement versions + traceability)
   + [ ] Configuration management
-+ [ ] Better error management (remove all unwrap())
++ [X] Better error management
+  + [X] Remove unwrap/expect in production paths (guards, routes, DB init, Excel export)
+  + [X] Result-based DB pool init; clear startup failure message
+  + [X] try_repo_read/try_repo_write for non-panicking lock in request path
 
 ## 🚀 Quick Start
 
@@ -299,6 +302,9 @@ cargo build --release
 
 # Run tests
 cargo test
+
+# Run all checks (fmt, clippy, stylelint, purgecss, npm ci, npm test)
+./run_checks.sh
 ```
 
 ## 📝 License
@@ -330,6 +336,8 @@ docker-compose restart
 ```
 
 #### Application Startup Issues
+If the app exits immediately with **"Database setup failed"**, set `DATABASE_URL` (e.g. in `.env`) and ensure the database is reachable. The app uses Result-based pool initialization and will not start without a valid pool.
+
 ```bash
 # Check if port 8000 is in use
 lsof -i :8000

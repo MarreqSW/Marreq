@@ -10,6 +10,7 @@ extern crate diesel;
 pub mod api;
 pub mod app;
 pub mod auth;
+pub mod diff;
 pub mod errors;
 pub mod fairings;
 pub mod generators;

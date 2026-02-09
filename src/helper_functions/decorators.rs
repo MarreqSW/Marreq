@@ -381,6 +381,7 @@ mod tests {
             Requirement {
                 id: 31,
                 current_version_id: None,
+                same_as_current: None,
                 title: "Parent".into(),
                 description: String::new(),
                 status_id: 1,
@@ -404,6 +405,7 @@ mod tests {
         let r1 = Requirement {
             id: 1,
             current_version_id: None,
+            same_as_current: None,
             title: "R1".into(),
             description: String::new(),
             status_id: 1,
@@ -426,6 +428,7 @@ mod tests {
         let r2 = Requirement {
             id: 2,
             current_version_id: None,
+            same_as_current: None,
             title: "R2".into(),
             description: String::new(),
             status_id: 1,
@@ -448,6 +451,7 @@ mod tests {
         let r3 = Requirement {
             id: 3,
             current_version_id: None,
+            same_as_current: None,
             title: "R3".into(),
             description: String::new(),
             status_id: 99,
@@ -591,6 +595,7 @@ mod tests {
         let req = Requirement {
             id: 1,
             current_version_id: None,
+            same_as_current: None,
             title: "R".into(),
             description: String::new(),
             status_id: 0,
@@ -648,6 +653,7 @@ mod tests {
         let req = Requirement {
             id: 2,
             current_version_id: None,
+            same_as_current: None,
             title: "R".into(),
             description: String::new(),
             status_id: 0,
@@ -700,6 +706,7 @@ mod tests {
         let req = Requirement {
             id: 3,
             current_version_id: None,
+            same_as_current: None,
             title: "R".into(),
             description: String::new(),
             status_id: 0,

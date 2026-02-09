@@ -132,18 +132,42 @@ pub async fn show_baseline(
         .iter()
         .filter_map(|r| r.current_version_id.map(|vid| (r.id, vid)))
         .collect();
-    let traceability_display: Vec<serde_json::Value> = traceability
+    let requirement_reference: std::collections::HashMap<i32, String> = requirements
+        .iter()
+        .map(|r| (r.id, r.reference_code.clone()))
+        .collect();
+
+    let repo = state.repo_read();
+    let tests = repo
+        .get_tests_by_project(project_id)
+        .unwrap_or_default();
+    let test_reference: std::collections::HashMap<i32, String> = tests
+        .iter()
+        .map(|t| (t.id, t.reference_code.clone()))
+        .collect();
+
+    // One entry per (requirement, test) link — do not collapse to one test per requirement
+    let traceability_links: Vec<serde_json::Value> = traceability
         .iter()
         .map(|t| {
+            let req_ref = requirement_reference
+                .get(&t.requirement_id)
+                .cloned()
+                .unwrap_or_else(|| format!("#{}", t.requirement_id));
+            let tst_ref = test_reference
+                .get(&t.test_id)
+                .cloned()
+                .unwrap_or_else(|| format!("#{}", t.test_id));
             serde_json::json!({
                 "requirement_id": t.requirement_id,
                 "test_id": t.test_id,
+                "requirement_reference": req_ref,
+                "test_reference": tst_ref,
                 "version_id": version_by_req.get(&t.requirement_id).copied(),
             })
         })
         .collect();
 
-    let repo = state.repo_read();
     let created_by_name = repo
         .get_user_by_id(baseline.created_by)
         .ok()
@@ -155,7 +179,7 @@ pub async fn show_baseline(
         "selected_project_id": project_id,
         "baseline": baseline,
         "requirements": requirements,
-        "traceability": traceability_display,
+        "traceability": traceability_links,
         "created_by_name": created_by_name,
         "page_title": format!("Baseline: {}", baseline.name)
     });

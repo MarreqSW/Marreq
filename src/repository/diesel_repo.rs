@@ -720,9 +720,11 @@ fn requirement_from_baseline_version(
     container: &RequirementContainer,
     version: &RequirementVersion,
 ) -> Requirement {
+    let same_as_current = container.current_version_id == Some(version.id);
     Requirement {
         id: container.id,
         current_version_id: Some(version.id),
+        same_as_current: Some(same_as_current),
         title: version.title.clone(),
         description: version.description.clone(),
         status_id: version.status_id,
@@ -750,6 +752,7 @@ fn requirement_from_current(
     Requirement {
         id: container.id,
         current_version_id: container.current_version_id,
+        same_as_current: None,
         title: version.title.clone(),
         description: version.description.clone(),
         status_id: version.status_id,
@@ -945,6 +948,20 @@ impl RequirementsRepository for DieselRepo {
         };
         rvvm_dsl::requirement_version_verification_methods
             .filter(rvvm_dsl::requirement_version_id.eq(vid))
+            .select(rvvm_dsl::verification_method_id)
+            .order(rvvm_dsl::verification_method_id)
+            .load::<i32>(conn.as_mut())
+            .map_err(RepoError::from)
+    }
+
+    fn get_verification_method_ids_for_version(
+        &self,
+        version_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        use schema::requirement_version_verification_methods::dsl as rvvm_dsl;
+        let mut conn = self.get_conn()?;
+        rvvm_dsl::requirement_version_verification_methods
+            .filter(rvvm_dsl::requirement_version_id.eq(version_id))
             .select(rvvm_dsl::verification_method_id)
             .order(rvvm_dsl::verification_method_id)
             .load::<i32>(conn.as_mut())
@@ -1649,6 +1666,22 @@ impl BaselineRepository for DieselRepo {
             .collect())
     }
 
+    fn get_baseline_requirement_version_id(
+        &self,
+        baseline_id: i32,
+        requirement_id: i32,
+    ) -> Result<Option<i32>, RepoError> {
+        use schema::baseline_requirements::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::baseline_requirements
+            .filter(dsl::baseline_id.eq(baseline_id))
+            .filter(dsl::requirement_id.eq(requirement_id))
+            .select(dsl::version_id)
+            .get_result::<i32>(conn.as_mut())
+            .optional()
+            .map_err(RepoError::from)
+    }
+
     fn get_baseline_traceability(
         &self,
         baseline_id: i32,
@@ -1657,6 +1690,7 @@ impl BaselineRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         dsl::baseline_traceability
             .filter(dsl::baseline_id.eq(baseline_id))
+            .order((dsl::requirement_id.asc(), dsl::test_id.asc()))
             .load(conn.as_mut())
             .map_err(RepoError::from)
     }

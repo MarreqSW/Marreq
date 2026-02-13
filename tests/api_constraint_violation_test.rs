@@ -451,6 +451,7 @@ async fn patch_requirement_with_invalid_foreign_keys_returns_error() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -787,6 +788,7 @@ async fn delete_category_that_has_requirements_handles_gracefully() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -835,6 +837,7 @@ async fn delete_applicability_that_has_requirements_handles_gracefully() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -881,6 +884,7 @@ async fn delete_status_that_has_requirements_handles_gracefully() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 

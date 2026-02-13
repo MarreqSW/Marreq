@@ -21,6 +21,8 @@ pub struct RequirementCreateRequest {
     pub project_id: i32,
     #[serde(default)]
     pub verification_method_ids: Vec<i32>,
+    #[serde(default)]
+    pub custom_fields: Vec<crate::models::CustomFieldValueInput>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -35,6 +37,7 @@ pub struct RequirementPatch {
     pub category_id: Option<i32>,
     pub applicability_id: Option<i32>,
     pub parent_id: Option<i32>,
+    pub custom_fields: Option<Vec<crate::models::CustomFieldValueInput>>,
 }
 
 #[get("/requirements")]
@@ -180,7 +183,17 @@ pub async fn create(
         project_id: payload.project_id,
     };
     let service = RequirementService::new(state.inner());
-    let id = service.create(user.user(), new_req, &verification_method_ids)?;
+    let custom_fields = if payload.custom_fields.is_empty() {
+        None
+    } else {
+        Some(payload.custom_fields.as_slice())
+    };
+    let id = service.create(
+        user.user(),
+        new_req,
+        &verification_method_ids,
+        custom_fields,
+    )?;
 
     Ok(json!({ "status": "ok", "id": id }))
 }
@@ -208,7 +221,8 @@ pub async fn patch_requirement(
         || patch.reviewer_id.is_some()
         || patch.category_id.is_some()
         || patch.applicability_id.is_some()
-        || patch.parent_id.is_some();
+        || patch.parent_id.is_some()
+        || patch.custom_fields.is_some();
 
     if !any_updates {
         return Err(ApiError::BadRequest("no fields provided".into()));
@@ -265,7 +279,14 @@ pub async fn patch_requirement(
         project_id: requirement.project_id,
     };
 
-    service.update(user.user(), id, payload, &verification_method_ids)?;
+    let custom_fields = patch.custom_fields.as_deref();
+    service.update(
+        user.user(),
+        id,
+        payload,
+        &verification_method_ids,
+        custom_fields,
+    )?;
 
     Ok(json!({
         "success": true,

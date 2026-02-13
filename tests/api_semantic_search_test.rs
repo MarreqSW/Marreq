@@ -194,6 +194,7 @@ mod document_builder_tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         }
     }
 

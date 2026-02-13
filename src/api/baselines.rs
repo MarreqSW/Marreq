@@ -206,6 +206,7 @@ mod tests {
                 approval_state: "approved".to_string(),
                 approved_by: Some(ADMIN_ID),
                 approved_at: Some(created),
+                custom_fields: None,
             },
         );
         repo

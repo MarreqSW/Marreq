@@ -53,6 +53,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             };
 
             let display = format!("{}", req);
@@ -82,6 +83,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             };
 
             let display = format!("{}", req);
@@ -264,6 +266,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             };
 
             assert_eq!(Requirement::entity_type(), EntityType::Requirement);
@@ -384,6 +387,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             };
 
             assert_eq!(req.id, 1);
@@ -512,6 +516,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             };
 
             let json = serde_json::to_string(&req).unwrap();
@@ -1013,6 +1018,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             };
 
             assert_eq!(decorated.id, 1);
@@ -1057,6 +1063,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             };
 
             assert_eq!(decorated.req_parent_id, Some(1));
@@ -1149,6 +1156,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             };
 
             let json = serde_json::to_string(&decorated).unwrap();
@@ -1249,6 +1257,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             };
 
             let cloned = req.clone();
@@ -1319,6 +1328,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             };
 
             assert_eq!(req.parent_id, Some(10));

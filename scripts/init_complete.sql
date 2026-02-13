@@ -121,6 +121,29 @@ CREATE TABLE verification (
     project_id INTEGER NOT NULL
 );
 
+-- =============================================================================
+-- CUSTOM METADATA FIELDS
+-- =============================================================================
+-- Project-scoped custom field definitions; values stored per requirement_version.
+-- field_type: text | enum | boolean | number
+-- =============================================================================
+
+CREATE TABLE custom_field_definitions (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    label VARCHAR(255) NOT NULL,
+    field_type VARCHAR(20) NOT NULL CHECK (field_type IN ('text', 'enum', 'boolean', 'number')),
+    enum_values JSONB,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE custom_field_definitions
+    ADD CONSTRAINT custom_field_definitions_enum_values_for_enum_type
+    CHECK (
+        (field_type <> 'enum') OR (enum_values IS NOT NULL AND jsonb_typeof(enum_values) = 'array')
+    );
+
 -- Requirements table (logical container; current content in requirement_versions)
 CREATE TABLE requirements (
     id SERIAL PRIMARY KEY,
@@ -165,6 +188,14 @@ CREATE TABLE requirement_version_verification_methods (
     requirement_version_id INTEGER NOT NULL REFERENCES requirement_versions(id) ON DELETE CASCADE,
     verification_method_id INTEGER NOT NULL REFERENCES verification(id),
     PRIMARY KEY (requirement_version_id, verification_method_id)
+);
+
+-- Custom field values (per requirement version)
+CREATE TABLE custom_field_values (
+    requirement_version_id INTEGER NOT NULL REFERENCES requirement_versions(id) ON DELETE CASCADE,
+    custom_field_definition_id INTEGER NOT NULL REFERENCES custom_field_definitions(id) ON DELETE CASCADE,
+    value TEXT,
+    PRIMARY KEY (requirement_version_id, custom_field_definition_id)
 );
 
 -- Tests table
@@ -406,6 +437,11 @@ CREATE INDEX idx_categories_tag ON categories(tag);
 CREATE INDEX idx_applicability_project_id ON applicability(project_id);
 CREATE INDEX idx_applicability_tag ON applicability(tag);
 
+-- Custom field definitions and values indexes
+CREATE INDEX idx_custom_field_definitions_project ON custom_field_definitions(project_id);
+CREATE INDEX idx_custom_field_values_version ON custom_field_values(requirement_version_id);
+CREATE INDEX idx_custom_field_values_definition ON custom_field_values(custom_field_definition_id);
+
 -- =============================================================================
 -- CONSTRAINTS
 -- =============================================================================
@@ -643,6 +679,24 @@ INSERT INTO requirement_version_verification_methods (requirement_version_id, ve
     (4, 2),  -- REQ-ACS-001 v1 -> Analysis
     (5, 4);  -- REQ-THERM-001 v1 -> Test
 
+-- Custom field definitions (Space Project: sample metadata fields)
+INSERT INTO custom_field_definitions (project_id, label, field_type, enum_values, sort_order) VALUES
+    (1, 'Component', 'text', NULL, 0),
+    (1, 'Risk', 'enum', '["Low", "Medium", "High"]'::jsonb, 1),
+    (1, 'Priority', 'number', NULL, 2);
+
+-- Sample custom field values for first three requirement versions
+INSERT INTO custom_field_values (requirement_version_id, custom_field_definition_id, value) VALUES
+    (1, 1, 'Power System'),
+    (1, 2, 'Medium'),
+    (1, 3, '1'),
+    (2, 1, 'Power System'),
+    (2, 2, 'Low'),
+    (2, 3, '2'),
+    (3, 1, 'Communication'),
+    (3, 2, 'High'),
+    (3, 3, '1');
+
 -- Sample audit logs
 INSERT INTO logs (user_id, action_type, entity_type, entity_id, project_id, description, created_at) VALUES
     (1, 'CREATE', 'PROJECT', 1, 1, 'Space Project created by system administrator', NOW() - INTERVAL '1 day'),
@@ -673,6 +727,8 @@ BEGIN
     RAISE NOTICE '- 5 Requirement version–verification method links';
     RAISE NOTICE '- 5 Tests for Space Project';
     RAISE NOTICE '- 5 Traceability matrix entries';
+    RAISE NOTICE '- 3 Custom field definitions (Space Project)';
+    RAISE NOTICE '- 9 Custom field value samples';
     RAISE NOTICE '- 9 Project membership assignments';
     RAISE NOTICE '- 5 Sample audit logs';
     RAISE NOTICE '';
@@ -704,5 +760,6 @@ INSERT INTO __diesel_schema_migrations (version) VALUES
     ('2026-02-08-000001_immutable_baselines'),
     ('2026-02-08-000003_requirement_version_approval'),
     ('2026-02-09-000001_matrix_triggering_metadata'),
-    ('2026-02-09-000002_baseline_traceability_suspect')
+    ('2026-02-09-000002_baseline_traceability_suspect'),
+    ('2026-02-13-000001_custom_metadata_fields')
 ON CONFLICT (version) DO NOTHING;

@@ -122,6 +122,7 @@ DROP TABLE IF EXISTS baseline_requirements CASCADE;
 DROP TABLE IF EXISTS baselines CASCADE;
 DROP TABLE IF EXISTS matrix CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;
+DROP TABLE IF EXISTS requirement_comments CASCADE;
 DROP TABLE IF EXISTS custom_field_values CASCADE;
 DROP TABLE IF EXISTS requirement_version_verification_methods CASCADE;
 DROP TRIGGER IF EXISTS requirement_versions_search_vector_trigger ON requirement_versions;
@@ -153,7 +154,7 @@ echo ""
 echo "🔍 Verifying database setup..."
 echo "📋 Tables created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "\dt" \
-  | grep -E "(projects|users|requirements|requirement_versions|requirement_version_verification|tests|matrix|logs|baselines|baseline_requirements|baseline_traceability|categories|applicability|verification|requirement_status|status_id|custom_field_definitions|custom_field_values)" || true
+  | grep -E "(projects|users|requirements|requirement_versions|requirement_version_verification|requirement_comments|tests|matrix|logs|baselines|baseline_requirements|baseline_traceability|categories|applicability|verification|requirement_status|status_id|custom_field_definitions|custom_field_values)" || true
 echo ""
 echo "📋 Immutable baselines (snapshots):"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
@@ -186,6 +187,12 @@ echo "📋 Custom metadata fields:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
   SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'custom_field_definitions') AS definitions_exists,
          EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'custom_field_values') AS values_exists;
+" 2>/dev/null || true
+echo ""
+echo "📋 Requirement comments:"
+docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
+  SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'requirement_comments') AS requirement_comments_exists,
+         EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_requirement_comments_requirement') AS index_requirement_exists;
 " 2>/dev/null || true
 echo ""
 
@@ -241,6 +248,8 @@ UNION ALL
 SELECT 'Custom field definitions', COUNT(*) FROM custom_field_definitions
 UNION ALL
 SELECT 'Custom field values', COUNT(*) FROM custom_field_values
+UNION ALL
+SELECT 'Requirement comments', COUNT(*) FROM requirement_comments
 UNION ALL
 SELECT 'Logs', COUNT(*) FROM logs;
 "

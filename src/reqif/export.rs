@@ -13,11 +13,13 @@ fn escape_xml(s: &str) -> String {
         .replace('\'', "&apos;")
 }
 
-/// Build ReqIF 1.2 XML from project name, requirements, and optional parent map (req_id -> parent_req_id).
+/// Build ReqIF 1.2 XML from project name, requirements, optional parent map (req_id -> parent_req_id),
+/// and optional comments per requirement (req_id -> formatted remarks string).
 pub fn to_reqif(
     project_name: &str,
     requirements: &[Requirement],
     parent_map: &HashMap<i32, i32>,
+    comments_map: Option<&HashMap<i32, String>>,
 ) -> String {
     let mut out = String::new();
     out.push_str(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
@@ -52,6 +54,7 @@ pub fn to_reqif(
     out.push_str("\n            <ATTRIBUTE-DEFINITION-STRING IDENTIFIER=\"ad-title\" LONG-NAME=\"Title\" TYPE=\"dt-string\"/>");
     out.push_str("\n            <ATTRIBUTE-DEFINITION-STRING IDENTIFIER=\"ad-statement\" LONG-NAME=\"Statement\" TYPE=\"dt-string\"/>");
     out.push_str("\n            <ATTRIBUTE-DEFINITION-STRING IDENTIFIER=\"ad-rationale\" LONG-NAME=\"Rationale\" TYPE=\"dt-string\"/>");
+    out.push_str("\n            <ATTRIBUTE-DEFINITION-STRING IDENTIFIER=\"ad-remarks\" LONG-NAME=\"Remarks\" TYPE=\"dt-string\"/>");
     out.push_str("\n          </SPEC-ATTRIBUTES>");
     out.push_str("\n        </SPEC-OBJECT-TYPE>");
     out.push_str("\n      </SPEC-TYPES>");
@@ -80,6 +83,15 @@ pub fn to_reqif(
                 out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
                 out.push_str(&escape_xml(j));
                 out.push_str("\" DEFINITION=\"ad-rationale\"/>");
+            }
+        }
+        if let Some(map) = comments_map {
+            if let Some(remarks) = map.get(&req.id) {
+                if !remarks.is_empty() {
+                    out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
+                    out.push_str(&escape_xml(remarks));
+                    out.push_str("\" DEFINITION=\"ad-remarks\"/>");
+                }
             }
         }
         out.push_str("\n          </VALUES>");

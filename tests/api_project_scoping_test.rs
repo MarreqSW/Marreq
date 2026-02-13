@@ -233,6 +233,7 @@ async fn list_requirements_returns_only_user_projects() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -260,6 +261,7 @@ async fn list_requirements_returns_only_user_projects() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -287,6 +289,7 @@ async fn list_requirements_returns_only_user_projects() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -343,6 +346,7 @@ async fn get_requirement_from_unauthorized_project_returns_forbidden() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -421,6 +425,7 @@ async fn delete_requirement_works_for_any_authenticated_user() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -685,6 +690,7 @@ async fn admin_can_access_all_projects() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 

@@ -432,6 +432,7 @@ async fn filter_and_search_requirements() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
         repo.requirements.insert(i, req);
     }
@@ -533,6 +534,7 @@ async fn non_admin_cannot_delete_released_requirement() {
         approval_state: "draft".to_string(),
         approved_by: None,
         approved_at: None,
+        custom_fields: None,
     };
     repo.requirements.insert(1, req);
 
@@ -692,6 +694,7 @@ async fn create_requirement_from_template() {
         approval_state: "draft".to_string(),
         approved_by: None,
         approved_at: None,
+        custom_fields: None,
     };
     repo.requirements.insert(1, template_req);
 

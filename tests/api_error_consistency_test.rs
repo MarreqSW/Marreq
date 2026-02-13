@@ -286,6 +286,7 @@ async fn bad_request_has_error_message() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -398,6 +399,7 @@ async fn error_messages_are_clear_and_actionable() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 

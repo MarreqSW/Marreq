@@ -631,6 +631,7 @@ async fn admin_can_access_all_endpoints() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -672,6 +673,7 @@ async fn regular_user_can_access_endpoints() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 

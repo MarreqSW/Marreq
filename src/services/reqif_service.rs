@@ -115,7 +115,7 @@ impl<'a> ReqIFService<'a> {
             };
 
             let verification_method_ids = [config.default_verification_method_id];
-            match req_service.create(actor, payload, &verification_method_ids) {
+            match req_service.create(actor, payload, &verification_method_ids, None) {
                 Ok(id) => {
                     imported_count += 1;
                     imported_requirement_ids.push(id);
@@ -158,7 +158,13 @@ impl<'a> ReqIFService<'a> {
                 justification: req.justification.clone(),
                 project_id: req.project_id,
             };
-            let _ = req_service.update(actor, child_reqman_id, payload, &verification_method_ids);
+            let _ = req_service.update(
+                actor,
+                child_reqman_id,
+                payload,
+                &verification_method_ids,
+                None,
+            );
         }
 
         Ok(ImportResult {
@@ -250,6 +256,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
         mock.requirements.insert(10, req);
 

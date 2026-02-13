@@ -71,6 +71,39 @@ Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
           <textarea name="justification" id="justification" class="c-create-field__textarea" rows="4"
             placeholder="What evidence or reasoning supports this?">{{template.justification}}</textarea>
         </div>
+
+        {{#if custom_field_definitions}}
+        <div class="c-create-field" id="custom-fields-section">
+          <h3 class="c-create-field__label mb-2">Custom fields</h3>
+          {{#each custom_field_definitions}}
+          <div class="c-create-field mb-2" data-custom-field-id="{{id}}">
+            <label for="custom_field_{{id}}" class="c-create-field__label">{{label}}</label>
+            {{#if (eq field_type "text")}}
+            <input type="text" id="custom_field_{{id}}" class="c-create-field__input c-create-field__custom-value" data-field-id="{{id}}" placeholder="">
+            {{else if (eq field_type "number")}}
+            <input type="number" id="custom_field_{{id}}" class="c-create-field__input c-create-field__custom-value" data-field-id="{{id}}" placeholder="">
+            {{else if (eq field_type "boolean")}}
+            <select id="custom_field_{{id}}" class="c-create-field__input c-create-field__custom-value" data-field-id="{{id}}">
+              <option value="">—</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+            {{else if (eq field_type "enum")}}
+            <select id="custom_field_{{id}}" class="c-create-field__input c-create-field__custom-value" data-field-id="{{id}}">
+              <option value="">—</option>
+              {{#if enum_values}}
+              {{#each enum_values}}
+              <option value="{{this}}">{{this}}</option>
+              {{/each}}
+              {{/if}}
+            </select>
+            {{else}}
+            <input type="text" id="custom_field_{{id}}" class="c-create-field__input c-create-field__custom-value" data-field-id="{{id}}" placeholder="">
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
       </div>
     </section>
 
@@ -288,6 +321,7 @@ Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
 
   <input type="hidden" id="id" name="id" value="None">
   <input type="hidden" id="req_author_email" name="req_author_email" value="hello@example.com">
+  <input type="hidden" id="custom_field_values" name="custom_field_values" value="[]">
 </form>
 
 {{> partials/modals}}

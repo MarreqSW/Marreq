@@ -505,8 +505,28 @@ function initKeyboardShortcuts({ searchInput, newRequirementButton }) {
   });
 }
 
+function syncCustomFiltersToHidden(form) {
+  const hidden = form?.querySelector('#custom_filters_hidden');
+  const inputs = form?.querySelectorAll('.custom-filter-input');
+  if (!hidden || !inputs?.length) return;
+  const arr = Array.from(inputs)
+    .map((el) => ({
+      field_id: parseInt(el.getAttribute('data-field-id'), 10),
+      value: (el.value ?? '').trim(),
+    }))
+    .filter((item) => item.value !== '');
+  hidden.value = arr.length ? JSON.stringify(arr) : '';
+}
+
 function initFiltersForm(form, searchInput) {
   if (!form) return;
+
+  form.querySelectorAll('.custom-filter-input').forEach((el) => {
+    el.addEventListener('change', () => syncCustomFiltersToHidden(form));
+    el.addEventListener('input', () => syncCustomFiltersToHidden(form));
+  });
+
+  form.addEventListener('submit', () => syncCustomFiltersToHidden(form));
 
   form.querySelectorAll('[data-filter-control]').forEach((select) => {
     select.addEventListener('change', () => {
@@ -531,6 +551,10 @@ function initFiltersForm(form, searchInput) {
       form.querySelectorAll('[data-filter-control]').forEach((select) => {
         select.value = '';
       });
+      form.querySelectorAll('.custom-filter-input').forEach((el) => {
+        el.value = '';
+      });
+      syncCustomFiltersToHidden(form);
       if (searchInput) {
         searchInput.value = '';
         applySearch('');

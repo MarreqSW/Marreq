@@ -35,6 +35,7 @@ fn sample_requirement() -> Requirement {
         approval_state: "draft".to_string(),
         approved_by: None,
         approved_at: None,
+        custom_fields: None,
     }
 }
 

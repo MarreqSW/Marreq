@@ -175,6 +175,7 @@ fn decorate_requirements_impl<R: Repository>(
                 approval_state: r.approval_state.clone(),
                 approved_by: r.approved_by,
                 approved_at: r.approved_at,
+                custom_fields: r.custom_fields.clone(),
             }
         })
         .collect()
@@ -399,6 +400,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
 
@@ -423,6 +425,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
 
         let r2 = Requirement {
@@ -446,6 +449,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
 
         let r3 = Requirement {
@@ -469,6 +473,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
 
         let decorated = decorate_requirements_impl(&repo, vec![r1, r2, r3]);
@@ -613,6 +618,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
         let test = TestCase {
             id: 10,
@@ -671,6 +677,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
         repo.requirements.insert(2, req);
         // matrix for different requirement
@@ -724,6 +731,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
         repo.requirements.insert(3, req);
         repo.matrices.push(MatrixLink {

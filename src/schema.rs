@@ -53,6 +53,28 @@ diesel::table! {
 }
 
 diesel::table! {
+    custom_field_definitions (id) {
+        id -> Int4,
+        project_id -> Int4,
+        #[max_length = 255]
+        label -> Varchar,
+        #[max_length = 20]
+        field_type -> Varchar,
+        enum_values -> Nullable<diesel::pg::sql_types::Jsonb>,
+        sort_order -> Int4,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    custom_field_values (requirement_version_id, custom_field_definition_id) {
+        requirement_version_id -> Int4,
+        custom_field_definition_id -> Int4,
+        value -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
     logs (log_id) {
         log_id -> Int4,
         user_id -> Int4,
@@ -238,6 +260,9 @@ diesel::table! {
 
 diesel::joinable!(applicability -> projects (project_id));
 diesel::joinable!(baseline_requirements -> baselines (baseline_id));
+diesel::joinable!(custom_field_definitions -> projects (project_id));
+diesel::joinable!(custom_field_values -> custom_field_definitions (custom_field_definition_id));
+diesel::joinable!(custom_field_values -> requirement_versions (requirement_version_id));
 diesel::joinable!(baseline_requirements -> requirement_versions (version_id));
 diesel::joinable!(baseline_requirements -> requirements (requirement_id));
 diesel::joinable!(baseline_traceability -> baselines (baseline_id));
@@ -275,6 +300,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     baseline_traceability,
     baselines,
     categories,
+    custom_field_definitions,
+    custom_field_values,
     embedding_index_queue,
     logs,
     matrix,

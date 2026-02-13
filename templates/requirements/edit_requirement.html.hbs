@@ -167,6 +167,39 @@
           </select>
           <small class="c-editor-field__help">Hold Ctrl/Cmd to select multiple.</small>
         </div>
+
+        {{#if custom_field_definitions_with_values}}
+        <div class="c-editor-meta-group" id="custom-fields-edit-section">
+          <h2 class="c-editor-meta__title">Custom fields</h2>
+          {{#each custom_field_definitions_with_values}}
+          <div class="c-editor-field mb-2" data-custom-field-id="{{id}}">
+            <label for="custom_field_{{id}}" class="c-editor-field__label">{{label}}</label>
+            {{#if (eq field_type "text")}}
+            <input type="text" id="custom_field_{{id}}" class="c-editor-field__input c-create-field__custom-value" data-field-id="{{id}}" value="{{current_value}}" placeholder="">
+            {{else if (eq field_type "number")}}
+            <input type="number" id="custom_field_{{id}}" class="c-editor-field__input c-create-field__custom-value" data-field-id="{{id}}" value="{{current_value}}" placeholder="">
+            {{else if (eq field_type "boolean")}}
+            <select id="custom_field_{{id}}" class="c-editor-field__input c-create-field__custom-value" data-field-id="{{id}}">
+              <option value="">—</option>
+              <option value="true" {{#if (eq current_value "true")}}selected{{/if}}>Yes</option>
+              <option value="false" {{#if (eq current_value "false")}}selected{{/if}}>No</option>
+            </select>
+            {{else if (eq field_type "enum")}}
+            <select id="custom_field_{{id}}" class="c-editor-field__input c-create-field__custom-value" data-field-id="{{id}}">
+              <option value="">—</option>
+              {{#if enum_values}}
+              {{#each enum_values}}
+              <option value="{{this}}" {{#if (eq this ../current_value)}}selected{{/if}}>{{this}}</option>
+              {{/each}}
+              {{/if}}
+            </select>
+            {{else}}
+            <input type="text" id="custom_field_{{id}}" class="c-editor-field__input c-create-field__custom-value" data-field-id="{{id}}" value="{{current_value}}" placeholder="">
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+        {{/if}}
       </section>
 
       <section class="c-editor-meta-group">
@@ -221,6 +254,7 @@
     {{/each}}
   </select>
   <input type="hidden" id="project_id" name="project_id" value="{{req.project_id}}">
+  <input type="hidden" id="custom_field_values" name="custom_field_values" value="[]">
   <input type="hidden" id="autosave-interval" value="{{autosave.interval_ms}}" data-role="autosave-interval">
 </form>
 {{/inline}}

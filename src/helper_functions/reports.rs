@@ -482,6 +482,97 @@ pub fn generate_pdf_report_data(metrics: &Metrics) -> Result<Vec<u8>, Box<dyn st
     save_pdf(doc, pages)
 }
 
+/// One row for the requirements PDF table: (id, title, reference, status, custom_values in definition order).
+pub type RequirementsPdfRow = (i32, String, String, String, Vec<String>);
+
+/// Generate a PDF document with a table of requirements (fixed columns + one per custom field).
+pub fn generate_requirements_pdf_report(
+    project_name: &str,
+    rows: &[RequirementsPdfRow],
+    custom_headers: &[String],
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let doc = PdfDocument::new("ReqMan Requirements");
+    let mut pages = vec![Vec::new()];
+    let mut current_page = 0usize;
+    let mut page_number = 1usize;
+
+    push_text(
+        &mut pages[current_page],
+        BuiltinFont::HelveticaBold,
+        16.0,
+        Mm(20.0),
+        Mm(INITIAL_Y),
+        &format!("Requirements - {}", project_name),
+    );
+    let current_date = chrono::Utc::now().format("%Y-%m-%d %H:%M UTC");
+    push_text(
+        &mut pages[current_page],
+        BuiltinFont::Helvetica,
+        9.0,
+        Mm(20.0),
+        Mm(270.0),
+        &format!("Generated on: {}", current_date),
+    );
+
+    let mut y = Mm(CONTENT_START_Y - 10.0);
+    let header_cells: Vec<String> = ["ID", "Title", "Reference", "Status"]
+        .into_iter()
+        .map(String::from)
+        .chain(custom_headers.iter().cloned())
+        .collect();
+    push_text(
+        &mut pages[current_page],
+        BuiltinFont::HelveticaBold,
+        8.0,
+        Mm(20.0),
+        y,
+        &header_cells.join(" | "),
+    );
+    y -= Mm(8.0);
+
+    fn truncate(s: &str, max_chars: usize) -> String {
+        let s = s.trim();
+        if s.chars().count() <= max_chars {
+            s.to_string()
+        } else {
+            format!("{}…", s.chars().take(max_chars - 1).collect::<String>())
+        }
+    }
+
+    for (id, title, reference, status, custom_vals) in rows {
+        if ensure_page_space(&mut pages, &mut current_page, &mut y, &mut page_number) {
+            push_text(
+                &mut pages[current_page],
+                BuiltinFont::HelveticaBold,
+                9.0,
+                Mm(20.0),
+                y,
+                "Requirements (continued)",
+            );
+            y -= Mm(8.0);
+        }
+        let mut cells = vec![
+            id.to_string(),
+            truncate(title, 35),
+            truncate(reference, 18),
+            truncate(status, 12),
+        ];
+        cells.extend(custom_vals.iter().map(|v| truncate(v, 15)));
+        push_text(
+            &mut pages[current_page],
+            BuiltinFont::Helvetica,
+            7.0,
+            Mm(20.0),
+            y,
+            &cells.join(" | "),
+        );
+        y -= Mm(6.0);
+    }
+
+    add_footer(&mut pages[0]);
+    save_pdf(doc, pages)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

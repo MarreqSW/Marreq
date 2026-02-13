@@ -69,6 +69,32 @@
 </section>
 {{/inline}}
 
+{{#*inline "custom_fields_panel"}}
+{{#if requirement_data.has_custom_fields}}
+<section class="card shadow-sm border-0 requirement-side-card" aria-labelledby="custom-fields-heading">
+  <div class="card-header requirement-card-header border-0 d-flex justify-content-between align-items-center">
+    <div class="text-uppercase small text-muted mb-0" id="custom-fields-heading">Custom metadata</div>
+    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse"
+      data-bs-target="#requirementCustomFieldsContent" aria-expanded="true" aria-controls="requirementCustomFieldsContent"
+      aria-label="Toggle custom metadata">
+      <span aria-hidden="true">▼</span>
+      <span class="visually-hidden">Collapse</span>
+    </button>
+  </div>
+  <div class="collapse show" id="requirementCustomFieldsContent">
+    <div class="card-body">
+      <dl class="row requirement-meta-list mb-0">
+        {{#each requirement_data.requirement.custom_fields}}
+        <dt class="col-6 text-uppercase small text-muted">{{this.label}}</dt>
+        <dd class="col-6 fw-semibold text-end text-lg-start">{{this.value}}</dd>
+        {{/each}}
+      </dl>
+    </div>
+  </div>
+</section>
+{{/if}}
+{{/inline}}
+
 {{#*inline "metadata_panel"}}
 <section class="card shadow-sm border-0 requirement-side-card" aria-labelledby="metadata-heading">
   <div class="card-header requirement-card-header border-0 d-flex justify-content-between align-items-center">
@@ -419,6 +445,7 @@
     </div>
     <aside class="reqman-requirement-detail-sidebar" aria-label="Requirement metadata and relationships">
       {{> metadata_panel}}
+      {{> custom_fields_panel}}
       {{> versions_panel}}
       {{> relationships_panel}}
     </aside>

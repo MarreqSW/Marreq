@@ -109,6 +109,38 @@ define_tagged_form!(NewRequirementStatus, requirement_status);
 define_tagged_form!(NewTestStatus, test_status);
 define_tagged_form!(NewVerificationMethod, verification);
 
+/// Payload to create or update a custom field definition (project-scoped).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+pub struct CustomFieldDefinitionPayload {
+    pub label: String,
+    /// One of: text, enum, boolean, number
+    pub field_type: String,
+    /// Required for field_type "enum": array of allowed strings
+    pub enum_values: Option<Vec<String>>,
+    pub sort_order: Option<i32>,
+}
+
+/// Insertable row for custom_field_definitions (id and created_at are SERIAL/DEFAULT).
+#[derive(Insertable, Clone, Debug)]
+#[diesel(table_name = custom_field_definitions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewCustomFieldDefinitionRow {
+    pub project_id: i32,
+    pub label: String,
+    pub field_type: String,
+    pub enum_values: Option<serde_json::Value>,
+    pub sort_order: i32,
+}
+
+/// One custom field value when creating/updating a requirement (field_id, value).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+pub struct CustomFieldValueInput {
+    pub field_id: i32,
+    pub value: Option<String>,
+}
+
 /// Form used to create a new [`MatrixLink`] entry tying a requirement to a test.
 #[derive(Serialize, Deserialize, Insertable)]
 #[serde(crate = "rocket::serde")]

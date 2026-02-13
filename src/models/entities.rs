@@ -44,6 +44,14 @@ pub struct RequirementVersion {
     pub approved_at: Option<chrono::NaiveDateTime>,
 }
 
+/// One custom field value as returned in requirement payloads (field_id, label, value).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct CustomFieldValueDisplay {
+    pub field_id: i32,
+    pub label: String,
+    pub value: Option<String>,
+}
+
 /// Current view of a requirement (logical id + current version content).
 /// Built from [`RequirementContainer`] + current [`RequirementVersion`] for API/UI compatibility.
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -72,6 +80,9 @@ pub struct Requirement {
     pub approval_state: String,
     pub approved_by: Option<i32>,
     pub approved_at: Option<chrono::NaiveDateTime>,
+    /// Project-scoped custom metadata (empty if none defined or no values).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub custom_fields: Option<Vec<CustomFieldValueDisplay>>,
 }
 
 impl Requirement {
@@ -243,6 +254,28 @@ define_tagged_entity!(Applicability);
 define_tagged_entity!(RequirementStatus);
 define_tagged_entity!(TestStatus);
 define_tagged_entity!(VerificationMethod);
+
+/// Project-scoped custom field definition (label, type, optional enum values).
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[diesel(table_name = crate::schema::custom_field_definitions)]
+pub struct CustomFieldDefinition {
+    pub id: i32,
+    pub project_id: i32,
+    pub label: String,
+    pub field_type: String,
+    pub enum_values: Option<serde_json::Value>,
+    pub sort_order: i32,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+/// One stored custom field value per requirement version.
+#[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug)]
+#[diesel(table_name = crate::schema::custom_field_values)]
+pub struct CustomFieldValue {
+    pub requirement_version_id: i32,
+    pub custom_field_definition_id: i32,
+    pub value: Option<String>,
+}
 
 /// Different categories of actions that can appear in the audit log.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

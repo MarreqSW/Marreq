@@ -103,6 +103,21 @@
   </div>
   {{/partials/metrics_card}}
 
+  {{#> partials/metrics_card title="Custom fields"}}
+  <div class="c-dashboard-card__description">
+    <p>Add project-specific metadata fields to requirements</p>
+  </div>
+  <div class="c-dashboard-card__actions">
+    {{#if selected_project_id}}
+    <a href="/p/{{selected_project_id}}/custom_fields" class="btn btn-primary c-dashboard-card__action">View Custom fields</a>
+    <a href="/p/{{selected_project_id}}/custom_fields/new" class="btn btn-outline c-dashboard-card__action">New custom field</a>
+    {{else}}
+    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Custom fields</span>
+    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New custom field</span>
+    {{/if}}
+  </div>
+  {{/partials/metrics_card}}
+
   {{#> partials/metrics_card title="Applicability"}}
   <div class="c-dashboard-card__description">
     <p>Define which products/systems requirements apply to</p>

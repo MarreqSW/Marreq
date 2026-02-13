@@ -122,6 +122,7 @@ DROP TABLE IF EXISTS baseline_requirements CASCADE;
 DROP TABLE IF EXISTS baselines CASCADE;
 DROP TABLE IF EXISTS matrix CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;
+DROP TABLE IF EXISTS custom_field_values CASCADE;
 DROP TABLE IF EXISTS requirement_version_verification_methods CASCADE;
 DROP TRIGGER IF EXISTS requirement_versions_search_vector_trigger ON requirement_versions;
 DROP TABLE IF EXISTS requirement_versions CASCADE;
@@ -133,6 +134,7 @@ DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS applicability CASCADE;
 DROP TABLE IF EXISTS verification CASCADE;
+DROP TABLE IF EXISTS custom_field_definitions CASCADE;
 DROP TABLE IF EXISTS requirement_status CASCADE;
 DROP TABLE IF EXISTS test_status CASCADE;
 DROP TABLE IF EXISTS status_id CASCADE;
@@ -151,7 +153,7 @@ echo ""
 echo "🔍 Verifying database setup..."
 echo "📋 Tables created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "\dt" \
-  | grep -E "(projects|users|requirements|requirement_versions|requirement_version_verification|tests|matrix|logs|baselines|baseline_requirements|baseline_traceability|categories|applicability|verification|requirement_status|status_id)" || true
+  | grep -E "(projects|users|requirements|requirement_versions|requirement_version_verification|tests|matrix|logs|baselines|baseline_requirements|baseline_traceability|categories|applicability|verification|requirement_status|status_id|custom_field_definitions|custom_field_values)" || true
 echo ""
 echo "📋 Immutable baselines (snapshots):"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
@@ -178,6 +180,12 @@ echo "📋 Requirement version approval workflow:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
   SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'requirement_versions' AND column_name = 'approval_state') AS approval_state_exists,
          EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_requirement_versions_approval_state') AS approval_index_exists;
+" 2>/dev/null || true
+echo ""
+echo "📋 Custom metadata fields:"
+docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
+  SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'custom_field_definitions') AS definitions_exists,
+         EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'custom_field_values') AS values_exists;
 " 2>/dev/null || true
 echo ""
 
@@ -229,6 +237,10 @@ UNION ALL
 SELECT 'Requirement Status', COUNT(*) FROM requirement_status
 UNION ALL
 SELECT 'Test Status', COUNT(*) FROM test_status
+UNION ALL
+SELECT 'Custom field definitions', COUNT(*) FROM custom_field_definitions
+UNION ALL
+SELECT 'Custom field values', COUNT(*) FROM custom_field_values
 UNION ALL
 SELECT 'Logs', COUNT(*) FROM logs;
 "

@@ -1052,6 +1052,18 @@ function initAutosave(form) {
   }
 }
 
+function collectCustomFieldValues(form) {
+  const hidden = form.querySelector('#custom_field_values');
+  if (!hidden) return;
+  const inputs = form.querySelectorAll('.c-create-field__custom-value');
+  const arr = Array.from(inputs).map((el) => {
+    const fieldId = Number(el.getAttribute('data-field-id'));
+    const value = el.value?.trim() || null;
+    return { field_id: fieldId, value };
+  });
+  hidden.value = JSON.stringify(arr);
+}
+
 export function init() {
   const form = document.querySelector('[data-requirement-form]');
   if (!form) {
@@ -1059,6 +1071,8 @@ export function init() {
   }
 
   const isCreateForm = form.classList.contains('create-form');
+
+  form.addEventListener('submit', () => collectCustomFieldValues(form));
 
   initCustomDropdowns(form);
   initReferenceValidation(form);

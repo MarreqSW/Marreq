@@ -537,6 +537,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
 
@@ -626,6 +627,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
 
@@ -665,6 +667,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
 
@@ -733,6 +736,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
         let req2 = Requirement {
             id: 2,
@@ -755,6 +759,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
         repo.requirements.insert(1, req1);
         repo.requirements.insert(2, req2);
@@ -803,6 +808,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
         repo.requirements.insert(
@@ -828,6 +834,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
 
@@ -875,6 +882,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
 
@@ -921,6 +929,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
 
@@ -968,6 +977,7 @@ mod tests {
                     approval_state: "draft".to_string(),
                     approved_by: None,
                     approved_at: None,
+                    custom_fields: None,
                 },
             );
         }
@@ -1015,6 +1025,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
         repo.requirements.insert(
@@ -1040,6 +1051,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
 
@@ -1086,6 +1098,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
         repo.requirements.insert(
@@ -1111,6 +1124,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
 
@@ -1157,6 +1171,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
         repo.requirements.insert(
@@ -1182,6 +1197,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
 
@@ -1228,6 +1244,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
         repo.tests.insert(
@@ -1333,6 +1350,7 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
         repo.tests.insert(
@@ -1399,6 +1417,7 @@ mod tests {
                     approval_state: "draft".to_string(),
                     approved_by: None,
                     approved_at: None,
+                    custom_fields: None,
                 },
             );
         }

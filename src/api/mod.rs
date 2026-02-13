@@ -2,6 +2,7 @@ pub mod applicability;
 pub mod baselines;
 pub mod cache;
 pub mod categories;
+pub mod comments;
 pub mod custom_fields;
 pub mod error;
 pub mod matrix;
@@ -32,6 +33,8 @@ pub fn routes() -> Vec<Route> {
         requirements::create,
         requirements::delete,
         requirements::patch_requirement,
+        comments::list,
+        comments::create,
         requirement_diff::diff_versions,
         requirement_diff::diff_baseline_vs_current,
         test_cases::list,

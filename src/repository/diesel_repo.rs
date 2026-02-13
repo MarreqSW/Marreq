@@ -1,9 +1,9 @@
 use super::errors::RepoError;
 use crate::models::entities::{
     Applicability, Baseline, BaselineTraceability, Category, CustomFieldDefinition,
-    CustomFieldValue, CustomFieldValueDisplay, Log, MatrixLink, Project, ProjectMember,
-    Requirement, RequirementContainer, RequirementStatus, RequirementVersion, TestCase, TestStatus,
-    User, VerificationMethod,
+    CustomFieldValue, CustomFieldValueDisplay, Log, MatrixLink, NewRequirementComment, Project,
+    ProjectMember, Requirement, RequirementComment, RequirementContainer, RequirementStatus,
+    RequirementVersion, TestCase, TestStatus, User, VerificationMethod,
 };
 use crate::models::forms::{
     CustomFieldDefinitionPayload, NewApplicability, NewBaselineRequirement, NewBaselineRow,
@@ -13,10 +13,11 @@ use crate::models::forms::{
 };
 use crate::repository::{
     BaselineRepository, CustomFieldRepository, LookupRepository, MatrixRepository,
-    ProjectMembersRepository, ProjectsRepository, RequirementsRepository, TestsCaseRepository,
-    UserRepository,
+    ProjectMembersRepository, ProjectsRepository, RequirementCommentsRepository,
+    RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use crate::schema;
+use diesel::expression_methods::BoolExpressionMethods;
 use diesel::expression_methods::NullableExpressionMethods;
 use diesel::pg::{upsert::excluded, PgConnection};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
@@ -1403,6 +1404,43 @@ impl crate::repository::LogRepository for DieselRepo {
         let cutoff = chrono::Utc::now().naive_utc() - chrono::Duration::days(days);
         let count = diesel::delete(logs.filter(created_at.lt(cutoff))).execute(conn.as_mut())?;
         Ok(count)
+    }
+}
+
+impl RequirementCommentsRepository for DieselRepo {
+    fn insert_requirement_comment(
+        &mut self,
+        new: &NewRequirementComment,
+    ) -> Result<RequirementComment, RepoError> {
+        let mut conn = self.get_conn()?;
+        diesel::insert_into(schema::requirement_comments::table)
+            .values(new)
+            .returning(schema::requirement_comments::all_columns)
+            .get_result(conn.as_mut())
+            .map_err(RepoError::from)
+    }
+
+    fn list_comments_by_requirement(
+        &self,
+        requirement_id: i32,
+        version_id: Option<i32>,
+    ) -> Result<Vec<RequirementComment>, RepoError> {
+        use schema::requirement_comments::dsl;
+        let mut conn = self.get_conn()?;
+        let q = dsl::requirement_comments
+            .filter(dsl::requirement_id.eq(requirement_id))
+            .order(dsl::created_at.asc());
+        let rows = match version_id {
+            Some(vid) => q
+                .filter(
+                    dsl::requirement_version_id
+                        .is_null()
+                        .or(dsl::requirement_version_id.eq(vid)),
+                )
+                .load::<RequirementComment>(conn.as_mut()),
+            None => q.load::<RequirementComment>(conn.as_mut()),
+        };
+        rows.map_err(RepoError::from)
     }
 }
 

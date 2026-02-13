@@ -3,6 +3,7 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{NewRequirement, User};
 use crate::repository::errors::RepoError;
+use crate::repository::{RequirementCommentsRepository, UserRepository};
 use crate::reqif::import::{object_to_fields, parse_reqif, ImportConfig, ImportResult};
 use crate::reqif::to_reqif;
 use crate::services::{BaselineService, ProjectService, RequirementService, StatusService};
@@ -17,17 +18,23 @@ impl<'a> ReqIFService<'a> {
         Self { state }
     }
 
-    /// Export project requirements as ReqIF 1.2 XML.
+    /// Export project requirements as ReqIF 1.2 XML (includes comments as Remarks when present).
     pub fn export_project(&self, project_id: i32) -> Result<String, RepoError> {
         let req_service = RequirementService::new(self.state);
         let project_service = ProjectService::new(self.state);
         let project = project_service.get_by_id(project_id)?;
         let requirements = req_service.list_by_project(project_id)?;
-        let parent_map = requirements
+        let parent_map: HashMap<i32, i32> = requirements
             .iter()
             .filter_map(|r| r.parent_id.map(|p| (r.id, p)))
             .collect();
-        Ok(to_reqif(&project.name, &requirements, &parent_map))
+        let comments_map = self.build_comments_map(&requirements);
+        Ok(to_reqif(
+            &project.name,
+            &requirements,
+            &parent_map,
+            Some(&comments_map),
+        ))
     }
 
     /// Export a baseline's requirements as ReqIF 1.2 XML (immutable snapshot).
@@ -45,7 +52,49 @@ impl<'a> ReqIFService<'a> {
             .filter_map(|r| r.parent_id.map(|p| (r.id, p)))
             .collect();
         let title = format!("{} (baseline: {})", project.name, baseline.name);
-        Ok(to_reqif(&title, &requirements, &parent_map))
+        let comments_map = self.build_comments_map(&requirements);
+        Ok(to_reqif(
+            &title,
+            &requirements,
+            &parent_map,
+            Some(&comments_map),
+        ))
+    }
+
+    /// Build requirement_id -> "Author, date: body\n..." for ReqIF Remarks.
+    fn build_comments_map(
+        &self,
+        requirements: &[crate::models::Requirement],
+    ) -> HashMap<i32, String> {
+        let repo = self.state.repo_read();
+        let mut map = HashMap::new();
+        for req in requirements {
+            let comments = match repo.list_comments_by_requirement(req.id, None) {
+                Ok(c) => c,
+                Err(_) => continue,
+            };
+            if comments.is_empty() {
+                continue;
+            }
+            let lines: Vec<String> = comments
+                .iter()
+                .map(|c| {
+                    let author = repo
+                        .get_user_by_id(c.author_id)
+                        .ok()
+                        .map(|u| u.name)
+                        .unwrap_or_else(|| format!("User#{}", c.author_id));
+                    format!(
+                        "{}, {}: {}",
+                        author,
+                        c.created_at.format("%Y-%m-%d %H:%M"),
+                        c.body
+                    )
+                })
+                .collect();
+            map.insert(req.id, lines.join("\n"));
+        }
+        map
     }
 
     /// Import ReqIF XML into a project. Creates requirements in topological order (parents before children).

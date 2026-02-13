@@ -4,8 +4,8 @@ use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
     BaselineRepository, CustomFieldRepository, LogRepository, LookupRepository, MatrixRepository,
-    ProjectMembersRepository, ProjectsRepository, Repository, RequirementsRepository,
-    TestsCaseRepository, UserRepository,
+    ProjectMembersRepository, ProjectsRepository, Repository, RequirementCommentsRepository,
+    RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -827,6 +827,24 @@ impl<R: LogRepository> LogRepository for CacheRepository<R> {
     }
 }
 
+impl<R: RequirementCommentsRepository> RequirementCommentsRepository for CacheRepository<R> {
+    fn insert_requirement_comment(
+        &mut self,
+        new: &NewRequirementComment,
+    ) -> Result<RequirementComment, RepoError> {
+        self.inner.insert_requirement_comment(new)
+    }
+
+    fn list_comments_by_requirement(
+        &self,
+        requirement_id: i32,
+        version_id: Option<i32>,
+    ) -> Result<Vec<RequirementComment>, RepoError> {
+        self.inner
+            .list_comments_by_requirement(requirement_id, version_id)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -972,6 +990,8 @@ mod tests {
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),
             next_custom_field_id: 1,
+            requirement_comments: Vec::new(),
+            next_comment_id: 1,
         }
     }
 

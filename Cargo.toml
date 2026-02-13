@@ -13,7 +13,7 @@ test-helpers = []
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-diesel = { version = "2.3.6", features = ["postgres", "chrono", "r2d2"] }
+diesel = { version = "2.3.6", features = ["postgres", "chrono", "r2d2", "serde_json"] }
 dotenvy = "0.15.7"
 chrono = { version = "0.4.43", features = ["serde"] }
 serde = "1.0"
@@ -35,6 +35,7 @@ reqwest = { version = "0.12.28", features = ["json", "blocking"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
 quick-xml = { version = "0.39", features = ["serialize"] }
 similar = "2.5"
+urlencoding = "2.1"
 
 # [dependencies.rocket_db_pools]
 # version = "0.1.0-rc.2"

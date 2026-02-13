@@ -71,6 +71,7 @@ impl<'a> DecoratedRequirementService<'a> {
         verification_filter: Option<i32>,
         category_filter: Option<i32>,
         applicability_filter: Option<i32>,
+        custom_field_filters: Option<&[(i32, String)]>,
         limit: i64,
         offset: i64,
     ) -> Result<Vec<DecoratedRequirement>, RepoError> {
@@ -82,6 +83,7 @@ impl<'a> DecoratedRequirementService<'a> {
                     verification_filter,
                     category_filter,
                     applicability_filter,
+                    custom_field_filters,
                     limit,
                     offset,
                 )?,
@@ -118,7 +120,7 @@ impl<'a> DecoratedRequirementService<'a> {
         verification_method_ids: &[i32],
     ) -> Result<i32, RepoError> {
         self.requirement_service
-            .create(actor, payload, verification_method_ids)
+            .create(actor, payload, verification_method_ids, None)
     }
 
     /// Update an existing requirement entry and log the change.
@@ -130,7 +132,7 @@ impl<'a> DecoratedRequirementService<'a> {
         verification_method_ids: &[i32],
     ) -> Result<Requirement, RepoError> {
         self.requirement_service
-            .update(actor, id, payload, verification_method_ids)
+            .update(actor, id, payload, verification_method_ids, None)
     }
 
     /// Delete an requirement entry and log the removal.
@@ -271,6 +273,7 @@ impl<'a> DecoratedRequirementService<'a> {
             approval_state: req.approval_state.clone(),
             approved_by: req.approved_by,
             approved_at: req.approved_at,
+            custom_fields: req.custom_fields.clone(),
         })
     }
 }
@@ -318,6 +321,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         }
     }
 

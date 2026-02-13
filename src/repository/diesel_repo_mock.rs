@@ -1,7 +1,7 @@
 // This is just for testing purposes
 
 use super::*;
-use crate::models::RequirementVersion;
+use crate::models::{CustomFieldDefinition, CustomFieldDefinitionPayload, RequirementVersion};
 use crate::repository::errors::RepoError;
 use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
@@ -31,6 +31,10 @@ pub struct DieselRepoMock {
     pub baseline_requirements: Vec<crate::models::BaselineRequirement>,
     pub baseline_traceability: Vec<crate::models::BaselineTraceability>,
     pub next_baseline_id: i32,
+    pub custom_field_definitions: HashMap<i32, CustomFieldDefinition>,
+    /// (requirement_version_id, custom_field_definition_id, value)
+    pub custom_field_values: Vec<(i32, i32, Option<String>)>,
+    pub next_custom_field_id: i32,
 }
 
 fn epoch() -> NaiveDateTime {
@@ -68,6 +72,9 @@ impl Default for DieselRepoMock {
             baseline_requirements: Vec::new(),
             baseline_traceability: Vec::new(),
             next_baseline_id: 1,
+            custom_field_definitions: HashMap::new(),
+            custom_field_values: Vec::new(),
+            next_custom_field_id: 1,
         }
     }
 }
@@ -100,6 +107,9 @@ impl DieselRepoMock {
             baseline_requirements: Vec::new(),
             baseline_traceability: Vec::new(),
             next_baseline_id: 1,
+            custom_field_definitions: HashMap::new(),
+            custom_field_values: Vec::new(),
+            next_custom_field_id: 1,
         }
     }
     pub fn with_error() -> Self {
@@ -125,6 +135,9 @@ impl DieselRepoMock {
             baseline_requirements: Vec::new(),
             baseline_traceability: Vec::new(),
             next_baseline_id: 1,
+            custom_field_definitions: HashMap::new(),
+            custom_field_values: Vec::new(),
+            next_custom_field_id: 1,
         }
     }
 
@@ -501,6 +514,7 @@ impl RequirementsRepository for DieselRepoMock {
         verification_filter: Option<i32>,
         category_filter: Option<i32>,
         applicability_filter: Option<i32>,
+        custom_field_filters: Option<&[(i32, String)]>,
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Requirement>, RepoError> {
@@ -519,6 +533,17 @@ impl RequirementsRepository for DieselRepoMock {
                     && verification_filter.is_none_or(|_| verification_ids.contains(&r.id))
                     && category_filter.is_none_or(|c| r.category_id == c)
                     && applicability_filter.is_none_or(|a| r.applicability_id == a)
+                    && custom_field_filters.is_none_or(|filters| {
+                        r.current_version_id.is_some_and(|vid| {
+                            filters.iter().all(|(field_id, value)| {
+                                self.custom_field_values.iter().any(|(v, fid, val)| {
+                                    *v == vid
+                                        && *fid == *field_id
+                                        && val.as_deref().unwrap_or("") == value.as_str()
+                                })
+                            })
+                        })
+                    })
             })
             .cloned()
             .collect();
@@ -655,6 +680,7 @@ impl RequirementsRepository for DieselRepoMock {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
         self.requirements.insert(id, req);
         Ok(id)
@@ -1053,6 +1079,128 @@ impl MatrixRepository for DieselRepoMock {
     }
 }
 
+impl crate::repository::CustomFieldRepository for DieselRepoMock {
+    fn list_custom_field_definitions_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<CustomFieldDefinition>, RepoError> {
+        let mut defs: Vec<_> = self
+            .custom_field_definitions
+            .values()
+            .filter(|d| d.project_id == project_id)
+            .cloned()
+            .collect();
+        defs.sort_by_key(|d| (d.sort_order, d.id));
+        Ok(defs)
+    }
+
+    fn get_custom_field_definition_by_id(
+        &self,
+        id: i32,
+    ) -> Result<CustomFieldDefinition, RepoError> {
+        self.custom_field_definitions
+            .get(&id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn create_custom_field_definition(
+        &mut self,
+        project_id: i32,
+        payload: &CustomFieldDefinitionPayload,
+    ) -> Result<i32, RepoError> {
+        let id = self.next_custom_field_id;
+        self.next_custom_field_id += 1;
+        let enum_values = payload
+            .enum_values
+            .as_ref()
+            .map(|v| serde_json::to_value(v).unwrap());
+        let def = CustomFieldDefinition {
+            id,
+            project_id,
+            label: payload.label.trim().to_string(),
+            field_type: payload.field_type.trim().to_lowercase(),
+            enum_values,
+            sort_order: payload.sort_order.unwrap_or(0),
+            created_at: epoch(),
+        };
+        self.custom_field_definitions.insert(id, def);
+        Ok(id)
+    }
+
+    fn update_custom_field_definition(
+        &mut self,
+        id: i32,
+        payload: &CustomFieldDefinitionPayload,
+    ) -> Result<(), RepoError> {
+        let def = self
+            .custom_field_definitions
+            .get_mut(&id)
+            .ok_or(RepoError::NotFound)?;
+        def.label = payload.label.trim().to_string();
+        def.field_type = payload.field_type.trim().to_lowercase();
+        def.enum_values = payload
+            .enum_values
+            .as_ref()
+            .map(|v| serde_json::to_value(v).unwrap());
+        def.sort_order = payload.sort_order.unwrap_or(0);
+        Ok(())
+    }
+
+    fn count_requirement_versions_using_field(&self, field_id: i32) -> Result<i64, RepoError> {
+        let count = self
+            .custom_field_values
+            .iter()
+            .filter(|(_, fid, _)| *fid == field_id)
+            .count();
+        Ok(count as i64)
+    }
+
+    fn delete_custom_field_definition(&mut self, id: i32) -> Result<(), RepoError> {
+        self.custom_field_definitions
+            .remove(&id)
+            .map(|_| ())
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn get_custom_field_values_for_version(
+        &self,
+        version_id: i32,
+    ) -> Result<Vec<crate::models::CustomFieldValueDisplay>, RepoError> {
+        let defs = &self.custom_field_definitions;
+        let values: Vec<_> = self
+            .custom_field_values
+            .iter()
+            .filter(|(vid, _, _)| *vid == version_id)
+            .filter_map(|(_, fid, value)| {
+                defs.get(fid)
+                    .map(|d| crate::models::CustomFieldValueDisplay {
+                        field_id: d.id,
+                        label: d.label.clone(),
+                        value: value.clone(),
+                    })
+            })
+            .collect();
+        Ok(values)
+    }
+
+    fn set_custom_field_values_for_version(
+        &mut self,
+        version_id: i32,
+        values: &[(i32, Option<String>)],
+    ) -> Result<(), RepoError> {
+        self.custom_field_values
+            .retain(|(vid, _, _)| *vid != version_id);
+        for &(field_id, ref value) in values {
+            if field_id > 0 {
+                self.custom_field_values
+                    .push((version_id, field_id, value.clone()));
+            }
+        }
+        Ok(())
+    }
+}
+
 impl crate::repository::BaselineRepository for DieselRepoMock {
     fn create_baseline(
         &mut self,
@@ -1162,6 +1310,7 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
                 approval_state: version.approval_state.clone(),
                 approved_by: version.approved_by,
                 approved_at: version.approved_at,
+                custom_fields: None,
             });
         }
         Ok(out)

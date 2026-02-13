@@ -1,6 +1,8 @@
 use crate::helper_functions::decorators;
 use crate::models::*;
-use crate::repository::{DieselRepo, RequirementsRepository, TestsCaseRepository};
+use crate::repository::{
+    CustomFieldRepository, DieselRepo, RequirementsRepository, TestsCaseRepository,
+};
 use diesel::prelude::*;
 use std::fs;
 use std::path::PathBuf;
@@ -113,10 +115,13 @@ pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::er
         .get_requirements_by_project(pid)
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
-    // Decorate requirements to get real names instead of IDs
-    let decorated_requirements = decorators::decorate_requirements(all_requirements);
+    let custom_defs = repo
+        .list_custom_field_definitions_by_project(pid)
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
-    // Write to a temp file to avoid fixed path and propagate read errors
+    // Decorate requirements to get real names instead of IDs
+    let decorated_requirements = decorators::decorate_requirements(all_requirements.clone());
+
     let temp_path: PathBuf = std::env::temp_dir().join(format!("reqman_requirements_{}.xls", pid));
     let path_str = temp_path
         .to_str()
@@ -124,7 +129,8 @@ pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::er
     let workbook = xlsxwriter::Workbook::new(path_str)?;
     let mut worksheet = workbook.add_worksheet(Some("Requirements"))?;
 
-    // Write headers
+    let base_cols = 14u16;
+    // Headers: standard columns then custom field labels
     worksheet.write_string(0, 0, "ID", None)?;
     worksheet.write_string(0, 1, "Title", None)?;
     worksheet.write_string(0, 2, "Description", None)?;
@@ -139,8 +145,10 @@ pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::er
     worksheet.write_string(0, 11, "Update Date", None)?;
     worksheet.write_string(0, 12, "Deadline Date", None)?;
     worksheet.write_string(0, 13, "Justification", None)?;
+    for (col_off, def) in custom_defs.iter().enumerate() {
+        worksheet.write_string(0, base_cols + col_off as u16, &def.label, None)?;
+    }
 
-    // Write data
     for (i, req) in decorated_requirements.iter().enumerate() {
         let row = (i + 1) as u32;
         worksheet.write_number(row, 0, req.id as f64, None)?;
@@ -157,6 +165,21 @@ pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::er
         worksheet.write_string(row, 11, &req.update_date, None)?;
         worksheet.write_string(row, 12, &req.deadline_date, None)?;
         worksheet.write_string(row, 13, req.justification.as_deref().unwrap_or(""), None)?;
+
+        let raw_req = &all_requirements[i];
+        if let Some(version_id) = raw_req.current_version_id {
+            let values = repo
+                .get_custom_field_values_for_version(version_id)
+                .unwrap_or_default();
+            let value_map: std::collections::HashMap<i32, String> = values
+                .into_iter()
+                .map(|v| (v.field_id, v.value.unwrap_or_default()))
+                .collect();
+            for (col_off, def) in custom_defs.iter().enumerate() {
+                let val = value_map.get(&def.id).cloned().unwrap_or_default();
+                worksheet.write_string(row, base_cols + col_off as u16, &val, None)?;
+            }
+        }
     }
 
     workbook.close()?;

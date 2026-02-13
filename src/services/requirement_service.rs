@@ -9,10 +9,14 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Loggable, Logger};
-use crate::models::{EntityType, NewRequirement, Requirement, RequirementVersion, TestCase, User};
+use crate::models::{
+    CustomFieldValueInput, EntityType, NewRequirement, Requirement, RequirementVersion, TestCase,
+    User,
+};
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository,
+    CustomFieldRepository, MatrixRepository, PooledConnectionWrapper, RequirementsRepository,
+    TestsCaseRepository,
 };
 use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
@@ -53,14 +57,22 @@ impl<'a> RequirementService<'a> {
         Self { state }
     }
 
-    /// Retrieve all requirements.
+    /// Retrieve all requirements (with custom fields attached).
     pub fn list_all(&self) -> Result<Vec<Requirement>, RepoError> {
-        self.repo_read().get_requirements_all()
+        let mut reqs = self.repo_read().get_requirements_all()?;
+        for r in &mut reqs {
+            let _ = self.attach_custom_fields(r);
+        }
+        Ok(reqs)
     }
 
-    /// Retrieve requirements scoped to a project.
+    /// Retrieve requirements scoped to a project (with custom fields attached).
     pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        self.repo_read().get_requirements_by_project(project_id)
+        let mut reqs = self.repo_read().get_requirements_by_project(project_id)?;
+        for r in &mut reqs {
+            let _ = self.attach_custom_fields(r);
+        }
+        Ok(reqs)
     }
 
     pub fn list_by_project_filtered(
@@ -90,7 +102,7 @@ impl<'a> RequirementService<'a> {
         ))
     }
 
-    /// Paginated filtered list; loads only one page from the database.
+    /// Paginated filtered list; loads only one page from the database (with custom fields attached).
     #[allow(clippy::too_many_arguments)]
     pub fn list_by_project_filtered_paginated(
         &self,
@@ -99,24 +111,33 @@ impl<'a> RequirementService<'a> {
         verification_filter: Option<i32>,
         category_filter: Option<i32>,
         applicability_filter: Option<i32>,
+        custom_field_filters: Option<&[(i32, String)]>,
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Requirement>, RepoError> {
-        self.repo_read()
+        let mut reqs = self
+            .repo_read()
             .get_requirements_by_project_filtered_paginated(
                 project_id,
                 status_filter,
                 verification_filter,
                 category_filter,
                 applicability_filter,
+                custom_field_filters,
                 limit,
                 offset,
-            )
+            )?;
+        for r in &mut reqs {
+            let _ = self.attach_custom_fields(r);
+        }
+        Ok(reqs)
     }
 
-    /// Retrieve a single requirement by identifier.
+    /// Retrieve a single requirement by identifier (with custom fields attached).
     pub fn get_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
-        self.repo_read().get_requirement_by_id(id)
+        let mut req = self.repo_read().get_requirement_by_id(id)?;
+        self.attach_custom_fields(&mut req)?;
+        Ok(req)
     }
 
     /// List all versions for a requirement (newest first).
@@ -157,11 +178,13 @@ impl<'a> RequirementService<'a> {
     ///
     /// If semantic search is enabled, the requirement is queued for embedding generation.
     /// `verification_method_ids` are written to the requirement–verification junction table.
+    /// Optional `custom_fields` are stored for the new version.
     pub fn create(
         &self,
         actor: &User,
         mut payload: NewRequirement,
         verification_method_ids: &[i32],
+        custom_fields: Option<&[CustomFieldValueInput]>,
     ) -> Result<i32, RepoError> {
         self.prepare_payload(&mut payload)?;
 
@@ -170,6 +193,16 @@ impl<'a> RequirementService<'a> {
             let mut repo = self.repo_write();
             let id = repo.insert_new_requirement(&payload)?;
             repo.set_requirement_verification_methods(id, verification_method_ids)?;
+            if let Some(cf) = custom_fields {
+                if !cf.is_empty() {
+                    let req = repo.get_requirement_by_id(id)?;
+                    if let Some(version_id) = req.current_version_id {
+                        let values: Vec<(i32, Option<String>)> =
+                            cf.iter().map(|v| (v.field_id, v.value.clone())).collect();
+                        repo.set_custom_field_values_for_version(version_id, &values)?;
+                    }
+                }
+            }
             id
         };
 
@@ -182,12 +215,14 @@ impl<'a> RequirementService<'a> {
     ///
     /// If semantic search is enabled, the requirement is queued for re-embedding.
     /// `verification_method_ids` replace the requirement's verification methods.
+    /// Optional `custom_fields` replace the current version's custom field values.
     pub fn update(
         &self,
         actor: &User,
         id: i32,
         mut payload: NewRequirement,
         verification_method_ids: &[i32],
+        custom_fields: Option<&[CustomFieldValueInput]>,
     ) -> Result<Requirement, RepoError> {
         self.prepare_payload(&mut payload)?;
         payload.id = Some(id);
@@ -202,6 +237,14 @@ impl<'a> RequirementService<'a> {
                 return Err(RepoError::NotFound);
             }
             repo.set_requirement_verification_methods(id, verification_method_ids)?;
+            let requirement = repo.get_requirement_by_id(id)?;
+            if let Some(cf) = custom_fields {
+                if let Some(version_id) = requirement.current_version_id {
+                    let values: Vec<(i32, Option<String>)> =
+                        cf.iter().map(|v| (v.field_id, v.value.clone())).collect();
+                    repo.set_custom_field_values_for_version(version_id, &values)?;
+                }
+            }
             let requirement = repo.get_requirement_by_id(id)?;
             let _project_ids = repo.mark_links_suspect_for_requirement(
                 id,
@@ -279,6 +322,22 @@ impl<'a> RequirementService<'a> {
 
     fn repo_write(&self) -> std::sync::RwLockWriteGuard<'_, DieselCachedRepo> {
         self.state.repo.write().expect("repo lock poisoned")
+    }
+
+    fn attach_custom_fields(&self, requirement: &mut Requirement) -> Result<(), RepoError> {
+        let Some(version_id) = requirement.current_version_id else {
+            requirement.custom_fields = Some(Vec::new());
+            return Ok(());
+        };
+        let values = self
+            .repo_read()
+            .get_custom_field_values_for_version(version_id)?;
+        requirement.custom_fields = if values.is_empty() {
+            None
+        } else {
+            Some(values)
+        };
+        Ok(())
     }
 
     fn prepare_payload(&self, payload: &mut NewRequirement) -> Result<(), RepoError> {
@@ -392,6 +451,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         }
     }
 
@@ -419,7 +479,7 @@ mod tests {
         let service = RequirementService::new(&state);
 
         let payload = new_payload();
-        let id = service.create(&actor(), payload, &[1]).unwrap();
+        let id = service.create(&actor(), payload, &[1], None).unwrap();
 
         let stored = service.get_by_id(id).unwrap();
         assert_eq!(stored.title, "Title");
@@ -437,7 +497,7 @@ mod tests {
         let mut payload = new_payload();
         payload.reference_code = "invalid".into();
 
-        let err = service.create(&actor(), payload, &[1]).unwrap_err();
+        let err = service.create(&actor(), payload, &[1], None).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
     }
 
@@ -453,7 +513,7 @@ mod tests {
         payload.description = "  New Description  ".into();
         payload.reference_code = "  REQ-999  ".into();
 
-        let updated = service.update(&actor(), 1, payload, &[1]).unwrap();
+        let updated = service.update(&actor(), 1, payload, &[1], None).unwrap();
         assert_eq!(updated.title, "Updated");
         assert_eq!(updated.description, "New Description");
         assert_eq!(updated.reference_code, "REQ-999");
@@ -487,7 +547,7 @@ mod tests {
         payload.description = "New".into();
         payload.reference_code = "REQ-001".into();
 
-        let _ = service.update(&actor(), 1, payload, &[1]).unwrap();
+        let _ = service.update(&actor(), 1, payload, &[1], None).unwrap();
 
         let links = state.repo_read().get_matrix_by_project(7).unwrap();
         assert_eq!(links.len(), 1);
@@ -763,7 +823,7 @@ mod tests {
         let mut payload = new_payload();
         payload.title = "".to_string(); // Empty title should fail validation
 
-        let result = service.create(&actor(), payload, &[1]);
+        let result = service.create(&actor(), payload, &[1], None);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), RepoError::BadInput(_)));
     }
@@ -775,7 +835,7 @@ mod tests {
         let service = RequirementService::new(&state);
 
         let payload = new_payload();
-        let result = service.update(&actor(), 999, payload, &[1]);
+        let result = service.update(&actor(), 999, payload, &[1], None);
         assert!(matches!(result, Err(RepoError::NotFound)));
     }
 

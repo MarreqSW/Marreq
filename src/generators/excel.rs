@@ -1,7 +1,8 @@
 use crate::helper_functions::decorators;
 use crate::models::*;
 use crate::repository::{
-    CustomFieldRepository, DieselRepo, RequirementsRepository, TestsCaseRepository,
+    CustomFieldRepository, DieselRepo, RequirementCommentsRepository, RequirementsRepository,
+    TestsCaseRepository, UserRepository,
 };
 use diesel::prelude::*;
 use std::fs;
@@ -180,6 +181,50 @@ pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::er
                 worksheet.write_string(row, base_cols + col_off as u16, &val, None)?;
             }
         }
+    }
+
+    // Comments sheet: requirement_id, version_id, author, created_at, body
+    let all_req_ids: Vec<i32> = all_requirements.iter().map(|r| r.id).collect();
+    let mut all_comments: Vec<(crate::models::RequirementComment, String)> = Vec::new();
+    for req_id in &all_req_ids {
+        let comments = repo
+            .list_comments_by_requirement(*req_id, None)
+            .unwrap_or_default();
+        for c in comments {
+            let author_name = repo
+                .get_user_by_id(c.author_id)
+                .ok()
+                .map(|u| u.name)
+                .unwrap_or_else(|| format!("User#{}", c.author_id));
+            all_comments.push((c, author_name));
+        }
+    }
+    all_comments.sort_by(|a, b| a.0.created_at.cmp(&b.0.created_at));
+    let mut comments_sheet = workbook.add_worksheet(Some("Comments"))?;
+    comments_sheet.write_string(0, 0, "Requirement ID", None)?;
+    comments_sheet.write_string(0, 1, "Version ID", None)?;
+    comments_sheet.write_string(0, 2, "Author", None)?;
+    comments_sheet.write_string(0, 3, "Created At", None)?;
+    comments_sheet.write_string(0, 4, "Body", None)?;
+    for (i, (c, author_name)) in all_comments.iter().enumerate() {
+        let row = (i + 1) as u32;
+        comments_sheet.write_number(row, 0, c.requirement_id as f64, None)?;
+        comments_sheet.write_string(
+            row,
+            1,
+            &c.requirement_version_id
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "—".to_string()),
+            None,
+        )?;
+        comments_sheet.write_string(row, 2, author_name, None)?;
+        comments_sheet.write_string(
+            row,
+            3,
+            &c.created_at.format("%Y-%m-%d %H:%M").to_string(),
+            None,
+        )?;
+        comments_sheet.write_string(row, 4, &c.body, None)?;
     }
 
     workbook.close()?;

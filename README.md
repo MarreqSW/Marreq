@@ -170,6 +170,8 @@ All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or
 - `GET /requirements/{req_id}/versions/{version_id}` - Get a specific requirement version
 - `GET /requirements/{req_id}/versions/{v1}/diff/{v2}` - Diff two requirement versions (structured JSON: text and metadata added/removed/unchanged; includes optional labels for status, category, applicability, verification)
 - `PUT /requirements/{req_id}/versions/{version_id}/approval` - Set approval state (body: `state`: "reviewed" | "approved"; project owners/managers only)
+- `GET /requirements/{id}/comments` - List comments for a requirement (query: optional `version_id`; chronological order)
+- `POST /requirements/{id}/comments` - Add a comment (body: `body`, optional `requirement_version_id`; approved versions rejected when `LOCK_APPROVED_VERSION_COMMENTS=true`)
 - `POST /requirements` - Create new requirement
 - `PATCH /requirements/{id}` - Partially update supported requirement fields
 - `DELETE /requirements/{id}` - Delete requirement

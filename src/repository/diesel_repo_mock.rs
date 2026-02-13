@@ -1,7 +1,10 @@
 // This is just for testing purposes
 
 use super::*;
-use crate::models::{CustomFieldDefinition, CustomFieldDefinitionPayload, RequirementVersion};
+use crate::models::{
+    CustomFieldDefinition, CustomFieldDefinitionPayload, NewRequirementComment, RequirementComment,
+    RequirementVersion,
+};
 use crate::repository::errors::RepoError;
 use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
@@ -35,6 +38,8 @@ pub struct DieselRepoMock {
     /// (requirement_version_id, custom_field_definition_id, value)
     pub custom_field_values: Vec<(i32, i32, Option<String>)>,
     pub next_custom_field_id: i32,
+    pub requirement_comments: Vec<RequirementComment>,
+    pub next_comment_id: i32,
 }
 
 fn epoch() -> NaiveDateTime {
@@ -75,6 +80,8 @@ impl Default for DieselRepoMock {
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),
             next_custom_field_id: 1,
+            requirement_comments: Vec::new(),
+            next_comment_id: 1,
         }
     }
 }
@@ -110,6 +117,8 @@ impl DieselRepoMock {
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),
             next_custom_field_id: 1,
+            requirement_comments: Vec::new(),
+            next_comment_id: 1,
         }
     }
     pub fn with_error() -> Self {
@@ -138,6 +147,8 @@ impl DieselRepoMock {
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),
             next_custom_field_id: 1,
+            requirement_comments: Vec::new(),
+            next_comment_id: 1,
         }
     }
 
@@ -1457,5 +1468,52 @@ impl LogRepository for DieselRepoMock {
         // In mock, we just clear everything for simplicity or keep it all
         // Let's say we remove nothing as dates are all epoch
         Ok(len_before - self.logs.len())
+    }
+}
+
+impl RequirementCommentsRepository for DieselRepoMock {
+    fn insert_requirement_comment(
+        &mut self,
+        new: &NewRequirementComment,
+    ) -> Result<RequirementComment, RepoError> {
+        if self.force_err {
+            return Err(RepoError::Pool("force_err".into()));
+        }
+        let id = self.next_comment_id;
+        self.next_comment_id += 1;
+        let comment = RequirementComment {
+            id,
+            requirement_id: new.requirement_id,
+            requirement_version_id: new.requirement_version_id,
+            author_id: new.author_id,
+            body: new.body.clone(),
+            created_at: epoch(),
+        };
+        self.requirement_comments.push(comment.clone());
+        Ok(comment)
+    }
+
+    fn list_comments_by_requirement(
+        &self,
+        requirement_id: i32,
+        version_id: Option<i32>,
+    ) -> Result<Vec<RequirementComment>, RepoError> {
+        let mut out: Vec<RequirementComment> = self
+            .requirement_comments
+            .iter()
+            .filter(|c| {
+                c.requirement_id == requirement_id
+                    && match version_id {
+                        Some(vid) => {
+                            c.requirement_version_id.is_none()
+                                || c.requirement_version_id == Some(vid)
+                        }
+                        None => true,
+                    }
+            })
+            .cloned()
+            .collect();
+        out.sort_by_key(|c| c.created_at);
+        Ok(out)
     }
 }

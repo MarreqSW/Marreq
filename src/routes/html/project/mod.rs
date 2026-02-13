@@ -1,6 +1,7 @@
 mod applicability;
 mod baselines;
 mod categories;
+mod custom_fields;
 mod matrix;
 mod members;
 mod project_routes;
@@ -44,6 +45,7 @@ pub fn routes() -> Vec<Route> {
     routes.extend(applicability::routes());
     routes.extend(baselines::routes());
     routes.extend(categories::routes());
+    routes.extend(custom_fields::routes());
     routes.extend(matrix::routes());
     routes.extend(members::routes());
     routes.extend(reports::routes());

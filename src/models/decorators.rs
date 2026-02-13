@@ -51,6 +51,8 @@ pub struct DecoratedRequirement {
     pub approval_state: String,
     pub approved_by: Option<i32>,
     pub approved_at: Option<chrono::NaiveDateTime>,
+    /// Project-scoped custom metadata (from requirement or version).
+    pub custom_fields: Option<Vec<crate::models::CustomFieldValueDisplay>>,
 }
 
 /// Test case information with resolved foreign keys for presentation.

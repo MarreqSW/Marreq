@@ -1,7 +1,9 @@
 use super::helpers::*;
 use super::prelude::*;
 use crate::app::DieselCachedRepo;
+use crate::helper_functions::reports::{generate_requirements_pdf_report, RequirementsPdfRow};
 use crate::models::{Category, Requirement, TestCase, User};
+use crate::services::{CustomFieldService, ProjectService, RequirementService};
 use std::collections::HashMap;
 
 fn round1(x: f64) -> f64 {
@@ -136,6 +138,59 @@ async fn show_reports(
     Ok(Template::render("reports", ctx))
 }
 
+#[get("/<project_id>/reports/requirements-pdf")]
+async fn generate_requirements_pdf_route(
+    project_access: ProjectAccess,
+    project_id: i32,
+    state: &State<AppState>,
+) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
+    let _user: User = project_access.into_user();
+    let project = ProjectService::new(state.inner()).get_by_id(project_id)?;
+    let requirements = RequirementService::new(state.inner())
+        .list_by_project(project_id)
+        .unwrap_or_default();
+    let custom_definitions = CustomFieldService::new(state.inner())
+        .list_by_project(project_id)
+        .unwrap_or_default();
+    let mut defs_sorted = custom_definitions.clone();
+    defs_sorted.sort_by_key(|d| d.sort_order);
+    let custom_headers: Vec<String> = defs_sorted.iter().map(|d| d.label.clone()).collect();
+    let rows: Vec<RequirementsPdfRow> = requirements
+        .iter()
+        .map(|req| {
+            let status = get_status_name_by_id_cached(state, req.status_id);
+            let custom_vals: Vec<String> = defs_sorted
+                .iter()
+                .map(|def| {
+                    req.custom_fields
+                        .as_ref()
+                        .and_then(|cf| cf.iter().find(|v| v.field_id == def.id))
+                        .and_then(|v| v.value.clone())
+                        .unwrap_or_default()
+                })
+                .collect();
+            (
+                req.id,
+                req.title.clone(),
+                req.reference_code.clone(),
+                status,
+                custom_vals,
+            )
+        })
+        .collect();
+    match generate_requirements_pdf_report(&project.name, &rows, &custom_headers) {
+        Ok(pdf_bytes) => {
+            let ct = rocket::http::ContentType::new("application", "pdf");
+            Ok((ct, pdf_bytes))
+        }
+        Err(_e) => {
+            #[cfg(debug_assertions)]
+            eprintln!("requirements PDF generation failed: {:?}", _e);
+            Err(Redirect::to(uri!("/p", show_reports(project_id))))
+        }
+    }
+}
+
 #[get("/<project_id>/reports/pdf")]
 async fn generate_pdf_report(
     project_access: ProjectAccess,
@@ -161,7 +216,11 @@ async fn generate_pdf_report(
 }
 
 pub fn routes() -> Vec<Route> {
-    routes![show_reports, generate_pdf_report,]
+    routes![
+        show_reports,
+        generate_pdf_report,
+        generate_requirements_pdf_route,
+    ]
 }
 
 #[cfg(test)]
@@ -235,6 +294,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         }
     }
 
@@ -291,7 +351,15 @@ mod tests {
     }
 
     async fn test_client(repo: DieselRepoMock) -> Client {
-        client_with_routes(repo, routes![show_reports, generate_pdf_report]).await
+        client_with_routes(
+            repo,
+            routes![
+                show_reports,
+                generate_pdf_report,
+                generate_requirements_pdf_route
+            ],
+        )
+        .await
     }
 
     #[rocket::async_test]

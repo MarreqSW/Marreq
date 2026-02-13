@@ -286,6 +286,7 @@ async fn patch_requirement_with_empty_patch_returns_bad_request() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -330,6 +331,7 @@ async fn patch_requirement_with_invalid_field_type_returns_error() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 
@@ -654,6 +656,7 @@ async fn sql_injection_in_id_parameter_is_handled_safely() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         },
     );
 

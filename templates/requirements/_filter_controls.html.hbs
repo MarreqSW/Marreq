@@ -91,6 +91,45 @@
           <option value="approved" {{#if approval_filter_approved}}selected{{/if}}>Approved only</option>
           <option value="not_approved" {{#if approval_filter_not_approved}}selected{{/if}}>Not approved</option>
         </select>
+
+        {{#if custom_field_definitions}}
+        {{#each custom_field_definitions}}
+        <label for="custom_filter_{{id}}" class="u-visually-hidden">Filter by {{label}}</label>
+        {{#if (eq field_type "enum")}}
+        <select
+          id="custom_filter_{{id}}"
+          class="reqman-requirements-filter-bar__select custom-filter-input"
+          data-field-id="{{id}}"
+          data-filter-label="{{label}}">
+          <option value="">{{label}} · All</option>
+          {{#if enum_values}}
+          {{#each enum_values}}
+          <option value="{{this}}" {{#if (eq this ../current_filter_value)}}selected{{/if}}>{{this}}</option>
+          {{/each}}
+          {{/if}}
+        </select>
+        {{else if (eq field_type "boolean")}}
+        <select
+          id="custom_filter_{{id}}"
+          class="reqman-requirements-filter-bar__select custom-filter-input"
+          data-field-id="{{id}}"
+          data-filter-label="{{label}}">
+          <option value="">{{label}} · All</option>
+          <option value="true" {{#if (eq current_filter_value "true")}}selected{{/if}}>Yes</option>
+          <option value="false" {{#if (eq current_filter_value "false")}}selected{{/if}}>No</option>
+        </select>
+        {{else}}
+        <input type="text"
+          id="custom_filter_{{id}}"
+          class="reqman-requirements-filter-bar__select custom-filter-input"
+          data-field-id="{{id}}"
+          data-filter-label="{{label}}"
+          placeholder="{{label}}"
+          value="{{current_filter_value}}">
+        {{/if}}
+        {{/each}}
+        <input type="hidden" name="custom_filters" id="custom_filters_hidden" value="{{custom_filters_param}}">
+        {{/if}}
       </div>
 
       <div class="reqman-requirements-filter-bar__actions">

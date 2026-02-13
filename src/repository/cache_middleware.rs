@@ -3,7 +3,7 @@ use super::cache::{keys, Cache};
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    BaselineRepository, LogRepository, LookupRepository, MatrixRepository,
+    BaselineRepository, CustomFieldRepository, LogRepository, LookupRepository, MatrixRepository,
     ProjectMembersRepository, ProjectsRepository, Repository, RequirementsRepository,
     TestsCaseRepository, UserRepository,
 };
@@ -132,6 +132,7 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         verification_filter: Option<i32>,
         category_filter: Option<i32>,
         applicability_filter: Option<i32>,
+        custom_field_filters: Option<&[(i32, String)]>,
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Requirement>, RepoError> {
@@ -141,6 +142,7 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
             verification_filter,
             category_filter,
             applicability_filter,
+            custom_field_filters,
             limit,
             offset,
         )
@@ -704,6 +706,64 @@ impl<R: Repository> MatrixRepository for CacheRepository<R> {
     }
 }
 
+impl<R: Repository> CustomFieldRepository for CacheRepository<R> {
+    fn list_custom_field_definitions_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<CustomFieldDefinition>, RepoError> {
+        self.inner
+            .list_custom_field_definitions_by_project(project_id)
+    }
+
+    fn get_custom_field_definition_by_id(
+        &self,
+        id: i32,
+    ) -> Result<CustomFieldDefinition, RepoError> {
+        self.inner.get_custom_field_definition_by_id(id)
+    }
+
+    fn create_custom_field_definition(
+        &mut self,
+        project_id: i32,
+        payload: &CustomFieldDefinitionPayload,
+    ) -> Result<i32, RepoError> {
+        self.inner
+            .create_custom_field_definition(project_id, payload)
+    }
+
+    fn update_custom_field_definition(
+        &mut self,
+        id: i32,
+        payload: &CustomFieldDefinitionPayload,
+    ) -> Result<(), RepoError> {
+        self.inner.update_custom_field_definition(id, payload)
+    }
+
+    fn count_requirement_versions_using_field(&self, field_id: i32) -> Result<i64, RepoError> {
+        self.inner.count_requirement_versions_using_field(field_id)
+    }
+
+    fn delete_custom_field_definition(&mut self, id: i32) -> Result<(), RepoError> {
+        self.inner.delete_custom_field_definition(id)
+    }
+
+    fn get_custom_field_values_for_version(
+        &self,
+        version_id: i32,
+    ) -> Result<Vec<CustomFieldValueDisplay>, RepoError> {
+        self.inner.get_custom_field_values_for_version(version_id)
+    }
+
+    fn set_custom_field_values_for_version(
+        &mut self,
+        version_id: i32,
+        values: &[(i32, Option<String>)],
+    ) -> Result<(), RepoError> {
+        self.inner
+            .set_custom_field_values_for_version(version_id, values)
+    }
+}
+
 impl<R: Repository> BaselineRepository for CacheRepository<R> {
     fn create_baseline(
         &mut self,
@@ -842,6 +902,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         };
         let test = TestCase {
             id: 1,
@@ -908,6 +969,9 @@ mod tests {
             baseline_requirements: Vec::new(),
             baseline_traceability: Vec::new(),
             next_baseline_id: 1,
+            custom_field_definitions: HashMap::new(),
+            custom_field_values: Vec::new(),
+            next_custom_field_id: 1,
         }
     }
 

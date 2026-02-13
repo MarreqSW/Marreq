@@ -13,12 +13,13 @@ use crate::app::AppState;
 use crate::helper_functions::generate_requirement_reference;
 use crate::models::*;
 use crate::repository::errors::RepoError;
+use crate::repository::CustomFieldRepository;
 use crate::repository::ProjectMembersRepository;
 use crate::services::{
     change_summary, log_change_details, resolve_change_details_labels, ApplicabilityService,
-    CategoryService, DecoratedRequirementService, DecoratedTestService, LabelResolvers, LogService,
-    ProjectService, RequirementAnalyticsService, RequirementService, StatusService, UserService,
-    VerificationService,
+    CategoryService, CustomFieldService, DecoratedRequirementService, DecoratedTestService,
+    LabelResolvers, LogService, ProjectService, RequirementAnalyticsService, RequirementService,
+    StatusService, UserService, VerificationService,
 };
 use crate::status_enums::{RequirementStatusEnum, TestStatusEnum};
 
@@ -48,6 +49,9 @@ struct RequirementCreateForm {
     applicability_id: i32,
     #[field(name = uncased("justification"))]
     justification: Option<String>,
+    /// JSON array of { "field_id": i32, "value": string | null }
+    #[field(name = uncased("custom_field_values"))]
+    custom_field_values: Option<String>,
 }
 
 impl RequirementCreateForm {
@@ -69,6 +73,7 @@ impl RequirementCreateForm {
             applicability_id,
             justification,
             title,
+            custom_field_values: _,
         } = self;
 
         let requirement = NewRequirement {
@@ -119,6 +124,9 @@ struct RequirementEditForm {
     parent_id: Option<i32>,
     #[field(name = uncased("verification_method_ids"))]
     verification_method_ids: Vec<i32>,
+    /// JSON array of { "field_id": i32, "value": string | null }
+    #[field(name = uncased("custom_field_values"))]
+    custom_field_values: Option<String>,
 }
 
 impl RequirementEditForm {
@@ -137,6 +145,23 @@ impl RequirementEditForm {
             justification: self.justification.clone(),
             project_id: self.project_id,
         }
+    }
+}
+
+/// Parse optional JSON string into custom field values for create/update.
+fn parse_custom_field_values(json: Option<&str>) -> Option<Vec<CustomFieldValueInput>> {
+    let s = json?.trim();
+    if s.is_empty() {
+        return None;
+    }
+    let parsed: Vec<CustomFieldValueInput> = match serde_json::from_str(s) {
+        Ok(v) => v,
+        Err(_) => return None,
+    };
+    if parsed.is_empty() {
+        None
+    } else {
+        Some(parsed)
     }
 }
 
@@ -159,6 +184,7 @@ fn requirements_list_redirect(project_id: i32) -> Redirect {
             category_filter = Option::<i32>::None,
             applicability_filter = Option::<i32>::None,
             approval_filter = Option::<String>::None,
+            custom_filters = Option::<String>::None,
             view = Option::<String>::None,
             page = Option::<u32>::None
         )
@@ -211,6 +237,7 @@ fn build_requirements_query(
     category_filter: Option<i32>,
     applicability_filter: Option<i32>,
     approval_filter: Option<&str>,
+    custom_filters: Option<&str>,
 ) -> String {
     let mut parts: Vec<String> = Vec::new();
     if let Some(v) = view.filter(|s| !s.is_empty()) {
@@ -230,6 +257,9 @@ fn build_requirements_query(
     }
     if let Some(a) = approval_filter.filter(|s| !s.is_empty()) {
         parts.push(format!("approval_filter={}", a));
+    }
+    if let Some(cf) = custom_filters.filter(|s| !s.is_empty()) {
+        parts.push(format!("custom_filters={}", urlencoding::encode(cf)));
     }
     parts.join("&")
 }
@@ -275,7 +305,45 @@ fn build_pagination_ctx(
     })
 }
 
-#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<applicability_filter>&<approval_filter>&<view>&<page>")]
+fn custom_field_definitions_with_filter_values(
+    defs: &[crate::models::CustomFieldDefinition],
+    custom_field_filters: Option<&Vec<(i32, String)>>,
+) -> Vec<serde_json::Value> {
+    let filter_map: std::collections::HashMap<i32, String> = custom_field_filters
+        .map(|v| v.iter().cloned().collect())
+        .unwrap_or_default();
+    defs.iter()
+        .map(|d| {
+            let current_filter_value = filter_map.get(&d.id).cloned();
+            json!({
+                "id": d.id,
+                "label": d.label,
+                "field_type": d.field_type,
+                "enum_values": d.enum_values,
+                "current_filter_value": current_filter_value,
+            })
+        })
+        .collect::<Vec<_>>()
+}
+
+fn parse_custom_filters_param(s: Option<&str>) -> Option<Vec<(i32, String)>> {
+    let s = s?.trim();
+    if s.is_empty() {
+        return None;
+    }
+    #[derive(serde::Deserialize)]
+    struct Item {
+        field_id: i32,
+        value: String,
+    }
+    let items: Vec<Item> = serde_json::from_str(s).ok()?;
+    if items.is_empty() {
+        return None;
+    }
+    Some(items.into_iter().map(|i| (i.field_id, i.value)).collect())
+}
+
+#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<applicability_filter>&<approval_filter>&<custom_filters>&<view>&<page>")]
 #[allow(clippy::too_many_arguments)]
 async fn show_requirements(
     project_access: ProjectAccess,
@@ -285,6 +353,7 @@ async fn show_requirements(
     category_filter: Option<i32>,
     applicability_filter: Option<i32>,
     approval_filter: Option<String>,
+    custom_filters: Option<String>,
     view: Option<String>,
     page: Option<u32>,
     state: &State<AppState>,
@@ -292,6 +361,8 @@ async fn show_requirements(
     let user = project_access.into_user();
 
     let selected_project = ProjectService::new(state.inner()).get_by_id(project_id)?;
+
+    let custom_field_filters = parse_custom_filters_param(custom_filters.as_deref());
 
     let metrics = RequirementAnalyticsService::new(state.inner()).metrics(
         project_id,
@@ -321,6 +392,7 @@ async fn show_requirements(
             verification_filter,
             category_filter,
             applicability_filter,
+            custom_field_filters.as_deref(),
             limit,
             offset,
         )?;
@@ -405,6 +477,11 @@ async fn show_requirements(
         "verifications": verifications,
         "categories": categories,
         "applicability": ApplicabilityService::new(state.inner()).list_by_project(project_id)?,
+        "custom_field_definitions": custom_field_definitions_with_filter_values(
+            &CustomFieldService::new(state.inner()).list_by_project(project_id).unwrap_or_default(),
+            custom_field_filters.as_ref(),
+        ),
+        "custom_filters_param": custom_filters.as_deref().unwrap_or(""),
         "users": UserService::new(state.inner()).get_by_project(project_id)?,
         "current_status_filter": json!(status_filter),
         "current_verification_filter": json!(verification_filter),
@@ -426,7 +503,7 @@ async fn show_requirements(
             total_pages,
             total_count,
             per_page,
-            &build_requirements_query(view.as_deref(), status_filter, verification_filter, category_filter, applicability_filter, approval_filter.as_deref()),
+            &build_requirements_query(view.as_deref(), status_filter, verification_filter, category_filter, applicability_filter, approval_filter.as_deref(), custom_filters.as_deref()),
         )),
     });
 
@@ -606,9 +683,15 @@ async fn show_requirement_id(
         })
         .collect();
 
+    let has_custom_fields = requirement
+        .custom_fields
+        .as_ref()
+        .map(|v| !v.is_empty())
+        .unwrap_or(false);
     let canonical_data = json!({
         "project_id": project_id,
         "requirement": requirement,
+        "has_custom_fields": has_custom_fields,
         "versions": versions_json,
         "current_version_id": requirement.current_version_id,
         "viewing_past_version": false,
@@ -687,6 +770,10 @@ async fn show_requirement_version(
     if let Some(redir) = enforce_project_ownership(project_id, current.project_id) {
         return Err(redir);
     }
+    let version_custom_fields = state
+        .repo_read()
+        .get_custom_field_values_for_version(version_id)
+        .ok();
     let req_from_version = Requirement {
         id: current.id,
         current_version_id: current.current_version_id,
@@ -708,6 +795,7 @@ async fn show_requirement_version(
         approval_state: version.approval_state.clone(),
         approved_by: version.approved_by,
         approved_at: version.approved_at,
+        custom_fields: version_custom_fields,
     };
     let decorated_requirement_service = DecoratedRequirementService::new(state.inner());
     let requirement = decorated_requirement_service.decorate_requirement(&req_from_version)?;
@@ -861,9 +949,15 @@ async fn show_requirement_version(
             v
         })
         .collect();
+    let has_custom_fields = requirement
+        .custom_fields
+        .as_ref()
+        .map(|v| !v.is_empty())
+        .unwrap_or(false);
     let canonical_data = json!({
         "project_id": project_id,
         "requirement": requirement,
+        "has_custom_fields": has_custom_fields,
         "versions": versions_json,
         "current_version_id": current.current_version_id,
         "viewing_past_version": true,
@@ -958,6 +1052,28 @@ async fn get_edit_requirement(
     let users = UserService::new(state.inner()).get_by_project(project_id)?;
     let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
     let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
+    let custom_field_definitions = CustomFieldService::new(state.inner())
+        .list_by_project(project_id)
+        .unwrap_or_default();
+    let custom_field_definitions_with_values: Vec<serde_json::Value> = custom_field_definitions
+        .iter()
+        .map(|def| {
+            let current_value = req
+                .custom_fields
+                .as_ref()
+                .and_then(|cf| cf.iter().find(|v| v.field_id == def.id))
+                .and_then(|v| v.value.clone())
+                .unwrap_or_default();
+            json!({
+                "id": def.id,
+                "label": def.label,
+                "field_type": def.field_type,
+                "enum_values": def.enum_values,
+                "sort_order": def.sort_order,
+                "current_value": current_value,
+            })
+        })
+        .collect();
 
     // Lightweight list of other requirements for linking (excluding current requirement), sorted by ID
     let mut candidates: Vec<_> = RequirementService::new(state.inner())
@@ -1006,6 +1122,8 @@ async fn get_edit_requirement(
         "verification": verifications,
         "verification_with_selected": verification_with_selected,
         "applicability": applicability,
+        "custom_field_definitions": custom_field_definitions,
+        "custom_field_definitions_with_values": custom_field_definitions_with_values,
         "linked_requirement_options": linked_requirement_options,
         "user": user,
         "display_reference": display_reference,
@@ -1050,12 +1168,14 @@ async fn post_edit_requirement(
         .filter(|&&id| id > 0)
         .copied()
         .collect();
+    let custom_fields = parse_custom_field_values(form.custom_field_values.as_deref());
     let user = project_access.into_user();
     service.update(
         &user,
         requirement_id,
         form.to_new_requirement(),
         &verification_ids,
+        custom_fields.as_deref(),
     )?;
     Ok(Redirect::to(uri!(
         "/p",
@@ -1118,6 +1238,9 @@ async fn new_requirement(
     let users = UserService::new(state.inner()).get_by_project(project_id)?;
     let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
     let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
+    let custom_field_definitions = CustomFieldService::new(state.inner())
+        .list_by_project(project_id)
+        .unwrap_or_default();
 
     // Lightweight list of other requirements for linking
     let parents = RequirementService::new(state.inner())
@@ -1214,6 +1337,7 @@ async fn new_requirement(
         "verification": verifications,
         "verification_with_selected": verification_with_selected,
         "applicability": applicability,
+        "custom_field_definitions": custom_field_definitions,
         "project_id": project_id,
         "project": {
             "id": project.id,
@@ -1253,9 +1377,9 @@ async fn post_requirement(
         )
     );
 
-    // Take ownership and enforce project_id from the route
-    let (mut req, verification_method_ids, intent) =
-        new_req.into_inner().into_payload(user.id, project_id);
+    let form = new_req.into_inner();
+    let custom_fields = parse_custom_field_values(form.custom_field_values.as_deref());
+    let (mut req, verification_method_ids, intent) = form.into_payload(user.id, project_id);
     req.project_id = project_id;
     req.author_id = user.id;
 
@@ -1321,7 +1445,8 @@ async fn post_requirement(
 
     // --- Insert ---
     let service = RequirementService::new(state.inner());
-    let id = match service.create(&user, req, &verification_method_ids) {
+    let custom_fields_ref = custom_fields.as_deref();
+    let id = match service.create(&user, req, &verification_method_ids, custom_fields_ref) {
         Ok(id) => id,
         Err(crate::repository::errors::RepoError::BadInput(_)) => {
             return Err(Redirect::to(new_url))
@@ -1676,6 +1801,7 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            custom_fields: None,
         }
     }
 

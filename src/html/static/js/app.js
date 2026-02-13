@@ -89,6 +89,23 @@ function initGlobalDeleteHandlers() {
   });
 
   registerDeleteAction({
+    selector: '[data-action="delete-custom-field"]',
+    getUrl: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      const fieldId = button.getAttribute('data-field-id');
+      return `/p/${projectId}/custom_fields/delete/${fieldId}`;
+    },
+    getMessage: (button) => {
+      const title = button.getAttribute('data-field-label') || 'this custom field';
+      return `Are you sure you want to delete ${title}? This action cannot be undone.`;
+    },
+    onSuccess: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      window.location.href = `/p/${projectId}/custom_fields`;
+    },
+  });
+
+  registerDeleteAction({
     selector: '[data-action="delete-applicability"]',
     getUrl: (button) => {
       const projectId = button.getAttribute('data-project-id');

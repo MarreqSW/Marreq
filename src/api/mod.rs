@@ -2,6 +2,7 @@ pub mod applicability;
 pub mod baselines;
 pub mod cache;
 pub mod categories;
+pub mod custom_fields;
 pub mod error;
 pub mod matrix;
 pub mod prelude;
@@ -48,6 +49,11 @@ pub fn routes() -> Vec<Route> {
         applicability::create,
         applicability::update,
         applicability::delete,
+        custom_fields::list_by_project,
+        custom_fields::get,
+        custom_fields::create,
+        custom_fields::update,
+        custom_fields::delete,
         status::list_requirement_statuses,
         status::get_requirement_status,
         status::create_requirement_status,

@@ -34,6 +34,7 @@ pub trait RequirementsRepository {
     fn get_requirements_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError>;
 
     /// Filtered list with same semantics as metrics; ordered by reference_code (empty last), then id.
+    /// `custom_field_filters`: optional list of (field_id, value) to AND-filter by custom field values.
     #[allow(clippy::too_many_arguments)]
     fn get_requirements_by_project_filtered_paginated(
         &self,
@@ -42,6 +43,7 @@ pub trait RequirementsRepository {
         verification_filter: Option<i32>,
         category_filter: Option<i32>,
         applicability_filter: Option<i32>,
+        custom_field_filters: Option<&[(i32, String)]>,
         limit: i64,
         offset: i64,
     ) -> Result<Vec<Requirement>, RepoError>;
@@ -202,6 +204,40 @@ pub trait MatrixRepository {
     ) -> Result<(bool, Option<i32>), RepoError>;
 }
 
+pub trait CustomFieldRepository {
+    fn list_custom_field_definitions_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<CustomFieldDefinition>, RepoError>;
+    fn get_custom_field_definition_by_id(
+        &self,
+        id: i32,
+    ) -> Result<CustomFieldDefinition, RepoError>;
+    fn create_custom_field_definition(
+        &mut self,
+        project_id: i32,
+        payload: &CustomFieldDefinitionPayload,
+    ) -> Result<i32, RepoError>;
+    fn update_custom_field_definition(
+        &mut self,
+        id: i32,
+        payload: &CustomFieldDefinitionPayload,
+    ) -> Result<(), RepoError>;
+    /// Returns number of requirement versions that have a value for this field (for "in use" warning).
+    fn count_requirement_versions_using_field(&self, field_id: i32) -> Result<i64, RepoError>;
+    fn delete_custom_field_definition(&mut self, id: i32) -> Result<(), RepoError>;
+
+    fn get_custom_field_values_for_version(
+        &self,
+        version_id: i32,
+    ) -> Result<Vec<CustomFieldValueDisplay>, RepoError>;
+    fn set_custom_field_values_for_version(
+        &mut self,
+        version_id: i32,
+        values: &[(i32, Option<String>)],
+    ) -> Result<(), RepoError>;
+}
+
 pub trait BaselineRepository {
     /// Create an immutable baseline: snapshot current requirement_versions and matrix for the project.
     fn create_baseline(
@@ -252,6 +288,7 @@ pub trait Repository:
     + ProjectsRepository
     + ProjectMembersRepository
     + MatrixRepository
+    + CustomFieldRepository
     + BaselineRepository
     + LogRepository
 {
@@ -265,6 +302,7 @@ impl<T> Repository for T where
         + ProjectsRepository
         + ProjectMembersRepository
         + MatrixRepository
+        + CustomFieldRepository
         + BaselineRepository
         + LogRepository
 {
@@ -537,6 +575,7 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                custom_fields: None,
             },
         );
         let mut link = create_test_matrix();

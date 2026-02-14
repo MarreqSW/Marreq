@@ -14,6 +14,7 @@ A comprehensive web-based requirements and test management system built with Rus
 - **User Management**: Assign authors and reviewers to requirements with authentication
 
 ### 🏷️ Advanced Features
+- **Requirement comments**: Comment threads on requirements and optional requirement versions; author, timestamp, optional version reference; chronological list; immutable after creation. UI panel on requirement/version detail pages; approved versions can be locked from new comments (`LOCK_APPROVED_VERSION_COMMENTS`). Comments in audit logs and in Excel/ReqIF exports.
 - **Requirement version diff**: Compare two requirement versions or a baseline snapshot vs current; API returns structured diff (metadata, verification, text) with optional **labels** (e.g. Status “Draft”, verification method titles) in addition to IDs; UI diff modal shows these labels for easier reading
 - **Categories**: User-defined categories for organizing requirements (project-specific)
 - **Applicability**: Define product lines, system types, or project scopes (project-specific)
@@ -23,10 +24,10 @@ A comprehensive web-based requirements and test management system built with Rus
 - **Project Isolation**: Data separation between different projects
 
 ### 📊 Reporting & Export
-- **Excel Export**: Export requirements with all fields to Excel format
+- **Excel Export**: Export requirements with all fields to Excel format; includes a **Comments** sheet (requirement_id, version_id, author, created_at, body)
 - **Matrix Export**: Export traceability matrix to Excel
-- **ReqIF 1.2**: Import and export requirements as ReqIF XML; export current project or an immutable baseline
-- **Comprehensive Data**: All metadata included in exports (categories, applicability, dates, etc.)
+- **ReqIF 1.2**: Import and export requirements as ReqIF XML; export current project or an immutable baseline; comments included as **Remarks** attribute per requirement when present
+- **Comprehensive Data**: All metadata included in exports (categories, applicability, dates, comments, etc.)
 
 ### 📸 Immutable Baselines
 - **Project Baselines**: Create point-in-time snapshots of all requirement versions and traceability
@@ -131,7 +132,7 @@ For detailed database setup options (automated, manual, reset, verification) see
 
 ### Web Interface
 
-1. **Requirements**: Navigate to project requirements to view and manage requirements (with version history)
+1. **Requirements**: Navigate to project requirements to view and manage requirements (with version history). On requirement and version detail pages, use the **Comments** section to read and add comments (add form hidden when the version is approved and comments are locked).
 2. **Tests**: Go to project tests to manage test cases
 3. **Matrix**: Visit project matrix to view the traceability matrix
 4. **Baselines**: From project dashboard or nav, open **Baselines** to create immutable snapshots, **view** a baseline (detail page with requirements and traceability), compare requirements to current via **Diff vs current** (opens diff modal; hidden when unchanged), or export a baseline as ReqIF
@@ -260,6 +261,7 @@ The application uses PostgreSQL with the following main entities:
 - **Projects**: Multi-project support with project metadata
 - **Requirements**: Logical requirement containers; current content lives in **requirement_versions** (immutable version history)
 - **Requirement versions**: Immutable snapshots of requirement content (title, description, status, category, applicability, etc.)
+- **Requirement comments**: Immutable comments attached to a requirement (general) or a specific version; author, body, created_at; optional requirement_version_id
 - **Tests**: Test cases with status and source information, project association
 - **Matrix**: Traceability links between requirements and tests (live), project-scoped
 - **Baselines**: Immutable project snapshots; **baseline_requirements** stores which requirement_version was current per requirement, **baseline_traceability** stores the matrix at baseline time

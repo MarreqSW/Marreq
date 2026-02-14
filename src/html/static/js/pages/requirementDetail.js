@@ -153,6 +153,55 @@ function renderBodySections(root, sections = []) {
   }
 }
 
+function renderComments(root, view, canonical) {
+  const listSlot = getSlot(root, 'comments-list');
+  const lockedSlot = getSlot(root, 'comments-locked');
+  const formSlot = getSlot(root, 'add-comment-form');
+  if (!listSlot) return;
+
+  listSlot.innerHTML = '';
+  const comments = view?.comments ?? {};
+  const items = comments.items ?? [];
+
+  if (items.length > 0) {
+    const ul = document.createElement('ul');
+    ul.className = 'list-unstyled mb-0';
+    items.forEach((c) => {
+      const li = document.createElement('li');
+      li.className = 'py-2 border-bottom border-light border-opacity-50';
+      const author = document.createElement('div');
+      author.className = 'small fw-medium';
+      author.textContent = `${c.author_name ?? 'Unknown'} · ${c.created_at ?? ''}`;
+      const body = document.createElement('div');
+      body.className = 'text-break';
+      body.textContent = c.body ?? '';
+      li.append(author, body);
+      ul.appendChild(li);
+    });
+    listSlot.appendChild(ul);
+  } else {
+    const empty = document.createElement('p');
+    empty.className = 'mb-0 text-muted';
+    empty.textContent = 'No comments yet.';
+    listSlot.appendChild(empty);
+  }
+
+  const enabled = comments.enabled === true;
+  const lockedReason = comments.locked_reason;
+  if (lockedSlot) {
+    if (lockedReason) {
+      lockedSlot.style.display = 'block';
+      const reasonEl = lockedSlot.querySelector('[data-field="comments-locked-reason"]');
+      if (reasonEl) reasonEl.textContent = lockedReason;
+    } else {
+      lockedSlot.style.display = 'none';
+    }
+  }
+  if (formSlot) {
+    formSlot.style.display = enabled ? 'block' : 'none';
+  }
+}
+
 function renderRelationships(root, view, projectId, linkedTests = []) {
   const container = getSlot(root, 'relationships');
   if (!container) {
@@ -607,6 +656,7 @@ function hydratePage(view, canonical) {
   renderChips(root, view.chips);
   renderMetadata(root, view.metadata);
   renderBodySections(root, view.body_sections);
+  renderComments(root, view, canonical);
   renderRelationships(root, view.relationships, canonical.project_id, view.linked_tests);
 }
 
@@ -624,6 +674,7 @@ export function init() {
   hydratePage(view, canonical);
   initRequirementDetailsToggle();
   initCopyRequirementLink();
+  initCommentsForm(canonical);
 
   initDiffModal({
     triggerSelector: '[data-action="show-changes"]',
@@ -719,6 +770,37 @@ function initApprovalHandlers(canonical) {
       doTransition(state);
     });
   }
+}
+
+function initCommentsForm(canonical) {
+  const form = document.querySelector('[data-action="add-comment"]');
+  if (!form || !canonical?.requirement?.id) return;
+
+  const reqId = canonical.requirement.id;
+  const versionId = canonical.viewing_past_version ? canonical.viewing_version_id : canonical.current_version_id;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const textarea = form.querySelector('textarea[name="body"]');
+    const body = textarea?.value?.trim();
+    if (!body) return;
+
+    const payload = { body };
+    if (versionId != null) {
+      payload.requirement_version_id = versionId;
+    } else {
+      payload.requirement_version_id = null;
+    }
+
+    try {
+      await postJson(`/api/requirements/${reqId}/comments`, payload);
+      showNotification('Comment added.', 'success');
+      window.location.reload();
+    } catch (err) {
+      const msg = err?.payload?.message || err?.message || 'Failed to add comment';
+      showNotification(msg, 'error');
+    }
+  });
 }
 
 function initEditApprovedHandler(canonical) {

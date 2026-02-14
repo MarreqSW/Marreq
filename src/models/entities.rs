@@ -94,6 +94,28 @@ impl Requirement {
     }
 }
 
+/// Immutable comment on a requirement (general) or a specific requirement version.
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[diesel(table_name = crate::schema::requirement_comments)]
+pub struct RequirementComment {
+    pub id: i32,
+    pub requirement_id: i32,
+    pub requirement_version_id: Option<i32>,
+    pub author_id: i32,
+    pub body: String,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+/// New comment to insert (no id; created_at from DB default).
+#[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
+#[diesel(table_name = crate::schema::requirement_comments)]
+pub struct NewRequirementComment {
+    pub requirement_id: i32,
+    pub requirement_version_id: Option<i32>,
+    pub author_id: i32,
+    pub body: String,
+}
+
 /// Link between a requirement version and a verification method (many-to-many).
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug)]
 #[diesel(table_name = crate::schema::requirement_version_verification_methods)]
@@ -332,6 +354,7 @@ pub enum EntityType {
     User,
     MatrixLink,
     Verification,
+    Comment,
 }
 
 impl std::fmt::Display for EntityType {
@@ -345,6 +368,7 @@ impl std::fmt::Display for EntityType {
             EntityType::User => write!(f, "USER"),
             EntityType::MatrixLink => write!(f, "MATRIX"),
             EntityType::Verification => write!(f, "VERIFICATION"),
+            EntityType::Comment => write!(f, "COMMENT"),
         }
     }
 }
@@ -361,6 +385,7 @@ impl EntityType {
             EntityType::User => "user",
             EntityType::MatrixLink => "matrix",
             EntityType::Verification => "verification",
+            EntityType::Comment => "comment",
         }
     }
 }

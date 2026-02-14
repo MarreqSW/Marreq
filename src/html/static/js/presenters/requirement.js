@@ -237,16 +237,19 @@ function relationships(rawRelationships = {}) {
   };
 }
 
-function commentsView(items = [], status = '') {
+function commentsView(items = [], status = '', canCommentOnVersion = true) {
   const normalizedStatus = normalise(status).toLowerCase();
   const lockedStatuses = {
     accepted: 'Read-only: requirement accepted and locked',
     rejected: 'Archived requirement: comments are closed',
   };
 
-  const lockedReason = lockedStatuses[normalizedStatus] ?? null;
+  const lockedReason =
+    lockedStatuses[normalizedStatus] ??
+    (canCommentOnVersion === false ? 'Approved version: comments are locked.' : null);
+  const enabled = canCommentOnVersion !== false && !lockedStatuses[normalizedStatus];
   return {
-    enabled: !lockedReason,
+    enabled,
     items,
     has_items: items.length > 0,
     locked_reason: lockedReason,
@@ -349,6 +352,10 @@ export function buildRequirementViewModel(canonical = {}) {
     },
     linked_tests: canonical.linked_tests ?? [],
     timeline: timelineEntries,
-    comments: commentsView(canonical.comments?.items ?? [], requirement.status_id),
+    comments: commentsView(
+      canonical.comments?.items ?? [],
+      requirement.status_id,
+      canonical.comments?.can_comment_on_version
+    ),
   };
 }

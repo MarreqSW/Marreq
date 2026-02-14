@@ -174,6 +174,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    requirement_comments (id) {
+        id -> Int4,
+        requirement_id -> Int4,
+        requirement_version_id -> Nullable<Int4>,
+        author_id -> Int4,
+        body -> Text,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     requirements (id) {
         id -> Int4,
         project_id -> Int4,
@@ -275,6 +286,9 @@ diesel::joinable!(requirement_embeddings -> projects (project_id));
 diesel::joinable!(embedding_index_queue -> requirements (requirement_id));
 diesel::joinable!(requirement_version_verification_methods -> requirement_versions (requirement_version_id));
 diesel::joinable!(requirement_version_verification_methods -> verification (verification_method_id));
+diesel::joinable!(requirement_comments -> requirements (requirement_id));
+diesel::joinable!(requirement_comments -> requirement_versions (requirement_version_id));
+diesel::joinable!(requirement_comments -> users (author_id));
 diesel::joinable!(requirement_versions -> requirements (requirement_id));
 diesel::joinable!(requirement_versions -> requirement_status (status_id));
 diesel::joinable!(requirement_versions -> applicability (applicability_id));
@@ -307,6 +321,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     matrix,
     project_members,
     projects,
+    requirement_comments,
     requirement_embeddings,
     requirement_status,
     requirement_version_verification_methods,

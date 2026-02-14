@@ -198,6 +198,18 @@ CREATE TABLE custom_field_values (
     PRIMARY KEY (requirement_version_id, custom_field_definition_id)
 );
 
+-- Requirement comments (immutable; attached to requirement or specific version)
+CREATE TABLE requirement_comments (
+    id SERIAL PRIMARY KEY,
+    requirement_id INTEGER NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+    requirement_version_id INTEGER REFERENCES requirement_versions(id) ON DELETE SET NULL,
+    author_id INTEGER NOT NULL REFERENCES users(id),
+    body TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_requirement_comments_requirement ON requirement_comments(requirement_id);
+CREATE INDEX idx_requirement_comments_version ON requirement_comments(requirement_version_id);
+
 -- Tests table
 CREATE TABLE tests (
     id SERIAL PRIMARY KEY,
@@ -761,5 +773,6 @@ INSERT INTO __diesel_schema_migrations (version) VALUES
     ('2026-02-08-000003_requirement_version_approval'),
     ('2026-02-09-000001_matrix_triggering_metadata'),
     ('2026-02-09-000002_baseline_traceability_suspect'),
-    ('2026-02-13-000001_custom_metadata_fields')
+    ('2026-02-13-000001_custom_metadata_fields'),
+    ('2026-02-14-000001_requirement_comments')
 ON CONFLICT (version) DO NOTHING;

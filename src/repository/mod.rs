@@ -280,6 +280,20 @@ pub trait LogRepository {
     fn cleanup_logs(&mut self, days: i64) -> Result<usize, RepoError>;
 }
 
+pub trait RequirementCommentsRepository {
+    fn insert_requirement_comment(
+        &mut self,
+        new: &NewRequirementComment,
+    ) -> Result<RequirementComment, RepoError>;
+    /// List comments for a requirement. If `version_id` is Some, return only comments
+    /// for that version or requirement-level (version_id NULL). Order: created_at ASC.
+    fn list_comments_by_requirement(
+        &self,
+        requirement_id: i32,
+        version_id: Option<i32>,
+    ) -> Result<Vec<RequirementComment>, RepoError>;
+}
+
 pub trait Repository:
     UserRepository
     + LookupRepository
@@ -291,6 +305,7 @@ pub trait Repository:
     + CustomFieldRepository
     + BaselineRepository
     + LogRepository
+    + RequirementCommentsRepository
 {
 }
 
@@ -305,6 +320,7 @@ impl<T> Repository for T where
         + CustomFieldRepository
         + BaselineRepository
         + LogRepository
+        + RequirementCommentsRepository
 {
 }
 

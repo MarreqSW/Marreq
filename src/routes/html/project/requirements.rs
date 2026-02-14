@@ -10,6 +10,7 @@ use rocket_dyn_templates::Template;
 use super::prelude::*;
 
 use crate::app::AppState;
+use crate::config;
 use crate::helper_functions::generate_requirement_reference;
 use crate::models::*;
 use crate::repository::errors::RepoError;
@@ -17,9 +18,9 @@ use crate::repository::CustomFieldRepository;
 use crate::repository::ProjectMembersRepository;
 use crate::services::{
     change_summary, log_change_details, resolve_change_details_labels, ApplicabilityService,
-    CategoryService, CustomFieldService, DecoratedRequirementService, DecoratedTestService,
-    LabelResolvers, LogService, ProjectService, RequirementAnalyticsService, RequirementService,
-    StatusService, UserService, VerificationService,
+    CategoryService, CommentService, CustomFieldService, DecoratedRequirementService,
+    DecoratedTestService, LabelResolvers, LogService, ProjectService, RequirementAnalyticsService,
+    RequirementService, StatusService, UserService, VerificationService,
 };
 use crate::status_enums::{RequirementStatusEnum, TestStatusEnum};
 
@@ -688,6 +689,31 @@ async fn show_requirement_id(
         .as_ref()
         .map(|v| !v.is_empty())
         .unwrap_or(false);
+
+    let comments_items: Vec<serde_json::Value> = CommentService::new(state.inner())
+        .list_comments(requirement_id, None)
+        .unwrap_or_default()
+        .iter()
+        .map(|c| {
+            let author_name = user_service
+                .get_by_id(c.author_id)
+                .ok()
+                .map(|u| u.name.clone())
+                .unwrap_or_else(|| format!("User#{}", c.author_id));
+            json!({
+                "id": c.id,
+                "requirement_id": c.requirement_id,
+                "requirement_version_id": c.requirement_version_id,
+                "author_id": c.author_id,
+                "author_name": author_name,
+                "body": c.body,
+                "created_at": c.created_at.format("%Y-%m-%d %H:%M").to_string(),
+            })
+        })
+        .collect();
+    let can_comment_on_version = !(config::lock_approved_version_comments()
+        && requirement.approval_state.eq_ignore_ascii_case("approved"));
+
     let canonical_data = json!({
         "project_id": project_id,
         "requirement": requirement,
@@ -722,7 +748,8 @@ async fn show_requirement_id(
             "entries": entries_with_summary,
         },
         "comments": {
-            "items": Vec::<serde_json::Value>::new(), // TODO: load comments
+            "items": comments_items,
+            "can_comment_on_version": can_comment_on_version,
         }
     });
 
@@ -954,6 +981,31 @@ async fn show_requirement_version(
         .as_ref()
         .map(|v| !v.is_empty())
         .unwrap_or(false);
+
+    let comments_items_version: Vec<serde_json::Value> = CommentService::new(state.inner())
+        .list_comments(requirement_id, Some(version_id))
+        .unwrap_or_default()
+        .iter()
+        .map(|c| {
+            let author_name = user_service
+                .get_by_id(c.author_id)
+                .ok()
+                .map(|u| u.name.clone())
+                .unwrap_or_else(|| format!("User#{}", c.author_id));
+            json!({
+                "id": c.id,
+                "requirement_id": c.requirement_id,
+                "requirement_version_id": c.requirement_version_id,
+                "author_id": c.author_id,
+                "author_name": author_name,
+                "body": c.body,
+                "created_at": c.created_at.format("%Y-%m-%d %H:%M").to_string(),
+            })
+        })
+        .collect();
+    let can_comment_on_version_view = !(config::lock_approved_version_comments()
+        && version.approval_state.eq_ignore_ascii_case("approved"));
+
     let canonical_data = json!({
         "project_id": project_id,
         "requirement": requirement,
@@ -978,7 +1030,10 @@ async fn show_requirement_version(
             "counts": { "total": linked_tests.len() as i32, "passed": tests_passed, "failed": tests_failed, "pending": tests_pending }
         },
         "history": { "entries": entries_with_summary },
-        "comments": { "items": Vec::<serde_json::Value>::new() }
+        "comments": {
+            "items": comments_items_version,
+            "can_comment_on_version": can_comment_on_version_view,
+        }
     });
     let ctx = json!({
         "user": user,

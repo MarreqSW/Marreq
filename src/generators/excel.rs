@@ -199,7 +199,7 @@ pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::er
             all_comments.push((c, author_name));
         }
     }
-    all_comments.sort_by(|a, b| a.0.created_at.cmp(&b.0.created_at));
+    all_comments.sort_by_key(|a| a.0.created_at);
     let mut comments_sheet = workbook.add_worksheet(Some("Comments"))?;
     comments_sheet.write_string(0, 0, "Requirement ID", None)?;
     comments_sheet.write_string(0, 1, "Version ID", None)?;

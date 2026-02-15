@@ -231,6 +231,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    user_api_tokens (id) {
+        id -> Int4,
+        user_id -> Int4,
+        #[max_length = 64]
+        token_hash -> Varchar,
+        #[max_length = 255]
+        name -> Nullable<Varchar>,
+        project_id -> Nullable<Int4>,
+        created_at -> Timestamp,
+        last_used_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     verification (id) {
         id -> Int4,
         title -> Varchar,
@@ -302,6 +316,8 @@ diesel::joinable!(matrix -> tests (test_id));
 diesel::joinable!(matrix -> users (cleared_by));
 diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (user_id));
+diesel::joinable!(user_api_tokens -> users (user_id));
+diesel::joinable!(user_api_tokens -> projects (project_id));
 diesel::joinable!(requirement_status -> projects (project_id));
 diesel::joinable!(test_status -> projects (project_id));
 diesel::joinable!(tests -> projects (project_id));
@@ -329,6 +345,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     requirements,
     test_status,
     tests,
+    user_api_tokens,
     users,
     verification,
 );

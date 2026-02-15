@@ -28,6 +28,12 @@ pub trait UserRepository {
     fn delete_user(&mut self, user_id: i32) -> Result<User, RepoError>;
 }
 
+/// API token lookup for headless auth (e.g. MCP). Returns user and optional project scope.
+pub trait ApiTokensRepository {
+    fn get_user_by_token_hash(&self, token_hash: &str) -> Result<(User, Option<i32>), RepoError>;
+    fn update_api_token_last_used_at(&mut self, token_hash: &str) -> Result<(), RepoError>;
+}
+
 pub trait RequirementsRepository {
     fn get_requirement_by_id(&self, requirement_id: i32) -> Result<Requirement, RepoError>;
     fn get_requirements_all(&self) -> Result<Vec<Requirement>, RepoError>;
@@ -295,7 +301,8 @@ pub trait RequirementCommentsRepository {
 }
 
 pub trait Repository:
-    UserRepository
+    ApiTokensRepository
+    + UserRepository
     + LookupRepository
     + RequirementsRepository
     + TestsCaseRepository
@@ -310,7 +317,8 @@ pub trait Repository:
 }
 
 impl<T> Repository for T where
-    T: UserRepository
+    T: ApiTokensRepository
+        + UserRepository
         + LookupRepository
         + RequirementsRepository
         + TestsCaseRepository

@@ -3,9 +3,9 @@ use super::cache::{keys, Cache};
 use crate::models::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    BaselineRepository, CustomFieldRepository, LogRepository, LookupRepository, MatrixRepository,
-    ProjectMembersRepository, ProjectsRepository, Repository, RequirementCommentsRepository,
-    RequirementsRepository, TestsCaseRepository, UserRepository,
+    ApiTokensRepository, BaselineRepository, CustomFieldRepository, LogRepository,
+    LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository, Repository,
+    RequirementCommentsRepository, RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -246,6 +246,16 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
             self.cache.invalidate_project(req.project_id);
         }
         Ok(updated)
+    }
+}
+
+impl<R: Repository> ApiTokensRepository for CacheRepository<R> {
+    fn get_user_by_token_hash(&self, token_hash: &str) -> Result<(User, Option<i32>), RepoError> {
+        self.inner.get_user_by_token_hash(token_hash)
+    }
+
+    fn update_api_token_last_used_at(&mut self, token_hash: &str) -> Result<(), RepoError> {
+        self.inner.update_api_token_last_used_at(token_hash)
     }
 }
 

@@ -772,7 +772,9 @@ mod tests {
         let titles: Vec<_> = details.iter().map(|d| d.field.as_str()).collect();
         assert!(titles.contains(&"Title"));
         assert!(titles.contains(&"Description"));
-        assert!(details.iter().any(|d| d.old_value == "—" && d.new_value != "—"));
+        assert!(details
+            .iter()
+            .any(|d| d.old_value == "—" && d.new_value != "—"));
     }
 
     #[test]
@@ -793,12 +795,14 @@ mod tests {
         let mut log = sample_log(1, 1);
         log.action_type = "CREATE".into();
         log.new_values = Some(
-            r#"{"title":"T","project_id":1,"author_id":1,"creation_date":"2024-01-01"}"#
-                .into(),
+            r#"{"title":"T","project_id":1,"author_id":1,"creation_date":"2024-01-01"}"#.into(),
         );
         let details = log_change_details(&log);
         let fields: Vec<_> = details.iter().map(|d| d.field.as_str()).collect();
-        assert!(!fields.contains(&"Reference"), "project_id/author_id/creation_date should be skipped");
+        assert!(
+            !fields.contains(&"Reference"),
+            "project_id/author_id/creation_date should be skipped"
+        );
         assert!(fields.contains(&"Title"));
     }
 

@@ -341,4 +341,18 @@ mod tests {
         // ReqIFUpload is the form data type for process_reqif_import; ensure it's present in module
         let _: Option<ReqIFUpload<'_>> = None;
     }
+
+    #[test]
+    fn import_page_uri_has_error_param() {
+        let r = routes();
+        let import_uri = r
+            .iter()
+            .find(|route| {
+                let u = route.uri.to_string();
+                u.contains("import_reqif") && !u.contains("process")
+            })
+            .map(|route| route.uri.to_string());
+        assert!(import_uri.is_some());
+        assert!(import_uri.unwrap().contains("error"));
+    }
 }

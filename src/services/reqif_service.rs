@@ -332,4 +332,134 @@ mod tests {
         let result = service.export_project(999);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn export_baseline_returns_xml_with_baseline_name() {
+        let mut mock = DieselRepoMock::default();
+        mock.projects.insert(
+            1,
+            crate::models::Project {
+                id: 1,
+                name: "Proj".to_string(),
+                description: None,
+                creation_date: Some(epoch()),
+                update_date: Some(epoch()),
+                status: ProjectStatus::Active,
+                owner_id: Some(1),
+            },
+        );
+        mock.baselines.push(crate::models::Baseline {
+            id: 1,
+            project_id: 1,
+            name: "v1.0".to_string(),
+            description: None,
+            created_at: epoch(),
+            created_by: 1,
+        });
+        mock.requirement_statuses.insert(
+            1,
+            crate::models::RequirementStatus {
+                id: 1,
+                title: "Draft".into(),
+                description: "".into(),
+                tag: "D".into(),
+                project_id: 1,
+            },
+        );
+        mock.requirement_versions.insert(
+            10,
+            crate::models::RequirementVersion {
+                id: 10,
+                requirement_id: 1,
+                title: "Req".into(),
+                description: "D".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                parent_id: None,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: epoch(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        mock.requirements.insert(
+            1,
+            crate::models::Requirement {
+                id: 1,
+                current_version_id: Some(10),
+                same_as_current: None,
+                title: "Req".into(),
+                description: "D".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "R-1".into(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: epoch(),
+                update_date: epoch(),
+                deadline_date: None,
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+                custom_fields: None,
+            },
+        );
+        mock.baseline_requirements
+            .push(crate::models::BaselineRequirement {
+                baseline_id: 1,
+                requirement_id: 1,
+                version_id: 10,
+            });
+        let cached = CacheRepository::new(mock, 0);
+        let state = AppState::<DieselCachedRepo> {
+            repo: Arc::new(RwLock::new(cached)),
+        };
+        let service = ReqIFService::new(&state);
+        let xml = service.export_baseline(1, 1).unwrap();
+        assert!(xml.contains("REQ-IF"));
+        assert!(xml.contains("v1.0"));
+        assert!(xml.contains("baseline"));
+        assert!(xml.contains("Req"));
+    }
+
+    #[test]
+    fn export_baseline_wrong_project_returns_err() {
+        let mut mock = DieselRepoMock::default();
+        mock.projects.insert(
+            1,
+            crate::models::Project {
+                id: 1,
+                name: "P1".into(),
+                description: None,
+                creation_date: None,
+                update_date: None,
+                status: ProjectStatus::Active,
+                owner_id: None,
+            },
+        );
+        mock.baselines.push(crate::models::Baseline {
+            id: 1,
+            project_id: 2,
+            name: "v1".into(),
+            description: None,
+            created_at: epoch(),
+            created_by: 1,
+        });
+        let cached = CacheRepository::new(mock, 0);
+        let state = AppState::<DieselCachedRepo> {
+            repo: Arc::new(RwLock::new(cached)),
+        };
+        let service = ReqIFService::new(&state);
+        let result = service.export_baseline(1, 1);
+        assert!(result.is_err());
+    }
 }

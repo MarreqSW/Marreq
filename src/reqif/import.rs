@@ -180,3 +180,113 @@ pub fn object_to_fields(obj: &ParsedSpecObject) -> ReqifObjectFields {
     let justification = mapping::get_attr(&obj.attributes, "justification");
     (title, reference_code, description, status, justification)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn parsed_document_default() {
+        let doc = ParsedDocument::default();
+        assert!(doc.objects.is_empty());
+        assert!(doc.relations.is_empty());
+    }
+
+    #[test]
+    fn object_to_fields_empty_attrs() {
+        let obj = ParsedSpecObject {
+            id: "id1".into(),
+            type_ref: "type1".into(),
+            attributes: HashMap::new(),
+        };
+        let (t, r, d, s, j) = object_to_fields(&obj);
+        assert_eq!(t, None);
+        assert_eq!(r, None);
+        assert_eq!(d, None);
+        assert_eq!(s, None);
+        assert_eq!(j, None);
+    }
+
+    #[test]
+    fn object_to_fields_title_only() {
+        let mut attrs = HashMap::new();
+        attrs.insert("Title".to_string(), "Req 1".to_string());
+        let obj = ParsedSpecObject {
+            id: "id1".into(),
+            type_ref: "type1".into(),
+            attributes: attrs,
+        };
+        let (t, r, d, s, j) = object_to_fields(&obj);
+        assert_eq!(t, Some("Req 1".into()));
+        assert_eq!(r, None);
+        assert_eq!(d, None);
+        assert_eq!(s, None);
+        assert_eq!(j, None);
+    }
+
+    #[test]
+    fn object_to_fields_multiple() {
+        let mut attrs = HashMap::new();
+        attrs.insert("Title".to_string(), "T".to_string());
+        attrs.insert("Identifier".to_string(), "REF-1".to_string());
+        attrs.insert("Statement".to_string(), "Desc".to_string());
+        let obj = ParsedSpecObject {
+            id: "id1".into(),
+            type_ref: "type1".into(),
+            attributes: attrs,
+        };
+        let (t, r, d, s, j) = object_to_fields(&obj);
+        assert_eq!(t, Some("T".into()));
+        assert_eq!(r, Some("REF-1".into()));
+        assert_eq!(d, Some("Desc".into()));
+        assert_eq!(s, None);
+        assert_eq!(j, None);
+    }
+
+    #[test]
+    fn parse_reqif_minimal_empty() {
+        let xml = r#"<?xml version="1.0"?><REQ-IF xmlns="http://www.omg.org/ReqIF"></REQ-IF>"#;
+        let result = parse_reqif(xml.as_bytes());
+        assert!(result.is_ok());
+        let doc = result.unwrap();
+        assert!(doc.objects.is_empty());
+        assert!(doc.relations.is_empty());
+    }
+
+    #[test]
+    fn parse_reqif_invalid_xml_returns_err() {
+        let xml = b"<open><no close";
+        let result = parse_reqif(xml);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_lowercase().contains("parse"));
+    }
+
+    #[test]
+    fn parse_reqif_one_spec_object() {
+        let xml = r#"<?xml version="1.0"?>
+        <REQ-IF>
+          <CORE-CONTENT>
+            <REQ-IF-CONTENT>
+              <SPEC-TYPES><SPEC-OBJECT-TYPE IDENTIFIER="type1">
+                <SPEC-ATTRIBUTES><ATTRIBUTE-DEFINITION-STRING IDENTIFIER="ad1" LONG-NAME="Title"/></SPEC-ATTRIBUTES>
+              </SPEC-OBJECT-TYPE></SPEC-TYPES>
+              <SPEC-OBJECTS>
+                <SPEC-OBJECT IDENTIFIER="obj1" TYPE="type1">
+                  <VALUES><ATTRIBUTE-VALUE-STRING DEFINITION="ad1" THE-VALUE="My Title"/></VALUES>
+                </SPEC-OBJECT>
+              </SPEC-OBJECTS>
+            </REQ-IF-CONTENT>
+          </CORE-CONTENT>
+        </REQ-IF>"#;
+        let result = parse_reqif(xml.as_bytes());
+        assert!(result.is_ok());
+        let doc = result.unwrap();
+        assert_eq!(doc.objects.len(), 1);
+        assert_eq!(doc.objects[0].id, "obj1");
+        assert_eq!(doc.objects[0].type_ref, "type1");
+        if let Some(title) = doc.objects[0].attributes.get("Title") {
+            assert_eq!(title, "My Title");
+        }
+    }
+}

@@ -167,3 +167,23 @@ fn ensure_json_extension(name: &str) -> String {
         format!("{name}.json")
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ensure_json_extension_adds_when_missing() {
+        assert_eq!(ensure_json_extension("logs"), "logs.json");
+        assert_eq!(
+            ensure_json_extension("reqman-logs_20240101"),
+            "reqman-logs_20240101.json"
+        );
+    }
+
+    #[test]
+    fn ensure_json_extension_preserves_when_present() {
+        assert_eq!(ensure_json_extension("a.json"), "a.json");
+        assert_eq!(ensure_json_extension("file.json"), "file.json");
+    }
+}

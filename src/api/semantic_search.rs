@@ -402,4 +402,34 @@ mod tests {
             reindex_response["total"].as_i64().unwrap()
         );
     }
+
+    #[test]
+    fn ask_request_deserialize() {
+        let json = r#"{"query":"What is the scope?"}"#;
+        let req: AskRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.query, "What is the scope?");
+        assert_eq!(req.k, None);
+        assert_eq!(req.status_filter, None);
+    }
+
+    #[test]
+    fn ask_request_deserialize_with_filters() {
+        let json = r#"{"query":"Q","k":5,"status_filter":1,"category_filter":2}"#;
+        let req: AskRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.query, "Q");
+        assert_eq!(req.k, Some(5));
+        assert_eq!(req.status_filter, Some(1));
+        assert_eq!(req.category_filter, Some(2));
+    }
+
+    #[test]
+    fn semantic_search_query_k_respects_max() {
+        assert_eq!(bound_k(Some(50), 10, 50), 50);
+        assert_eq!(bound_k(Some(51), 10, 50), 50);
+    }
+
+    #[test]
+    fn semantic_search_query_k_uses_default() {
+        assert_eq!(bound_k(None, 10, 50), 10);
+    }
 }

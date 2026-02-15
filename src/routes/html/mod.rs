@@ -75,3 +75,41 @@ pub fn routes() -> Vec<Route> {
         cache::warm_cache_route,
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn routes_non_empty() {
+        let r = routes();
+        assert!(!r.is_empty());
+    }
+
+    #[test]
+    fn routes_include_login_and_logs() {
+        let r = routes();
+        let uris: Vec<String> = r.iter().map(|route| route.uri.to_string()).collect();
+        assert!(
+            uris.iter().any(|u| u.contains("login")),
+            "expected login route, got {:?}",
+            uris
+        );
+        assert!(
+            uris.iter().any(|u| u.contains("logs")),
+            "expected logs route, got {:?}",
+            uris
+        );
+    }
+
+    #[test]
+    fn routes_include_import_excel() {
+        let r = routes();
+        let uris: Vec<String> = r.iter().map(|route| route.uri.to_string()).collect();
+        assert!(
+            uris.iter().any(|u| u.contains("import_excel")),
+            "expected import_excel route, got {:?}",
+            uris
+        );
+    }
+}

@@ -144,12 +144,10 @@ mod tests {
     }
 
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
-        let rocket = rocket::build()
-            .manage(state_from_repo(repo))
-            .mount(
-                "/api",
-                routes![list_by_project, get, create, update, delete],
-            );
+        let rocket = rocket::build().manage(state_from_repo(repo)).mount(
+            "/api",
+            routes![list_by_project, get, create, update, delete],
+        );
         Client::tracked(rocket).await.unwrap()
     }
 
@@ -379,7 +377,8 @@ mod tests {
                 created_at: epoch(),
             },
         );
-        repo.custom_field_values.push((100, 1, Some("value".into())));
+        repo.custom_field_values
+            .push((100, 1, Some("value".into())));
         repo.next_custom_field_id = 2;
         let client = client_with_repo(repo).await;
         let response = client

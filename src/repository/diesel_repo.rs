@@ -342,7 +342,7 @@ impl ApiTokensRepository for DieselRepo {
                 schema::user_api_tokens::project_id,
             ))
             .first(conn.as_mut())
-            .map_err(|e| {
+            .map_err(|e: diesel::result::Error| {
                 if e == diesel::result::Error::NotFound {
                     RepoError::NotFound
                 } else {

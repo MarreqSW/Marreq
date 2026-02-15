@@ -979,4 +979,51 @@ mod tests {
         assert!(result.contains("system:*"));
         assert!(result.contains("performance:*"));
     }
+
+    #[test]
+    fn semantic_search_service_with_config() {
+        use crate::app::{AppState, DieselCachedRepo};
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
+        use crate::repository::CacheRepository;
+        use std::sync::{Arc, RwLock};
+
+        let state = AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(
+                DieselRepoMock::default(),
+                0,
+            ))),
+        };
+        let config = crate::services::semantic_search::config::SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "mock".into(),
+            ..Default::default()
+        };
+        let service = SemanticSearchService::with_config(&state, config);
+        assert!(service.is_enabled());
+        assert!(!service.is_rag_enabled());
+    }
+
+    #[test]
+    fn semantic_search_service_rag_enabled_with_config() {
+        use crate::app::{AppState, DieselCachedRepo};
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
+        use crate::repository::CacheRepository;
+        use std::sync::{Arc, RwLock};
+
+        let state = AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(
+                DieselRepoMock::default(),
+                0,
+            ))),
+        };
+        let config = crate::services::semantic_search::config::SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "mock".into(),
+            rag_enabled: true,
+            ..Default::default()
+        };
+        let service = SemanticSearchService::with_config(&state, config);
+        assert!(service.is_enabled());
+        assert!(service.is_rag_enabled());
+    }
 }

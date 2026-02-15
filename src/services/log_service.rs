@@ -727,4 +727,94 @@ mod tests {
         let logs = service.entity_logs("PROJECT", 999).unwrap();
         assert_eq!(logs.len(), 0);
     }
+
+    #[test]
+    fn change_summary_create_returns_created() {
+        let mut log = sample_log(1, 1);
+        log.action_type = "CREATE".into();
+        assert_eq!(change_summary(&log), "Created");
+    }
+
+    #[test]
+    fn change_summary_delete_returns_deleted() {
+        let mut log = sample_log(1, 1);
+        log.action_type = "DELETE".into();
+        assert_eq!(change_summary(&log), "Deleted");
+    }
+
+    #[test]
+    fn change_summary_update_no_changes_returns_updated() {
+        let mut log = sample_log(1, 1);
+        log.action_type = "UPDATE".into();
+        log.old_values = None;
+        log.new_values = None;
+        assert_eq!(change_summary(&log), "Updated");
+    }
+
+    #[test]
+    fn change_summary_update_with_changed_fields() {
+        let mut log = sample_log(1, 1);
+        log.action_type = "UPDATE".into();
+        log.old_values = Some(r#"{"title":"Old"}"#.into());
+        log.new_values = Some(r#"{"title":"New"}"#.into());
+        let summary = change_summary(&log);
+        assert!(summary.contains("Title"));
+        assert!(summary.contains("updated"));
+    }
+
+    #[test]
+    fn log_change_details_create_returns_new_values() {
+        let mut log = sample_log(1, 1);
+        log.action_type = "CREATE".into();
+        log.new_values = Some(r#"{"title":"Req 1","description":"Desc"}"#.into());
+        let details = log_change_details(&log);
+        assert_eq!(details.len(), 2);
+        let titles: Vec<_> = details.iter().map(|d| d.field.as_str()).collect();
+        assert!(titles.contains(&"Title"));
+        assert!(titles.contains(&"Description"));
+        assert!(details
+            .iter()
+            .any(|d| d.old_value == "—" && d.new_value != "—"));
+    }
+
+    #[test]
+    fn log_change_details_update_shows_changed_field() {
+        let mut log = sample_log(1, 1);
+        log.action_type = "UPDATE".into();
+        log.old_values = Some(r#"{"title":"Old"}"#.into());
+        log.new_values = Some(r#"{"title":"New"}"#.into());
+        let details = log_change_details(&log);
+        assert_eq!(details.len(), 1);
+        assert_eq!(details[0].field, "Title");
+        assert_eq!(details[0].old_value, "Old");
+        assert_eq!(details[0].new_value, "New");
+    }
+
+    #[test]
+    fn log_change_details_skips_internal_keys() {
+        let mut log = sample_log(1, 1);
+        log.action_type = "CREATE".into();
+        log.new_values = Some(
+            r#"{"title":"T","project_id":1,"author_id":1,"creation_date":"2024-01-01"}"#.into(),
+        );
+        let details = log_change_details(&log);
+        let fields: Vec<_> = details.iter().map(|d| d.field.as_str()).collect();
+        assert!(
+            !fields.contains(&"Reference"),
+            "project_id/author_id/creation_date should be skipped"
+        );
+        assert!(fields.contains(&"Title"));
+    }
+
+    #[test]
+    fn change_detail_struct_fields() {
+        let detail = ChangeDetail {
+            field: "Title".to_string(),
+            old_value: "Old".to_string(),
+            new_value: "New".to_string(),
+        };
+        assert_eq!(detail.field, "Title");
+        assert_eq!(detail.old_value, "Old");
+        assert_eq!(detail.new_value, "New");
+    }
 }

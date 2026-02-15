@@ -148,14 +148,26 @@ mod tests {
     use super::*;
     use crate::app::AppState;
     use crate::auth::session::SESSION_COOKIE;
-    use crate::models::MatrixLink;
+    use crate::models::{MatrixLink, Project, ProjectMember, Requirement, TestCase};
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::ContentType;
+    use crate::status_enums::ProjectStatus;
+    use chrono::NaiveDate;
+    use rocket::http::{ContentType, Cookie};
     use rocket::local::asynchronous::Client;
     use rocket::serde::json::Value;
     use std::sync::{Arc, RwLock};
 
     type TestState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
+    const PROJECT_ID: i32 = 1;
+
+    fn epoch() -> chrono::NaiveDateTime {
+        NaiveDate::from_ymd_opt(2020, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
 
     fn state_from_repo(repo: DieselRepoMock) -> TestState {
         AppState {
@@ -163,29 +175,80 @@ mod tests {
         }
     }
 
-    async fn client_with_repo(repo: DieselRepoMock) -> Client {
-        let rocket = rocket::build()
-            .manage(state_from_repo(repo.with_admin_user()))
-            .mount("/api", routes![clear_suspect]);
-        Client::tracked(rocket).await.unwrap()
-    }
-
-    fn auth_cookie() -> rocket::http::Cookie<'static> {
-        let mut cookie = rocket::http::Cookie::new(SESSION_COOKIE, "1");
+    fn auth_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
         cookie.set_path("/");
         cookie
     }
 
+    fn repo_with_project_and_requirement() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default().with_admin_user();
+        repo.projects.insert(
+            PROJECT_ID,
+            Project {
+                id: PROJECT_ID,
+                name: "P".into(),
+                description: None,
+                creation_date: None,
+                update_date: None,
+                status: ProjectStatus::Active,
+                owner_id: Some(ADMIN_ID),
+            },
+        );
+        repo.project_members.push(ProjectMember {
+            project_id: PROJECT_ID,
+            user_id: ADMIN_ID,
+            role: 1,
+            created_at: epoch(),
+            updated_at: epoch(),
+        });
+        repo.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                current_version_id: None,
+                same_as_current: None,
+                title: "R1".into(),
+                description: "D1".into(),
+                status_id: 1,
+                author_id: ADMIN_ID,
+                reviewer_id: ADMIN_ID,
+                reference_code: "REF-1".into(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: epoch(),
+                update_date: epoch(),
+                deadline_date: None,
+                applicability_id: 1,
+                justification: None,
+                project_id: PROJECT_ID,
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+                custom_fields: None,
+            },
+        );
+        repo
+    }
+
+    async fn client_with_repo(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build().manage(state_from_repo(repo)).mount(
+            "/api",
+            routes![trace_up, trace_down, coverage_report, clear_suspect],
+        );
+        Client::tracked(rocket).await.unwrap()
+    }
+
     #[rocket::async_test]
     async fn clear_suspect_returns_ok_and_cleared_true_when_link_was_suspect() {
-        let mut repo = DieselRepoMock::default();
+        let mut repo = DieselRepoMock::default().with_admin_user();
         repo.matrices.push(MatrixLink {
             req_id: 1,
             test_id: 2,
-            creation_date: chrono::Utc::now().naive_utc(),
+            creation_date: epoch(),
             project_id: 7,
             suspect: true,
-            suspect_at: Some(chrono::Utc::now().naive_utc()),
+            suspect_at: Some(epoch()),
             suspect_reason: Some("Requirement updated".into()),
             cleared_by: None,
             cleared_at: None,
@@ -209,7 +272,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn clear_suspect_returns_ok_and_cleared_false_when_link_missing() {
-        let client = client_with_repo(DieselRepoMock::default()).await;
+        let client = client_with_repo(DieselRepoMock::default().with_admin_user()).await;
         let response = client
             .post("/api/traceability/clear_suspect")
             .header(ContentType::JSON)
@@ -229,7 +292,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn clear_suspect_requires_auth() {
-        let client = client_with_repo(DieselRepoMock::default()).await;
+        let client = client_with_repo(DieselRepoMock::default().with_admin_user()).await;
         let response = client
             .post("/api/traceability/clear_suspect")
             .header(ContentType::JSON)
@@ -238,5 +301,105 @@ mod tests {
             .await;
 
         assert_eq!(response.status(), rocket::http::Status::Unauthorized);
+    }
+
+    #[rocket::async_test]
+    async fn trace_up_returns_parent_none_when_no_parent() {
+        let client = client_with_repo(repo_with_project_and_requirement()).await;
+        let response = client
+            .get(format!(
+                "/api/projects/{}/requirements/1/trace_up",
+                PROJECT_ID
+            ))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), rocket::http::Status::Ok);
+        let body: Value = response.into_json().await.unwrap();
+        assert!(body.get("parent").is_some());
+        assert!(
+            body.get("parent").unwrap().is_null(),
+            "expected parent to be null when requirement has no parent"
+        );
+    }
+
+    #[rocket::async_test]
+    async fn trace_up_returns_404_when_requirement_not_in_project() {
+        let client = client_with_repo(repo_with_project_and_requirement()).await;
+        let response = client
+            .get(format!(
+                "/api/projects/{}/requirements/999/trace_up",
+                PROJECT_ID
+            ))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), rocket::http::Status::NotFound);
+    }
+
+    #[rocket::async_test]
+    async fn trace_down_returns_children_and_linked_tests() {
+        let mut repo = repo_with_project_and_requirement();
+        repo.tests.insert(
+            10,
+            TestCase {
+                id: 10,
+                name: "T1".into(),
+                reference_code: "T-1".into(),
+                description: "".into(),
+                source: "".into(),
+                status_id: 1,
+                parent_id: None,
+                project_id: PROJECT_ID,
+            },
+        );
+        repo.matrices.push(MatrixLink {
+            req_id: 1,
+            test_id: 10,
+            creation_date: epoch(),
+            project_id: PROJECT_ID,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
+        });
+        let client = client_with_repo(repo).await;
+        let response = client
+            .get(format!(
+                "/api/projects/{}/requirements/1/trace_down",
+                PROJECT_ID
+            ))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), rocket::http::Status::Ok);
+        let body: Value = response.into_json().await.unwrap();
+        let linked = body.get("linked_tests").and_then(|v| v.as_array()).unwrap();
+        assert_eq!(linked.len(), 1);
+    }
+
+    #[rocket::async_test]
+    async fn coverage_report_returns_empty_arrays_when_no_data() {
+        let client = client_with_repo(repo_with_project_and_requirement()).await;
+        let response = client
+            .get(format!("/api/projects/{}/coverage_report", PROJECT_ID))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), rocket::http::Status::Ok);
+        let body: Value = response.into_json().await.unwrap();
+        assert!(body.get("requirements_without_tests").is_some());
+        assert!(body.get("tests_without_requirements").is_some());
+        assert!(body.get("suspect_links").is_some());
+        let reqs: &Vec<_> = body
+            .get("requirements_without_tests")
+            .unwrap()
+            .as_array()
+            .unwrap();
+        assert_eq!(reqs.len(), 1);
+        assert_eq!(reqs[0].as_i64(), Some(1));
     }
 }

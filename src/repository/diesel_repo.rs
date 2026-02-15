@@ -2191,4 +2191,26 @@ mod tests {
         let debug_str = format!("{:?}", info);
         assert!(debug_str.contains("PoolInfo"));
     }
+
+    #[test]
+    fn utilization_when_current_exceeds_max() {
+        let stats = PoolStats {
+            max_size: 10,
+            min_idle: 0,
+            current_size: 12,
+            available: 2,
+        };
+        assert_eq!(stats.utilization_percentage(), 120.0);
+    }
+
+    #[test]
+    fn active_connections_when_none_available() {
+        let stats = PoolStats {
+            max_size: 10,
+            min_idle: 0,
+            current_size: 5,
+            available: 0,
+        };
+        assert_eq!(stats.active_connections(), 5);
+    }
 }

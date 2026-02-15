@@ -1,15 +1,130 @@
-//! Traceability (matrix) API: suspect link management.
+//! Traceability (matrix) API: suspect link management, trace_up/trace_down, coverage report.
 
-use rocket::serde::Deserialize;
+use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::services::MatrixService;
+use crate::auth::guards::ProjectAccessOrBearer;
+use crate::models::{Requirement, TestCase};
+use crate::repository::{MatrixRepository, RequirementsRepository, TestsCaseRepository};
+use crate::services::{MatrixService, RequirementService};
 
 #[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct ClearSuspectRequest {
     pub req_id: i32,
     pub test_id: i32,
+}
+
+/// Trace up: parent requirement(s) for a requirement. Project-scoped; accepts session or Bearer.
+#[get("/projects/<project_id>/requirements/<id>/trace_up")]
+pub async fn trace_up(
+    _access: ProjectAccessOrBearer,
+    project_id: i32,
+    id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<TraceUpResponse>> {
+    let service = RequirementService::new(state.inner());
+    let requirement = service.get_by_id(id)?;
+    if requirement.project_id != project_id {
+        return Err(ApiError::NotFound("requirement not in project".into()));
+    }
+    let parent = requirement
+        .parent_id
+        .and_then(|pid| service.get_by_id(pid).ok())
+        .filter(|p| p.project_id == project_id);
+    Ok(Json(TraceUpResponse { parent }))
+}
+
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct TraceUpResponse {
+    pub parent: Option<Requirement>,
+}
+
+/// Trace down: child requirements and linked tests. Project-scoped; accepts session or Bearer.
+#[get("/projects/<project_id>/requirements/<id>/trace_down")]
+pub async fn trace_down(
+    _access: ProjectAccessOrBearer,
+    project_id: i32,
+    id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<TraceDownResponse>> {
+    let req_service = RequirementService::new(state.inner());
+    let requirement = req_service.get_by_id(id)?;
+    if requirement.project_id != project_id {
+        return Err(ApiError::NotFound("requirement not in project".into()));
+    }
+    let child_requirements = req_service.get_children_by_parent_and_project(project_id, id)?;
+    let linked_tests = req_service.get_linked_tests(id)?;
+    Ok(Json(TraceDownResponse {
+        child_requirements,
+        linked_tests,
+    }))
+}
+
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct TraceDownResponse {
+    pub child_requirements: Vec<Requirement>,
+    pub linked_tests: Vec<TestCase>,
+}
+
+/// Coverage report: requirements without tests, tests without requirements, suspect links. Project-scoped.
+#[get("/projects/<project_id>/coverage_report")]
+pub async fn coverage_report(
+    _access: ProjectAccessOrBearer,
+    project_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<CoverageReport>> {
+    let repo = state.repo_read();
+    let requirements = repo.get_requirements_by_project(project_id)?;
+    let tests = repo.get_tests_by_project(project_id)?;
+    let links = repo.get_matrix_by_project(project_id)?;
+
+    let req_ids_with_tests: std::collections::HashSet<i32> =
+        links.iter().map(|m| m.req_id).collect();
+    let test_ids_with_reqs: std::collections::HashSet<i32> =
+        links.iter().map(|m| m.test_id).collect();
+
+    let requirements_without_tests: Vec<i32> = requirements
+        .iter()
+        .filter(|r| !req_ids_with_tests.contains(&r.id))
+        .map(|r| r.id)
+        .collect();
+    let tests_without_requirements: Vec<i32> = tests
+        .iter()
+        .filter(|t| !test_ids_with_reqs.contains(&t.id))
+        .map(|t| t.id)
+        .collect();
+    let suspect_links: Vec<SuspectLink> = links
+        .iter()
+        .filter(|m| m.suspect)
+        .map(|m| SuspectLink {
+            req_id: m.req_id,
+            test_id: m.test_id,
+        })
+        .collect();
+
+    Ok(Json(CoverageReport {
+        requirements_without_tests,
+        tests_without_requirements,
+        suspect_links,
+    }))
+}
+
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct SuspectLink {
+    pub req_id: i32,
+    pub test_id: i32,
+}
+
+#[derive(Serialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct CoverageReport {
+    pub requirements_without_tests: Vec<i32>,
+    pub tests_without_requirements: Vec<i32>,
+    pub suspect_links: Vec<SuspectLink>,
 }
 
 /// Clear the suspect flag for a traceability link. Records current user and timestamp (auditable).

@@ -6,6 +6,7 @@ pub mod comments;
 pub mod custom_fields;
 pub mod error;
 pub mod matrix;
+pub mod mcp;
 pub mod prelude;
 pub mod requirement_diff;
 pub mod requirements;
@@ -24,18 +25,27 @@ pub fn routes() -> Vec<Route> {
         baselines::create,
         baselines::get_requirements,
         baselines::get_traceability,
+        baselines::diff_baselines,
         requirements::list,
+        requirements::list_by_project,
         requirements::get,
+        requirements::get_by_project,
         requirements::list_versions,
+        requirements::list_versions_by_project,
         requirements::get_version,
+        requirements::get_version_by_project,
         requirements::get_impacted_tests,
         requirements::set_version_approval,
+        requirements::set_version_approval_by_project,
         requirements::create,
+        requirements::create_by_project,
         requirements::delete,
         requirements::patch_requirement,
+        requirements::patch_by_project,
         comments::list,
         comments::create,
         requirement_diff::diff_versions,
+        requirement_diff::diff_versions_by_project,
         requirement_diff::diff_baseline_vs_current,
         test_cases::list,
         test_cases::get,
@@ -65,6 +75,10 @@ pub fn routes() -> Vec<Route> {
         users::create,
         users::delete,
         matrix::list,
+        matrix::list_by_project,
+        traceability::trace_up,
+        traceability::trace_down,
+        traceability::coverage_report,
         traceability::clear_suspect,
         cache::stats,
         cache::clear,
@@ -79,5 +93,6 @@ pub fn routes() -> Vec<Route> {
         semantic_search::reindex,
         semantic_search::index_status,
         semantic_search::search_status,
+        mcp::audit,
     ]
 }

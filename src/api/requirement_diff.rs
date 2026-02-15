@@ -1,8 +1,9 @@
 //! API endpoints for requirement version diffs (read-only, deterministic).
 
 use crate::api::prelude::*;
+use crate::auth::guards::ProjectAccessOrBearer;
 use crate::diff::RequirementDiff;
-use crate::services::RequirementDiffService;
+use crate::services::{RequirementDiffService, RequirementService};
 
 /// Diff two versions of a requirement (v1 = old, v2 = new).
 /// Both version IDs must belong to the given requirement.
@@ -19,10 +20,30 @@ pub async fn diff_versions(
     Ok(Json(diff))
 }
 
-/// Diff the requirement as stored in the baseline vs the current version.
+/// Project-scoped diff two versions (session or Bearer). Enforces requirement belongs to project.
+#[get("/projects/<project_id>/requirements/<req_id>/versions/<v1>/diff/<v2>")]
+pub async fn diff_versions_by_project(
+    _access: ProjectAccessOrBearer,
+    project_id: i32,
+    req_id: i32,
+    v1: i32,
+    v2: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<RequirementDiff>> {
+    let req_service = RequirementService::new(state.inner());
+    let requirement = req_service.get_by_id(req_id)?;
+    if requirement.project_id != project_id {
+        return Err(ApiError::NotFound("requirement not in project".into()));
+    }
+    let service = RequirementDiffService::new(state.inner());
+    let diff = service.diff_versions(req_id, v1, v2)?;
+    Ok(Json(diff))
+}
+
+/// Diff the requirement as stored in the baseline vs the current version (session or Bearer).
 #[get("/projects/<project_id>/baselines/<baseline_id>/requirements/<req_id>/diff/current")]
 pub async fn diff_baseline_vs_current(
-    _user: ApiUser,
+    _access: ProjectAccessOrBearer,
     project_id: i32,
     baseline_id: i32,
     req_id: i32,

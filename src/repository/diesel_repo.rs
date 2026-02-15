@@ -12,8 +12,8 @@ use crate::models::forms::{
     NewTestCase, NewTestStatus, NewUser, NewVerificationMethod, UpdateProject, UpdateUser,
 };
 use crate::repository::{
-    BaselineRepository, CustomFieldRepository, LookupRepository, MatrixRepository,
-    ProjectMembersRepository, ProjectsRepository, RequirementCommentsRepository,
+    ApiTokensRepository, BaselineRepository, CustomFieldRepository, LookupRepository,
+    MatrixRepository, ProjectMembersRepository, ProjectsRepository, RequirementCommentsRepository,
     RequirementsRepository, TestsCaseRepository, UserRepository,
 };
 use crate::schema;
@@ -325,6 +325,41 @@ impl UserRepository for DieselRepo {
             })?;
         diesel::delete(dsl::users.filter(dsl::id.eq(user_id))).execute(conn.as_mut())?;
         Ok(user)
+    }
+}
+
+impl ApiTokensRepository for DieselRepo {
+    fn get_user_by_token_hash(&self, token_hash: &str) -> Result<(User, Option<i32>), RepoError> {
+        use schema::user_api_tokens::dsl as tok_dsl;
+        let mut conn = self.get_conn()?;
+        let row: (User, Option<i32>) = schema::user_api_tokens::table
+            .inner_join(
+                schema::users::table.on(schema::user_api_tokens::user_id.eq(schema::users::id)),
+            )
+            .filter(tok_dsl::token_hash.eq(token_hash))
+            .select((
+                schema::users::all_columns,
+                schema::user_api_tokens::project_id,
+            ))
+            .first(conn.as_mut())
+            .map_err(|e: diesel::result::Error| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })?;
+        Ok(row)
+    }
+
+    fn update_api_token_last_used_at(&mut self, token_hash: &str) -> Result<(), RepoError> {
+        use schema::user_api_tokens::dsl;
+        let mut conn = self.get_conn()?;
+        let now = chrono::Utc::now().naive_utc();
+        diesel::update(dsl::user_api_tokens.filter(dsl::token_hash.eq(token_hash)))
+            .set(dsl::last_used_at.eq(now))
+            .execute(conn.as_mut())?;
+        Ok(())
     }
 }
 

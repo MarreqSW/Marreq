@@ -12,6 +12,30 @@ pub struct CreateBaselineForm {
     pub description: Option<String>,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_baseline_form_struct_exists() {
+        let form = CreateBaselineForm {
+            name: "v1.0".to_string(),
+            description: Some("First release".to_string()),
+        };
+        assert_eq!(form.name, "v1.0");
+        assert_eq!(form.description.as_deref(), Some("First release"));
+    }
+
+    #[test]
+    fn create_baseline_form_description_optional() {
+        let form = CreateBaselineForm {
+            name: "v1.0".to_string(),
+            description: None,
+        };
+        assert!(form.description.is_none());
+    }
+}
+
 #[get("/<project_id>/baselines")]
 pub async fn show_baselines(
     project_access: ProjectAccess,

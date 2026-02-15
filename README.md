@@ -48,7 +48,15 @@ A comprehensive web-based requirements and test management system built with Rus
 - **RESTful API**: Complete programmatic access to all data
 - **JSON Format**: Standard JSON responses for integration
 - **CRUD Operations**: Full Create, Read, Update, Delete support
-- **Project-Scoped**: All API operations respect project boundaries
+- **Project-Scoped**: All API operations respect project boundaries; project-scoped routes support both session and Bearer token auth (e.g. for MCP)
+- **API tokens**: Bearer token auth for headless clients (e.g. MCP); tokens can be scoped to a project (see [MCP Setup](doc/MCP_SETUP.md))
+
+### 🤖 MCP (Model Context Protocol)
+- **MCP server**: Optional TypeScript MCP server in `mcp-server/` that exposes ReqMan data as MCP tools for AI assistants (Cursor, Claude, etc.). Talks to the ReqMan REST API with Bearer token; all tools are project-scoped.
+- **Read-only (default)**: get_requirement, list_requirements, get_versions, compare_versions, trace_up, trace_down, coverage_report, get_baseline, diff_baselines.
+- **Phase 2 (draft_write)**: When `REQMAN_MODE=draft_write`, additional tools: create_requirement, patch_requirement, set_approval, create_baseline.
+- **Audit**: Every tool call is logged to ReqMan (POST /api/mcp/audit) for compliance.
+- See [MCP Setup](doc/MCP_SETUP.md) for environment variables, tool list, and how to run the server.
 
 ### ✅ Requirement approval workflow (UI)
 - **Detail page**: Approval badge (draft / reviewed / approved), metadata (approved by, date), and contextual actions: *Mark as Reviewed* and *Approve Requirement* (for project owners/managers). Confirmation modals before each transition.
@@ -177,6 +185,14 @@ All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or
 - `PATCH /requirements/{id}` - Partially update supported requirement fields
 - `DELETE /requirements/{id}` - Delete requirement
 
+**Project-scoped (session or Bearer token):**
+- `GET /projects/{project_id}/requirements` - List requirements; query: `approval_state`, `has_tests`
+- `GET /projects/{project_id}/requirements/{id}` - Get requirement with trace summary (parent, children, linked tests)
+- `GET /projects/{project_id}/requirements/{req_id}/versions/{v1}/diff/{v2}` - Diff two versions (requirement must belong to project)
+- `POST /projects/{project_id}/requirements` - Create requirement (body must include `project_id` matching route)
+- `PATCH /projects/{project_id}/requirements/{id}` - Partially update requirement
+- `PUT /projects/{project_id}/requirements/{req_id}/versions/{version_id}/approval` - Set approval state (body: `state`: "reviewed" | "approved")
+
 #### Tests
 - `GET /tests` - List all tests
 - `GET /tests/{id}` - Get specific test
@@ -200,6 +216,7 @@ All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or
 
 #### Matrix
 - `GET /matrix` - Get traceability matrix data
+- `GET /projects/{project_id}/matrix` - Get traceability matrix for a project (session or Bearer)
 
 #### Baselines (immutable snapshots)
 - `GET /projects/{project_id}/baselines` - List baselines for a project
@@ -221,6 +238,9 @@ All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or
 - `POST /status` - Create new status
 
 #### Traceability
+- `GET /projects/{project_id}/requirements/{id}/trace_up` - Get parent requirement(s) (session or Bearer)
+- `GET /projects/{project_id}/requirements/{id}/trace_down` - Get child requirements and linked tests (session or Bearer)
+- `GET /projects/{project_id}/coverage_report` - Requirements without tests, tests without requirements, suspect links (session or Bearer)
 - `POST /traceability/clear_suspect` - Clear suspect flag for a traceability link (body: `req_id`, `test_id`; records current user and timestamp)
 
 #### Semantic search (project-scoped; requires embeddings/RAG when enabled)
@@ -267,6 +287,7 @@ The application uses PostgreSQL with the following main entities:
 - **Baselines**: Immutable project snapshots; **baseline_requirements** stores which requirement_version was current per requirement, **baseline_traceability** stores the matrix at baseline time
 - **Categories**, **Applicability**, **Requirement status**, **Test status**, **Verification**: Project-scoped lookup/config tables
 - **Users**: System users (authors, reviewers) with authentication
+- **User API tokens**: Bearer tokens for headless/MCP access; optional project scope; hashed storage, last_used_at tracking
 - **Logs**: Audit trail for all system activities
 
 For a full entity-relationship diagram see [doc/database_schema.mmd](doc/database_schema.mmd) (Mermaid). Legacy: ![ER Diagram](doc/ER%20diagram.png)
@@ -314,7 +335,8 @@ ReqMan/
 │   │   ├── parser.rs       # Excel parsing logic
 │   │   └── api_client.rs   # API integration
 │   └── README.md           # Parser documentation
-├── doc/                   # Documentation
+├── doc/                   # Documentation (incl. MCP_SETUP.md)
+├── mcp-server/            # Optional MCP server (Node/TypeScript) for AI assistants
 ├── scripts/               # Dev tooling & DB setup
 │   ├── init_complete.sql  # Complete DB init (schema + sample data)
 │   └── setup_database.sh  # Automated database setup

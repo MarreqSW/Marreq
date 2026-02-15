@@ -232,12 +232,10 @@ mod tests {
     }
 
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
-        let rocket = rocket::build()
-            .manage(state_from_repo(repo))
-            .mount(
-                "/api",
-                routes![trace_up, trace_down, coverage_report, clear_suspect],
-            );
+        let rocket = rocket::build().manage(state_from_repo(repo)).mount(
+            "/api",
+            routes![trace_up, trace_down, coverage_report, clear_suspect],
+        );
         Client::tracked(rocket).await.unwrap()
     }
 
@@ -396,7 +394,11 @@ mod tests {
         assert!(body.get("requirements_without_tests").is_some());
         assert!(body.get("tests_without_requirements").is_some());
         assert!(body.get("suspect_links").is_some());
-        let reqs: &Vec<_> = body.get("requirements_without_tests").unwrap().as_array().unwrap();
+        let reqs: &Vec<_> = body
+            .get("requirements_without_tests")
+            .unwrap()
+            .as_array()
+            .unwrap();
         assert_eq!(reqs.len(), 1);
         assert_eq!(reqs[0].as_i64(), Some(1));
     }

@@ -131,6 +131,7 @@ DROP TABLE IF EXISTS requirements CASCADE;
 DROP FUNCTION IF EXISTS requirement_versions_search_vector_update() CASCADE;
 DROP TABLE IF EXISTS tests CASCADE;
 DROP TABLE IF EXISTS project_members CASCADE;
+DROP TABLE IF EXISTS user_api_tokens CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS applicability CASCADE;
@@ -154,7 +155,7 @@ echo ""
 echo "🔍 Verifying database setup..."
 echo "📋 Tables created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "\dt" \
-  | grep -E "(projects|users|requirements|requirement_versions|requirement_version_verification|requirement_comments|tests|matrix|logs|baselines|baseline_requirements|baseline_traceability|categories|applicability|verification|requirement_status|status_id|custom_field_definitions|custom_field_values)" || true
+  | grep -E "(projects|users|user_api_tokens|requirements|requirement_versions|requirement_version_verification|requirement_comments|tests|matrix|logs|baselines|baseline_requirements|baseline_traceability|categories|applicability|verification|requirement_status|status_id|custom_field_definitions|custom_field_values)" || true
 echo ""
 echo "📋 Immutable baselines (snapshots):"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
@@ -193,6 +194,12 @@ echo "📋 Requirement comments:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
   SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'requirement_comments') AS requirement_comments_exists,
          EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_requirement_comments_requirement') AS index_requirement_exists;
+" 2>/dev/null || true
+echo ""
+echo "📋 User API tokens (MCP / headless auth):"
+docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
+  SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'user_api_tokens') AS user_api_tokens_exists,
+         EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_user_api_tokens_token_hash') AS token_hash_index_exists;
 " 2>/dev/null || true
 echo ""
 

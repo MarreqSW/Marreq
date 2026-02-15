@@ -62,3 +62,98 @@ pub async fn audit(
         .map_err(ApiError::from)?;
     Ok(Json(McpAuditResponse { status: "ok" }))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use rocket::http::{ContentType, Cookie, Status};
+    use rocket::local::asynchronous::Client;
+    use std::sync::{Arc, RwLock};
+
+    type TestState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
+
+    fn state_from_repo(repo: DieselRepoMock) -> TestState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn client_with_repo(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(state_from_repo(repo))
+            .mount("/api", routes![audit]);
+        Client::tracked(rocket).await.unwrap()
+    }
+
+    fn auth_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        cookie.set_path("/");
+        cookie
+    }
+
+    #[rocket::async_test]
+    async fn audit_returns_ok_when_authenticated() {
+        let client = client_with_repo(DieselRepoMock::default().with_admin_user()).await;
+        let response = client
+            .post("/api/mcp/audit")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(
+                r#"{
+                "project_id": 1,
+                "session_id": "sess-1",
+                "tool_name": "test_tool",
+                "params_summary": "a=1",
+                "result_summary": "ok",
+                "is_write": false
+            }"#,
+            )
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Ok);
+        let body: serde_json::Value = response.into_json().await.unwrap();
+        assert_eq!(body.get("status").and_then(|v| v.as_str()), Some("ok"));
+    }
+
+    #[rocket::async_test]
+    async fn audit_requires_auth() {
+        let client = client_with_repo(DieselRepoMock::default().with_admin_user()).await;
+        let response = client
+            .post("/api/mcp/audit")
+            .header(ContentType::JSON)
+            .body(
+                r#"{
+                "project_id": 1,
+                "tool_name": "test_tool",
+                "is_write": false
+            }"#,
+            )
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Unauthorized);
+    }
+
+    #[test]
+    fn mcp_audit_request_deserialize() {
+        let json = r#"{"project_id":1,"tool_name":"x","is_write":true}"#;
+        let req: McpAuditRequest = serde_json::from_str(json).unwrap();
+        assert_eq!(req.project_id, 1);
+        assert_eq!(req.tool_name, "x");
+        assert!(req.is_write);
+        assert!(req.session_id.is_none());
+        assert!(req.params_summary.is_none());
+        assert!(req.result_summary.is_none());
+    }
+
+    #[test]
+    fn mcp_audit_response_serialize() {
+        let res = McpAuditResponse { status: "ok" };
+        let json = serde_json::to_string(&res).unwrap();
+        assert_eq!(json, r#"{"status":"ok"}"#);
+    }
+}

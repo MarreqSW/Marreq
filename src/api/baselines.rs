@@ -3,7 +3,9 @@
 use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
+use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::{Baseline, BaselineTraceability, NewBaseline, Requirement};
+use crate::services::baseline_service::BaselineDiff;
 use crate::services::BaselineService;
 
 #[derive(Debug, Deserialize)]
@@ -13,9 +15,10 @@ pub struct CreateBaselineRequest {
     pub description: Option<String>,
 }
 
+/// List baselines (session or Bearer). Project-scoped.
 #[get("/projects/<project_id>/baselines")]
 pub async fn list(
-    _user: ApiUser,
+    _access: ProjectAccessOrBearer,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<Baseline>>> {
@@ -24,9 +27,10 @@ pub async fn list(
     Ok(Json(baselines))
 }
 
+/// Get baseline by id (session or Bearer). Project-scoped.
 #[get("/projects/<project_id>/baselines/<baseline_id>")]
 pub async fn get(
-    _user: ApiUser,
+    _access: ProjectAccessOrBearer,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
@@ -41,9 +45,10 @@ pub async fn get(
     Ok(Json(baseline))
 }
 
+/// Create baseline (session or Bearer). Project-scoped; supports MCP Phase 2 draft_write.
 #[post("/projects/<project_id>/baselines", data = "<payload>")]
 pub async fn create(
-    user: ApiUser,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     state: &State<AppState>,
     payload: Json<CreateBaselineRequest>,
@@ -54,14 +59,14 @@ pub async fn create(
         description: payload.description,
     };
     let service = BaselineService::new(state.inner());
-    let baseline = service.create_baseline(project_id, user.user().id, &new_baseline)?;
+    let baseline = service.create_baseline(project_id, access.user().id, &new_baseline)?;
     Ok(Json(baseline))
 }
 
-/// Retrieve baseline contents: requirements as at baseline time (from snapshot).
+/// Retrieve baseline contents: requirements as at baseline time (from snapshot). Session or Bearer.
 #[get("/projects/<project_id>/baselines/<baseline_id>/requirements")]
 pub async fn get_requirements(
-    _user: ApiUser,
+    _access: ProjectAccessOrBearer,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
@@ -77,10 +82,10 @@ pub async fn get_requirements(
     Ok(Json(requirements))
 }
 
-/// Retrieve baseline traceability snapshot (requirement–test links).
+/// Retrieve baseline traceability snapshot (requirement–test links). Session or Bearer.
 #[get("/projects/<project_id>/baselines/<baseline_id>/traceability")]
 pub async fn get_traceability(
-    _user: ApiUser,
+    _access: ProjectAccessOrBearer,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
@@ -94,6 +99,20 @@ pub async fn get_traceability(
     }
     let traceability = service.get_traceability(baseline_id)?;
     Ok(Json(traceability))
+}
+
+/// Compare two baselines. Query: baseline_a, baseline_b. Accepts session or Bearer token.
+#[get("/projects/<project_id>/baselines/diff?<baseline_a>&<baseline_b>")]
+pub async fn diff_baselines(
+    _access: ProjectAccessOrBearer,
+    project_id: i32,
+    baseline_a: i32,
+    baseline_b: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<BaselineDiff>> {
+    let service = BaselineService::new(state.inner());
+    let diff = service.diff_baselines(project_id, baseline_a, baseline_b)?;
+    Ok(Json(diff))
 }
 
 #[cfg(test)]

@@ -179,6 +179,16 @@ impl DieselRepoMock {
     }
 }
 
+impl ApiTokensRepository for DieselRepoMock {
+    fn get_user_by_token_hash(&self, _token_hash: &str) -> Result<(User, Option<i32>), RepoError> {
+        Err(RepoError::NotFound)
+    }
+
+    fn update_api_token_last_used_at(&mut self, _token_hash: &str) -> Result<(), RepoError> {
+        Ok(())
+    }
+}
+
 impl UserRepository for DieselRepoMock {
     fn get_users_all(&self) -> Result<Vec<User>, RepoError> {
         Ok(self.users.values().cloned().collect())

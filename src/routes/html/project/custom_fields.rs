@@ -251,3 +251,63 @@ pub fn routes() -> Vec<Route> {
         delete_custom_field_route
     ]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn list_url_format() {
+        assert_eq!(list_url(1), "/p/1/custom_fields");
+        assert_eq!(list_url(42), "/p/42/custom_fields");
+    }
+
+    #[test]
+    fn form_to_payload_label_and_type() {
+        let form = CustomFieldForm {
+            label: "Priority".to_string(),
+            field_type: "text".to_string(),
+            enum_values: None,
+            sort_order: None,
+        };
+        let payload = form_to_payload(form);
+        assert_eq!(payload.label, "Priority");
+        assert_eq!(payload.field_type, "text");
+        assert!(payload.enum_values.is_none());
+        assert!(payload.sort_order.is_none());
+    }
+
+    #[test]
+    fn form_to_payload_enum_comma_separated() {
+        let form = CustomFieldForm {
+            label: "Status".to_string(),
+            field_type: "enum".to_string(),
+            enum_values: Some("Low, Medium, High".to_string()),
+            sort_order: Some(0),
+        };
+        let payload = form_to_payload(form);
+        assert_eq!(payload.enum_values.as_ref().map(|v| v.len()), Some(3));
+        assert_eq!(payload.sort_order, Some(0));
+    }
+
+    #[test]
+    fn form_to_payload_enum_newline_separated() {
+        let form = CustomFieldForm {
+            label: "X".to_string(),
+            field_type: "enum".to_string(),
+            enum_values: Some("A\nB\nC".to_string()),
+            sort_order: None,
+        };
+        let payload = form_to_payload(form);
+        assert_eq!(
+            payload.enum_values.as_deref(),
+            Some(vec!["A".to_string(), "B".to_string(), "C".to_string()].as_slice())
+        );
+    }
+
+    #[test]
+    fn routes_count() {
+        let r = routes();
+        assert_eq!(r.len(), 6);
+    }
+}

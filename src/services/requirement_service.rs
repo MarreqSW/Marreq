@@ -102,6 +102,34 @@ impl<'a> RequirementService<'a> {
         ))
     }
 
+    /// List requirements by project with optional approval_state and has_tests filters (for MCP / project-scoped API).
+    pub fn list_by_project_with_approval_and_tests(
+        &self,
+        project_id: i32,
+        approval_state: Option<&str>,
+        has_tests: Option<bool>,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        let mut reqs = self.list_by_project(project_id)?;
+
+        if let Some(state) = approval_state {
+            let state_lower = state.to_lowercase();
+            reqs.retain(|r| r.approval_state.to_lowercase() == state_lower);
+        }
+
+        if let Some(has_tests_filter) = has_tests {
+            let links = self.repo_read().get_matrix_by_project(project_id)?;
+            let req_ids_with_tests: std::collections::HashSet<i32> =
+                links.into_iter().map(|m| m.req_id).collect();
+            if has_tests_filter {
+                reqs.retain(|r| req_ids_with_tests.contains(&r.id));
+            } else {
+                reqs.retain(|r| !req_ids_with_tests.contains(&r.id));
+            }
+        }
+
+        Ok(reqs)
+    }
+
     /// Paginated filtered list; loads only one page from the database (with custom fields attached).
     #[allow(clippy::too_many_arguments)]
     pub fn list_by_project_filtered_paginated(
@@ -162,6 +190,17 @@ impl<'a> RequirementService<'a> {
             .into_iter()
             .filter(|r| r.parent_id == Some(parent_id))
             .collect())
+    }
+
+    /// Child requirements of a requirement in the same project (for trace_down).
+    pub fn get_children_by_parent_and_project(
+        &self,
+        project_id: i32,
+        parent_id: i32,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        let mut reqs = self.list_by_project(project_id)?;
+        reqs.retain(|r| r.parent_id == Some(parent_id));
+        Ok(reqs)
     }
 
     pub fn get_linked_tests(&self, id: i32) -> Result<Vec<TestCase>, RepoError> {

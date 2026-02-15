@@ -1,4 +1,5 @@
 use crate::api::prelude::*;
+use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::MatrixLink;
 use crate::services::MatrixService;
 
@@ -6,6 +7,18 @@ use crate::services::MatrixService;
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<MatrixLink>>> {
     let service = MatrixService::new(state.inner());
     let entries = service.list_all()?;
+    Ok(Json(entries))
+}
+
+/// Project-scoped matrix (traceability links). Accepts session or Bearer token.
+#[get("/projects/<project_id>/matrix")]
+pub async fn list_by_project(
+    _access: ProjectAccessOrBearer,
+    project_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<MatrixLink>>> {
+    let service = MatrixService::new(state.inner());
+    let entries = service.list_by_project(project_id)?;
     Ok(Json(entries))
 }
 

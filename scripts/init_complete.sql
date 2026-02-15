@@ -76,6 +76,23 @@ CREATE TABLE project_members (
     PRIMARY KEY (project_id, user_id)
 );
 
+-- API tokens for headless auth (e.g. MCP server).
+-- token_hash: SHA-256 hex of the raw token; raw token is never stored.
+-- project_id: optional scope; when set, token only valid for that project.
+CREATE TABLE user_api_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL,
+    name VARCHAR(255),
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP,
+    UNIQUE(token_hash)
+);
+
+CREATE INDEX idx_user_api_tokens_token_hash ON user_api_tokens(token_hash);
+CREATE INDEX idx_user_api_tokens_user_id ON user_api_tokens(user_id);
+
 -- Requirement Status table
 CREATE TABLE requirement_status (
     id SERIAL PRIMARY KEY,
@@ -774,5 +791,6 @@ INSERT INTO __diesel_schema_migrations (version) VALUES
     ('2026-02-09-000001_matrix_triggering_metadata'),
     ('2026-02-09-000002_baseline_traceability_suspect'),
     ('2026-02-13-000001_custom_metadata_fields'),
-    ('2026-02-14-000001_requirement_comments')
+    ('2026-02-14-000001_requirement_comments'),
+    ('2026-02-14-000001_user_api_tokens')
 ON CONFLICT (version) DO NOTHING;

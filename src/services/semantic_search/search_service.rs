@@ -982,7 +982,7 @@ mod tests {
 
     #[test]
     fn semantic_search_service_with_config() {
-        use crate::app::{AppState, DieselCachedRepo};
+        use crate::app::AppState;
         use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
         use std::sync::{Arc, RwLock};
@@ -1005,7 +1005,7 @@ mod tests {
 
     #[test]
     fn semantic_search_service_rag_enabled_with_config() {
-        use crate::app::{AppState, DieselCachedRepo};
+        use crate::app::AppState;
         use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
         use std::sync::{Arc, RwLock};

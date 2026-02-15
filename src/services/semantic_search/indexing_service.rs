@@ -590,7 +590,7 @@ mod tests {
 
     #[test]
     fn indexing_service_with_config_stores_config() {
-        use crate::app::{AppState, DieselCachedRepo};
+        use crate::app::AppState;
         use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
         use std::sync::{Arc, RwLock};
@@ -613,7 +613,7 @@ mod tests {
 
     #[test]
     fn indexing_service_is_enabled_false_when_disabled() {
-        use crate::app::{AppState, DieselCachedRepo};
+        use crate::app::AppState;
         use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
         use std::sync::{Arc, RwLock};
@@ -630,7 +630,7 @@ mod tests {
 
     #[test]
     fn indexing_service_is_enabled_true_with_valid_config() {
-        use crate::app::{AppState, DieselCachedRepo};
+        use crate::app::AppState;
         use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
         use std::sync::{Arc, RwLock};

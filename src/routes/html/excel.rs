@@ -37,19 +37,8 @@ fn queue_requirements_for_indexing(
     }
 }
 
-#[get("/p/<project_id>/import_excel?<error>")]
-pub fn import_excel_page(
-    session_user: SessionUser,
-    project_id: i32,
-    state: &State<AppState>,
-    error: Option<String>,
-) -> Result<content::RawHtml<String>, Redirect> {
-    let _user = session_user.into_inner();
-
-    let project = get_project_by_id_pooled_safe(state, project_id);
-    let name = project.name;
-
-    let html = format!(
+fn render_import_page_html(name: &str, project_id: i32, error_html: &str) -> String {
+    format!(
         r#"
     <!doctype html>
     <html lang='en'>
@@ -95,15 +84,26 @@ pub fn import_excel_page(
     </body>
     </html>
     "#,
-        name,
-        project_id,
-        error
-            .as_ref()
-            .map(|message| format!("<div class=\"alert alert-danger\">{}</div>", message))
-            .unwrap_or_default(),
-        project_id
-    );
+        name, project_id, error_html, project_id
+    )
+}
 
+#[get("/p/<project_id>/import_excel?<error>")]
+pub fn import_excel_page(
+    session_user: SessionUser,
+    project_id: i32,
+    state: &State<AppState>,
+    error: Option<String>,
+) -> Result<content::RawHtml<String>, Redirect> {
+    let _user = session_user.into_inner();
+
+    let project = get_project_by_id_pooled_safe(state, project_id);
+    let name = project.name;
+    let error_html = error
+        .as_ref()
+        .map(|message| format!("<div class=\"alert alert-danger\">{}</div>", message))
+        .unwrap_or_default();
+    let html = render_import_page_html(&name, project_id, &error_html);
     Ok(content::RawHtml(html))
 }
 
@@ -457,4 +457,26 @@ pub fn process_excel_import(
     };
 
     Ok(content::RawHtml(html))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn import_page_html_contains_expected_content() {
+        let html = render_import_page_html("Test Project", 1, "");
+        assert!(html.contains("Import File"));
+        assert!(html.contains("Target Project"));
+        assert!(html.contains("Test Project"));
+        assert!(html.contains("/p/1/import_excel/upload"));
+        assert!(html.contains(".xlsx,.xls,.csv"));
+    }
+
+    #[test]
+    fn import_page_html_includes_error_when_provided() {
+        let html = render_import_page_html("P", 2, "<div class=\"alert alert-danger\">Oops</div>");
+        assert!(html.contains("alert-danger"));
+        assert!(html.contains("Oops"));
+    }
 }

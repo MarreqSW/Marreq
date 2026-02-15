@@ -587,4 +587,66 @@ mod tests {
         assert!(err.to_string().contains("API request failed"));
         assert!(err.to_string().contains("network timeout"));
     }
+
+    #[test]
+    fn indexing_service_with_config_stores_config() {
+        use crate::app::AppState;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
+        use crate::repository::CacheRepository;
+        use std::sync::{Arc, RwLock};
+
+        let state = AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(
+                DieselRepoMock::default(),
+                0,
+            ))),
+        };
+        let config = SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "mock".into(),
+            ..Default::default()
+        };
+        let service = IndexingService::with_config(&state, config.clone());
+        assert!(service.config().embeddings_enabled);
+        assert_eq!(service.config().embedding_provider, "mock");
+    }
+
+    #[test]
+    fn indexing_service_is_enabled_false_when_disabled() {
+        use crate::app::AppState;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
+        use crate::repository::CacheRepository;
+        use std::sync::{Arc, RwLock};
+
+        let state = AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(
+                DieselRepoMock::default(),
+                0,
+            ))),
+        };
+        let service = IndexingService::new(&state);
+        assert!(!service.is_enabled());
+    }
+
+    #[test]
+    fn indexing_service_is_enabled_true_with_valid_config() {
+        use crate::app::AppState;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
+        use crate::repository::CacheRepository;
+        use std::sync::{Arc, RwLock};
+
+        let state = AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(
+                DieselRepoMock::default(),
+                0,
+            ))),
+        };
+        let config = SemanticSearchConfig {
+            embeddings_enabled: true,
+            embedding_provider: "mock".into(),
+            ..Default::default()
+        };
+        let service = IndexingService::with_config(&state, config);
+        assert!(service.is_enabled());
+    }
 }

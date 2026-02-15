@@ -157,3 +157,177 @@ impl<'a> RequirementDiffService<'a> {
         );
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::{AppState, DieselCachedRepo};
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use crate::repository::CacheRepository;
+    use chrono::{NaiveDate, NaiveDateTime};
+    use std::sync::{Arc, RwLock};
+
+    fn epoch() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2020, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    #[test]
+    fn service_new_constructs() {
+        let mock = DieselRepoMock::default();
+        let state = state_with_repo(mock);
+        let _service = RequirementDiffService::new(&state);
+    }
+
+    #[test]
+    fn diff_versions_returns_ok_when_both_versions_belong_to_requirement() {
+        let mut mock = DieselRepoMock::default();
+        mock.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                current_version_id: Some(11),
+                same_as_current: None,
+                title: "R".into(),
+                description: "D".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "R-1".into(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: epoch(),
+                update_date: epoch(),
+                deadline_date: None,
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+                custom_fields: None,
+            },
+        );
+        let v10 = crate::models::RequirementVersion {
+            id: 10,
+            requirement_id: 1,
+            title: "Old".into(),
+            description: "D".into(),
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            category_id: 1,
+            parent_id: None,
+            applicability_id: 1,
+            justification: None,
+            deadline_date: None,
+            created_at: epoch(),
+            approval_state: "draft".into(),
+            approved_by: None,
+            approved_at: None,
+        };
+        let v11 = crate::models::RequirementVersion {
+            id: 11,
+            requirement_id: 1,
+            title: "New".into(),
+            description: "D".into(),
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            category_id: 1,
+            parent_id: None,
+            applicability_id: 1,
+            justification: None,
+            deadline_date: None,
+            created_at: epoch(),
+            approval_state: "draft".into(),
+            approved_by: None,
+            approved_at: None,
+        };
+        mock.requirement_versions.insert(10, v10);
+        mock.requirement_versions.insert(11, v11);
+        let state = state_with_repo(mock);
+        let service = RequirementDiffService::new(&state);
+        let diff = service.diff_versions(1, 10, 11).unwrap();
+        assert_eq!(diff.text.title.removed, vec!["Old"]);
+        assert_eq!(diff.text.title.added, vec!["New"]);
+    }
+
+    #[test]
+    fn diff_versions_returns_not_found_when_version_belongs_to_different_requirement() {
+        let mut mock = DieselRepoMock::default();
+        mock.requirement_versions.insert(
+            10,
+            crate::models::RequirementVersion {
+                id: 10,
+                requirement_id: 1,
+                title: "A".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                parent_id: None,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: epoch(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        mock.requirement_versions.insert(
+            20,
+            crate::models::RequirementVersion {
+                id: 20,
+                requirement_id: 2,
+                title: "B".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                parent_id: None,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: epoch(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        let state = state_with_repo(mock);
+        let service = RequirementDiffService::new(&state);
+        let result = service.diff_versions(1, 10, 20);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RepoError::NotFound));
+    }
+
+    #[test]
+    fn diff_baseline_vs_current_returns_not_found_when_baseline_wrong_project() {
+        let mut mock = DieselRepoMock::default();
+        mock.baselines.push(crate::models::Baseline {
+            id: 1,
+            project_id: 2,
+            name: "v1".into(),
+            description: None,
+            created_at: epoch(),
+            created_by: 1,
+        });
+        let state = state_with_repo(mock);
+        let service = RequirementDiffService::new(&state);
+        let result = service.diff_baseline_vs_current(1, 1, 1);
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), RepoError::NotFound));
+    }
+}

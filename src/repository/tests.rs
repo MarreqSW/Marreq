@@ -87,6 +87,8 @@ mod tests {
             description: "Draft status".to_string(),
             tag: "DRAFT".to_string(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         }
     }
 
@@ -97,6 +99,8 @@ mod tests {
             description: "Draft status".to_string(),
             tag: "DRAFT".to_string(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         }
     }
 
@@ -790,6 +794,8 @@ mod tests {
             description: "New Status Description".to_string(),
             tag: "NEW".to_string(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         };
 
         let result = repo.create_requirement_status(&new_status);
@@ -806,6 +812,8 @@ mod tests {
             description: "Test Status Description".to_string(),
             tag: "TST".to_string(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         };
 
         let result = repo.create_test_status(&new_status);

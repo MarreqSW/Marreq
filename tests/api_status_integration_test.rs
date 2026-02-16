@@ -47,6 +47,7 @@ mod test_support {
                 description: "Initial draft".into(),
                 tag: "DR".into(),
                 project_id: 1,
+                is_system: false,
             },
         );
 
@@ -58,6 +59,7 @@ mod test_support {
                 description: "Approved for implementation".into(),
                 tag: "AP".into(),
                 project_id: 1,
+                is_system: false,
             },
         );
 

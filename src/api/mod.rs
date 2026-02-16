@@ -13,6 +13,7 @@ pub mod requirements;
 pub mod semantic_search;
 pub mod status;
 pub mod test_cases;
+pub mod test_status;
 pub mod traceability;
 pub mod users;
 
@@ -70,6 +71,13 @@ pub fn routes() -> Vec<Route> {
         status::list_requirement_statuses,
         status::get_requirement_status,
         status::create_requirement_status,
+        status::update_requirement_status,
+        status::delete_requirement_status,
+        test_status::list_test_statuses,
+        test_status::get_test_status,
+        test_status::create_test_status,
+        test_status::update_test_status,
+        test_status::delete_test_status,
         users::list,
         users::get,
         users::create,

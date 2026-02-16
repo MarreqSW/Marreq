@@ -7,10 +7,12 @@ mod members;
 mod project_routes;
 mod reports;
 pub mod reqif;
+mod requirement_statuses;
 pub mod requirements;
 mod test_cases;
 #[cfg(any(test, feature = "test-helpers"))]
 pub mod test_helpers;
+mod test_statuses;
 mod verification;
 
 use super::helpers;
@@ -46,6 +48,8 @@ pub fn routes() -> Vec<Route> {
     routes.extend(baselines::routes());
     routes.extend(categories::routes());
     routes.extend(custom_fields::routes());
+    routes.extend(requirement_statuses::routes());
+    routes.extend(test_statuses::routes());
     routes.extend(matrix::routes());
     routes.extend(members::routes());
     routes.extend(reports::routes());

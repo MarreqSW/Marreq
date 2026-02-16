@@ -68,6 +68,8 @@ mod test_support {
                 description: "".into(),
                 tag: "D".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
 
@@ -79,6 +81,8 @@ mod test_support {
                 description: "".into(),
                 tag: "NR".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
 
@@ -90,6 +94,8 @@ mod test_support {
                 description: "".into(),
                 tag: "P".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
 
@@ -439,6 +445,8 @@ fn matrix_view_filters_by_requirement_status() {
             title: "Accepted".into(),
             description: "".into(),
             tag: "A".into(),
+            is_system: false,
+            tag_color: None,
         },
     );
 

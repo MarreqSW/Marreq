@@ -34,7 +34,7 @@ function updateTestPreviewInRow(row, displayText) {
 }
 
 /** Update the matching card's status badge when inline edit succeeds (keeps card/table in sync) */
-function updateCardStatusBadge(testId, displayText, variant) {
+function updateCardStatusBadge(testId, displayText, variant, tagColor = null) {
   const card = document.querySelector(`#cardView .reqman-requirement-card[data-test-id="${testId}"]`);
   if (!card) return;
   const badge = card.querySelector('.reqman-requirement-card__header .reqman-requirements-status-badge');
@@ -43,6 +43,15 @@ function updateCardStatusBadge(testId, displayText, variant) {
     badge.className = `reqman-requirements-status-badge reqman-requirements-status-badge--${variant}`;
     badge.dataset.status = displayText;
     badge.dataset.statusVariant = variant;
+    if (tagColor) {
+      badge.style.backgroundColor = tagColor;
+      badge.style.color = '#fff';
+      badge.style.borderColor = tagColor;
+    } else {
+      badge.style.backgroundColor = '';
+      badge.style.color = '';
+      badge.style.borderColor = '';
+    }
   }
   const cardTitleLink = card.querySelector('a.reqman-requirement-card__title-link[data-test-preview]');
   if (cardTitleLink && displayText != null) {
@@ -99,6 +108,7 @@ function openInlineEditForTest(cell, row, config) {
     try {
       await postJson(`/p/${projectId}/tests/update-status/${testId}`, { status_id: v });
       const variant = testStatusVariant(displayText);
+      const tagColor = s?.tag_color || null;
       row.dataset.statusId = String(v);
       row.dataset.statusLabel = displayText;
       displayEl.textContent = displayText;
@@ -106,8 +116,17 @@ function openInlineEditForTest(cell, row, config) {
       displayEl.dataset.statusId = String(v);
       displayEl.dataset.statusVariant = variant;
       displayEl.className = `reqman-requirements-status-badge reqman-requirements-status-badge--${variant} reqman-requirements-cell__display`;
+      if (tagColor) {
+        displayEl.style.backgroundColor = tagColor;
+        displayEl.style.color = '#fff';
+        displayEl.style.borderColor = tagColor;
+      } else {
+        displayEl.style.backgroundColor = '';
+        displayEl.style.color = '';
+        displayEl.style.borderColor = '';
+      }
       updateTestPreviewInRow(row, displayText);
-      updateCardStatusBadge(testId, displayText, variant);
+      updateCardStatusBadge(testId, displayText, variant, tagColor);
       updateParentLinkPreviewsForTest(testId, displayText);
       showNotification('Status updated successfully', 'success');
     } catch (err) {

@@ -126,6 +126,8 @@ mod tests {
                 description: "Requirement accepted".to_string(),
                 tag: "ACC".to_string(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             };
 
             let display = format!("{}", status);
@@ -733,6 +735,8 @@ mod tests {
                 description: "Desc".to_string(),
                 tag: "ACC".to_string(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             };
 
             assert_eq!(NewRequirementStatus::entity_type(), EntityType::Requirement);
@@ -749,6 +753,8 @@ mod tests {
                 description: "Desc".to_string(),
                 tag: "PASS".to_string(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             };
 
             assert_eq!(NewTestStatus::entity_type(), EntityType::Test);
@@ -995,6 +1001,7 @@ mod tests {
                 req_verification_ids: vec![1],
                 status_id: "Accepted".to_string(),
                 req_current_status_id: 3,
+                status_tag_color: None,
                 author_id: "John Doe".to_string(),
                 req_author_id: 1,
                 reviewer_id: "Jane Doe".to_string(),
@@ -1009,6 +1016,7 @@ mod tests {
                 req_parent_reference_code: "".to_string(),
                 req_parent_description: "".to_string(),
                 req_parent_status_id: "".to_string(),
+                req_parent_status_tag_color: None,
                 req_parent_category_id: "".to_string(),
                 creation_date: "2024-01-15".to_string(),
                 update_date: "2024-01-15".to_string(),
@@ -1040,6 +1048,7 @@ mod tests {
                 req_verification_ids: vec![1],
                 status_id: "Draft".to_string(),
                 req_current_status_id: 1,
+                status_tag_color: None,
                 author_id: "User".to_string(),
                 req_author_id: 1,
                 reviewer_id: "Reviewer".to_string(),
@@ -1054,6 +1063,7 @@ mod tests {
                 req_parent_reference_code: "".to_string(),
                 req_parent_description: "".to_string(),
                 req_parent_status_id: "".to_string(),
+                req_parent_status_tag_color: None,
                 req_parent_category_id: "".to_string(),
                 creation_date: "2024-01-15".to_string(),
                 update_date: "2024-01-15".to_string(),
@@ -1081,12 +1091,14 @@ mod tests {
                 status_id: "Passed".to_string(),
                 status_variant: "passed".to_string(),
                 test_status_id: 1,
+                status_tag_color: None,
                 test_parent_id: None,
                 test_parent_title: "".to_string(),
                 test_parent_reference_code: "".to_string(),
                 test_parent_description: "".to_string(),
                 test_parent_status_id: "".to_string(),
                 test_parent_status_variant: "".to_string(),
+                test_parent_status_tag_color: None,
                 test_parent_source: "".to_string(),
                 project_id: 1,
             };
@@ -1108,12 +1120,14 @@ mod tests {
                 status_id: "Pending".to_string(),
                 status_variant: "proposal".to_string(),
                 test_status_id: 3,
+                status_tag_color: None,
                 test_parent_id: Some(1),
                 test_parent_title: "Parent Test".to_string(),
                 test_parent_reference_code: "".to_string(),
                 test_parent_description: "".to_string(),
                 test_parent_status_id: "".to_string(),
                 test_parent_status_variant: "".to_string(),
+                test_parent_status_tag_color: None,
                 test_parent_source: "".to_string(),
                 project_id: 1,
             };
@@ -1133,6 +1147,7 @@ mod tests {
                 req_verification_ids: vec![1],
                 status_id: "Accepted".to_string(),
                 req_current_status_id: 3,
+                status_tag_color: None,
                 author_id: "Author".to_string(),
                 req_author_id: 1,
                 reviewer_id: "Reviewer".to_string(),
@@ -1147,6 +1162,7 @@ mod tests {
                 req_parent_reference_code: "".to_string(),
                 req_parent_description: "".to_string(),
                 req_parent_status_id: "".to_string(),
+                req_parent_status_tag_color: None,
                 req_parent_category_id: "".to_string(),
                 creation_date: "2024-01-15".to_string(),
                 update_date: "2024-01-15".to_string(),
@@ -1177,12 +1193,14 @@ mod tests {
                 status_id: "Passed".to_string(),
                 status_variant: "passed".to_string(),
                 test_status_id: 1,
+                status_tag_color: None,
                 test_parent_id: None,
                 test_parent_title: "".to_string(),
                 test_parent_reference_code: "".to_string(),
                 test_parent_description: "".to_string(),
                 test_parent_status_id: "".to_string(),
                 test_parent_status_variant: "".to_string(),
+                test_parent_status_tag_color: None,
                 test_parent_source: "".to_string(),
                 project_id: 1,
             };
@@ -1465,6 +1483,8 @@ mod tests {
                 description: "Desc".to_string(),
                 tag: "PASS".to_string(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             };
 
             let json = serde_json::to_string(&status).unwrap();

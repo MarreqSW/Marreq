@@ -1,0 +1,32 @@
+{{!--
+  List of test statuses; system statuses are not editable/deletable.
+--}}
+{{#*inline "page"}}
+<section class="reqman-list-page reqman-category-page">
+  <div class="reqman-list-page__header">
+    <h1 class="reqman-list-page__title">Test statuses</h1>
+    <a href="/p/{{selected_project_id}}/test_statuses/new" class="btn btn-primary">New test status</a>
+  </div>
+
+  <div class="reqman-list-page__toolbar">
+    <label for="test-status-search-input" class="u-sr-only">Search test statuses</label>
+    <input
+      id="test-status-search-input"
+      type="search"
+      class="form-control reqman-list-page__search c-form-control"
+      placeholder="Search by title, tag, or description"
+      autocomplete="off"
+    >
+  </div>
+
+  <div class="reqman-list-page__list" id="test-status-list">
+    {{#each test_statuses}}
+      {{> test_statuses/test_status_row}}
+    {{else}}
+      <p class="reqman-list-page__empty" id="test-status-empty-state">No test statuses yet.</p>
+    {{/each}}
+  </div>
+  <p class="reqman-list-page__empty" id="test-status-empty-filter" hidden>No statuses match your search.</p>
+</section>
+{{/inline}}
+{{> layout page_id="test_statuses"}}

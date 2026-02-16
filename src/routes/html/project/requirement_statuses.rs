@@ -1,0 +1,195 @@
+//! HTML routes for project-scoped requirement status management.
+//! System statuses are shown but not editable or deletable.
+
+use super::helpers::*;
+use super::prelude::*;
+use crate::services::StatusService;
+
+#[get("/<project_id>/requirement_statuses")]
+async fn show_requirement_statuses(
+    project_access: ProjectAccess,
+    project_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user = project_access.into_user();
+    let projects = get_accessible_projects(state, &user);
+    let service = StatusService::new(state.inner());
+    let statuses = service
+        .list_requirement_statuses_by_project(project_id)
+        .unwrap_or_default();
+
+    let ctx = json!({
+        "user": user,
+        "projects": projects,
+        "selected_project_id": project_id,
+        "requirement_statuses": statuses,
+        "page_title": "Requirement statuses"
+    });
+
+    Ok(Template::render(
+        "requirement_statuses/requirement_statuses",
+        ctx,
+    ))
+}
+
+#[get("/<project_id>/requirement_statuses/new")]
+async fn new_requirement_status(
+    project_access: ProjectAccess,
+    project_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user = project_access.into_user();
+    let projects = get_accessible_projects(state, &user);
+
+    let ctx = json!({
+        "user": user,
+        "projects": projects,
+        "selected_project_id": project_id,
+        "page_title": "New requirement status"
+    });
+    Ok(Template::render(
+        "requirement_statuses/new_requirement_status",
+        ctx,
+    ))
+}
+
+#[post("/<project_id>/requirement_statuses/new", data = "<form>")]
+async fn post_requirement_status(
+    project_access: ProjectAccess,
+    project_id: i32,
+    form: Form<NewRequirementStatus>,
+    state: &State<AppState>,
+) -> Result<Redirect, Redirect> {
+    let _user = project_access.into_user();
+    let service = StatusService::new(state.inner());
+
+    let new_url = uri!("/p", new_requirement_status(project_id));
+    let show_url = uri!("/p", show_requirement_statuses(project_id));
+
+    let mut payload = form.into_inner();
+    payload.project_id = project_id;
+    payload.tag_color = payload.tag_color.filter(|s| !s.is_empty());
+
+    if let Err(_e) = service.create_requirement_status(payload) {
+        #[cfg(debug_assertions)]
+        eprintln!("create_requirement_status error: {:?}", _e);
+        return Ok(Redirect::to(new_url));
+    }
+
+    Ok(Redirect::to(show_url))
+}
+
+#[get("/<project_id>/requirement_statuses/edit/<status_id>")]
+async fn get_edit_requirement_status(
+    project_access: ProjectAccess,
+    project_id: i32,
+    status_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user = project_access.into_user();
+    let service = StatusService::new(state.inner());
+
+    let status = service
+        .get_requirement_status(status_id)
+        .map_err(|_| Redirect::to(uri!("/p", show_requirement_statuses(project_id))))?;
+
+    if status.project_id != project_id {
+        return Err(Redirect::to(uri!(
+            "/p",
+            show_requirement_statuses(project_id = status.project_id)
+        )));
+    }
+
+    if status.is_system {
+        return Err(Redirect::to(uri!(
+            "/p",
+            show_requirement_statuses(project_id)
+        )));
+    }
+
+    let projects = get_accessible_projects(state, &user);
+
+    let ctx = json!({
+        "requirement_status": status,
+        "user": user,
+        "projects": projects,
+        "selected_project_id": project_id,
+        "page_title": format!("Edit {} - Requirement status", status.title)
+    });
+
+    Ok(Template::render(
+        "requirement_statuses/edit_requirement_status",
+        ctx,
+    ))
+}
+
+#[post("/<project_id>/requirement_statuses/edit/<status_id>", data = "<form>")]
+async fn post_edit_requirement_status(
+    project_access: ProjectAccess,
+    project_id: i32,
+    status_id: i32,
+    form: Form<NewRequirementStatus>,
+    state: &State<AppState>,
+) -> Result<Redirect, Redirect> {
+    let _user = project_access.into_user();
+    let service = StatusService::new(state.inner());
+
+    let edit_url = uri!("/p", get_edit_requirement_status(project_id, status_id));
+    let show_url = uri!("/p", show_requirement_statuses(project_id));
+
+    let mut payload = form.into_inner();
+    payload.id = Some(status_id);
+    payload.project_id = project_id;
+    payload.tag_color = payload.tag_color.filter(|s| !s.is_empty());
+
+    if let Err(_e) = service.update_requirement_status(status_id, &payload) {
+        #[cfg(debug_assertions)]
+        eprintln!("update_requirement_status error: {:?}", _e);
+        return Ok(Redirect::to(edit_url));
+    }
+
+    Ok(Redirect::to(show_url))
+}
+
+#[delete("/<project_id>/requirement_statuses/delete/<status_id>")]
+async fn delete_requirement_status_route(
+    project_access: ProjectAccess,
+    project_id: i32,
+    status_id: i32,
+    state: &State<AppState>,
+) -> Result<rocket::http::Status, Redirect> {
+    let _user = project_access.into_user();
+    let service = StatusService::new(state.inner());
+
+    let status = match service.get_requirement_status(status_id) {
+        Ok(s) => s,
+        Err(_) => return Ok(rocket::http::Status::NotFound),
+    };
+
+    if status.project_id != project_id {
+        return Err(Redirect::to(uri!(
+            "/p",
+            show_requirement_statuses(project_id = status.project_id)
+        )));
+    }
+
+    match service.delete_requirement_status(status_id) {
+        Ok(_) => Ok(rocket::http::Status::Ok),
+        Err(_e) => {
+            #[cfg(debug_assertions)]
+            eprintln!("delete_requirement_status error: {:?}", _e);
+            Ok(rocket::http::Status::BadRequest)
+        }
+    }
+}
+
+pub fn routes() -> Vec<Route> {
+    routes![
+        show_requirement_statuses,
+        new_requirement_status,
+        post_requirement_status,
+        get_edit_requirement_status,
+        post_edit_requirement_status,
+        delete_requirement_status_route,
+    ]
+}

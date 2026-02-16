@@ -20,21 +20,25 @@ struct UpdateTestStatusForm {
     status_id: i32,
 }
 
-/// Returns only the four canonical test statuses (Passed, Failed, Pending, In Progress) for the project.
-fn canonical_test_statuses(state: &AppState, project_id: i32) -> Vec<crate::models::TestStatus> {
+/// Returns all test statuses for the project, with canonical four first (Passed, Failed, Pending, In Progress), then the rest by id.
+/// Use for dropdowns, filters, and inline edit so user-created statuses are shown.
+fn project_test_statuses(state: &AppState, project_id: i32) -> Vec<crate::models::TestStatus> {
     let statuses = StatusService::new(state)
         .list_test_statuses_by_project(project_id)
         .unwrap_or_default();
-    let mut out: Vec<_> = statuses
+    let (canonical, rest): (Vec<_>, Vec<_>) = statuses
         .into_iter()
-        .filter(|s| TestStatusEnum::from_title(&s.title).is_some())
-        .collect();
-    out.sort_by_key(|s| {
+        .partition(|s| TestStatusEnum::from_title(&s.title).is_some());
+    let mut canonical = canonical;
+    canonical.sort_by_key(|s| {
         TestStatusEnum::from_title(&s.title)
             .map(|e| e.id())
             .unwrap_or(i32::MAX)
     });
-    out
+    let mut rest = rest;
+    rest.sort_by_key(|s| s.id);
+    canonical.extend(rest);
+    canonical
 }
 
 #[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>&<search>")]
@@ -126,8 +130,8 @@ async fn show_tests(
         }
     });
 
-    // Common data lookups (for filters and inline edit). Only the four canonical statuses.
-    let statuses = canonical_test_statuses(state.inner(), project_id);
+    // Common data lookups (for filters and inline edit). All project statuses so user-created ones appear.
+    let statuses = project_test_statuses(state.inner(), project_id);
 
     let verifications = repo
         .get_verification_by_project(project_id)
@@ -137,7 +141,7 @@ async fn show_tests(
         .unwrap_or_default();
 
     let inline_edit_config = json!({
-        "statuses": statuses.iter().map(|s| json!({"id": s.id, "title": s.title})).collect::<Vec<_>>(),
+        "statuses": statuses.iter().map(|s| json!({"id": s.id, "title": s.title, "tag_color": s.tag_color})).collect::<Vec<_>>(),
         "verifications": verifications.iter().map(|v| json!({"id": v.id, "title": v.title})).collect::<Vec<_>>(),
         "categories": categories.iter().map(|c| json!({"id": c.id, "title": c.title})).collect::<Vec<_>>(),
     });
@@ -308,7 +312,7 @@ async fn new_test(
     ctx["categories"] = json!(repo
         .get_categories_by_project(project_id)
         .unwrap_or_default());
-    ctx["status"] = json!(canonical_test_statuses(state.inner(), project_id));
+    ctx["status"] = json!(project_test_statuses(state.inner(), project_id));
     ctx["parents"] = json!(repo.get_tests_by_project(project_id).unwrap_or_default());
     ctx["users"] = json!(repo.get_users_all().unwrap_or_default());
     ctx["requirements"] = json!(repo
@@ -420,7 +424,7 @@ async fn get_edit_test(
         "tests": test0,
         "test_status_id": test0.test_status_id,
         "categories": repo.get_categories_by_project(project_id).unwrap_or_default(),
-        "status": canonical_test_statuses(state.inner(), project_id),
+        "status": project_test_statuses(state.inner(), project_id),
         "parent": repo.get_tests_by_project(project_id).unwrap_or_default(),
         "users": repo.get_users_all().unwrap_or_default(),
         "verification": repo.get_verification_by_project(project_id).unwrap_or_default(),
@@ -674,6 +678,8 @@ mod tests {
             description: format!("{title} status"),
             tag: title.to_ascii_uppercase(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         }
     }
 
@@ -684,6 +690,8 @@ mod tests {
             description: format!("{title} status"),
             tag: title.to_ascii_uppercase(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         }
     }
 

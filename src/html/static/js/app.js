@@ -5,6 +5,7 @@ import { initProjectPreview } from './modules/projectPreview.js';
 import { initRequirementPreview } from './modules/requirementPreview.js';
 import { initTestPreview } from './modules/testPreview.js';
 import { registerDeleteAction } from './modules/deleteActions.js';
+import { initStatusColorPickers } from './modules/statusColorPicker.js';
 
 const pageControllers = {
   requirements: () => import('./pages/requirements.js'),
@@ -119,6 +120,32 @@ function initGlobalDeleteHandlers() {
   });
 
   registerDeleteAction({
+    selector: '[data-action="delete-requirement-status"]',
+    getUrl: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      const statusId = button.getAttribute('data-status-id');
+      return `/p/${projectId}/requirement_statuses/delete/${statusId}`;
+    },
+    getMessage: (button) => {
+      const title = button.getAttribute('data-status-title') || 'this requirement status';
+      return `Are you sure you want to delete ${title}? This action cannot be undone.`;
+    },
+  });
+
+  registerDeleteAction({
+    selector: '[data-action="delete-test-status"]',
+    getUrl: (button) => {
+      const projectId = button.getAttribute('data-project-id');
+      const statusId = button.getAttribute('data-status-id');
+      return `/p/${projectId}/test_statuses/delete/${statusId}`;
+    },
+    getMessage: (button) => {
+      const title = button.getAttribute('data-status-title') || 'this test status';
+      return `Are you sure you want to delete ${title}? This action cannot be undone.`;
+    },
+  });
+
+  registerDeleteAction({
     selector: '[data-action="delete-verification"]',
     getUrl: (button) => {
       const projectId = button.getAttribute('data-project-id');
@@ -202,6 +229,7 @@ initProjectPreview();
 initRequirementPreview();
 initTestPreview();
 initGlobalDeleteHandlers();
+initStatusColorPickers();
 initConfirmations();
 initHistoryBack();
 initPageController();

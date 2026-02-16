@@ -87,6 +87,15 @@ function renderBadge(element, badge) {
     }
     el.className = `badge ${badge.variant}`;
     el.textContent = badge.label;
+    if (badge.tag_color) {
+      el.style.backgroundColor = badge.tag_color;
+      el.style.color = '#fff';
+      el.style.borderColor = badge.tag_color;
+    } else {
+      el.style.backgroundColor = '';
+      el.style.color = '';
+      el.style.borderColor = '';
+    }
   });
 }
 
@@ -447,11 +456,21 @@ function renderVerification(root, view, canonical) {
           try {
             await postJson(`/p/${projectId}/tests/update-status/${test.id}`, { status_id: v });
             const variant = testStatusVariant(displayText);
+            const tagColor = status?.tag_color || null;
             test.status_id = displayText;
             test.test_status_id = v;
             row.setAttribute('data-status-id', String(v));
             displayEl.textContent = displayText;
             displayEl.className = `badge border reqman-requirements-status-badge reqman-requirements-status-badge--${variant}`;
+            if (tagColor) {
+              displayEl.style.backgroundColor = tagColor;
+              displayEl.style.color = '#fff';
+              displayEl.style.borderColor = tagColor;
+            } else {
+              displayEl.style.backgroundColor = '';
+              displayEl.style.color = '';
+              displayEl.style.borderColor = '';
+            }
             updateVerificationSummary();
             showNotification('Status updated successfully', 'success');
           } catch (err) {

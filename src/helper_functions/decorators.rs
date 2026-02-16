@@ -67,10 +67,10 @@ fn decorate_requirements_impl<R: Repository>(
                     .join(", ")
             };
 
-            let status = repo
+            let (status, status_tag_color) = repo
                 .get_requirement_status_by_id(r.status_id)
-                .map(|s| s.title)
-                .unwrap_or_else(|_| format!("Unknown Status ({})", r.status_id));
+                .map(|s| (s.title, s.tag_color))
+                .unwrap_or_else(|_| (format!("Unknown Status ({})", r.status_id), None));
 
             let author = if r.author_id != 0 {
                 repo.get_user_by_id(r.author_id)
@@ -98,47 +98,56 @@ fn decorate_requirements_impl<R: Repository>(
                 .map(|a| a.title)
                 .unwrap_or_else(|_| format!("Unknown Applicability ({})", r.applicability_id));
 
-            let (parent_title, parent_ref, parent_desc, parent_status, parent_category) =
-                if let Some(parent_id) = r.parent_id {
-                    match repo.get_requirement_by_id(parent_id) {
-                        Ok(parent_req) => {
-                            let p_status = repo
-                                .get_requirement_status_by_id(parent_req.status_id)
-                                .map(|s| s.title)
-                                .unwrap_or_else(|_| {
-                                    format!("Unknown Status ({})", parent_req.status_id)
-                                });
-                            let p_category = repo
-                                .get_category_by_id(parent_req.category_id)
-                                .map(|c| c.title)
-                                .unwrap_or_else(|_| {
-                                    format!("Unknown Category ({})", parent_req.category_id)
-                                });
-                            (
-                                parent_req.title,
-                                parent_req.reference_code,
-                                parent_req.description,
-                                p_status,
-                                p_category,
-                            )
-                        }
-                        Err(_) => (
-                            "[Deleted Parent]".to_string(),
-                            String::new(),
-                            String::new(),
-                            String::new(),
-                            String::new(),
-                        ),
+            let (
+                parent_title,
+                parent_ref,
+                parent_desc,
+                parent_status,
+                parent_category,
+                req_parent_status_tag_color,
+            ) = if let Some(parent_id) = r.parent_id {
+                match repo.get_requirement_by_id(parent_id) {
+                    Ok(parent_req) => {
+                        let (p_status, p_tag_color) = repo
+                            .get_requirement_status_by_id(parent_req.status_id)
+                            .map(|s| (s.title, s.tag_color))
+                            .unwrap_or_else(|_| {
+                                (format!("Unknown Status ({})", parent_req.status_id), None)
+                            });
+                        let p_category = repo
+                            .get_category_by_id(parent_req.category_id)
+                            .map(|c| c.title)
+                            .unwrap_or_else(|_| {
+                                format!("Unknown Category ({})", parent_req.category_id)
+                            });
+                        (
+                            parent_req.title,
+                            parent_req.reference_code,
+                            parent_req.description,
+                            p_status,
+                            p_category,
+                            p_tag_color,
+                        )
                     }
-                } else {
-                    (
+                    Err(_) => (
+                        "[Deleted Parent]".to_string(),
                         String::new(),
                         String::new(),
                         String::new(),
                         String::new(),
-                        String::new(),
-                    )
-                };
+                        None,
+                    ),
+                }
+            } else {
+                (
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    None,
+                )
+            };
 
             DecoratedRequirement {
                 id: r.id,
@@ -149,6 +158,7 @@ fn decorate_requirements_impl<R: Repository>(
                 description: r.description,
                 status_id: status,
                 req_current_status_id: r.status_id,
+                status_tag_color,
                 author_id: author,
                 req_author_id: r.author_id,
                 reviewer_id: reviewer,
@@ -163,6 +173,7 @@ fn decorate_requirements_impl<R: Repository>(
                 req_parent_reference_code: parent_ref,
                 req_parent_description: parent_desc,
                 req_parent_status_id: parent_status,
+                req_parent_status_tag_color,
                 req_parent_category_id: parent_category,
                 creation_date: r.creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
                 update_date: r.update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
@@ -197,10 +208,10 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
     tests
         .into_iter()
         .map(|t| {
-            let status = repo
+            let (status, status_tag_color) = repo
                 .get_test_status_by_id(t.status_id)
-                .map(|s| s.title)
-                .unwrap_or_else(|_| format!("Unknown Status ({})", t.status_id));
+                .map(|s| (s.title, s.tag_color))
+                .unwrap_or_else(|_| (format!("Unknown Status ({})", t.status_id), None));
 
             let empty = (
                 String::new(),
@@ -209,6 +220,7 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
                 String::new(),
                 String::new(),
                 String::new(),
+                None,
             );
             let (
                 parent_title,
@@ -217,13 +229,16 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
                 parent_status,
                 parent_status_variant,
                 parent_source,
+                test_parent_status_tag_color,
             ) = if let Some(parent_id) = t.parent_id {
                 repo.get_test_by_id(parent_id)
                     .map(|p| {
-                        let p_status = repo
+                        let (p_status, p_tag_color) = repo
                             .get_test_status_by_id(p.status_id)
-                            .map(|s| s.title)
-                            .unwrap_or_else(|_| format!("Unknown Status ({})", p.status_id));
+                            .map(|s| (s.title, s.tag_color))
+                            .unwrap_or_else(|_| {
+                                (format!("Unknown Status ({})", p.status_id), None)
+                            });
                         (
                             p.name,
                             p.reference_code,
@@ -231,6 +246,7 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
                             p_status.clone(),
                             test_status_title_to_variant(&p_status).to_string(),
                             p.source,
+                            p_tag_color,
                         )
                     })
                     .unwrap_or(empty)
@@ -247,12 +263,14 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
                 status_id: status.clone(),
                 status_variant: test_status_title_to_variant(&status).to_string(),
                 test_status_id: t.status_id,
+                status_tag_color,
                 test_parent_id: t.parent_id,
                 test_parent_title: parent_title,
                 test_parent_reference_code: parent_ref,
                 test_parent_description: parent_desc,
                 test_parent_status_id: parent_status,
                 test_parent_status_variant: parent_status_variant,
+                test_parent_status_tag_color,
                 test_parent_source: parent_source,
                 project_id: t.project_id,
             }
@@ -313,6 +331,8 @@ mod tests {
                 description: String::new(),
                 tag: String::new(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.verifications.insert(
@@ -516,6 +536,8 @@ mod tests {
                 description: String::new(),
                 tag: String::new(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         // parent test for branch
@@ -585,6 +607,8 @@ mod tests {
                 description: String::new(),
                 tag: String::new(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.test_statuses.insert(
@@ -595,6 +619,8 @@ mod tests {
                 description: String::new(),
                 tag: String::new(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         let req = Requirement {

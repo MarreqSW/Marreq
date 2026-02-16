@@ -1,0 +1,31 @@
+{{!-- One row: tag, title, description; Edit/Delete only when not is_system --}}
+<article class="reqman-list-page__row" data-requirement-status-row data-search-text="{{title}} {{tag}} {{description}} {{id}}">
+  <div class="reqman-list-page__row-main">
+    <div class="reqman-list-page__row-headline">
+      <span class="reqman-list-page__tag" aria-label="Status tag {{tag}}"{{#if tag_color}} style="background-color: {{tag_color}}; color: #fff; border-color: {{tag_color}};"{{/if}}>{{tag}}</span>
+      <h3 class="reqman-list-page__row-title">{{title}}</h3>
+      {{#if is_system}}
+        <span class="badge bg-secondary ms-2" title="Default status (cannot be edited or deleted)">System</span>
+      {{/if}}
+    </div>
+    {{#if description}}
+      <p class="reqman-list-page__row-description">{{description}}</p>
+    {{/if}}
+  </div>
+  <div class="reqman-list-page__row-meta">
+    <span class="reqman-list-page__row-id" title="Status ID">#{{id}}</span>
+    <div class="reqman-list-page__row-actions">
+      {{#unless is_system}}
+        <a href="/p/{{@root.selected_project_id}}/requirement_statuses/edit/{{id}}" class="btn btn-outline btn-sm reqman-list-page__action-btn">Edit</a>
+        <button
+          class="btn btn-danger btn-sm reqman-list-page__action-btn"
+          type="button"
+          data-action="delete-requirement-status"
+          data-status-id="{{id}}"
+          data-status-title="requirement status {{tag}}"
+          data-project-id="{{@root.selected_project_id}}"
+        >Delete</button>
+      {{/unless}}
+    </div>
+  </div>
+</article>

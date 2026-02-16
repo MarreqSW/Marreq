@@ -109,7 +109,7 @@
             <span
               class="reqman-requirements-status-badge reqman-requirements-cell__display"
               data-status-id="{{req_current_status_id}}"
-              data-status="{{status_id}}">
+              data-status="{{status_id}}"{{#if status_tag_color}} style="background-color: {{status_tag_color}}; color: #fff; border-color: {{status_tag_color}};"{{/if}}>
               {{status_id}}
             </span>
           </td>

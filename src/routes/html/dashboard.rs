@@ -196,6 +196,8 @@ mod tests {
                 description: "Ready for release".into(),
                 tag: "APR".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
 

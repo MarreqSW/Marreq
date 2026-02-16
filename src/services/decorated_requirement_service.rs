@@ -164,11 +164,11 @@ impl<'a> DecoratedRequirementService<'a> {
                 .join(", ")
         };
 
-        let status = self
+        let (status, status_tag_color) = self
             .status_service
             .get_requirement_status(req.status_id)
-            .map(|s| s.title)
-            .unwrap_or_else(|_| format!("Unknown Status ({})", req.status_id));
+            .map(|s| (s.title, s.tag_color))
+            .unwrap_or_else(|_| (format!("Unknown Status ({})", req.status_id), None));
 
         let author = self
             .user_service
@@ -194,49 +194,58 @@ impl<'a> DecoratedRequirementService<'a> {
             .map(|a| a.title)
             .unwrap_or_else(|_| format!("Unknown Applicability ({})", req.applicability_id));
 
-        let (parent_title, parent_ref, parent_desc, parent_status, parent_category) =
-            if let Some(parent_id) = req.parent_id {
-                match self.requirement_service.get_by_id(parent_id) {
-                    Ok(parent_req) => {
-                        let p_status = self
-                            .status_service
-                            .get_requirement_status(parent_req.status_id)
-                            .map(|s| s.title)
-                            .unwrap_or_else(|_| {
-                                format!("Unknown Status ({})", parent_req.status_id)
-                            });
-                        let p_category = self
-                            .category_service
-                            .get_by_id(parent_req.category_id)
-                            .map(|c| c.title)
-                            .unwrap_or_else(|_| {
-                                format!("Unknown Category ({})", parent_req.category_id)
-                            });
-                        (
-                            parent_req.title,
-                            parent_req.reference_code,
-                            parent_req.description,
-                            p_status,
-                            p_category,
-                        )
-                    }
-                    Err(_) => (
-                        "[Deleted Parent]".to_string(),
-                        String::new(),
-                        String::new(),
-                        String::new(),
-                        String::new(),
-                    ),
+        let (
+            parent_title,
+            parent_ref,
+            parent_desc,
+            parent_status,
+            parent_category,
+            req_parent_status_tag_color,
+        ) = if let Some(parent_id) = req.parent_id {
+            match self.requirement_service.get_by_id(parent_id) {
+                Ok(parent_req) => {
+                    let (p_status, p_tag_color) = self
+                        .status_service
+                        .get_requirement_status(parent_req.status_id)
+                        .map(|s| (s.title, s.tag_color))
+                        .unwrap_or_else(|_| {
+                            (format!("Unknown Status ({})", parent_req.status_id), None)
+                        });
+                    let p_category = self
+                        .category_service
+                        .get_by_id(parent_req.category_id)
+                        .map(|c| c.title)
+                        .unwrap_or_else(|_| {
+                            format!("Unknown Category ({})", parent_req.category_id)
+                        });
+                    (
+                        parent_req.title,
+                        parent_req.reference_code,
+                        parent_req.description,
+                        p_status,
+                        p_category,
+                        p_tag_color,
+                    )
                 }
-            } else {
-                (
+                Err(_) => (
+                    "[Deleted Parent]".to_string(),
                     String::new(),
                     String::new(),
                     String::new(),
                     String::new(),
-                    String::new(),
-                )
-            };
+                    None,
+                ),
+            }
+        } else {
+            (
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+                None,
+            )
+        };
 
         Ok(DecoratedRequirement {
             id: req.id,
@@ -247,6 +256,7 @@ impl<'a> DecoratedRequirementService<'a> {
             description: req.description.clone(),
             status_id: status,
             req_current_status_id: req.status_id,
+            status_tag_color,
             author_id: author,
             req_author_id: req.author_id,
             reviewer_id: reviewer,
@@ -261,6 +271,7 @@ impl<'a> DecoratedRequirementService<'a> {
             req_parent_reference_code: parent_ref,
             req_parent_description: parent_desc,
             req_parent_status_id: parent_status,
+            req_parent_status_tag_color,
             req_parent_category_id: parent_category,
             creation_date: req.creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
             update_date: req.update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
@@ -349,6 +360,8 @@ mod tests {
                 description: "Draft status".into(),
                 tag: "DRAFT".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
 

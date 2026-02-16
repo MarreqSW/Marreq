@@ -67,8 +67,17 @@ impl<'a> StatusService<'a> {
         Ok(status.title)
     }
 
-    /// Create a new requirement status entry.
+    /// Create a new requirement status entry (user-created; is_system is always false).
     pub fn create_requirement_status(
+        &self,
+        mut payload: NewRequirementStatus,
+    ) -> Result<i32, RepoError> {
+        payload.is_system = false;
+        self.create_system_requirement_status(payload)
+    }
+
+    /// Create a requirement status with explicit is_system (used for default statuses).
+    fn create_system_requirement_status(
         &self,
         mut payload: NewRequirementStatus,
     ) -> Result<i32, RepoError> {
@@ -87,8 +96,14 @@ impl<'a> StatusService<'a> {
         Ok(id)
     }
 
-    /// Create a new test status entry.
+    /// Create a new test status entry (user-created; is_system is always false).
     pub fn create_test_status(&self, mut payload: NewTestStatus) -> Result<i32, RepoError> {
+        payload.is_system = false;
+        self.create_system_test_status(payload)
+    }
+
+    /// Create a test status with explicit is_system (used for default statuses).
+    fn create_system_test_status(&self, mut payload: NewTestStatus) -> Result<i32, RepoError> {
         sanitize_string(&mut payload.title);
         sanitize_string(&mut payload.description);
         sanitize_string(&mut payload.tag);
@@ -100,6 +115,8 @@ impl<'a> StatusService<'a> {
             description: payload.description.clone(),
             tag: payload.tag.clone(),
             project_id: payload.project_id,
+            is_system: payload.is_system,
+            tag_color: payload.tag_color.clone(),
         })
         .map_err(|err| RepoError::BadInput(err.to_string()))?;
 
@@ -109,6 +126,70 @@ impl<'a> StatusService<'a> {
         };
 
         Ok(id)
+    }
+
+    /// Update a requirement status (title, description, tag). Fails if the status is system.
+    pub fn update_requirement_status(
+        &self,
+        id: i32,
+        payload: &NewRequirementStatus,
+    ) -> Result<bool, RepoError> {
+        let status = self.get_requirement_status(id)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot modify system status".into()));
+        }
+        let mut payload = payload.clone();
+        sanitize_string(&mut payload.title);
+        sanitize_string(&mut payload.description);
+        sanitize_string(&mut payload.tag);
+        validate_requirement_status(&payload)
+            .map_err(|err| RepoError::BadInput(err.to_string()))?;
+        let mut repo = self.state.repo_write();
+        repo.update_requirement_status(id, &payload)
+    }
+
+    /// Delete a requirement status. Fails if system or in use.
+    pub fn delete_requirement_status(&self, id: i32) -> Result<RequirementStatus, RepoError> {
+        let status = self.get_requirement_status(id)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot delete system status".into()));
+        }
+        let mut repo = self.state.repo_write();
+        repo.delete_requirement_status(id)
+    }
+
+    /// Update a test status (title, description, tag). Fails if the status is system.
+    pub fn update_test_status(&self, id: i32, payload: &NewTestStatus) -> Result<bool, RepoError> {
+        let status = self.get_test_status(id)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot modify system status".into()));
+        }
+        let mut payload = payload.clone();
+        sanitize_string(&mut payload.title);
+        sanitize_string(&mut payload.description);
+        sanitize_string(&mut payload.tag);
+        validate_requirement_status(&NewRequirementStatus {
+            id: payload.id,
+            title: payload.title.clone(),
+            description: payload.description.clone(),
+            tag: payload.tag.clone(),
+            project_id: payload.project_id,
+            is_system: payload.is_system,
+            tag_color: payload.tag_color.clone(),
+        })
+        .map_err(|err| RepoError::BadInput(err.to_string()))?;
+        let mut repo = self.state.repo_write();
+        repo.update_test_status(id, &payload)
+    }
+
+    /// Delete a test status. Fails if system or in use.
+    pub fn delete_test_status(&self, id: i32) -> Result<TestStatus, RepoError> {
+        let status = self.get_test_status(id)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot delete system status".into()));
+        }
+        let mut repo = self.state.repo_write();
+        repo.delete_test_status(id)
     }
 
     /// Initialize default requirement and test statuses for a new project.
@@ -131,8 +212,10 @@ impl<'a> StatusService<'a> {
                 description: status_enum.description().to_string(),
                 tag: status_enum.short_name().to_string(),
                 project_id,
+                is_system: true,
+                tag_color: None,
             };
-            self.create_requirement_status(payload)?;
+            self.create_system_requirement_status(payload)?;
         }
 
         // Initialize test statuses from enum
@@ -143,8 +226,10 @@ impl<'a> StatusService<'a> {
                 description: status_enum.description().to_string(),
                 tag: status_enum.short_name().to_string(),
                 project_id,
+                is_system: true,
+                tag_color: None,
             };
-            self.create_test_status(payload)?;
+            self.create_system_test_status(payload)?;
         }
 
         Ok(())
@@ -173,6 +258,8 @@ mod tests {
                 description: "legacy".into(),
                 tag: "LEG".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.requirement_statuses.insert(
@@ -183,6 +270,8 @@ mod tests {
                 description: "draft".into(),
                 tag: "DRT".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.test_statuses.insert(
@@ -193,6 +282,8 @@ mod tests {
                 description: "ready".into(),
                 tag: "RDY".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo
@@ -222,6 +313,8 @@ mod tests {
             description: "  Description  ".into(),
             tag: "  VFD  ".into(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         };
 
         let id = service.create_requirement_status(payload).unwrap();
@@ -245,6 +338,8 @@ mod tests {
             description: "Desc".into(),
             tag: "DRT".into(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         };
 
         let err = service.create_requirement_status(payload).unwrap_err();
@@ -306,6 +401,8 @@ mod tests {
                 description: "draft".into(),
                 tag: "DRT".into(),
                 project_id: 10,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.requirement_statuses.insert(
@@ -316,6 +413,8 @@ mod tests {
                 description: "accepted".into(),
                 tag: "ACC".into(),
                 project_id: 10,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.requirement_statuses.insert(
@@ -326,6 +425,8 @@ mod tests {
                 description: "finished".into(),
                 tag: "FIN".into(),
                 project_id: 20,
+                is_system: false,
+                tag_color: None,
             },
         );
 
@@ -350,6 +451,8 @@ mod tests {
                 description: "passed".into(),
                 tag: "PASS".into(),
                 project_id: 10,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.test_statuses.insert(
@@ -360,6 +463,8 @@ mod tests {
                 description: "failed".into(),
                 tag: "FAIL".into(),
                 project_id: 10,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.test_statuses.insert(
@@ -370,6 +475,8 @@ mod tests {
                 description: "pending".into(),
                 tag: "PEND".into(),
                 project_id: 20,
+                is_system: false,
+                tag_color: None,
             },
         );
 
@@ -394,6 +501,8 @@ mod tests {
                 description: "draft".into(),
                 tag: "DRT".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
 
@@ -426,6 +535,8 @@ mod tests {
             description: "  Description  ".into(),
             tag: "  PROG  ".into(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         };
 
         let id = service.create_test_status(payload).unwrap();
@@ -449,6 +560,8 @@ mod tests {
             description: "Desc".into(),
             tag: "TAG".into(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         };
 
         let err = service.create_test_status(payload).unwrap_err();
@@ -493,5 +606,115 @@ mod tests {
 
         let result = service.get_test_status(999);
         assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn update_requirement_status_rejects_system_status() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(
+            1,
+            RequirementStatus {
+                id: 1,
+                title: "Draft".into(),
+                description: "".into(),
+                tag: "Drf".into(),
+                project_id: 1,
+                is_system: true,
+                tag_color: None,
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let payload = NewRequirementStatus {
+            id: Some(1),
+            title: "Custom".into(),
+            description: "".into(),
+            tag: "Cus".into(),
+            project_id: 1,
+            is_system: false,
+            tag_color: None,
+        };
+        let err = service.update_requirement_status(1, &payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+        assert!(err.to_string().to_lowercase().contains("system"));
+    }
+
+    #[test]
+    fn delete_requirement_status_rejects_system_status() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirement_statuses.insert(
+            1,
+            RequirementStatus {
+                id: 1,
+                title: "Draft".into(),
+                description: "".into(),
+                tag: "Drf".into(),
+                project_id: 1,
+                is_system: true,
+                tag_color: None,
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let err = service.delete_requirement_status(1).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+        assert!(err.to_string().to_lowercase().contains("system"));
+    }
+
+    #[test]
+    fn update_test_status_rejects_system_status() {
+        let mut repo = DieselRepoMock::default();
+        repo.test_statuses.insert(
+            1,
+            TestStatus {
+                id: 1,
+                title: "Passed".into(),
+                description: "".into(),
+                tag: "Pass".into(),
+                project_id: 1,
+                is_system: true,
+                tag_color: None,
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let payload = NewTestStatus {
+            id: Some(1),
+            title: "Custom".into(),
+            description: "".into(),
+            tag: "Cus".into(),
+            project_id: 1,
+            is_system: false,
+            tag_color: None,
+        };
+        let err = service.update_test_status(1, &payload).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+        assert!(err.to_string().to_lowercase().contains("system"));
+    }
+
+    #[test]
+    fn delete_test_status_rejects_system_status() {
+        let mut repo = DieselRepoMock::default();
+        repo.test_statuses.insert(
+            1,
+            TestStatus {
+                id: 1,
+                title: "Passed".into(),
+                description: "".into(),
+                tag: "Pass".into(),
+                project_id: 1,
+                is_system: true,
+                tag_color: None,
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = StatusService::new(&state);
+
+        let err = service.delete_test_status(1).unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+        assert!(err.to_string().to_lowercase().contains("system"));
     }
 }

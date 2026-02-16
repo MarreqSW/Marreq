@@ -454,7 +454,7 @@ async fn show_requirements(
 
     let inline_edit_config = json!({
         "categories": categories.iter().map(|c| json!({"id": c.id, "title": c.title})).collect::<Vec<_>>(),
-        "statuses": statuses.iter().map(|s| json!({"id": s.id, "title": s.title})).collect::<Vec<_>>(),
+        "statuses": statuses.iter().map(|s| json!({"id": s.id, "title": s.title, "tag_color": s.tag_color})).collect::<Vec<_>>(),
         "verifications": verifications.iter().map(|v| json!({"id": v.id, "title": v.title})).collect::<Vec<_>>(),
     });
     let inline_edit_config_json =
@@ -659,7 +659,7 @@ async fn show_requirement_id(
     });
     let test_statuses: Vec<serde_json::Value> = test_status_list
         .into_iter()
-        .map(|s| json!({ "id": s.id, "title": s.title }))
+        .map(|s| json!({ "id": s.id, "title": s.title, "tag_color": s.tag_color }))
         .collect();
 
     let entries_with_summary: Vec<serde_json::Value> = history_entries
@@ -906,7 +906,7 @@ async fn show_requirement_version(
     });
     let test_statuses: Vec<serde_json::Value> = test_status_list
         .into_iter()
-        .map(|s| json!({ "id": s.id, "title": s.title }))
+        .map(|s| json!({ "id": s.id, "title": s.title, "tag_color": s.tag_color }))
         .collect();
     let history_entries = LogService::new(state.inner())
         .entity_logs(&EntityType::Requirement.to_string(), requirement_id)
@@ -1795,6 +1795,8 @@ mod tests {
                 description: "".into(),
                 tag: "D".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
 

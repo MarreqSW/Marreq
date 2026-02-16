@@ -99,7 +99,9 @@ CREATE TABLE requirement_status (
     title VARCHAR NOT NULL,
     description VARCHAR NOT NULL,
     tag VARCHAR NOT NULL,
-    project_id INTEGER NOT NULL
+    project_id INTEGER NOT NULL,
+    is_system BOOLEAN NOT NULL DEFAULT false,
+    tag_color VARCHAR(20) NULL
 );
 
 -- Test Status table
@@ -108,7 +110,9 @@ CREATE TABLE test_status (
     title VARCHAR NOT NULL,
     description VARCHAR NOT NULL,
     tag VARCHAR NOT NULL,
-    project_id INTEGER NOT NULL
+    project_id INTEGER NOT NULL,
+    is_system BOOLEAN NOT NULL DEFAULT false,
+    tag_color VARCHAR(20) NULL
 );
 
 -- Categories table
@@ -547,36 +551,36 @@ INSERT INTO projects (id, name, description, creation_date, status) VALUES
 -- Ensure the projects sequence is aligned with seeded IDs
 SELECT setval('projects_id_seq', (SELECT COALESCE(MAX(id), 1) FROM projects));
 
--- Requirement Status definitions
-INSERT INTO requirement_status (title, description, tag, project_id) VALUES
+-- Requirement Status definitions (is_system = true: default set, not editable/deletable)
+INSERT INTO requirement_status (title, description, tag, project_id, is_system) VALUES
     -- Space Project statuses
-    ('Draft', 'The requirement is still being edited and developed', 'Drf', 1),
-    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', 1),
-    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', 1),
-    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', 1),
-    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', 1),
-    ('Finished', 'The requirement is finished and completed', 'Fsh', 1),
+    ('Draft', 'The requirement is still being edited and developed', 'Drf', 1, true),
+    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', 1, true),
+    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', 1, true),
+    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', 1, true),
+    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', 1, true),
+    ('Finished', 'The requirement is finished and completed', 'Fsh', 1, true),
     -- ReqMan Project statuses
-    ('Draft', 'The requirement is still being edited and developed', 'Drf', 2),
-    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', 2),
-    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', 2),
-    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', 2),
-    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', 2),
-    ('Finished', 'The requirement is finished and completed', 'Fsh', 2);
+    ('Draft', 'The requirement is still being edited and developed', 'Drf', 2, true),
+    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', 2, true),
+    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', 2, true),
+    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', 2, true),
+    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', 2, true),
+    ('Finished', 'The requirement is finished and completed', 'Fsh', 2, true);
 
 
--- Test Status definitions
-INSERT INTO test_status (title, description, tag, project_id) VALUES
+-- Test Status definitions (is_system = true: default set, not editable/deletable)
+INSERT INTO test_status (title, description, tag, project_id, is_system) VALUES
     -- Space Project test statuses
-    ('Passed', 'The test has passed all criteria', 'Pass', 1),
-    ('Failed', 'The test has failed one or more criteria', 'Fail', 1),
-    ('Pending', 'The test is pending execution', 'Pend', 1),
-    ('In Progress', 'The test is currently being executed', 'Prog', 1),
+    ('Passed', 'The test has passed all criteria', 'Pass', 1, true),
+    ('Failed', 'The test has failed one or more criteria', 'Fail', 1, true),
+    ('Pending', 'The test is pending execution', 'Pend', 1, true),
+    ('In Progress', 'The test is currently being executed', 'Prog', 1, true),
     -- ReqMan Project test statuses
-    ('Passed', 'The test has passed all criteria', 'Pass', 2),
-    ('Failed', 'The test has failed one or more criteria', 'Fail', 2),
-    ('Pending', 'The test is pending execution', 'Pend', 2),
-    ('In Progress', 'The test is currently being executed', 'Prog', 2);
+    ('Passed', 'The test has passed all criteria', 'Pass', 2, true),
+    ('Failed', 'The test has failed one or more criteria', 'Fail', 2, true),
+    ('Pending', 'The test is pending execution', 'Pend', 2, true),
+    ('In Progress', 'The test is currently being executed', 'Prog', 2, true);
 
 -- Users with working passwords (all users have password: 'password')
 -- Password hash: $2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m
@@ -792,5 +796,7 @@ INSERT INTO __diesel_schema_migrations (version) VALUES
     ('2026-02-09-000002_baseline_traceability_suspect'),
     ('2026-02-13-000001_custom_metadata_fields'),
     ('2026-02-14-000001_requirement_comments'),
-    ('2026-02-14-000001_user_api_tokens')
+    ('2026-02-14-000001_user_api_tokens'),
+    ('2026-02-15-000001_status_is_system'),
+    ('2026-02-15-000002_status_tag_color')
 ON CONFLICT (version) DO NOTHING;

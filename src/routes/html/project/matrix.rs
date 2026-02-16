@@ -387,6 +387,8 @@ mod tests {
             description: format!("{title} status"),
             tag: title.to_ascii_uppercase(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         }
     }
 
@@ -397,6 +399,8 @@ mod tests {
             description: format!("{title} status"),
             tag: title.to_ascii_uppercase(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         }
     }
 

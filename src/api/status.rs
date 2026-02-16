@@ -22,7 +22,27 @@ pub async fn get_requirement_status(id: i32, state: &State<AppState>) -> ApiResu
         "description": status.description,
         "tag": status.tag,
         "project_id": status.project_id,
+        "is_system": status.is_system,
+        "tag_color": status.tag_color,
     })))
+}
+
+#[put("/status/<id>", data = "<payload>")]
+pub async fn update_requirement_status(
+    id: i32,
+    state: &State<AppState>,
+    payload: Json<NewRequirementStatus>,
+) -> ApiResult<Value> {
+    let service = StatusService::new(state.inner());
+    service.update_requirement_status(id, &payload.into_inner())?;
+    Ok(json!({ "status": "ok" }))
+}
+
+#[delete("/status/<id>")]
+pub async fn delete_requirement_status(id: i32, state: &State<AppState>) -> ApiResult<Status> {
+    let service = StatusService::new(state.inner());
+    service.delete_requirement_status(id)?;
+    Ok(Status::NoContent)
 }
 
 #[post("/status", data = "<payload>")]
@@ -61,7 +81,9 @@ mod tests {
             routes![
                 list_requirement_statuses,
                 get_requirement_status,
-                create_requirement_status
+                create_requirement_status,
+                update_requirement_status,
+                delete_requirement_status,
             ],
         );
         Client::tracked(rocket).await.unwrap()
@@ -79,6 +101,8 @@ mod tests {
                 description: "Initial".into(),
                 tag: "DR".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.requirement_statuses = statuses;
@@ -102,6 +126,8 @@ mod tests {
                 description: "Ready".into(),
                 tag: "AP".into(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
 

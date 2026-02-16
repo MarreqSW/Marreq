@@ -87,6 +87,15 @@ function renderBadge(element, badge) {
     }
     el.className = `badge ${badge.variant}`;
     el.textContent = badge.label;
+    if (badge.tag_color) {
+      el.style.backgroundColor = badge.tag_color;
+      el.style.color = '#fff';
+      el.style.borderColor = badge.tag_color;
+    } else {
+      el.style.backgroundColor = '';
+      el.style.color = '';
+      el.style.borderColor = '';
+    }
   });
 }
 

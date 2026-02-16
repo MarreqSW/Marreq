@@ -8,20 +8,20 @@ function safeNumber(value) {
   return Number.isFinite(value) ? value : 0;
 }
 
-export function statusBadge(statusLabel = '') {
+export function statusBadge(statusLabel = '', tagColor = null) {
   const label = normalise(statusLabel);
   switch (label.toLowerCase()) {
     case 'accepted':
     case 'finished':
-      return { label, variant: 'bg-success' };
+      return { label, variant: 'bg-success', tag_color: tagColor || undefined };
     case 'draft':
     case 'proposal':
-      return { label, variant: 'bg-secondary' };
+      return { label, variant: 'bg-secondary', tag_color: tagColor || undefined };
     case 'rejected':
     case 'cancelled':
-      return { label, variant: 'bg-danger' };
+      return { label, variant: 'bg-danger', tag_color: tagColor || undefined };
     default:
-      return { label, variant: 'bg-secondary' };
+      return { label, variant: 'bg-secondary', tag_color: tagColor || undefined };
   }
 }
 
@@ -286,7 +286,7 @@ export function buildRequirementViewModel(canonical = {}) {
   const counts = canonical.verification?.counts ?? {};
   const historyEntries = canonical.history?.entries ?? [];
 
-  const badge = statusBadge(requirement.status_id);
+  const badge = statusBadge(requirement.status_id, requirement.status_tag_color);
   const verification = verificationBadge(counts, requirement.verification_method_id);
   const solidityView = solidity(counts, requirement.status_id);
   const percent = verificationPercent(counts);

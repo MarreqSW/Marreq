@@ -155,7 +155,15 @@ echo ""
 echo "🔍 Verifying database setup..."
 echo "📋 Tables created:"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "\dt" \
-  | grep -E "(projects|users|user_api_tokens|requirements|requirement_versions|requirement_version_verification|requirement_comments|tests|matrix|logs|baselines|baseline_requirements|baseline_traceability|categories|applicability|verification|requirement_status|status_id|custom_field_definitions|custom_field_values)" || true
+  | grep -E "(projects|users|user_api_tokens|requirements|requirement_versions|requirement_version_verification|requirement_comments|tests|matrix|logs|baselines|baseline_requirements|baseline_traceability|categories|applicability|verification|requirement_status|test_status|status_id|custom_field_definitions|custom_field_values)" || true
+echo ""
+echo "📋 Status tables (is_system, tag_color):"
+docker exec -i "${DB_CID}" psql -U rust -d reqman -c "
+  SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'requirement_status' AND column_name = 'is_system') AS requirement_status_is_system,
+         EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'test_status' AND column_name = 'is_system') AS test_status_is_system,
+         EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'requirement_status' AND column_name = 'tag_color') AS requirement_status_tag_color,
+         EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'test_status' AND column_name = 'tag_color') AS test_status_tag_color;
+" 2>/dev/null || true
 echo ""
 echo "📋 Immutable baselines (snapshots):"
 docker exec -i "${DB_CID}" psql -U rust -d reqman -c "

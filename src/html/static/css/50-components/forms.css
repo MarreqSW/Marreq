@@ -136,3 +136,36 @@
   font-size: 0.875rem;
   margin-top: var(--space-1);
 }
+
+/* Status tag color picker: native color input + hex text input */
+.c-status-tag-color {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.c-status-tag-color__picker {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  flex-shrink: 0;
+  height: 2.75rem;
+  padding: 2px;
+  width: 2.75rem;
+}
+
+.c-status-tag-color__picker::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.c-status-tag-color__picker::-webkit-color-swatch {
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+}
+
+.c-status-tag-color__hex {
+  flex: 1;
+  font-family: ui-monospace, monospace;
+  min-width: 0;
+}

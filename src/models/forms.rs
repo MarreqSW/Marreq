@@ -105,8 +105,43 @@ macro_rules! define_tagged_form {
 
 define_tagged_form!(NewCategory, categories);
 define_tagged_form!(NewApplicability, applicability);
-define_tagged_form!(NewRequirementStatus, requirement_status);
-define_tagged_form!(NewTestStatus, test_status);
+
+/// Insertable requirement status. `is_system` is set by the service (true for defaults, false for user-created).
+#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = requirement_status)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(primary_key(id))]
+pub struct NewRequirementStatus {
+    pub id: Option<i32>,
+    pub title: String,
+    pub description: String,
+    pub tag: String,
+    pub project_id: i32,
+    #[serde(default)]
+    pub is_system: bool,
+    #[serde(default)]
+    pub tag_color: Option<String>,
+}
+
+/// Insertable test status. `is_system` is set by the service (true for defaults, false for user-created).
+#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = test_status)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(primary_key(id))]
+pub struct NewTestStatus {
+    pub id: Option<i32>,
+    pub title: String,
+    pub description: String,
+    pub tag: String,
+    pub project_id: i32,
+    #[serde(default)]
+    pub is_system: bool,
+    #[serde(default)]
+    pub tag_color: Option<String>,
+}
+
 define_tagged_form!(NewVerificationMethod, verification);
 
 /// Payload to create or update a custom field definition (project-scoped).
@@ -678,6 +713,8 @@ mod forms_tests {
             description: "D".into(),
             tag: "D".into(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         };
         assert_eq!(NewRequirementStatus::entity_type(), EntityType::Requirement);
         assert_eq!(s.display_name(), "Draft");
@@ -691,6 +728,8 @@ mod forms_tests {
             description: "D".into(),
             tag: "P".into(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         };
         assert_eq!(NewTestStatus::entity_type(), EntityType::Test);
         assert_eq!(s.display_name(), "Pass");

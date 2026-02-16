@@ -92,6 +92,7 @@ mod test_support {
                 description: "".into(),
                 tag: "NR".into(),
                 project_id: 1,
+                is_system: false,
             },
         );
 
@@ -103,6 +104,7 @@ mod test_support {
                 description: "".into(),
                 tag: "P".into(),
                 project_id: 1,
+                is_system: false,
             },
         );
 
@@ -114,6 +116,7 @@ mod test_support {
                 description: "".into(),
                 tag: "F".into(),
                 project_id: 1,
+                is_system: false,
             },
         );
 

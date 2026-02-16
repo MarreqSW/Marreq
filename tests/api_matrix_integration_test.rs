@@ -69,6 +69,7 @@ mod test_support {
                 tag: "D".into(),
                 project_id: 1,
                 is_system: false,
+                tag_color: None,
             },
         );
 
@@ -81,6 +82,7 @@ mod test_support {
                 tag: "NR".into(),
                 project_id: 1,
                 is_system: false,
+                tag_color: None,
             },
         );
 
@@ -93,6 +95,7 @@ mod test_support {
                 tag: "P".into(),
                 project_id: 1,
                 is_system: false,
+                tag_color: None,
             },
         );
 
@@ -443,6 +446,7 @@ fn matrix_view_filters_by_requirement_status() {
             description: "".into(),
             tag: "A".into(),
             is_system: false,
+            tag_color: None,
         },
     );
 

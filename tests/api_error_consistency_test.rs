@@ -80,6 +80,7 @@ mod test_support {
                 tag: "D".into(),
                 project_id: 1,
                 is_system: false,
+                tag_color: None,
             },
         );
 

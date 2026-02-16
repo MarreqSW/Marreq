@@ -88,6 +88,13 @@ function statusVariant(statusLabel) {
 }
 
 function decorateStatusBadges() {
+  const config = getInlineEditConfig();
+  const statusIdToTagColor = new Map(
+    (config.statuses || []).map((s) => [s.id, s.tag_color]).filter(([, c]) => c)
+  );
+  const statusLabelToTagColor = new Map(
+    (config.statuses || []).map((s) => [normalize(s.title), s.tag_color]).filter(([, c]) => c)
+  );
   const badges = document.querySelectorAll('.reqman-requirements-status-badge');
   badges.forEach((badge) => {
     const label = badge.dataset.status || badge.textContent;
@@ -100,6 +107,21 @@ function decorateStatusBadges() {
 
     const variant = statusVariant(label);
     badge.classList.add(`reqman-requirements-status-badge--${variant}`);
+
+    const row = badge.closest('tr') || badge.closest('.reqman-requirement-card') || badge.closest('.c-tree__node');
+    const statusId = row ? parseInt(row.dataset.statusId, 10) : NaN;
+    const tagColor =
+      (!Number.isNaN(statusId) && statusIdToTagColor.get(statusId)) ||
+      (label && statusLabelToTagColor.get(normalize(label)));
+    if (tagColor) {
+      badge.style.backgroundColor = tagColor;
+      badge.style.color = '#fff';
+      badge.style.borderColor = tagColor;
+    } else {
+      badge.style.backgroundColor = '';
+      badge.style.color = '';
+      badge.style.borderColor = '';
+    }
   });
 }
 
@@ -960,12 +982,23 @@ function openInlineEdit(cell, field, row, config) {
         displayEl.textContent = displayText;
         updateRequirementPreviewInRow(row, 'category', displayText, projectId);
       } else if (field === 'status') {
+        const statusDef = (config.statuses || []).find((x) => x.id === statusId);
+        const tagColor = statusDef?.tag_color || null;
         row.dataset.statusId = String(statusId);
         row.dataset.statusLabel = displayText;
         displayEl.textContent = displayText;
         displayEl.dataset.status = displayText;
         displayEl.dataset.statusId = String(statusId);
         displayEl.className = 'reqman-requirements-status-badge reqman-requirements-cell__display reqman-requirements-status-badge--' + statusVariant(displayText);
+        if (tagColor) {
+          displayEl.style.backgroundColor = tagColor;
+          displayEl.style.color = '#fff';
+          displayEl.style.borderColor = tagColor;
+        } else {
+          displayEl.style.backgroundColor = '';
+          displayEl.style.color = '';
+          displayEl.style.borderColor = '';
+        }
         updateRequirementPreviewInRow(row, 'status', displayText, projectId);
       } else if (field === 'verification') {
         row.dataset.verificationIds = (verificationIds || []).join(' ');

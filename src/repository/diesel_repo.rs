@@ -751,6 +751,88 @@ impl LookupRepository for DieselRepo {
             .get_result(conn.as_mut())?;
         Ok(res.id)
     }
+
+    fn update_requirement_status(
+        &mut self,
+        id: i32,
+        payload: &NewRequirementStatus,
+    ) -> Result<bool, RepoError> {
+        use schema::requirement_status::dsl;
+        let status = self.get_requirement_status_by_id(id)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot modify system status".into()));
+        }
+        let mut conn = self.get_conn()?;
+        let updated = diesel::update(dsl::requirement_status.filter(dsl::id.eq(id)))
+            .set((
+                dsl::title.eq(&payload.title),
+                dsl::description.eq(&payload.description),
+                dsl::tag.eq(&payload.tag),
+                dsl::tag_color.eq(&payload.tag_color),
+            ))
+            .execute(conn.as_mut())?;
+        Ok(updated > 0)
+    }
+
+    fn delete_requirement_status(&mut self, id: i32) -> Result<RequirementStatus, RepoError> {
+        use schema::{requirement_status::dsl, requirement_versions};
+        let status = self.get_requirement_status_by_id(id)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot delete system status".into()));
+        }
+        let mut conn = self.get_conn()?;
+        let in_use: i64 = requirement_versions::table
+            .filter(requirement_versions::status_id.eq(id))
+            .count()
+            .get_result(conn.as_mut())
+            .map_err(RepoError::from)?;
+        if in_use > 0 {
+            return Err(RepoError::BadInput(
+                "Cannot delete status: it is in use by requirement versions".into(),
+            ));
+        }
+        diesel::delete(dsl::requirement_status.filter(dsl::id.eq(id))).execute(conn.as_mut())?;
+        Ok(status)
+    }
+
+    fn update_test_status(&mut self, id: i32, payload: &NewTestStatus) -> Result<bool, RepoError> {
+        use schema::test_status::dsl;
+        let status = self.get_test_status_by_id(id)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot modify system status".into()));
+        }
+        let mut conn = self.get_conn()?;
+        let updated = diesel::update(dsl::test_status.filter(dsl::id.eq(id)))
+            .set((
+                dsl::title.eq(&payload.title),
+                dsl::description.eq(&payload.description),
+                dsl::tag.eq(&payload.tag),
+                dsl::tag_color.eq(&payload.tag_color),
+            ))
+            .execute(conn.as_mut())?;
+        Ok(updated > 0)
+    }
+
+    fn delete_test_status(&mut self, id: i32) -> Result<TestStatus, RepoError> {
+        use schema::{test_status::dsl, tests};
+        let status = self.get_test_status_by_id(id)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot delete system status".into()));
+        }
+        let mut conn = self.get_conn()?;
+        let in_use: i64 = tests::table
+            .filter(tests::status_id.eq(id))
+            .count()
+            .get_result(conn.as_mut())
+            .map_err(RepoError::from)?;
+        if in_use > 0 {
+            return Err(RepoError::BadInput(
+                "Cannot delete status: it is in use by tests".into(),
+            ));
+        }
+        diesel::delete(dsl::test_status.filter(dsl::id.eq(id))).execute(conn.as_mut())?;
+        Ok(status)
+    }
 }
 
 /// Builds a Requirement for baseline context using the snapshot version id (so links point to the version).

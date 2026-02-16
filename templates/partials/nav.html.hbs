@@ -111,6 +111,24 @@
               <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New Verification</span>
               {{/if}}
             </li>
+            <li>
+              {{#if project.id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/requirement_statuses/new">New requirement status</a>
+              {{else if selected_project_id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/requirement_statuses/new">New requirement status</a>
+              {{else}}
+              <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New requirement status</span>
+              {{/if}}
+            </li>
+            <li>
+              {{#if project.id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/test_statuses/new">New test status</a>
+              {{else if selected_project_id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/test_statuses/new">New test status</a>
+              {{else}}
+              <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New test status</span>
+              {{/if}}
+            </li>
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/user/new">New User</a></li>
             <li>
               <hr class="dropdown-divider c-navbar__dropdown-divider">

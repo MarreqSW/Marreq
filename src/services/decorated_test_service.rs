@@ -86,11 +86,11 @@ impl<'a> DecoratedTestService<'a> {
     }
 
     fn decorate(&self, test: &TestCase) -> Result<DecoratedTestCase, RepoError> {
-        let status = self
+        let (status, status_tag_color) = self
             .status_service
             .get_test_status(test.status_id)
-            .map(|s| s.title)
-            .unwrap_or_else(|_| format!("Unknown Status ({})", test.status_id));
+            .map(|s| (s.title, s.tag_color))
+            .unwrap_or_else(|_| (format!("Unknown Status ({})", test.status_id), None));
 
         let status_variant = match status.trim().to_lowercase().as_str() {
             "passed" => "passed",
@@ -107,14 +107,15 @@ impl<'a> DecoratedTestService<'a> {
             parent_status,
             parent_status_variant,
             parent_source,
+            test_parent_status_tag_color,
         ) = if let Some(parent_id) = test.parent_id {
             match self.test_service.get_by_id(parent_id) {
                 Ok(p) => {
-                    let p_status = self
+                    let (p_status, p_tag_color) = self
                         .status_service
                         .get_test_status(p.status_id)
-                        .map(|s| s.title)
-                        .unwrap_or_else(|_| format!("Unknown Status ({})", p.status_id));
+                        .map(|s| (s.title, s.tag_color))
+                        .unwrap_or_else(|_| (format!("Unknown Status ({})", p.status_id), None));
                     let p_variant = match p_status.trim().to_lowercase().as_str() {
                         "passed" => "passed",
                         "failed" => "failed",
@@ -129,6 +130,7 @@ impl<'a> DecoratedTestService<'a> {
                         p_status,
                         p_variant.to_string(),
                         p.source,
+                        p_tag_color,
                     )
                 }
                 Err(_) => (
@@ -138,6 +140,7 @@ impl<'a> DecoratedTestService<'a> {
                     String::new(),
                     String::new(),
                     String::new(),
+                    None,
                 ),
             }
         } else {
@@ -148,6 +151,7 @@ impl<'a> DecoratedTestService<'a> {
                 String::new(),
                 String::new(),
                 String::new(),
+                None,
             )
         };
 
@@ -160,12 +164,14 @@ impl<'a> DecoratedTestService<'a> {
             status_id: status,
             status_variant: status_variant.to_string(),
             test_status_id: test.status_id,
+            status_tag_color,
             test_parent_id: test.parent_id,
             test_parent_title: parent_title,
             test_parent_reference_code: parent_ref,
             test_parent_description: parent_desc,
             test_parent_status_id: parent_status,
             test_parent_status_variant: parent_status_variant,
+            test_parent_status_tag_color,
             test_parent_source: parent_source,
             project_id: test.project_id,
         })
@@ -217,6 +223,8 @@ mod tests {
                 description: String::new(),
                 tag: String::new(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.tests.insert(1, make_test(1, 0, 1));
@@ -255,6 +263,8 @@ mod tests {
                 description: String::new(),
                 tag: String::new(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.tests.insert(10, make_test(10, 0, 1));
@@ -318,6 +328,8 @@ mod tests {
                 description: String::new(),
                 tag: String::new(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.tests.insert(1, make_test(1, 0, 1));
@@ -345,6 +357,8 @@ mod tests {
                 description: String::new(),
                 tag: String::new(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         let mut test1 = make_test(1, 0, 1);
@@ -374,6 +388,8 @@ mod tests {
                 description: String::new(),
                 tag: String::new(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.tests.insert(1, make_test(1, 0, 1));
@@ -400,6 +416,8 @@ mod tests {
                 description: String::new(),
                 tag: String::new(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         repo.tests.insert(1, make_test(1, 0, 1));
@@ -422,6 +440,8 @@ mod tests {
                 description: String::new(),
                 tag: String::new(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             },
         );
         let mut test = make_test(1, 0, 1);

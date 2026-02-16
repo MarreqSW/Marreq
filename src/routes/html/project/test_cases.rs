@@ -141,7 +141,7 @@ async fn show_tests(
         .unwrap_or_default();
 
     let inline_edit_config = json!({
-        "statuses": statuses.iter().map(|s| json!({"id": s.id, "title": s.title})).collect::<Vec<_>>(),
+        "statuses": statuses.iter().map(|s| json!({"id": s.id, "title": s.title, "tag_color": s.tag_color})).collect::<Vec<_>>(),
         "verifications": verifications.iter().map(|v| json!({"id": v.id, "title": v.title})).collect::<Vec<_>>(),
         "categories": categories.iter().map(|c| json!({"id": c.id, "title": c.title})).collect::<Vec<_>>(),
     });

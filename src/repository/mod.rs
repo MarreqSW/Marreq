@@ -149,6 +149,14 @@ pub trait LookupRepository {
 
     fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError>;
     fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError>;
+    fn update_requirement_status(
+        &mut self,
+        id: i32,
+        payload: &NewRequirementStatus,
+    ) -> Result<bool, RepoError>;
+    fn delete_requirement_status(&mut self, id: i32) -> Result<RequirementStatus, RepoError>;
+    fn update_test_status(&mut self, id: i32, payload: &NewTestStatus) -> Result<bool, RepoError>;
+    fn delete_test_status(&mut self, id: i32) -> Result<TestStatus, RepoError>;
 
     fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError>;
     fn edit_verification(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError>;

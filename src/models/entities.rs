@@ -273,8 +273,33 @@ macro_rules! define_tagged_entity {
 
 define_tagged_entity!(Category);
 define_tagged_entity!(Applicability);
-define_tagged_entity!(RequirementStatus);
-define_tagged_entity!(TestStatus);
+
+/// Requirement status with optional system flag (system statuses are immutable).
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct RequirementStatus {
+    pub id: i32,
+    pub title: String,
+    pub description: String,
+    pub tag: String,
+    pub project_id: i32,
+    pub is_system: bool,
+    pub tag_color: Option<String>,
+}
+
+/// Test status with optional system flag (system statuses are immutable).
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct TestStatus {
+    pub id: i32,
+    pub title: String,
+    pub description: String,
+    pub tag: String,
+    pub project_id: i32,
+    pub is_system: bool,
+    pub tag_color: Option<String>,
+}
+
 define_tagged_entity!(VerificationMethod);
 
 /// Project-scoped custom field definition (label, type, optional enum values).

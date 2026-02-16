@@ -9,6 +9,7 @@
     "test": "tests"
   },
   "scripts": {
+    "commit": "cz",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
@@ -27,14 +28,16 @@
   },
   "homepage": "https://github.com/mariusmm/ReqMan#readme",
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.0",
+    "@vitest/ui": "^4.0.6",
+    "commitizen": "^4.3.1",
+    "cz-conventional-changelog": "^3.3.0",
+    "happy-dom": "^20.0.10",
+    "purgecss": "^6.0.0",
     "stylelint": "^16.25.0",
     "stylelint-config-clean-order": "^7.0.0",
     "stylelint-config-standard": "^39.0.1",
     "stylelint-order": "^7.0.0",
-    "@vitest/ui": "^4.0.6",
-    "@vitest/coverage-v8": "^4.0.0",
-    "happy-dom": "^20.0.10",
-    "vitest": "^4.0.6",
-    "purgecss": "^6.0.0"
+    "vitest": "^4.0.6"
   }
 }

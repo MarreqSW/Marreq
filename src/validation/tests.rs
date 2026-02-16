@@ -1068,6 +1068,8 @@ mod tests {
                 description: "Valid description".to_string(),
                 tag: "VALID".to_string(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             }
         }
 
@@ -1138,6 +1140,8 @@ mod tests {
                 description: "Valid description".to_string(),
                 tag: "VALID".to_string(),
                 project_id: 1,
+                is_system: false,
+                tag_color: None,
             }
         }
 

@@ -141,6 +141,8 @@ diesel::table! {
         description -> Varchar,
         tag -> Varchar,
         project_id -> Int4,
+        is_system -> Bool,
+        tag_color -> Nullable<Varchar>,
     }
 }
 
@@ -200,6 +202,8 @@ diesel::table! {
         description -> Varchar,
         tag -> Varchar,
         project_id -> Int4,
+        is_system -> Bool,
+        tag_color -> Nullable<Varchar>,
     }
 }
 

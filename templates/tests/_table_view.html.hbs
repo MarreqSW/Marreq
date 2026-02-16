@@ -75,7 +75,7 @@
               class="reqman-requirements-status-badge reqman-requirements-status-badge--{{status_variant}} reqman-requirements-cell__display"
               data-status-id="{{test_status_id}}"
               data-status="{{status_id}}"
-              data-status-variant="{{status_variant}}">
+              data-status-variant="{{status_variant}}"{{#if status_tag_color}} style="background-color: {{status_tag_color}}; color: #fff; border-color: {{status_tag_color}};"{{/if}}>
               {{status_id}}
             </span>
           </td>

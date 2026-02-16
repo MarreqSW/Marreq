@@ -485,6 +485,8 @@ impl LookupRepository for DieselRepoMock {
             description: new.description.clone(),
             tag: new.tag.clone(),
             project_id: new.project_id,
+            is_system: new.is_system,
+            tag_color: new.tag_color.clone(),
         };
         self.requirement_statuses.insert(id, status.clone());
         self.statuses.insert(id, status); // Keep backward compat with legacy field
@@ -501,9 +503,89 @@ impl LookupRepository for DieselRepoMock {
             description: new.description.clone(),
             tag: new.tag.clone(),
             project_id: new.project_id,
+            is_system: new.is_system,
+            tag_color: new.tag_color.clone(),
         };
         self.test_statuses.insert(id, status);
         Ok(id)
+    }
+
+    fn update_requirement_status(
+        &mut self,
+        id: i32,
+        payload: &NewRequirementStatus,
+    ) -> Result<bool, RepoError> {
+        let status = self
+            .requirement_statuses
+            .get_mut(&id)
+            .ok_or(RepoError::NotFound)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot modify system status".into()));
+        }
+        status.title = payload.title.clone();
+        status.description = payload.description.clone();
+        status.tag = payload.tag.clone();
+        status.tag_color = payload.tag_color.clone();
+        if let Some(ref mut s) = self.statuses.get_mut(&id) {
+            s.title = payload.title.clone();
+            s.description = payload.description.clone();
+            s.tag = payload.tag.clone();
+            s.tag_color = payload.tag_color.clone();
+        }
+        Ok(true)
+    }
+
+    fn delete_requirement_status(&mut self, id: i32) -> Result<RequirementStatus, RepoError> {
+        let status = self
+            .requirement_statuses
+            .get(&id)
+            .cloned()
+            .ok_or(RepoError::NotFound)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot delete system status".into()));
+        }
+        let in_use = self
+            .requirement_versions
+            .values()
+            .any(|v| v.status_id == id);
+        if in_use {
+            return Err(RepoError::BadInput(
+                "Cannot delete status: it is in use by requirement versions".into(),
+            ));
+        }
+        self.requirement_statuses.remove(&id);
+        self.statuses.remove(&id);
+        Ok(status)
+    }
+
+    fn update_test_status(&mut self, id: i32, payload: &NewTestStatus) -> Result<bool, RepoError> {
+        let status = self.test_statuses.get_mut(&id).ok_or(RepoError::NotFound)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot modify system status".into()));
+        }
+        status.title = payload.title.clone();
+        status.description = payload.description.clone();
+        status.tag = payload.tag.clone();
+        status.tag_color = payload.tag_color.clone();
+        Ok(true)
+    }
+
+    fn delete_test_status(&mut self, id: i32) -> Result<TestStatus, RepoError> {
+        let status = self
+            .test_statuses
+            .get(&id)
+            .cloned()
+            .ok_or(RepoError::NotFound)?;
+        if status.is_system {
+            return Err(RepoError::BadInput("Cannot delete system status".into()));
+        }
+        let in_use = self.tests.values().any(|t| t.status_id == id);
+        if in_use {
+            return Err(RepoError::BadInput(
+                "Cannot delete status: it is in use by tests".into(),
+            ));
+        }
+        self.test_statuses.remove(&id).ok_or(RepoError::NotFound)
     }
 }
 

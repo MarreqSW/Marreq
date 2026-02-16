@@ -560,6 +560,38 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         Ok(id)
     }
 
+    fn update_requirement_status(
+        &mut self,
+        id: i32,
+        payload: &NewRequirementStatus,
+    ) -> Result<bool, RepoError> {
+        let res = self.inner.update_requirement_status(id, payload)?;
+        if res {
+            self.cache.invalidate_status(id);
+        }
+        Ok(res)
+    }
+
+    fn delete_requirement_status(&mut self, id: i32) -> Result<RequirementStatus, RepoError> {
+        let status = self.inner.delete_requirement_status(id)?;
+        self.cache.invalidate_status(id);
+        Ok(status)
+    }
+
+    fn update_test_status(&mut self, id: i32, payload: &NewTestStatus) -> Result<bool, RepoError> {
+        let res = self.inner.update_test_status(id, payload)?;
+        if res {
+            self.cache.invalidate_status(id);
+        }
+        Ok(res)
+    }
+
+    fn delete_test_status(&mut self, id: i32) -> Result<TestStatus, RepoError> {
+        let status = self.inner.delete_test_status(id)?;
+        self.cache.invalidate_status(id);
+        Ok(status)
+    }
+
     fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_verification(new)?;
         self.cache.invalidate_verification(id);
@@ -878,6 +910,8 @@ mod tests {
             description: "".into(),
             tag: "O".into(),
             project_id: 1,
+            is_system: false,
+            tag_color: None,
         };
         let category = Category {
             id: 1,
@@ -1322,11 +1356,13 @@ mod tests {
         repo.get_requirement_status_by_id(1).unwrap();
         assert!(cache.get(&keys::RequirementStatus::by_id(1)).is_some());
         let ns = NewRequirementStatus {
+            is_system: false,
             id: None,
             title: "Closed".into(),
             description: "".into(),
             tag: "C".into(),
             project_id: 1,
+            tag_color: None,
         };
         let stid = repo.create_requirement_status(&ns).unwrap();
         assert!(cache.get(&keys::RequirementStatus::by_id(stid)).is_none());

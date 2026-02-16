@@ -23,6 +23,8 @@ pub struct DecoratedRequirement {
     pub req_verification_ids: Vec<i32>,
     pub status_id: String,
     pub req_current_status_id: i32, // Add numeric status ID for access control
+    /// Optional tag color (hex) for status badge background.
+    pub status_tag_color: Option<String>,
     pub author_id: String,
     pub req_author_id: i32,
     pub reviewer_id: String,
@@ -40,6 +42,8 @@ pub struct DecoratedRequirement {
     pub req_parent_description: String,
     /// Parent's status title (for hover preview).
     pub req_parent_status_id: String,
+    /// Parent's status tag color (hex) for badge, if set.
+    pub req_parent_status_tag_color: Option<String>,
     /// Parent's category title (for hover preview).
     pub req_parent_category_id: String,
     pub creation_date: String,
@@ -67,6 +71,8 @@ pub struct DecoratedTestCase {
     /// CSS variant for status badge: passed, failed, proposal, draft, default
     pub status_variant: String,
     pub test_status_id: i32, // Add numeric status ID for access control
+    /// Optional tag color (hex) for status badge background.
+    pub status_tag_color: Option<String>,
     pub test_parent_id: Option<i32>,
     pub test_parent_title: String,
     /// Parent test fields for hover preview card (same shape as main test).
@@ -74,6 +80,8 @@ pub struct DecoratedTestCase {
     pub test_parent_description: String,
     pub test_parent_status_id: String,
     pub test_parent_status_variant: String,
+    /// Parent's status tag color (hex) for badge, if set.
+    pub test_parent_status_tag_color: Option<String>,
     pub test_parent_source: String,
     pub project_id: i32,
 }

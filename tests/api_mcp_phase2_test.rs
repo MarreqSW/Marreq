@@ -107,6 +107,7 @@ mod test_support {
                 description: "".into(),
                 tag: "D".into(),
                 project_id: 1,
+                is_system: false,
             },
         );
 

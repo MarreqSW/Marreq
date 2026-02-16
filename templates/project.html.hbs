@@ -118,6 +118,36 @@
   </div>
   {{/partials/metrics_card}}
 
+  {{#> partials/metrics_card title="Requirement statuses"}}
+  <div class="c-dashboard-card__description">
+    <p>Manage requirement status labels (Draft, Accepted, etc.)</p>
+  </div>
+  <div class="c-dashboard-card__actions">
+    {{#if selected_project_id}}
+    <a href="/p/{{selected_project_id}}/requirement_statuses" class="btn btn-primary c-dashboard-card__action">View requirement statuses</a>
+    <a href="/p/{{selected_project_id}}/requirement_statuses/new" class="btn btn-outline c-dashboard-card__action">New requirement status</a>
+    {{else}}
+    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View requirement statuses</span>
+    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New requirement status</span>
+    {{/if}}
+  </div>
+  {{/partials/metrics_card}}
+
+  {{#> partials/metrics_card title="Test statuses"}}
+  <div class="c-dashboard-card__description">
+    <p>Manage test status labels (Passed, Failed, Pending, etc.)</p>
+  </div>
+  <div class="c-dashboard-card__actions">
+    {{#if selected_project_id}}
+    <a href="/p/{{selected_project_id}}/test_statuses" class="btn btn-primary c-dashboard-card__action">View test statuses</a>
+    <a href="/p/{{selected_project_id}}/test_statuses/new" class="btn btn-outline c-dashboard-card__action">New test status</a>
+    {{else}}
+    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View test statuses</span>
+    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New test status</span>
+    {{/if}}
+  </div>
+  {{/partials/metrics_card}}
+
   {{#> partials/metrics_card title="Applicability"}}
   <div class="c-dashboard-card__description">
     <p>Define which products/systems requirements apply to</p>

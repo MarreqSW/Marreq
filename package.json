@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "check:unused-css": "node .github/workflows/purgecss-ci.mjs"
+    "check:unused-css": "node .github/workflows/purgecss-ci.mjs",
+    "screenshots:manual": "node doc/UserManual/capture_screenshots.mjs"
   },
   "repository": {
     "type": "git",
@@ -28,6 +29,7 @@
   },
   "homepage": "https://github.com/mariusmm/ReqMan#readme",
   "devDependencies": {
+    "playwright": "^1.49.0",
     "@vitest/coverage-v8": "^4.0.0",
     "@vitest/ui": "^4.0.6",
     "commitizen": "^4.3.1",

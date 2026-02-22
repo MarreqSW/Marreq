@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>ReqMan User Manual</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main class="o-main-content">
+<header id="title-block-header">
+<h1 class="title">ReqMan User Manual</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#reqman-user-manual" id="toc-reqman-user-manual">ReqMan
+User Manual</a>
+<ul>
+<li><a href="#table-of-contents" id="toc-table-of-contents">Table of
+Contents</a></li>
+<li><a href="#introduction" id="toc-introduction">1.
+Introduction</a></li>
+<li><a href="#getting-started" id="toc-getting-started">2. Getting
+Started</a>
+<ul>
+<li><a href="#logging-in" id="toc-logging-in">2.1 Logging In</a></li>
+<li><a href="#home-page" id="toc-home-page">2.2 Home Page</a></li>
+<li><a href="#navigation" id="toc-navigation">2.3 Navigation</a></li>
+</ul></li>
+<li><a href="#projects" id="toc-projects">3. Projects</a>
+<ul>
+<li><a href="#viewing-projects" id="toc-viewing-projects">3.1 Viewing
+Projects</a></li>
+<li><a href="#creating-a-project-admin"
+id="toc-creating-a-project-admin">3.2 Creating a Project
+(Admin)</a></li>
+<li><a href="#editing-a-project" id="toc-editing-a-project">3.3 Editing
+a Project</a></li>
+</ul></li>
+<li><a href="#requirements" id="toc-requirements">4. Requirements</a>
+<ul>
+<li><a href="#requirements-list" id="toc-requirements-list">4.1
+Requirements List</a></li>
+<li><a href="#requirement-detail-page"
+id="toc-requirement-detail-page">4.2 Requirement Detail Page</a></li>
+<li><a href="#creating-a-requirement"
+id="toc-creating-a-requirement">4.3 Creating a Requirement</a></li>
+<li><a href="#editing-a-requirement" id="toc-editing-a-requirement">4.4
+Editing a Requirement</a></li>
+<li><a href="#version-history-diff" id="toc-version-history-diff">4.5
+Version History &amp; Diff</a></li>
+<li><a href="#comments" id="toc-comments">4.6 Comments</a></li>
+<li><a href="#duplicating-a-requirement"
+id="toc-duplicating-a-requirement">4.7 Duplicating a
+Requirement</a></li>
+<li><a href="#semantic-search-ai" id="toc-semantic-search-ai">4.8
+Semantic Search (AI)</a></li>
+</ul></li>
+<li><a href="#test-management" id="toc-test-management">5. Test
+Management</a>
+<ul>
+<li><a href="#tests-list" id="toc-tests-list">5.1 Tests List</a></li>
+<li><a href="#test-detail-page" id="toc-test-detail-page">5.2 Test
+Detail Page</a></li>
+<li><a href="#creating-a-test" id="toc-creating-a-test">5.3 Creating a
+Test</a></li>
+<li><a href="#editing-a-test" id="toc-editing-a-test">5.4 Editing a
+Test</a></li>
+<li><a href="#updating-test-status" id="toc-updating-test-status">5.5
+Updating Test Status</a></li>
+<li><a href="#test-hierarchy" id="toc-test-hierarchy">5.6 Test
+Hierarchy</a></li>
+</ul></li>
+<li><a href="#traceability-matrix" id="toc-traceability-matrix">6.
+Traceability Matrix</a>
+<ul>
+<li><a href="#opening-the-matrix" id="toc-opening-the-matrix">6.1
+Opening the Matrix</a></li>
+<li><a href="#using-the-matrix" id="toc-using-the-matrix">6.2 Using the
+Matrix</a></li>
+<li><a href="#exporting-the-matrix" id="toc-exporting-the-matrix">6.3
+Exporting the Matrix</a></li>
+</ul></li>
+<li><a href="#baselines" id="toc-baselines">7. Baselines</a>
+<ul>
+<li><a href="#baselines-list" id="toc-baselines-list">7.1 Baselines
+List</a></li>
+<li><a href="#creating-a-baseline" id="toc-creating-a-baseline">7.2
+Creating a Baseline</a></li>
+<li><a href="#viewing-a-baseline" id="toc-viewing-a-baseline">7.3
+Viewing a Baseline</a></li>
+<li><a href="#exporting-a-baseline-as-reqif"
+id="toc-exporting-a-baseline-as-reqif">7.4 Exporting a Baseline as
+ReqIF</a></li>
+</ul></li>
+<li><a href="#categories-applicability-verification"
+id="toc-categories-applicability-verification">8. Categories,
+Applicability &amp; Verification</a>
+<ul>
+<li><a href="#categories" id="toc-categories">8.1 Categories</a></li>
+<li><a href="#applicability" id="toc-applicability">8.2
+Applicability</a></li>
+<li><a href="#verification-methods" id="toc-verification-methods">8.3
+Verification Methods</a></li>
+<li><a href="#requirement-statuses" id="toc-requirement-statuses">8.4
+Requirement Statuses</a></li>
+<li><a href="#test-statuses" id="toc-test-statuses">8.5 Test
+Statuses</a></li>
+</ul></li>
+<li><a href="#reports-export" id="toc-reports-export">9. Reports &amp;
+Export</a>
+<ul>
+<li><a href="#reports-page" id="toc-reports-page">9.1 Reports
+Page</a></li>
+<li><a href="#exporting-requirements-to-excel"
+id="toc-exporting-requirements-to-excel">9.2 Exporting Requirements to
+Excel</a></li>
+<li><a href="#exporting-tests-to-excel"
+id="toc-exporting-tests-to-excel">9.3 Exporting Tests to Excel</a></li>
+<li><a href="#exporting-reqif" id="toc-exporting-reqif">9.4 Exporting
+ReqIF</a></li>
+</ul></li>
+<li><a href="#import" id="toc-import">10. Import</a>
+<ul>
+<li><a href="#importing-from-excel" id="toc-importing-from-excel">10.1
+Importing from Excel</a></li>
+<li><a href="#importing-reqif" id="toc-importing-reqif">10.2 Importing
+ReqIF</a></li>
+</ul></li>
+<li><a href="#project-members" id="toc-project-members">11. Project
+Members</a></li>
+<li><a href="#profile-account" id="toc-profile-account">12. Profile
+&amp; Account</a>
+<ul>
+<li><a href="#my-profile" id="toc-my-profile">12.1 My Profile</a></li>
+<li><a href="#edit-profile" id="toc-edit-profile">12.2 Edit
+Profile</a></li>
+<li><a href="#change-password" id="toc-change-password">12.3 Change
+Password</a></li>
+</ul></li>
+<li><a href="#administration" id="toc-administration">13.
+Administration</a>
+<ul>
+<li><a href="#admin-dashboard" id="toc-admin-dashboard">13.1 Admin
+Dashboard</a></li>
+<li><a href="#user-management" id="toc-user-management">13.2 User
+Management</a></li>
+<li><a href="#database-backup" id="toc-database-backup">13.3 Database
+Backup</a></li>
+<li><a href="#cache-if-exposed" id="toc-cache-if-exposed">13.4 Cache (if
+exposed)</a></li>
+<li><a href="#system-logs" id="toc-system-logs">13.5 System
+Logs</a></li>
+<li><a href="#log-analytics" id="toc-log-analytics">13.6 Log
+Analytics</a></li>
+</ul></li>
+<li><a href="#tips-shortcuts" id="toc-tips-shortcuts">14. Tips &amp;
+Shortcuts</a></li>
+<li><a href="#support" id="toc-support">Support</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="reqman-user-manual">ReqMan User Manual</h1>
+<p><strong>Requirement Manager (ReqMan)</strong> is a web-based
+requirements and test management system. This manual describes how to
+use the application from the end-user perspective.</p>
+<p>For a <strong>typical end-to-end workflow</strong> (project setup →
+requirements → tests → traceability → approval → baselines → export),
+see <strong><a href="Workflow.html">Typical Workflow with
+ReqMan</a></strong>.</p>
+<hr />
+<h2 id="table-of-contents">Table of Contents</h2>
+<ol type="1">
+<li><a href="#introduction">Introduction</a></li>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#projects">Projects</a></li>
+<li><a href="#requirements">Requirements</a></li>
+<li><a href="#test-management">Test Management</a></li>
+<li><a href="#traceability-matrix">Traceability Matrix</a></li>
+<li><a href="#baselines">Baselines</a></li>
+<li><a href="#categories-applicability-verification">Categories,
+Applicability &amp; Verification</a></li>
+<li><a href="#reports-export">Reports &amp; Export</a></li>
+<li><a href="#import">Import</a></li>
+<li><a href="#project-members">Project Members</a></li>
+<li><a href="#profile-account">Profile &amp; Account</a></li>
+<li><a href="#administration">Administration</a></li>
+<li><a href="#tips-shortcuts">Tips &amp; Shortcuts</a></li>
+</ol>
+<hr />
+<h2 id="introduction">1. Introduction</h2>
+<p>ReqMan helps you:</p>
+<ul>
+<li><strong>Manage requirements</strong> in a hierarchy, with version
+history, comments, and approval workflow</li>
+<li><strong>Manage tests</strong> — create and organize tests (including
+hierarchy), track test status (e.g. Pass/Fail/Pending), link tests to
+requirements, and see coverage in reports and on requirement pages</li>
+<li><strong>View and export</strong> traceability matrices and
+reports</li>
+<li><strong>Create immutable baselines</strong> for audits or
+releases</li>
+<li><strong>Import/export</strong> via Excel and ReqIF 1.2</li>
+</ul>
+<p>Data is organized by <strong>projects</strong>. Each project has its
+own requirements, tests, categories, applicability options, and
+baselines. You must be logged in to use the application.</p>
+<p>See <strong><a href="Workflow.html">Typical Workflow with
+ReqMan</a></strong> for a step-by-step workflow from project setup
+through baselines and export.</p>
+<hr />
+<h2 id="getting-started">2. Getting Started</h2>
+<h3 id="logging-in">2.1 Logging In</h3>
+<ol type="1">
+<li>Open the application in your browser
+(e.g. <strong>http://localhost:8000</strong>).</li>
+<li>You will see the <strong>Welcome to ReqMan</strong> login page.</li>
+<li>Enter your <strong>Username</strong> and
+<strong>Password</strong>.</li>
+<li>Click <strong>Sign In</strong>.</li>
+</ol>
+<p>If you use a demo setup, typical users include <code>alice</code>,
+<code>dr_smith</code>, <code>eng_jones</code>, <code>tech_lee</code>,
+<code>qa_wilson</code>, and <code>admin</code>; the default password is
+often <code>password</code> (check with your administrator).</p>
+<ul>
+<li><strong>Theme</strong>: Use the sun/moon toggle on the login card to
+switch between light and dark mode.</li>
+<li><strong>Logout</strong>: Click your name in the top-right →
+<strong>Logout</strong>.</li>
+</ul>
+<h3 id="home-page">2.2 Home Page</h3>
+<p>After login you see the <strong>Home</strong> page:</p>
+<ul>
+<li><strong>Quick Actions</strong>: Browse Projects, (if admin) Create
+Project, Admin Panel</li>
+<li><strong>Your Projects</strong>: Grid of project cards; click a
+project to open its detail page</li>
+<li><strong>Recent Activity</strong>: Placeholder for future activity
+feed</li>
+</ul>
+<p>Use <strong>Home</strong> in the navbar to return here anytime.</p>
+<h3 id="navigation">2.3 Navigation</h3>
+<p>The top navigation bar includes:</p>
+<table>
+<colgroup>
+<col style="width: 17%" />
+<col style="width: 82%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Item</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Home</strong></td>
+<td>Dashboard and project list</td>
+</tr>
+<tr class="even">
+<td><strong>Projects</strong></td>
+<td>All Projects / New Project (admin only)</td>
+</tr>
+<tr class="odd">
+<td><strong>Requirements</strong></td>
+<td>Project requirements (active when a project is selected)</td>
+</tr>
+<tr class="even">
+<td><strong>Tests</strong></td>
+<td>Project tests</td>
+</tr>
+<tr class="odd">
+<td><strong>Reports</strong></td>
+<td>Project reports &amp; analytics</td>
+</tr>
+<tr class="even">
+<td><strong>Members</strong></td>
+<td>Project members</td>
+</tr>
+<tr class="odd">
+<td><strong>Baselines</strong></td>
+<td>Project baselines</td>
+</tr>
+<tr class="even">
+<td><strong>Quick Actions</strong> (admin)</td>
+<td>Shortcuts: New Project, New
+Requirement/Test/Category/Applicability/Verification/Status, New User,
+Import File/ReqIF</td>
+</tr>
+<tr class="odd">
+<td><strong>Admin</strong> (admin)</td>
+<td>Dashboard, User Management, Database Backup, Import, System Logs,
+Log Analytics</td>
+</tr>
+</tbody>
+</table>
+<p>In the top-right:</p>
+<ul>
+<li><strong>Theme toggle</strong> (sun/moon) for light/dark mode</li>
+<li><strong>User menu</strong>: My Profile, Change Password, Logout</li>
+</ul>
+<p>Requirements, Tests, Reports, Members, and Baselines are
+<strong>project-scoped</strong>: select a project first (e.g. by opening
+it from Home or Projects) so these links apply to that project.</p>
+<hr />
+<h2 id="projects">3. Projects</h2>
+<h3 id="viewing-projects">3.1 Viewing Projects</h3>
+<ul>
+<li><strong>All Projects</strong>: <strong>Projects → All
+Projects</strong> or open <strong>Home</strong> and use “View all” under
+Your Projects.</li>
+<li><strong>Project detail</strong>: Click a project card to open
+<strong>Project Detail</strong>
+(<code>/p/&lt;project_id&gt;</code>).</li>
+</ul>
+<p>On the project detail page you see:</p>
+<ul>
+<li>Project name, status (e.g. active), description</li>
+<li>Created/Updated dates and owner</li>
+<li><strong>Quick Actions</strong>: View Requirements, View Tests, View
+Matrix, Baselines, View Reports, View Members</li>
+<li><strong>Project Members</strong> list with names, usernames, roles,
+and email</li>
+</ul>
+<h3 id="creating-a-project-admin">3.2 Creating a Project (Admin)</h3>
+<ol type="1">
+<li><strong>Projects → New Project</strong> or <strong>Quick Actions →
+New Project</strong>.</li>
+<li>Enter <strong>Name</strong> (required), optional
+<strong>Description</strong>.</li>
+<li>Submit the form.</li>
+</ol>
+<p>You are typically taken to the new project or the project list.</p>
+<h3 id="editing-a-project">3.3 Editing a Project</h3>
+<ol type="1">
+<li>Open the project detail page.</li>
+<li>Click <strong>Edit Project</strong>.</li>
+<li>Update name/description and save.</li>
+</ol>
+<hr />
+<h2 id="requirements">4. Requirements</h2>
+<p>Requirements are the core artifact. Each requirement can have
+multiple <strong>versions</strong> (history), <strong>comments</strong>,
+and an <strong>approval</strong> state (draft → reviewed → approved).
+Requirements can be hierarchical (parent/child) and are linked to tests
+via the traceability matrix.</p>
+<h3 id="requirements-list">4.1 Requirements List</h3>
+<ul>
+<li>Open a project, then use <strong>Requirements</strong> in the nav or
+<strong>View Requirements</strong> on the project detail page.</li>
+<li>URL: <code>/p/&lt;project_id&gt;/requirements</code>.</li>
+</ul>
+<p>You can:</p>
+<ul>
+<li><strong>View</strong> requirements in <strong>Card</strong>,
+<strong>Table</strong>, or <strong>Tree</strong> layout (use the view
+toggle).</li>
+<li><strong>Filter</strong> by status, verification, category,
+applicability, approval (e.g. Approved only / Not approved), and custom
+filters.</li>
+<li><strong>Search</strong> (and use <strong>Semantic Search</strong> if
+enabled).</li>
+<li><strong>Paginate</strong> through results.</li>
+<li><strong>Create</strong> a new requirement (button in header;
+admin/appropriate role).</li>
+<li><strong>Open</strong> a requirement by clicking its title or
+reference to see the <strong>Requirement detail</strong> page.</li>
+</ul>
+<p>Metrics (e.g. total count, by status) are shown at the top.</p>
+<h3 id="requirement-detail-page">4.2 Requirement Detail Page</h3>
+<ul>
+<li>URL:
+<code>/p/&lt;project_id&gt;/requirements/show/&lt;requirement_id&gt;</code>.</li>
+<li>For a specific version:
+<code>/p/&lt;project_id&gt;/requirements/show/&lt;requirement_id&gt;/version/&lt;version_id&gt;</code>.</li>
+</ul>
+<p>On the detail page you see:</p>
+<ul>
+<li><strong>Approval badge</strong>: Draft / Reviewed / Approved, and
+who approved and when.</li>
+<li><strong>Actions</strong> (for project owners/managers): <strong>Mark
+as Reviewed</strong>, <strong>Approve Requirement</strong> (with
+confirmation).</li>
+<li><strong>Content</strong>: Title, reference code, statement,
+rationale, category, status, applicability, verification methods,
+author, reviewer, dates.</li>
+<li><strong>Traceability</strong>: Upstream/downstream requirements and
+<strong>Verified by</strong> — list of linked tests with links to test
+pages.</li>
+<li><strong>Verification</strong> panel: pass/fail/pending counts and
+overall pass rate; list of linked tests.</li>
+<li><strong>Version history</strong>: List of versions with approval
+state; click a version to view that snapshot.</li>
+<li><strong>Comments</strong>: Chronological list; form to add a comment
+(optional version reference). On approved versions, comments may be
+locked by policy (<code>LOCK_APPROVED_VERSION_COMMENTS</code>).</li>
+<li><strong>Custom metadata</strong> (if the project uses custom
+fields).</li>
+</ul>
+<p><strong>Editing an approved requirement</strong>: Clicking
+<strong>Edit</strong> on an approved requirement shows a warning that
+editing will create a new <strong>Draft</strong> version; you can cancel
+or proceed.</p>
+<h3 id="creating-a-requirement">4.3 Creating a Requirement</h3>
+<ol type="1">
+<li>From the project’s requirements list, click <strong>New
+Requirement</strong> (or <strong>Quick Actions → New
+Requirement</strong> when a project is selected).</li>
+<li>URL: <code>/p/&lt;project_id&gt;/requirements/new</code>.</li>
+<li>Fill in:
+<ul>
+<li><strong>Title</strong> (required)</li>
+<li><strong>Reference</strong> (optional; can be auto-generated)</li>
+<li><strong>Statement</strong> (required)</li>
+<li><strong>Rationale</strong> (optional)</li>
+<li><strong>Category</strong>, <strong>Status</strong>,
+<strong>Verification methods</strong>, <strong>Applicability</strong>
+(as configured for the project)</li>
+<li><strong>Reviewer</strong>, <strong>Parent requirement</strong>
+(optional)</li>
+<li>Any <strong>Custom fields</strong> if present</li>
+</ul></li>
+<li>Click <strong>Save</strong>.</li>
+</ol>
+<p>You can optionally pass a parent or template via query parameters
+(<code>parent</code>, <code>template</code>).</p>
+<h3 id="editing-a-requirement">4.4 Editing a Requirement</h3>
+<ol type="1">
+<li>Open the requirement detail page.</li>
+<li>Click <strong>Edit</strong>.</li>
+<li>URL:
+<code>/p/&lt;project_id&gt;/requirements/edit/&lt;requirement_id&gt;</code>.</li>
+<li>Change title, statement, rationale, category, status, applicability,
+verification, reviewer, parent, and custom fields as needed.</li>
+<li>Use <strong>Save</strong> to create a new version.
+<strong>Cancel</strong> returns to the detail view.</li>
+</ol>
+<p>The editor supports rich text (bold, italic, list, code, link) and a
+preview toggle for the statement. Autosave and “All changes saved” are
+shown in the header.</p>
+<h3 id="version-history-diff">4.5 Version History &amp; Diff</h3>
+<ul>
+<li>On the requirement detail page, the <strong>Version history</strong>
+section lists all versions (newest first); each shows approval
+state.</li>
+<li>Click a version to view that snapshot:
+<code>/p/&lt;project_id&gt;/requirements/show/&lt;requirement_id&gt;/version/&lt;version_id&gt;</code>.</li>
+<li><strong>Compare two versions</strong>: Use the diff action
+(e.g. “Compare” or “Diff”) to open a <strong>diff modal</strong> that
+shows added/removed/unchanged text and metadata (with labels for status,
+category, applicability, verification where available).</li>
+</ul>
+<h3 id="comments">4.6 Comments</h3>
+<ul>
+<li>On the requirement (or version) detail page, use the
+<strong>Comments</strong> section to read existing comments and add new
+ones.</li>
+<li>Comments are immutable once created; they can reference an optional
+requirement version.</li>
+<li>If the current version is approved and the system locks comments on
+approved versions, the add-comment form is hidden.</li>
+</ul>
+<h3 id="duplicating-a-requirement">4.7 Duplicating a Requirement</h3>
+<ul>
+<li>From the requirements list or detail, use the
+<strong>Duplicate</strong> action (if available).</li>
+<li>A modal lets you adjust title, reference, statement, rationale,
+category, status, verification, applicability, reviewer, and parent
+before creating the new requirement.</li>
+</ul>
+<h3 id="semantic-search-ai">4.8 Semantic Search (AI)</h3>
+<p>If your administrator has enabled semantic search
+(embeddings/RAG):</p>
+<ul>
+<li>Open the <strong>Semantic Search (AI)</strong> modal from the
+requirements list (e.g. search icon or <strong>Ctrl+K</strong>).</li>
+<li>Enter a natural-language question or search phrase; you can restrict
+by status, category, applicability, verification.</li>
+<li>Results show matching requirements; “AI Answer” may appear when
+using the RAG “ask” feature.</li>
+<li>Shortcuts: <strong>Ctrl+K</strong> open, <strong>Enter</strong>
+search, <strong>Esc</strong> close.</li>
+</ul>
+<hr />
+<h2 id="test-management">5. Test Management</h2>
+<p>Test management in ReqMan covers creating and organizing tests,
+tracking execution status (e.g. Pass, Fail, Pending), and linking tests
+to requirements for traceability and coverage. Tests are project-scoped
+and can be arranged in a <strong>parent/child hierarchy</strong>.
+Linking is done in the <a href="#traceability-matrix">Traceability
+Matrix</a>; once linked, requirement detail pages show a
+<strong>Verified by</strong> section and verification pass/fail
+summary.</p>
+<h3 id="tests-list">5.1 Tests List</h3>
+<ul>
+<li>Open a project, then <strong>Tests</strong> in the nav or
+<strong>View Tests</strong> on the project detail page.</li>
+<li>URL: <code>/p/&lt;project_id&gt;/tests</code>.</li>
+</ul>
+<p>You can:</p>
+<ul>
+<li>Switch between <strong>Card</strong> and <strong>Table</strong>
+view.</li>
+<li><strong>Filter</strong> by test status, verification, category, and
+<strong>search</strong> (e.g. by name or reference).</li>
+<li>View <strong>metrics</strong> (e.g. total tests, counts by status
+such as Passed/Failed/Pending).</li>
+<li>Click <strong>New Test</strong> to create a test (admin/appropriate
+role).</li>
+<li>Click a test to open its <strong>Test detail</strong> page.</li>
+<li><strong>Update test status</strong> inline in the list (e.g. set
+Pass/Fail after execution) when the UI offers it.</li>
+<li><strong>Export tests to Excel</strong> from the tests list or
+Reports (see <a href="#exporting-tests-to-excel">§9.3 Exporting Tests
+to Excel</a>).</li>
+</ul>
+<h3 id="test-detail-page">5.2 Test Detail Page</h3>
+<ul>
+<li>URL:
+<code>/p/&lt;project_id&gt;/tests/show/&lt;test_id&gt;</code>.</li>
+</ul>
+<p>Shows: <strong>Name</strong>, <strong>Description</strong>,
+<strong>Source</strong> (e.g. test file or document reference),
+<strong>Status</strong>, <strong>Reference code</strong>, <strong>Parent
+test</strong> (if part of a hierarchy), and <strong>which requirements
+this test verifies</strong> (traceability links). From here you can
+<strong>Edit</strong> the test (name, description, source, status,
+reference, parent) or <strong>update status</strong> (e.g. after running
+the test). Status updates feed into the requirement
+<strong>Verification</strong> panel and into <a
+href="#reports-export">Reports</a> (coverage, pass rate).</p>
+<h3 id="creating-a-test">5.3 Creating a Test</h3>
+<ol type="1">
+<li>From the project’s tests list, click <strong>New Test</strong> (or
+<strong>Quick Actions → New Test</strong>).</li>
+<li>URL: <code>/p/&lt;project_id&gt;/tests/new</code>.</li>
+<li>Enter <strong>Name</strong>, <strong>Description</strong>,
+<strong>Source</strong> (e.g. path to test script or doc),
+<strong>Status</strong> (e.g. Pending, Not Run), <strong>Reference
+code</strong> (optional; e.g. TEST-PWR-001), and <strong>Parent
+test</strong> (optional, for hierarchy).</li>
+<li>Save.</li>
+</ol>
+<p>After creation, link the test to requirements in the <a
+href="#traceability-matrix">Traceability Matrix</a>.</p>
+<h3 id="editing-a-test">5.4 Editing a Test</h3>
+<ol type="1">
+<li>Open the test detail page.</li>
+<li>Click <strong>Edit</strong>.</li>
+<li>URL:
+<code>/p/&lt;project_id&gt;/tests/edit/&lt;test_id&gt;</code>.</li>
+<li>Update name, description, source, status, reference code, or parent
+test; save.</li>
+</ol>
+<p>Linking or unlinking tests to/from requirements is done in the
+<strong>Traceability Matrix</strong> (add/remove links there).</p>
+<h3 id="updating-test-status">5.5 Updating Test Status</h3>
+<p>As tests are executed, update their status (e.g. Pass, Fail, Pending,
+In Progress) so that:</p>
+<ul>
+<li>Requirement detail pages show correct <strong>Verification</strong>
+counts (passed/failed/pending) and overall pass rate.</li>
+<li><strong>Reports</strong> and <strong>Matrix</strong> reflect current
+coverage and test results.</li>
+<li><strong>Matrix</strong> and <strong>Reports</strong> can be filtered
+by test status (e.g. show only Failed tests).</li>
+</ul>
+<p>Update status from the <strong>Test detail</strong> page (Edit or
+dedicated status control) or, when available, <strong>inline from the
+tests list</strong> or from the matrix. Test statuses are configured per
+project under <a href="#test-statuses">Test statuses</a>.</p>
+<h3 id="test-hierarchy">5.6 Test Hierarchy</h3>
+<p>Tests can have a <strong>parent test</strong> (e.g. a test suite or
+feature area). Set the parent when creating or editing a test. The tests
+list and tree views (if available) reflect this hierarchy; reporting and
+traceability still work at the level of individual tests linked to
+requirements.</p>
+<hr />
+<h2 id="traceability-matrix">6. Traceability Matrix</h2>
+<p>The traceability matrix is central to <strong>test
+management</strong> and coverage: it shows which requirements are linked
+to which tests. You add or remove links here; requirement detail pages
+and reports then show verification status and coverage. The matrix can
+display test status, requirement status, category, applicability, and
+suspect links.</p>
+<h3 id="opening-the-matrix">6.1 Opening the Matrix</h3>
+<ul>
+<li>From the project: <strong>Matrix</strong> in the nav or <strong>View
+Matrix</strong> on the project detail page.</li>
+<li>URL: <code>/p/&lt;project_id&gt;/matrix</code>.</li>
+</ul>
+<h3 id="using-the-matrix">6.2 Using the Matrix</h3>
+<ul>
+<li><strong>Table</strong>: Rows and columns represent requirements and
+tests (or the configured layout); cells indicate links.</li>
+<li><strong>Filters</strong>: Restrict by test status, requirement
+status, category, applicability, search, suspect links.</li>
+<li><strong>Sort</strong> and <strong>paginate</strong> as
+available.</li>
+<li><strong>Sticky headers</strong> and <strong>virtual
+scrolling</strong> may be used for large matrices.</li>
+<li><strong>Clear suspect</strong>: For links marked “suspect”
+(e.g. after a requirement or test change), you can clear the suspect
+flag from the matrix (action/button or <strong>Clear suspect</strong>
+form); the system records user and timestamp.</li>
+</ul>
+<h3 id="exporting-the-matrix">6.3 Exporting the Matrix</h3>
+<ul>
+<li><strong>Export Excel</strong>: Use <strong>Export Excel</strong> on
+the matrix page to download the matrix as <code>.xls</code>.</li>
+<li><strong>Export CSV</strong>: Use the CSV export link/button when
+offered (e.g. <code>/p/&lt;project_id&gt;/matrix.csv</code>).</li>
+</ul>
+<hr />
+<h2 id="baselines">7. Baselines</h2>
+<p>Baselines are <strong>immutable</strong> point-in-time snapshots of
+requirement versions and traceability for a project. Use them for
+audits, releases, or comparison.</p>
+<h3 id="baselines-list">7.1 Baselines List</h3>
+<ul>
+<li>From the project: <strong>Baselines</strong> in the nav or
+<strong>View Baselines</strong> on the project detail page.</li>
+<li>URL: <code>/p/&lt;project_id&gt;/baselines</code>.</li>
+</ul>
+<p>You see all baselines for the project and can click <strong>New
+Baseline</strong> to create one.</p>
+<h3 id="creating-a-baseline">7.2 Creating a Baseline</h3>
+<ol type="1">
+<li>Click <strong>New Baseline</strong>.</li>
+<li>URL: <code>/p/&lt;project_id&gt;/baselines/new</code>.</li>
+<li>Enter <strong>Name</strong> and optional
+<strong>Description</strong>.</li>
+<li>Submit.</li>
+</ol>
+<p>The system captures the <strong>current</strong> requirement version
+for each requirement and the <strong>current</strong> traceability
+matrix. The baseline cannot be edited or deleted.</p>
+<h3 id="viewing-a-baseline">7.3 Viewing a Baseline</h3>
+<ul>
+<li>Click a baseline in the list.</li>
+<li>URL:
+<code>/p/&lt;project_id&gt;/baselines/&lt;baseline_id&gt;</code>.</li>
+</ul>
+<p>You see:</p>
+<ul>
+<li><strong>Metadata</strong>: Name, description, created date, created
+by.</li>
+<li><strong>Requirements in this baseline</strong>: Table with
+requirement ID, reference, title; links to requirement (and version)
+pages.</li>
+<li><strong>Traceability</strong>: List of requirement–test pairs (with
+references like REQ-PWR-001, TEST-PWR-001).</li>
+<li><strong>Diff vs current</strong>: For each requirement that has
+changed since the baseline, a <strong>Diff vs current</strong> action
+opens a <strong>diff modal</strong> comparing the baseline snapshot to
+the current version. If the requirement is unchanged, this action is
+hidden.</li>
+<li><strong>Export ReqIF</strong>: Button to export <strong>this
+baseline</strong> as ReqIF 1.2 XML.</li>
+</ul>
+<h3 id="exporting-a-baseline-as-reqif">7.4 Exporting a Baseline as
+ReqIF</h3>
+<ul>
+<li>On the baseline detail page: <strong>Export ReqIF</strong>.</li>
+<li>Or from the project’s export menu: <strong>Export → ReqIF (from
+baseline…)</strong> and choose the baseline. The downloaded file is the
+ReqIF snapshot of that baseline.</li>
+</ul>
+<hr />
+<h2 id="categories-applicability-verification">8. Categories,
+Applicability &amp; Verification</h2>
+<p>These are <strong>project-level</strong> configuration entities used
+to classify and manage requirements (and sometimes tests).</p>
+<h3 id="categories">8.1 Categories</h3>
+<p>Categories organize requirements (e.g. “Safety”, “Performance”).</p>
+<ul>
+<li><strong>List</strong>:
+<code>/p/&lt;project_id&gt;/categories</code>.</li>
+<li><strong>New</strong>: <strong>Quick Actions → New Category</strong>
+or <code>/p/&lt;project_id&gt;/categories/new</code> — enter title,
+description, tag.</li>
+<li><strong>Edit</strong>: Open a category → Edit; URL
+<code>/p/&lt;project_id&gt;/categories/edit/&lt;category_id&gt;</code>.</li>
+</ul>
+<h3 id="applicability">8.2 Applicability</h3>
+<p>Applicability represents product lines, system types, or scope
+(e.g. “Product A”, “All”).</p>
+<ul>
+<li><strong>List</strong>:
+<code>/p/&lt;project_id&gt;/applicability</code>.</li>
+<li><strong>New</strong>: <strong>Quick Actions → New
+Applicability</strong> or
+<code>/p/&lt;project_id&gt;/applicability/new</code>.</li>
+<li><strong>Edit</strong>:
+<code>/p/&lt;project_id&gt;/applicability/edit/&lt;applicability_id&gt;</code>.</li>
+</ul>
+<h3 id="verification-methods">8.3 Verification Methods</h3>
+<p>Verification methods define how requirements are verified (e.g. Test,
+Analysis, Review).</p>
+<ul>
+<li><strong>List</strong>:
+<code>/p/&lt;project_id&gt;/verification</code>.</li>
+<li><strong>New</strong>: <strong>Quick Actions → New
+Verification</strong> or
+<code>/p/&lt;project_id&gt;/verification/new</code>.</li>
+<li><strong>Edit</strong>:
+<code>/p/&lt;project_id&gt;/verification/edit/&lt;verification_id&gt;</code>.</li>
+</ul>
+<h3 id="requirement-statuses">8.4 Requirement Statuses</h3>
+<p>Requirement statuses (e.g. Draft, Accepted, Rejected) are configured
+per project.</p>
+<ul>
+<li><strong>List</strong>:
+<code>/p/&lt;project_id&gt;/requirement_statuses</code>.</li>
+<li><strong>New</strong>:
+<code>/p/&lt;project_id&gt;/requirement_statuses/new</code>.</li>
+<li><strong>Edit</strong>:
+<code>/p/&lt;project_id&gt;/requirement_statuses/edit/&lt;status_id&gt;</code>.</li>
+</ul>
+<h3 id="test-statuses">8.5 Test Statuses</h3>
+<p>Test statuses (e.g. Pass, Fail, Not Run) are configured per
+project.</p>
+<ul>
+<li><strong>List</strong>:
+<code>/p/&lt;project_id&gt;/test_statuses</code>.</li>
+<li><strong>New</strong>:
+<code>/p/&lt;project_id&gt;/test_statuses/new</code>.</li>
+<li><strong>Edit</strong>:
+<code>/p/&lt;project_id&gt;/test_statuses/edit/&lt;status_id&gt;</code>.</li>
+</ul>
+<hr />
+<h2 id="reports-export">9. Reports &amp; Export</h2>
+<h3 id="reports-page">9.1 Reports Page</h3>
+<ul>
+<li>From the project: <strong>Reports</strong> in the nav or
+<strong>View Reports</strong> on the project detail page.</li>
+<li>URL: <code>/p/&lt;project_id&gt;/reports</code>.</li>
+</ul>
+<p>You see:</p>
+<ul>
+<li><strong>Executive summary</strong>: Total requirements, total tests,
+coverage %, average tests per requirement.</li>
+<li><strong>Coverage analysis</strong> (test management): Covered vs
+uncovered requirements, requirements without tests, tests without
+requirements, suspect links. Test status distribution
+(e.g. Passed/Failed/Pending) may be shown for test management
+overview.</li>
+<li><strong>Generate PDF Report</strong>: Button to open/download a full
+project report PDF.</li>
+<li><strong>Download requirements (PDF)</strong>: Link to
+requirements-only PDF.</li>
+</ul>
+<h3 id="exporting-requirements-to-excel">9.2 Exporting Requirements to
+Excel</h3>
+<ul>
+<li>From the <strong>Requirements</strong> list: <strong>Export
+Excel</strong> (or use the project-level export link).</li>
+<li>URL: <code>/p/&lt;project_id&gt;/requirements.xls</code>.</li>
+<li>Downloads an <code>.xls</code> file with requirements and all
+configured fields (including a <strong>Comments</strong> sheet when
+applicable).</li>
+</ul>
+<h3 id="exporting-tests-to-excel">9.3 Exporting Tests to Excel</h3>
+<ul>
+<li>From the <strong>Tests</strong> list or reports: use <strong>Export
+Excel</strong> (tests) when available to download all project tests for
+test management or external reporting.</li>
+<li>URL: <code>/p/&lt;project_id&gt;/tests.xls</code>.</li>
+<li>The export includes test fields (name, description, source, status,
+reference code, etc.) so you can share or analyze test data outside
+ReqMan.</li>
+</ul>
+<h3 id="exporting-reqif">9.4 Exporting ReqIF</h3>
+<ul>
+<li><strong>Current project</strong>: <strong>Export → ReqIF
+(current)</strong> (or equivalent) to download ReqIF 1.2 XML for the
+current requirement set (and comments as Remarks when present).</li>
+<li><strong>From a baseline</strong>: <strong>Export → ReqIF (from
+baseline…)</strong> or open the baseline and use <strong>Export
+ReqIF</strong> to get an immutable ReqIF snapshot.</li>
+</ul>
+<hr />
+<h2 id="import">10. Import</h2>
+<h3 id="importing-from-excel">10.1 Importing from Excel</h3>
+<ol type="1">
+<li>Open <strong>Import File</strong> for the project: <strong>Quick
+Actions → Import File</strong> or <strong>Admin → Import File</strong>,
+or go to <code>/p/&lt;project_id&gt;/import_excel</code>.</li>
+<li>Upload a file (<strong>.xlsx</strong>, <strong>.xls</strong>, or
+<strong>.csv</strong>).</li>
+<li>Click <strong>Upload and Map Columns</strong>.</li>
+<li>On the mapping page, map your columns to ReqMan fields
+(requirements, tests, traceability).</li>
+<li>Complete the import; data is created/updated via the API.</li>
+</ol>
+<h3 id="importing-reqif">10.2 Importing ReqIF</h3>
+<ol type="1">
+<li>Open <strong>Import ReqIF</strong>: <strong>Quick Actions → Import
+ReqIF</strong> or <strong>Admin → Import ReqIF</strong>, or
+<code>/p/&lt;project_id&gt;/import_reqif</code>.</li>
+<li>Upload a <strong>ReqIF 1.2</strong> XML file.</li>
+<li>Follow the process flow; requirements (and optionally comments) are
+imported into the project.</li>
+</ol>
+<hr />
+<h2 id="project-members">11. Project Members</h2>
+<ul>
+<li><strong>View members</strong>: Project detail page → <strong>View
+Members</strong>, or <strong>Members</strong> in the nav for the
+selected project.</li>
+<li>URL: <code>/p/&lt;project_id&gt;/members</code>.</li>
+</ul>
+<p>You see the list of members with names, usernames, roles (e.g. owner,
+manager), and email. <strong>Admins</strong> can add/remove members and
+change roles via <strong>Add member</strong> and member actions
+(e.g. remove).</p>
+<ul>
+<li><strong>Add member</strong>: Submit the form with user and
+role.</li>
+<li><strong>Remove member</strong>: Use the remove action for a member
+(e.g. <strong>Remove</strong> button); confirm if prompted.</li>
+</ul>
+<hr />
+<h2 id="profile-account">12. Profile &amp; Account</h2>
+<h3 id="my-profile">12.1 My Profile</h3>
+<ul>
+<li><strong>User menu (top-right) → My Profile</strong>.</li>
+<li>URL: <code>/user/profile</code>.</li>
+</ul>
+<p>You see: full name, username, email, member since, last login. Click
+<strong>Edit Profile</strong> to change name and email (and any other
+editable profile fields). Success message is shown after update.</p>
+<h3 id="edit-profile">12.2 Edit Profile</h3>
+<ul>
+<li>URL: <code>/user/profile/edit</code>.</li>
+<li>Update <strong>Full name</strong>, <strong>Email</strong> (and any
+other fields offered). Save.</li>
+</ul>
+<h3 id="change-password">12.3 Change Password</h3>
+<ul>
+<li><strong>User menu → Change Password</strong>.</li>
+<li>URL: <code>/change_password</code>.</li>
+</ul>
+<p>Enter <strong>Current password</strong>, <strong>New
+password</strong>, and <strong>Confirm new password</strong>. Passwords
+must meet the minimum length (e.g. 8 characters). Submit; success or
+error message is shown.</p>
+<hr />
+<h2 id="administration">13. Administration</h2>
+<p>Available only to <strong>administrators</strong>
+(<code>is_admin</code>).</p>
+<h3 id="admin-dashboard">13.1 Admin Dashboard</h3>
+<ul>
+<li><strong>Admin → Dashboard</strong>.</li>
+<li>URL: <code>/admin</code>.</li>
+</ul>
+<p>Overview of system status and links to user management, backup,
+cache, logs.</p>
+<h3 id="user-management">13.2 User Management</h3>
+<ul>
+<li><strong>Admin → User Management</strong>.</li>
+<li>URL: <code>/admin/users</code>.</li>
+</ul>
+<p>List all users. Create <strong>New User</strong>
+(<code>/user/new</code>), or open a user to view/edit
+(<code>/user/&lt;user_id&gt;/show</code>,
+<code>/user/&lt;user_id&gt;/edit</code>). You can set username, name,
+email, password, and admin flag.</p>
+<h3 id="database-backup">13.3 Database Backup</h3>
+<ul>
+<li><strong>Admin → Database Backup</strong>.</li>
+<li>URL: <code>/admin/backup</code>.</li>
+</ul>
+<p>Generate a backup file; download or save as configured.</p>
+<h3 id="cache-if-exposed">13.4 Cache (if exposed)</h3>
+<ul>
+<li><strong>Admin → Cache</strong> (or <code>/admin/cache</code> when
+available).</li>
+<li>Options may include: view cache stats, <strong>Clear cache</strong>,
+<strong>Cleanup</strong> expired entries, health check, warm cache. Use
+for tuning or troubleshooting.</li>
+</ul>
+<h3 id="system-logs">13.5 System Logs</h3>
+<ul>
+<li><strong>Admin → System Logs</strong>.</li>
+<li>URL: <code>/logs</code>.</li>
+</ul>
+<p>Browse audit logs (entity type, entity ID, user, action, timestamp).
+You can filter by entity and export logs (e.g. <strong>Export
+logs</strong> with optional filename). <strong>Cleanup logs</strong> (if
+available) removes old entries.</p>
+<h3 id="log-analytics">13.6 Log Analytics</h3>
+<ul>
+<li><strong>Admin → Log Analytics</strong>.</li>
+<li>URL: <code>/log_analytics</code>.</li>
+</ul>
+<p>Analytics views over log data (if implemented).</p>
+<hr />
+<h2 id="tips-shortcuts">14. Tips &amp; Shortcuts</h2>
+<ul>
+<li><strong>Theme</strong>: Use the sun/moon icon in the navbar or on
+the login page for light/dark mode; preference is often stored in the
+browser.</li>
+<li><strong>Semantic search</strong>: <strong>Ctrl+K</strong> on the
+requirements page (when semantic search is enabled) opens the AI search
+modal; <strong>Enter</strong> runs the search, <strong>Esc</strong>
+closes.</li>
+<li><strong>Requirement diff</strong>: From requirement version history
+or baseline “Diff vs current”, the diff modal uses <strong>red</strong>
+for removed, <strong>green</strong> for added, <strong>gray</strong> for
+unchanged.</li>
+<li><strong>Breadcrumbs</strong>: Requirement and test edit/create pages
+show breadcrumbs (Project → Requirements → …); use them to navigate
+back.</li>
+<li><strong>Project context</strong>: Many links (Requirements, Tests,
+Matrix, Reports, Members, Baselines) depend on having a project
+selected; open a project from Home or Projects first.</li>
+<li><strong>Export formats</strong>: Requirements and matrix export as
+<strong>Excel</strong> (<code>.xls</code>); ReqIF export is
+<strong>XML</strong>. PDF reports are available from the Reports
+page.</li>
+</ul>
+<hr />
+<h2 id="support">Support</h2>
+<p>For installation, database setup, API reference, and MCP (Model
+Context Protocol) integration, see the main project
+<strong>README</strong> and <strong>doc/</strong>
+(e.g. <code>DATABASE_SETUP_README.md</code>,
+<code>doc/MCP_SETUP.md</code>). For bugs or feature requests, use the
+project’s issue tracker.</p>
+</main>
+</body>
+</html>

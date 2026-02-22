@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Typical Workflow with ReqMan</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<main class="o-main-content">
+<header id="title-block-header">
+<h1 class="title">Typical Workflow with ReqMan</h1>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#typical-workflow-with-reqman"
+id="toc-typical-workflow-with-reqman">Typical Workflow with ReqMan</a>
+<ul>
+<li><a href="#overview" id="toc-overview">Overview</a></li>
+<li><a href="#set-up-the-project" id="toc-set-up-the-project">1. Set Up
+the Project</a></li>
+<li><a href="#capture-requirements" id="toc-capture-requirements">2.
+Capture Requirements</a></li>
+<li><a href="#test-management-and-traceability"
+id="toc-test-management-and-traceability">3. Test Management and
+Traceability</a>
+<ul>
+<li><a href="#define-and-organize-tests"
+id="toc-define-and-organize-tests">3.1 Define and Organize
+Tests</a></li>
+<li><a href="#link-tests-to-requirements-traceability"
+id="toc-link-tests-to-requirements-traceability">3.2 Link Tests to
+Requirements (Traceability)</a></li>
+<li><a href="#track-test-execution-test-status"
+id="toc-track-test-execution-test-status">3.3 Track Test Execution (Test
+Status)</a></li>
+</ul></li>
+<li><a href="#review-and-approve-requirements"
+id="toc-review-and-approve-requirements">4. Review and Approve
+Requirements</a></li>
+<li><a href="#create-baselines" id="toc-create-baselines">5. Create
+Baselines</a></li>
+<li><a href="#export-for-audits-and-documentation"
+id="toc-export-for-audits-and-documentation">6. Export for Audits and
+Documentation</a></li>
+<li><a href="#iteration-and-maintenance"
+id="toc-iteration-and-maintenance">Iteration and Maintenance</a></li>
+</ul></li>
+</ul>
+</nav>
+<h1 id="typical-workflow-with-reqman">Typical Workflow with ReqMan</h1>
+<p>This document describes a <strong>typical end-to-end
+workflow</strong> for using ReqMan: from project setup through
+requirements, <strong>test management</strong>, traceability, approval,
+baselines, and export. For detailed steps on each screen, see the <a
+href="UserManual.html">User Manual</a>, in particular <a
+href="UserManual.html#test-management">Test Management</a> and <a
+href="UserManual.html#traceability-matrix">Traceability Matrix</a>.</p>
+<hr />
+<h2 id="overview">Overview</h2>
+<p>A common ReqMan workflow follows this sequence:</p>
+<ol type="1">
+<li><strong>Set up the project</strong> and configuration (categories,
+applicability, verification, requirement and <strong>test
+statuses</strong>).</li>
+<li><strong>Capture requirements</strong> (create, optionally import,
+organize in hierarchy).</li>
+<li><strong>Test management</strong>: define tests, organize
+(e.g. hierarchy), link to requirements in the traceability matrix, and
+track test status (Pass/Fail/Pending) as tests are run.</li>
+<li><strong>Review and approve</strong> requirements (draft → reviewed →
+approved).</li>
+<li><strong>Create baselines</strong> for milestones or releases.</li>
+<li><strong>Export</strong> for audits, documentation, or tooling
+(requirements Excel, <strong>tests Excel</strong>, matrix Excel/CSV,
+ReqIF, PDF).</li>
+</ol>
+<p>You can adapt the order (e.g. import requirements first, then
+configure categories) or iterate (add requirements and tests over time,
+update test status as you execute tests).</p>
+<hr />
+<h2 id="set-up-the-project">1. Set Up the Project</h2>
+<ul>
+<li><strong>Create the project</strong> (Admin: <strong>Projects → New
+Project</strong>). Enter name and description.</li>
+<li><strong>Add project members</strong> (<strong>Members</strong>):
+assign users and roles (e.g. owner, manager) so the right people can
+approve requirements and manage the project.</li>
+<li><strong>Configure project-level data</strong> (Admin or project
+<strong>Quick Actions</strong>):
+<ul>
+<li><strong>Categories</strong> (e.g. Safety, Performance, Usability) —
+used to tag requirements.</li>
+<li><strong>Applicability</strong> (e.g. Product A, Product B, All) —
+used for product line or scope.</li>
+<li><strong>Verification methods</strong> (e.g. Test, Analysis, Review,
+Inspection) — used to state how each requirement will be verified.</li>
+<li><strong>Requirement statuses</strong> (e.g. Draft, Accepted,
+Rejected) — lifecycle of requirements.</li>
+<li><strong>Test statuses</strong> (e.g. Pass, Fail, Not Run, Blocked) —
+for test execution.</li>
+</ul></li>
+</ul>
+<p>Having these in place before bulk-adding requirements keeps data
+consistent and makes filtering and reporting more useful.</p>
+<hr />
+<h2 id="capture-requirements">2. Capture Requirements</h2>
+<ul>
+<li><strong>Create requirements</strong> one by one:
+<strong>Requirements → New Requirement</strong>. Fill in title,
+statement, rationale, category, status, applicability, verification
+method(s), and optionally parent requirement (for hierarchy) and
+reviewer.</li>
+<li><strong>Or import</strong> existing data:
+<ul>
+<li><strong>Import File</strong>: upload Excel/CSV, map columns to
+ReqMan fields, then run the import (see <a
+href="UserManual.html#import">User Manual – Import</a>).</li>
+<li><strong>Import ReqIF</strong>: upload ReqIF 1.2 XML to bring in
+requirements (and optionally comments) from another tool.</li>
+</ul></li>
+<li><strong>Refine</strong>: use the <strong>Requirements</strong> list
+in card/table/tree view, filter by status/category/applicability, and
+<strong>Edit</strong> requirements to adjust content or set parent/child
+relationships.</li>
+<li><strong>Optional</strong>: use <strong>Semantic Search (AI)</strong>
+(if enabled) to find related requirements or answer questions over the
+requirement set.</li>
+</ul>
+<hr />
+<h2 id="test-management-and-traceability">3. Test Management and
+Traceability</h2>
+<h3 id="define-and-organize-tests">3.1 Define and Organize Tests</h3>
+<ul>
+<li><strong>Create tests</strong>: <strong>Tests → New Test</strong>.
+Enter name, description, <strong>Source</strong> (e.g. test file or
+document), <strong>Status</strong> (e.g. Pending, Not Run), and
+<strong>Reference code</strong> (e.g. TEST-PWR-001). Use <strong>Parent
+test</strong> to build a test hierarchy (suites, feature areas) if
+needed.</li>
+<li><strong>Manage tests</strong> from the <strong>Tests</strong> list:
+filter by status, verification, category, search; switch between card
+and table view; view metrics (total tests, by status). Edit tests to
+change name, description, source, or parent.</li>
+<li><strong>Export tests</strong>: From the Tests list or Reports,
+<strong>Export Excel</strong> (tests) to get all tests in
+<code>.xls</code> for external reporting or test management.</li>
+</ul>
+<h3 id="link-tests-to-requirements-traceability">3.2 Link Tests to
+Requirements (Traceability)</h3>
+<ul>
+<li>Open the <strong>Traceability Matrix</strong> for the project.</li>
+<li><strong>Add links</strong> between requirements and tests (via the
+matrix UI: e.g. select requirement and test, then add link).</li>
+<li>The matrix shows <strong>coverage</strong>; requirements without
+tests and tests without requirements are visible in
+<strong>Reports</strong> (Coverage analysis) and on requirement detail
+pages (<strong>Verified by</strong> section,
+<strong>Verification</strong> panel).</li>
+</ul>
+<h3 id="track-test-execution-test-status">3.3 Track Test Execution (Test
+Status)</h3>
+<ul>
+<li><strong>Update test status</strong> as tests are run (e.g. Pass,
+Fail, Pending, In Progress) from the <strong>Test detail</strong> page
+or, when available, inline from the tests list or matrix.</li>
+<li>Requirement detail pages then show the <strong>Verification</strong>
+panel: passed/failed/pending counts and overall pass rate for linked
+tests.</li>
+<li><strong>Reports</strong> and the <strong>Matrix</strong> reflect
+current coverage and test results; filter the matrix by test status
+(e.g. show only Failed tests) for test management and defect
+follow-up.</li>
+</ul>
+<hr />
+<h2 id="review-and-approve-requirements">4. Review and Approve
+Requirements</h2>
+<ul>
+<li><strong>Review</strong>: Authors and reviewers use the
+<strong>Requirement detail</strong> page to read the requirement, check
+linked tests and verification status, and use the
+<strong>Comments</strong> section to discuss.</li>
+<li><strong>Mark as Reviewed</strong>: A project owner/manager uses
+<strong>Mark as Reviewed</strong> on the requirement (with
+confirmation). This moves the requirement along the approval
+workflow.</li>
+<li><strong>Approve</strong>: When the requirement is ready for release
+or baseline, a project owner/manager uses <strong>Approve
+Requirement</strong> (with confirmation). The requirement then shows as
+<strong>Approved</strong> with approver and date; editing it later
+creates a new <strong>Draft</strong> version.</li>
+<li><strong>Filter by approval</strong>: On the Requirements list, use
+filters such as <strong>Approved only</strong> or <strong>Not
+approved</strong> to focus on what still needs review.</li>
+</ul>
+<hr />
+<h2 id="create-baselines">5. Create Baselines</h2>
+<ul>
+<li>When the requirement set (and optionally approvals) are at a
+<strong>milestone</strong> (e.g. release or audit point), create a
+<strong>baseline</strong>:
+<ul>
+<li><strong>Baselines → New Baseline</strong>. Enter name and optional
+description, then submit.</li>
+</ul></li>
+<li>The baseline is <strong>immutable</strong>: it stores the current
+requirement version for each requirement and the traceability matrix at
+that moment. You cannot edit or delete a baseline.</li>
+<li>Use baselines to:
+<ul>
+<li><strong>Export ReqIF</strong> for that exact snapshot (e.g. for
+auditors or downstream tools).</li>
+<li><strong>Compare</strong> later: open the baseline and use
+<strong>Diff vs current</strong> on individual requirements to see what
+changed since that snapshot.</li>
+</ul></li>
+</ul>
+<hr />
+<h2 id="export-for-audits-and-documentation">6. Export for Audits and
+Documentation</h2>
+<ul>
+<li><strong>Requirements</strong>: From <strong>Requirements</strong> or
+<strong>Reports</strong>, <strong>Export Excel</strong> to get all
+requirements (and a Comments sheet) in <code>.xls</code>.</li>
+<li><strong>Tests</strong> (test management): From
+<strong>Tests</strong> list or <strong>Reports</strong>, <strong>Export
+Excel</strong> (tests) to get all tests in <code>.xls</code> (name,
+description, source, status, reference code, etc.).</li>
+<li><strong>Traceability matrix</strong>: From <strong>Matrix</strong>,
+<strong>Export Excel</strong> (or CSV) for the requirement–test mapping;
+optionally filter by test status before export.</li>
+<li><strong>ReqIF</strong>:
+<ul>
+<li><strong>Current project</strong>: <strong>Export → ReqIF
+(current)</strong> for the latest state.</li>
+<li><strong>From a baseline</strong>: Open the baseline and use
+<strong>Export ReqIF</strong>, or <strong>Export → ReqIF (from
+baseline…)</strong> and select the baseline — use this for audits or
+release packages.</li>
+</ul></li>
+<li><strong>Reports</strong>: From <strong>Reports</strong>, use
+<strong>Generate PDF Report</strong> or <strong>Download requirements
+(PDF)</strong> for human-readable summaries, coverage, and test-related
+metrics.</li>
+</ul>
+<hr />
+<h2 id="iteration-and-maintenance">Iteration and Maintenance</h2>
+<ul>
+<li><strong>Ongoing</strong>: Add or edit requirements and tests, update
+traceability, <strong>run tests and update test status</strong>
+(Pass/Fail/Pending), and add comments. Create new baselines at each
+major milestone.</li>
+<li><strong>Test management</strong>: Use the Tests list and Matrix to
+track which tests are passing or failing; use Reports for coverage and
+test status distribution. Export tests to Excel when you need to share
+test data or integrate with other test tools.</li>
+<li><strong>After changes</strong>: Traceability links may be marked
+<strong>suspect</strong> when a requirement or test changes; review and
+<strong>Clear suspect</strong> from the matrix when the link is still
+valid (user and timestamp are recorded).</li>
+<li><strong>History</strong>: Use <strong>Version history</strong> on
+requirements and <strong>Diff</strong> (between versions or baseline vs
+current) to see what changed and when.</li>
+</ul>
+<p>For detailed instructions on each action, see the <a
+href="UserManual.html">User Manual</a>, including <a
+href="UserManual.html#test-management">Test Management</a>.</p>
+</main>
+</body>
+</html>

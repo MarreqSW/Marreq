@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Data models for the requirement management application.
 //!
 //! These structures describe the core entities stored in the database and the

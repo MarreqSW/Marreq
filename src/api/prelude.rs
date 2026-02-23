@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 pub use rocket::http::Status;
 pub use rocket::serde::json::{json, Json, Value};
 pub use rocket::State;

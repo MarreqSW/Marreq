@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Category service for managing requirement categories business logic.
 
 use crate::app::{AppState, DieselCachedRepo};

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Comprehensive test suite for the models module.
 //!
 //! This module provides tests for all model types, ensuring:

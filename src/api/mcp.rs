@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! MCP (Model Context Protocol) API: audit logging for tool calls.
 
 use rocket::serde::{Deserialize, Serialize};

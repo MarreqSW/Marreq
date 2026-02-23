@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Service for immutable project baselines.
 
 use crate::app::{AppState, DieselCachedRepo};

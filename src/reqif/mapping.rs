@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Default ReqIF attribute long-name to ReqMan field mapping.
 
 use std::collections::HashMap;

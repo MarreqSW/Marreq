@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Error types and handling for the ReqMan application.
 //!
 //! This module provides comprehensive error handling with proper error types,

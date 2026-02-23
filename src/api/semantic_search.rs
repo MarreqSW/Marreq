@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! API endpoints for semantic search functionality.
 //!
 //! All endpoints are project-scoped and use the `ProjectAccess` guard

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::{http::Method, http::Status, Request, Response};
 

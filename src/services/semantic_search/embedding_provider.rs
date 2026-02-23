@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Embedding provider trait and implementations.
 //!
 //! Provides a clean abstraction for generating text embeddings, with

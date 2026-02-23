@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! REST API for test status (list, get, create, update, delete).
 //! System statuses cannot be updated or deleted.
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Status enumeration definitions matching the database schema.
 //!
 //! These enums provide type-safe representations of requirement and test statuses,

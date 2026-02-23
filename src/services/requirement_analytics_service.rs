@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Service providing aggregated requirement metrics.
 //!
 //! Encapsulates the logic for computing per-status counts and coverage figures

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! HTML routes for project-scoped custom field definitions (admin UI).
 
 use super::helpers::*;

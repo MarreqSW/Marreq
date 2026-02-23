@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Application configuration from environment.
 //!
 //! Reads optional settings; most behavior uses defaults when env vars are unset.

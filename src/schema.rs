@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 // @generated automatically by Diesel CLI.
 // NOTE: Additional tables for semantic search added manually below
 

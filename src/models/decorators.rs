@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Decorated models with human-readable values.
 //!
 //! These structures extend the base database entities by replacing foreign key

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Core database entities.
 //!
 //! These structures directly map to database tables and represent the persistent

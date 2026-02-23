@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Service layer for the ReqMan application.
 //!
 //! This module provides business logic services that abstract database operations

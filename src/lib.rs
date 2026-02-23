@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! ReqMan - Requirements Management System
 //!
 //! This library provides the core functionality for the ReqMan application.

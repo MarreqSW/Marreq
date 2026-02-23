@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Service for requirement comments (create and list).
 //!
 //! Comments are immutable. Permission checks (project membership, lock approved version)

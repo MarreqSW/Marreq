@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 #![cfg(feature = "test-helpers")]
 
 //! Comprehensive project scoping and filtering tests for API endpoints.

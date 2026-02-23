@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! ReqIF 1.2 import and export support.
 //!
 //! See [OMG ReqIF 1.2](https://www.omg.org/spec/ReqIF/1.2/).

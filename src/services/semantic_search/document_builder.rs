@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Document builder for creating embedding source text.
 //!
 //! Constructs a deterministic text representation of a requirement for embedding,

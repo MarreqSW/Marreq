@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 use crate::app::AppState;
 use crate::auth::session::SESSION_COOKIE;
 use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};

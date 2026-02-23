@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 use handlebars::handlebars_helper;
 use handlebars::Handlebars;
 #[allow(unused_imports)]

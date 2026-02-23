@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 #[cfg(any(test, feature = "test-helpers"))]
 use crate::repository::diesel_repo_mock::DieselRepoMock;
 use crate::repository::errors::RepoError;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 use crate::auth::{clear_session_cookie, read_session_user_id};
 use crate::models::NewLog;
 use crate::repository::LogRepository;

@@ -4,13 +4,11 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Màrius Montón <marius.monton@gmail.com>"]
 description = "Requirements management"
-license = "GNU General Public License"
+license = "AGPL-3.0-or-later"
 
 [features]
 # Enable test helpers for integration tests
 test-helpers = []
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 diesel = { version = "2.3.6", features = ["postgres", "chrono", "r2d2", "serde_json"] }
@@ -54,3 +52,4 @@ features = ["handlebars"]
 handlebars = { version = "6.4", features = ["dir_source"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
+

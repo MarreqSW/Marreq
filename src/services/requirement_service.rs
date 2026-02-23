@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Service providing requirement related operations.
 //!
 //! The service is intentionally lightweight and wraps repository calls with

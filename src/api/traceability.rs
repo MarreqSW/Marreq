@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Traceability (matrix) API: suspect link management, trace_up/trace_down, coverage report.
 
 use rocket::serde::{Deserialize, Serialize};

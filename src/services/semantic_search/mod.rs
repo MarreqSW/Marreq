@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Semantic search services for RAG-powered requirement search.
 //!
 //! This module provides the infrastructure for:

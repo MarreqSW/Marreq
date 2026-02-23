@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 use crate::models::{Requirement, TestCase};
 
 /// When `verification_requirement_ids` is `Some`, only requirements whose id is in the slice are kept.

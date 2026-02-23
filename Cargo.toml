@@ -9,8 +9,8 @@ license = "GNU General Public License"
 [features]
 # Enable test helpers for integration tests
 test-helpers = []
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# Optional PDF generation support (enables `printpdf`)
+pdf = ["printpdf"]
 
 [dependencies]
 diesel = { version = "2.3.6", features = ["postgres", "chrono", "r2d2", "serde_json"] }
@@ -23,7 +23,8 @@ rocket = { version = "0.5.1", features = ["json", "secrets"] }
 bcrypt = "0.17.1"
 time = "0.3"
 xlsxwriter = "0.6.1"
-printpdf = "0.8.2"
+# Make PDF generation optional to avoid pulling heavy native deps during lint/build
+printpdf = { version = "0.8.2", optional = true }
 calamine = "0.33"
 anyhow = "1.0"
 regex = "1.10"
@@ -54,3 +55,4 @@ features = ["handlebars"]
 handlebars = { version = "6.4", features = ["dir_source"] }
 serde_json = "1.0"
 tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }
+

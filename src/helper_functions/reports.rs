@@ -2,6 +2,9 @@
 // Copyright (C) 2026 ReqMan
 
 use crate::models::{Category, RequirementStatus};
+use printpdf::{
+    BuiltinFont, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, PdfWarnMsg, Point, Pt, TextItem,
+};
 use std::collections::HashMap;
 
 pub struct Metrics {
@@ -208,50 +211,14 @@ pub fn generate_pdf_content(metrics: &Metrics) -> String {
 
     content
 }
-#[cfg(feature = "pdf")]
-use printpdf::{
-    BuiltinFont, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, PdfWarnMsg, Point, Pt, TextItem,
-};
 
-// When PDF feature is disabled provide stubs for the PDF-producing public APIs so callers
-// can still compile and routes will gracefully fall back to HTML generation.
-#[cfg(not(feature = "pdf"))]
-pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    Err(Box::<dyn std::error::Error>::from(
-        "pdf feature not enabled",
-    ))
-}
-
-#[cfg(not(feature = "pdf"))]
-pub fn generate_pdf_report_data(_metrics: &Metrics) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    Err(Box::<dyn std::error::Error>::from(
-        "pdf feature not enabled",
-    ))
-}
-
-#[cfg(not(feature = "pdf"))]
-pub fn generate_requirements_pdf_report(
-    _project_name: &str,
-    _rows: &[RequirementsPdfRow],
-    _custom_headers: &[String],
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    Err(Box::<dyn std::error::Error>::from(
-        "pdf feature not enabled",
-    ))
-}
-
-#[cfg(feature = "pdf")]
+// PDF helper functions and types
 const PAGE_WIDTH: f32 = 210.0;
-#[cfg(feature = "pdf")]
 const PAGE_HEIGHT: f32 = 297.0;
-#[cfg(feature = "pdf")]
 const INITIAL_Y: f32 = 280.0;
-#[cfg(feature = "pdf")]
 const CONTENT_START_Y: f32 = 250.0;
-#[cfg(feature = "pdf")]
 const PAGE_BREAK_Y: f32 = 50.0;
 
-#[cfg(feature = "pdf")]
 fn push_text(ops: &mut Vec<Op>, font: BuiltinFont, size: f32, x: Mm, y: Mm, text: &str) {
     ops.push(Op::StartTextSection);
     ops.push(Op::SetTextCursor {
@@ -268,7 +235,6 @@ fn push_text(ops: &mut Vec<Op>, font: BuiltinFont, size: f32, x: Mm, y: Mm, text
     ops.push(Op::EndTextSection);
 }
 
-#[cfg(feature = "pdf")]
 fn add_header(ops: &mut Vec<Op>) {
     push_text(
         ops,
@@ -289,7 +255,6 @@ fn add_header(ops: &mut Vec<Op>) {
     );
 }
 
-#[cfg(feature = "pdf")]
 fn add_footer(ops: &mut Vec<Op>) {
     push_text(
         ops,
@@ -301,7 +266,6 @@ fn add_footer(ops: &mut Vec<Op>) {
     );
 }
 
-#[cfg(feature = "pdf")]
 fn add_page_number(ops: &mut Vec<Op>, page_number: usize) {
     push_text(
         ops,
@@ -313,7 +277,6 @@ fn add_page_number(ops: &mut Vec<Op>, page_number: usize) {
     );
 }
 
-#[cfg(feature = "pdf")]
 fn save_pdf(
     mut doc: PdfDocument,
     pages_ops: Vec<Vec<Op>>,
@@ -330,7 +293,6 @@ fn save_pdf(
     Ok(bytes)
 }
 
-#[cfg(feature = "pdf")]
 fn ensure_page_space(
     pages: &mut Vec<Vec<Op>>,
     current_page: &mut usize,
@@ -348,7 +310,6 @@ fn ensure_page_space(
     false
 }
 
-#[cfg(feature = "pdf")]
 fn add_list_section(
     pages: &mut Vec<Vec<Op>>,
     current_page: &mut usize,
@@ -391,7 +352,6 @@ fn add_list_section(
     *y -= Mm(8.0);
 }
 
-#[cfg(feature = "pdf")]
 fn add_status_section(
     pages: &mut Vec<Vec<Op>>,
     current_page: &mut usize,
@@ -404,7 +364,6 @@ fn add_status_section(
     add_list_section(pages, current_page, title, items, y, page_num);
 }
 
-#[cfg(feature = "pdf")]
 pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let doc = PdfDocument::new("ReqMan Report");
     let mut pages = vec![Vec::new()];
@@ -460,7 +419,6 @@ pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn st
     save_pdf(doc, pages)
 }
 
-#[cfg(feature = "pdf")]
 pub fn generate_pdf_report_data(metrics: &Metrics) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let doc = PdfDocument::new("ReqMan Report");
     let mut pages = vec![Vec::new()];
@@ -532,7 +490,6 @@ pub fn generate_pdf_report_data(metrics: &Metrics) -> Result<Vec<u8>, Box<dyn st
 pub type RequirementsPdfRow = (i32, String, String, String, Vec<String>);
 
 /// Generate a PDF document with a table of requirements (fixed columns + one per custom field).
-#[cfg(feature = "pdf")]
 pub fn generate_requirements_pdf_report(
     project_name: &str,
     rows: &[RequirementsPdfRow],

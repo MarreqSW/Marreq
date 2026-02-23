@@ -1,7 +1,7 @@
 [package]
 authors = [
     "Màrius Montón <marius.monton@gmail.com>",
-    "Ramón Vallés vallespuigramon@gmail.com",
+    "Ramón Vallés <vallespuigramon@gmail.com>",
 ]
 name = "req_man"
 version = "0.1.0"

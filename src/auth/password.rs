@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 use super::errors::AuthError;
 use crate::repository::Repository;
 use bcrypt::{hash, verify, DEFAULT_COST};

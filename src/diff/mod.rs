@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Deterministic diff between two requirement versions.
 //!
 //! Text fields (title, description) use line-based diff; metadata (status, category,

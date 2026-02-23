@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Màrius Montón <marius.monton@gmail.com>"]
 description = "Requirements management"
-license = "GNU General Public License"
+license = "AGPL-3.0-or-later"
 
 [features]
 # Enable test helpers for integration tests

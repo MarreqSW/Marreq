@@ -6,11 +6,6 @@
 use super::helpers;
 use super::prelude::*;
 use crate::services::BaselineService;
-//! HTML routes for immutable project baselines.
-
-use super::helpers;
-use super::prelude::*;
-use crate::services::BaselineService;
 use rocket::form::FromForm;
 
 #[derive(Debug, FromForm)]

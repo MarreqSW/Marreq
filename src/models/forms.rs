@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Form structures for creating and updating database entities.
 //!
 //! These types are typically used with HTTP forms and represent the data

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 use super::errors::RepoError;
 use crate::models::entities::{
     Applicability, Baseline, BaselineTraceability, Category, CustomFieldDefinition,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 use crate::api::prelude::*;
 use crate::models::{NewRequirementStatus, RequirementStatus};
 use crate::services::StatusService;

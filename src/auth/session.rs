@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 use rocket::http::{Cookie, CookieJar};
 
 /// Name of the session cookie used to store the authenticated user id.

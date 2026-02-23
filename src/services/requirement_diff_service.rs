@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Service for computing diffs between two requirement versions (read-only, deterministic).
 
 use crate::app::{AppState, DieselCachedRepo};

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Indexing service for managing requirement embeddings.
 //!
 //! Handles embedding generation, storage, and synchronization with requirements.

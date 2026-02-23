@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 use crate::repository::errors::RepoError;
 use crate::services::log_service::LogServiceError;
 use rocket::response::Redirect;

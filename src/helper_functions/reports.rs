@@ -217,12 +217,16 @@ use printpdf::{
 // can still compile and routes will gracefully fall back to HTML generation.
 #[cfg(not(feature = "pdf"))]
 pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    Err(Box::<dyn std::error::Error>::from("pdf feature not enabled"))
+    Err(Box::<dyn std::error::Error>::from(
+        "pdf feature not enabled",
+    ))
 }
 
 #[cfg(not(feature = "pdf"))]
 pub fn generate_pdf_report_data(_metrics: &Metrics) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    Err(Box::<dyn std::error::Error>::from("pdf feature not enabled"))
+    Err(Box::<dyn std::error::Error>::from(
+        "pdf feature not enabled",
+    ))
 }
 
 #[cfg(not(feature = "pdf"))]
@@ -231,7 +235,9 @@ pub fn generate_requirements_pdf_report(
     _rows: &[RequirementsPdfRow],
     _custom_headers: &[String],
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    Err(Box::<dyn std::error::Error>::from("pdf feature not enabled"))
+    Err(Box::<dyn std::error::Error>::from(
+        "pdf feature not enabled",
+    ))
 }
 
 #[cfg(feature = "pdf")]

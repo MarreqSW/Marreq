@@ -1,4 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 use crate::models::{Category, RequirementStatus};
+use printpdf::{
+    BuiltinFont, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, PdfWarnMsg, Point, Pt, TextItem,
+};
 use std::collections::HashMap;
 
 pub struct Metrics {
@@ -205,10 +211,8 @@ pub fn generate_pdf_content(metrics: &Metrics) -> String {
 
     content
 }
-use printpdf::{
-    BuiltinFont, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, PdfWarnMsg, Point, Pt, TextItem,
-};
 
+// PDF helper functions and types
 const PAGE_WIDTH: f32 = 210.0;
 const PAGE_HEIGHT: f32 = 297.0;
 const INITIAL_Y: f32 = 280.0;

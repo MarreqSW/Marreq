@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Common helpers shared across service modules.
 //!
 //! The refactor towards lightweight service structs that operate on the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 ReqMan
+
 //! Test service for managing test cases business logic.
 //!
 //! This service handles all test-related operations including CRUD operations,

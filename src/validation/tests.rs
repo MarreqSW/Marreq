@@ -32,7 +32,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: None,
                 reference_code: "REQ-001".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,
@@ -287,13 +286,6 @@ mod tests {
         fn requirement_with_justification() {
             let mut req = valid_requirement();
             req.justification = Some("Test justification".to_string());
-            assert!(validate_requirement(&req).is_ok());
-        }
-
-        #[test]
-        fn requirement_with_parent_id() {
-            let mut req = valid_requirement();
-            req.parent_id = Some(1);
             assert!(validate_requirement(&req).is_ok());
         }
     }
@@ -1487,7 +1479,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: Some(10),
                 reference_code: "REQ-ABC-001".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,
@@ -1521,7 +1512,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: None,
                 reference_code: "REQ-001".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,
@@ -1540,7 +1530,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: None,
                 reference_code: "REQ-001".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,
@@ -1559,7 +1548,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: None,
                 reference_code: "REQ-001".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,
@@ -1578,7 +1566,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: None,
                 reference_code: "REQ-001".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,
@@ -1602,7 +1589,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: None,
                 reference_code: "REQ-001".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,

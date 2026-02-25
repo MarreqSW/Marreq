@@ -681,16 +681,65 @@ mod tests {
 
     #[test]
     fn get_by_parent_id_decorates_children() {
+        use crate::models::{RequirementVersion, RequirementVersionLink};
+
         let mut repo = setup_repo_with_lookup_data();
-        let parent = requirement(1, 1);
+        let mut parent = requirement(1, 1);
+        parent.current_version_id = Some(100);
         let mut child1 = requirement(2, 1);
-        child1.parent_id = Some(1);
+        child1.current_version_id = Some(200);
         let mut child2 = requirement(3, 1);
-        child2.parent_id = Some(1);
+        child2.current_version_id = Some(300);
 
         repo.requirements.insert(1, parent);
         repo.requirements.insert(2, child1);
         repo.requirements.insert(3, child2);
+
+        // Add RequirementVersion entries so get_requirement_version_by_id works
+        for (vid, rid) in [(100, 1), (200, 2), (300, 3)] {
+            repo.requirement_versions.insert(
+                vid,
+                RequirementVersion {
+                    id: vid,
+                    requirement_id: rid,
+                    title: format!("Requirement {rid}"),
+                    description: "Description".into(),
+                    status_id: 1,
+                    author_id: 1,
+                    reviewer_id: 2,
+                    category_id: 1,
+                    created_at: timestamp(),
+                    deadline_date: None,
+                    applicability_id: 1,
+                    justification: None,
+                    approval_state: "draft".to_string(),
+                    approved_by: None,
+                    approved_at: None,
+                },
+            );
+        }
+
+        // Add links: child1 -> parent, child2 -> parent (source=child version, target=parent version)
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 1,
+            source_version_id: 200,
+            target_version_id: 100,
+            link_type: "DERIVES_FROM".to_string(),
+            rationale: None,
+            project_id: 1,
+            created_at: timestamp(),
+            metadata: None,
+        });
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 2,
+            source_version_id: 300,
+            target_version_id: 100,
+            link_type: "DERIVES_FROM".to_string(),
+            rationale: None,
+            project_id: 1,
+            created_at: timestamp(),
+            metadata: None,
+        });
 
         let state = state_with_repo(repo);
         let service = DecoratedRequirementService::new(&state);
@@ -715,7 +764,6 @@ mod tests {
             author_id: 1,
             category_id: 1,
             status_id: 1,
-            parent_id: None,
             reference_code: "REQ-NEW".into(),
             reviewer_id: 1,
             applicability_id: 1,
@@ -743,7 +791,6 @@ mod tests {
             author_id: 1,
             category_id: 1,
             status_id: 1,
-            parent_id: None,
             reference_code: "REQ-001".into(),
             reviewer_id: 1,
             applicability_id: 1,

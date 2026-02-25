@@ -15,9 +15,7 @@ use crate::services::RequirementService;
 #[derive(Debug, Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct TraceSummary {
-    /// First parent requirement id (from links, for backward compat). Prefer parent_links for full DAG.
-    pub parent_id: Option<i32>,
-    /// Typed links from this requirement's current version to parent versions (multi-parent).
+    /// Typed links from this requirement's current version to parent versions (multi-parent DAG).
     #[serde(default)]
     pub parent_links: Vec<RequirementVersionLink>,
     pub child_ids: Vec<i32>,
@@ -50,8 +48,6 @@ pub struct RequirementCreateRequest {
     pub author_id: i32,
     pub category_id: i32,
     pub status_id: i32,
-    /// Deprecated: use parent_links for multi-parent. When only parent_id is set, a single DERIVES_FROM link is created for compatibility.
-    pub parent_id: Option<i32>,
     pub reference_code: String,
     pub reviewer_id: i32,
     pub applicability_id: i32,
@@ -76,8 +72,6 @@ pub struct RequirementPatch {
     pub reviewer_id: Option<i32>,
     pub category_id: Option<i32>,
     pub applicability_id: Option<i32>,
-    /// Deprecated: use requirement-version-links API for multi-parent. When set, updates the single parent (legacy).
-    pub parent_id: Option<i32>,
     pub custom_fields: Option<Vec<crate::models::CustomFieldValueInput>>,
 }
 
@@ -138,12 +132,6 @@ pub async fn get_by_project(
         })
         .unwrap_or_default();
     let trace_summary = TraceSummary {
-        parent_id: parent_links.first().and_then(|l| {
-            state.repo_read()
-                .get_requirement_version_by_id(l.target_version_id)
-                .ok()
-                .map(|v| v.requirement_id)
-        }),
         parent_links,
         child_ids: children.iter().map(|r| r.id).collect(),
         linked_test_ids: linked_tests.iter().map(|t| t.id).collect(),
@@ -493,25 +481,6 @@ pub async fn create_by_project(
                 );
             }
         }
-    } else if let (Some(vid), Some(pid)) = (source_version_id, payload.parent_id) {
-        if pid != 0 {
-            if let Ok(parent_req) = service.get_by_id(pid) {
-                if parent_req.project_id == project_id {
-                    let _ = parent_req.current_version_id.and_then(|target_vid| {
-                        service
-                            .create_requirement_version_link(
-                                vid,
-                                target_vid,
-                                "DERIVES_FROM",
-                                project_id,
-                                None,
-                                None,
-                            )
-                            .ok()
-                    });
-                }
-            }
-        }
     }
     Ok(json!({ "status": "ok", "id": id }))
 }
@@ -702,7 +671,6 @@ mod tests {
             "author_id": 1,
             "category_id": 1,
             "status_id": 1,
-            "parent_id": null,
             "reference_code": "REF-1",
             "reviewer_id": 2,
             "applicability_id": 3,

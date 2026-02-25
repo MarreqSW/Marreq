@@ -108,7 +108,9 @@ fn decorate_requirements_impl<R: Repository>(
                 .unwrap_or_default()
                 .into_iter()
                 .filter_map(|link| {
-                    let ver = repo.get_requirement_version_by_id(link.target_version_id).ok()?;
+                    let ver = repo
+                        .get_requirement_version_by_id(link.target_version_id)
+                        .ok()?;
                     let parent_req = repo.get_requirement_by_id(ver.requirement_id).ok()?;
                     Some(ReqParentDisplay {
                         id: parent_req.id,

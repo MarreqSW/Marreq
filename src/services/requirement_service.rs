@@ -37,6 +37,9 @@ struct RequirementWithVerification<'a> {
     parent_requirement_ids: Option<Vec<i32>>,
 }
 
+/// (source_version_id, project_id, links to create as (target_version_id, link_type))
+type ParentLinksToCreate = (i32, i32, Vec<(i32, String)>);
+
 impl Loggable for RequirementWithVerification<'_> {
     fn entity_type() -> EntityType {
         EntityType::Requirement
@@ -296,7 +299,10 @@ impl<'a> RequirementService<'a> {
         let repo = self.repo_read();
         let mut ids: Vec<i32> = links
             .into_iter()
-            .filter_map(|link| repo.get_requirement_version_by_id(link.target_version_id).ok())
+            .filter_map(|link| {
+                repo.get_requirement_version_by_id(link.target_version_id)
+                    .ok()
+            })
             .map(|v| v.requirement_id)
             .collect();
         ids.sort_unstable();
@@ -472,7 +478,7 @@ impl<'a> RequirementService<'a> {
         let before = self.get_by_id(id)?;
         let before_verification_ids = self.get_verification_method_ids(id)?;
 
-        let parent_links_to_create: Option<(i32, i32, Vec<(i32, String)>)> = {
+        let parent_links_to_create: Option<ParentLinksToCreate> = {
             let mut repo = self.repo_write();
             let updated = repo.edit_requirement(&payload)?;
             if !updated {
@@ -494,7 +500,7 @@ impl<'a> RequirementService<'a> {
                 requirement.current_version_id,
                 Some(actor.id),
             )?;
-            let out: Option<(i32, i32, Vec<(i32, String)>)> = if let Some(links) = &parent_links {
+            let out: Option<ParentLinksToCreate> = if let Some(links) = &parent_links {
                 if let Some(version_id) = requirement.current_version_id {
                     repo.delete_requirement_version_links_by_source_version(version_id)?;
                     Some((version_id, requirement.project_id, links.clone()))
@@ -789,7 +795,9 @@ mod tests {
         payload.description = "  New Description  ".into();
         payload.reference_code = "  REQ-999  ".into();
 
-        let updated = service.update(&actor(), 1, payload, &[1], None, None).unwrap();
+        let updated = service
+            .update(&actor(), 1, payload, &[1], None, None)
+            .unwrap();
         assert_eq!(updated.title, "Updated");
         assert_eq!(updated.description, "New Description");
         assert_eq!(updated.reference_code, "REQ-999");
@@ -823,7 +831,9 @@ mod tests {
         payload.description = "New".into();
         payload.reference_code = "REQ-001".into();
 
-        let _ = service.update(&actor(), 1, payload, &[1], None, None).unwrap();
+        let _ = service
+            .update(&actor(), 1, payload, &[1], None, None)
+            .unwrap();
 
         let links = state.repo_read().get_matrix_by_project(7).unwrap();
         assert_eq!(links.len(), 1);

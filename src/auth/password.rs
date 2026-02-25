@@ -185,10 +185,4 @@ mod tests {
 
         assert!(matches!(err, AuthError::PasswordPolicy(_)));
     }
-
-    // Helper for generating static Argon2 hashes when needed.
-    // #[test]
-    // fn print_argon2_hash() {
-    //     println!("{}", hash_password("ChangeMe123!").unwrap());
-    // }
 }

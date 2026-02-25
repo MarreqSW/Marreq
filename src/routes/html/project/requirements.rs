@@ -43,8 +43,6 @@ struct RequirementCreateForm {
     category_id: i32,
     #[field(name = uncased("status_id"))]
     status_id: i32,
-    #[field(name = uncased("parent_id"))]
-    parent_id: i32,
     /// JSON array of { "target_requirement_id": i32, "link_type": string } for multi-parent.
     #[field(name = uncased("parent_links"))]
     parent_links: Option<String>,
@@ -74,7 +72,6 @@ impl RequirementCreateForm {
             verification_method_ids,
             category_id,
             status_id,
-            parent_id: _,
             parent_links: _,
             reference_code,
             reviewer_id,
@@ -127,8 +124,6 @@ struct RequirementEditForm {
     justification: Option<String>,
     #[field(name = uncased("project_id"))]
     project_id: i32,
-    #[field(name = uncased("parent_id"))]
-    parent_id: Option<i32>,
     /// JSON array of { "target_requirement_id": i32, "link_type": string } for multi-parent upstream links.
     #[field(name = uncased("parent_links"))]
     parent_links: Option<String>,

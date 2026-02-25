@@ -19,6 +19,7 @@ pub struct ClearSuspectRequest {
 }
 
 /// Trace up: parent requirement(s) for a requirement. Project-scoped; accepts session or Bearer.
+/// Returns multiple parents when requirement version links are used; otherwise single parent from deprecated parent_id.
 #[get("/projects/<project_id>/requirements/<id>/trace_up")]
 pub async fn trace_up(
     _access: ProjectAccessOrBearer,
@@ -31,17 +32,51 @@ pub async fn trace_up(
     if requirement.project_id != project_id {
         return Err(ApiError::NotFound("requirement not in project".into()));
     }
-    let parent = requirement
-        .parent_id
-        .and_then(|pid| service.get_by_id(pid).ok())
-        .filter(|p| p.project_id == project_id);
-    Ok(Json(TraceUpResponse { parent }))
+    let parents = if let Some(vid) = requirement.current_version_id {
+        let links = service
+            .get_parent_links_for_version(vid)
+            .unwrap_or_default();
+        if links.is_empty() {
+            requirement
+                .parent_id
+                .and_then(|pid| service.get_by_id(pid).ok())
+                .filter(|p| p.project_id == project_id)
+                .map(|p| vec![p])
+                .unwrap_or_default()
+        } else {
+            let repo = state.inner().repo_read();
+            let mut out = Vec::new();
+            for link in links {
+                if let Ok(ver) = repo.get_requirement_version_by_id(link.target_version_id) {
+                    if let Ok(req) = repo.get_requirement_by_id(ver.requirement_id) {
+                        if req.project_id == project_id {
+                            out.push(req);
+                        }
+                    }
+                }
+            }
+            drop(repo);
+            out
+        }
+    } else {
+        requirement
+            .parent_id
+            .and_then(|pid| service.get_by_id(pid).ok())
+            .filter(|p| p.project_id == project_id)
+            .map(|p| vec![p])
+            .unwrap_or_default()
+    };
+    let parent = parents.first().cloned();
+    Ok(Json(TraceUpResponse { parent, parents }))
 }
 
 #[derive(Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct TraceUpResponse {
+    /// First parent (backward compatibility).
     pub parent: Option<Requirement>,
+    /// All parent requirements (from links or deprecated parent_id).
+    pub parents: Vec<Requirement>,
 }
 
 /// Trace down: child requirements and linked tests. Project-scoped; accepts session or Bearer.

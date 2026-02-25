@@ -230,7 +230,35 @@ function renderRelationships(root, view, projectId, linkedTests = []) {
     return;
   }
 
-  if (view?.parent) {
+  if (view?.parent_links?.length > 0) {
+    const label = document.createElement('div');
+    label.className = 'small text-muted text-uppercase mb-2';
+    label.textContent = 'Upstream';
+    container.appendChild(label);
+
+    const list = document.createElement('ul');
+    list.className = 'list-unstyled mb-0';
+
+    view.parent_links.forEach((pl) => {
+      if (!pl.target) return;
+      const item = document.createElement('li');
+      item.className = 'd-flex align-items-center mb-2';
+
+      const typeBadge = document.createElement('span');
+      typeBadge.className = 'badge bg-secondary me-2';
+      typeBadge.textContent = pl.link_type;
+
+      const link = document.createElement('a');
+      link.className = 'fw-semibold flex-grow-1';
+      link.href = `/p/${projectId}/requirements/show/${pl.target.id}`;
+      link.textContent = `${pl.target.reference} · ${pl.target.title}`;
+
+      item.append(typeBadge, link);
+      list.appendChild(item);
+    });
+
+    container.appendChild(list);
+  } else if (view?.parent) {
     const wrapper = document.createElement('div');
     wrapper.className = 'mb-3';
 

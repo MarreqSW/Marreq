@@ -227,20 +227,43 @@
         </div>
       </section>
 
-      <section class="c-editor-meta-group">
+      <section class="c-editor-meta-group" data-role="upstream-trace">
         <h2 class="c-editor-meta__title">Upstream Trace</h2>
         <div class="c-editor-field">
-          <label for="parent_id" class="c-editor-field__label">Parent requirement</label>
-          <select name="parent_id" id="parent_id" class="c-editor-field__input">
-            <option value="0" {{#if (eq 0 ../req.req_parent_id)}}selected{{/if}}>None</option>
-            {{#each linked_requirement_options}}
-            <option value="{{id}}" data-reference="{{reference}}" data-title="{{title}}" {{#if (eq id
-              ../req.req_parent_id)}}selected{{/if}}>
-              {{#if reference}}{{reference}}{{else}}RM-{{id}}{{/if}} — {{title}}
-            </option>
+          <label class="c-editor-field__label">Parent requirements</label>
+          <p class="c-editor-field__help mb-2">Link this requirement to one or more parent requirements (e.g. derives from, refines).</p>
+          <ul class="list-unstyled mb-3" data-role="parent-links-list" aria-label="Parent links">
+            {{#each parent_links_edit}}
+            <li class="d-flex align-items-center gap-2 mb-2" data-target-id="{{target_requirement_id}}" data-link-type="{{link_type}}">
+              <span class="badge bg-secondary">{{link_type}}</span>
+              <span class="flex-grow-1">{{#if reference}}{{reference}}{{else}}RM-{{target_requirement_id}}{{/if}} — {{title}}</span>
+              <button type="button" class="btn btn-sm btn-outline-danger" data-role="remove-parent-link" aria-label="Remove parent link">Remove</button>
+            </li>
             {{/each}}
-          </select>
+          </ul>
+          <div class="d-flex flex-wrap gap-2 align-items-end" data-role="add-parent-link">
+            <div class="flex-grow-1 min-w-0">
+              <label for="parent_link_requirement" class="form-label visually-hidden">Requirement</label>
+              <select id="parent_link_requirement" class="form-select form-select-sm" data-role="parent-link-requirement" aria-label="Select parent requirement">
+                <option value="">Select requirement…</option>
+                {{#each linked_requirement_options}}
+                <option value="{{id}}" data-reference="{{reference}}" data-title="{{title}}">{{#if reference}}{{reference}}{{else}}RM-{{id}}{{/if}} — {{title}}</option>
+                {{/each}}
+              </select>
+            </div>
+            <div>
+              <label for="parent_link_type" class="form-label visually-hidden">Link type</label>
+              <select id="parent_link_type" class="form-select form-select-sm" data-role="parent-link-type" aria-label="Link type">
+                {{#each link_types}}
+                <option value="{{this}}">{{this}}</option>
+                {{/each}}
+              </select>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary" data-role="add-parent-link-btn">Add parent</button>
+          </div>
         </div>
+        <input type="hidden" name="parent_id" id="parent_id" value="{{#if req.req_parent_id}}{{req.req_parent_id}}{{else}}0{{/if}}">
+        <input type="hidden" name="parent_links" id="parent_links" value="" data-role="parent-links-value">
       </section>
     </aside>
   </div>

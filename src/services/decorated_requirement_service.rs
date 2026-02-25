@@ -12,7 +12,9 @@ use super::{
     VerificationService,
 };
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{DecoratedRequirement, NewRequirement, ReqParentDisplay, Requirement, TestCase, User};
+use crate::models::{
+    DecoratedRequirement, NewRequirement, ReqParentDisplay, Requirement, TestCase, User,
+};
 use crate::repository::errors::RepoError;
 
 /// High level operations for requirements backed by the shared [`AppState`].
@@ -200,7 +202,10 @@ impl<'a> DecoratedRequirementService<'a> {
         // All parents from requirement_version_links.
         let req_parents: Vec<ReqParentDisplay> = req
             .current_version_id
-            .map(|vid| self.requirement_service.get_parent_requirement_ids_for_version(vid))
+            .map(|vid| {
+                self.requirement_service
+                    .get_parent_requirement_ids_for_version(vid)
+            })
             .unwrap_or_default()
             .into_iter()
             .filter_map(|id| {
@@ -288,7 +293,7 @@ impl<'a> DecoratedRequirementService<'a> {
             req_applicability_id: req.applicability_id,
             req_parent_id: first_parent_id,
             req_parent_title: parent_title,
-            req_parents: req_parents,
+            req_parents,
             req_parent_reference_code: parent_ref,
             req_parent_description: parent_desc,
             req_parent_status_id: parent_status,

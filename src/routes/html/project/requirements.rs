@@ -1323,8 +1323,7 @@ async fn post_edit_requirement(
         .collect();
     let custom_fields = parse_custom_field_values(form.custom_field_values.as_deref());
     let parent_links: Option<Vec<(i32, String)>> = form.parent_links.as_deref().and_then(|json| {
-        let links: Vec<ParentLinkEditInput> =
-            serde_json::from_str(json.trim()).ok()?;
+        let links: Vec<ParentLinkEditInput> = serde_json::from_str(json.trim()).ok()?;
         if links.is_empty() {
             return Some(vec![]);
         }
@@ -1335,8 +1334,7 @@ async fn post_edit_requirement(
                 if pl.target_requirement_id <= 0 {
                     return None;
                 }
-                let target_req =
-                    repo.get_requirement_by_id(pl.target_requirement_id).ok()?;
+                let target_req = repo.get_requirement_by_id(pl.target_requirement_id).ok()?;
                 if target_req.project_id != project_id {
                     return None;
                 }

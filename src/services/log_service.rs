@@ -100,7 +100,10 @@ fn changed_field_labels(old_json: Option<&str>, new_json: Option<&str>) -> Vec<S
             labels.push(field_label(key).to_string());
         }
     }
-    if labels.is_empty() && parent_id_differs(&old_obj, &new_obj) && !parent_requirement_ids_differs(&old_obj, &new_obj) {
+    if labels.is_empty()
+        && parent_id_differs(&old_obj, &new_obj)
+        && !parent_requirement_ids_differs(&old_obj, &new_obj)
+    {
         labels.push("Parent".to_string());
     }
     if parent_requirement_ids_differs(&old_obj, &new_obj) {

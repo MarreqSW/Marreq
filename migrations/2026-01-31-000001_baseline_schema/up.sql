@@ -60,7 +60,7 @@ CREATE TABLE users (
     email VARCHAR NOT NULL DEFAULT ' ',
     creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    password_hash VARCHAR(255) NOT NULL DEFAULT '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m',
+    password_hash VARCHAR(255) NOT NULL DEFAULT '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0',
     is_admin BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -287,4 +287,3 @@ CREATE INDEX idx_requirement_embeddings_vector_hnsw
 
 CREATE INDEX idx_embedding_index_queue_status ON embedding_index_queue(status, created_at);
 CREATE INDEX idx_embedding_index_queue_project ON embedding_index_queue(project_id);
-

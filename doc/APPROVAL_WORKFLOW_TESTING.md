@@ -16,7 +16,7 @@ This guide explains how to test the **approval workflow** for requirement versio
    - App: `cargo run --bin req_man` (or your usual run)
 
 2. **Logged-in session**  
-   - Open http://localhost:8000 (or your base URL) and log in (e.g. **alice** / **password**).  
+   - Open http://localhost:8000 (or your base URL) and log in (e.g. **alice** / **ChangeMe123!**).  
    - You need a user that is **Owner** or **Manager** of the project (or admin).  
    - Default data: **alice** is Owner of project 2 (ReqMan Project), **admin** is Manager of project 2.
 

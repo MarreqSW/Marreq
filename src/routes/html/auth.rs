@@ -31,6 +31,7 @@ pub fn login(
                 AuthError::Verify(_) => "Password verification failed",
                 AuthError::Db(_) => "Database error occurred",
                 AuthError::Audit(_) => "Login successful but failed to audit",
+                AuthError::PasswordPolicy(_) => "Password policy violation",
                 AuthError::NotLoggedIn => "Not logged in",
                 AuthError::InvalidSession => "Invalid session",
                 AuthError::Repo(_) => "Internal server error",
@@ -83,13 +84,6 @@ pub fn change_password(
         ))));
     }
 
-    if password_form.new_password.len() < 8 {
-        return Err(Redirect::to(uri!(change_password_page(
-            error = Some("New password must be at least 8 characters long".to_string()),
-            success = Option::<String>::None
-        ))));
-    }
-
     let mut repo = state.repo_write();
 
     match change_user_password(
@@ -104,16 +98,17 @@ pub fn change_password(
         )))),
         Err(err) => {
             let error_msg = match err {
-                AuthError::InvalidCredentials => "Invalid current password",
-                AuthError::Verify(_) => "Password verification failed",
-                AuthError::Db(_) => "Database error occurred",
-                AuthError::NotLoggedIn => "Not logged in",
-                AuthError::InvalidSession => "Invalid session",
-                AuthError::Audit(_) => "Failed to log password change",
-                AuthError::Repo(_) => "Internal server error",
+                AuthError::InvalidCredentials => "Invalid current password".to_string(),
+                AuthError::Verify(_) => "Password verification failed".to_string(),
+                AuthError::PasswordPolicy(reason) => reason,
+                AuthError::Db(_) => "Database error occurred".to_string(),
+                AuthError::NotLoggedIn => "Not logged in".to_string(),
+                AuthError::InvalidSession => "Invalid session".to_string(),
+                AuthError::Audit(_) => "Failed to log password change".to_string(),
+                AuthError::Repo(_) => "Internal server error".to_string(),
             };
             Err(Redirect::to(uri!(change_password_page(
-                error = Some(error_msg.to_string()),
+                error = Some(error_msg),
                 success = Option::<String>::None
             ))))
         }

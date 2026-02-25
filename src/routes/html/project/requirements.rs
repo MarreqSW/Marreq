@@ -2693,17 +2693,16 @@ mod tests {
         );
 
         // Link child (version 200) -> parent (version 100)
-        repo.requirement_version_links
-            .push(RequirementVersionLink {
-                id: 1,
-                source_version_id: 200,
-                target_version_id: 100,
-                link_type: "DERIVES_FROM".to_string(),
-                rationale: None,
-                project_id: PRIMARY_PROJECT,
-                created_at: timestamp(),
-                metadata: None,
-            });
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 1,
+            source_version_id: 200,
+            target_version_id: 100,
+            link_type: "DERIVES_FROM".to_string(),
+            rationale: None,
+            project_id: PRIMARY_PROJECT,
+            created_at: timestamp(),
+            metadata: None,
+        });
 
         let client = test_client(repo).await;
 

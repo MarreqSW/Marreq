@@ -1096,43 +1096,97 @@ mod tests {
         repo.requirements.insert(3, req3);
         repo.requirements.insert(4, req4);
         // Insert RequirementVersions
-        repo.requirement_versions.insert(10, RequirementVersion {
-            id: 10, requirement_id: 1, title: "R1".into(), description: "".into(),
-            status_id: 1, author_id: 1, reviewer_id: 1, category_id: 1,
-            applicability_id: 1, justification: None, deadline_date: None,
-            created_at: timestamp(), approval_state: "draft".into(),
-            approved_by: None, approved_at: None,
-        });
-        repo.requirement_versions.insert(20, RequirementVersion {
-            id: 20, requirement_id: 2, title: "R2".into(), description: "".into(),
-            status_id: 1, author_id: 1, reviewer_id: 1, category_id: 1,
-            applicability_id: 1, justification: None, deadline_date: None,
-            created_at: timestamp(), approval_state: "draft".into(),
-            approved_by: None, approved_at: None,
-        });
-        repo.requirement_versions.insert(30, RequirementVersion {
-            id: 30, requirement_id: 3, title: "R3".into(), description: "".into(),
-            status_id: 1, author_id: 1, reviewer_id: 1, category_id: 1,
-            applicability_id: 1, justification: None, deadline_date: None,
-            created_at: timestamp(), approval_state: "draft".into(),
-            approved_by: None, approved_at: None,
-        });
+        repo.requirement_versions.insert(
+            10,
+            RequirementVersion {
+                id: 10,
+                requirement_id: 1,
+                title: "R1".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: timestamp(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        repo.requirement_versions.insert(
+            20,
+            RequirementVersion {
+                id: 20,
+                requirement_id: 2,
+                title: "R2".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: timestamp(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        repo.requirement_versions.insert(
+            30,
+            RequirementVersion {
+                id: 30,
+                requirement_id: 3,
+                title: "R3".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: timestamp(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
         // Links: req2 -> req1, req3 -> req1 (source=child version, target=parent version)
         repo.requirement_version_links.push(RequirementVersionLink {
-            id: 1, source_version_id: 20, target_version_id: 10,
-            link_type: "DERIVES_FROM".into(), rationale: None,
-            project_id: 7, created_at: timestamp(), metadata: None,
+            id: 1,
+            source_version_id: 20,
+            target_version_id: 10,
+            link_type: "DERIVES_FROM".into(),
+            rationale: None,
+            project_id: 7,
+            created_at: timestamp(),
+            metadata: None,
         });
         repo.requirement_version_links.push(RequirementVersionLink {
-            id: 2, source_version_id: 30, target_version_id: 10,
-            link_type: "DERIVES_FROM".into(), rationale: None,
-            project_id: 7, created_at: timestamp(), metadata: None,
+            id: 2,
+            source_version_id: 30,
+            target_version_id: 10,
+            link_type: "DERIVES_FROM".into(),
+            rationale: None,
+            project_id: 7,
+            created_at: timestamp(),
+            metadata: None,
         });
         // req4 -> req2 (not a child of req1)
         repo.requirement_version_links.push(RequirementVersionLink {
-            id: 3, source_version_id: 40, target_version_id: 20,
-            link_type: "DERIVES_FROM".into(), rationale: None,
-            project_id: 7, created_at: timestamp(), metadata: None,
+            id: 3,
+            source_version_id: 40,
+            target_version_id: 20,
+            link_type: "DERIVES_FROM".into(),
+            rationale: None,
+            project_id: 7,
+            created_at: timestamp(),
+            metadata: None,
         });
         let state = state_with_repo(repo);
         let service = RequirementService::new(&state);

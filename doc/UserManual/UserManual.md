@@ -54,7 +54,7 @@ See **[Typical Workflow with ReqMan](Workflow.md)** for a step-by-step workflow 
 
 ![Login page](screenshots/login.png)
 
-If you use a demo setup, typical users include `alice`, `dr_smith`, `eng_jones`, `tech_lee`, `qa_wilson`, and `admin`; the default password is often `password` (check with your administrator).
+If you use a demo setup, typical users include `alice`, `dr_smith`, `eng_jones`, `tech_lee`, `qa_wilson`, and `admin`; the default password is `ChangeMe123!` unless your administrator changed it.
 
 - **Theme**: Use the sun/moon toggle on the login card to switch between light and dark mode.
 - **Logout**: Click your name in the top-right → **Logout**.

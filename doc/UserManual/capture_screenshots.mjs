@@ -17,7 +17,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, 'screenshots');
 const BASE_URL = process.env.REQMAN_URL || 'http://localhost:8000';
 const USER = process.env.REQMAN_USER || 'alice';
-const PASS = process.env.REQMAN_PASS || 'password';
+const PASS = process.env.REQMAN_PASS || 'ChangeMe123!';
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });

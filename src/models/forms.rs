@@ -235,7 +235,7 @@ pub struct NewBaselineTraceability {
 /// Form used to insert or update [`User`] records.
 ///
 /// # Security Note
-/// The `password_hash` field stores the bcrypt hash and is protected with
+/// The `password_hash` field stores the password hash and is protected with
 /// `#[serde(skip_serializing)]` to prevent accidental exposure in responses.
 /// This struct is for internal use after password hashing. API endpoints should
 /// use [`UserCreateRequest`] which accepts plain passwords.

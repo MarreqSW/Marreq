@@ -102,7 +102,6 @@ export class ReqManClient {
     status_id: number;
     applicability_id: number;
     project_id: number;
-    parent_id?: number | null;
     justification?: string | null;
     verification_method_ids: number[];
     custom_fields?: Array<{ field_id: number; value: string }>;
@@ -125,7 +124,6 @@ export class ReqManClient {
       reviewer_id?: number;
       category_id?: number;
       applicability_id?: number;
-      parent_id?: number | null;
       custom_fields?: Array<{ field_id: number; value: string }>;
     }
   ) {

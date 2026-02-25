@@ -236,12 +236,7 @@ impl<'a> RequirementService<'a> {
                 return Ok(out);
             }
         }
-        drop(repo);
-        Ok(self
-            .list_all()?
-            .into_iter()
-            .filter(|r| r.parent_id == Some(parent_id))
-            .collect())
+        Ok(vec![])
     }
 
     /// Child requirements of a requirement in the same project (for trace_down).
@@ -268,10 +263,7 @@ impl<'a> RequirementService<'a> {
                 return Ok(reqs);
             }
         }
-        drop(repo);
-        let mut reqs = self.list_by_project(project_id)?;
-        reqs.retain(|r| r.parent_id == Some(parent_id));
-        Ok(reqs)
+        Ok(vec![])
     }
 
     /// Parent links for a requirement version (source_version_id = this version).
@@ -723,7 +715,7 @@ mod tests {
             reviewer_id: 1,
             reference_code: reference.into(),
             category_id: 1,
-            parent_id: Some(1),
+            parent_id: None,
             creation_date: timestamp(),
             update_date: timestamp(),
             deadline_date: Some(timestamp()),
@@ -745,7 +737,6 @@ mod tests {
             author_id: 1,
             category_id: 1,
             status_id: 1,
-            parent_id: None,
             reference_code: "  REQ-123  ".into(),
             reviewer_id: 1,
             applicability_id: 1,
@@ -1048,7 +1039,6 @@ mod tests {
                 author_id: 1,
                 reviewer_id: 1,
                 category_id: 1,
-                parent_id: None,
                 applicability_id: 1,
                 justification: None,
                 deadline_date: None,
@@ -1069,7 +1059,6 @@ mod tests {
                 author_id: 1,
                 reviewer_id: 1,
                 category_id: 1,
-                parent_id: None,
                 applicability_id: 1,
                 justification: None,
                 deadline_date: None,
@@ -1090,19 +1079,115 @@ mod tests {
 
     #[test]
     fn get_by_parent_id_returns_children() {
+        use crate::models::entities::RequirementVersionLink;
         let mut repo = DieselRepoMock::default();
+        // Parent requirement (id=1) with current_version_id=10
         let mut req1 = requirement(1, 7, "REQ-001");
-        req1.parent_id = None;
+        req1.current_version_id = Some(10);
+        // Child requirements (id=2 with version 20, id=3 with version 30)
         let mut req2 = requirement(2, 7, "REQ-002");
-        req2.parent_id = Some(1);
+        req2.current_version_id = Some(20);
         let mut req3 = requirement(3, 7, "REQ-003");
-        req3.parent_id = Some(1);
+        req3.current_version_id = Some(30);
         let mut req4 = requirement(4, 7, "REQ-004");
-        req4.parent_id = Some(2);
+        req4.current_version_id = Some(40);
         repo.requirements.insert(1, req1);
         repo.requirements.insert(2, req2);
         repo.requirements.insert(3, req3);
         repo.requirements.insert(4, req4);
+        // Insert RequirementVersions
+        repo.requirement_versions.insert(
+            10,
+            RequirementVersion {
+                id: 10,
+                requirement_id: 1,
+                title: "R1".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: timestamp(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        repo.requirement_versions.insert(
+            20,
+            RequirementVersion {
+                id: 20,
+                requirement_id: 2,
+                title: "R2".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: timestamp(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        repo.requirement_versions.insert(
+            30,
+            RequirementVersion {
+                id: 30,
+                requirement_id: 3,
+                title: "R3".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: timestamp(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        // Links: req2 -> req1, req3 -> req1 (source=child version, target=parent version)
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 1,
+            source_version_id: 20,
+            target_version_id: 10,
+            link_type: "DERIVES_FROM".into(),
+            rationale: None,
+            project_id: 7,
+            created_at: timestamp(),
+            metadata: None,
+        });
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 2,
+            source_version_id: 30,
+            target_version_id: 10,
+            link_type: "DERIVES_FROM".into(),
+            rationale: None,
+            project_id: 7,
+            created_at: timestamp(),
+            metadata: None,
+        });
+        // req4 -> req2 (not a child of req1)
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 3,
+            source_version_id: 40,
+            target_version_id: 20,
+            link_type: "DERIVES_FROM".into(),
+            rationale: None,
+            project_id: 7,
+            created_at: timestamp(),
+            metadata: None,
+        });
         let state = state_with_repo(repo);
         let service = RequirementService::new(&state);
 

@@ -584,7 +584,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: None,
                 reference_code: "REF-001".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,
@@ -605,7 +604,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: None,
                 reference_code: "REF".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,
@@ -628,7 +626,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: None,
                 reference_code: "REF".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,
@@ -950,7 +947,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: None,
                 reference_code: "REF".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,
@@ -1414,7 +1410,6 @@ mod tests {
                 author_id: 1,
                 category_id: 1,
                 status_id: 1,
-                parent_id: Some(10),
                 reference_code: "REF".to_string(),
                 reviewer_id: 1,
                 applicability_id: 1,
@@ -1423,7 +1418,6 @@ mod tests {
             };
 
             assert_eq!(new_req.id, Some(1));
-            assert_eq!(new_req.parent_id, Some(10));
             assert_eq!(new_req.justification, Some("Just".to_string()));
         }
 

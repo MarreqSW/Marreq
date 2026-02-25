@@ -614,7 +614,6 @@ mod tests {
                 author_id: 1,
                 reviewer_id: 1,
                 category_id: 1,
-                parent_id: None,
                 applicability_id: 1,
                 justification: None,
                 deadline_date: Some(test_datetime()),

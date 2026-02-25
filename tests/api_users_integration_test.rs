@@ -64,7 +64,7 @@ mod test_support {
             "username": username,
             "name": name,
             "email": format!("{}@example.com", username),
-            "password": "password123",
+            "password": "Voyager!Marble_2026",
             "is_admin": is_admin
         })
     }

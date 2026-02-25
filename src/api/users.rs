@@ -106,7 +106,7 @@ mod tests {
                     "username": "bob",
                     "name": "Bob",
                     "email": "bob@example.com",
-                    "password": "secret",
+                    "password": "Skyline!Current_2026",
                     "is_admin": false
                 })
                 .to_string(),
@@ -132,7 +132,7 @@ mod tests {
                     "username": "carol",
                     "name": "Carol",
                     "email": "carol@example.com",
-                    "password": "secret",
+                    "password": "Orbit!Delta_2026",
                     "is_admin": false
                 })
                 .to_string(),

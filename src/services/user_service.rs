@@ -5,6 +5,7 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::auth::password::hash_password;
+use crate::auth::password_policy::{validate_password, PasswordContext};
 use crate::logger::{LogCtx, Logger};
 use crate::models::{NewUser, UpdateUser, User, UserCreateRequest};
 use crate::repository::errors::RepoError;
@@ -45,9 +46,19 @@ impl<'a> UserService<'a> {
 
     /// Create a new user from a request containing a plain password.
     ///
-    /// This method sanitizes input, hashes the password, and creates the user.
-    /// Always provide plain text passwords - they will be hashed with bcrypt.
+    /// This method validates input, hashes the password, and creates the user.
+    /// Always provide plain text passwords - they will be hashed server-side.
     pub fn create(&self, actor: &User, request: UserCreateRequest) -> Result<i32, RepoError> {
+        validate_password(
+            &request.password,
+            PasswordContext {
+                username: Some(&request.username),
+                email: Some(&request.email),
+                full_name: Some(&request.name),
+            },
+        )
+        .map_err(|e| RepoError::BadInput(e.to_string()))?;
+
         let password_hash = hash_password(&request.password)
             .map_err(|e| RepoError::BadInput(format!("Password hashing failed: {}", e)))?;
 
@@ -162,7 +173,7 @@ mod tests {
             username: "  alice  ".into(),
             name: "  Alice Example  ".into(),
             email: "  alice@example.com  ".into(),
-            password: "secret".into(),
+            password: "CobaltRiver!Vacuum88".into(),
             is_admin: false,
         }
     }
@@ -280,7 +291,7 @@ mod tests {
             username: "  bob  ".into(),
             name: "  Bob Example  ".into(),
             email: "  bob@example.com  ".into(),
-            password: "plaintext_password".into(),
+            password: "Skyline!Current_2026".into(),
             is_admin: false,
         };
 
@@ -290,9 +301,9 @@ mod tests {
         assert_eq!(stored.username, "bob");
         assert_eq!(stored.name, "Bob Example");
         assert_eq!(stored.email, "bob@example.com");
-        // Password should be hashed (bcrypt hashes start with $2)
-        assert!(stored.password_hash.starts_with("$2"));
-        assert_ne!(stored.password_hash, "plaintext_password");
+        // Password should be hashed (argon2 hashes start with $argon2)
+        assert!(stored.password_hash.starts_with("$argon2"));
+        assert_ne!(stored.password_hash, "Skyline!Current_2026");
     }
 
     #[test]
@@ -478,19 +489,51 @@ mod tests {
         let state = state_with_repo(repo);
         let service = UserService::new(&state);
 
-        // Create request with empty password (bcrypt might reject this)
         let request = UserCreateRequest {
             username: "test".into(),
             name: "Test".into(),
             email: "test@example.com".into(),
-            password: "".into(), // Empty password
+            password: "".into(),
             is_admin: false,
         };
 
-        // This might succeed or fail depending on bcrypt implementation
-        // We're just testing that the service handles it
         let result = service.create(&actor(), request);
-        // Either succeeds or fails gracefully
-        assert!(result.is_ok() || result.is_err());
+        assert!(matches!(result, Err(RepoError::BadInput(_))));
+    }
+
+    #[test]
+    fn create_rejects_common_passwords() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let request = UserCreateRequest {
+            username: "test".into(),
+            name: "Test User".into(),
+            email: "test@example.com".into(),
+            password: "password1".into(),
+            is_admin: false,
+        };
+
+        let result = service.create(&actor(), request);
+        assert!(matches!(result, Err(RepoError::BadInput(_))));
+    }
+
+    #[test]
+    fn create_rejects_context_specific_passwords() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let request = UserCreateRequest {
+            username: "alice".into(),
+            name: "Alice Example".into(),
+            email: "alice@example.com".into(),
+            password: "alice-secure-pass-2026".into(),
+            is_admin: false,
+        };
+
+        let result = service.create(&actor(), request);
+        assert!(matches!(result, Err(RepoError::BadInput(_))));
     }
 }

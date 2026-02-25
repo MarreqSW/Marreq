@@ -98,9 +98,14 @@
               <span class="reqman-requirements-cell__display reqman-requirements-cell-muted">—</span>
             {{/if}}
           </td>
-          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--parent reqman-requirements-cell--editable" data-inline-edit="parent" title="Click to change">
-            {{#if req_parent_id}}
-              <a href="/p/{{../project.id}}/requirements/show/{{req_parent_id}}" class="reqman-requirements-parent-link reqman-requirements-cell__display" title="View parent requirement" data-requirement-preview data-requirement-preview-project-id="{{../project.id}}" data-requirement-preview-id="{{req_parent_id}}" data-requirement-preview-ref="{{req_parent_reference_code}}" data-requirement-preview-title="{{req_parent_title}}" data-requirement-preview-description="{{req_parent_description}}" data-requirement-preview-status="{{req_parent_status_id}}" data-requirement-preview-category="{{req_parent_category_id}}">{{req_parent_title}}</a>
+          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--parent">
+            {{#if req_parents}}
+              <span class="reqman-requirements-cell__display reqman-requirements-parents-list">
+                {{#each req_parents}}
+                  {{#unless @first}}<span class="reqman-requirements-parents-sep">, </span>{{/unless}}
+                  <a href="/p/{{../../project.id}}/requirements/show/{{id}}" class="reqman-requirements-parent-link" title="View {{reference_code}} — {{title}}" data-requirement-preview data-requirement-preview-project-id="{{../../project.id}}" data-requirement-preview-id="{{id}}" data-requirement-preview-ref="{{reference_code}}" data-requirement-preview-title="{{title}}">{{#if reference_code}}{{reference_code}} — {{/if}}{{title}}</a>
+                {{/each}}
+              </span>
             {{else}}
               <span class="reqman-requirements-cell__display reqman-requirements-cell-muted">—</span>
             {{/if}}
@@ -192,10 +197,13 @@
                 <dd>{{#if author_id}}{{author_id}}{{else}}—{{/if}}</dd>
               </div>
               <div>
-                <dt>Parent</dt>
+                <dt>Parents</dt>
                 <dd>
-                  {{#if req_parent_id}}
-                    <a href="/p/{{project.id}}/requirements/show/{{req_parent_id}}">{{req_parent_title}}</a>
+                  {{#if req_parents}}
+                    {{#each req_parents}}
+                      {{#unless @first}}, {{/unless}}
+                      <a href="/p/{{../../project.id}}/requirements/show/{{id}}">{{#if reference_code}}{{reference_code}} — {{/if}}{{title}}</a>
+                    {{/each}}
                   {{else}}
                     —
                   {{/if}}

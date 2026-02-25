@@ -216,6 +216,7 @@ impl<'a> ReqIFService<'a> {
                 payload,
                 &verification_method_ids,
                 None,
+                None,
             );
         }
 

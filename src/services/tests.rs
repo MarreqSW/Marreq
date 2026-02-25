@@ -50,7 +50,6 @@ fn sample_requirement_payload() -> NewRequirement {
         author_id: 1,
         category_id: 1,
         status_id: 1,
-        parent_id: None,
         reference_code: "  REQ-123  ".into(),
         reviewer_id: 1,
         applicability_id: 1,

@@ -19,7 +19,7 @@ pub struct ClearSuspectRequest {
 }
 
 /// Trace up: parent requirement(s) for a requirement. Project-scoped; accepts session or Bearer.
-/// Returns multiple parents when requirement version links are used; otherwise single parent from deprecated parent_id.
+/// Returns multiple parents from requirement version links (DAG).
 #[get("/projects/<project_id>/requirements/<id>/trace_up")]
 pub async fn trace_up(
     _access: ProjectAccessOrBearer,
@@ -36,35 +36,21 @@ pub async fn trace_up(
         let links = service
             .get_parent_links_for_version(vid)
             .unwrap_or_default();
-        if links.is_empty() {
-            requirement
-                .parent_id
-                .and_then(|pid| service.get_by_id(pid).ok())
-                .filter(|p| p.project_id == project_id)
-                .map(|p| vec![p])
-                .unwrap_or_default()
-        } else {
-            let repo = state.inner().repo_read();
-            let mut out = Vec::new();
-            for link in links {
-                if let Ok(ver) = repo.get_requirement_version_by_id(link.target_version_id) {
-                    if let Ok(req) = repo.get_requirement_by_id(ver.requirement_id) {
-                        if req.project_id == project_id {
-                            out.push(req);
-                        }
+        let repo = state.inner().repo_read();
+        let mut out = Vec::new();
+        for link in links {
+            if let Ok(ver) = repo.get_requirement_version_by_id(link.target_version_id) {
+                if let Ok(req) = repo.get_requirement_by_id(ver.requirement_id) {
+                    if req.project_id == project_id {
+                        out.push(req);
                     }
                 }
             }
-            drop(repo);
-            out
         }
+        drop(repo);
+        out
     } else {
-        requirement
-            .parent_id
-            .and_then(|pid| service.get_by_id(pid).ok())
-            .filter(|p| p.project_id == project_id)
-            .map(|p| vec![p])
-            .unwrap_or_default()
+        vec![]
     };
     let parent = parents.first().cloned();
     Ok(Json(TraceUpResponse { parent, parents }))
@@ -75,7 +61,7 @@ pub async fn trace_up(
 pub struct TraceUpResponse {
     /// First parent (backward compatibility).
     pub parent: Option<Requirement>,
-    /// All parent requirements (from links or deprecated parent_id).
+    /// All parent requirements (from links).
     pub parents: Vec<Requirement>,
 }
 

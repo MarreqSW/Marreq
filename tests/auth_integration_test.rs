@@ -132,6 +132,18 @@ async fn login_unknown_user_fails() {
     assert!(location.contains("error=Invalid%20username%20or%20password"));
 }
 
+#[rocket::async_test]
+async fn login_page_uses_masked_password_with_password_manager_autocomplete() {
+    let client = test_client(base_repo()).await;
+
+    let response = client.get("/login").dispatch().await;
+    assert_eq!(response.status(), Status::Ok);
+
+    let html = response.into_string().await.expect("body");
+    assert!(html.contains("type=\"password\""));
+    assert!(html.contains("autocomplete=\"current-password\""));
+}
+
 // ============================================================================
 // GET /logout
 // ============================================================================
@@ -175,7 +187,7 @@ async fn change_password_success() {
         .post("/change_password")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
-        .body("current_password=secret&new_password=newsecret123&confirm_password=newsecret123")
+        .body("current_password=secret&new_password=CobaltRiver%21Vacuum88&confirm_password=CobaltRiver%21Vacuum88")
         .dispatch()
         .await;
 
@@ -190,7 +202,7 @@ async fn change_password_success() {
     let login_response = client
         .post("/login")
         .header(ContentType::Form)
-        .body("username=alice&password=newsecret123")
+        .body("username=alice&password=CobaltRiver%21Vacuum88")
         .dispatch()
         .await;
 
@@ -206,7 +218,9 @@ async fn change_password_mismatch_fails() {
         .post("/change_password")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
-        .body("current_password=secret&new_password=newsecret123&confirm_password=mismatch")
+        .body(
+            "current_password=secret&new_password=CobaltRiver%21Vacuum88&confirm_password=mismatch",
+        )
         .dispatch()
         .await;
 
@@ -229,7 +243,7 @@ async fn change_password_too_short_fails() {
 
     assert_eq!(response.status(), Status::SeeOther);
     let location = response.headers().get_one("Location").unwrap();
-    assert!(location.contains("error=New%20password%20must%20be%20at%20least%208%20characters"));
+    assert!(location.contains("error=Password%20must%20be%20at%20least%208%20characters%20long"));
 }
 
 #[rocket::async_test]
@@ -240,7 +254,7 @@ async fn change_password_wrong_current_fails() {
         .post("/change_password")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
-        .body("current_password=wrong&new_password=newsecret123&confirm_password=newsecret123")
+        .body("current_password=wrong&new_password=CobaltRiver%21Vacuum88&confirm_password=CobaltRiver%21Vacuum88")
         .dispatch()
         .await;
 
@@ -256,7 +270,7 @@ async fn change_password_requires_login() {
     let response = client
         .post("/change_password")
         .header(ContentType::Form)
-        .body("current_password=secret&new_password=newsecret123&confirm_password=newsecret123")
+        .body("current_password=secret&new_password=CobaltRiver%21Vacuum88&confirm_password=CobaltRiver%21Vacuum88")
         .dispatch()
         .await;
 
@@ -270,4 +284,53 @@ async fn change_password_requires_login() {
     assert_eq!(response.status(), Status::SeeOther);
     let location = response.headers().get_one("Location").unwrap();
     assert!(location.contains("error=Not%20logged%20in"));
+}
+
+#[rocket::async_test]
+async fn change_password_page_uses_masked_inputs_and_autocomplete_hints() {
+    let client = test_client(base_repo()).await;
+
+    let response = client.get("/change_password").dispatch().await;
+    assert_eq!(response.status(), Status::Ok);
+
+    let html = response.into_string().await.expect("body");
+    assert!(html.contains("id=\"current_password\""));
+    assert!(html.contains("autocomplete=\"current-password\""));
+    assert!(html.contains("id=\"new_password\""));
+    assert!(html.contains("autocomplete=\"new-password\""));
+}
+
+#[rocket::async_test]
+async fn change_password_rejects_common_password() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .post("/change_password")
+        .header(ContentType::Form)
+        .private_cookie(session_cookie(1))
+        .body("current_password=secret&new_password=password1&confirm_password=password1")
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::SeeOther);
+    let location = response.headers().get_one("Location").unwrap();
+    assert!(location
+        .contains("error=Password%20is%20too%20common.%20Choose%20a%20more%20unique%20password"));
+}
+
+#[rocket::async_test]
+async fn change_password_rejects_context_specific_password() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .post("/change_password")
+        .header(ContentType::Form)
+        .private_cookie(session_cookie(1))
+        .body("current_password=secret&new_password=alice-strong-passphrase&confirm_password=alice-strong-passphrase")
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::SeeOther);
+    let location = response.headers().get_one("Location").unwrap();
+    assert!(location.contains("error=Password%20must%20not%20contain%20context-specific%20terms"));
 }

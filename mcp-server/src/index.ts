@@ -261,7 +261,6 @@ async function main() {
           category_id: z.number(),
           status_id: z.number(),
           applicability_id: z.number(),
-          parent_id: z.number().nullable().optional(),
           justification: z.string().nullable().optional(),
           verification_method_ids: z.array(z.number()),
           custom_fields: z
@@ -302,7 +301,6 @@ async function main() {
             reviewer_id: z.number().optional(),
             category_id: z.number().optional(),
             applicability_id: z.number().optional(),
-            parent_id: z.number().nullable().optional(),
             custom_fields: z
               .array(z.object({ field_id: z.number(), value: z.string() }))
               .optional(),

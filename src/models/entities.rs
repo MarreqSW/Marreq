@@ -36,7 +36,6 @@ pub struct RequirementVersion {
     pub author_id: i32,
     pub reviewer_id: i32,
     pub category_id: i32,
-    pub parent_id: Option<i32>,
     pub applicability_id: i32,
     pub justification: Option<String>,
     pub deadline_date: Option<chrono::NaiveDateTime>,

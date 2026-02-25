@@ -763,7 +763,6 @@ impl RequirementsRepository for DieselRepoMock {
             author_id: _new.author_id,
             reviewer_id: _new.reviewer_id,
             category_id: _new.category_id,
-            parent_id: _new.parent_id,
             applicability_id: _new.applicability_id,
             justification: _new.justification.clone(),
             deadline_date: Some(now),
@@ -784,7 +783,7 @@ impl RequirementsRepository for DieselRepoMock {
             reviewer_id: _new.reviewer_id,
             reference_code: _new.reference_code.clone(),
             category_id: _new.category_id,
-            parent_id: _new.parent_id,
+            parent_id: None,
             creation_date: now,
             update_date: now,
             deadline_date: Some(now),
@@ -817,7 +816,6 @@ impl RequirementsRepository for DieselRepoMock {
                     author_id: _new.author_id,
                     reviewer_id: _new.reviewer_id,
                     category_id: _new.category_id,
-                    parent_id: _new.parent_id,
                     applicability_id: _new.applicability_id,
                     justification: _new.justification.clone(),
                     deadline_date: Some(now),
@@ -835,7 +833,6 @@ impl RequirementsRepository for DieselRepoMock {
                 req.reviewer_id = _new.reviewer_id;
                 req.reference_code = _new.reference_code.clone();
                 req.category_id = _new.category_id;
-                req.parent_id = _new.parent_id;
                 req.applicability_id = _new.applicability_id;
                 req.justification = _new.justification.clone();
                 req.project_id = _new.project_id;
@@ -1414,7 +1411,7 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
                 reviewer_id: version.reviewer_id,
                 reference_code: req.reference_code.clone(),
                 category_id: version.category_id,
-                parent_id: version.parent_id,
+                parent_id: None, // populated from requirement_version_links by service/decorator layer
                 creation_date: version.created_at,
                 update_date: version.created_at,
                 deadline_date: version.deadline_date,

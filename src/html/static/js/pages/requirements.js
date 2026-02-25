@@ -710,12 +710,8 @@ function showDuplicateModal(requirement) {
   }
   document.getElementById('dup_req_applicability').value = requirement.applicability_id || '';
   document.getElementById('dup_req_reviewer').value = requirement.reviewer_id || '';
-  document.getElementById('dup_req_parent').value = requirement.parent_id || '0';
   document.getElementById('dup_project_id').value = requirement.project_id;
   document.getElementById('dup_req_author').value = requirement.author_id;
-  
-  // Load parent requirement options from the current page's requirements
-  loadParentRequirementOptionsFromPage(requirement.id, requirement.parent_id);
 
   // Show the modal using Bootstrap
   if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -727,89 +723,6 @@ function showDuplicateModal(requirement) {
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('modal-open');
   }
-}
-
-function loadParentRequirementOptionsFromPage(currentReqId, selectedValue) {
-  const select = document.getElementById('dup_req_parent');
-  
-  // Clear existing options except the first one (None)
-  while (select.options.length > 1) {
-    select.remove(1);
-  }
-  
-  // Get all requirements from the page
-  const allRequirements = [];
-  
-  // Collect from table view rows
-  state.rows.forEach(entry => {
-    const row = entry.row;
-    const reqId = parseInt(row.dataset.requirementId, 10);
-    if (reqId && reqId !== currentReqId) {
-      const titleCell = row.querySelector('.reqman-requirements-title');
-      const keyCell = row.querySelector('.reqman-requirements-key__value');
-      if (titleCell && keyCell) {
-        allRequirements.push({
-          id: reqId,
-          reference: keyCell.textContent.trim(),
-          title: titleCell.textContent.trim()
-        });
-      }
-    }
-  });
-  
-  // Collect from card view cards
-  state.cards.forEach(entry => {
-    const card = entry.card;
-    const reqId = parseInt(card.dataset.requirementId, 10);
-    if (reqId && reqId !== currentReqId) {
-      const titleEl = card.querySelector('.reqman-requirement-card__title');
-      const keyEl = card.querySelector('.reqman-requirement-card__key');
-      if (titleEl && keyEl) {
-        // Check if not already added
-        if (!allRequirements.find(r => r.id === reqId)) {
-          allRequirements.push({
-            id: reqId,
-            reference: keyEl.textContent.trim(),
-            title: titleEl.textContent.trim()
-          });
-        }
-      }
-    }
-  });
-  
-  // Collect from tree view nodes
-  state.treeNodes.forEach(entry => {
-    const node = entry.node;
-    const reqId = parseInt(node.dataset.requirementId, 10);
-    if (reqId && reqId !== currentReqId) {
-      const titleEl = node.querySelector('.c-tree__title');
-      const keyEl = node.querySelector('.c-tree__key');
-      if (titleEl && keyEl) {
-        // Check if not already added
-        if (!allRequirements.find(r => r.id === reqId)) {
-          allRequirements.push({
-            id: reqId,
-            reference: keyEl.textContent.trim(),
-            title: titleEl.textContent.trim()
-          });
-        }
-      }
-    }
-  });
-  
-  // Sort by ID
-  allRequirements.sort((a, b) => a.id - b.id);
-  
-  // Add options to select
-  allRequirements.forEach(req => {
-    const option = document.createElement('option');
-    option.value = req.id;
-    option.textContent = `${req.reference} - ${req.title}`;
-    if (req.id === selectedValue) {
-      option.selected = true;
-    }
-    select.appendChild(option);
-  });
 }
 
 /**
@@ -859,28 +772,6 @@ function getInlineEditConfig() {
   }
 }
 
-function getParentOptionsForInlineEdit(currentReqId) {
-  const options = [];
-  const add = (list, getKey, getTitle, getRef) => {
-    (list || []).forEach((entry) => {
-      const row = entry.row || entry.card || entry.node;
-      const reqId = parseInt(row?.dataset?.requirementId, 10);
-      if (!reqId || reqId === currentReqId) return;
-      const keyEl = row.querySelector?.('.reqman-requirements-key__value, .reqman-requirement-card__key, .c-tree__key');
-      const titleEl = row.querySelector?.('.reqman-requirements-title, .reqman-requirement-card__title, .c-tree__title');
-      const reference = keyEl?.textContent?.trim() || '';
-      const title = titleEl?.textContent?.trim() || '';
-      if (options.some((o) => o.id === reqId)) return;
-      options.push({ id: reqId, reference, title });
-    });
-  };
-  add(state.rows);
-  add(state.cards);
-  add(state.treeNodes);
-  options.sort((a, b) => a.id - b.id);
-  return options;
-}
-
 function openInlineEdit(cell, field, row, config) {
   // Parent is display-only in list view; edit via requirement edit page.
   if (field === 'parent') return;
@@ -912,13 +803,6 @@ function openInlineEdit(cell, field, row, config) {
     (config.verifications || []).forEach((v) => {
       const opt = new Option(v.title, String(v.id), false, currentIds.includes(v.id));
       select.appendChild(opt);
-    });
-  } else if (field === 'parent') {
-    const currentId = parseInt(row.dataset.parentId, 10) || 0;
-    select.appendChild(new Option('None', '0', false, currentId === 0));
-    getParentOptionsForInlineEdit(requirementId).forEach((req) => {
-      const label = req.reference ? `${req.reference} — ${req.title}` : `RM-${req.id} — ${req.title}`;
-      select.appendChild(new Option(label, String(req.id), false, req.id === currentId));
     });
   }
 
@@ -961,17 +845,6 @@ function openInlineEdit(cell, field, row, config) {
       verificationIds = ids;
       payload = { verification_method_ids: ids };
       displayText = (config.verifications || []).filter((v) => ids.includes(v.id)).map((v) => v.title).join(', ') || '—';
-    } else if (field === 'parent') {
-      const v = parseInt(select.value, 10);
-      if (Number.isNaN(v)) return;
-      parentId = v;
-      payload = { parent_id: v === 0 ? 0 : v };
-      if (v === 0) {
-        displayText = '—';
-      } else {
-        const opt = select.options[select.selectedIndex];
-        displayText = opt ? opt.textContent.trim() : '—';
-      }
     }
     applied = true;
     if (select.parentNode) select.remove();
@@ -1005,14 +878,6 @@ function openInlineEdit(cell, field, row, config) {
       } else if (field === 'verification') {
         row.dataset.verificationIds = (verificationIds || []).join(' ');
         displayEl.textContent = displayText;
-      } else if (field === 'parent') {
-        row.dataset.parentId = parentId === 0 ? '0' : String(parentId);
-        displayEl.textContent = displayText;
-        if (displayEl.tagName === 'A') {
-          displayEl.href = parentId === 0 ? '#' : `/p/${projectId}/requirements/show/${parentId}`;
-          displayEl.style.pointerEvents = parentId === 0 ? 'none' : 'auto';
-        }
-        updateRequirementPreviewInRow(row, 'parent', displayText, projectId, parentId);
       }
       showNotification('Updated successfully', 'success');
       if (field === 'status') decorateStatusBadges();
@@ -1114,7 +979,6 @@ function initDuplicateForm() {
         verification_method_ids: formData.getAll('verification_method_ids').map((id) => parseInt(id, 10)).filter((n) => !Number.isNaN(n)),
         applicability_id: parseInt(formData.get('applicability_id'), 10),
         reviewer_id: parseInt(formData.get('reviewer_id'), 10) || 0,
-        parent_id: parseInt(formData.get('parent_id'), 10) || 0,
         project_id: parseInt(formData.get('project_id'), 10),
         author_id: parseInt(formData.get('author_id'), 10),
       };

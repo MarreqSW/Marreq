@@ -29,7 +29,15 @@ impl<'a> ReqIFService<'a> {
         let requirements = req_service.list_by_project(project_id)?;
         let parent_map: HashMap<i32, i32> = requirements
             .iter()
-            .filter_map(|r| r.parent_id.map(|p| (r.id, p)))
+            .filter_map(|r| {
+                r.current_version_id.and_then(|vid| {
+                    req_service
+                        .get_parent_requirement_ids_for_version(vid)
+                        .into_iter()
+                        .next()
+                        .map(|pid| (r.id, pid))
+                })
+            })
             .collect();
         let comments_map = self.build_comments_map(&requirements);
         Ok(to_reqif(
@@ -50,9 +58,18 @@ impl<'a> ReqIFService<'a> {
             return Err(RepoError::NotFound);
         }
         let requirements = baseline_service.get_requirements(baseline_id)?;
+        let req_service = RequirementService::new(self.state);
         let parent_map: HashMap<i32, i32> = requirements
             .iter()
-            .filter_map(|r| r.parent_id.map(|p| (r.id, p)))
+            .filter_map(|r| {
+                r.current_version_id.and_then(|vid| {
+                    req_service
+                        .get_parent_requirement_ids_for_version(vid)
+                        .into_iter()
+                        .next()
+                        .map(|pid| (r.id, pid))
+                })
+            })
             .collect();
         let title = format!("{} (baseline: {})", project.name, baseline.name);
         let comments_map = self.build_comments_map(&requirements);
@@ -133,7 +150,7 @@ impl<'a> ReqIFService<'a> {
         let mut errors = Vec::new();
         let mut imported_requirement_ids = Vec::new();
 
-        // Pass 1: create all requirements with parent_id = None
+        // Pass 1: create all requirements (no parent links yet)
         for obj in &doc.objects {
             let (title_opt, ref_opt, desc_opt, status_opt, justification_opt) =
                 object_to_fields(obj);
@@ -158,7 +175,6 @@ impl<'a> ReqIFService<'a> {
                 author_id: config.author_id,
                 category_id: config.default_category_id,
                 status_id,
-                parent_id: None,
                 reference_code: reference_code.clone(),
                 reviewer_id: config.reviewer_id,
                 applicability_id: config.default_applicability_id,
@@ -179,7 +195,7 @@ impl<'a> ReqIFService<'a> {
             }
         }
 
-        // Pass 2: set parent_id for requirements that have a parent in relations
+        // Pass 2: create requirement_version_links for parent relationships
         for obj in &doc.objects {
             let Some(child_reqman_id) = reqif_id_to_reqman_id.get(&obj.id).copied() else {
                 continue;
@@ -190,34 +206,26 @@ impl<'a> ReqIFService<'a> {
             let Some(parent_reqman_id) = reqif_id_to_reqman_id.get(parent_reqif_id).copied() else {
                 continue;
             };
-            let req = req_service
-                .get_by_id(child_reqman_id)
-                .map_err(|e| e.to_string())?;
-            let verification_method_ids = req_service
-                .get_verification_method_ids(child_reqman_id)
-                .unwrap_or_default();
-            let payload = NewRequirement {
-                id: Some(req.id),
-                title: req.title.clone(),
-                description: req.description.clone(),
-                author_id: req.author_id,
-                category_id: req.category_id,
-                status_id: req.status_id,
-                parent_id: Some(parent_reqman_id),
-                reference_code: req.reference_code.clone(),
-                reviewer_id: req.reviewer_id,
-                applicability_id: req.applicability_id,
-                justification: req.justification.clone(),
-                project_id: req.project_id,
+            let child_req = match req_service.get_by_id(child_reqman_id) {
+                Ok(r) => r,
+                Err(_) => continue,
             };
-            let _ = req_service.update(
-                actor,
-                child_reqman_id,
-                payload,
-                &verification_method_ids,
-                None,
-                None,
-            );
+            let parent_req = match req_service.get_by_id(parent_reqman_id) {
+                Ok(r) => r,
+                Err(_) => continue,
+            };
+            if let (Some(child_vid), Some(parent_vid)) =
+                (child_req.current_version_id, parent_req.current_version_id)
+            {
+                let _ = req_service.create_requirement_version_link(
+                    child_vid,
+                    parent_vid,
+                    "DERIVES_FROM",
+                    config.project_id,
+                    None,
+                    None,
+                );
+            }
         }
 
         Ok(ImportResult {
@@ -385,7 +393,6 @@ mod tests {
                 author_id: 1,
                 reviewer_id: 1,
                 category_id: 1,
-                parent_id: None,
                 applicability_id: 1,
                 justification: None,
                 deadline_date: None,

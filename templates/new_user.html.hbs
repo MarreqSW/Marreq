@@ -3,6 +3,9 @@
 <div class="mb-4">
   <h1>New User</h1>
   <p class="text-secondary">Create a new user account</p>
+  {{#if error}}
+    <div class="alert alert-error c-alert c-alert--error mt-3">{{error}}</div>
+  {{/if}}
 </div>
 
 <section id="Users">
@@ -15,24 +18,24 @@
         <div class="o-grid o-grid--two">
           <div class="form-group c-form-group">
             <label for="username" class="form-label c-form-label">Username</label>
-            <input type="text" name="username" id="username" class="form-control c-form-control" required>
+            <input type="text" name="username" id="username" class="form-control c-form-control" autocomplete="username" required>
           </div>
           
           <div class="form-group c-form-group">
             <label for="name" class="form-label c-form-label">Full Name</label>
-            <input type="text" name="name" id="name" class="form-control c-form-control" required>
+            <input type="text" name="name" id="name" class="form-control c-form-control" autocomplete="name" required>
           </div>
         </div>
 
         <div class="form-group c-form-group">
           <label for="email" class="form-label c-form-label">Email Address</label>
-          <input type="email" name="email" id="email" class="form-control c-form-control" required>
+          <input type="email" name="email" id="email" class="form-control c-form-control" autocomplete="email" required>
         </div>
 
         <div class="form-group c-form-group">
           <label for="password_hash" class="form-label c-form-label">Password</label>
-          <input type="password" name="password_hash" id="password_hash" class="form-control c-form-control" required>
-          <small class="form-text c-form-text">Password must be at least 8 characters long</small>
+          <input type="password" name="password_hash" id="password_hash" class="form-control c-form-control" autocomplete="new-password" required>
+          <small class="form-text c-form-text">Minimum 8 characters (15+ recommended).</small>
         </div>
 
         <input type="hidden" id="project_id" name="project_id" value="">

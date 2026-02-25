@@ -88,6 +88,7 @@ mod tests {
             req_applicability_id: 1,
             req_parent_id: None,
             req_parent_title: "".to_string(),
+            req_parents: vec![],
             req_parent_reference_code: "".to_string(),
             req_parent_description: "".to_string(),
             req_parent_status_id: "".to_string(),

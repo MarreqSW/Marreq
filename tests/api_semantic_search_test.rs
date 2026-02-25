@@ -186,6 +186,7 @@ mod document_builder_tests {
             req_applicability_id: 1,
             req_parent_id: Some(0),
             req_parent_title: "System Requirements".into(),
+            req_parents: vec![],
             req_parent_reference_code: "".into(),
             req_parent_description: "".into(),
             req_parent_status_id: "".into(),

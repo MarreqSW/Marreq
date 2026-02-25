@@ -279,42 +279,44 @@ Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
         </div>
         {{/if}}
 
-        <div class="c-create-field">
-          <label for="parent_id" class="c-create-field__label">
-            Parent Requirement <span class="c-create-field__optional">(optional)</span>
-          </label>
-          <div class="c-custom-dropdown c-custom-dropdown--searchable" data-dropdown="parent">
-            <button type="button" class="c-custom-dropdown__trigger" data-role="dropdown-trigger">
-              <span class="c-custom-dropdown__value" data-role="dropdown-value">Select parent requirement...</span>
-              <span class="c-custom-dropdown__arrow">▼</span>
-            </button>
-            <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
-              <div class="c-custom-dropdown__search">
-                <input type="text" class="c-custom-dropdown__search-input" placeholder="Search requirements..."
-                  data-role="dropdown-search" autocomplete="off">
-              </div>
-              <div class="c-custom-dropdown__list c-custom-dropdown__list--scrollable" data-role="dropdown-list">
-                <button type="button" class="c-custom-dropdown__item" data-value="0" data-search-text="none">
-                  <span class="c-custom-dropdown__item-label">None</span>
-                </button>
-                {{#each parent}}
-                <button type="button" class="c-custom-dropdown__item" data-value="{{id}}"
-                  data-search-text="{{reference}} {{title}}">
-                  <span class="c-custom-dropdown__item-ref">{{reference}}</span>
-                  <span class="c-custom-dropdown__item-label">{{title}}</span>
-                </button>
-                {{/each}}
-              </div>
-            </div>
-            <select name="parent_id" id="parent_id" class="c-custom-dropdown__hidden" hidden>
-              <option value="0" {{#if (not template.parent_id)}}selected{{/if}}>None</option>
-              {{#each parent}}
-              <option value="{{id}}" {{#if (eq id ../template.parent_id)}}selected{{/if}}>{{reference}} - {{title}}
-              </option>
+        <section class="c-editor-meta-group" data-role="upstream-trace">
+          <h2 class="c-editor-meta__title">Upstream Trace</h2>
+          <div class="c-editor-field">
+            <label class="c-editor-field__label">Parent requirements</label>
+            <p class="c-editor-field__help mb-2">Link this requirement to one or more parent requirements (e.g. derives from, refines).</p>
+            <ul class="list-unstyled mb-3" data-role="parent-links-list" aria-label="Parent links">
+              {{#each parent_links_edit}}
+              <li class="d-flex align-items-center gap-2 mb-2" data-target-id="{{target_requirement_id}}" data-link-type="{{link_type}}">
+                <span class="badge bg-secondary">{{link_type}}</span>
+                <span class="flex-grow-1">{{#if reference}}{{reference}}{{else}}RM-{{target_requirement_id}}{{/if}} — {{title}}</span>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-role="remove-parent-link" aria-label="Remove parent link">Remove</button>
+              </li>
               {{/each}}
-            </select>
+            </ul>
+            <div class="d-flex flex-wrap gap-2 align-items-end" data-role="add-parent-link">
+              <div class="flex-grow-1 min-w-0">
+                <label for="parent_link_requirement" class="form-label visually-hidden">Requirement</label>
+                <select id="parent_link_requirement" class="form-select form-select-sm" data-role="parent-link-requirement" aria-label="Select parent requirement">
+                  <option value="">Select requirement…</option>
+                  {{#each parent}}
+                  <option value="{{id}}" data-reference="{{reference}}" data-title="{{title}}">{{#if reference}}{{reference}}{{else}}RM-{{id}}{{/if}} — {{title}}</option>
+                  {{/each}}
+                </select>
+              </div>
+              <div>
+                <label for="parent_link_type" class="form-label visually-hidden">Link type</label>
+                <select id="parent_link_type" class="form-select form-select-sm" data-role="parent-link-type" aria-label="Link type">
+                  {{#each link_types}}
+                  <option value="{{this}}">{{this}}</option>
+                  {{/each}}
+                </select>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-primary" data-role="add-parent-link-btn">Add parent</button>
+            </div>
           </div>
-        </div>
+          <input type="hidden" name="parent_id" id="parent_id" value="{{#if template.parent_id}}{{template.parent_id}}{{else}}0{{/if}}">
+          <input type="hidden" name="parent_links" id="parent_links" value="" data-role="parent-links-value">
+        </section>
       </div>
     </aside>
   </div>

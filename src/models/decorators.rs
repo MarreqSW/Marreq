@@ -9,6 +9,14 @@
 
 use serde::{Deserialize, Serialize};
 
+/// One parent requirement for list display (id, reference, title).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ReqParentDisplay {
+    pub id: i32,
+    pub reference_code: String,
+    pub title: String,
+}
+
 /// Requirement enriched with human readable values for presentation.
 ///
 /// Foreign key fields are replaced by their corresponding names, simplifying
@@ -39,6 +47,8 @@ pub struct DecoratedRequirement {
     pub req_applicability_id: i32,
     pub req_parent_id: Option<i32>,
     pub req_parent_title: String,
+    /// All parent requirements (from version links) for list view. First is used for tree/single display.
+    pub req_parents: Vec<ReqParentDisplay>,
     /// Parent's reference code (for hover preview when parent link is shown).
     pub req_parent_reference_code: String,
     /// Parent's description (for hover preview).

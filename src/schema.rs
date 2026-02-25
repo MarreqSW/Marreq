@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
-
 // @generated automatically by Diesel CLI.
 // NOTE: Additional tables for semantic search added manually below
 
@@ -179,6 +176,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    requirement_version_links (id) {
+        id -> Int4,
+        source_version_id -> Int4,
+        target_version_id -> Int4,
+        #[max_length = 32]
+        link_type -> Varchar,
+        rationale -> Nullable<Text>,
+        project_id -> Int4,
+        created_at -> Timestamp,
+        metadata -> Nullable<diesel::sql_types::Jsonb>,
+    }
+}
+
+diesel::table! {
     requirement_comments (id) {
         id -> Int4,
         requirement_id -> Int4,
@@ -310,6 +321,7 @@ diesel::joinable!(requirement_version_verification_methods -> verification (veri
 diesel::joinable!(requirement_comments -> requirements (requirement_id));
 diesel::joinable!(requirement_comments -> requirement_versions (requirement_version_id));
 diesel::joinable!(requirement_comments -> users (author_id));
+diesel::joinable!(requirement_version_links -> projects (project_id));
 diesel::joinable!(requirement_versions -> requirements (requirement_id));
 diesel::joinable!(requirement_versions -> requirement_status (status_id));
 diesel::joinable!(requirement_versions -> applicability (applicability_id));
@@ -347,6 +359,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     requirement_comments,
     requirement_embeddings,
     requirement_status,
+    requirement_version_links,
     requirement_version_verification_methods,
     requirement_versions,
     requirements,

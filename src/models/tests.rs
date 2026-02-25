@@ -1,6 +1,3 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
-
 //! Comprehensive test suite for the models module.
 //!
 //! This module provides tests for all model types, ensuring:
@@ -1016,6 +1013,7 @@ mod tests {
                 req_applicability_id: 2,
                 req_parent_id: None,
                 req_parent_title: "".to_string(),
+                req_parents: vec![],
                 req_parent_reference_code: "".to_string(),
                 req_parent_description: "".to_string(),
                 req_parent_status_id: "".to_string(),
@@ -1063,6 +1061,7 @@ mod tests {
                 req_applicability_id: 1,
                 req_parent_id: Some(1),
                 req_parent_title: "Parent Requirement".to_string(),
+                req_parents: vec![],
                 req_parent_reference_code: "".to_string(),
                 req_parent_description: "".to_string(),
                 req_parent_status_id: "".to_string(),
@@ -1162,6 +1161,7 @@ mod tests {
                 req_applicability_id: 1,
                 req_parent_id: None,
                 req_parent_title: "".to_string(),
+                req_parents: vec![],
                 req_parent_reference_code: "".to_string(),
                 req_parent_description: "".to_string(),
                 req_parent_status_id: "".to_string(),

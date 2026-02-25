@@ -127,6 +127,33 @@ pub struct RequirementVersionVerificationMethod {
     pub verification_method_id: i32,
 }
 
+/// Typed link between two requirement versions (e.g. DERIVES_FROM, REFINES).
+/// source_version_id = child, target_version_id = parent.
+#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[diesel(table_name = crate::schema::requirement_version_links)]
+pub struct RequirementVersionLink {
+    pub id: i32,
+    pub source_version_id: i32,
+    pub target_version_id: i32,
+    pub link_type: String,
+    pub rationale: Option<String>,
+    pub project_id: i32,
+    pub created_at: chrono::NaiveDateTime,
+    pub metadata: Option<serde_json::Value>,
+}
+
+/// Insertable row for a new requirement version link.
+#[derive(Serialize, Deserialize, Insertable, Clone, Debug)]
+#[diesel(table_name = crate::schema::requirement_version_links)]
+pub struct NewRequirementVersionLink {
+    pub source_version_id: i32,
+    pub target_version_id: i32,
+    pub link_type: String,
+    pub rationale: Option<String>,
+    pub project_id: i32,
+    pub metadata: Option<serde_json::Value>,
+}
+
 /// Link between a requirement and a test in the traceability matrix.
 /// Suspect state: when a requirement changes, links are marked suspect until reviewed.
 #[derive(Serialize, Deserialize, Queryable, Clone, Debug)]

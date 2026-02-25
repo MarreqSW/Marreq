@@ -311,11 +311,47 @@ pub trait RequirementCommentsRepository {
     ) -> Result<Vec<RequirementComment>, RepoError>;
 }
 
+pub trait RequirementVersionLinksRepository {
+    fn list_links_by_source_version(
+        &self,
+        source_version_id: i32,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError>;
+    fn list_links_by_target_version(
+        &self,
+        target_version_id: i32,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError>;
+    fn list_links_by_project(
+        &self,
+        project_id: i32,
+        source_version_id: Option<i32>,
+        target_version_id: Option<i32>,
+        link_type: Option<&str>,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError>;
+    fn insert_requirement_version_link(
+        &mut self,
+        new: &NewRequirementVersionLink,
+    ) -> Result<RequirementVersionLink, RepoError>;
+    fn delete_requirement_version_link(
+        &mut self,
+        link_id: i32,
+    ) -> Result<RequirementVersionLink, RepoError>;
+    /// Delete all links where source_version_id = the given id (e.g. to replace parent set).
+    fn delete_requirement_version_links_by_source_version(
+        &mut self,
+        source_version_id: i32,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError>;
+    fn get_requirement_version_link_by_id(
+        &self,
+        link_id: i32,
+    ) -> Result<RequirementVersionLink, RepoError>;
+}
+
 pub trait Repository:
     ApiTokensRepository
     + UserRepository
     + LookupRepository
     + RequirementsRepository
+    + RequirementVersionLinksRepository
     + TestsCaseRepository
     + ProjectsRepository
     + ProjectMembersRepository
@@ -332,6 +368,7 @@ impl<T> Repository for T where
         + UserRepository
         + LookupRepository
         + RequirementsRepository
+        + RequirementVersionLinksRepository
         + TestsCaseRepository
         + ProjectsRepository
         + ProjectMembersRepository

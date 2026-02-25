@@ -13,25 +13,28 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Loggable, Logger};
 use crate::models::{
-    CustomFieldValueInput, EntityType, NewRequirement, Requirement, RequirementVersion, TestCase,
-    User,
+    CustomFieldValueInput, EntityType, NewRequirement, NewRequirementVersionLink, Requirement,
+    RequirementVersion, RequirementVersionLink, TestCase, User,
 };
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    CustomFieldRepository, MatrixRepository, PooledConnectionWrapper, RequirementsRepository,
-    TestsCaseRepository,
+    CustomFieldRepository, MatrixRepository, PooledConnectionWrapper,
+    RequirementVersionLinksRepository, RequirementsRepository, TestsCaseRepository,
 };
 use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
 use serde::Serialize;
 
 /// Wrapper used when logging requirement updates so that verification method IDs
-/// are included in old_values/new_values (they live in a separate junction table).
+/// and parent requirement ids (from version links) are included in old_values/new_values.
 #[derive(Serialize)]
 struct RequirementWithVerification<'a> {
     #[serde(flatten)]
     requirement: &'a Requirement,
     verification_method_ids: Vec<i32>,
+    /// Parent requirement ids from requirement_version_links (for changelog "Parents" list).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    parent_requirement_ids: Option<Vec<i32>>,
 }
 
 impl Loggable for RequirementWithVerification<'_> {
@@ -46,6 +49,26 @@ impl Loggable for RequirementWithVerification<'_> {
     }
     fn display_name(&self) -> String {
         self.requirement.reference_code.clone()
+    }
+}
+
+/// Allowed requirement version link types (typed traceability).
+pub const REQUIREMENT_VERSION_LINK_TYPES: &[&str] = &[
+    "DERIVES_FROM",
+    "REFINES",
+    "SATISFIES",
+    "DEPENDS_ON",
+    "RELATES_TO",
+];
+
+fn validate_link_type(link_type: &str) -> Result<(), RepoError> {
+    if REQUIREMENT_VERSION_LINK_TYPES.contains(&link_type) {
+        Ok(())
+    } else {
+        Err(RepoError::BadInput(format!(
+            "invalid link_type: '{}'; allowed: {:?}",
+            link_type, REQUIREMENT_VERSION_LINK_TYPES
+        )))
     }
 }
 
@@ -188,6 +211,29 @@ impl<'a> RequirementService<'a> {
     }
 
     pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<Requirement>, RepoError> {
+        let repo = self.repo_read();
+        let parent = repo.get_requirement_by_id(parent_id).ok();
+        let parent_version_id = parent.and_then(|p| p.current_version_id);
+        if let Some(tvid) = parent_version_id {
+            let links = repo.list_links_by_target_version(tvid)?;
+            if !links.is_empty() {
+                let mut children = Vec::new();
+                for link in links {
+                    if let Ok(ver) = repo.get_requirement_version_by_id(link.source_version_id) {
+                        if let Ok(req) = repo.get_requirement_by_id(ver.requirement_id) {
+                            children.push(req);
+                        }
+                    }
+                }
+                drop(repo);
+                let mut out: Vec<Requirement> = children.into_iter().collect();
+                for r in &mut out {
+                    let _ = self.attach_custom_fields(r);
+                }
+                return Ok(out);
+            }
+        }
+        drop(repo);
         Ok(self
             .list_all()?
             .into_iter()
@@ -201,9 +247,160 @@ impl<'a> RequirementService<'a> {
         project_id: i32,
         parent_id: i32,
     ) -> Result<Vec<Requirement>, RepoError> {
+        let repo = self.repo_read();
+        let parent = repo.get_requirement_by_id(parent_id).ok();
+        let parent_version_id = parent.and_then(|p| p.current_version_id);
+        if let Some(tvid) = parent_version_id {
+            let links = repo.list_links_by_target_version(tvid)?;
+            if !links.is_empty() {
+                let mut child_req_ids = Vec::new();
+                for link in links {
+                    if let Ok(ver) = repo.get_requirement_version_by_id(link.source_version_id) {
+                        child_req_ids.push(ver.requirement_id);
+                    }
+                }
+                drop(repo);
+                let mut reqs = self.list_by_project(project_id)?;
+                reqs.retain(|r| child_req_ids.contains(&r.id));
+                return Ok(reqs);
+            }
+        }
+        drop(repo);
         let mut reqs = self.list_by_project(project_id)?;
         reqs.retain(|r| r.parent_id == Some(parent_id));
         Ok(reqs)
+    }
+
+    /// Parent links for a requirement version (source_version_id = this version).
+    pub fn get_parent_links_for_version(
+        &self,
+        version_id: i32,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError> {
+        self.repo_read().list_links_by_source_version(version_id)
+    }
+
+    /// Child links for a requirement version (target_version_id = this version).
+    pub fn get_child_links_for_version(
+        &self,
+        version_id: i32,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError> {
+        self.repo_read().list_links_by_target_version(version_id)
+    }
+
+    /// Parent requirement ids for a version (from parent links). Used for changelog and list view.
+    pub fn get_parent_requirement_ids_for_version(&self, version_id: i32) -> Vec<i32> {
+        let links = match self.get_parent_links_for_version(version_id) {
+            Ok(l) => l,
+            Err(_) => return vec![],
+        };
+        let repo = self.repo_read();
+        let mut ids: Vec<i32> = links
+            .into_iter()
+            .filter_map(|link| repo.get_requirement_version_by_id(link.target_version_id).ok())
+            .map(|v| v.requirement_id)
+            .collect();
+        ids.sort_unstable();
+        ids.dedup();
+        ids
+    }
+
+    /// Create a requirement version link. Validates link_type and rejects if it would create a cycle.
+    pub fn create_requirement_version_link(
+        &self,
+        source_version_id: i32,
+        target_version_id: i32,
+        link_type: &str,
+        project_id: i32,
+        rationale: Option<String>,
+        metadata: Option<serde_json::Value>,
+    ) -> Result<RequirementVersionLink, RepoError> {
+        validate_link_type(link_type)?;
+        if source_version_id == target_version_id {
+            return Err(RepoError::BadInput(
+                "source_version_id and target_version_id must differ".into(),
+            ));
+        }
+        let repo = self.repo_read();
+        let _source_ver = repo.get_requirement_version_by_id(source_version_id)?;
+        let _target_ver = repo.get_requirement_version_by_id(target_version_id)?;
+        let project_id_from_source = repo
+            .get_requirement_version_by_id(source_version_id)
+            .and_then(|v| {
+                repo.get_requirement_by_id(v.requirement_id)
+                    .map(|r| r.project_id)
+            });
+        let project_id_for_list = project_id_from_source.unwrap_or(project_id);
+        if Self::would_create_cycle(
+            &repo,
+            source_version_id,
+            target_version_id,
+            project_id_for_list,
+        )? {
+            return Err(RepoError::BadInput(
+                "creating this link would introduce a cycle in requirement version links".into(),
+            ));
+        }
+        drop(repo);
+        let new_link = NewRequirementVersionLink {
+            source_version_id,
+            target_version_id,
+            link_type: link_type.to_string(),
+            rationale,
+            project_id,
+            metadata,
+        };
+        let mut repo = self.repo_write();
+        repo.insert_requirement_version_link(&new_link)
+    }
+
+    /// Delete a requirement version link by id. Returns NotFound if link not in project.
+    pub fn delete_requirement_version_link(
+        &self,
+        project_id: i32,
+        link_id: i32,
+    ) -> Result<RequirementVersionLink, RepoError> {
+        let repo = self.repo_read();
+        let link = repo.get_requirement_version_link_by_id(link_id)?;
+        if link.project_id != project_id {
+            return Err(RepoError::NotFound);
+        }
+        drop(repo);
+        self.repo_write().delete_requirement_version_link(link_id)
+    }
+
+    /// Returns true if adding edge (source_version_id -> target_version_id) would create a cycle.
+    /// Cycle: there exists a path from target to source in the current link graph (reverse direction).
+    fn would_create_cycle(
+        repo: &DieselCachedRepo,
+        source_version_id: i32,
+        target_version_id: i32,
+        project_id: i32,
+    ) -> Result<bool, RepoError> {
+        let all_links = repo.list_links_by_project(project_id, None, None, None)?;
+        let mut by_target: std::collections::HashMap<i32, Vec<i32>> =
+            std::collections::HashMap::new();
+        for link in &all_links {
+            by_target
+                .entry(link.target_version_id)
+                .or_default()
+                .push(link.source_version_id);
+        }
+        let mut visited = std::collections::HashSet::new();
+        let mut stack = vec![target_version_id];
+        while let Some(v) = stack.pop() {
+            if v == source_version_id {
+                return Ok(true);
+            }
+            if !visited.insert(v) {
+                continue;
+            }
+            if let Some(sources) = by_target.get(&v) {
+                for &s in sources {
+                    stack.push(s);
+                }
+            }
+        }
+        Ok(false)
     }
 
     pub fn get_linked_tests(&self, id: i32) -> Result<Vec<TestCase>, RepoError> {
@@ -258,6 +455,8 @@ impl<'a> RequirementService<'a> {
     /// If semantic search is enabled, the requirement is queued for re-embedding.
     /// `verification_method_ids` replace the requirement's verification methods.
     /// Optional `custom_fields` replace the current version's custom field values.
+    /// `parent_links`: if provided, replaces all parent links for the current version with
+    /// the given list of (target_version_id, link_type). Applied before logging so changelog shows the new list.
     pub fn update(
         &self,
         actor: &User,
@@ -265,6 +464,7 @@ impl<'a> RequirementService<'a> {
         mut payload: NewRequirement,
         verification_method_ids: &[i32],
         custom_fields: Option<&[CustomFieldValueInput]>,
+        parent_links: Option<Vec<(i32, String)>>,
     ) -> Result<Requirement, RepoError> {
         self.prepare_payload(&mut payload)?;
         payload.id = Some(id);
@@ -272,7 +472,7 @@ impl<'a> RequirementService<'a> {
         let before = self.get_by_id(id)?;
         let before_verification_ids = self.get_verification_method_ids(id)?;
 
-        {
+        let parent_links_to_create: Option<(i32, i32, Vec<(i32, String)>)> = {
             let mut repo = self.repo_write();
             let updated = repo.edit_requirement(&payload)?;
             if !updated {
@@ -294,19 +494,53 @@ impl<'a> RequirementService<'a> {
                 requirement.current_version_id,
                 Some(actor.id),
             )?;
+            let out: Option<(i32, i32, Vec<(i32, String)>)> = if let Some(links) = &parent_links {
+                if let Some(version_id) = requirement.current_version_id {
+                    repo.delete_requirement_version_links_by_source_version(version_id)?;
+                    Some((version_id, requirement.project_id, links.clone()))
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+            Ok::<_, RepoError>(out)
+        }?;
+
+        if let Some((source_version_id, project_id, links)) = parent_links_to_create {
+            for (target_version_id, link_type) in links {
+                let _ = self.create_requirement_version_link(
+                    source_version_id,
+                    target_version_id,
+                    &link_type,
+                    project_id,
+                    None,
+                    None,
+                );
+            }
         }
 
         let after = self.get_by_id(id)?;
         let after_verification_ids = verification_method_ids.to_vec();
+        let before_parent_ids: Vec<i32> = before
+            .current_version_id
+            .map(|vid| self.get_parent_requirement_ids_for_version(vid))
+            .unwrap_or_default();
+        let after_parent_ids: Vec<i32> = after
+            .current_version_id
+            .map(|vid| self.get_parent_requirement_ids_for_version(vid))
+            .unwrap_or_default();
         self.log_updated(
             actor,
             &RequirementWithVerification {
                 requirement: &before,
                 verification_method_ids: before_verification_ids,
+                parent_requirement_ids: Some(before_parent_ids),
             },
             &RequirementWithVerification {
                 requirement: &after,
                 verification_method_ids: after_verification_ids,
+                parent_requirement_ids: Some(after_parent_ids),
             },
         );
         self.queue_for_indexing(id, after.project_id);
@@ -449,7 +683,7 @@ impl<'a> RequirementService<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::MatrixLink;
+    use crate::models::{MatrixLink, RequirementVersion};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -555,7 +789,7 @@ mod tests {
         payload.description = "  New Description  ".into();
         payload.reference_code = "  REQ-999  ".into();
 
-        let updated = service.update(&actor(), 1, payload, &[1], None).unwrap();
+        let updated = service.update(&actor(), 1, payload, &[1], None, None).unwrap();
         assert_eq!(updated.title, "Updated");
         assert_eq!(updated.description, "New Description");
         assert_eq!(updated.reference_code, "REQ-999");
@@ -589,7 +823,7 @@ mod tests {
         payload.description = "New".into();
         payload.reference_code = "REQ-001".into();
 
-        let _ = service.update(&actor(), 1, payload, &[1], None).unwrap();
+        let _ = service.update(&actor(), 1, payload, &[1], None, None).unwrap();
 
         let links = state.repo_read().get_matrix_by_project(7).unwrap();
         assert_eq!(links.len(), 1);
@@ -785,6 +1019,66 @@ mod tests {
     }
 
     #[test]
+    fn create_requirement_version_link_rejects_invalid_link_type() {
+        let mut repo = DieselRepoMock::default();
+        let mut r1 = requirement(1, 7, "REQ-001");
+        r1.current_version_id = Some(10);
+        let mut r2 = requirement(2, 7, "REQ-002");
+        r2.current_version_id = Some(20);
+        repo.requirements.insert(1, r1);
+        repo.requirements.insert(2, r2);
+        repo.requirement_versions.insert(
+            10,
+            RequirementVersion {
+                id: 10,
+                requirement_id: 1,
+                title: "R1".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                parent_id: None,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: timestamp(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        repo.requirement_versions.insert(
+            20,
+            RequirementVersion {
+                id: 20,
+                requirement_id: 2,
+                title: "R2".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                parent_id: None,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: timestamp(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let err = service
+            .create_requirement_version_link(20, 10, "INVALID_TYPE", 7, None, None)
+            .unwrap_err();
+        assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
     fn get_by_parent_id_returns_children() {
         let mut repo = DieselRepoMock::default();
         let mut req1 = requirement(1, 7, "REQ-001");
@@ -877,7 +1171,7 @@ mod tests {
         let service = RequirementService::new(&state);
 
         let payload = new_payload();
-        let result = service.update(&actor(), 999, payload, &[1], None);
+        let result = service.update(&actor(), 999, payload, &[1], None, None);
         assert!(matches!(result, Err(RepoError::NotFound)));
     }
 

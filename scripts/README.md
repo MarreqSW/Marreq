@@ -18,7 +18,7 @@ This directory contains utility scripts for managing the ReqMan application data
 - Initializes the database with complete schema and sample data from `scripts/init_complete.sql`
 - Verifies the setup by showing:
   - Created tables
-  - Sample users (all with password: 'password')
+  - Sample users (all with password: 'ChangeMe123!')
   - Created projects
   - Project memberships
   - Data counts for each entity type
@@ -35,7 +35,7 @@ This directory contains utility scripts for managing the ReqMan application data
 
 #### 👥 Pre-configured Users
 
-All users have password: `password`
+All users have password: `ChangeMe123!`
 
 | Username | Name | Role | Project |
 |----------|------|------|---------|

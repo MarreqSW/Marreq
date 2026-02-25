@@ -12,7 +12,9 @@ use super::{
     VerificationService,
 };
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{DecoratedRequirement, NewRequirement, Requirement, TestCase, User};
+use crate::models::{
+    DecoratedRequirement, NewRequirement, ReqParentDisplay, Requirement, TestCase, User,
+};
 use crate::repository::errors::RepoError;
 
 /// High level operations for requirements backed by the shared [`AppState`].
@@ -135,7 +137,7 @@ impl<'a> DecoratedRequirementService<'a> {
         verification_method_ids: &[i32],
     ) -> Result<Requirement, RepoError> {
         self.requirement_service
-            .update(actor, id, payload, verification_method_ids, None)
+            .update(actor, id, payload, verification_method_ids, None, None)
     }
 
     /// Delete an requirement entry and log the removal.
@@ -197,6 +199,26 @@ impl<'a> DecoratedRequirementService<'a> {
             .map(|a| a.title)
             .unwrap_or_else(|_| format!("Unknown Applicability ({})", req.applicability_id));
 
+        // All parents from requirement_version_links.
+        let req_parents: Vec<ReqParentDisplay> = req
+            .current_version_id
+            .map(|vid| {
+                self.requirement_service
+                    .get_parent_requirement_ids_for_version(vid)
+            })
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|id| {
+                let parent_req = self.requirement_service.get_by_id(id).ok()?;
+                Some(ReqParentDisplay {
+                    id: parent_req.id,
+                    reference_code: parent_req.reference_code,
+                    title: parent_req.title,
+                })
+            })
+            .collect();
+
+        let first_parent_id = req_parents.first().map(|p| p.id).or(req.parent_id);
         let (
             parent_title,
             parent_ref,
@@ -204,7 +226,7 @@ impl<'a> DecoratedRequirementService<'a> {
             parent_status,
             parent_category,
             req_parent_status_tag_color,
-        ) = if let Some(parent_id) = req.parent_id {
+        ) = if let Some(parent_id) = first_parent_id {
             match self.requirement_service.get_by_id(parent_id) {
                 Ok(parent_req) => {
                     let (p_status, p_tag_color) = self
@@ -269,8 +291,9 @@ impl<'a> DecoratedRequirementService<'a> {
             req_category_id: req.category_id,
             applicability_id: applicability,
             req_applicability_id: req.applicability_id,
-            req_parent_id: req.parent_id,
+            req_parent_id: first_parent_id,
             req_parent_title: parent_title,
+            req_parents,
             req_parent_reference_code: parent_ref,
             req_parent_description: parent_desc,
             req_parent_status_id: parent_status,

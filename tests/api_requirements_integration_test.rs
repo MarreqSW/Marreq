@@ -755,3 +755,21 @@ async fn patch_requirement_preserves_unmodified_fields() {
     assert_eq!(requirement.description, original_description);
     assert_eq!(requirement.status_id, original_status);
 }
+
+#[rocket::async_test]
+async fn list_requirement_version_links_returns_200_and_array() {
+    use test_support::*;
+
+    let repo = base_repo();
+    let client = test_client(repo).await;
+
+    let response = client
+        .get("/api/projects/1/requirement-version-links")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let links: Vec<Value> = response.into_json().await.expect("json");
+    assert!(links.is_empty());
+}

@@ -101,6 +101,27 @@ fn decorate_requirements_impl<R: Repository>(
                 .map(|a| a.title)
                 .unwrap_or_else(|_| format!("Unknown Applicability ({})", r.applicability_id));
 
+            // All parents from requirement_version_links (source = this version).
+            let req_parents: Vec<ReqParentDisplay> = r
+                .current_version_id
+                .and_then(|vid| repo.list_links_by_source_version(vid).ok())
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(|link| {
+                    let ver = repo
+                        .get_requirement_version_by_id(link.target_version_id)
+                        .ok()?;
+                    let parent_req = repo.get_requirement_by_id(ver.requirement_id).ok()?;
+                    Some(ReqParentDisplay {
+                        id: parent_req.id,
+                        reference_code: parent_req.reference_code.clone(),
+                        title: parent_req.title.clone(),
+                    })
+                })
+                .collect();
+
+            // Single-parent fields: first from req_parents (for tree / backward compat), else legacy r.parent_id.
+            let first_parent_id = req_parents.first().map(|p| p.id).or(r.parent_id);
             let (
                 parent_title,
                 parent_ref,
@@ -108,7 +129,7 @@ fn decorate_requirements_impl<R: Repository>(
                 parent_status,
                 parent_category,
                 req_parent_status_tag_color,
-            ) = if let Some(parent_id) = r.parent_id {
+            ) = if let Some(parent_id) = first_parent_id {
                 match repo.get_requirement_by_id(parent_id) {
                     Ok(parent_req) => {
                         let (p_status, p_tag_color) = repo
@@ -171,8 +192,9 @@ fn decorate_requirements_impl<R: Repository>(
                 req_category_id: r.category_id,
                 applicability_id: applicability,
                 req_applicability_id: r.applicability_id,
-                req_parent_id: r.parent_id,
+                req_parent_id: first_parent_id,
                 req_parent_title: parent_title,
+                req_parents: req_parents.clone(),
                 req_parent_reference_code: parent_ref,
                 req_parent_description: parent_desc,
                 req_parent_status_id: parent_status,

@@ -8,7 +8,8 @@ use crate::repository::errors::RepoError;
 use crate::repository::{
     ApiTokensRepository, BaselineRepository, CustomFieldRepository, LogRepository,
     LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository, Repository,
-    RequirementCommentsRepository, RequirementsRepository, TestsCaseRepository, UserRepository,
+    RequirementCommentsRepository, RequirementVersionLinksRepository, RequirementsRepository,
+    TestsCaseRepository, UserRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -890,6 +891,77 @@ impl<R: RequirementCommentsRepository> RequirementCommentsRepository for CacheRe
     }
 }
 
+impl<R: RequirementVersionLinksRepository> RequirementVersionLinksRepository
+    for CacheRepository<R>
+{
+    fn list_links_by_source_version(
+        &self,
+        source_version_id: i32,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError> {
+        self.inner.list_links_by_source_version(source_version_id)
+    }
+
+    fn list_links_by_target_version(
+        &self,
+        target_version_id: i32,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError> {
+        self.inner.list_links_by_target_version(target_version_id)
+    }
+
+    fn list_links_by_project(
+        &self,
+        project_id: i32,
+        source_version_id: Option<i32>,
+        target_version_id: Option<i32>,
+        link_type: Option<&str>,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError> {
+        self.inner.list_links_by_project(
+            project_id,
+            source_version_id,
+            target_version_id,
+            link_type,
+        )
+    }
+
+    fn insert_requirement_version_link(
+        &mut self,
+        new: &NewRequirementVersionLink,
+    ) -> Result<RequirementVersionLink, RepoError> {
+        let link = self.inner.insert_requirement_version_link(new)?;
+        self.cache.invalidate_project(new.project_id);
+        Ok(link)
+    }
+
+    fn delete_requirement_version_link(
+        &mut self,
+        link_id: i32,
+    ) -> Result<RequirementVersionLink, RepoError> {
+        let link = self.inner.delete_requirement_version_link(link_id)?;
+        self.cache.invalidate_project(link.project_id);
+        Ok(link)
+    }
+
+    fn delete_requirement_version_links_by_source_version(
+        &mut self,
+        source_version_id: i32,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError> {
+        let links = self
+            .inner
+            .delete_requirement_version_links_by_source_version(source_version_id)?;
+        for link in &links {
+            self.cache.invalidate_project(link.project_id);
+        }
+        Ok(links)
+    }
+
+    fn get_requirement_version_link_by_id(
+        &self,
+        link_id: i32,
+    ) -> Result<RequirementVersionLink, RepoError> {
+        self.inner.get_requirement_version_link_by_id(link_id)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1039,6 +1111,8 @@ mod tests {
             next_custom_field_id: 1,
             requirement_comments: Vec::new(),
             next_comment_id: 1,
+            requirement_version_links: Vec::new(),
+            next_link_id: 1,
         }
     }
 

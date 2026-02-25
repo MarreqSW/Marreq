@@ -5,15 +5,20 @@ use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
-use crate::models::{NewRequirement, Requirement, RequirementVersion, TestCase};
+use crate::models::{
+    NewRequirement, Requirement, RequirementVersion, RequirementVersionLink, TestCase,
+};
 use crate::repository::{ProjectMembersRepository, RequirementsRepository};
 use crate::services::RequirementService;
 
-/// Trace summary for a requirement (parent, children, linked tests). Used in project-scoped get.
+/// Trace summary for a requirement (parent, parent_links, children, linked tests). Used in project-scoped get.
 #[derive(Debug, Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct TraceSummary {
     pub parent_id: Option<i32>,
+    /// Typed links from this requirement's current version to parent versions (multi-parent).
+    #[serde(default)]
+    pub parent_links: Vec<RequirementVersionLink>,
     pub child_ids: Vec<i32>,
     pub linked_test_ids: Vec<i32>,
 }
@@ -26,6 +31,16 @@ pub struct RequirementWithTraceSummary {
     pub trace_summary: TraceSummary,
 }
 
+/// One parent link when creating a requirement (target version + link type).
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct ParentLinkInput {
+    pub target_version_id: i32,
+    pub link_type: String,
+    #[serde(default)]
+    pub rationale: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct RequirementCreateRequest {
@@ -34,6 +49,7 @@ pub struct RequirementCreateRequest {
     pub author_id: i32,
     pub category_id: i32,
     pub status_id: i32,
+    /// Deprecated: use parent_links for multi-parent. When only parent_id is set, a single DERIVES_FROM link is created for compatibility.
     pub parent_id: Option<i32>,
     pub reference_code: String,
     pub reviewer_id: i32,
@@ -44,6 +60,8 @@ pub struct RequirementCreateRequest {
     pub verification_method_ids: Vec<i32>,
     #[serde(default)]
     pub custom_fields: Vec<crate::models::CustomFieldValueInput>,
+    #[serde(default)]
+    pub parent_links: Vec<ParentLinkInput>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,6 +75,7 @@ pub struct RequirementPatch {
     pub reviewer_id: Option<i32>,
     pub category_id: Option<i32>,
     pub applicability_id: Option<i32>,
+    /// Deprecated: use requirement-version-links API for multi-parent. When set, updates the single parent (legacy).
     pub parent_id: Option<i32>,
     pub custom_fields: Option<Vec<crate::models::CustomFieldValueInput>>,
 }
@@ -109,8 +128,17 @@ pub async fn get_by_project(
     }
     let children = service.get_children_by_parent_and_project(project_id, id)?;
     let linked_tests = service.get_linked_tests(id)?;
+    let parent_links = requirement
+        .current_version_id
+        .map(|vid| {
+            service
+                .get_parent_links_for_version(vid)
+                .unwrap_or_default()
+        })
+        .unwrap_or_default();
     let trace_summary = TraceSummary {
         parent_id: requirement.parent_id,
+        parent_links,
         child_ids: children.iter().map(|r| r.id).collect(),
         linked_test_ids: linked_tests.iter().map(|t| t.id).collect(),
     };
@@ -392,6 +420,7 @@ pub async fn patch_requirement(
         payload,
         &verification_method_ids,
         custom_fields,
+        None,
     )?;
 
     Ok(json!({
@@ -450,6 +479,41 @@ pub async fn create_by_project(
         &verification_method_ids,
         custom_fields,
     )?;
+    let requirement = service.get_by_id(id)?;
+    let source_version_id = requirement.current_version_id;
+    if !payload.parent_links.is_empty() {
+        if let Some(vid) = source_version_id {
+            for pl in &payload.parent_links {
+                let _ = service.create_requirement_version_link(
+                    vid,
+                    pl.target_version_id,
+                    &pl.link_type,
+                    project_id,
+                    pl.rationale.clone(),
+                    None,
+                );
+            }
+        }
+    } else if let (Some(vid), Some(pid)) = (source_version_id, payload.parent_id) {
+        if pid != 0 {
+            if let Ok(parent_req) = service.get_by_id(pid) {
+                if parent_req.project_id == project_id {
+                    let _ = parent_req.current_version_id.and_then(|target_vid| {
+                        service
+                            .create_requirement_version_link(
+                                vid,
+                                target_vid,
+                                "DERIVES_FROM",
+                                project_id,
+                                None,
+                                None,
+                            )
+                            .ok()
+                    });
+                }
+            }
+        }
+    }
     Ok(json!({ "status": "ok", "id": id }))
 }
 
@@ -533,6 +597,7 @@ pub async fn patch_by_project(
         payload,
         &verification_method_ids,
         custom_fields,
+        None,
     )?;
     Ok(json!({
         "success": true,

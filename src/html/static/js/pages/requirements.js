@@ -882,6 +882,8 @@ function getParentOptionsForInlineEdit(currentReqId) {
 }
 
 function openInlineEdit(cell, field, row, config) {
+  // Parent is display-only in list view; edit via requirement edit page.
+  if (field === 'parent') return;
   const requirementId = parseInt(row.dataset.requirementId, 10);
   if (!requirementId) return;
   const displayEl = cell.querySelector('.reqman-requirements-cell__display');

@@ -80,14 +80,14 @@
             {{applicability_id}}
           </span>
           {{/if}}
-          {{#if req_parent_title}}
-          <a href="/p/{{../project.id}}/requirements/show/{{req_parent_id}}" class="reqman-requirement-card__badge reqman-requirement-card__badge--parent" data-badge data-requirement-preview data-requirement-preview-project-id="{{../project.id}}" data-requirement-preview-id="{{req_parent_id}}" data-requirement-preview-ref="{{req_parent_reference_code}}" data-requirement-preview-title="{{req_parent_title}}" data-requirement-preview-description="{{req_parent_description}}" data-requirement-preview-status="{{req_parent_status_id}}" data-requirement-preview-category="{{req_parent_category_id}}" title="Parent: {{req_parent_title}}">
+          {{#each req_parents}}
+          <a href="/p/{{../../project.id}}/requirements/show/{{id}}" class="reqman-requirement-card__badge reqman-requirement-card__badge--parent" data-badge data-requirement-preview data-requirement-preview-project-id="{{../../project.id}}" data-requirement-preview-id="{{id}}" data-requirement-preview-ref="{{reference_code}}" data-requirement-preview-title="{{title}}" title="Parent: {{#if reference_code}}{{reference_code}} — {{/if}}{{title}}">
             <svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
               <path d="M1 0a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5v-1H2v-1h4v-9H2V2h4v3h9a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1H1z"/>
             </svg>
-            {{req_parent_title}}
+            {{#if reference_code}}{{reference_code}} — {{/if}}{{title}}
           </a>
-          {{/if}}
+          {{/each}}
         </div>
         <span class="reqman-requirement-card__badge-overflow" data-overflow hidden></span>
       </div>

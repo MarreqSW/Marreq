@@ -45,6 +45,9 @@ struct RequirementCreateForm {
     status_id: i32,
     #[field(name = uncased("parent_id"))]
     parent_id: i32,
+    /// JSON array of { "target_requirement_id": i32, "link_type": string } for multi-parent.
+    #[field(name = uncased("parent_links"))]
+    parent_links: Option<String>,
     #[field(name = uncased("reference_code"))]
     reference_code: String,
     #[field(name = uncased("reviewer_id"))]
@@ -72,6 +75,7 @@ impl RequirementCreateForm {
             category_id,
             status_id,
             parent_id,
+            parent_links,
             reference_code,
             reviewer_id,
             applicability_id,
@@ -80,6 +84,9 @@ impl RequirementCreateForm {
             custom_field_values: _,
         } = self;
 
+        let parent_id = parse_first_parent_from_links(parent_links.as_deref())
+            .or(if parent_id > 0 { Some(parent_id) } else { None });
+
         let requirement = NewRequirement {
             id,
             title,
@@ -87,7 +94,7 @@ impl RequirementCreateForm {
             author_id,
             category_id,
             status_id,
-            parent_id: Some(parent_id),
+            parent_id,
             reference_code,
             reviewer_id,
             applicability_id,
@@ -126,6 +133,9 @@ struct RequirementEditForm {
     project_id: i32,
     #[field(name = uncased("parent_id"))]
     parent_id: Option<i32>,
+    /// JSON array of { "target_requirement_id": i32, "link_type": string } for multi-parent upstream links.
+    #[field(name = uncased("parent_links"))]
+    parent_links: Option<String>,
     #[field(name = uncased("verification_method_ids"))]
     verification_method_ids: Vec<i32>,
     /// JSON array of { "field_id": i32, "value": string | null }
@@ -133,8 +143,16 @@ struct RequirementEditForm {
     custom_field_values: Option<String>,
 }
 
+#[derive(serde::Deserialize)]
+struct ParentLinkEditInput {
+    target_requirement_id: i32,
+    link_type: String,
+}
+
 impl RequirementEditForm {
     fn to_new_requirement(&self) -> NewRequirement {
+        let parent_id =
+            parse_first_parent_from_links(self.parent_links.as_deref()).or(self.parent_id);
         NewRequirement {
             id: self.id,
             title: self.title.clone(),
@@ -142,7 +160,7 @@ impl RequirementEditForm {
             author_id: self.author_id,
             category_id: self.category_id,
             status_id: self.status_id,
-            parent_id: self.parent_id,
+            parent_id,
             reference_code: self.reference_code.clone(),
             reviewer_id: self.reviewer_id,
             applicability_id: self.applicability_id,
@@ -150,6 +168,15 @@ impl RequirementEditForm {
             project_id: self.project_id,
         }
     }
+}
+
+fn parse_first_parent_from_links(json: Option<&str>) -> Option<i32> {
+    let s = json?.trim();
+    if s.is_empty() {
+        return None;
+    }
+    let parsed: Vec<ParentLinkEditInput> = serde_json::from_str(s).ok()?;
+    parsed.first().map(|pl| pl.target_requirement_id)
 }
 
 /// Parse optional JSON string into custom field values for create/update.
@@ -543,6 +570,12 @@ async fn show_requirement_id(
     };
     let child_requirements = decorated_requirement_service.get_by_parent_id(requirement.id)?;
 
+    let requirement_service = RequirementService::new(state.inner());
+    let parent_links: Vec<crate::models::RequirementVersionLink> = requirement
+        .current_version_id
+        .and_then(|vid| requirement_service.get_parent_links_for_version(vid).ok())
+        .unwrap_or_default();
+
     // Linked verification artefacts
     let linked_tests =
         DecoratedTestService::new(state.inner()).get_linked_to_requirement(requirement_id)?;
@@ -598,6 +631,25 @@ async fn show_requirement_id(
         .collect();
 
     let repo = state.repo_read();
+    let parent_links_json: Vec<serde_json::Value> = parent_links
+        .iter()
+        .filter_map(|link| {
+            let target_ver = repo
+                .get_requirement_version_by_id(link.target_version_id)
+                .ok()?;
+            let target_req = repo.get_requirement_by_id(target_ver.requirement_id).ok()?;
+            Some(json!({
+                "link_id": link.id,
+                "link_type": link.link_type,
+                "rationale": link.rationale,
+                "target": {
+                    "id": target_req.id,
+                    "reference_code": target_req.reference_code,
+                    "title": target_req.title,
+                }
+            }))
+        })
+        .collect();
     let req_status_map: HashMap<i32, String> = repo
         .get_requirement_status_all()
         .unwrap_or_default()
@@ -632,7 +684,14 @@ async fn show_requirement_id(
         .get_requirements_by_project(project_id)
         .unwrap_or_default()
         .into_iter()
-        .map(|r| (r.id, r.reference_code))
+        .map(|r| {
+            let ref_display = if r.reference_code.trim().is_empty() {
+                format!("RM-{}", r.id)
+            } else {
+                r.reference_code.clone()
+            };
+            (r.id, format!("{} — {}", ref_display, r.title))
+        })
         .collect();
     let members = repo
         .get_members_by_project(requirement.project_id)
@@ -732,6 +791,7 @@ async fn show_requirement_id(
         "approval_is_approved": requirement.approval_state.eq_ignore_ascii_case("approved"),
         "relationships": {
             "parent": parent_requirement,
+            "parent_links": parent_links_json,
             "children": child_requirements,
         },
         "linked_tests": linked_tests,
@@ -949,7 +1009,14 @@ async fn show_requirement_version(
         .get_requirements_by_project(project_id)
         .unwrap_or_default()
         .into_iter()
-        .map(|r| (r.id, r.reference_code))
+        .map(|r| {
+            let ref_display = if r.reference_code.trim().is_empty() {
+                format!("RM-{}", r.id)
+            } else {
+                r.reference_code.clone()
+            };
+            (r.id, format!("{} — {}", ref_display, r.title))
+        })
         .collect();
     drop(repo);
     let entries_with_summary: Vec<serde_json::Value> = history_entries
@@ -1141,7 +1208,7 @@ async fn get_edit_requirement(
         .collect();
     candidates.sort_by_key(|c| c.id);
     let linked_requirement_options: Vec<_> = candidates
-        .into_iter()
+        .iter()
         .map(|candidate| {
             json!({
                 "id": candidate.id,
@@ -1150,6 +1217,32 @@ async fn get_edit_requirement(
             })
         })
         .collect();
+
+    let requirement_service = RequirementService::new(state.inner());
+    let parent_links_edit: Vec<serde_json::Value> = req
+        .current_version_id
+        .and_then(|vid| requirement_service.get_parent_links_for_version(vid).ok())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|link| {
+            let repo = state.repo_read();
+            let target_ver = repo
+                .get_requirement_version_by_id(link.target_version_id)
+                .ok()?;
+            let target_req = repo.get_requirement_by_id(target_ver.requirement_id).ok()?;
+            Some(json!({
+                "target_requirement_id": target_req.id,
+                "reference": target_req.reference_code,
+                "title": target_req.title,
+                "link_type": link.link_type,
+            }))
+        })
+        .collect();
+    let link_types: Vec<String> =
+        crate::services::requirement_service::REQUIREMENT_VERSION_LINK_TYPES
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect();
 
     let display_reference = if req.reference_code.trim().is_empty() {
         format!("RM-{:03}", req.id)
@@ -1183,6 +1276,8 @@ async fn get_edit_requirement(
         "custom_field_definitions": custom_field_definitions,
         "custom_field_definitions_with_values": custom_field_definitions_with_values,
         "linked_requirement_options": linked_requirement_options,
+        "parent_links_edit": parent_links_edit,
+        "link_types": link_types,
         "user": user,
         "display_reference": display_reference,
         "name": name,
@@ -1227,6 +1322,28 @@ async fn post_edit_requirement(
         .copied()
         .collect();
     let custom_fields = parse_custom_field_values(form.custom_field_values.as_deref());
+    let parent_links: Option<Vec<(i32, String)>> = form.parent_links.as_deref().and_then(|json| {
+        let links: Vec<ParentLinkEditInput> = serde_json::from_str(json.trim()).ok()?;
+        if links.is_empty() {
+            return Some(vec![]);
+        }
+        let repo = state.inner().repo_read();
+        let to_create: Vec<(i32, String)> = links
+            .iter()
+            .filter_map(|pl| {
+                if pl.target_requirement_id <= 0 {
+                    return None;
+                }
+                let target_req = repo.get_requirement_by_id(pl.target_requirement_id).ok()?;
+                if target_req.project_id != project_id {
+                    return None;
+                }
+                let target_version_id = target_req.current_version_id?;
+                Some((target_version_id, pl.link_type.clone()))
+            })
+            .collect();
+        Some(to_create)
+    });
     let user = project_access.into_user();
     service.update(
         &user,
@@ -1234,6 +1351,7 @@ async fn post_edit_requirement(
         form.to_new_requirement(),
         &verification_ids,
         custom_fields.as_deref(),
+        parent_links,
     )?;
     Ok(Redirect::to(uri!(
         "/p",
@@ -1387,10 +1505,31 @@ async fn new_requirement(
         })
         .collect();
 
+    let link_types: Vec<String> =
+        crate::services::requirement_service::REQUIREMENT_VERSION_LINK_TYPES
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect();
+
+    let parent_links_edit: Vec<serde_json::Value> = parent
+        .and_then(|pid| {
+            parents.iter().find(|p| p["id"] == pid).map(|p| {
+                vec![json!({
+                    "target_requirement_id": p["id"],
+                    "reference": p["reference"],
+                    "title": p["title"],
+                    "link_type": "DERIVES_FROM",
+                })]
+            })
+        })
+        .unwrap_or_default();
+
     let ctx = json!({
         "categories": categories,
         "status": statuses,
         "parent": parents,
+        "link_types": link_types,
+        "parent_links_edit": parent_links_edit,
         "users": users,
         "verification": verifications,
         "verification_with_selected": verification_with_selected,
@@ -1436,6 +1575,7 @@ async fn post_requirement(
     );
 
     let form = new_req.into_inner();
+    let parent_links_for_create = form.parent_links.clone();
     let custom_fields = parse_custom_field_values(form.custom_field_values.as_deref());
     let (mut req, verification_method_ids, intent) = form.into_payload(user.id, project_id);
     req.project_id = project_id;
@@ -1515,6 +1655,44 @@ async fn post_requirement(
             return Err(Redirect::to(failure_url));
         }
     };
+
+    if let Some(links_json) = parent_links_for_create.as_deref() {
+        let links: Vec<ParentLinkEditInput> =
+            serde_json::from_str(links_json.trim()).unwrap_or_default();
+        if !links.is_empty() {
+            let requirement = service.get_by_id(id)?;
+            if let Some(source_version_id) = requirement.current_version_id {
+                let to_create: Vec<(i32, String)> = {
+                    let repo = state.inner().repo_read();
+                    links
+                        .iter()
+                        .filter_map(|pl| {
+                            if pl.target_requirement_id <= 0 {
+                                return None;
+                            }
+                            let target_req =
+                                repo.get_requirement_by_id(pl.target_requirement_id).ok()?;
+                            if target_req.project_id != project_id {
+                                return None;
+                            }
+                            let target_version_id = target_req.current_version_id?;
+                            Some((target_version_id, pl.link_type.clone()))
+                        })
+                        .collect()
+                };
+                for (target_version_id, link_type) in to_create {
+                    let _ = service.create_requirement_version_link(
+                        source_version_id,
+                        target_version_id,
+                        &link_type,
+                        project_id,
+                        None,
+                        None,
+                    );
+                }
+            }
+        }
+    }
 
     if matches!(intent.as_deref(), Some("add_another")) {
         return Ok(Redirect::to(uri!(

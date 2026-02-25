@@ -12,6 +12,7 @@ pub mod matrix;
 pub mod mcp;
 pub mod prelude;
 pub mod requirement_diff;
+pub mod requirement_version_links;
 pub mod requirements;
 pub mod semantic_search;
 pub mod status;
@@ -91,6 +92,10 @@ pub fn routes() -> Vec<Route> {
         traceability::trace_down,
         traceability::coverage_report,
         traceability::clear_suspect,
+        requirement_version_links::create,
+        requirement_version_links::list,
+        requirement_version_links::delete,
+        requirement_version_links::link_types,
         cache::stats,
         cache::clear,
         cache::cleanup,

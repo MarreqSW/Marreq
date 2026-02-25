@@ -20,6 +20,9 @@ pub enum AuthError {
     #[error("password verification error: {0}")]
     Verify(String), // hashing library errors
 
+    #[error("password policy violation: {0}")]
+    PasswordPolicy(String),
+
     #[error("logging error: {0}")]
     Audit(String), // optional: login logging failed
 

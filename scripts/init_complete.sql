@@ -63,7 +63,7 @@ CREATE TABLE users (
     email VARCHAR NOT NULL DEFAULT ' ',
     creation_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    password_hash VARCHAR(255) NOT NULL DEFAULT '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m',
+    password_hash VARCHAR(255) NOT NULL,
     is_admin BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -582,15 +582,15 @@ INSERT INTO test_status (title, description, tag, project_id, is_system) VALUES
     ('Pending', 'The test is pending execution', 'Pend', 2, true),
     ('In Progress', 'The test is currently being executed', 'Prog', 2, true);
 
--- Users with working passwords (all users have password: 'password')
--- Password hash: $2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m
+-- Users with working passwords (all users have password: 'ChangeMe123!')
+-- Password hash (Argon2id): $argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0
 INSERT INTO users (username, name, email, is_admin, password_hash) VALUES
-    ('alice', 'Alice Johnson', 'alice@reqman.com', true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
-    ('dr_smith', 'Dr. Sarah Smith', 'sarah.smith@spacecorp.com', true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
-    ('eng_jones', 'Engineer Mike Jones', 'mike.jones@spacecorp.com', false, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
-    ('tech_lee', 'Technician Lisa Lee', 'lisa.lee@spacecorp.com', false, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
-    ('qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', false, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m'),
-    ('admin', 'System Administrator', 'admin@reqman.com', true, '$2b$12$XA9O8krsitwulDQm1Cx3rupcIVug8lckConqWLmBsn6kXKNApQE7m');
+    ('alice', 'Alice Johnson', 'alice@reqman.com', true, '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0'),
+    ('dr_smith', 'Dr. Sarah Smith', 'sarah.smith@spacecorp.com', true, '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0'),
+    ('eng_jones', 'Engineer Mike Jones', 'mike.jones@spacecorp.com', false, '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0'),
+    ('tech_lee', 'Technician Lisa Lee', 'lisa.lee@spacecorp.com', false, '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0'),
+    ('qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', false, '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0'),
+    ('admin', 'System Administrator', 'admin@reqman.com', true, '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0');
 
 -- Project membership assignments (role: 1=Owner, 2=Manager, 3=Contributor, 4=Viewer)
 INSERT INTO project_members (project_id, user_id, role) VALUES
@@ -750,7 +750,7 @@ BEGIN
     RAISE NOTICE '';
     RAISE NOTICE 'Database Setup:';
     RAISE NOTICE '- 3 Projects created';
-    RAISE NOTICE '- 6 Users created (all with password: password)';
+    RAISE NOTICE '- 6 Users created (all with password: ChangeMe123!)';
     RAISE NOTICE '- 6 Requirement Status definitions';
     RAISE NOTICE '- 4 Test Status definitions';
     RAISE NOTICE '- 8 Categories for Space Project';
@@ -766,12 +766,12 @@ BEGIN
     RAISE NOTICE '- 5 Sample audit logs';
     RAISE NOTICE '';
     RAISE NOTICE 'Login Credentials:';
-    RAISE NOTICE '- Username: alice, Password: password (Admin)';
-    RAISE NOTICE '- Username: dr_smith, Password: password (Admin)';
-    RAISE NOTICE '- Username: eng_jones, Password: password';
-    RAISE NOTICE '- Username: tech_lee, Password: password';
-    RAISE NOTICE '- Username: qa_wilson, Password: password';
-    RAISE NOTICE '- Username: admin, Password: password (Admin)';
+    RAISE NOTICE '- Username: alice, Password: ChangeMe123! (Admin)';
+    RAISE NOTICE '- Username: dr_smith, Password: ChangeMe123! (Admin)';
+    RAISE NOTICE '- Username: eng_jones, Password: ChangeMe123!';
+    RAISE NOTICE '- Username: tech_lee, Password: ChangeMe123!';
+    RAISE NOTICE '- Username: qa_wilson, Password: ChangeMe123!';
+    RAISE NOTICE '- Username: admin, Password: ChangeMe123! (Admin)';
     RAISE NOTICE '';
     RAISE NOTICE 'The database is ready for use!';
     RAISE NOTICE '========================================';
@@ -787,16 +787,5 @@ CREATE TABLE IF NOT EXISTS __diesel_schema_migrations (
 );
 
 INSERT INTO __diesel_schema_migrations (version) VALUES
-    ('2026-01-31-000001_baseline_schema'),
-    ('2026-02-06-000001_seed_default_user'),
-    ('2026-02-07-000001_requirement_versioning'),
-    ('2026-02-08-000001_immutable_baselines'),
-    ('2026-02-08-000003_requirement_version_approval'),
-    ('2026-02-09-000001_matrix_triggering_metadata'),
-    ('2026-02-09-000002_baseline_traceability_suspect'),
-    ('2026-02-13-000001_custom_metadata_fields'),
-    ('2026-02-14-000001_requirement_comments'),
-    ('2026-02-14-000001_user_api_tokens'),
-    ('2026-02-15-000001_status_is_system'),
-    ('2026-02-15-000002_status_tag_color')
+    ('2026-01-31-000001_baseline_schema')
 ON CONFLICT (version) DO NOTHING;

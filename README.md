@@ -132,7 +132,7 @@ Typical flow:
 - Initialize DB with sample data: `./scripts/setup_database.sh`
 - Start app: `cargo run --bin req_man`
 
-Then open **http://localhost:8000** in your browser (all demo users use password `password`).
+Then open **http://localhost:8000** in your browser (demo admin user `alice` uses password `ChangeMe123!`).
 
 For detailed database setup options (automated, manual, reset, verification) see the [database setup guide](DATABASE_SETUP_README.md).
 
@@ -409,7 +409,7 @@ cargo run --bin req_man
 ```
 
 #### Login Issues
-- **Default credentials**: All users have password `password`
+- **Default credentials**: Seeded admin `alice` has password `ChangeMe123!` (change after first login).
 - **Available users**: alice, dr_smith, eng_jones, tech_lee, qa_wilson, admin
 - **Reset passwords**: Update database directly or re-run setup script
 

@@ -509,7 +509,7 @@ if [[ ${#INSTALLED_ITEMS[@]} -gt 0 ]]; then
     echo ""
 fi
 
-echo -e "${BLUE}🔐 Login Credentials (all users have password: 'password'):${NC}"
+echo -e "${BLUE}🔐 Login Credentials (all users have password: 'ChangeMe123!'):${NC}"
 echo "   • alice (Admin) - Alice Johnson"
 echo "   • dr_smith (Admin) - Dr. Sarah Smith"
 echo "   • eng_jones - Engineer Mike Jones"

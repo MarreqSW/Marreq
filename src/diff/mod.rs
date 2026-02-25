@@ -199,7 +199,6 @@ mod tests {
             author_id: 1,
             reviewer_id: 1,
             category_id,
-            parent_id: None,
             applicability_id,
             justification: None,
             deadline_date: None,

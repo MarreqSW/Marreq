@@ -163,7 +163,6 @@ diesel::table! {
         author_id -> Int4,
         reviewer_id -> Int4,
         category_id -> Int4,
-        parent_id -> Nullable<Int4>,
         applicability_id -> Int4,
         justification -> Nullable<Text>,
         deadline_date -> Nullable<Timestamp>,

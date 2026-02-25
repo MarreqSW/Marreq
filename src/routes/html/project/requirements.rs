@@ -43,8 +43,6 @@ struct RequirementCreateForm {
     category_id: i32,
     #[field(name = uncased("status_id"))]
     status_id: i32,
-    #[field(name = uncased("parent_id"))]
-    parent_id: i32,
     /// JSON array of { "target_requirement_id": i32, "link_type": string } for multi-parent.
     #[field(name = uncased("parent_links"))]
     parent_links: Option<String>,
@@ -74,8 +72,7 @@ impl RequirementCreateForm {
             verification_method_ids,
             category_id,
             status_id,
-            parent_id,
-            parent_links,
+            parent_links: _,
             reference_code,
             reviewer_id,
             applicability_id,
@@ -84,9 +81,6 @@ impl RequirementCreateForm {
             custom_field_values: _,
         } = self;
 
-        let parent_id = parse_first_parent_from_links(parent_links.as_deref())
-            .or(if parent_id > 0 { Some(parent_id) } else { None });
-
         let requirement = NewRequirement {
             id,
             title,
@@ -94,7 +88,6 @@ impl RequirementCreateForm {
             author_id,
             category_id,
             status_id,
-            parent_id,
             reference_code,
             reviewer_id,
             applicability_id,
@@ -131,8 +124,6 @@ struct RequirementEditForm {
     justification: Option<String>,
     #[field(name = uncased("project_id"))]
     project_id: i32,
-    #[field(name = uncased("parent_id"))]
-    parent_id: Option<i32>,
     /// JSON array of { "target_requirement_id": i32, "link_type": string } for multi-parent upstream links.
     #[field(name = uncased("parent_links"))]
     parent_links: Option<String>,
@@ -151,8 +142,6 @@ struct ParentLinkEditInput {
 
 impl RequirementEditForm {
     fn to_new_requirement(&self) -> NewRequirement {
-        let parent_id =
-            parse_first_parent_from_links(self.parent_links.as_deref()).or(self.parent_id);
         NewRequirement {
             id: self.id,
             title: self.title.clone(),
@@ -160,7 +149,6 @@ impl RequirementEditForm {
             author_id: self.author_id,
             category_id: self.category_id,
             status_id: self.status_id,
-            parent_id,
             reference_code: self.reference_code.clone(),
             reviewer_id: self.reviewer_id,
             applicability_id: self.applicability_id,
@@ -168,15 +156,6 @@ impl RequirementEditForm {
             project_id: self.project_id,
         }
     }
-}
-
-fn parse_first_parent_from_links(json: Option<&str>) -> Option<i32> {
-    let s = json?.trim();
-    if s.is_empty() {
-        return None;
-    }
-    let parsed: Vec<ParentLinkEditInput> = serde_json::from_str(s).ok()?;
-    parsed.first().map(|pl| pl.target_requirement_id)
 }
 
 /// Parse optional JSON string into custom field values for create/update.
@@ -438,14 +417,17 @@ async fn show_requirements(
     }
 
     // Build tree data for tree view
+    // DAG: a requirement can appear under multiple parents via req_parents.
     let mut children: HashMap<i32, Vec<&DecoratedRequirement>> = HashMap::new();
     let mut roots: Vec<&DecoratedRequirement> = Vec::new();
 
     for r in &requirements {
-        if r.req_parent_id.is_none() || r.req_parent_id == Some(0) {
+        if r.req_parents.is_empty() {
             roots.push(r);
-        } else if let Some(parent_id) = r.req_parent_id {
-            children.entry(parent_id).or_default().push(r);
+        } else {
+            for parent in &r.req_parents {
+                children.entry(parent.id).or_default().push(r);
+            }
         }
     }
 
@@ -875,7 +857,7 @@ async fn show_requirement_version(
         reviewer_id: version.reviewer_id,
         reference_code: current.reference_code.clone(),
         category_id: version.category_id,
-        parent_id: version.parent_id,
+        parent_id: None, // populated from requirement_version_links by decorator layer
         creation_date: version.created_at,
         update_date: version.created_at,
         deadline_date: version.deadline_date,
@@ -1444,14 +1426,13 @@ async fn new_requirement(
         None => vec![],
     };
 
-    let mut new_requirement = NewRequirement {
+    let new_requirement = NewRequirement {
         id: None,
         title: tr.map(|r| r.title.clone()).unwrap_or_default(),
         description: tr.map(|r| r.description.clone()).unwrap_or_default(),
         author_id: user.id,
         category_id: tr.map(|r| r.category_id).unwrap_or_default(),
         status_id: 0, // Draft
-        parent_id: tr.map(|r| r.parent_id).unwrap_or_default(),
         reference_code: tr.map(|r| r.reference_code.clone()).unwrap_or_default(),
         reviewer_id: tr.map(|r| r.reviewer_id).unwrap_or_default(),
         applicability_id: tr.map(|r| r.applicability_id).unwrap_or_default(),
@@ -1459,16 +1440,8 @@ async fn new_requirement(
         project_id,
     };
 
-    // if parent is valid, assign, else None
-    if let Some(parent_id) = parent {
-        new_requirement.parent_id = parents
-            .iter()
-            .find(|req| req["id"] == parent_id)
-            .map(|_| Some(parent_id))
-            .unwrap_or(None);
-    }
-
     // Default status to "Draft"
+    let mut new_requirement = new_requirement;
     new_requirement.status_id = statuses
         .iter()
         .find(|st| st.title.eq_ignore_ascii_case("Draft"))
@@ -2664,15 +2637,72 @@ mod tests {
 
     #[rocket::async_test]
     async fn requirement_detail_shows_parent_and_children() {
+        use crate::models::{RequirementVersion, RequirementVersionLink};
+
         let mut repo = base_repo();
 
-        let parent = sample_requirement(1);
+        let mut parent = sample_requirement(1);
+        parent.current_version_id = Some(100);
         repo.requirements.insert(1, parent);
 
         let mut child = sample_requirement(2);
-        child.parent_id = Some(1);
+        child.current_version_id = Some(200);
         child.reference_code = "REQ-SYS-2".into();
         repo.requirements.insert(2, child);
+
+        // Add RequirementVersion entries
+        repo.requirement_versions.insert(
+            100,
+            RequirementVersion {
+                id: 100,
+                requirement_id: 1,
+                title: "Requirement 1".into(),
+                description: "Test requirement".into(),
+                status_id: 1,
+                author_id: ADMIN_ID,
+                reviewer_id: ADMIN_ID,
+                category_id: 1,
+                created_at: timestamp(),
+                deadline_date: None,
+                applicability_id: 1,
+                justification: None,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        repo.requirement_versions.insert(
+            200,
+            RequirementVersion {
+                id: 200,
+                requirement_id: 2,
+                title: "Requirement 2".into(),
+                description: "Test requirement".into(),
+                status_id: 1,
+                author_id: ADMIN_ID,
+                reviewer_id: ADMIN_ID,
+                category_id: 1,
+                created_at: timestamp(),
+                deadline_date: None,
+                applicability_id: 1,
+                justification: None,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+
+        // Link child (version 200) -> parent (version 100)
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 1,
+            source_version_id: 200,
+            target_version_id: 100,
+            link_type: "DERIVES_FROM".to_string(),
+            rationale: None,
+            project_id: PRIMARY_PROJECT,
+            created_at: timestamp(),
+            metadata: None,
+        });
 
         let client = test_client(repo).await;
 

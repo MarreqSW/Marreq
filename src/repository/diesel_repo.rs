@@ -856,7 +856,7 @@ fn requirement_from_baseline_version(
         reviewer_id: version.reviewer_id,
         reference_code: container.stable_code.clone(),
         category_id: version.category_id,
-        parent_id: version.parent_id,
+        parent_id: None, // populated from requirement_version_links by service/decorator layer
         creation_date: version.created_at,
         update_date: version.created_at,
         deadline_date: version.deadline_date,
@@ -885,7 +885,7 @@ fn requirement_from_current(
         reviewer_id: version.reviewer_id,
         reference_code: container.stable_code.clone(),
         category_id: version.category_id,
-        parent_id: version.parent_id,
+        parent_id: None, // populated from requirement_version_links by service/decorator layer
         creation_date: version.created_at,
         update_date: version.created_at,
         deadline_date: version.deadline_date,

@@ -5,7 +5,8 @@ use crate::models::{
     NewApplicability, NewCategory, NewRequirement, NewTestCase, NewVerificationMethod,
 };
 use crate::repository::{
-    DieselRepo, LookupRepository, RequirementsRepository, TestsCaseRepository, UserRepository,
+    DieselRepo, LookupRepository, RequirementVersionLinksRepository, RequirementsRepository,
+    TestsCaseRepository, UserRepository,
 };
 use anyhow::{anyhow, Result};
 use calamine::{open_workbook, DataType, Reader, Xlsx};
@@ -361,7 +362,6 @@ impl ExcelImporter {
             status_id,
             author_id,
             reviewer_id,
-            parent_id,
             justification: req_data.get("justification").cloned(),
             project_id,
         };
@@ -372,6 +372,28 @@ impl ExcelImporter {
             .map_err(|e| anyhow!("{}", e))?;
         repo.set_requirement_verification_methods(id, &[verification_method_id])
             .map_err(|e| anyhow!("{}", e))?;
+
+        // Create a DERIVES_FROM link to the parent requirement if one was resolved
+        if let Some(parent_req_id) = parent_id {
+            let child_req = repo.get_requirement_by_id(id).ok();
+            let parent_req = repo.get_requirement_by_id(parent_req_id).ok();
+            if let (Some(child), Some(parent)) = (child_req, parent_req) {
+                if let (Some(child_vid), Some(parent_vid)) =
+                    (child.current_version_id, parent.current_version_id)
+                {
+                    use crate::models::NewRequirementVersionLink;
+                    let _ = repo.insert_requirement_version_link(&NewRequirementVersionLink {
+                        source_version_id: child_vid,
+                        target_version_id: parent_vid,
+                        link_type: "DERIVES_FROM".to_string(),
+                        rationale: None,
+                        project_id,
+                        metadata: None,
+                    });
+                }
+            }
+        }
+
         Ok(Some(id))
     }
 

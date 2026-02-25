@@ -476,17 +476,16 @@ mod tests {
 
         // Links: r2 (vid=20) -> parent 31 (vid=310); r3 (vid=30) -> non-existent parent 32 (vid=320)
         use crate::models::RequirementVersionLink;
-        repo.requirement_version_links
-            .push(RequirementVersionLink {
-                id: 1,
-                source_version_id: 20,
-                target_version_id: 310,
-                link_type: "DERIVES_FROM".to_string(),
-                rationale: None,
-                project_id: 1,
-                created_at: now,
-                metadata: None,
-            });
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 1,
+            source_version_id: 20,
+            target_version_id: 310,
+            link_type: "DERIVES_FROM".to_string(),
+            rationale: None,
+            project_id: 1,
+            created_at: now,
+            metadata: None,
+        });
         // Link for r3 to a version (320) whose requirement (32) doesn't exist -> "[Deleted Parent]"
         // We add version 320 pointing to requirement 32 (which is NOT in repo.requirements)
         repo.requirement_versions.insert(
@@ -509,17 +508,16 @@ mod tests {
                 approved_at: None,
             },
         );
-        repo.requirement_version_links
-            .push(RequirementVersionLink {
-                id: 2,
-                source_version_id: 30,
-                target_version_id: 320,
-                link_type: "DERIVES_FROM".to_string(),
-                rationale: None,
-                project_id: 1,
-                created_at: now,
-                metadata: None,
-            });
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 2,
+            source_version_id: 30,
+            target_version_id: 320,
+            link_type: "DERIVES_FROM".to_string(),
+            rationale: None,
+            project_id: 1,
+            created_at: now,
+            metadata: None,
+        });
 
         let r1 = Requirement {
             id: 1,

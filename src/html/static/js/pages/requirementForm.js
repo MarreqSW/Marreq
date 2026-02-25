@@ -1064,6 +1064,84 @@ function collectCustomFieldValues(form) {
   hidden.value = JSON.stringify(arr);
 }
 
+function syncParentLinksFromList(form) {
+  const list = form.querySelector('[data-role="parent-links-list"]');
+  const hidden = form.querySelector('#parent_links');
+  const parentIdField = form.querySelector('#parent_id');
+  if (!list || !hidden) return;
+  const items = list.querySelectorAll('li[data-target-id][data-link-type]');
+  const arr = Array.from(items).map((li) => ({
+    target_requirement_id: parseInt(li.dataset.targetId, 10),
+    link_type: li.dataset.linkType || 'DERIVES_FROM',
+  }));
+  hidden.value = JSON.stringify(arr);
+  if (parentIdField) {
+    parentIdField.value = arr.length > 0 ? String(arr[0].target_requirement_id) : '0';
+  }
+}
+
+function initParentLinks(form) {
+  const section = form.querySelector('[data-role="upstream-trace"]');
+  const list = form.querySelector('[data-role="parent-links-list"]');
+  const addBlock = form.querySelector('[data-role="add-parent-link"]');
+  const requirementSelect = form.querySelector('[data-role="parent-link-requirement"]');
+  const linkTypeSelect = form.querySelector('[data-role="parent-link-type"]');
+  const addBtn = form.querySelector('[data-role="add-parent-link-btn"]');
+  const hidden = form.querySelector('#parent_links');
+  if (!section || !list || !addBlock || !requirementSelect || !linkTypeSelect || !addBtn || !hidden) {
+    return;
+  }
+
+  syncParentLinksFromList(form);
+
+  addBtn.addEventListener('click', () => {
+    const reqId = requirementSelect.value;
+    const linkType = linkTypeSelect.value;
+    if (!reqId) {
+      showNotification('Select a requirement to add as parent', 'error');
+      return;
+    }
+    const opt = requirementSelect.options[requirementSelect.selectedIndex];
+    const reference = opt?.getAttribute('data-reference') ?? '';
+    const title = opt?.getAttribute('data-title') ?? '';
+    const displayRef = reference || `RM-${reqId}`;
+    const existing = list.querySelector(`li[data-target-id="${reqId}"]`);
+    if (existing) {
+      showNotification('This requirement is already added as a parent', 'error');
+      return;
+    }
+    const li = document.createElement('li');
+    li.className = 'd-flex align-items-center gap-2 mb-2';
+    li.dataset.targetId = reqId;
+    li.dataset.linkType = linkType;
+    li.innerHTML = `
+      <span class="badge bg-secondary">${escapeHtmlForParentLink(linkType)}</span>
+      <span class="flex-grow-1">${escapeHtmlForParentLink(displayRef)} — ${escapeHtmlForParentLink(title)}</span>
+      <button type="button" class="btn btn-sm btn-outline-danger" data-role="remove-parent-link" aria-label="Remove parent link">Remove</button>
+    `;
+    li.querySelector('[data-role="remove-parent-link"]').addEventListener('click', () => {
+      li.remove();
+      syncParentLinksFromList(form);
+    });
+    list.appendChild(li);
+    syncParentLinksFromList(form);
+  });
+
+  list.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-role="remove-parent-link"]');
+    if (btn) {
+      btn.closest('li')?.remove();
+      syncParentLinksFromList(form);
+    }
+  });
+}
+
+function escapeHtmlForParentLink(s) {
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
 export function init() {
   const form = document.querySelector('[data-requirement-form]');
   if (!form) {
@@ -1072,7 +1150,10 @@ export function init() {
 
   const isCreateForm = form.classList.contains('create-form');
 
-  form.addEventListener('submit', () => collectCustomFieldValues(form));
+  form.addEventListener('submit', () => {
+    collectCustomFieldValues(form);
+    syncParentLinksFromList(form);
+  });
 
   initCustomDropdowns(form);
   initReferenceValidation(form);
@@ -1080,6 +1161,7 @@ export function init() {
     initInlineCreation(form);
     initSuccessToast(form);
   }
+  initParentLinks(form);
   initStatusControls(form);
   initRichText(form);
   initRationale(form);

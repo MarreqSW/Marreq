@@ -219,7 +219,7 @@ function relationships(rawRelationships = {}) {
 
     return {
       id: item.id,
-      reference: reference(item),
+      reference: reference(item) ?? item.reference_code,
       title: normalise(item.title),
       status: normalise(item.status_id ?? item.req_current_status_id),
     };
@@ -230,10 +230,24 @@ function relationships(rawRelationships = {}) {
     .map(format)
     .filter(Boolean);
 
+  const parent_links = (rawRelationships.parent_links ?? []).map((link) => ({
+    link_id: link.link_id,
+    link_type: link.link_type || 'DERIVES_FROM',
+    rationale: link.rationale,
+    target: link.target
+      ? {
+          id: link.target.id,
+          reference: link.target.reference_code,
+          title: normalise(link.target.title),
+        }
+      : null,
+  }));
+
   return {
     parent,
+    parent_links,
     children,
-    has_links: Boolean(parent) || children.length > 0,
+    has_links: Boolean(parent) || parent_links.length > 0 || children.length > 0,
   };
 }
 

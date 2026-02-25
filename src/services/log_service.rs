@@ -25,6 +25,7 @@ fn field_label(key: &str) -> &'static str {
         "deadline_date" => "Deadline",
         "reference_code" => "Reference",
         "parent_id" => "Parent",
+        "parent_requirement_ids" => "Parents",
         "source" => "Source",
         "verification_method_ids" => "Verification",
         _ => "Details",
@@ -48,6 +49,24 @@ pub fn change_summary(log: &Log) -> String {
     format!("{} updated", changed.join(", "))
 }
 
+fn parent_id_differs(
+    old_obj: &serde_json::Map<String, JsonValue>,
+    new_obj: &serde_json::Map<String, JsonValue>,
+) -> bool {
+    let old = old_obj.get("parent_id");
+    let new = new_obj.get("parent_id");
+    old != new
+}
+
+fn parent_requirement_ids_differs(
+    old_obj: &serde_json::Map<String, JsonValue>,
+    new_obj: &serde_json::Map<String, JsonValue>,
+) -> bool {
+    let old = old_obj.get("parent_requirement_ids");
+    let new = new_obj.get("parent_requirement_ids");
+    old != new
+}
+
 fn changed_field_labels(old_json: Option<&str>, new_json: Option<&str>) -> Vec<String> {
     let old_obj = old_json.and_then(|s| serde_json::from_str::<JsonValue>(s).ok());
     let new_obj = new_json.and_then(|s| serde_json::from_str::<JsonValue>(s).ok());
@@ -64,6 +83,8 @@ fn changed_field_labels(old_json: Option<&str>, new_json: Option<&str>) -> Vec<S
         "project_id",
         "creation_date",
         "update_date",
+        "current_version_id",
+        "same_as_current",
     ];
     for (key, new_val) in new_obj.iter() {
         if skip_keys.contains(&key.as_str()) {
@@ -78,6 +99,12 @@ fn changed_field_labels(old_json: Option<&str>, new_json: Option<&str>) -> Vec<S
         if !new_obj.contains_key(key) && !skip_keys.contains(&key.as_str()) {
             labels.push(field_label(key).to_string());
         }
+    }
+    if labels.is_empty() && parent_id_differs(&old_obj, &new_obj) && !parent_requirement_ids_differs(&old_obj, &new_obj) {
+        labels.push("Parent".to_string());
+    }
+    if parent_requirement_ids_differs(&old_obj, &new_obj) {
+        labels.push("Parents".to_string());
     }
     labels.sort();
     labels.dedup();
@@ -131,6 +158,8 @@ pub fn log_change_details(log: &Log) -> Vec<ChangeDetail> {
         "project_id",
         "creation_date",
         "update_date",
+        "current_version_id",
+        "same_as_current",
     ];
 
     match action.as_str() {
@@ -173,9 +202,13 @@ pub fn log_change_details(log: &Log) -> Vec<ChangeDetail> {
                 (Some(JsonValue::Object(a)), Some(JsonValue::Object(b))) => (a, b),
                 _ => return vec![],
             };
+            let parents_diff = parent_requirement_ids_differs(&old_obj, &new_obj);
             let mut out = Vec::new();
             for (key, new_val) in new_obj.iter() {
                 if skip_keys.contains(&key.as_str()) {
+                    continue;
+                }
+                if key == "parent_id" && parents_diff {
                     continue;
                 }
                 let old_val = old_obj.get(key);
@@ -189,12 +222,25 @@ pub fn log_change_details(log: &Log) -> Vec<ChangeDetail> {
             }
             for key in old_obj.keys() {
                 if !new_obj.contains_key(key) && !skip_keys.contains(&key.as_str()) {
+                    if key == "parent_id" && parents_diff {
+                        continue;
+                    }
                     out.push(ChangeDetail {
                         field: field_label(key).to_string(),
                         old_value: value_to_display(old_obj.get(key)),
                         new_value: "—".to_string(),
                     });
                 }
+            }
+            if parent_id_differs(&old_obj, &new_obj)
+                && !out.iter().any(|d| d.field == "Parent")
+                && !out.iter().any(|d| d.field == "Parents")
+            {
+                out.push(ChangeDetail {
+                    field: "Parent".to_string(),
+                    old_value: value_to_display(old_obj.get("parent_id")),
+                    new_value: value_to_display(new_obj.get("parent_id")),
+                });
             }
             out.sort_by(|a, b| a.field.cmp(&b.field));
             out
@@ -204,6 +250,16 @@ pub fn log_change_details(log: &Log) -> Vec<ChangeDetail> {
 
 fn parse_id_for_label(s: &str) -> Option<i32> {
     s.trim().parse().ok()
+}
+
+/// True if the value represents "no parent" in change logs (null, 0, empty, or em dash).
+fn is_empty_parent_value(s: &str) -> bool {
+    let t = s.trim();
+    t.is_empty()
+        || t == "—"
+        || t.eq_ignore_ascii_case("null")
+        || t == "0"
+        || t.eq_ignore_ascii_case("none")
 }
 
 fn parse_ids_array_for_labels(s: &str) -> Vec<i32> {
@@ -218,6 +274,22 @@ fn resolve_verification_ids_to_labels(s: &str, verification_map: &HashMap<i32, S
     let labels: Vec<String> = ids
         .iter()
         .filter_map(|id| verification_map.get(id).cloned())
+        .collect();
+    if labels.is_empty() {
+        s.to_string()
+    } else {
+        labels.join(", ")
+    }
+}
+
+fn resolve_parent_ids_to_labels(s: &str, parent_label_map: &HashMap<i32, String>) -> String {
+    let ids = parse_ids_array_for_labels(s);
+    if ids.is_empty() {
+        return "—".to_string();
+    }
+    let labels: Vec<String> = ids
+        .iter()
+        .filter_map(|id| parent_label_map.get(id).cloned())
         .collect();
     if labels.is_empty() {
         s.to_string()
@@ -284,11 +356,39 @@ pub fn resolve_change_details_labels(
                 ),
                 "Parent" => (
                     parse_id_for_label(&d.old_value)
-                        .and_then(|id| resolvers.parent_label_map.get(&id).cloned())
-                        .unwrap_or_else(|| d.old_value.clone()),
+                        .and_then(|id| {
+                            if id == 0 {
+                                Some("—".to_string())
+                            } else {
+                                resolvers.parent_label_map.get(&id).cloned()
+                            }
+                        })
+                        .unwrap_or_else(|| {
+                            if is_empty_parent_value(&d.old_value) {
+                                "—".to_string()
+                            } else {
+                                d.old_value.clone()
+                            }
+                        }),
                     parse_id_for_label(&d.new_value)
-                        .and_then(|id| resolvers.parent_label_map.get(&id).cloned())
-                        .unwrap_or_else(|| d.new_value.clone()),
+                        .and_then(|id| {
+                            if id == 0 {
+                                Some("—".to_string())
+                            } else {
+                                resolvers.parent_label_map.get(&id).cloned()
+                            }
+                        })
+                        .unwrap_or_else(|| {
+                            if is_empty_parent_value(&d.new_value) {
+                                "—".to_string()
+                            } else {
+                                d.new_value.clone()
+                            }
+                        }),
+                ),
+                "Parents" => (
+                    resolve_parent_ids_to_labels(&d.old_value, resolvers.parent_label_map),
+                    resolve_parent_ids_to_labels(&d.new_value, resolvers.parent_label_map),
                 ),
                 _ => (d.old_value, d.new_value),
             };

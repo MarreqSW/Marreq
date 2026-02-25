@@ -5,8 +5,8 @@
 
 use super::*;
 use crate::models::{
-    CustomFieldDefinition, CustomFieldDefinitionPayload, NewRequirementComment, RequirementComment,
-    RequirementVersion,
+    CustomFieldDefinition, CustomFieldDefinitionPayload, NewRequirementComment,
+    NewRequirementVersionLink, RequirementComment, RequirementVersion, RequirementVersionLink,
 };
 use crate::repository::errors::RepoError;
 use chrono::{NaiveDate, NaiveDateTime};
@@ -43,6 +43,8 @@ pub struct DieselRepoMock {
     pub next_custom_field_id: i32,
     pub requirement_comments: Vec<RequirementComment>,
     pub next_comment_id: i32,
+    pub requirement_version_links: Vec<RequirementVersionLink>,
+    pub next_link_id: i32,
 }
 
 fn epoch() -> NaiveDateTime {
@@ -85,6 +87,8 @@ impl Default for DieselRepoMock {
             next_custom_field_id: 1,
             requirement_comments: Vec::new(),
             next_comment_id: 1,
+            requirement_version_links: Vec::new(),
+            next_link_id: 1,
         }
     }
 }
@@ -122,6 +126,8 @@ impl DieselRepoMock {
             next_custom_field_id: 1,
             requirement_comments: Vec::new(),
             next_comment_id: 1,
+            requirement_version_links: Vec::new(),
+            next_link_id: 1,
         }
     }
     pub fn with_error() -> Self {
@@ -152,6 +158,8 @@ impl DieselRepoMock {
             next_custom_field_id: 1,
             requirement_comments: Vec::new(),
             next_comment_id: 1,
+            requirement_version_links: Vec::new(),
+            next_link_id: 1,
         }
     }
 
@@ -1610,5 +1618,121 @@ impl RequirementCommentsRepository for DieselRepoMock {
             .collect();
         out.sort_by_key(|c| c.created_at);
         Ok(out)
+    }
+}
+
+impl RequirementVersionLinksRepository for DieselRepoMock {
+    fn list_links_by_source_version(
+        &self,
+        source_version_id: i32,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError> {
+        let mut out: Vec<_> = self
+            .requirement_version_links
+            .iter()
+            .filter(|l| l.source_version_id == source_version_id)
+            .cloned()
+            .collect();
+        out.sort_by_key(|l| l.created_at);
+        Ok(out)
+    }
+
+    fn list_links_by_target_version(
+        &self,
+        target_version_id: i32,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError> {
+        let mut out: Vec<_> = self
+            .requirement_version_links
+            .iter()
+            .filter(|l| l.target_version_id == target_version_id)
+            .cloned()
+            .collect();
+        out.sort_by_key(|l| l.created_at);
+        Ok(out)
+    }
+
+    fn list_links_by_project(
+        &self,
+        project_id: i32,
+        source_version_id: Option<i32>,
+        target_version_id: Option<i32>,
+        link_type: Option<&str>,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError> {
+        let mut out: Vec<_> = self
+            .requirement_version_links
+            .iter()
+            .filter(|l| {
+                l.project_id == project_id
+                    && source_version_id.is_none_or(|s| l.source_version_id == s)
+                    && target_version_id.is_none_or(|t| l.target_version_id == t)
+                    && link_type.is_none_or(|lt| l.link_type.as_str() == lt)
+            })
+            .cloned()
+            .collect();
+        out.sort_by_key(|l| l.created_at);
+        Ok(out)
+    }
+
+    fn insert_requirement_version_link(
+        &mut self,
+        new: &NewRequirementVersionLink,
+    ) -> Result<RequirementVersionLink, RepoError> {
+        if self.force_err {
+            return Err(RepoError::Pool("force_err".into()));
+        }
+        let id = self.next_link_id;
+        self.next_link_id += 1;
+        let link = RequirementVersionLink {
+            id,
+            source_version_id: new.source_version_id,
+            target_version_id: new.target_version_id,
+            link_type: new.link_type.clone(),
+            rationale: new.rationale.clone(),
+            project_id: new.project_id,
+            created_at: epoch(),
+            metadata: new.metadata.clone(),
+        };
+        self.requirement_version_links.push(link.clone());
+        Ok(link)
+    }
+
+    fn delete_requirement_version_link(
+        &mut self,
+        link_id: i32,
+    ) -> Result<RequirementVersionLink, RepoError> {
+        if self.force_err {
+            return Err(RepoError::Pool("force_err".into()));
+        }
+        let pos = self
+            .requirement_version_links
+            .iter()
+            .position(|l| l.id == link_id)
+            .ok_or(RepoError::NotFound)?;
+        Ok(self.requirement_version_links.remove(pos))
+    }
+
+    fn delete_requirement_version_links_by_source_version(
+        &mut self,
+        source_version_id: i32,
+    ) -> Result<Vec<RequirementVersionLink>, RepoError> {
+        if self.force_err {
+            return Err(RepoError::Pool("force_err".into()));
+        }
+        let (kept, removed): (Vec<_>, Vec<_>) = self
+            .requirement_version_links
+            .drain(..)
+            .partition(|l| l.source_version_id != source_version_id);
+        self.requirement_version_links = kept;
+        Ok(removed)
+    }
+
+    fn get_requirement_version_link_by_id(
+        &self,
+        link_id: i32,
+    ) -> Result<RequirementVersionLink, RepoError> {
+        self.requirement_version_links
+            .iter()
+            .find(|l| l.id == link_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
     }
 }

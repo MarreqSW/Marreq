@@ -37,12 +37,12 @@
         <form method="POST" action="/login" class="reqman-login__form">
           <div class="mb-3">
             <label for="username" class="form-label c-form-label">Username</label>
-            <input id="username" name="username" type="text" class="form-control c-form-control" required>
+            <input id="username" name="username" type="text" class="form-control c-form-control" autocomplete="username" required>
           </div>
 
           <div class="mb-3">
             <label for="password" class="form-label c-form-label">Password</label>
-            <input id="password" name="password" type="password" class="form-control c-form-control" required>
+            <input id="password" name="password" type="password" class="form-control c-form-control" autocomplete="current-password" required>
           </div>
 
           {{#if error}}
@@ -53,7 +53,7 @@
         </form>
 
         <footer class="reqman-login__footer">
-          <p>Default credentials: alice / password</p>
+          <p>Default credentials: alice / ChangeMe123!</p>
         </footer>
       </div>
 

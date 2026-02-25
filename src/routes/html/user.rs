@@ -211,10 +211,13 @@ async fn post_user(
 
     match service.create(&admin.into_inner(), request) {
         Ok(id) => Ok(Redirect::to(uri!("/user", show_user_id(id)))),
-        Err(_) => Ok(Redirect::to(uri!(
-            "/user",
-            new_user(error = Some("Failed to create user".to_string()))
-        ))),
+        Err(err) => {
+            let error = match err {
+                crate::repository::errors::RepoError::BadInput(message) => message,
+                _ => "Failed to create user".to_string(),
+            };
+            Ok(Redirect::to(uri!("/user", new_user(error = Some(error)))))
+        }
     }
 }
 
@@ -396,6 +399,8 @@ mod tests {
         let body = response.into_string().await.expect("body");
         assert!(body.contains("New User"));
         assert!(body.contains("Create User"));
+        assert!(body.contains("type=\"password\""));
+        assert!(body.contains("autocomplete=\"new-password\""));
     }
 
     #[rocket::async_test]

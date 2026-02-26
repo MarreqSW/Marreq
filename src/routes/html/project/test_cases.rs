@@ -315,7 +315,18 @@ async fn new_test(
     ctx["categories"] = json!(repo
         .get_categories_by_project(project_id)
         .unwrap_or_default());
-    ctx["status"] = json!(project_test_statuses(state.inner(), project_id));
+    let pending_id = TestStatusEnum::Pending.id();
+    let status_with_default: Vec<serde_json::Value> = project_test_statuses(state.inner(), project_id)
+        .into_iter()
+        .map(|s| {
+            json!({
+                "id": s.id,
+                "title": s.title,
+                "selected": s.id == pending_id
+            })
+        })
+        .collect();
+    ctx["status"] = json!(status_with_default);
     ctx["parents"] = json!(repo.get_tests_by_project(project_id).unwrap_or_default());
     ctx["users"] = json!(repo.get_users_all().unwrap_or_default());
     ctx["requirements"] = json!(repo

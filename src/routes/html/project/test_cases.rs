@@ -315,14 +315,14 @@ async fn new_test(
     ctx["categories"] = json!(repo
         .get_categories_by_project(project_id)
         .unwrap_or_default());
-    let pending_id = TestStatusEnum::Pending.id();
+    let pending_title = TestStatusEnum::Pending.title();
     let status_with_default: Vec<serde_json::Value> = project_test_statuses(state.inner(), project_id)
         .into_iter()
         .map(|s| {
             json!({
                 "id": s.id,
                 "title": s.title,
-                "selected": s.id == pending_id
+                "selected": s.title == pending_title
             })
         })
         .collect();

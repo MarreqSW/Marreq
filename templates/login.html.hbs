@@ -18,15 +18,12 @@
 <body class="login-page" data-page="login">
   <main>
     <div class="reqman-login">
-      <button
-        data-theme-toggle
-        class="theme-toggle reqman-login__theme-toggle c-theme-toggle"
-        type="button"
-        aria-label="Toggle dark mode"
-        aria-pressed="false"
-        title="Toggle dark mode">
-        <span class="theme-toggle-icon theme-toggle-icon-sun c-theme-toggle__icon c-theme-toggle__icon--sun" aria-hidden="true">☀</span>
-        <span class="theme-toggle-icon theme-toggle-icon-moon c-theme-toggle__icon c-theme-toggle__icon--moon" aria-hidden="true">🌙</span>
+      <button data-theme-toggle class="theme-toggle reqman-login__theme-toggle c-theme-toggle" type="button"
+        aria-label="Toggle dark mode" aria-pressed="false" title="Toggle dark mode">
+        <span class="theme-toggle-icon theme-toggle-icon-sun c-theme-toggle__icon c-theme-toggle__icon--sun"
+          aria-hidden="true">☀</span>
+        <span class="theme-toggle-icon theme-toggle-icon-moon c-theme-toggle__icon c-theme-toggle__icon--moon"
+          aria-hidden="true">🌙</span>
       </button>
       <div class="reqman-login__card">
         <header class="reqman-login__header">
@@ -37,12 +34,14 @@
         <form method="POST" action="/login" class="reqman-login__form">
           <div class="mb-3">
             <label for="username" class="form-label c-form-label">Username</label>
-            <input id="username" name="username" type="text" class="form-control c-form-control" autocomplete="username" required>
+            <input id="username" name="username" type="text" class="form-control c-form-control" autocomplete="username"
+              required>
           </div>
 
           <div class="mb-3">
             <label for="password" class="form-label c-form-label">Password</label>
-            <input id="password" name="password" type="password" class="form-control c-form-control" autocomplete="current-password" required>
+            <input id="password" name="password" type="password" class="form-control c-form-control"
+              autocomplete="current-password" required>
           </div>
 
           {{#if error}}

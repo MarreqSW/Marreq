@@ -5,10 +5,11 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{NewProject, NewProjectMember, Project, UpdateProject, User};
+use crate::models::{NewApplicability, NewCategory, NewProject, NewProjectMember, Project, UpdateProject, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, ProjectMembersRepository, ProjectsRepository};
 use crate::services::status_service::StatusService;
+use crate::services::{ApplicabilityService, CategoryService, VerificationService};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_project};
 
 /// High level project operations backed by the shared [`AppState`].
@@ -79,6 +80,34 @@ impl<'a> ProjectService<'a> {
         // Initialize default statuses for the new project
         let status_service = StatusService::new(self.state);
         status_service.initialize_default_statuses(id)?;
+
+        // Initialize default verification methods for the new project
+        let verification_service = VerificationService::new(self.state);
+        verification_service.initialize_default_verification_methods(id)?;
+
+        // One default category and applicability so the new-requirement form can be submitted
+        let category_service = CategoryService::new(self.state);
+        category_service.create(
+            actor,
+            NewCategory {
+                id: None,
+                title: "Default".into(),
+                description: "Default category".into(),
+                tag: "DEF".into(),
+                project_id: id,
+            },
+        )?;
+        let applicability_service = ApplicabilityService::new(self.state);
+        applicability_service.create(
+            actor,
+            NewApplicability {
+                id: None,
+                title: "Default".into(),
+                description: "Default applicability".into(),
+                tag: "DEF".into(),
+                project_id: id,
+            },
+        )?;
 
         if let Ok(project) = self.get_by_id(id) {
             self.log_created(actor, id, &project);

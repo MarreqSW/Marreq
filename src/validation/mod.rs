@@ -26,10 +26,10 @@ pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError>
         });
     }
 
-    if req.title.len() < 3 {
+    if req.title.trim().len() < 1 {
         return Err(ValidationError::TooShort {
             field: "title".to_string(),
-            min: 3,
+            min: 1,
         });
     }
 

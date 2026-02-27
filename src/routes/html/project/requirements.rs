@@ -40,18 +40,18 @@ struct RequirementCreateForm {
     #[field(name = uncased("verification_method_ids"))]
     verification_method_ids: Vec<i32>,
     #[field(name = uncased("category_id"))]
-    category_id: i32,
+    category_id: Option<i32>,
     #[field(name = uncased("status_id"))]
-    status_id: i32,
+    status_id: Option<i32>,
     /// JSON array of { "target_requirement_id": i32, "link_type": string } for multi-parent.
     #[field(name = uncased("parent_links"))]
     parent_links: Option<String>,
     #[field(name = uncased("reference_code"))]
     reference_code: String,
     #[field(name = uncased("reviewer_id"))]
-    reviewer_id: i32,
+    reviewer_id: Option<i32>,
     #[field(name = uncased("applicability_id"))]
-    applicability_id: i32,
+    applicability_id: Option<i32>,
     #[field(name = uncased("justification"))]
     justification: Option<String>,
     /// JSON array of { "field_id": i32, "value": string | null }
@@ -86,11 +86,11 @@ impl RequirementCreateForm {
             title,
             description,
             author_id,
-            category_id,
-            status_id,
+            category_id: category_id.unwrap_or(0),
+            status_id: status_id.unwrap_or(0),
             reference_code,
-            reviewer_id,
-            applicability_id,
+            reviewer_id: reviewer_id.unwrap_or(0),
+            applicability_id: applicability_id.unwrap_or(0),
             justification,
             project_id,
         };
@@ -1497,6 +1497,26 @@ async fn new_requirement(
         })
         .unwrap_or_default();
 
+    // Defaults for dropdowns so the template can pre-select and form submits valid values
+    let category_id = if new_requirement.category_id > 0 {
+        new_requirement.category_id
+    } else {
+        categories.first().map(|c| c.id).unwrap_or(0)
+    };
+    let applicability_id = if new_requirement.applicability_id > 0 {
+        new_requirement.applicability_id
+    } else {
+        applicability.first().map(|a| a.id).unwrap_or(0)
+    };
+    let reviewer_id = if new_requirement.reviewer_id > 0 {
+        new_requirement.reviewer_id
+    } else {
+        user.id
+    };
+    new_requirement.category_id = category_id;
+    new_requirement.applicability_id = applicability_id;
+    new_requirement.reviewer_id = reviewer_id;
+
     let ctx = json!({
         "categories": categories,
         "status": statuses,
@@ -1521,6 +1541,10 @@ async fn new_requirement(
         "error": error,
         "flash_success": created_flash,
         "page_title": format!("New Requirement - {}", project.name),
+        "category_id": category_id,
+        "applicability_id": applicability_id,
+        "status_id": new_requirement.status_id,
+        "reviewer_id": reviewer_id,
     });
 
     Ok(Template::render("requirements/new_requirement", ctx))
@@ -1554,45 +1578,49 @@ async fn post_requirement(
     req.project_id = project_id;
     req.author_id = user.id;
 
-    // Require at least one verification method
+    // If required IDs didn't come through (e.g. 0 from dropdowns), use sensible defaults so validate_requirement passes
+    let categories = CategoryService::new(state.inner()).list_by_project(project_id).unwrap_or_default();
+    let applicability_list = ApplicabilityService::new(state.inner()).list_by_project(project_id).unwrap_or_default();
+    let statuses = StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id).unwrap_or_default();
+
+    if req.category_id <= 0 && !categories.is_empty() {
+        req.category_id = categories[0].id;
+    }
+    if req.applicability_id <= 0 && !applicability_list.is_empty() {
+        req.applicability_id = applicability_list[0].id;
+    }
+    if req.status_id <= 0 {
+        req.status_id = statuses
+            .iter()
+            .find(|s| s.title.eq_ignore_ascii_case("Draft"))
+            .map(|s| s.id)
+            .unwrap_or_else(|| RequirementStatusEnum::Draft.id());
+    }
+    if req.reviewer_id <= 0 {
+        req.reviewer_id = user.id;
+    }
+
+    // Allow empty verification methods; user can add them when editing
     let verification_method_ids: Vec<i32> = verification_method_ids
         .into_iter()
         .filter(|&id| id > 0)
         .collect();
-    if verification_method_ids.is_empty() {
-        return Err(Redirect::to(new_url));
-    }
 
     // --- Reference validation / generation ---
-    if !req.reference_code.is_empty() {
-        // Validate against the category's tag
-        let category = get_category_or_placeholder(state, req.category_id);
-        let expected_prefix = format!("REQ-{}-", category.tag);
-        if !req.reference_code.starts_with(&expected_prefix) {
-            return Err(Redirect::to(new_url));
-        }
+    let category = get_category_or_placeholder(state, req.category_id);
+    let expected_prefix = format!("REQ-{}-", category.tag);
+    let pat = format!(r"^REQ-{}-\d+$", regex::escape(&category.tag));
+    let re = regex::Regex::new(&pat).unwrap_or_else(|_| regex::Regex::new(r"^REQ-\w+-\d+$").unwrap());
+    let reference_ok = !req.reference_code.is_empty()
+        && req.reference_code.starts_with(&expected_prefix)
+        && re.is_match(&req.reference_code);
 
-        // Strict pattern: REQ-<CAT_TAG>-<NUMBER>
-        // Escape the tag just in case and compile once.
-        let pat = format!(r"^REQ-{}-\d+$", regex::escape(&category.tag));
-        let re = match regex::Regex::new(&pat) {
-            Ok(r) => r,
-            Err(_e) => {
-                #[cfg(debug_assertions)]
-                eprintln!("regex compile failed for '{}': {:?}", pat, _e);
-                return Err(Redirect::to(new_url));
-            }
-        };
-        if !re.is_match(&req.reference_code) {
-            return Err(Redirect::to(new_url));
-        }
-    } else {
-        // Generate when missing
+    if !reference_ok {
+        // Generate when missing or when user input doesn't match category format (avoid rejecting the whole form)
         let generated = {
             let repo = state.repo_read();
             generate_requirement_reference(&*repo, req.category_id, req.project_id)
         };
-
         match generated {
             Ok(reference) => req.reference_code = reference,
             Err(_e) => {
@@ -1619,8 +1647,9 @@ async fn post_requirement(
     let custom_fields_ref = custom_fields.as_deref();
     let id = match service.create(&user, req, &verification_method_ids, custom_fields_ref) {
         Ok(id) => id,
-        Err(crate::repository::errors::RepoError::BadInput(_)) => {
-            return Err(Redirect::to(new_url))
+        Err(crate::repository::errors::RepoError::BadInput(msg)) => {
+            eprintln!("post_requirement: validation failed: {}", msg);
+            return Err(Redirect::to(new_url));
         }
         Err(_err) => {
             #[cfg(debug_assertions)]

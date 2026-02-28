@@ -26,7 +26,7 @@ pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError>
         });
     }
 
-    if req.title.trim().len() < 1 {
+    if req.title.trim().is_empty() {
         return Err(ValidationError::TooShort {
             field: "title".to_string(),
             min: 1,

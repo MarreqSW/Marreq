@@ -316,16 +316,17 @@ async fn new_test(
         .get_categories_by_project(project_id)
         .unwrap_or_default());
     let pending_title = TestStatusEnum::Pending.title();
-    let status_with_default: Vec<serde_json::Value> = project_test_statuses(state.inner(), project_id)
-        .into_iter()
-        .map(|s| {
-            json!({
-                "id": s.id,
-                "title": s.title,
-                "selected": s.title == pending_title
+    let status_with_default: Vec<serde_json::Value> =
+        project_test_statuses(state.inner(), project_id)
+            .into_iter()
+            .map(|s| {
+                json!({
+                    "id": s.id,
+                    "title": s.title,
+                    "selected": s.title == pending_title
+                })
             })
-        })
-        .collect();
+            .collect();
     ctx["status"] = json!(status_with_default);
     ctx["parents"] = json!(repo.get_tests_by_project(project_id).unwrap_or_default());
     ctx["users"] = json!(repo.get_users_all().unwrap_or_default());

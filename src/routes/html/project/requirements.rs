@@ -1579,9 +1579,15 @@ async fn post_requirement(
     req.author_id = user.id;
 
     // If required IDs didn't come through (e.g. 0 from dropdowns), use sensible defaults so validate_requirement passes
-    let categories = CategoryService::new(state.inner()).list_by_project(project_id).unwrap_or_default();
-    let applicability_list = ApplicabilityService::new(state.inner()).list_by_project(project_id).unwrap_or_default();
-    let statuses = StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id).unwrap_or_default();
+    let categories = CategoryService::new(state.inner())
+        .list_by_project(project_id)
+        .unwrap_or_default();
+    let applicability_list = ApplicabilityService::new(state.inner())
+        .list_by_project(project_id)
+        .unwrap_or_default();
+    let statuses = StatusService::new(state.inner())
+        .list_requirement_statuses_by_project(project_id)
+        .unwrap_or_default();
 
     if req.category_id <= 0 && !categories.is_empty() {
         req.category_id = categories[0].id;
@@ -1610,7 +1616,8 @@ async fn post_requirement(
     let category = get_category_or_placeholder(state, req.category_id);
     let expected_prefix = format!("REQ-{}-", category.tag);
     let pat = format!(r"^REQ-{}-\d+$", regex::escape(&category.tag));
-    let re = regex::Regex::new(&pat).unwrap_or_else(|_| regex::Regex::new(r"^REQ-\w+-\d+$").unwrap());
+    let re =
+        regex::Regex::new(&pat).unwrap_or_else(|_| regex::Regex::new(r"^REQ-\w+-\d+$").unwrap());
     let reference_ok = !req.reference_code.is_empty()
         && req.reference_code.starts_with(&expected_prefix)
         && re.is_match(&req.reference_code);

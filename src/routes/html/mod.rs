@@ -76,6 +76,7 @@ pub fn routes() -> Vec<Route> {
         cache::cleanup_cache,
         cache::cache_health_page,
         cache::warm_cache_route,
+        dashboard::error_page,
     ]
 }
 

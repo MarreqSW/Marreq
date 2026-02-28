@@ -45,7 +45,10 @@ impl<'a> VerificationService<'a> {
 
     /// Create the default set of verification methods for a new project.
     /// Called automatically when a project is created.
-    pub fn initialize_default_verification_methods(&self, project_id: i32) -> Result<(), RepoError> {
+    pub fn initialize_default_verification_methods(
+        &self,
+        project_id: i32,
+    ) -> Result<(), RepoError> {
         let mut repo = self.state.repo_write();
         for (title, description, tag) in DEFAULT_VERIFICATION_METHODS {
             let payload = NewVerificationMethod {

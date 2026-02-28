@@ -5,7 +5,9 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{NewApplicability, NewCategory, NewProject, NewProjectMember, Project, UpdateProject, User};
+use crate::models::{
+    NewApplicability, NewCategory, NewProject, NewProjectMember, Project, UpdateProject, User,
+};
 use crate::repository::errors::RepoError;
 use crate::repository::{PooledConnectionWrapper, ProjectMembersRepository, ProjectsRepository};
 use crate::services::status_service::StatusService;

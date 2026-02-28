@@ -74,8 +74,26 @@ pub fn show_status(state: &State<AppState>) -> content::RawHtml<String> {
     content::RawHtml(out_str)
 }
 
+/// Renders the generic error page. Used when catchers redirect to /error (e.g. RepoError, LogServiceError).
+#[get("/error?<message>&<details>&<title>")]
+pub fn error_page(
+    session_user: SessionUser,
+    message: Option<String>,
+    details: Option<String>,
+    title: Option<String>,
+) -> Template {
+    let user = session_user.into_inner();
+    let ctx = json!({
+        "page_title": title.as_deref().unwrap_or("Error"),
+        "message": message.as_deref().unwrap_or("An error occurred while processing your request."),
+        "details": details,
+        "user": user
+    });
+    Template::render("error", ctx)
+}
+
 pub fn routes() -> Vec<Route> {
-    routes![index, show_status]
+    routes![index, show_status, error_page]
 }
 
 #[cfg(test)]

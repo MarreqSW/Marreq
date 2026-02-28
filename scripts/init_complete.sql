@@ -231,6 +231,22 @@ CREATE TABLE requirement_comments (
 CREATE INDEX idx_requirement_comments_requirement ON requirement_comments(requirement_id);
 CREATE INDEX idx_requirement_comments_version ON requirement_comments(requirement_version_id);
 
+-- Typed version-to-version links (replaces deprecated parent_id column).
+CREATE TABLE requirement_version_links (
+    id SERIAL PRIMARY KEY,
+    source_version_id INTEGER NOT NULL REFERENCES requirement_versions(id) ON DELETE CASCADE,
+    target_version_id INTEGER NOT NULL REFERENCES requirement_versions(id) ON DELETE CASCADE,
+    link_type VARCHAR(32) NOT NULL,
+    rationale TEXT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    metadata JSONB
+);
+CREATE UNIQUE INDEX idx_rvl_source_target_type ON requirement_version_links(source_version_id, target_version_id, link_type);
+CREATE INDEX idx_rvl_source ON requirement_version_links(source_version_id);
+CREATE INDEX idx_rvl_target ON requirement_version_links(target_version_id);
+CREATE INDEX idx_rvl_project ON requirement_version_links(project_id);
+
 -- Tests table
 CREATE TABLE tests (
     id SERIAL PRIMARY KEY,

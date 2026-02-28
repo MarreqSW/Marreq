@@ -1623,18 +1623,23 @@ async fn post_requirement(
         && re.is_match(&req.reference_code);
 
     if !reference_ok {
-        // Generate when missing or when user input doesn't match category format (avoid rejecting the whole form)
-        let generated = {
-            let repo = state.repo_read();
-            generate_requirement_reference(&*repo, req.category_id, req.project_id)
-        };
-        match generated {
-            Ok(reference) => req.reference_code = reference,
-            Err(_e) => {
-                #[cfg(debug_assertions)]
-                eprintln!("reference generation failed: {:?}", _e);
-                req.reference_code = format!("REQ-UNKNOWN-{}", chrono::Utc::now().timestamp());
+        if req.reference_code.trim().is_empty() {
+            // Generate when missing
+            let generated = {
+                let repo = state.repo_read();
+                generate_requirement_reference(&*repo, req.category_id, req.project_id)
+            };
+            match generated {
+                Ok(reference) => req.reference_code = reference,
+                Err(_e) => {
+                    #[cfg(debug_assertions)]
+                    eprintln!("reference generation failed: {:?}", _e);
+                    req.reference_code = format!("REQ-UNKNOWN-{}", chrono::Utc::now().timestamp());
+                }
             }
+        } else {
+            // User supplied a reference that doesn't match format; redirect back with error
+            return Err(Redirect::to(new_url));
         }
     }
 

@@ -168,6 +168,13 @@ docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT COUNT(*) as requiremen
    diesel migration run
    ```
 
+6. **"relation requirement_version_links does not exist"**
+   This happens when the database was created from an older `init_complete.sql` that did not include the `requirement_version_links` table. Apply the table with:
+   ```bash
+   psql "$DATABASE_URL" -f scripts/apply_requirement_version_links.sql
+   ```
+   Or with Docker: `docker compose exec -T db psql -U rust -d reqman < scripts/apply_requirement_version_links.sql`
+
 ### Reset Database
 
 To completely reset the database:

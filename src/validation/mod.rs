@@ -19,17 +19,17 @@ pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError>
         });
     }
 
+    if req.title.trim().len() < 3 {
+        return Err(ValidationError::TooShort {
+            field: "title".to_string(),
+            min: 3,
+        });
+    }
+
     if req.title.len() > 255 {
         return Err(ValidationError::TooLong {
             field: "title".to_string(),
             max: 255,
-        });
-    }
-
-    if req.title.trim().is_empty() {
-        return Err(ValidationError::TooShort {
-            field: "title".to_string(),
-            min: 1,
         });
     }
 

@@ -323,10 +323,6 @@
               {{requirement_data.requirement.title}}
             </h1>
           </div>
-          <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="badge" data-field="status-badge" role="status" aria-label="Requirement status">—</span>
-            <span class="badge reqman-approval-badge reqman-approval-badge--{{requirement_data.requirement.approval_state}}" data-field="approval-badge" role="status" aria-label="Approval state">{{requirement_data.requirement.approval_state}}</span>
-          </div>
           <nav class="ms-lg-auto" aria-label="Requirement actions">
             <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
               <a href="/p/{{project_id}}/requirements/edit/{{requirement_data.requirement.id}}"
@@ -397,11 +393,11 @@
           </nav>
         </div>
 
-        {{!-- Approval section: badge, metadata, action buttons --}}
+        {{!-- Status & approval: single place for requirement status and approval state --}}
         <section class="reqman-approval-section mb-4" data-approval-section aria-labelledby="approval-heading">
-          <h2 id="approval-heading" class="visually-hidden">Approval</h2>
+          <h2 id="approval-heading" class="visually-hidden">Status and approval</h2>
           <div class="d-flex flex-wrap align-items-center gap-3">
-            <span class="badge reqman-approval-badge reqman-approval-badge--{{requirement_data.requirement.approval_state}}" aria-label="Approval state">{{requirement_data.requirement.approval_state}}</span>
+            <span class="badge" data-field="status-badge" role="status" aria-label="Requirement status">—</span>
             {{#if requirement_data.approval_is_approved}}
               {{#if requirement_data.approved_by_name}}
                 <span class="text-muted small">Approved by {{requirement_data.approved_by_name}}{{#if requirement_data.approved_at_formatted}} on {{requirement_data.approved_at_formatted}}{{/if}}</span>

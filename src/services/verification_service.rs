@@ -8,6 +8,30 @@ use crate::models::{NewVerificationMethod, VerificationMethod};
 use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 
+/// Default verification methods created for new projects (same set as Space Project / p/1/verification).
+const DEFAULT_VERIFICATION_METHODS: &[(&str, &str, &str)] = &[
+    (
+        "Inspection",
+        "Nondestructive examination of a system or component",
+        "INSP",
+    ),
+    (
+        "Analysis",
+        "Verification using mathematical models and calculations",
+        "ANALYSIS",
+    ),
+    (
+        "Demonstration",
+        "Manipulation of the product as intended in its operational environment",
+        "DEMO",
+    ),
+    (
+        "Test",
+        "Controlled verification with predefined inputs and expected outputs",
+        "TEST",
+    ),
+];
+
 /// High-level operations for verification methods backed by the shared [`AppState`].
 pub struct VerificationService<'a> {
     state: &'a AppState<DieselCachedRepo>,
@@ -17,6 +41,26 @@ impl<'a> VerificationService<'a> {
     /// Create a new service instance bound to the provided application state.
     pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
         Self { state }
+    }
+
+    /// Create the default set of verification methods for a new project.
+    /// Called automatically when a project is created.
+    pub fn initialize_default_verification_methods(
+        &self,
+        project_id: i32,
+    ) -> Result<(), RepoError> {
+        let mut repo = self.state.repo_write();
+        for (title, description, tag) in DEFAULT_VERIFICATION_METHODS {
+            let payload = NewVerificationMethod {
+                id: None,
+                title: (*title).to_string(),
+                description: (*description).to_string(),
+                tag: (*tag).to_string(),
+                project_id,
+            };
+            repo.insert_new_verification(&payload)?;
+        }
+        Ok(())
     }
 
     /// List verification methods scoped to a project.

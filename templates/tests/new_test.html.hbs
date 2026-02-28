@@ -40,7 +40,7 @@
             <label for="status_id" class="form-label c-form-label">Status</label>
             <select name="status_id" id="status_id" class="form-control c-form-control c-form-control--select" required>
               {{#each status }}
-                <option value="{{id}}">{{title}}</option>
+                <option value="{{id}}" {{#if selected}}selected{{/if}}>{{title}}</option>
               {{/each}}
             </select>
           </div>

@@ -27,7 +27,11 @@ where
         .filter(|req| req.category_id == category_id)
         .count();
 
-    Ok(format!("REQ-{}-{}", category.tag, existing_count + 1))
+    Ok(format!(
+        "REQ-{}-{}",
+        category.tag.to_uppercase(),
+        existing_count + 1
+    ))
 }
 
 #[cfg(test)]

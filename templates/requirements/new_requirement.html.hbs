@@ -2,7 +2,7 @@
 Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
 --}}
 {{#*inline "page"}}
-<form method="post" data-requirement-form data-allow-soft-mismatch="false" class="c-create-form create-form"
+<form method="post" action="/p/{{#if project}}{{project.id}}{{else}}{{project_id}}{{/if}}/requirements/new" data-requirement-form data-allow-soft-mismatch="false" class="c-create-form create-form"
   data-project-id="{{project_id}}" {{#if flash_success}}data-flash-success="{{flash_success}}" {{/if}}>
   <header class="c-create-topbar">
     <div class="c-create-topbar__context">

@@ -15,7 +15,7 @@ use std::fmt;
 
 /// Logical requirement container (id, project_id, stable_code, current_version_id).
 /// Content lives in [`RequirementVersion`]; the "current" requirement view is built from this + current version.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug)]
 #[diesel(table_name = crate::schema::requirements)]
 pub struct RequirementContainer {
     pub id: i32,
@@ -25,8 +25,9 @@ pub struct RequirementContainer {
 }
 
 /// A single immutable requirement version (content snapshot).
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug)]
 #[diesel(table_name = crate::schema::requirement_versions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct RequirementVersion {
     pub id: i32,
     pub requirement_id: i32,

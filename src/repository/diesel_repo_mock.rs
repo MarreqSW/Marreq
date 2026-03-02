@@ -213,7 +213,12 @@ impl UserRepository for DieselRepoMock {
         if self.force_err {
             return Err(RepoError::Pool("forced test error".into()));
         }
-        Ok(self.users.values().find(|u| u.username == uname).cloned())
+        let lower = uname.to_lowercase();
+        Ok(self
+            .users
+            .values()
+            .find(|u| u.username.to_lowercase() == lower)
+            .cloned())
     }
 
     fn update_user_password(&mut self, user_id: i32, new_hash: &str) -> Result<(), RepoError> {
@@ -230,6 +235,23 @@ impl UserRepository for DieselRepoMock {
     }
 
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
+        // Enforce case-insensitive uniqueness
+        let lower_username = new.username.to_lowercase();
+        let lower_email = new.email.to_lowercase();
+        if self
+            .users
+            .values()
+            .any(|u| u.username.to_lowercase() == lower_username)
+        {
+            return Err(RepoError::Duplicate("username is already taken".into()));
+        }
+        if self
+            .users
+            .values()
+            .any(|u| u.email.to_lowercase() == lower_email)
+        {
+            return Err(RepoError::Duplicate("email is already in use".into()));
+        }
         let id = new
             .id
             .unwrap_or_else(|| self.users.keys().max().map(|i| i + 1).unwrap_or(1));

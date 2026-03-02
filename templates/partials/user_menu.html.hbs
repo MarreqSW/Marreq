@@ -1,24 +1,24 @@
 {{!-- Depends on: css/50-components/dashboard.css --}}
-<div class="reqman-sidebar__footer">
-  <div class="reqman-user-info">
-    <div class="reqman-user-info__avatar">
+<div class="marreq-sidebar__footer">
+  <div class="marreq-user-info">
+    <div class="marreq-user-info__avatar">
       <i class="fas fa-user-circle" aria-hidden="true"></i>
     </div>
-    <div class="reqman-user-info__details">
-      <div class="reqman-user-info__name">
+    <div class="marreq-user-info__details">
+      <div class="marreq-user-info__name">
         {{#if user.name}}
         {{user.name}}
         {{else}}
         {{user.username}}
         {{/if}}
       </div>
-      <div class="reqman-user-info__email">{{user.email}}</div>
+      <div class="marreq-user-info__email">{{user.email}}</div>
     </div>
-    <div class="reqman-user-info__actions">
+    <div class="marreq-user-info__actions">
       <div class="dropdown">
-        <button class="reqman-user-menu-toggle btn btn-link p-0" type="button" data-bs-toggle="dropdown"
+        <button class="marreq-user-menu-toggle btn btn-link p-0" type="button" data-bs-toggle="dropdown"
           aria-expanded="false" title="User menu">
-          <img class="reqman-user-menu-toggle__icon" src="https://parspng.com/wp-content/uploads/2022/08/gearpng.parspng.com-5.png"
+          <img class="marreq-user-menu-toggle__icon" src="https://parspng.com/wp-content/uploads/2022/08/gearpng.parspng.com-5.png"
             alt="User menu gear" width="20" height="20" aria-hidden="true">
           <span class="visually-hidden">User menu</span>
         </button>

@@ -27,7 +27,7 @@
       <div class="c-tree__requirement-header">
         <div class="c-tree__requirement-title-wrapper">
           <a href="/p/{{requirement.project_id}}/requirements/show/{{requirement.id}}"
-            class="reqman-requirement-card__reference-text"
+            class="marreq-requirement-card__reference-text"
             title="View requirement details"
             data-requirement-preview
             data-requirement-preview-project-id="{{requirement.project_id}}"
@@ -70,7 +70,7 @@
           </a>
         </div>
         <div class="requirement-status">
-          <span class="reqman-requirements-status-badge reqman-requirements-status-badge--{{requirement.status_id}}"
+          <span class="marreq-requirements-status-badge marreq-requirements-status-badge--{{requirement.status_id}}"
             data-status="{{requirement.status_id}}"
             title="Status: {{requirement.status_id}}"{{#if requirement.status_tag_color}} style="background-color: {{requirement.status_tag_color}}; color: #fff; border-color: {{requirement.status_tag_color}};"{{/if}}>
             {{requirement.status_id}}

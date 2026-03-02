@@ -2,50 +2,50 @@
   PARTIAL: Table View (Default/Compact)
   Compact table with expandable row details
 --}}
-<section class="reqman-requirements-table-section" id="tableView" aria-live="polite">
+<section class="marreq-requirements-table-section" id="tableView" aria-live="polite">
   {{#if tests}}
-  <div class="reqman-requirements-table__wrapper">
-    <table class="reqman-requirements-table" id="testsTable">
+  <div class="marreq-requirements-table__wrapper">
+    <table class="marreq-requirements-table" id="testsTable">
       <thead>
         <tr>
           <th scope="col" data-sort-key="reference" class="is-sortable">
             Reference
-            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+            <span class="marreq-requirements-table__sort-indicator" aria-hidden="true">↕</span>
           </th>
           <th scope="col" data-sort-key="name" class="is-sortable">
             Name
-            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+            <span class="marreq-requirements-table__sort-indicator" aria-hidden="true">↕</span>
           </th>
           <th scope="col" data-sort-key="status" class="is-sortable">
             Status
-            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+            <span class="marreq-requirements-table__sort-indicator" aria-hidden="true">↕</span>
           </th>
           <th scope="col" data-sort-key="source" class="is-sortable">
             Source
-            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+            <span class="marreq-requirements-table__sort-indicator" aria-hidden="true">↕</span>
           </th>
           <th scope="col" data-sort-key="parent" class="is-sortable">
             Parent
-            <span class="reqman-requirements-table__sort-indicator" aria-hidden="true">↕</span>
+            <span class="marreq-requirements-table__sort-indicator" aria-hidden="true">↕</span>
           </th>
-          <th scope="col" class="reqman-requirements-table__actions-head">Actions</th>
+          <th scope="col" class="marreq-requirements-table__actions-head">Actions</th>
         </tr>
       </thead>
       <tbody>
         {{#each tests}}
         <tr
-          class="reqman-requirements-row"
+          class="marreq-requirements-row"
           data-test-id="{{id}}"
           data-status-id="{{test_status_id}}"
           data-status-label="{{status_id}}">
-          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--key">
-            <div class="reqman-requirements-key">
-              <span class="reqman-requirements-key__value">
+          <td class="marreq-requirements-row__cell marreq-requirements-row__cell--key">
+            <div class="marreq-requirements-key">
+              <span class="marreq-requirements-key__value">
                 {{#if reference_code}}{{reference_code}}{{else}}TEST-{{id}}{{/if}}
               </span>
               <button
                 type="button"
-                class="reqman-requirements-key__toggle"
+                class="marreq-requirements-key__toggle"
                 data-action="toggle-row-details"
                 aria-expanded="false"
                 aria-controls="test-details-{{id}}">
@@ -53,10 +53,10 @@
               </button>
             </div>
           </td>
-          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--title">
+          <td class="marreq-requirements-row__cell marreq-requirements-row__cell--title">
             <a
               href="/p/{{../project.id}}/tests/show/{{id}}"
-              class="reqman-requirements-title"
+              class="marreq-requirements-title"
               title="{{name}}"
               data-test-preview
               data-test-preview-project-id="{{../project.id}}"
@@ -70,19 +70,19 @@
               {{name}}
             </a>
           </td>
-          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--status reqman-requirements-cell--editable" data-inline-edit="status" title="Click to change">
+          <td class="marreq-requirements-row__cell marreq-requirements-row__cell--status marreq-requirements-cell--editable" data-inline-edit="status" title="Click to change">
             <span
-              class="reqman-requirements-status-badge reqman-requirements-status-badge--{{status_variant}} reqman-requirements-cell__display"
+              class="marreq-requirements-status-badge marreq-requirements-status-badge--{{status_variant}} marreq-requirements-cell__display"
               data-status-id="{{test_status_id}}"
               data-status="{{status_id}}"
               data-status-variant="{{status_variant}}"{{#if status_tag_color}} style="background-color: {{status_tag_color}}; color: #fff; border-color: {{status_tag_color}};"{{/if}}>
               {{status_id}}
             </span>
           </td>
-          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--verification">
-            <span class="reqman-requirements-cell-muted">{{source}}</span>
+          <td class="marreq-requirements-row__cell marreq-requirements-row__cell--verification">
+            <span class="marreq-requirements-cell-muted">{{source}}</span>
           </td>
-          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--parent">
+          <td class="marreq-requirements-row__cell marreq-requirements-row__cell--parent">
             {{#if test_parent_title}}
               <a
                 href="/p/{{../project.id}}/tests/show/{{test_parent_id}}"
@@ -98,14 +98,14 @@
                 {{test_parent_title}}
               </a>
             {{else}}
-              <span class="reqman-requirements-cell-muted">—</span>
+              <span class="marreq-requirements-cell-muted">—</span>
             {{/if}}
           </td>
-          <td class="reqman-requirements-row__cell reqman-requirements-row__cell--actions">
-            <div class="reqman-requirements-row__actions">
+          <td class="marreq-requirements-row__cell marreq-requirements-row__cell--actions">
+            <div class="marreq-requirements-row__actions">
               <a 
                 href="/p/{{../project.id}}/tests/show/{{id}}" 
-                class="reqman-requirements-row__action reqman-requirements-row__action--icon"
+                class="marreq-requirements-row__action marreq-requirements-row__action--icon"
                 title="View test">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                   <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
@@ -115,7 +115,7 @@
               </a>
               <a 
                 href="/p/{{../project.id}}/tests/edit/{{id}}" 
-                class="reqman-requirements-row__action reqman-requirements-row__action--icon"
+                class="marreq-requirements-row__action marreq-requirements-row__action--icon"
                 title="Edit test">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
                   <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/>
@@ -125,7 +125,7 @@
               {{#if (or (eq status_id "Passed") (eq status_id "Failed") ../user.is_admin)}}
               <button
                 type="button"
-                class="reqman-requirements-row__action reqman-requirements-row__action--icon reqman-requirements-row__action--danger"
+                class="marreq-requirements-row__action marreq-requirements-row__action--icon marreq-requirements-row__action--danger"
                 data-action="delete-test"
                 data-project-id="{{../project.id}}"
                 data-test-id="{{id}}"
@@ -143,11 +143,11 @@
         </tr>
         <tr
           id="test-details-{{id}}"
-          class="reqman-requirements-row__details"
+          class="marreq-requirements-row__details"
           data-details-for="{{id}}"
           hidden>
           <td colspan="6">
-            <dl class="reqman-requirements-details-grid">
+            <dl class="marreq-requirements-details-grid">
               <div>
                 <dt>Description</dt>
                 <dd>{{description}}</dd>
@@ -173,10 +173,10 @@
       </tbody>
     </table>
   </div>
-  <nav class="reqman-requirements-pagination" aria-label="Tests pagination">
-    <button type="button" class="reqman-requirements-pagination__button is-disabled" disabled aria-disabled="true">Prev</button>
-    <span class="reqman-requirements-pagination__status">All {{test_metrics.total}} tests</span>
-    <button type="button" class="reqman-requirements-pagination__button is-disabled" disabled aria-disabled="true">Next</button>
+  <nav class="marreq-requirements-pagination" aria-label="Tests pagination">
+    <button type="button" class="marreq-requirements-pagination__button is-disabled" disabled aria-disabled="true">Prev</button>
+    <span class="marreq-requirements-pagination__status">All {{test_metrics.total}} tests</span>
+    <button type="button" class="marreq-requirements-pagination__button is-disabled" disabled aria-disabled="true">Next</button>
   </nav>
   {{else}}
   {{> tests/_empty_state}}

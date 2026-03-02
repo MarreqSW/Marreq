@@ -2125,6 +2125,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "marreq"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "calamine",
+ "chrono",
+ "csv",
+ "diesel",
+ "dotenvy",
+ "handlebars 6.4.0",
+ "lazy_static",
+ "pgvector",
+ "printpdf",
+ "quick-xml 0.39.0",
+ "rand_core 0.6.4",
+ "regex",
+ "reqwest",
+ "rocket",
+ "rocket_dyn_templates",
+ "rocket_sync_db_pools",
+ "serde",
+ "serde_json",
+ "sha2",
+ "similar",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "urlencoding",
+ "xlsxwriter",
+]
+
+[[package]]
 name = "matchers"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3090,39 +3123,6 @@ name = "regex-syntax"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a96887878f22d7bad8a3b6dc5b7440e0ada9a245242924394987b21cf2210a4c"
-
-[[package]]
-name = "req_man"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "argon2",
- "calamine",
- "chrono",
- "csv",
- "diesel",
- "dotenvy",
- "handlebars 6.4.0",
- "lazy_static",
- "pgvector",
- "printpdf",
- "quick-xml 0.39.0",
- "rand_core 0.6.4",
- "regex",
- "reqwest",
- "rocket",
- "rocket_dyn_templates",
- "rocket_sync_db_pools",
- "serde",
- "serde_json",
- "sha2",
- "similar",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "urlencoding",
- "xlsxwriter",
-]
 
 [[package]]
 name = "reqwest"

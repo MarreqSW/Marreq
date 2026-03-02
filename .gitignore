@@ -64,3 +64,9 @@ node_modules
 exports/
 webpage/
 artifacts/
+
+_bmad/
+_bmad-output/
+.cursor/
+.cursorrules
+.cursorignore

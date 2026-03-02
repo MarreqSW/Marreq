@@ -1,6 +1,6 @@
 /* Login Page Styles */
 
-.reqman-login {
+.marreq-login {
   align-items: center;
   background: linear-gradient(135deg, var(--login-gradient-start) 0%, var(--login-gradient-end) 100%);
   display: flex;
@@ -10,7 +10,7 @@
   position: relative;
 }
 
-.reqman-login > p {
+.marreq-login > p {
   bottom: 0;
   color: #fff;
   font-size: 0.875rem;
@@ -21,7 +21,7 @@
   width: 100%;
 }
 
-.reqman-login__card {
+.marreq-login__card {
   background: var(--surface-color);
   border-radius: 12px;
   box-shadow: 0 20px 40px rgb(0 0 0 / 0.1);
@@ -30,40 +30,40 @@
   width: 100%;
 }
 
-.reqman-login__theme-toggle {
+.marreq-login__theme-toggle {
   position: absolute;
   right: 1.5rem;
   top: 1.5rem;
 }
 
-.reqman-login__header {
+.marreq-login__header {
   margin-bottom: 2rem;
   text-align: center;
 }
 
-.reqman-login__header h1 {
+.marreq-login__header h1 {
   color: var(--text-primary);
   font-size: 1.75rem;
   margin-bottom: 0.5rem;
 }
 
-.reqman-login__header p {
+.marreq-login__header p {
   color: var(--text-secondary);
   margin: 0;
 }
 
-.reqman-login__form {
+.marreq-login__form {
   margin-bottom: 1.5rem;
 }
 
-.reqman-login__form .c-form-label {
+.marreq-login__form .c-form-label {
   color: var(--text-primary);
   display: block;
   font-weight: 500;
   margin-bottom: 0.5rem;
 }
 
-.reqman-login__form .c-form-control {
+.marreq-login__form .c-form-control {
   border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
@@ -72,19 +72,19 @@
   width: 100%;
 }
 
-.reqman-login__form .c-form-control:focus {
+.marreq-login__form .c-form-control:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
   outline: none;
 }
 
-.reqman-login__footer {
+.marreq-login__footer {
   border-top: 1px solid var(--border-color);
   padding-top: 1.5rem;
   text-align: center;
 }
 
-.reqman-login__footer p {
+.marreq-login__footer p {
   color: var(--text-secondary);
   font-size: 0.875rem;
   margin: 0;

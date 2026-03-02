@@ -32,27 +32,27 @@ describe('Requirements List Page', () => {
       document.body.innerHTML = `
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td class="reqman-requirements-row__cell--key">
-                <div class="reqman-requirements-key">
-                  <span class="reqman-requirements-key__value">REQ-SYS-001</span>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td class="marreq-requirements-row__cell--key">
+                <div class="marreq-requirements-key">
+                  <span class="marreq-requirements-key__value">REQ-SYS-001</span>
                   <button data-action="toggle-row-details" aria-controls="requirement-details-1" aria-expanded="false"></button>
                 </div>
               </td>
-              <td class="reqman-requirements-row__cell--title">
-                <a href="/p/1/requirements/show/1" class="reqman-requirements-title">Test Requirement</a>
+              <td class="marreq-requirements-row__cell--title">
+                <a href="/p/1/requirements/show/1" class="marreq-requirements-title">Test Requirement</a>
               </td>
-              <td class="reqman-requirements-row__cell--status">
-                <span class="reqman-requirements-status-badge" data-status="Draft">Draft</span>
+              <td class="marreq-requirements-row__cell--status">
+                <span class="marreq-requirements-status-badge" data-status="Draft">Draft</span>
               </td>
-              <td class="reqman-requirements-row__cell--verification">Analysis</td>
-              <td class="reqman-requirements-row__cell--updated"><time>2024-01-01</time></td>
-              <td class="reqman-requirements-row__cell--author">Admin</td>
-              <td class="reqman-requirements-row__cell--actions">
+              <td class="marreq-requirements-row__cell--verification">Analysis</td>
+              <td class="marreq-requirements-row__cell--updated"><time>2024-01-01</time></td>
+              <td class="marreq-requirements-row__cell--author">Admin</td>
+              <td class="marreq-requirements-row__cell--actions">
                 <button data-action="duplicate-requirement" data-requirement-id="1">Duplicate</button>
               </td>
             </tr>
-            <tr id="requirement-details-1" class="reqman-requirements-row__details" data-details-for="1" hidden>
+            <tr id="requirement-details-1" class="marreq-requirements-row__details" data-details-for="1" hidden>
               <td colspan="7">Details here</td>
             </tr>
           </tbody>
@@ -69,11 +69,11 @@ describe('Requirements List Page', () => {
       document.body.innerHTML = `
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-1</span></td>
-              <td><a class="reqman-requirements-title">Test</a></td>
-              <td><span class="reqman-requirements-status-badge" data-status="Draft">Draft</span></td>
-              <td><span class="reqman-requirements-row__cell--verification">Test</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-1</span></td>
+              <td><a class="marreq-requirements-title">Test</a></td>
+              <td><span class="marreq-requirements-status-badge" data-status="Draft">Draft</span></td>
+              <td><span class="marreq-requirements-row__cell--verification">Test</span></td>
               <td><time>2024-01-01</time></td>
               <td>Author</td>
               <td></td>
@@ -86,8 +86,8 @@ describe('Requirements List Page', () => {
 
       init();
 
-      const badge = document.querySelector('.reqman-requirements-status-badge');
-      expect(badge.classList.contains('reqman-requirements-status-badge--draft')).toBe(true);
+      const badge = document.querySelector('.marreq-requirements-status-badge');
+      expect(badge.classList.contains('marreq-requirements-status-badge--draft')).toBe(true);
     });
   });
 
@@ -96,19 +96,19 @@ describe('Requirements List Page', () => {
       document.body.innerHTML = `
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-SYS-001</span></td>
-              <td><a class="reqman-requirements-title">System Requirement</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-SYS-001</span></td>
+              <td><a class="marreq-requirements-title">System Requirement</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-01</time></td>
               <td>Admin</td>
               <td></td>
             </tr>
-            <tr class="reqman-requirements-row" data-requirement-id="2" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-SYS-002</span></td>
-              <td><a class="reqman-requirements-title">Network Requirement</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="2" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-SYS-002</span></td>
+              <td><a class="marreq-requirements-title">Network Requirement</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Testing</td>
               <td><time>2024-01-02</time></td>
               <td>User</td>
@@ -129,7 +129,7 @@ describe('Requirements List Page', () => {
       // Wait for debounce
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      const rows = document.querySelectorAll('.reqman-requirements-row');
+      const rows = document.querySelectorAll('.marreq-requirements-row');
       expect(rows.length).toBeGreaterThanOrEqual(2);
       if (rows.length >= 2) {
         expect(rows[0].classList.contains('is-filtered-out')).toBe(true);
@@ -141,10 +141,10 @@ describe('Requirements List Page', () => {
       document.body.innerHTML = `
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-              <td><a class="reqman-requirements-title">Test</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+              <td><a class="marreq-requirements-title">Test</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-01</time></td>
               <td>Admin</td>
@@ -169,7 +169,7 @@ describe('Requirements List Page', () => {
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      const row = document.querySelector('.reqman-requirements-row');
+      const row = document.querySelector('.marreq-requirements-row');
       if (row) {
         expect(row.classList.contains('is-filtered-out')).toBe(false);
       }
@@ -183,25 +183,25 @@ describe('Requirements List Page', () => {
           <thead>
             <tr>
               <th data-sort-key="key" class="is-sortable">
-                Key <span class="reqman-requirements-table__sort-indicator">↕</span>
+                Key <span class="marreq-requirements-table__sort-indicator">↕</span>
               </th>
               <th data-sort-key="title">Title</th>
             </tr>
           </thead>
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="2" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-002</span></td>
-              <td><a class="reqman-requirements-title">Second</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="2" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-002</span></td>
+              <td><a class="marreq-requirements-title">Second</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-02</time></td>
               <td>Admin</td>
               <td></td>
             </tr>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-              <td><a class="reqman-requirements-title">First</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+              <td><a class="marreq-requirements-title">First</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Testing</td>
               <td><time>2024-01-01</time></td>
               <td>User</td>
@@ -218,8 +218,8 @@ describe('Requirements List Page', () => {
       const header = document.querySelector('[data-sort-key="key"]');
       header.click();
 
-      const rows = document.querySelectorAll('.reqman-requirements-row');
-      const firstKey = rows[0].querySelector('.reqman-requirements-key__value').textContent;
+      const rows = document.querySelectorAll('.marreq-requirements-row');
+      const firstKey = rows[0].querySelector('.marreq-requirements-key__value').textContent;
       expect(firstKey).toBe('REQ-001');
     });
 
@@ -229,24 +229,24 @@ describe('Requirements List Page', () => {
           <thead>
             <tr>
               <th data-sort-key="title">
-                Title <span class="reqman-requirements-table__sort-indicator">↕</span>
+                Title <span class="marreq-requirements-table__sort-indicator">↕</span>
               </th>
             </tr>
           </thead>
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-              <td><a class="reqman-requirements-title">Alpha</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+              <td><a class="marreq-requirements-title">Alpha</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-01</time></td>
               <td>Admin</td>
               <td></td>
             </tr>
-            <tr class="reqman-requirements-row" data-requirement-id="2" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-002</span></td>
-              <td><a class="reqman-requirements-title">Zeta</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="2" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-002</span></td>
+              <td><a class="marreq-requirements-title">Zeta</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Testing</td>
               <td><time>2024-01-02</time></td>
               <td>User</td>
@@ -264,14 +264,14 @@ describe('Requirements List Page', () => {
       
       // First click - ascending
       header.click();
-      let firstTitle = document.querySelectorAll('.reqman-requirements-row')[0]
-        .querySelector('.reqman-requirements-title').textContent;
+      let firstTitle = document.querySelectorAll('.marreq-requirements-row')[0]
+        .querySelector('.marreq-requirements-title').textContent;
       expect(firstTitle).toBe('Alpha');
       
       // Second click - descending
       header.click();
-      firstTitle = document.querySelectorAll('.reqman-requirements-row')[0]
-        .querySelector('.reqman-requirements-title').textContent;
+      firstTitle = document.querySelectorAll('.marreq-requirements-row')[0]
+        .querySelector('.marreq-requirements-title').textContent;
       expect(firstTitle).toBe('Zeta');
     });
   });
@@ -281,21 +281,21 @@ describe('Requirements List Page', () => {
       document.body.innerHTML = `
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
               <td>
                 <button data-action="toggle-row-details" aria-controls="requirement-details-1" aria-expanded="false">
                   Toggle
                 </button>
               </td>
-              <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-              <td><a class="reqman-requirements-title">Test</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+              <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+              <td><a class="marreq-requirements-title">Test</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-01</time></td>
               <td>Admin</td>
               <td></td>
             </tr>
-            <tr id="requirement-details-1" class="reqman-requirements-row__details" data-details-for="1" hidden>
+            <tr id="requirement-details-1" class="marreq-requirements-row__details" data-details-for="1" hidden>
               <td colspan="7">Detailed information</td>
             </tr>
           </tbody>
@@ -324,10 +324,10 @@ describe('Requirements List Page', () => {
       document.body.innerHTML = `
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-              <td><a class="reqman-requirements-title">Test</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+              <td><a class="marreq-requirements-title">Test</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-01</time></td>
               <td>Admin</td>
@@ -357,10 +357,10 @@ describe('Requirements List Page', () => {
       document.body.innerHTML = `
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-              <td><a class="reqman-requirements-title">Test</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+              <td><a class="marreq-requirements-title">Test</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-01</time></td>
               <td>Admin</td>
@@ -397,10 +397,10 @@ describe('Requirements List Page', () => {
       document.body.innerHTML = `
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-              <td><a class="reqman-requirements-title">Test</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+              <td><a class="marreq-requirements-title">Test</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-01</time></td>
               <td>Admin</td>
@@ -426,10 +426,10 @@ describe('Requirements List Page', () => {
       document.body.innerHTML = `
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-              <td><a class="reqman-requirements-title">Test</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+              <td><a class="marreq-requirements-title">Test</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-01</time></td>
               <td>Admin</td>
@@ -547,13 +547,13 @@ describe('Requirements List Page', () => {
   describe('Card View', () => {
     it('should collect cards from requirements grid', () => {
       document.body.innerHTML = `
-        <div class="reqman-requirements-cards-grid">
-          <div class="reqman-requirement-card" data-requirement-id="1" data-status-label="Draft" data-verification="Analysis" data-category="Systems">
-            <div class="reqman-requirement-card__reference-text">REQ-001</div>
-            <div class="reqman-requirement-card__title">Card Requirement</div>
-            <div class="reqman-requirement-card__description">Description text</div>
-            <div class="reqman-requirement-card__author">Author</div>
-            <div class="reqman-requirement-card__date">2024-01-01</div>
+        <div class="marreq-requirements-cards-grid">
+          <div class="marreq-requirement-card" data-requirement-id="1" data-status-label="Draft" data-verification="Analysis" data-category="Systems">
+            <div class="marreq-requirement-card__reference-text">REQ-001</div>
+            <div class="marreq-requirement-card__title">Card Requirement</div>
+            <div class="marreq-requirement-card__description">Description text</div>
+            <div class="marreq-requirement-card__author">Author</div>
+            <div class="marreq-requirement-card__date">2024-01-01</div>
           </div>
         </div>
         <input type="search" id="requirementsSearch" />
@@ -565,14 +565,14 @@ describe('Requirements List Page', () => {
 
     it('should filter cards based on search', async () => {
       document.body.innerHTML = `
-        <div class="reqman-requirements-cards-grid">
-          <div class="reqman-requirement-card" data-requirement-id="1" data-status-label="Draft">
-            <div class="reqman-requirement-card__reference-text">REQ-001</div>
-            <div class="reqman-requirement-card__title">Network Card</div>
+        <div class="marreq-requirements-cards-grid">
+          <div class="marreq-requirement-card" data-requirement-id="1" data-status-label="Draft">
+            <div class="marreq-requirement-card__reference-text">REQ-001</div>
+            <div class="marreq-requirement-card__title">Network Card</div>
           </div>
-          <div class="reqman-requirement-card" data-requirement-id="2" data-status-label="Draft">
-            <div class="reqman-requirement-card__reference-text">REQ-002</div>
-            <div class="reqman-requirement-card__title">System Card</div>
+          <div class="marreq-requirement-card" data-requirement-id="2" data-status-label="Draft">
+            <div class="marreq-requirement-card__reference-text">REQ-002</div>
+            <div class="marreq-requirement-card__title">System Card</div>
           </div>
         </div>
         <input type="search" id="requirementsSearch" />
@@ -587,7 +587,7 @@ describe('Requirements List Page', () => {
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      const cards = document.querySelectorAll('.reqman-requirement-card');
+      const cards = document.querySelectorAll('.marreq-requirement-card');
       if (cards.length >= 2) {
         expect(cards[0].classList.contains('is-filtered-out')).toBe(false);
         expect(cards[1].classList.contains('is-filtered-out')).toBe(true);
@@ -649,10 +649,10 @@ describe('Requirements List Page', () => {
       document.body.innerHTML = `
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-              <td><a class="reqman-requirements-title">Test</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+              <td><a class="marreq-requirements-title">Test</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-01</time></td>
               <td>Admin</td>
@@ -695,10 +695,10 @@ describe('Requirements List Page', () => {
   describe('Badge Overflow', () => {
     it('should handle badge overflow in cards', () => {
       document.body.innerHTML = `
-        <div class="reqman-requirements-cards-grid">
-          <div class="reqman-requirement-card" data-requirement-id="1" data-status-label="Draft">
+        <div class="marreq-requirements-cards-grid">
+          <div class="marreq-requirement-card" data-requirement-id="1" data-status-label="Draft">
             <div data-badge-rail>
-              <div class="reqman-requirement-card__badge-rail">
+              <div class="marreq-requirement-card__badge-rail">
                 <span data-badge>Badge 1</span>
                 <span data-badge>Badge 2</span>
               </div>
@@ -717,13 +717,13 @@ describe('Requirements List Page', () => {
   describe('No Results Banner', () => {
     it('should show banner when no results match search', async () => {
       document.body.innerHTML = `
-        <div class="reqman-requirements-table-section">
+        <div class="marreq-requirements-table-section">
           <table id="requirementsTable">
             <tbody>
-              <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-                <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-                <td><a class="reqman-requirements-title">Test</a></td>
-                <td><span class="reqman-requirements-status-badge">Draft</span></td>
+              <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+                <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+                <td><a class="marreq-requirements-title">Test</a></td>
+                <td><span class="marreq-requirements-status-badge">Draft</span></td>
                 <td>Analysis</td>
                 <td><time>2024-01-01</time></td>
                 <td>Admin</td>
@@ -744,7 +744,7 @@ describe('Requirements List Page', () => {
 
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      const banner = document.querySelector('.reqman-requirements-search-empty');
+      const banner = document.querySelector('.marreq-requirements-search-empty');
       if (banner) {
         expect(banner.hidden).toBe(false);
       }
@@ -752,13 +752,13 @@ describe('Requirements List Page', () => {
 
     it('should hide banner when results are found', () => {
       document.body.innerHTML = `
-        <div class="reqman-requirements-table-section">
+        <div class="marreq-requirements-table-section">
           <table id="requirementsTable">
             <tbody>
-              <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-                <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-                <td><a class="reqman-requirements-title">Test</a></td>
-                <td><span class="reqman-requirements-status-badge">Draft</span></td>
+              <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+                <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+                <td><a class="marreq-requirements-title">Test</a></td>
+                <td><span class="marreq-requirements-status-badge">Draft</span></td>
                 <td>Analysis</td>
                 <td><time>2024-01-01</time></td>
                 <td>Admin</td>
@@ -785,7 +785,7 @@ describe('Requirements List Page', () => {
         searchInput.dispatchEvent(new Event('input'));
 
         setTimeout(() => {
-          const banner = document.querySelector('.reqman-requirements-search-empty');
+          const banner = document.querySelector('.marreq-requirements-search-empty');
           if (banner) {
             expect(banner.hidden).toBe(true);
           }
@@ -802,10 +802,10 @@ describe('Requirements List Page', () => {
         </script>
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-              <td><a class="reqman-requirements-title">Test</a></td>
-              <td><span class="reqman-requirements-status-badge" data-status="Draft">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+              <td><a class="marreq-requirements-title">Test</a></td>
+              <td><span class="marreq-requirements-status-badge" data-status="Draft">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-01</time></td>
               <td>Admin</td>
@@ -819,7 +819,7 @@ describe('Requirements List Page', () => {
 
       init();
 
-      const badge = document.querySelector('.reqman-requirements-status-badge');
+      const badge = document.querySelector('.marreq-requirements-status-badge');
       expect(badge.title).toContain('Work in progress');
     });
 
@@ -827,10 +827,10 @@ describe('Requirements List Page', () => {
       document.body.innerHTML = `
         <table id="requirementsTable">
           <tbody>
-            <tr class="reqman-requirements-row" data-requirement-id="1" data-status-label="Draft">
-              <td><span class="reqman-requirements-key__value">REQ-001</span></td>
-              <td><a class="reqman-requirements-title">Test</a></td>
-              <td><span class="reqman-requirements-status-badge">Draft</span></td>
+            <tr class="marreq-requirements-row" data-requirement-id="1" data-status-label="Draft">
+              <td><span class="marreq-requirements-key__value">REQ-001</span></td>
+              <td><a class="marreq-requirements-title">Test</a></td>
+              <td><span class="marreq-requirements-status-badge">Draft</span></td>
               <td>Analysis</td>
               <td><time>2024-01-01</time></td>
               <td>Admin</td>

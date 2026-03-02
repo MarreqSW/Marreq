@@ -4,7 +4,7 @@ set -euo pipefail
 # db_migrate.sh — Diesel migration management wrapper
 #
 # Thin wrapper around diesel migration commands.  Use this to apply pending
-# migrations after pulling a new version of ReqMan, or to revert migrations
+# migrations after pulling a new version of Marreq, or to revert migrations
 # during development.
 #
 # Usage:
@@ -36,7 +36,7 @@ if [[ -f "${PROJECT_ROOT}/.env" ]]; then
   set -a; source "${PROJECT_ROOT}/.env"; set +a
 fi
 
-DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/reqman}"
+DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/marreq}"
 
 # ── Require diesel CLI ───────────────────────────────────────────────────────
 if ! command -v diesel &>/dev/null; then

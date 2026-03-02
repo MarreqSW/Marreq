@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 #![allow(clippy::result_large_err)]
 
@@ -79,7 +79,7 @@ pub async fn export_logs(
 
     let filename = filename.unwrap_or_else(|| {
         let now = chrono::Utc::now();
-        format!("reqman-logs_{}.json", now.format("%Y%m%d_%H%M%S"))
+        format!("marreq-logs_{}.json", now.format("%Y%m%d_%H%M%S"))
     });
     let filename = ensure_json_extension(&filename);
 
@@ -179,8 +179,8 @@ mod tests {
     fn ensure_json_extension_adds_when_missing() {
         assert_eq!(ensure_json_extension("logs"), "logs.json");
         assert_eq!(
-            ensure_json_extension("reqman-logs_20240101"),
-            "reqman-logs_20240101.json"
+            ensure_json_extension("marreq-logs_20240101"),
+            "marreq-logs_20240101.json"
         );
     }
 

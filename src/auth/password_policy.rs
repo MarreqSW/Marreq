@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 use lazy_static::lazy_static;
 use std::collections::HashSet;
@@ -17,7 +17,7 @@ pub const MAX_PASSWORD_LENGTH: usize = 1024;
 /// This documented list is intentionally small and product-specific. User-specific
 /// terms (username/email/name tokens) are added dynamically at validation time.
 pub const DOCUMENTED_CONTEXT_WORDS: &[&str] = &[
-    "reqman",
+    "marreq",
     "requirement",
     "requirements",
     "traceability",

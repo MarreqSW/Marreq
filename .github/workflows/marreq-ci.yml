@@ -1,4 +1,4 @@
-name: ReqMan CI
+name: Marreq CI
 
 on:
   pull_request:
@@ -69,7 +69,7 @@ jobs:
   test-and-coverage:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgres://rust:rust@127.0.0.1:5432/reqman
+      DATABASE_URL: postgres://rust:rust@127.0.0.1:5432/marreq
     steps:
       - uses: actions/checkout@v4
 

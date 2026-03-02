@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 //! Service for ReqIF 1.2 export and import.
 
@@ -145,7 +145,7 @@ impl<'a> ReqIFService<'a> {
             parent_of.insert(rel.source.clone(), rel.target.clone());
         }
 
-        let mut reqif_id_to_reqman_id: HashMap<String, i32> = HashMap::new();
+        let mut reqif_id_to_marreq_id: HashMap<String, i32> = HashMap::new();
         let mut imported_count = 0usize;
         let mut errors = Vec::new();
         let mut imported_requirement_ids = Vec::new();
@@ -187,7 +187,7 @@ impl<'a> ReqIFService<'a> {
                 Ok(id) => {
                     imported_count += 1;
                     imported_requirement_ids.push(id);
-                    reqif_id_to_reqman_id.insert(obj.id.clone(), id);
+                    reqif_id_to_marreq_id.insert(obj.id.clone(), id);
                 }
                 Err(e) => {
                     errors.push(format!("{} ({}): {}", reference_code, title, e));
@@ -197,20 +197,20 @@ impl<'a> ReqIFService<'a> {
 
         // Pass 2: create requirement_version_links for parent relationships
         for obj in &doc.objects {
-            let Some(child_reqman_id) = reqif_id_to_reqman_id.get(&obj.id).copied() else {
+            let Some(child_marreq_id) = reqif_id_to_marreq_id.get(&obj.id).copied() else {
                 continue;
             };
             let Some(parent_reqif_id) = parent_of.get(&obj.id) else {
                 continue;
             };
-            let Some(parent_reqman_id) = reqif_id_to_reqman_id.get(parent_reqif_id).copied() else {
+            let Some(parent_marreq_id) = reqif_id_to_marreq_id.get(parent_reqif_id).copied() else {
                 continue;
             };
-            let child_req = match req_service.get_by_id(child_reqman_id) {
+            let child_req = match req_service.get_by_id(child_marreq_id) {
                 Ok(r) => r,
                 Err(_) => continue,
             };
-            let parent_req = match req_service.get_by_id(parent_reqman_id) {
+            let parent_req = match req_service.get_by_id(parent_marreq_id) {
                 Ok(r) => r,
                 Err(_) => continue,
             };

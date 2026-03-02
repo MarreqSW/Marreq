@@ -32,6 +32,24 @@ use diesel::{
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
+/// Convert a Diesel error to [`RepoError`], translating unique-constraint violations into
+/// the more descriptive [`RepoError::Duplicate`] variant.
+///
+/// The constraint name is inspected to produce a human-readable field name; unknown
+/// constraint names fall back to the raw Diesel error path.
+fn map_unique_violation(e: diesel::result::Error) -> RepoError {
+    use diesel::result::{DatabaseErrorKind, Error as DE};
+    if let DE::DatabaseError(DatabaseErrorKind::UniqueViolation, ref info) = e {
+        let field = match info.constraint_name().unwrap_or("") {
+            c if c.contains("username") => "username",
+            c if c.contains("email") => "email",
+            _ => "value",
+        };
+        return RepoError::Duplicate(format!("{} is already taken", field));
+    }
+    e.into()
+}
+
 /// Database connection wrapper for use in Rocket handlers
 pub type DbConn = rocket_sync_db_pools::diesel::PgConnection;
 
@@ -277,7 +295,8 @@ impl UserRepository for DieselRepo {
                     .values(new)
                     .get_result(conn)?;
                 Ok(res.id)
-            })?;
+            })
+            .map_err(map_unique_violation)?;
 
         Ok(id)
     }
@@ -296,7 +315,8 @@ impl UserRepository for DieselRepo {
                 dsl::password_hash.eq(&user_data.password_hash),
                 dsl::is_admin.eq(user_data.is_admin),
             ))
-            .execute(conn.as_mut())?;
+            .execute(conn.as_mut())
+            .map_err(map_unique_violation)?;
         Ok(result > 0)
     }
 
@@ -313,7 +333,8 @@ impl UserRepository for DieselRepo {
                 dsl::email.eq(&user_data.email),
                 dsl::is_admin.eq(user_data.is_admin),
             ))
-            .execute(conn.as_mut())?;
+            .execute(conn.as_mut())
+            .map_err(map_unique_violation)?;
         Ok(result > 0)
     }
 

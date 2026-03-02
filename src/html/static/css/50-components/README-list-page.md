@@ -21,22 +21,22 @@ Following the **DRY (Don't Repeat Yourself)** principle and **Component-Based Ar
 The component follows BEM (Block Element Modifier) naming conventions:
 
 ```
-.reqman-list-page              # Container
-├── .reqman-list-page__header  # Page header with title and actions
-│   └── .reqman-list-page__title
-├── .reqman-list-page__toolbar # Search and filter controls
-│   └── .reqman-list-page__search
-└── .reqman-list-page__list    # List container
-    └── .reqman-list-page__row # Individual list item
-        ├── .reqman-list-page__row-main
-        │   ├── .reqman-list-page__row-headline
-        │   │   ├── .reqman-list-page__tag
-        │   │   └── .reqman-list-page__row-title
-        │   └── .reqman-list-page__row-description
-        └── .reqman-list-page__row-meta
-            ├── .reqman-list-page__row-id
-            └── .reqman-list-page__row-actions
-                └── .reqman-list-page__action-btn
+.marreq-list-page              # Container
+├── .marreq-list-page__header  # Page header with title and actions
+│   └── .marreq-list-page__title
+├── .marreq-list-page__toolbar # Search and filter controls
+│   └── .marreq-list-page__search
+└── .marreq-list-page__list    # List container
+    └── .marreq-list-page__row # Individual list item
+        ├── .marreq-list-page__row-main
+        │   ├── .marreq-list-page__row-headline
+        │   │   ├── .marreq-list-page__tag
+        │   │   └── .marreq-list-page__row-title
+        │   └── .marreq-list-page__row-description
+        └── .marreq-list-page__row-meta
+            ├── .marreq-list-page__row-id
+            └── .marreq-list-page__row-actions
+                └── .marreq-list-page__action-btn
 ```
 
 ## Usage
@@ -44,25 +44,25 @@ The component follows BEM (Block Element Modifier) naming conventions:
 ### HTML Template
 
 ```handlebars
-<section class="reqman-list-page reqman-your-page">
-  <div class="reqman-list-page__header">
-    <h1 class="reqman-list-page__title">Your Title</h1>
+<section class="marreq-list-page marreq-your-page">
+  <div class="marreq-list-page__header">
+    <h1 class="marreq-list-page__title">Your Title</h1>
     <a href="/new" class="btn btn-primary">New Item</a>
   </div>
 
-  <div class="reqman-list-page__toolbar">
+  <div class="marreq-list-page__toolbar">
     <label for="search-input" class="u-sr-only">Search items</label>
     <input
       id="search-input"
       type="search"
-      class="form-control reqman-list-page__search"
+      class="form-control marreq-list-page__search"
       placeholder="Search..."
     >
   </div>
 
-  <div class="reqman-list-page__list" id="item-list">
+  <div class="marreq-list-page__list" id="item-list">
     {{#each items}}
-      <article class="reqman-list-page__row">
+      <article class="marreq-list-page__row">
         <!-- Your item content -->
       </article>
     {{/each}}
@@ -85,7 +85,7 @@ Page-specific CSS files (e.g., `pages/categories.css`) should only contain:
  */
 
 /* Page-specific overrides (if any) */
-.reqman-your-page .reqman-list-page__tag {
+.marreq-your-page .marreq-list-page__tag {
   background: custom-gradient;
 }
 ```
@@ -96,10 +96,10 @@ The refactoring changed class names from page-specific to component-based:
 
 | Old Class                     | New Class                       |
 |-------------------------------|---------------------------------|
-| `.reqman-category-page`       | `.reqman-list-page`             |
-| `.reqman-category-row`        | `.reqman-list-page__row`        |
-| `.reqman-category-tag`        | `.reqman-list-page__tag`        |
-| `.reqman-category-row__title` | `.reqman-list-page__row-title`  |
+| `.marreq-category-page`       | `.marreq-list-page`             |
+| `.marreq-category-row`        | `.marreq-list-page__row`        |
+| `.marreq-category-tag`        | `.marreq-list-page__tag`        |
+| `.marreq-category-row__title` | `.marreq-list-page__row-title`  |
 | (etc.)                        | (etc.)                          |
 
 ## Responsive Design
@@ -132,8 +132,8 @@ Compatible with all modern browsers and gracefully degrades in older browsers.
 
 To extend this pattern for new list-based pages:
 
-1. Use the `.reqman-list-page` base classes in your template
-2. Add a page-specific class (e.g., `.reqman-statuses-page`)
+1. Use the `.marreq-list-page` base classes in your template
+2. Add a page-specific class (e.g., `.marreq-statuses-page`)
 3. Create a minimal page CSS file if custom styling is needed
 4. Follow the established BEM naming pattern
 

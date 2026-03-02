@@ -1,4 +1,4 @@
--- Drop all ReqMan tables in reverse-dependency order.
+-- Drop all Marreq tables in reverse-dependency order.
 DROP TABLE IF EXISTS embedding_index_queue CASCADE;
 DROP TABLE IF EXISTS requirement_embeddings CASCADE;
 DROP TABLE IF EXISTS logs CASCADE;

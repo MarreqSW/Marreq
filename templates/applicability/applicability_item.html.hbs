@@ -1,27 +1,27 @@
 {{!--
   Depends on: css/pages/applicability.css, js/pages/applicability.js
-  Dynamic classes: reqman-list-page__row (visibility toggled)
+  Dynamic classes: marreq-list-page__row (visibility toggled)
 --}}
-<article class="reqman-list-page__row" data-applicability-row data-search-text="{{title}} {{tag}} {{description}} {{id}}">
-  <div class="reqman-list-page__row-main">
-    <div class="reqman-list-page__row-headline">
-      <span class="reqman-list-page__tag" aria-label="Applicability tag {{tag}}">{{tag}}</span>
-      <h3 class="reqman-list-page__row-title">{{title}}</h3>
+<article class="marreq-list-page__row" data-applicability-row data-search-text="{{title}} {{tag}} {{description}} {{id}}">
+  <div class="marreq-list-page__row-main">
+    <div class="marreq-list-page__row-headline">
+      <span class="marreq-list-page__tag" aria-label="Applicability tag {{tag}}">{{tag}}</span>
+      <h3 class="marreq-list-page__row-title">{{title}}</h3>
     </div>
     {{#if description}}
-      <p class="reqman-list-page__row-description">{{description}}</p>
+      <p class="marreq-list-page__row-description">{{description}}</p>
     {{/if}}
   </div>
-  <div class="reqman-list-page__row-meta">
-    <span class="reqman-list-page__row-id" title="Applicability ID">#{{id}}</span>
-    <div class="reqman-list-page__row-actions">
+  <div class="marreq-list-page__row-meta">
+    <span class="marreq-list-page__row-id" title="Applicability ID">#{{id}}</span>
+    <div class="marreq-list-page__row-actions">
       <a
         href="/p/{{@root.selected_project_id}}/requirements?applicability_filter={{id}}"
-        class="btn btn-secondary btn-sm reqman-list-page__action-btn"
+        class="btn btn-secondary btn-sm marreq-list-page__action-btn"
       >View Requirements</a>
-      <a href="/p/{{@root.selected_project_id}}/applicability/edit/{{id}}" class="btn btn-outline btn-sm reqman-list-page__action-btn">Edit</a>
+      <a href="/p/{{@root.selected_project_id}}/applicability/edit/{{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn">Edit</a>
       <button
-        class="btn btn-danger btn-sm reqman-list-page__action-btn"
+        class="btn btn-danger btn-sm marreq-list-page__action-btn"
         type="button"
         data-action="delete-applicability"
         data-applicability-id="{{id}}"

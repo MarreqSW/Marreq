@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { loadContext } from "./context.js";
-import { ReqManClient } from "./client.js";
+import { MarreqClient } from "./client.js";
 function jsonContent(data) {
     const text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
     return { type: "text", text };
@@ -41,9 +41,9 @@ async function withAudit(client, toolName, paramsSummary, isWrite, fn) {
 }
 async function main() {
     const ctx = loadContext();
-    const client = new ReqManClient(ctx);
+    const client = new MarreqClient(ctx);
     const server = new McpServer({
-        name: "reqman-mcp-server",
+        name: "marreq-mcp-server",
         version: "0.1.0",
     });
     server.registerTool("get_requirement", {
@@ -129,7 +129,7 @@ async function main() {
         const out = await withAudit(client, "diff_baselines", JSON.stringify({ baseline_a, baseline_b }), false, () => client.diffBaselines(baseline_a, baseline_b));
         return { content: [jsonContent(out)] };
     });
-    // Phase 2: draft_write tools (only when REQMAN_MODE=draft_write)
+    // Phase 2: draft_write tools (only when MARREQ_MODE=draft_write)
     if (ctx.mode === "draft_write") {
         server.registerTool("create_requirement", {
             description: "Create a new requirement in the project (draft). Requires draft_write mode.",
@@ -142,7 +142,6 @@ async function main() {
                 category_id: z.number(),
                 status_id: z.number(),
                 applicability_id: z.number(),
-                parent_id: z.number().nullable().optional(),
                 justification: z.string().nullable().optional(),
                 verification_method_ids: z.array(z.number()),
                 custom_fields: z
@@ -171,7 +170,6 @@ async function main() {
                     reviewer_id: z.number().optional(),
                     category_id: z.number().optional(),
                     applicability_id: z.number().optional(),
-                    parent_id: z.number().nullable().optional(),
                     custom_fields: z
                         .array(z.object({ field_id: z.number(), value: z.string() }))
                         .optional(),

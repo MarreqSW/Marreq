@@ -1,8 +1,8 @@
 -- =============================================================================
--- ReqMan Sample Data Seed Script
+-- Marreq Sample Data Seed Script
 -- =============================================================================
 -- Purpose:
---   Populate a migrated ReqMan database with rich demo data.
+--   Populate a migrated Marreq database with rich demo data.
 --
 -- Important:
 --   - This script does NOT create schema objects.
@@ -74,7 +74,7 @@ $$;
 -- Projects
 INSERT INTO projects (name, description, creation_date, status) VALUES
     ('Space Project', 'Space exploration satellite requirements and test management system for advanced satellite missions', NOW(), 'active'),
-    ('ReqMan Project', 'Requirements management system development and testing', NOW(), 'active'),
+    ('Marreq Project', 'Requirements management system development and testing', NOW(), 'active'),
     ('Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 'active');
 
 -- Requirement status definitions (is_system = true: default set, not editable/deletable)
@@ -85,12 +85,12 @@ INSERT INTO requirement_status (title, description, tag, project_id, is_system) 
     ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', (SELECT id FROM projects WHERE name = 'Space Project'), true),
     ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', (SELECT id FROM projects WHERE name = 'Space Project'), true),
     ('Finished', 'The requirement is finished and completed', 'Fsh', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('Draft', 'The requirement is still being edited and developed', 'Drf', (SELECT id FROM projects WHERE name = 'ReqMan Project'), true),
-    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', (SELECT id FROM projects WHERE name = 'ReqMan Project'), true),
-    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', (SELECT id FROM projects WHERE name = 'ReqMan Project'), true),
-    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', (SELECT id FROM projects WHERE name = 'ReqMan Project'), true),
-    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', (SELECT id FROM projects WHERE name = 'ReqMan Project'), true),
-    ('Finished', 'The requirement is finished and completed', 'Fsh', (SELECT id FROM projects WHERE name = 'ReqMan Project'), true);
+    ('Draft', 'The requirement is still being edited and developed', 'Drf', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
+    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
+    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
+    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
+    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
+    ('Finished', 'The requirement is finished and completed', 'Fsh', (SELECT id FROM projects WHERE name = 'Marreq Project'), true);
 
 -- Test status definitions (is_system = true: default set, not editable/deletable)
 INSERT INTO test_status (title, description, tag, project_id, is_system) VALUES
@@ -98,16 +98,16 @@ INSERT INTO test_status (title, description, tag, project_id, is_system) VALUES
     ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'Space Project'), true),
     ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'Space Project'), true),
     ('In Progress', 'The test is currently being executed', 'Prog', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('Passed', 'The test has passed all criteria', 'Pass', (SELECT id FROM projects WHERE name = 'ReqMan Project'), true),
-    ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'ReqMan Project'), true),
-    ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'ReqMan Project'), true),
-    ('In Progress', 'The test is currently being executed', 'Prog', (SELECT id FROM projects WHERE name = 'ReqMan Project'), true);
+    ('Passed', 'The test has passed all criteria', 'Pass', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
+    ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
+    ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
+    ('In Progress', 'The test is currently being executed', 'Prog', (SELECT id FROM projects WHERE name = 'Marreq Project'), true);
 
 -- Users with working passwords (all users have password: ChangeMe123!)
 -- Password hash (Argon2id):
 -- $argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0
 INSERT INTO users (username, name, email, is_admin, password_hash)
-SELECT 'alice', 'Alice Johnson', 'alice@reqman.com', true,
+SELECT 'alice', 'Alice Johnson', 'alice@marreq.com', true,
        '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'alice');
 
@@ -132,7 +132,7 @@ SELECT 'qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', fals
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'qa_wilson');
 
 INSERT INTO users (username, name, email, is_admin, password_hash)
-SELECT 'admin', 'System Administrator', 'admin@reqman.com', true,
+SELECT 'admin', 'System Administrator', 'admin@marreq.com', true,
        '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
 
@@ -142,9 +142,9 @@ INSERT INTO project_members (project_id, user_id, role) VALUES
     ((SELECT id FROM projects WHERE name = 'Space Project'), (SELECT id FROM users WHERE username = 'eng_jones' ORDER BY id LIMIT 1), 3),
     ((SELECT id FROM projects WHERE name = 'Space Project'), (SELECT id FROM users WHERE username = 'tech_lee' ORDER BY id LIMIT 1), 3),
     ((SELECT id FROM projects WHERE name = 'Space Project'), (SELECT id FROM users WHERE username = 'qa_wilson' ORDER BY id LIMIT 1), 4),
-    ((SELECT id FROM projects WHERE name = 'ReqMan Project'), (SELECT id FROM users WHERE username = 'alice' ORDER BY id LIMIT 1), 1),
-    ((SELECT id FROM projects WHERE name = 'ReqMan Project'), (SELECT id FROM users WHERE username = 'admin' ORDER BY id LIMIT 1), 2),
-    ((SELECT id FROM projects WHERE name = 'ReqMan Project'), (SELECT id FROM users WHERE username = 'qa_wilson' ORDER BY id LIMIT 1), 3),
+    ((SELECT id FROM projects WHERE name = 'Marreq Project'), (SELECT id FROM users WHERE username = 'alice' ORDER BY id LIMIT 1), 1),
+    ((SELECT id FROM projects WHERE name = 'Marreq Project'), (SELECT id FROM users WHERE username = 'admin' ORDER BY id LIMIT 1), 2),
+    ((SELECT id FROM projects WHERE name = 'Marreq Project'), (SELECT id FROM users WHERE username = 'qa_wilson' ORDER BY id LIMIT 1), 3),
     ((SELECT id FROM projects WHERE name = 'Empty Project'), (SELECT id FROM users WHERE username = 'admin' ORDER BY id LIMIT 1), 1),
     ((SELECT id FROM projects WHERE name = 'Empty Project'), (SELECT id FROM users WHERE username = 'alice' ORDER BY id LIMIT 1), 2);
 
@@ -159,15 +159,15 @@ INSERT INTO categories (title, description, tag, project_id) VALUES
     ('Structure', 'Mechanical structure and deployment mechanisms', 'STRUCT', (SELECT id FROM projects WHERE name = 'Space Project')),
     ('Software', 'On-board computer systems and control algorithms', 'SW', (SELECT id FROM projects WHERE name = 'Space Project'));
 
--- Categories for ReqMan Project
+-- Categories for Marreq Project
 INSERT INTO categories (title, description, tag, project_id) VALUES
-    ('User Interface', 'User interface components and functionality', 'UI', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Backend', 'Server-side logic and API endpoints', 'BE', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Database', 'Database schema and data management', 'DB', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Authentication', 'User authentication and authorization', 'AUTH', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Documentation', 'Technical and user documentation', 'DOC', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Testing', 'Test infrastructure and test cases', 'TEST', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Performance', 'System performance and optimization', 'PERF', (SELECT id FROM projects WHERE name = 'ReqMan Project'));
+    ('User Interface', 'User interface components and functionality', 'UI', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Backend', 'Server-side logic and API endpoints', 'BE', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Database', 'Database schema and data management', 'DB', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Authentication', 'User authentication and authorization', 'AUTH', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Documentation', 'Technical and user documentation', 'DOC', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Testing', 'Test infrastructure and test cases', 'TEST', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Performance', 'System performance and optimization', 'PERF', (SELECT id FROM projects WHERE name = 'Marreq Project'));
 
 -- Applicability definitions for Space Project
 INSERT INTO applicability (title, description, tag, project_id) VALUES
@@ -178,13 +178,13 @@ INSERT INTO applicability (title, description, tag, project_id) VALUES
     ('Deep Space', 'Interplanetary and deep space exploration missions', 'DEEP', (SELECT id FROM projects WHERE name = 'Space Project')),
     ('CubeSat', 'Small satellite missions and CubeSat platforms', 'CUBE', (SELECT id FROM projects WHERE name = 'Space Project'));
 
--- Applicability definitions for ReqMan Project
+-- Applicability definitions for Marreq Project
 INSERT INTO applicability (title, description, tag, project_id) VALUES
-    ('All Users', 'Applies to all user types', 'ALL', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Administrators', 'Applies to system administrators only', 'ADMIN', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Project Managers', 'Applies to project managers and owners', 'MGR', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Contributors', 'Applies to regular contributors', 'CONT', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Viewers', 'Applies to read-only viewers', 'VIEW', (SELECT id FROM projects WHERE name = 'ReqMan Project'));
+    ('All Users', 'Applies to all user types', 'ALL', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Administrators', 'Applies to system administrators only', 'ADMIN', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Project Managers', 'Applies to project managers and owners', 'MGR', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Contributors', 'Applies to regular contributors', 'CONT', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Viewers', 'Applies to read-only viewers', 'VIEW', (SELECT id FROM projects WHERE name = 'Marreq Project'));
 
 -- Verification methods for Space Project
 INSERT INTO verification (title, description, tag, project_id) VALUES
@@ -193,13 +193,13 @@ INSERT INTO verification (title, description, tag, project_id) VALUES
     ('Demonstration', 'Manipulation of the product as intended in its operational environment', 'DEMO', (SELECT id FROM projects WHERE name = 'Space Project')),
     ('Test', 'Controlled verification with predefined inputs and expected outputs', 'TEST', (SELECT id FROM projects WHERE name = 'Space Project'));
 
--- Verification methods for ReqMan Project
+-- Verification methods for Marreq Project
 INSERT INTO verification (title, description, tag, project_id) VALUES
-    ('Code Review', 'Review of source code by peers', 'REVIEW', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Unit Test', 'Automated unit testing', 'UNIT', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Integration Test', 'Testing of integrated components', 'INTEG', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('System Test', 'End-to-end system testing', 'SYS', (SELECT id FROM projects WHERE name = 'ReqMan Project')),
-    ('Manual Test', 'Manual testing by QA team', 'MANUAL', (SELECT id FROM projects WHERE name = 'ReqMan Project'));
+    ('Code Review', 'Review of source code by peers', 'REVIEW', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Unit Test', 'Automated unit testing', 'UNIT', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Integration Test', 'Testing of integrated components', 'INTEG', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('System Test', 'End-to-end system testing', 'SYS', (SELECT id FROM projects WHERE name = 'Marreq Project')),
+    ('Manual Test', 'Manual testing by QA team', 'MANUAL', (SELECT id FROM projects WHERE name = 'Marreq Project'));
 
 -- Requirements for Space Project (containers only; content in requirement_versions)
 INSERT INTO requirements (project_id, stable_code) VALUES
@@ -497,7 +497,7 @@ INSERT INTO logs (user_id, action_type, entity_type, entity_id, project_id, desc
 DO $$
 BEGIN
     RAISE NOTICE '========================================';
-    RAISE NOTICE 'ReqMan Sample Data Seed Complete';
+    RAISE NOTICE 'Marreq Sample Data Seed Complete';
     RAISE NOTICE '========================================';
     RAISE NOTICE '';
     RAISE NOTICE 'Seeded Data:';

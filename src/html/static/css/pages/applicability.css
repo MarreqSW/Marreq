@@ -4,7 +4,7 @@
  * Page-specific styles for the applicability list page.
  * Inherits layout from the list-page component (50-components/list-page.css).
  * 
- * The page now uses the shared .reqman-list-page component classes.
+ * The page now uses the shared .marreq-list-page component classes.
  * Add applicability-specific styling overrides below as needed.
  */
 

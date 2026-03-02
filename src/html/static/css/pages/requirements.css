@@ -15,7 +15,7 @@
   }
 }
 
-.reqman-requirements-page {
+.marreq-requirements-page {
   background-color: transparent;
   display: flex;
   flex-direction: column;
@@ -26,31 +26,31 @@
 }
 
 @media (min-width: 768px) {
-  .reqman-requirements-page {
+  .marreq-requirements-page {
     gap: var(--space-8);
     padding-inline: var(--space-6);
   }
 }
 
 @media (min-width: 1280px) {
-  .reqman-requirements-page {
+  .marreq-requirements-page {
     padding-inline: var(--space-8);
   }
 }
 
-.reqman-requirements-main {
+.marreq-requirements-main {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
 }
 
 @media (min-width: 1024px) {
-  .reqman-requirements-main {
+  .marreq-requirements-main {
     gap: var(--space-8);
   }
 }
 
-.reqman-requirements-header {
+.marreq-requirements-header {
   align-items: flex-start;
   background: linear-gradient(135deg, var(--surface-color), var(--surface-accent));
   border-radius: var(--radius-lg);
@@ -62,26 +62,26 @@
 }
 
 @media (min-width: 1024px) {
-  .reqman-requirements-header {
+  .marreq-requirements-header {
     align-items: start;
     grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr);
   }
 }
 
-.reqman-requirements-header__meta {
+.marreq-requirements-header__meta {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.reqman-requirements-header__title {
+.marreq-requirements-header__title {
   color: var(--text-primary);
   font-size: 2rem;
   font-weight: 700;
   margin: 0;
 }
 
-.reqman-requirements-header__title-accent {
+.marreq-requirements-header__title-accent {
   color: var(--primary-color);
   display: inline-block;
   font-weight: 600;
@@ -89,33 +89,33 @@
   text-transform: lowercase;
 }
 
-.reqman-requirements-header__subtitle {
+.marreq-requirements-header__subtitle {
   color: var(--text-secondary);
   margin: 0;
 }
 
-.reqman-requirements-header__actions {
+.marreq-requirements-header__actions {
   align-items: center;
   display: flex;
   gap: var(--space-3);
 }
 
 @media (min-width: 1024px) {
-  .reqman-requirements-header__actions {
+  .marreq-requirements-header__actions {
     justify-content: flex-end;
   }
 }
 
-.reqman-requirements-header__secondary {
+.marreq-requirements-header__secondary {
   display: flex;
   gap: var(--space-2);
 }
 
-.reqman-requirements-header__primary {
+.marreq-requirements-header__primary {
   padding-inline: var(--space-5);
 }
 
-.reqman-requirements-breadcrumb ol {
+.marreq-requirements-breadcrumb ol {
   align-items: center;
   color: var(--text-secondary);
   display: flex;
@@ -126,28 +126,28 @@
   padding: 0;
 }
 
-.reqman-requirements-breadcrumb__link {
+.marreq-requirements-breadcrumb__link {
   color: inherit;
   text-decoration: none;
 }
 
-.reqman-requirements-breadcrumb__link:hover {
+.marreq-requirements-breadcrumb__link:hover {
   color: var(--primary-color);
   text-decoration: underline;
 }
 
-.reqman-requirements-breadcrumb__current {
+.marreq-requirements-breadcrumb__current {
   color: var(--text-primary);
   font-weight: 600;
 }
 
-.reqman-requirements-metrics {
+.marreq-requirements-metrics {
   display: grid;
   gap: var(--space-4);
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
-.reqman-requirements-metric-card {
+.marreq-requirements-metric-card {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -158,7 +158,7 @@
   padding: var(--space-4);
 }
 
-.reqman-requirements-metric-card__label {
+.marreq-requirements-metric-card__label {
   color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 600;
@@ -166,25 +166,25 @@
   text-transform: uppercase;
 }
 
-.reqman-requirements-metric-card__value {
+.marreq-requirements-metric-card__value {
   color: var(--text-primary);
   font-size: 1.75rem;
   font-weight: 700;
 }
 
-.reqman-requirements-metric-card__header {
+.marreq-requirements-metric-card__header {
   align-items: baseline;
   display: flex;
   justify-content: space-between;
 }
 
-.reqman-requirements-metric-card__badge,
-.reqman-requirements-metric-card__hint {
+.marreq-requirements-metric-card__badge,
+.marreq-requirements-metric-card__hint {
   color: var(--text-secondary);
   font-size: 0.75rem;
 }
 
-.reqman-requirements-metric-card__badge {
+.marreq-requirements-metric-card__badge {
   align-items: center;
   background-color: var(--surface-muted);
   border-radius: var(--radius-xl);
@@ -194,64 +194,64 @@
   padding: var(--space-1) var(--space-2);
 }
 
-.reqman-requirements-metric-card--total {
+.marreq-requirements-metric-card--total {
   border-color: rgb(37 99 235 / 0.15);
 }
 
-.reqman-requirements-metric-card--draft {
+.marreq-requirements-metric-card--draft {
   background: linear-gradient(135deg, rgb(148 163 184 / 0.12), transparent);
 }
 
-.reqman-requirements-metric-card--accepted {
+.marreq-requirements-metric-card--accepted {
   background: linear-gradient(135deg, rgb(16 185 129 / 0.12), transparent);
 }
 
-.reqman-requirements-metric-card--rejected {
+.marreq-requirements-metric-card--rejected {
   background: linear-gradient(135deg, rgb(239 68 68 / 0.12), transparent);
 }
 
-.reqman-requirements-metric-card--rejected .reqman-requirements-metric-card__badge {
+.marreq-requirements-metric-card--rejected .marreq-requirements-metric-card__badge {
   background-color: rgb(239 68 68 / 0.16);
   color: #b91c1c;
 }
 
-.reqman-requirements-metric-card--coverage {
+.marreq-requirements-metric-card--coverage {
   background: linear-gradient(135deg, rgb(37 99 235 / 0.08), transparent);
 }
 
-.reqman-requirements-metric-card__progress {
+.marreq-requirements-metric-card__progress {
   background-color: var(--surface-muted);
   border-radius: var(--radius-xl);
   height: 6px;
   overflow: hidden;
 }
 
-.reqman-requirements-metric-card__progress-bar {
+.marreq-requirements-metric-card__progress-bar {
   background: linear-gradient(90deg, var(--primary-color), var(--primary-light));
   border-radius: inherit;
   height: 100%;
   transition: width var(--transition-base);
 }
 
-.reqman-requirements-controls {
+.marreq-requirements-controls {
   border: 1px solid var(--border-color);
   padding: 0;
   transform: none;
   transition: box-shadow var(--transition-base);
 }
 
-.reqman-requirements-controls:hover {
+.marreq-requirements-controls:hover {
   transform: none;
 }
 
-.reqman-requirements-controls__inner {
+.marreq-requirements-controls__inner {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
 }
 
-.reqman-requirements-filter-bar {
+.marreq-requirements-filter-bar {
   align-items: stretch;
   display: grid;
   gap: var(--space-3);
@@ -263,44 +263,44 @@
 }
 
 @media (min-width: 1280px) {
-  .reqman-requirements-filter-bar {
+  .marreq-requirements-filter-bar {
     grid-template-areas:
       'search filter1 filter2 filter3 filter4 actions';
     grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(100px, 1fr)) auto;
   }
 }
 
-.reqman-requirements-filter-bar__search {
+.marreq-requirements-filter-bar__search {
   grid-area: search;
   /* anchor absolute-positioned shortcut inside the search area */
   position: relative;
 }
 
-.reqman-requirements-filter-bar__selects {
+.marreq-requirements-filter-bar__selects {
   display: contents;
 }
 
-.reqman-requirements-filter-bar__select:nth-of-type(1) {
+.marreq-requirements-filter-bar__select:nth-of-type(1) {
   grid-area: filter1;
 }
 
-.reqman-requirements-filter-bar__select:nth-of-type(2) {
+.marreq-requirements-filter-bar__select:nth-of-type(2) {
   grid-area: filter2;
 }
 
-.reqman-requirements-filter-bar__select:nth-of-type(3) {
+.marreq-requirements-filter-bar__select:nth-of-type(3) {
   grid-area: filter3;
 }
 
-.reqman-requirements-filter-bar__select:nth-of-type(4) {
+.marreq-requirements-filter-bar__select:nth-of-type(4) {
   grid-area: filter4;
 }
 
-.reqman-requirements-filter-bar__actions {
+.marreq-requirements-filter-bar__actions {
   grid-area: actions;
 }
 
-.reqman-requirements-filter-bar__search-input {
+.marreq-requirements-filter-bar__search-input {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -310,12 +310,12 @@
   width: 100%;
 }
 
-.reqman-requirements-filter-bar__search-input:focus {
+.marreq-requirements-filter-bar__search-input:focus {
   outline: 2px solid rgb(37 99 235 / 0.35);
   outline-offset: 0;
 }
 
-.reqman-requirements-filter-bar__shortcut {
+.marreq-requirements-filter-bar__shortcut {
   background-color: var(--surface-muted);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -329,7 +329,7 @@
   transform: translateY(-50%);
 }
 
-.reqman-requirements-filter-bar__select {
+.marreq-requirements-filter-bar__select {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -338,12 +338,12 @@
   width: 100%;
 }
 
-.reqman-requirements-filter-bar__select:focus {
+.marreq-requirements-filter-bar__select:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgb(37 99 235 / 0.15);
 }
 
-.reqman-requirements-filter-bar__clear {
+.marreq-requirements-filter-bar__clear {
   background: none;
   border: none;
   border-radius: var(--radius-md);
@@ -354,11 +354,11 @@
   transition: background-color var(--transition-base);
 }
 
-.reqman-requirements-filter-bar__clear:hover {
+.marreq-requirements-filter-bar__clear:hover {
   background-color: var(--surface-muted);
 }
 
-.reqman-requirements-filter-bar__submit {
+.marreq-requirements-filter-bar__submit {
   background-color: var(--primary-color);
   border: none;
   border-radius: var(--radius-md);
@@ -369,16 +369,16 @@
   transition: background-color var(--transition-base);
 }
 
-.reqman-requirements-filter-bar__submit:hover {
+.marreq-requirements-filter-bar__submit:hover {
   background-color: var(--primary-dark);
 }
 
-.reqman-requirements-filter-bar__submit:active {
+.marreq-requirements-filter-bar__submit:active {
   transform: scale(0.98);
 }
 
 /* Pagination */
-.reqman-requirements-pagination {
+.marreq-requirements-pagination {
   align-items: center;
   color: var(--text-secondary);
   display: flex;
@@ -389,40 +389,40 @@
   padding: var(--space-3) 0;
 }
 
-.reqman-requirements-pagination__info {
+.marreq-requirements-pagination__info {
   color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
-.reqman-requirements-pagination__range {
+.marreq-requirements-pagination__range {
   white-space: nowrap;
 }
 
-.reqman-requirements-pagination__links {
+.marreq-requirements-pagination__links {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.reqman-requirements-pagination__link {
+.marreq-requirements-pagination__link {
   color: var(--primary-color);
   font-size: 0.875rem;
   padding: var(--space-1) var(--space-2);
   text-decoration: none;
 }
 
-.reqman-requirements-pagination__link:hover {
+.marreq-requirements-pagination__link:hover {
   text-decoration: underline;
 }
 
-.reqman-requirements-pagination__link--disabled {
+.marreq-requirements-pagination__link--disabled {
   color: var(--text-muted);
   cursor: not-allowed;
   text-decoration: none;
 }
 
-.reqman-requirements-pagination__pages {
+.marreq-requirements-pagination__pages {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
@@ -431,7 +431,7 @@
   padding: 0;
 }
 
-.reqman-requirements-pagination__page {
+.marreq-requirements-pagination__page {
   border-radius: var(--radius-md);
   display: inline-block;
   font-size: 0.875rem;
@@ -441,28 +441,28 @@
   text-decoration: none;
 }
 
-.reqman-requirements-pagination__page[href] {
+.marreq-requirements-pagination__page[href] {
   color: var(--primary-color);
 }
 
-.reqman-requirements-pagination__page[href]:hover {
+.marreq-requirements-pagination__page[href]:hover {
   background-color: var(--surface-muted);
   text-decoration: none;
 }
 
-.reqman-requirements-pagination__page--current {
+.marreq-requirements-pagination__page--current {
   background-color: var(--primary-color);
   color: var(--text-on-primary, #fff);
   font-weight: 600;
 }
 
-.reqman-requirements-filter-chips {
+.marreq-requirements-filter-chips {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.reqman-requirements-filter-chip {
+.marreq-requirements-filter-chip {
   align-items: center;
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -476,7 +476,7 @@
   transition: background-color var(--transition-base), border-color var(--transition-base);
 }
 
-.reqman-requirements-filter-chip:hover {
+.marreq-requirements-filter-chip:hover {
   background-color: var(--surface-muted);
   border-color: var(--primary-color);
 }
@@ -493,7 +493,7 @@
   width: 1px;
 }
 
-.reqman-requirements-table-section {
+.marreq-requirements-table-section {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -501,11 +501,11 @@
   overflow: hidden;
 }
 
-.reqman-requirements-table__wrapper {
+.marreq-requirements-table__wrapper {
   overflow-x: auto;
 }
 
-.reqman-requirements-table {
+.marreq-requirements-table {
   border-collapse: separate;
   border-spacing: 0;
   min-width: 720px;
@@ -513,7 +513,7 @@
   width: 100%;
 }
 
-.reqman-requirements-table thead {
+.marreq-requirements-table thead {
   background-color: var(--surface-muted);
   color: var(--text-secondary);
   font-size: 0.75rem;
@@ -521,24 +521,24 @@
   text-transform: uppercase;
 }
 
-.reqman-requirements-table th,
-.reqman-requirements-table td {
+.marreq-requirements-table th,
+.marreq-requirements-table td {
   border-bottom: 1px solid var(--border-color);
   padding: var(--space-4) var(--space-5);
   text-align: left;
 }
 
-.reqman-requirements-table tbody tr:last-child td {
+.marreq-requirements-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.reqman-requirements-table .is-sortable {
+.marreq-requirements-table .is-sortable {
   cursor: pointer;
   padding-right: var(--space-6);
   position: relative;
 }
 
-.reqman-requirements-table__sort-indicator {
+.marreq-requirements-table__sort-indicator {
   color: inherit;
   font-size: 0.75rem;
   pointer-events: none;
@@ -548,30 +548,30 @@
   transform: translateY(-50%);
 }
 
-.reqman-requirements-row {
+.marreq-requirements-row {
   transition: background-color var(--transition-base);
 }
 
-.reqman-requirements-row.is-filtered-out,
-.reqman-requirements-row__details.is-filtered-out {
+.marreq-requirements-row.is-filtered-out,
+.marreq-requirements-row__details.is-filtered-out {
   display: none;
 }
 
-.reqman-requirements-row:hover {
+.marreq-requirements-row:hover {
   background-color: var(--surface-muted);
 }
 
-.reqman-requirements-row__cell--key {
+.marreq-requirements-row__cell--key {
   font-weight: 600;
 }
 
-.reqman-requirements-key {
+.marreq-requirements-key {
   align-items: center;
   display: flex;
   gap: var(--space-2);
 }
 
-.reqman-requirements-key__value {
+.marreq-requirements-key__value {
   background-color: var(--primary-surface);
   border-radius: var(--radius-md);
   color: var(--primary-color);
@@ -582,12 +582,12 @@
 }
 
 /* Dark mode adjustments for table key badge */
-:root[data-theme='dark'] .reqman-requirements-key__value {
+:root[data-theme='dark'] .marreq-requirements-key__value {
   background-color: rgb(37 99 235 / 0.15);
   color: var(--primary-light);
 }
 
-.reqman-requirements-key__toggle {
+.marreq-requirements-key__toggle {
   align-items: center;
   background: transparent;
   border: none;
@@ -601,38 +601,38 @@
   width: 1.75rem;
 }
 
-.reqman-requirements-key__toggle::after {
+.marreq-requirements-key__toggle::after {
   content: '▾';
   display: inline-block;
   font-size: 0.8rem;
   transition: transform var(--transition-base);
 }
 
-.reqman-requirements-key__toggle[aria-expanded='true']::after {
+.marreq-requirements-key__toggle[aria-expanded='true']::after {
   transform: rotate(180deg);
 }
 
-.reqman-requirements-key__toggle:hover {
+.marreq-requirements-key__toggle:hover {
   background-color: var(--surface-muted);
 }
 
-.reqman-requirements-title {
+.marreq-requirements-title {
   color: var(--text-primary);
   font-weight: 600;
   text-decoration: none;
 }
 
-.reqman-requirements-title:hover {
+.marreq-requirements-title:hover {
   text-decoration: underline;
 }
 
-.reqman-requirements-title__reference {
+.marreq-requirements-title__reference {
   color: var(--text-secondary);
   font-size: 0.85rem;
   margin-left: var(--space-1);
 }
 
-.reqman-requirements-status-badge {
+.marreq-requirements-status-badge {
   align-items: center;
   background-color: var(--surface-muted);
   border-radius: var(--radius-xl);
@@ -647,61 +647,61 @@
   transition: transform var(--transition-base);
 }
 
-.reqman-requirements-status-badge:hover {
+.marreq-requirements-status-badge:hover {
   transform: translateY(-1px);
 }
 
-.reqman-requirements-status-badge--draft {
+.marreq-requirements-status-badge--draft {
   background-color: rgb(148 163 184 / 0.2);
   color: #475569;
 }
 
-.reqman-requirements-status-badge--proposal {
+.marreq-requirements-status-badge--proposal {
   background-color: rgb(245 158 11 / 0.18);
   color: #b45309;
 }
 
-.reqman-requirements-status-badge--accepted,
-.reqman-requirements-status-badge--approved,
-.reqman-requirements-status-badge--finished,
-.reqman-requirements-status-badge--passed {
+.marreq-requirements-status-badge--accepted,
+.marreq-requirements-status-badge--approved,
+.marreq-requirements-status-badge--finished,
+.marreq-requirements-status-badge--passed {
   background-color: rgb(16 185 129 / 0.2);
   color: #047857;
 }
 
-.reqman-requirements-status-badge--rejected,
-.reqman-requirements-status-badge--failed,
-.reqman-requirements-status-badge--cancelled {
+.marreq-requirements-status-badge--rejected,
+.marreq-requirements-status-badge--failed,
+.marreq-requirements-status-badge--cancelled {
   background-color: rgb(239 68 68 / 0.18);
   color: #b91c1c;
 }
 
-.reqman-requirements-status-badge--default {
+.marreq-requirements-status-badge--default {
   background-color: rgb(37 99 235 / 0.15);
   color: var(--primary-color);
 }
 
-.reqman-requirements-cell-muted {
+.marreq-requirements-cell-muted {
   color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
-.reqman-requirements-cell--editable {
+.marreq-requirements-cell--editable {
   cursor: pointer;
   position: relative;
 }
 
-.reqman-requirements-cell--editable:hover {
+.marreq-requirements-cell--editable:hover {
   background-color: var(--surface-muted);
   outline: 1px dashed var(--border-color);
   outline-offset: -1px;
 }
 
-.reqman-requirements-cell--editable[title] {
+.marreq-requirements-cell--editable[title] {
   cursor: pointer;
 }
 
-.reqman-inline-edit-select {
+.marreq-inline-edit-select {
   appearance: auto;
   background: var(--surface-color);
   border: 1px solid var(--primary-color);
@@ -714,18 +714,18 @@
   width: 100%;
 }
 
-.reqman-inline-edit-select:focus {
+.marreq-inline-edit-select:focus {
   box-shadow: 0 0 0 2px var(--primary-color);
   outline: none;
 }
 
-.reqman-requirements-row__actions {
+.marreq-requirements-row__actions {
   align-items: center;
   display: inline-flex;
   gap: var(--space-2);
 }
 
-.reqman-requirements-row__action {
+.marreq-requirements-row__action {
   background: none;
   border: none;
   color: var(--primary-color);
@@ -735,26 +735,26 @@
   transition: color var(--transition-base);
 }
 
-.reqman-requirements-row__action:hover {
+.marreq-requirements-row__action:hover {
   color: var(--primary-dark);
 }
 
-.reqman-requirements-row__details {
+.marreq-requirements-row__details {
   background-color: var(--surface-subtle);
 }
 
-.reqman-requirements-row__details td {
+.marreq-requirements-row__details td {
   padding: var(--space-4);
 }
 
-.reqman-requirements-details-grid {
+.marreq-requirements-details-grid {
   display: grid;
   gap: var(--space-3);
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   margin: 0;
 }
 
-.reqman-requirements-details-grid dt {
+.marreq-requirements-details-grid dt {
   color: var(--text-secondary);
   font-size: 0.75rem;
   letter-spacing: 0.04em;
@@ -762,14 +762,14 @@
   text-transform: uppercase;
 }
 
-.reqman-requirements-details-grid dd {
+.marreq-requirements-details-grid dd {
   color: var(--text-primary);
   font-weight: 500;
   margin: 0;
   word-break: break-word;
 }
 
-.reqman-requirements-pagination__button {
+.marreq-requirements-pagination__button {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -778,12 +778,12 @@
   padding: var(--space-1) var(--space-3);
 }
 
-.reqman-requirements-pagination__button.is-disabled {
+.marreq-requirements-pagination__button.is-disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
-.reqman-requirements-empty-state {
+.marreq-requirements-empty-state {
   color: var(--text-secondary);
   display: grid;
   gap: var(--space-3);
@@ -792,23 +792,23 @@
   text-align: center;
 }
 
-.reqman-requirements-empty-state__illustration {
+.marreq-requirements-empty-state__illustration {
   font-size: 3rem;
 }
 
-.reqman-requirements-empty-state h2 {
+.marreq-requirements-empty-state h2 {
   color: var(--text-primary);
   margin: 0;
 }
 
-.reqman-requirements-search-empty {
+.marreq-requirements-search-empty {
   border-top: 1px solid var(--border-color);
   color: var(--text-secondary);
   padding: var(--space-6);
   text-align: center;
 }
 
-.reqman-requirements-row--enter {
+.marreq-requirements-row--enter {
   animation: requirements-row-fade 220ms ease-in-out;
 }
 
@@ -825,7 +825,7 @@
 }
 
 @media (max-width: 768px) {
-  .reqman-requirements-filter-bar {
+  .marreq-requirements-filter-bar {
     grid-template-areas:
       'search search'
       'filter1 filter2'
@@ -840,13 +840,13 @@
    Modern card-based layout with rich metadata display
    ============================================================ */
 
-.reqman-requirements-cards-section {
+.marreq-requirements-cards-section {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
 }
 
-.reqman-requirements-cards-grid {
+.marreq-requirements-cards-grid {
   display: grid;
   gap: var(--space-5);
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -854,19 +854,19 @@
 }
 
 @media (min-width: 768px) {
-  .reqman-requirements-cards-grid {
+  .marreq-requirements-cards-grid {
     grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   }
 }
 
 @media (min-width: 1280px) {
-  .reqman-requirements-cards-grid {
+  .marreq-requirements-cards-grid {
     grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
   }
 }
 
 /* Card container */
-.reqman-requirement-card {
+.marreq-requirement-card {
   animation: card-fade-in 280ms ease-out;
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -882,7 +882,7 @@
     border-color var(--transition-base);
 }
 
-.reqman-requirement-card::before {
+.marreq-requirement-card::before {
   background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   content: '';
@@ -895,29 +895,29 @@
   width: 100%;
 }
 
-.reqman-requirement-card:hover {
+.marreq-requirement-card:hover {
   border-color: var(--primary-color);
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
-.reqman-requirement-card:hover::before {
+.marreq-requirement-card:hover::before {
   opacity: 1;
 }
 
 /* Card header */
-.reqman-requirement-card__header {
+.marreq-requirement-card__header {
   align-items: center;
   display: flex;
   gap: var(--space-3);
   justify-content: space-between;
 }
 
-.reqman-requirement-card__reference {
+.marreq-requirement-card__reference {
   flex-shrink: 0;
 }
 
-.reqman-requirement-card__reference-text {
+.marreq-requirement-card__reference-text {
   background-color: var(--primary-surface);
   border-radius: var(--radius-md);
   color: var(--primary-color);
@@ -931,32 +931,32 @@
   transition: background-color var(--transition-base), transform var(--transition-fast);
 }
 
-.reqman-requirement-card__reference-text:hover {
+.marreq-requirement-card__reference-text:hover {
   background-color: var(--surface-accent);
   color: var(--primary-dark);
   transform: translateY(-1px);
 }
 
 /* Dark mode adjustments for reference badge */
-:root[data-theme='dark'] .reqman-requirement-card__reference-text {
+:root[data-theme='dark'] .marreq-requirement-card__reference-text {
   background-color: rgb(37 99 235 / 0.15);
   color: var(--primary-light);
 }
 
-[data-theme='dark'] .reqman-requirement-card__reference-text:hover {
+[data-theme='dark'] .marreq-requirement-card__reference-text:hover {
   background-color: rgb(37 99 235 / 0.25);
   color: var(--primary-light);
 }
 
 /* Status badge in card context */
-.reqman-requirement-card .reqman-requirements-status-badge {
+.marreq-requirement-card .marreq-requirements-status-badge {
   flex-shrink: 0;
   font-size: 0.6875rem;
   padding: var(--space-1) var(--space-2);
 }
 
 /* Card body */
-.reqman-requirement-card__body {
+.marreq-requirement-card__body {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -964,7 +964,7 @@
   min-height: 0;
 }
 
-.reqman-requirement-card__title {
+.marreq-requirement-card__title {
   color: var(--text-primary);
   font-size: 1.0625rem;
   font-weight: 600;
@@ -972,18 +972,18 @@
   margin: 0;
 }
 
-.reqman-requirement-card__title-link {
+.marreq-requirement-card__title-link {
   color: inherit;
   text-decoration: none;
   transition: color var(--transition-base);
 }
 
-.reqman-requirement-card__title-link:hover {
+.marreq-requirement-card__title-link:hover {
   color: var(--primary-color);
   text-decoration: underline;
 }
 
-.reqman-requirement-card__description {
+.marreq-requirement-card__description {
   -webkit-box-orient: vertical;
   color: var(--text-secondary);
   display: -webkit-box;
@@ -996,13 +996,13 @@
 }
 
 /* Card metadata badges */
-.reqman-requirement-card__metadata {
+.marreq-requirement-card__metadata {
   min-height: 20px;
   overflow: hidden;
   position: relative;
 }
 
-.reqman-requirement-card__badge-rail {
+.marreq-requirement-card__badge-rail {
   align-items: center;
   display: flex;
   gap: 4px;
@@ -1010,7 +1010,7 @@
   white-space: nowrap;
 }
 
-.reqman-requirement-card__badge {
+.marreq-requirement-card__badge {
   align-items: center;
   background-color: rgb(148 163 184 / 0.12);
   border-radius: 3px;
@@ -1027,65 +1027,65 @@
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
-.reqman-requirement-card__badge:hover {
+.marreq-requirement-card__badge:hover {
   background-color: rgb(148 163 184 / 0.18);
   color: inherit;
 }
 
-.reqman-requirement-card__badge--category {
+.marreq-requirement-card__badge--category {
   background-color: rgb(37 99 235 / 0.08);
   color: #3b82f6;
 }
 
-.reqman-requirement-card__badge--category:hover {
+.marreq-requirement-card__badge--category:hover {
   background-color: rgb(37 99 235 / 0.12);
   color: #2563eb;
 }
 
-.reqman-requirement-card__badge--verification {
+.marreq-requirement-card__badge--verification {
   background-color: rgb(16 185 129 / 0.08);
   color: #10b981;
 }
 
-.reqman-requirement-card__badge--verification:hover {
+.marreq-requirement-card__badge--verification:hover {
   background-color: rgb(16 185 129 / 0.12);
   color: #059669;
 }
 
-.reqman-requirement-card__badge--applicability {
+.marreq-requirement-card__badge--applicability {
   background-color: rgb(245 158 11 / 0.08);
   color: #f59e0b;
 }
 
-.reqman-requirement-card__badge--applicability:hover {
+.marreq-requirement-card__badge--applicability:hover {
   background-color: rgb(245 158 11 / 0.12);
   color: #d97706;
 }
 
-.reqman-requirement-card__badge--parent {
+.marreq-requirement-card__badge--parent {
   background-color: rgb(148 163 184 / 0.12);
   color: var(--text-secondary);
 }
 
-.reqman-requirement-card__badge--parent:hover {
+.marreq-requirement-card__badge--parent:hover {
   background-color: rgb(148 163 184 / 0.18);
 }
 
-.reqman-requirement-card__badge--muted {
+.marreq-requirement-card__badge--muted {
   color: var(--text-tertiary, #94a3b8);
 }
 
-.reqman-requirement-card__description--empty {
+.marreq-requirement-card__description--empty {
   color: var(--text-tertiary, #94a3b8);
   font-style: italic;
 }
 
-.reqman-requirement-card__badge-icon {
+.marreq-requirement-card__badge-icon {
   flex-shrink: 0;
   opacity: 0.75;
 }
 
-.reqman-requirement-card__badge-overflow {
+.marreq-requirement-card__badge-overflow {
   align-items: center;
   background-color: rgb(148 163 184 / 0.12);
   border-radius: 3px;
@@ -1103,12 +1103,12 @@
   transition: background-color var(--transition-fast);
 }
 
-.reqman-requirement-card__badge-overflow:hover {
+.marreq-requirement-card__badge-overflow:hover {
   background-color: rgb(148 163 184 / 0.18);
 }
 
 /* Card footer */
-.reqman-requirement-card__footer {
+.marreq-requirement-card__footer {
   align-items: center;
   border-top: 1px solid var(--border-color);
   display: flex;
@@ -1117,7 +1117,7 @@
   padding-top: var(--space-3);
 }
 
-.reqman-requirement-card__info {
+.marreq-requirement-card__info {
   align-items: center;
   color: var(--text-secondary);
   display: flex;
@@ -1126,26 +1126,26 @@
   gap: var(--space-3);
 }
 
-.reqman-requirement-card__author,
-.reqman-requirement-card__date {
+.marreq-requirement-card__author,
+.marreq-requirement-card__date {
   align-items: center;
   display: inline-flex;
   gap: var(--space-1);
 }
 
-.reqman-requirement-card__info-icon {
+.marreq-requirement-card__info-icon {
   flex-shrink: 0;
   opacity: 0.6;
 }
 
 /* Card actions */
-.reqman-requirement-card__actions {
+.marreq-requirement-card__actions {
   align-items: center;
   display: flex;
   gap: var(--space-2);
 }
 
-.reqman-requirement-card__action {
+.marreq-requirement-card__action {
   align-items: center;
   background: transparent;
   border: 1px solid var(--border-color);
@@ -1160,24 +1160,24 @@
     border-color var(--transition-base), transform var(--transition-fast);
 }
 
-.reqman-requirement-card__action:hover {
+.marreq-requirement-card__action:hover {
   background-color: var(--surface-muted);
   border-color: var(--primary-color);
   color: var(--primary-color);
   transform: translateY(-1px);
 }
 
-.reqman-requirement-card__action:active {
+.marreq-requirement-card__action:active {
   transform: translateY(0);
 }
 
-.reqman-requirement-card__action--primary {
+.marreq-requirement-card__action--primary {
   background-color: var(--primary-color);
   border-color: var(--primary-color);
   color: var(--text-inverse);
 }
 
-.reqman-requirement-card__action--primary:hover {
+.marreq-requirement-card__action--primary:hover {
   background-color: var(--primary-dark);
   border-color: var(--primary-dark);
   color: var(--text-inverse);
@@ -1197,7 +1197,7 @@
 }
 
 /* Card filtering states */
-.reqman-requirement-card.is-filtered-out {
+.marreq-requirement-card.is-filtered-out {
   animation: card-fade-out 180ms ease-in forwards;
 }
 
@@ -1209,99 +1209,99 @@
 }
 
 /* Empty state within cards view */
-.reqman-requirements-cards-section .reqman-requirements-empty-state {
+.marreq-requirements-cards-section .marreq-requirements-empty-state {
   grid-column: 1 / -1;
 }
 
 /* Responsive adjustments for cards */
 @media (max-width: 768px) {
-  .reqman-requirements-cards-grid {
+  .marreq-requirements-cards-grid {
     grid-template-columns: 1fr;
     padding: var(--space-3);
   }
 
-  .reqman-requirement-card {
+  .marreq-requirement-card {
     padding: var(--space-4);
   }
 
-  .reqman-requirement-card__footer {
+  .marreq-requirement-card__footer {
     flex-direction: column;
     gap: var(--space-3);
   }
 
-  .reqman-requirement-card__info {
+  .marreq-requirement-card__info {
     width: 100%;
   }
 
-  .reqman-requirement-card__actions {
+  .marreq-requirement-card__actions {
     justify-content: flex-end;
     width: 100%;
   }
 }
 
 @media (max-width: 768px) {
-  .reqman-requirements-page {
+  .marreq-requirements-page {
     padding: var(--space-4);
   }
 
-  .reqman-requirements-header {
+  .marreq-requirements-header {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .reqman-requirements-header__actions {
+  .marreq-requirements-header__actions {
     flex-wrap: wrap;
     justify-content: space-between;
     width: 100%;
   }
 
-  .reqman-requirements-filter-bar {
+  .marreq-requirements-filter-bar {
     grid-template-columns: 1fr;
   }
 
-  .reqman-requirements-table {
+  .marreq-requirements-table {
     min-width: 100%;
   }
 
-  .reqman-requirements-table thead {
+  .marreq-requirements-table thead {
     display: none;
   }
 
-  .reqman-requirements-table tbody,
-  .reqman-requirements-table tr,
-  .reqman-requirements-table td {
+  .marreq-requirements-table tbody,
+  .marreq-requirements-table tr,
+  .marreq-requirements-table td {
     display: block;
     width: 100%;
   }
 
-  .reqman-requirements-row {
+  .marreq-requirements-row {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     margin-bottom: var(--space-4);
     overflow: hidden;
   }
 
-  .reqman-requirements-row__cell {
+  .marreq-requirements-row__cell {
     border: none;
     padding: var(--space-3);
   }
 
-  .reqman-requirements-row__cell--key {
+  .marreq-requirements-row__cell--key {
     background-color: var(--surface-muted);
   }
 
-  .reqman-requirements-row__cell--actions {
+  .marreq-requirements-row__cell--actions {
     display: flex;
     justify-content: flex-end;
   }
 
-  .reqman-requirements-row__details td {
+  .marreq-requirements-row__details td {
     border-top: 1px solid var(--border-color);
   }
 }
 
 /* Requirement link hover preview: same card view as the list, in a fixed-position wrapper */
-.reqman-requirement-preview {
+.marreq-requirement-preview {
   max-width: 380px;
   min-width: 280px;
   pointer-events: auto;
@@ -1309,20 +1309,20 @@
   z-index: 9999;
 }
 
-.reqman-requirement-preview[hidden] {
+.marreq-requirement-preview[hidden] {
   display: none;
 }
 
-.reqman-requirement-preview .reqman-requirement-card--preview {
+.marreq-requirement-preview .marreq-requirement-card--preview {
   box-shadow: 0 10px 40px rgb(0 0 0 / 0.12);
   pointer-events: auto;
 }
 
-.reqman-requirement-preview .reqman-requirement-card--preview:hover {
+.marreq-requirement-preview .marreq-requirement-card--preview:hover {
   transform: none;
 }
 
-.reqman-requirement-preview .reqman-requirement-card__description {
+.marreq-requirement-preview .marreq-requirement-card__description {
   -webkit-box-orient: vertical;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -1330,22 +1330,22 @@
 }
 
 /* Approval badges (requirement list and detail) */
-.reqman-approval-badge {
+.marreq-approval-badge {
   font-weight: 600;
   text-transform: capitalize;
 }
 
-.reqman-approval-badge--draft {
+.marreq-approval-badge--draft {
   background-color: #6c757d;
   color: #fff;
 }
 
-.reqman-approval-badge--reviewed {
+.marreq-approval-badge--reviewed {
   background-color: #ffc107;
   color: #000;
 }
 
-.reqman-approval-badge--approved {
+.marreq-approval-badge--approved {
   background-color: #198754;
   color: #fff;
 }

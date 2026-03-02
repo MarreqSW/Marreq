@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 use super::helpers::*;
 use super::prelude::*;
@@ -395,7 +395,7 @@ mod tests {
         } else {
             assert_eq!(content_type, ContentType::new("text", "html"));
             let body = response.into_string().await.expect("html body");
-            assert!(body.contains("ReqMan Project Report"));
+            assert!(body.contains("Marreq Project Report"));
         }
     }
 }

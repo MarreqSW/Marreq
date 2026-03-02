@@ -3,7 +3,7 @@ authors = [
     "Màrius Montón <marius.monton@gmail.com>",
     "Ramón Vallés <vallespuigramon@gmail.com>",
 ]
-name = "req_man"
+name = "marreq"
 version = "0.1.0"
 edition = "2021"
 description = "Requirements management"

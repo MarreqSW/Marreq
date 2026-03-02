@@ -2,8 +2,8 @@
   PARTIAL: View Controls
   View switcher buttons, export/import, and new test button
 --}}
-<div class="reqman-requirements-header__actions">
-  <div class="reqman-requirements-header__secondary">
+<div class="marreq-requirements-header__actions">
+  <div class="marreq-requirements-header__secondary">
     {{!-- View Switcher Buttons --}}
     <div class="btn-group me-3" role="group" aria-label="View switcher">
       <button type="button" class="btn btn-outline-secondary btn-sm view-switcher-btn active" data-view="table" id="tableViewBtn">
@@ -40,11 +40,11 @@
     {{/if}}
   </div>
   {{#if project.id}}
-    <a href="/p/{{project.id}}/tests/new" class="btn btn-primary reqman-requirements-header__primary" id="newTestButton">
+    <a href="/p/{{project.id}}/tests/new" class="btn btn-primary marreq-requirements-header__primary" id="newTestButton">
       New Test
     </a>
   {{else}}
-    <button type="button" class="btn btn-primary reqman-requirements-header__primary" id="newTestButton" disabled aria-disabled="true">
+    <button type="button" class="btn btn-primary marreq-requirements-header__primary" id="newTestButton" disabled aria-disabled="true">
       New Test
     </button>
   {{/if}}

@@ -1,5 +1,5 @@
 -- =============================================================================
--- ReqMan Origin Schema
+-- Marreq Origin Schema
 -- =============================================================================
 -- Single baseline migration representing the complete schema at v0.1 (pre-release).
 -- All previous incremental migrations have been squashed into this file.
@@ -459,6 +459,6 @@ CREATE INDEX idx_embedding_index_queue_project ON embedding_index_queue(project_
 -- =============================================================================
 
 INSERT INTO users (username, name, email, is_admin, password_hash)
-SELECT 'alice', 'Alice Johnson', 'alice@reqman.com', true,
+SELECT 'alice', 'Alice Johnson', 'alice@marreq.com', true,
        '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0'
 WHERE NOT EXISTS (SELECT 1 FROM users LIMIT 1);

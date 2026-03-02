@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { loadContext } from "./context.js";
-import { ReqManClient } from "./client.js";
+import { MarreqClient } from "./client.js";
 
 function jsonContent(data: unknown) {
   const text =
@@ -12,7 +12,7 @@ function jsonContent(data: unknown) {
 }
 
 async function withAudit(
-  client: ReqManClient,
+  client: MarreqClient,
   toolName: string,
   paramsSummary: string,
   isWrite: boolean,
@@ -50,10 +50,10 @@ async function withAudit(
 
 async function main() {
   const ctx = loadContext();
-  const client = new ReqManClient(ctx);
+  const client = new MarreqClient(ctx);
 
   const server = new McpServer({
-    name: "reqman-mcp-server",
+    name: "marreq-mcp-server",
     version: "0.1.0",
   });
 
@@ -245,7 +245,7 @@ async function main() {
     }
   );
 
-  // Phase 2: draft_write tools (only when REQMAN_MODE=draft_write)
+  // Phase 2: draft_write tools (only when MARREQ_MODE=draft_write)
   if (ctx.mode === "draft_write") {
     server.registerTool(
       "create_requirement",

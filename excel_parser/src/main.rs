@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 use clap::Parser;
 use std::path::PathBuf;
@@ -10,13 +10,13 @@ mod api_client;
 
 #[derive(Parser)]
 #[command(name = "excel_parser")]
-#[command(about = "Parse Excel files and import data into ReqMan API")]
+#[command(about = "Parse Excel files and import data into Marreq API")]
 struct Args {
     /// Path to the Excel file to parse
     #[arg(short, long)]
     file: PathBuf,
 
-    /// ReqMan API base URL
+    /// Marreq API base URL
     #[arg(short, long, default_value = "http://127.0.0.1:8000")]
     api_url: String,
 
@@ -42,7 +42,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     #[cfg(debug_assertions)]
-    println!("🔍 Excel Parser for ReqMan");
+    println!("🔍 Excel Parser for Marreq");
     #[cfg(debug_assertions)]
     println!("📁 File: {}", args.file.display());
     #[cfg(debug_assertions)]

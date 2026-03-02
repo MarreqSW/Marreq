@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 #![cfg(feature = "test-helpers")]
 
 //! Integration tests for semantic search API endpoints.
 
-use req_man::app::AppState;
-use req_man::auth::session::SESSION_COOKIE;
-use req_man::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+use marreq::app::AppState;
+use marreq::auth::session::SESSION_COOKIE;
+use marreq::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::{json, Value};
@@ -27,7 +27,7 @@ fn state_from_repo(repo: DieselRepoMock) -> TestState {
 async fn client_with_repo(repo: DieselRepoMock) -> Client {
     let rocket = rocket::build()
         .manage(state_from_repo(repo.with_admin_user()))
-        .mount("/api", req_man::api::routes());
+        .mount("/api", marreq::api::routes());
     Client::tracked(rocket).await.unwrap()
 }
 
@@ -161,8 +161,8 @@ async fn search_with_empty_query_returns_empty_results() {
 
 #[cfg(test)]
 mod document_builder_tests {
-    use req_man::models::DecoratedRequirement;
-    use req_man::services::semantic_search::{build_embedding_document, compute_content_hash};
+    use marreq::models::DecoratedRequirement;
+    use marreq::services::semantic_search::{build_embedding_document, compute_content_hash};
 
     fn sample_requirement() -> DecoratedRequirement {
         DecoratedRequirement {
@@ -258,7 +258,7 @@ mod document_builder_tests {
 
 #[cfg(test)]
 mod embedding_provider_tests {
-    use req_man::services::semantic_search::{EmbeddingProvider, MockEmbeddingProvider};
+    use marreq::services::semantic_search::{EmbeddingProvider, MockEmbeddingProvider};
 
     #[tokio::test]
     async fn mock_provider_produces_deterministic_embeddings() {

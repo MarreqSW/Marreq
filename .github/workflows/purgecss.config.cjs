@@ -16,9 +16,9 @@ module.exports = {
       /^is-/,
       /^status-/,
       // Status badge variants (dynamically added)
-      /^reqman-requirements-status-badge--/,
+      /^marreq-requirements-status-badge--/,
       // Approval badge variants (draft, reviewed, approved from Handlebars)
-      /^reqman-approval-badge--/,
+      /^marreq-approval-badge--/,
       // Editor states
       /^c-editor-dropzone--/,
       /^c-editor-dropzone__/,
@@ -33,8 +33,8 @@ module.exports = {
       /^c-custom-dropdown__item--/,
       /^c-custom-dropdown__value--/,
       // Dashboard & metrics (dynamically rendered)
-      /^reqman-action-card/,
-      /^reqman-project-card/,
+      /^marreq-action-card/,
+      /^marreq-project-card/,
       // Create form fields
       /^c-create-field/,
       // Utility classes
@@ -47,9 +47,9 @@ module.exports = {
     ],
     deep: [
       // Keep all variations of these components
-      /reqman-requirements-status-badge/,
-      /reqman-action-card/,
-      /reqman-project-card/,
+      /marreq-requirements-status-badge/,
+      /marreq-action-card/,
+      /marreq-project-card/,
       /c-editor-dropzone/,
       /c-table-editable/,
       /c-table-sort-trigger/,

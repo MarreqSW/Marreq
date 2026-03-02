@@ -441,10 +441,10 @@ function renderVerification(root, view, canonical) {
     row.appendChild(link);
 
     const statusWrap = document.createElement('div');
-    statusWrap.className = 'reqman-linked-test-status flex-shrink-0';
+    statusWrap.className = 'marreq-linked-test-status flex-shrink-0';
     statusWrap.setAttribute('data-inline-edit', 'status');
     const displayEl = document.createElement('span');
-    displayEl.className = `badge border reqman-requirements-status-badge reqman-requirements-status-badge--${testStatusVariant(test.status_id)}`;
+    displayEl.className = `badge border marreq-requirements-status-badge marreq-requirements-status-badge--${testStatusVariant(test.status_id)}`;
     displayEl.textContent = test.status_id || '—';
     displayEl.title = 'Click to change';
     displayEl.setAttribute('role', 'button');
@@ -457,10 +457,10 @@ function renderVerification(root, view, canonical) {
       displayEl.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (statusWrap.querySelector('.reqman-inline-edit-select')) return;
+        if (statusWrap.querySelector('.marreq-inline-edit-select')) return;
         const currentStatusId = parseInt(row.getAttribute('data-status-id'), 10) || 0;
         const select = document.createElement('select');
-        select.className = 'reqman-inline-edit-select form-select form-select-sm';
+        select.className = 'marreq-inline-edit-select form-select form-select-sm';
         select.setAttribute('aria-label', 'Change status');
         statuses.forEach((s) => {
           const sid = typeof s.id === 'number' ? s.id : parseInt(s.id, 10);
@@ -489,7 +489,7 @@ function renderVerification(root, view, canonical) {
             test.test_status_id = v;
             row.setAttribute('data-status-id', String(v));
             displayEl.textContent = displayText;
-            displayEl.className = `badge border reqman-requirements-status-badge reqman-requirements-status-badge--${variant}`;
+            displayEl.className = `badge border marreq-requirements-status-badge marreq-requirements-status-badge--${variant}`;
             if (tagColor) {
               displayEl.style.backgroundColor = tagColor;
               displayEl.style.color = '#fff';

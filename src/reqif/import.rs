@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 //! ReqIF 1.2 import: parse XML into intermediate model.
 
@@ -174,7 +174,7 @@ pub type ReqifObjectFields = (
     Option<String>,
 );
 
-/// Build ReqMan field map from a parsed SpecObject using default attribute mapping.
+/// Build Marreq field map from a parsed SpecObject using default attribute mapping.
 pub fn object_to_fields(obj: &ParsedSpecObject) -> ReqifObjectFields {
     let title = mapping::get_attr(&obj.attributes, "title");
     let reference_code = mapping::get_attr(&obj.attributes, "reference_code");

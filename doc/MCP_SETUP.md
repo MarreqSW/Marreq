@@ -1,19 +1,19 @@
-# MCP (Model Context Protocol) Setup for ReqMan
+# MCP (Model Context Protocol) Setup for Marreq
 
-ReqMan can be used from AI assistants (Cursor, Claude, etc.) via an optional **MCP server** that exposes read-only tools. The MCP server talks to the ReqMan REST API; it does not access the database directly.
+Marreq can be used from AI assistants (Cursor, Claude, etc.) via an optional **MCP server** that exposes read-only tools. The MCP server talks to the Marreq REST API; it does not access the database directly.
 
 ## Architecture
 
-- **AI client** (Cursor / Claude) ↔ **ReqMan MCP server** (stdio) ↔ **ReqMan REST API** (HTTP + Bearer token) ↔ **Database**
+- **AI client** (Cursor / Claude) ↔ **Marreq MCP server** (stdio) ↔ **Marreq REST API** (HTTP + Bearer token) ↔ **Database**
 - All access is project-scoped and permission-checked. Every tool call is audited.
 
 ## Prerequisites
 
-1. **ReqMan** running with the API available (e.g. `cargo run --bin req_man`).
-2. **API token** for a ReqMan user, with optional project scope (see below).
+1. **Marreq** running with the API available (e.g. `cargo run --bin marreq`).
+2. **API token** for a Marreq user, with optional project scope (see below).
 3. **Node.js** 18+ to run the MCP server.
 
-## 1. Create an API token (ReqMan)
+## 1. Create an API token (Marreq)
 
 API tokens are stored in the `user_api_tokens` table. You need to insert a row with a **hashed** token (SHA-256 hex of the raw token). Example using `psql` and a generated secret:
 
@@ -31,21 +31,23 @@ psql $DATABASE_URL -c "
 "
 ```
 
-Use `REQMAN_API_TOKEN="$RAW_TOKEN"` when starting the MCP server. If `project_id` is set on the token, the server may only access that project (enforced by the API).
+Use `MARREQ_API_TOKEN="$RAW_TOKEN"` when starting the MCP server. If `project_id` is set on the token, the server may only access that project (enforced by the API).
 
 ## 2. Environment variables for the MCP server
+
+Environment variable names use the `MARREQ_*` prefix (formerly `REQMAN_*`). Update your config if you used the old names.
 
 Set these before starting the MCP server (e.g. in a `.env` file or your shell):
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `REQMAN_BASE_URL` | Yes | ReqMan API base URL (e.g. `http://localhost:8000`) |
-| `REQMAN_API_TOKEN` | Yes | Raw API token (Bearer) |
-| `REQMAN_PROJECT_ID` | Yes | Project ID to scope all tools |
-| `REQMAN_MODE` | No | `read_only` (default) or `draft_write` (Phase 2) |
-| `REQMAN_USER_ID` | No | User ID (for audit display) |
-| `REQMAN_ROLE` | No | Role (for future use) |
-| `REQMAN_SESSION_ID` | No | Session identifier (for audit correlation) |
+| `MARREQ_BASE_URL` | Yes | Marreq API base URL (e.g. `http://localhost:8000`) |
+| `MARREQ_API_TOKEN` | Yes | Raw API token (Bearer) |
+| `MARREQ_PROJECT_ID` | Yes | Project ID to scope all tools |
+| `MARREQ_MODE` | No | `read_only` (default) or `draft_write` (Phase 2) |
+| `MARREQ_USER_ID` | No | User ID (for audit display) |
+| `MARREQ_ROLE` | No | Role (for future use) |
+| `MARREQ_SESSION_ID` | No | Session identifier (for audit correlation) |
 
 ## 3. Build and run the MCP server
 
@@ -60,18 +62,18 @@ Or in one step: `npm run dev` (builds then runs). The server uses **stdio** tran
 
 ## 4. Configure your AI client (e.g. Cursor)
 
-Add the ReqMan MCP server to your client config. Example for Cursor (in project or user MCP settings):
+Add the Marreq MCP server to your client config. Example for Cursor (in project or user MCP settings):
 
 ```json
 {
   "mcpServers": {
-    "reqman": {
+    "marreq": {
       "command": "node",
-      "args": ["/path/to/ReqMan/mcp-server/dist/index.js"],
+      "args": ["/path/to/Marreq/mcp-server/dist/index.js"],
       "env": {
-        "REQMAN_BASE_URL": "http://localhost:8000",
-        "REQMAN_API_TOKEN": "your-secret-token-here",
-        "REQMAN_PROJECT_ID": "1"
+        "MARREQ_BASE_URL": "http://localhost:8000",
+        "MARREQ_API_TOKEN": "your-secret-token-here",
+        "MARREQ_PROJECT_ID": "1"
       }
     }
   }
@@ -80,7 +82,7 @@ Add the ReqMan MCP server to your client config. Example for Cursor (in project 
 
 Use the absolute path to `mcp-server/dist/index.js` and the same env vars as above.
 
-To enable Phase 2 write tools, set `REQMAN_MODE=draft_write` in the MCP server env (same config block). The server will then register `create_requirement`, `patch_requirement`, `set_approval`, and `create_baseline` in addition to the read-only tools.
+To enable Phase 2 write tools, set `MARREQ_MODE=draft_write` in the MCP server env (same config block). The server will then register `create_requirement`, `patch_requirement`, `set_approval`, and `create_baseline` in addition to the read-only tools.
 
 ## 5. Available tools
 
@@ -98,7 +100,7 @@ To enable Phase 2 write tools, set `REQMAN_MODE=draft_write` in the MCP server e
 | `get_baseline` | Baseline metadata, requirements snapshot, and traceability |
 | `diff_baselines` | Compare two baselines (requirements and traceability diff) |
 
-### Draft write (Phase 2, only when `REQMAN_MODE=draft_write`)
+### Draft write (Phase 2, only when `MARREQ_MODE=draft_write`)
 
 | Tool | Description |
 |------|-------------|
@@ -107,17 +109,17 @@ To enable Phase 2 write tools, set `REQMAN_MODE=draft_write` in the MCP server e
 | `set_approval` | Set requirement version approval to `reviewed` or `approved`. Requires project owner/manager role. Parameters: requirement_id, version_id, state. |
 | `create_baseline` | Create a new baseline snapshot for the project. Parameters: name, optional description. |
 
-All tools are project-scoped to `REQMAN_PROJECT_ID`. Audit entries are written to ReqMan (entity_type `MCP`, queryable in logs). Write tools are only registered when the server is started with `REQMAN_MODE=draft_write`.
+All tools are project-scoped to `MARREQ_PROJECT_ID`. Audit entries are written to Marreq (entity_type `MCP`, queryable in logs). Write tools are only registered when the server is started with `MARREQ_MODE=draft_write`.
 
 ## 6. Security notes
 
-- **Token**: Store `REQMAN_API_TOKEN` securely; never commit it. Use env or a secrets manager.
+- **Token**: Store `MARREQ_API_TOKEN` securely; never commit it. Use env or a secrets manager.
 - **Base URL**: For production, use HTTPS and a URL the MCP server can reach.
 - **Project scope**: Prefer creating tokens with `project_id` set so a compromised token only exposes one project.
-- **Read-only vs draft_write**: Default `REQMAN_MODE=read_only` exposes only read tools. Set `REQMAN_MODE=draft_write` to enable create/patch requirement, set approval, and create baseline (Phase 2).
+- **Read-only vs draft_write**: Default `MARREQ_MODE=read_only` exposes only read tools. Set `MARREQ_MODE=draft_write` to enable create/patch requirement, set approval, and create baseline (Phase 2).
 
 ## 7. Troubleshooting
 
-- **Unauthorized (401)**: Check that `REQMAN_API_TOKEN` matches a token in `user_api_tokens` (compare SHA-256 hash of the raw token).
-- **Forbidden (403)**: The token’s project scope (if set) must match `REQMAN_PROJECT_ID`; or the user must be a member of the project.
-- **Connection refused**: Ensure ReqMan is running and `REQMAN_BASE_URL` is correct (e.g. `http://localhost:8000`).
+- **Unauthorized (401)**: Check that `MARREQ_API_TOKEN` matches a token in `user_api_tokens` (compare SHA-256 hash of the raw token).
+- **Forbidden (403)**: The token’s project scope (if set) must match `MARREQ_PROJECT_ID`; or the user must be a member of the project.
+- **Connection refused**: Ensure Marreq is running and `MARREQ_BASE_URL` is correct (e.g. `http://localhost:8000`).

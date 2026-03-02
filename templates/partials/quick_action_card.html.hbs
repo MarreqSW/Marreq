@@ -3,7 +3,7 @@
     href: target URL (required unless disabled)
     icon: icon class name
     label: button label
-    modifier: optional modifier class (e.g., reqman-action-card--primary)
+    modifier: optional modifier class (e.g., marreq-action-card--primary)
     disabled: truthy value marks the card as disabled
     title: optional tooltip/title attribute
 
@@ -11,7 +11,7 @@
 --}}
 {{#if disabled}}
   <span
-    class="reqman-action-card{{#if modifier}} {{modifier}}{{/if}} reqman-nav-link--disabled"
+    class="marreq-action-card{{#if modifier}} {{modifier}}{{/if}} marreq-nav-link--disabled"
     aria-disabled="true"
     {{#if title}}title="{{title}}"{{/if}}>
     {{#if icon}}
@@ -19,20 +19,20 @@
     {{/if}}
     <span>{{label}}</span>
     {{#if badge}}
-      <span class="reqman-badge">{{badge}}</span>
+      <span class="marreq-badge">{{badge}}</span>
     {{/if}}
   </span>
 {{else}}
   <a
     href="{{href}}"
-    class="reqman-action-card{{#if modifier}} {{modifier}}{{/if}}"
+    class="marreq-action-card{{#if modifier}} {{modifier}}{{/if}}"
     {{#if title}}title="{{title}}"{{/if}}>
     {{#if icon}}
     <i class="{{icon}}" aria-hidden="true"></i>
     {{/if}}
     <span>{{label}}</span>
     {{#if badge}}
-      <span class="reqman-badge">{{badge}}</span>
+      <span class="marreq-badge">{{badge}}</span>
     {{/if}}
   </a>
 {{/if}}

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 #![cfg(feature = "test-helpers")]
 
-use req_man::app::AppState;
-use req_man::auth::session::SESSION_COOKIE;
-use req_man::models::{Project, ProjectMember};
-use req_man::repository::diesel_repo_mock::DieselRepoMock;
-use req_man::repository::CacheRepository;
-use req_man::routes::html::project;
-use req_man::routes::html::projects;
-use req_man::status_enums::ProjectStatus;
+use marreq::app::AppState;
+use marreq::auth::session::SESSION_COOKIE;
+use marreq::models::{Project, ProjectMember};
+use marreq::repository::diesel_repo_mock::DieselRepoMock;
+use marreq::repository::CacheRepository;
+use marreq::routes::html::project;
+use marreq::routes::html::projects;
+use marreq::status_enums::ProjectStatus;
 use rocket::http::{Cookie, Status};
 use rocket::local::asynchronous::Client;
 use std::sync::{Arc, RwLock};
@@ -39,8 +39,8 @@ async fn test_client(repo: DieselRepoMock) -> Client {
         .register(
             "/",
             rocket::catchers![
-                req_man::routes::catchers::unauthorized,
-                req_man::routes::catchers::forbidden
+                marreq::routes::catchers::unauthorized,
+                marreq::routes::catchers::forbidden
             ],
         )
         .manage(managed_state(repo));

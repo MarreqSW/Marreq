@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
-//! Error types and handling for the ReqMan application.
+//! Error types and handling for the Marreq application.
 //!
 //! This module provides comprehensive error handling with proper error types,
 //! conversion implementations, and user-friendly error messages.

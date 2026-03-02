@@ -27,7 +27,7 @@ function testStatusVariant(statusLabel) {
 
 /** Update data-test-preview-status on the row's title link after inline status edit */
 function updateTestPreviewInRow(row, displayText) {
-  const titleLink = row.querySelector('a.reqman-requirements-title[data-test-preview]');
+  const titleLink = row.querySelector('a.marreq-requirements-title[data-test-preview]');
   if (titleLink && displayText != null) {
     titleLink.setAttribute('data-test-preview-status', displayText);
   }
@@ -35,12 +35,12 @@ function updateTestPreviewInRow(row, displayText) {
 
 /** Update the matching card's status badge when inline edit succeeds (keeps card/table in sync) */
 function updateCardStatusBadge(testId, displayText, variant, tagColor = null) {
-  const card = document.querySelector(`#cardView .reqman-requirement-card[data-test-id="${testId}"]`);
+  const card = document.querySelector(`#cardView .marreq-requirement-card[data-test-id="${testId}"]`);
   if (!card) return;
-  const badge = card.querySelector('.reqman-requirement-card__header .reqman-requirements-status-badge');
+  const badge = card.querySelector('.marreq-requirement-card__header .marreq-requirements-status-badge');
   if (badge) {
     badge.textContent = displayText;
-    badge.className = `reqman-requirements-status-badge reqman-requirements-status-badge--${variant}`;
+    badge.className = `marreq-requirements-status-badge marreq-requirements-status-badge--${variant}`;
     badge.dataset.status = displayText;
     badge.dataset.statusVariant = variant;
     if (tagColor) {
@@ -53,7 +53,7 @@ function updateCardStatusBadge(testId, displayText, variant, tagColor = null) {
       badge.style.borderColor = '';
     }
   }
-  const cardTitleLink = card.querySelector('a.reqman-requirement-card__title-link[data-test-preview]');
+  const cardTitleLink = card.querySelector('a.marreq-requirement-card__title-link[data-test-preview]');
   if (cardTitleLink && displayText != null) {
     cardTitleLink.setAttribute('data-test-preview-status', displayText);
   }
@@ -80,11 +80,11 @@ function openInlineEditForTest(cell, row, config) {
   if (!testId) return;
   const projectId = config.projectId;
   if (!projectId) return;
-  const displayEl = cell.querySelector('.reqman-requirements-cell__display');
-  if (!displayEl || cell.querySelector('.reqman-inline-edit-select')) return;
+  const displayEl = cell.querySelector('.marreq-requirements-cell__display');
+  if (!displayEl || cell.querySelector('.marreq-inline-edit-select')) return;
 
   const select = document.createElement('select');
-  select.className = 'reqman-inline-edit-select';
+  select.className = 'marreq-inline-edit-select';
   select.setAttribute('aria-label', 'Change status');
 
   const currentId = parseInt(row.dataset.statusId, 10) || 0;
@@ -115,7 +115,7 @@ function openInlineEditForTest(cell, row, config) {
       displayEl.dataset.status = displayText;
       displayEl.dataset.statusId = String(v);
       displayEl.dataset.statusVariant = variant;
-      displayEl.className = `reqman-requirements-status-badge reqman-requirements-status-badge--${variant} reqman-requirements-cell__display`;
+      displayEl.className = `marreq-requirements-status-badge marreq-requirements-status-badge--${variant} marreq-requirements-cell__display`;
       if (tagColor) {
         displayEl.style.backgroundColor = tagColor;
         displayEl.style.color = '#fff';
@@ -169,19 +169,19 @@ function initInlineStatusEdit() {
   const config = getTestsInlineEditConfig();
   if (!config.statuses?.length) return;
 
-  const pageEl = document.querySelector('.reqman-requirements-page[data-project-id]');
+  const pageEl = document.querySelector('.marreq-requirements-page[data-project-id]');
   const projectId = pageEl?.getAttribute('data-project-id');
   if (!projectId) return;
   const configWithProject = { ...config, projectId };
 
   table.addEventListener('click', (e) => {
-    if (e.target.closest('.reqman-inline-edit-select')) return;
+    if (e.target.closest('.marreq-inline-edit-select')) return;
     const cell = e.target.closest('[data-inline-edit="status"]');
     if (!cell || !table.contains(cell)) return;
     e.preventDefault();
     e.stopPropagation();
     const row = cell.closest('tr');
-    if (!row || !row.classList.contains('reqman-requirements-row')) return;
+    if (!row || !row.classList.contains('marreq-requirements-row')) return;
     openInlineEditForTest(cell, row, configWithProject);
   });
 }
@@ -240,7 +240,7 @@ function initCreateTestModal() {
 
 function initFilterToggle() {
   const toggleButton = document.querySelector('.js-toggle-filters');
-  const filterBody = document.querySelector('.reqman-tests-page__filters-body');
+  const filterBody = document.querySelector('.marreq-tests-page__filters-body');
   
   if (!toggleButton || !filterBody) {
     return;

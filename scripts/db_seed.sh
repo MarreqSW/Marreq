@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# db_seed.sh — Load demo/test data into the ReqMan database
+# db_seed.sh — Load demo/test data into the Marreq database
 #
 # Executes scripts/init_complete.sql, which inserts sample projects, users,
 # requirements, tests, and related entities.  The SQL file contains its own
@@ -31,7 +31,7 @@ error()   { echo -e "${RED}❌ $*${NC}" >&2; exit 1; }
 
 echo -e "${YELLOW}"
 echo "==========================================="
-echo "   ReqMan — Seed Demo/Test Data"
+echo "   Marreq — Seed Demo/Test Data"
 echo "   FOR TESTING AND DEMO ONLY"
 echo "==========================================="
 echo -e "${NC}"
@@ -42,7 +42,7 @@ if [[ -f "${PROJECT_ROOT}/.env" ]]; then
   set -a; source "${PROJECT_ROOT}/.env"; set +a
 fi
 
-DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/reqman}"
+DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/marreq}"
 DB_USER="${DATABASE_URL#*://}"
 DB_USER="${DB_USER%%:*}"
 DB_NAME="${DATABASE_URL##*/}"
@@ -84,4 +84,4 @@ echo "  tech_lee    — User"
 echo "  qa_wilson   — User"
 echo "  admin       — Admin"
 echo ""
-echo "Projects: Space Project, ReqMan Project, Empty Project"
+echo "Projects: Space Project, Marreq Project, Empty Project"

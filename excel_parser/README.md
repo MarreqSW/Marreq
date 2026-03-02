@@ -1,11 +1,11 @@
-# Excel Parser for ReqMan
+# Excel Parser for Marreq
 
-A command-line tool to parse Excel files exported from ReqMan and import the data back into the ReqMan API.
+A command-line tool to parse Excel files exported from Marreq and import the data back into the Marreq API.
 
 ## Features
 
 - 🔍 **Excel File Parsing**: Parse requirements and tests from Excel files
-- 🔄 **API Integration**: Direct import into ReqMan API
+- 🔄 **API Integration**: Direct import into Marreq API
 - 📊 **Data Validation**: Automatic resolution of relationships and references
 - 💾 **JSON Export**: Generate JSON files for manual review
 - 🧪 **Dry Run Mode**: Preview data without making API calls
@@ -51,7 +51,7 @@ cargo build --release
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-f, --file` | Path to Excel file | Required |
-| `-u, --api-url` | ReqMan API base URL | `http://127.0.0.1:8000` |
+| `-u, --api-url` | Marreq API base URL | `http://127.0.0.1:8000` |
 | `-o, --output` | Output JSON file path | None |
 | `--dry-run` | Preview data without API calls | false |
 | `--json-only` | Generate JSON only, skip API | false |
@@ -142,7 +142,7 @@ The parser automatically resolves the following relationships:
 ./target/release/excel_parser -f tests.xls
 
 # Use custom API URL
-./target/release/excel_parser -f tests.xls --api-url http://my-reqman-server:8000
+./target/release/excel_parser -f tests.xls --api-url http://my-marreq-server:8000
 ```
 
 ## Error Handling
@@ -159,7 +159,7 @@ The parser provides detailed error messages for:
 ### Console Output
 
 ```
-🔍 Excel Parser for ReqMan
+🔍 Excel Parser for Marreq
 📁 File: requirements.xls
 🌐 API URL: http://127.0.0.1:8000
 ✅ Parsed 20 records
@@ -229,4 +229,4 @@ cargo run -- -f requirements.xls --dry-run
 
 ## License
 
-This project is part of the ReqMan ecosystem and follows the same license terms. 
+This project is part of the Marreq ecosystem and follows the same license terms. 

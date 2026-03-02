@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 #![cfg(feature = "test-helpers")]
 
@@ -18,8 +18,8 @@ use serde_json::Value;
 
 mod test_support {
     use super::*;
-    use req_man::app::AppState;
-    use req_man::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use marreq::app::AppState;
+    use marreq::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
     pub type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
@@ -33,7 +33,7 @@ mod test_support {
     pub async fn test_client() -> Client {
         let rocket = rocket::build()
             .manage(managed_state(DieselRepoMock::default()))
-            .mount("/api", req_man::api::routes());
+            .mount("/api", marreq::api::routes());
 
         Client::tracked(rocket).await.expect("rocket instance")
     }

@@ -33,14 +33,14 @@ function getOrCreateTooltip() {
   if (tooltipEl) return tooltipEl;
   tooltipEl = document.createElement('div');
   tooltipEl.id = 'test-preview-card';
-  tooltipEl.className = 'reqman-requirement-preview';
+  tooltipEl.className = 'marreq-requirement-preview';
   tooltipEl.setAttribute('role', 'tooltip');
   tooltipEl.hidden = true;
   document.body.appendChild(tooltipEl);
   return tooltipEl;
 }
 
-const CATEGORY_ICON = '<svg class="reqman-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm8.5 9.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V11.5z"/></svg>';
+const CATEGORY_ICON = '<svg class="marreq-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm8.5 9.5a.5.5 0 0 1-1 0V5.707L5.354 7.854a.5.5 0 1 1-.708-.708l3-3a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 5.707V11.5z"/></svg>';
 const VIEW_ICON = '<svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/></svg>';
 
 function renderCard(link) {
@@ -59,39 +59,39 @@ function renderCard(link) {
   const statusVariant = testStatusToVariant(status);
   const statusLabel = status || '—';
   const descriptionHtml = descSnippet
-    ? `<p class="reqman-requirement-card__description">${escapeHtml(descSnippet)}</p>`
-    : '<p class="reqman-requirement-card__description reqman-requirement-card__description--empty">—</p>';
+    ? `<p class="marreq-requirement-card__description">${escapeHtml(descSnippet)}</p>`
+    : '<p class="marreq-requirement-card__description marreq-requirement-card__description--empty">—</p>';
   const categoryHtml = category
-    ? `<span class="reqman-requirement-card__badge reqman-requirement-card__badge--category" data-badge title="Category: ${escapeHtml(category)}">${CATEGORY_ICON}${escapeHtml(category)}</span>`
-    : '<span class="reqman-requirement-card__badge reqman-requirement-card__badge--muted" data-badge>—</span>';
+    ? `<span class="marreq-requirement-card__badge marreq-requirement-card__badge--category" data-badge title="Category: ${escapeHtml(category)}">${CATEGORY_ICON}${escapeHtml(category)}</span>`
+    : '<span class="marreq-requirement-card__badge marreq-requirement-card__badge--muted" data-badge>—</span>';
   const sourceHtml = source
-    ? `<span class="reqman-requirement-card__badge reqman-requirement-card__badge--verification" data-badge title="Source: ${escapeHtml(source)}">${escapeHtml(source)}</span>`
+    ? `<span class="marreq-requirement-card__badge marreq-requirement-card__badge--verification" data-badge title="Source: ${escapeHtml(source)}">${escapeHtml(source)}</span>`
     : '';
 
   const card = getOrCreateTooltip();
   card.innerHTML = `
-    <article class="reqman-requirement-card reqman-requirement-card--preview">
-      <header class="reqman-requirement-card__header">
-        <div class="reqman-requirement-card__reference">
-          <span class="reqman-requirement-card__reference-text">${escapeHtml(displayRef)}</span>
+    <article class="marreq-requirement-card marreq-requirement-card--preview">
+      <header class="marreq-requirement-card__header">
+        <div class="marreq-requirement-card__reference">
+          <span class="marreq-requirement-card__reference-text">${escapeHtml(displayRef)}</span>
         </div>
-        <span class="reqman-requirements-status-badge reqman-requirements-status-badge--${escapeHtml(statusVariant)}" data-status="${escapeHtml(statusLabel)}">${escapeHtml(statusLabel)}</span>
+        <span class="marreq-requirements-status-badge marreq-requirements-status-badge--${escapeHtml(statusVariant)}" data-status="${escapeHtml(statusLabel)}">${escapeHtml(statusLabel)}</span>
       </header>
-      <div class="reqman-requirement-card__body">
-        <h3 class="reqman-requirement-card__title">
-          <span class="reqman-requirement-card__title-link">${escapeHtml(title)}</span>
+      <div class="marreq-requirement-card__body">
+        <h3 class="marreq-requirement-card__title">
+          <span class="marreq-requirement-card__title-link">${escapeHtml(title)}</span>
         </h3>
         ${descriptionHtml}
       </div>
-      <div class="reqman-requirement-card__metadata" data-badge-rail>
-        <div class="reqman-requirement-card__badge-rail">
+      <div class="marreq-requirement-card__metadata" data-badge-rail>
+        <div class="marreq-requirement-card__badge-rail">
           ${categoryHtml}
           ${sourceHtml}
         </div>
       </div>
-      <footer class="reqman-requirement-card__footer">
-        <div class="reqman-requirement-card__actions">
-          <a href="${escapeHtml(href)}" class="reqman-requirement-card__action reqman-requirement-card__action--primary" title="View details">${VIEW_ICON}<span class="u-visually-hidden">View</span></a>
+      <footer class="marreq-requirement-card__footer">
+        <div class="marreq-requirement-card__actions">
+          <a href="${escapeHtml(href)}" class="marreq-requirement-card__action marreq-requirement-card__action--primary" title="View details">${VIEW_ICON}<span class="u-visually-hidden">View</span></a>
         </div>
       </footer>
     </article>

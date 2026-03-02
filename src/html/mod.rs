@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 //pub mod html;
 pub mod cors;
@@ -7,8 +7,8 @@ pub mod cors;
 pub fn print_header() -> String {
     "<!DOCTYPE html>
     <html lang='en'><head>
-    <title>Req Manager</title>
-    <link rel='stylesheet' href='/static/reqman.css'>
+    <title>Marreq</title>
+    <link rel='stylesheet' href='/static/marreq.css'>
     <link rel='icon' type='image/x-icon' href='/static/favicon.ico'>
     </head>
     <body>"

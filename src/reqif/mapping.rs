@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
-//! Default ReqIF attribute long-name to ReqMan field mapping.
+//! Default ReqIF attribute long-name to Marreq field mapping.
 
 use std::collections::HashMap;
 
-/// Returns default mapping: ReqIF attribute long-name (case-insensitive match) -> ReqMan field name.
+/// Returns default mapping: ReqIF attribute long-name (case-insensitive match) -> Marreq field name.
 pub fn default_attribute_mapping() -> HashMap<String, String> {
     let mut m = HashMap::new();
     m.insert("Title".to_string(), "title".to_string());

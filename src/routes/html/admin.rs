@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 use super::helpers::get_db_connection;
 use super::prelude::*;
@@ -54,7 +54,7 @@ pub async fn generate_backup(
     const PORT: &str = "5432";
     const USER: &str = "rust";
     const PASSWORD: &str = "rust";
-    const DB: &str = "reqman";
+    const DB: &str = "marreq";
     const DIR: &str = "backups";
 
     let id = admin.into_inner().id;
@@ -289,7 +289,7 @@ mod tests {
     #[test]
     fn ensure_dir_creates_directory_and_is_idempotent() {
         let unique = format!(
-            "reqman-test-{}",
+            "marreq-test-{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()

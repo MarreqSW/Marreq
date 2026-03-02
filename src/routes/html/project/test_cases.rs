@@ -64,6 +64,7 @@ async fn show_tests(
     let repo = state.repo_read();
 
     let mut ctx = build_context_with_projects(state, user, cookies);
+    ctx["selected_project_id"] = json!(project_id);
 
     // Get project info
     let project = repo.get_project_by_id(project_id).ok();

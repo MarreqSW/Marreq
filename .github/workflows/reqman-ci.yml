@@ -99,8 +99,11 @@ jobs:
         with:
           tool: cargo-llvm-cov
 
+      - name: Install diesel CLI
+        run: cargo install diesel_cli --no-default-features --features postgres
+
       - name: Initialize database
-        run: ./scripts/setup_database.sh
+        run: ./scripts/db_setup.sh
 
       - name: Generate coverage reports
         run: |

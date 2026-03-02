@@ -312,7 +312,7 @@ diesel migration run
 diesel migration redo
 ```
 
-**Note**: The initialization scripts provide a complete, working database setup that bypasses the need for individual migrations during initial setup. If your database already has the schema (e.g. from `init_complete.sql`) and you need only the baselines tables, run `psql "$DATABASE_URL" -f scripts/apply_baselines_migration.sql`.
+**Note**: Migrations are the single source of truth for schema creation/evolution. `scripts/init_complete.sql` is seed data only (sample projects/users/requirements) and should be run after migrations.
 
 ## 🛠️ Development
 
@@ -338,7 +338,7 @@ ReqMan/
 ├── doc/                   # Documentation (incl. MCP_SETUP.md)
 ├── mcp-server/            # Optional MCP server (Node/TypeScript) for AI assistants
 ├── scripts/               # Dev tooling & DB setup
-│   ├── init_complete.sql  # Complete DB init (schema + sample data)
+│   ├── init_complete.sql  # Sample data seed (schema must already exist)
 │   └── setup_database.sh  # Automated database setup
 ├── DATABASE_SETUP_README.md # Database setup documentation
 └── docker-compose.yml     # Docker database configuration

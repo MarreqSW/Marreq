@@ -21,7 +21,7 @@ docker compose up -d db
 
 ### 2) Initialize the database schema + sample data
 
-This project’s dev setup uses the SQL initializer (it creates the semantic search tables too):
+This project uses migrations for schema and `init_complete.sql` for sample data:
 
 ```bash
 ./scripts/setup_database.sh
@@ -31,6 +31,7 @@ Manual equivalent:
 
 ```bash
 docker exec -i $(docker compose ps -q db) psql -U rust -d postgres -c "CREATE DATABASE reqman;"
+DATABASE_URL='postgres://rust:rust@localhost:5432/reqman' diesel migration run
 docker exec -i $(docker compose ps -q db) psql -U rust -d reqman < scripts/init_complete.sql
 ```
 
@@ -133,7 +134,7 @@ ReqMan attempts to extract citations like `[REQ-123]` from the answer.
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      PostgreSQL                                 │
-│  - requirements.search_vector (tsvector)                        │
+│  - requirement_versions.search_vector (tsvector)                │
 │  - requirement_embeddings (pgvector)                            │
 │  - embedding_index_queue                                        │
 └─────────────────────────────────────────────────────────────────┘
@@ -157,7 +158,7 @@ Automatic background indexing runs via a Rocket fairing in `src/fairings/semanti
 
 ---
 
-## Database Objects (Created by `scripts/init_complete.sql`)
+## Database Objects (Created by migrations)
 
 ### Extension
 
@@ -171,14 +172,14 @@ Automatic background indexing runs via a Rocket fairing in `src/fairings/semanti
 - `embedding_index_queue`
   - tracks indexing jobs (`pending`, `processing`, `completed`, `failed`)
   - unique per `requirement_id` (only one active job per requirement)
-- `requirements.search_vector`
+- `requirement_versions.search_vector`
   - `tsvector` column used for lexical full‑text search
 
 ### Indexes and triggers
 
 - ANN index on `requirement_embeddings.embedding` using HNSW + cosine distance ops
-- GIN index on `requirements.search_vector`
-- trigger `requirements_search_vector_trigger` keeps `search_vector` up to date on insert/update
+- GIN index on `requirement_versions.search_vector`
+- trigger `requirement_versions_search_vector_trigger` keeps `search_vector` up to date on insert/update
 
 ---
 
@@ -358,4 +359,3 @@ cargo test semantic_search --lib
 EMBEDDINGS_ENABLED=true
 EMBEDDING_PROVIDER=mock cargo test
 ```
-

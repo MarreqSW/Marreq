@@ -17,6 +17,7 @@ pub enum ApiError {
     BadRequest(String),
     NotFound(String),
     Forbidden(String),
+    Conflict(String),
     Internal(String),
 }
 
@@ -26,6 +27,7 @@ impl ApiError {
             ApiError::BadRequest(msg)
             | ApiError::NotFound(msg)
             | ApiError::Forbidden(msg)
+            | ApiError::Conflict(msg)
             | ApiError::Internal(msg) => msg,
         }
     }
@@ -35,6 +37,7 @@ impl ApiError {
             ApiError::BadRequest(_) => Status::BadRequest,
             ApiError::NotFound(_) => Status::NotFound,
             ApiError::Forbidden(_) => Status::Forbidden,
+            ApiError::Conflict(_) => Status::Conflict,
             ApiError::Internal(_) => Status::InternalServerError,
         }
     }
@@ -72,6 +75,7 @@ impl From<RepoError> for ApiError {
             RepoError::Pool(err) => ApiError::Internal(format!("connection pool error: {}", err)),
             RepoError::BadInput(msg) => ApiError::BadRequest(msg),
             RepoError::Unauthorized => ApiError::Forbidden("operation not permitted".into()),
+            RepoError::Duplicate(msg) => ApiError::Conflict(msg),
         }
     }
 }

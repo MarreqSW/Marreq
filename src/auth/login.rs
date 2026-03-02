@@ -47,8 +47,10 @@ fn authenticate_user<R: Repository>(
     username: &str,
     password: &str,
 ) -> Result<User, AuthError> {
+    // Normalise before lookup so "Alice" and "alice" resolve to the same account.
+    let username_normalised = username.trim().to_lowercase();
     let user_opt = repo
-        .get_user_by_username(username)
+        .get_user_by_username(&username_normalised)
         .map_err(|e| AuthError::Db(e.to_string()))?;
 
     let user = match user_opt {

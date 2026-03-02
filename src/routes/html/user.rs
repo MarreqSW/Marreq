@@ -214,6 +214,7 @@ async fn post_user(
         Err(err) => {
             let error = match err {
                 crate::repository::errors::RepoError::BadInput(message) => message,
+                crate::repository::errors::RepoError::Duplicate(message) => message,
                 _ => "Failed to create user".to_string(),
             };
             Ok(Redirect::to(uri!("/user", new_user(error = Some(error)))))

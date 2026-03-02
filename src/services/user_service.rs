@@ -74,6 +74,10 @@ impl<'a> UserService<'a> {
         sanitize_string(&mut payload.username);
         sanitize_string(&mut payload.name);
         sanitize_string(&mut payload.email);
+        // Enforce case-insensitive identity: always persist lowercase so that the
+        // functional unique indexes (lower(username), lower(email)) are deterministic.
+        payload.username = payload.username.to_lowercase();
+        payload.email = payload.email.to_lowercase();
 
         let id = {
             let mut repo = self.state.repo_write();
@@ -107,9 +111,19 @@ impl<'a> UserService<'a> {
         }
         let old = self.get_by_id(id)?;
 
+        // Normalize identity fields before persisting so they match the
+        // lower(username) / lower(email) unique indexes.
+        let normalized = UpdateUser {
+            id: payload.id,
+            username: payload.username.trim().to_lowercase(),
+            name: payload.name.trim().to_string(),
+            email: payload.email.trim().to_lowercase(),
+            is_admin: payload.is_admin,
+        };
+
         let updated = {
             let mut repo = self.state.repo_write();
-            repo.update_user_without_password(payload)?
+            repo.update_user_without_password(&normalized)?
         };
 
         if updated {

@@ -757,6 +757,24 @@ impl RequirementsRepository for DieselRepoMock {
         requirement_id: i32,
         verification_method_ids: &[i32],
     ) -> Result<(), RepoError> {
+        // Mirror the DB trigger: verification methods must belong to the same project
+        // as the requirement.
+        if let Some(req) = self.requirements.get(&requirement_id) {
+            let req_project = req.project_id;
+            for &ver_id in verification_method_ids {
+                if ver_id <= 0 {
+                    continue;
+                }
+                if let Some(vm) = self.verifications.get(&ver_id) {
+                    if vm.project_id != req_project {
+                        return Err(RepoError::CrossProjectViolation(format!(
+                            "requirement {} (project {}) cannot use verification method {} from project {}",
+                            requirement_id, req_project, ver_id, vm.project_id
+                        )));
+                    }
+                }
+            }
+        }
         self.requirement_verification_methods
             .retain(|(req_id, _)| *req_id != requirement_id);
         for &ver_id in verification_method_ids {
@@ -1068,6 +1086,15 @@ impl TestsCaseRepository for DieselRepoMock {
         self.matrices.retain(|m| m.test_id != _test_id);
         let project_id = self.tests.get(&_test_id).map(|t| t.project_id).unwrap_or(0);
         for &id in _requirement_ids {
+            // Mirror the DB trigger: reject requirements from a different project
+            if let Some(req) = self.requirements.get(&id) {
+                if req.project_id != project_id {
+                    return Err(RepoError::CrossProjectViolation(format!(
+                        "requirement {} belongs to project {} but test {} is in project {}",
+                        id, req.project_id, _test_id, project_id
+                    )));
+                }
+            }
             self.matrices.push(MatrixLink {
                 req_id: id,
                 test_id: _test_id,
@@ -1149,6 +1176,23 @@ impl MatrixRepository for DieselRepoMock {
     }
 
     fn insert_new_matrix_item(&mut self, new: &NewMatrixLink) -> Result<(), RepoError> {
+        // Mirror the DB trigger: requirement and test must both belong to matrix.project_id
+        if let Some(req) = self.requirements.get(&new.req_id) {
+            if req.project_id != new.project_id {
+                return Err(RepoError::CrossProjectViolation(format!(
+                    "requirement {} belongs to project {} but matrix row declares project_id={}",
+                    new.req_id, req.project_id, new.project_id
+                )));
+            }
+        }
+        if let Some(test) = self.tests.get(&new.test_id) {
+            if test.project_id != new.project_id {
+                return Err(RepoError::CrossProjectViolation(format!(
+                    "test {} belongs to project {} but matrix row declares project_id={}",
+                    new.test_id, test.project_id, new.project_id
+                )));
+            }
+        }
         self.matrices.push(MatrixLink {
             req_id: new.req_id,
             test_id: new.test_id,
@@ -1322,6 +1366,28 @@ impl crate::repository::CustomFieldRepository for DieselRepoMock {
         version_id: i32,
         values: &[(i32, Option<String>)],
     ) -> Result<(), RepoError> {
+        // Mirror the DB trigger: custom field definitions must belong to the same
+        // project as the requirement version.
+        let ver_project: Option<i32> = self
+            .requirement_versions
+            .get(&version_id)
+            .and_then(|rv| self.requirements.get(&rv.requirement_id))
+            .map(|r| r.project_id);
+        if let Some(req_project) = ver_project {
+            for &(field_id, _) in values {
+                if field_id <= 0 {
+                    continue;
+                }
+                if let Some(def) = self.custom_field_definitions.get(&field_id) {
+                    if def.project_id != req_project {
+                        return Err(RepoError::CrossProjectViolation(format!(
+                            "requirement version {} (project {}) cannot use custom field definition {} from project {}",
+                            version_id, req_project, field_id, def.project_id
+                        )));
+                    }
+                }
+            }
+        }
         self.custom_field_values
             .retain(|(vid, _, _)| *vid != version_id);
         for &(field_id, ref value) in values {
@@ -1697,6 +1763,41 @@ impl RequirementVersionLinksRepository for DieselRepoMock {
     ) -> Result<RequirementVersionLink, RepoError> {
         if self.force_err {
             return Err(RepoError::Pool("force_err".into()));
+        }
+        // Mirror the DB trigger: source and target versions must share new.project_id
+        let src_project = self
+            .requirement_versions
+            .get(&new.source_version_id)
+            .and_then(|rv| self.requirements.get(&rv.requirement_id))
+            .map(|r| r.project_id);
+        let tgt_project = self
+            .requirement_versions
+            .get(&new.target_version_id)
+            .and_then(|rv| self.requirements.get(&rv.requirement_id))
+            .map(|r| r.project_id);
+        if let Some(sp) = src_project {
+            if sp != new.project_id {
+                return Err(RepoError::CrossProjectViolation(format!(
+                    "source version {} belongs to project {} but link declares project_id={}",
+                    new.source_version_id, sp, new.project_id
+                )));
+            }
+        }
+        if let Some(tp) = tgt_project {
+            if tp != new.project_id {
+                return Err(RepoError::CrossProjectViolation(format!(
+                    "target version {} belongs to project {} but link declares project_id={}",
+                    new.target_version_id, tp, new.project_id
+                )));
+            }
+        }
+        if let (Some(sp), Some(tp)) = (src_project, tgt_project) {
+            if sp != tp {
+                return Err(RepoError::CrossProjectViolation(format!(
+                    "source version {} (project {}) and target version {} (project {}) are in different projects",
+                    new.source_version_id, sp, new.target_version_id, tp
+                )));
+            }
         }
         let id = self.next_link_id;
         self.next_link_id += 1;

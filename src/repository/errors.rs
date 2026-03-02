@@ -19,6 +19,9 @@ pub enum RepoError {
     /// A uniqueness constraint was violated (e.g. duplicate username or email).
     #[error("duplicate: {0}")]
     Duplicate(String),
+    /// A row was rejected because it would cross a project boundary.
+    #[error("cross-project violation: {0}")]
+    CrossProjectViolation(String),
 }
 
 #[cfg(test)]

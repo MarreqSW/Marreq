@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 //! ReqIF 1.2 export and import routes.
 
@@ -52,11 +52,11 @@ pub fn import_reqif_page(
         r#"<!doctype html>
 <html lang="en">
 <head>
-    <title>ReqMan - Import ReqIF</title>
+    <title>Marreq - Import ReqIF</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/static/reqman.css">
+    <link rel="stylesheet" href="/static/marreq.css">
 </head>
 <body>
     <div class="container mt-4">
@@ -215,11 +215,11 @@ pub async fn process_reqif_import(
         r#"<!doctype html>
 <html lang="en">
 <head>
-    <title>ReqMan - ReqIF Import Result</title>
+    <title>Marreq - ReqIF Import Result</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/static/reqman.css">
+    <link rel="stylesheet" href="/static/marreq.css">
 </head>
 <body>
     <div class="container mt-4">

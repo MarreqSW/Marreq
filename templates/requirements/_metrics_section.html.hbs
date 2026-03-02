@@ -2,35 +2,35 @@
   PARTIAL: Metrics Section
   Dashboard cards showing requirement health statistics
 --}}
-<section class="reqman-requirements-metrics" aria-label="Requirement health">
-  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--total">
-    <span class="reqman-requirements-metric-card__label">Total</span>
-    <span class="reqman-requirements-metric-card__value">{{requirement_metrics.total}}</span>
-    <span class="reqman-requirements-metric-card__hint">Tracked items</span>
+<section class="marreq-requirements-metrics" aria-label="Requirement health">
+  <article class="marreq-requirements-metric-card marreq-requirements-metric-card--total">
+    <span class="marreq-requirements-metric-card__label">Total</span>
+    <span class="marreq-requirements-metric-card__value">{{requirement_metrics.total}}</span>
+    <span class="marreq-requirements-metric-card__hint">Tracked items</span>
   </article>
-  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--draft">
-    <span class="reqman-requirements-metric-card__label">Draft</span>
-    <span class="reqman-requirements-metric-card__value">{{requirement_metrics.draft}}</span>
-    <span class="reqman-requirements-metric-card__badge">Needs polish</span>
+  <article class="marreq-requirements-metric-card marreq-requirements-metric-card--draft">
+    <span class="marreq-requirements-metric-card__label">Draft</span>
+    <span class="marreq-requirements-metric-card__value">{{requirement_metrics.draft}}</span>
+    <span class="marreq-requirements-metric-card__badge">Needs polish</span>
   </article>
-  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--accepted">
-    <span class="reqman-requirements-metric-card__label">Accepted</span>
-    <span class="reqman-requirements-metric-card__value">{{requirement_metrics.accepted}}</span>
-    <span class="reqman-requirements-metric-card__badge">Ready to build</span>
+  <article class="marreq-requirements-metric-card marreq-requirements-metric-card--accepted">
+    <span class="marreq-requirements-metric-card__label">Accepted</span>
+    <span class="marreq-requirements-metric-card__value">{{requirement_metrics.accepted}}</span>
+    <span class="marreq-requirements-metric-card__badge">Ready to build</span>
   </article>
-  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--rejected">
-    <span class="reqman-requirements-metric-card__label">Rejected</span>
-    <span class="reqman-requirements-metric-card__value">{{requirement_metrics.rejected}}</span>
-    <span class="reqman-requirements-metric-card__badge">Out of scope</span>
+  <article class="marreq-requirements-metric-card marreq-requirements-metric-card--rejected">
+    <span class="marreq-requirements-metric-card__label">Rejected</span>
+    <span class="marreq-requirements-metric-card__value">{{requirement_metrics.rejected}}</span>
+    <span class="marreq-requirements-metric-card__badge">Out of scope</span>
   </article>
-  <article class="reqman-requirements-metric-card reqman-requirements-metric-card--coverage">
-    <div class="reqman-requirements-metric-card__header">
-      <span class="reqman-requirements-metric-card__label">Coverage</span>
-      <span class="reqman-requirements-metric-card__value">{{requirement_metrics.coverage.percent}}%</span>
+  <article class="marreq-requirements-metric-card marreq-requirements-metric-card--coverage">
+    <div class="marreq-requirements-metric-card__header">
+      <span class="marreq-requirements-metric-card__label">Coverage</span>
+      <span class="marreq-requirements-metric-card__value">{{requirement_metrics.coverage.percent}}%</span>
     </div>
-    <div class="reqman-requirements-metric-card__progress">
+    <div class="marreq-requirements-metric-card__progress">
       <div
-        class="reqman-requirements-metric-card__progress-bar"
+        class="marreq-requirements-metric-card__progress-bar"
         style="width: {{requirement_metrics.coverage.percent}}%;"
         aria-valuenow="{{requirement_metrics.coverage.percent}}"
         aria-valuemin="0"
@@ -38,7 +38,7 @@
         role="progressbar">
       </div>
     </div>
-    <span class="reqman-requirements-metric-card__hint">
+    <span class="marreq-requirements-metric-card__hint">
       {{requirement_metrics.coverage.verified}} verified of {{requirement_metrics.total}}
     </span>
   </article>

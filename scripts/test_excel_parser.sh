@@ -1,14 +1,14 @@
 #!/bin/bash
 
-echo "🧪 Testing Excel Parser for ReqMan"
+echo "🧪 Testing Excel Parser for Marreq"
 echo "=================================="
 
-# Check if ReqMan server is running
-echo "🔍 Checking if ReqMan server is running..."
+# Check if Marreq server is running
+echo "🔍 Checking if Marreq server is running..."
 if curl -s http://127.0.0.1:8000 > /dev/null; then
-    echo "✅ ReqMan server is running"
+    echo "✅ Marreq server is running"
 else
-    echo "❌ ReqMan server is not running. Please start it first with 'cargo run'"
+    echo "❌ Marreq server is not running. Please start it first with 'cargo run'"
     exit 1
 fi
 
@@ -58,6 +58,6 @@ ls -la test_exports/
 echo ""
 echo "🎉 Test completed! Check the test_exports/ directory for generated files."
 echo ""
-echo "To import data into ReqMan API, run:"
+echo "To import data into Marreq API, run:"
 echo "  ./excel_parser/target/release/excel_parser -f test_exports/requirements.xls"
 echo "  ./excel_parser/target/release/excel_parser -f test_exports/tests.xls" 

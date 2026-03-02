@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 #![cfg(feature = "test-helpers")]
 
-use req_man::models::*;
-use req_man::status_enums::ProjectStatus;
+use marreq::models::*;
+use marreq::status_enums::ProjectStatus;
 /// Frontend integration tests for requirements pages.
 ///
 /// These tests verify:
@@ -23,9 +23,9 @@ use rocket_dyn_templates::Template;
 mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
-    use req_man::app::AppState;
-    use req_man::auth::session::SESSION_COOKIE;
-    use req_man::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use marreq::app::AppState;
+    use marreq::auth::session::SESSION_COOKIE;
+    use marreq::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::Route;
     use std::sync::{Arc, RwLock};
 
@@ -45,7 +45,7 @@ mod test_support {
     }
 
     pub async fn test_client(repo: DieselRepoMock) -> Client {
-        client_with_routes(repo, req_man::routes::html::project::requirements::routes()).await
+        client_with_routes(repo, marreq::routes::html::project::requirements::routes()).await
     }
 
     pub async fn client_with_routes(repo: DieselRepoMock, routes: Vec<Route>) -> Client {
@@ -203,15 +203,15 @@ async fn requirements_page_renders_correct_html_structure() {
 
     // Verify key HTML elements exist
     assert!(
-        html.contains("reqman-requirements-page"),
+        html.contains("marreq-requirements-page"),
         "Missing requirements page container"
     );
     assert!(
-        html.contains("reqman-requirements-header"),
+        html.contains("marreq-requirements-header"),
         "Missing header"
     );
     assert!(
-        html.contains("reqman-requirements-table"),
+        html.contains("marreq-requirements-table"),
         "Missing requirements table"
     );
     assert!(
@@ -240,7 +240,7 @@ async fn requirements_page_displays_metrics_section() {
     let html = response.into_string().await.expect("body");
 
     assert!(
-        html.contains("reqman-requirements-metrics"),
+        html.contains("marreq-requirements-metrics"),
         "Missing metrics section"
     );
     assert!(html.contains("requirement_metrics"), "Missing metrics data");

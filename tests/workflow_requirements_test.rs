@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 #![cfg(feature = "test-helpers")]
 
-use req_man::models::*;
-use req_man::status_enums::ProjectStatus;
+use marreq::models::*;
+use marreq::status_enums::ProjectStatus;
 /// End-to-end workflow tests for requirements management.
 ///
 /// These tests verify complete user workflows including:
@@ -20,9 +20,9 @@ use rocket_dyn_templates::Template;
 mod workflow_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
-    use req_man::app::AppState;
-    use req_man::auth::session::SESSION_COOKIE;
-    use req_man::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use marreq::app::AppState;
+    use marreq::auth::session::SESSION_COOKIE;
+    use marreq::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::Route;
     use std::sync::{Arc, RwLock};
 
@@ -42,7 +42,7 @@ mod workflow_support {
     }
 
     pub async fn test_client(repo: DieselRepoMock) -> Client {
-        client_with_routes(repo, req_man::routes::html::project::requirements::routes()).await
+        client_with_routes(repo, marreq::routes::html::project::requirements::routes()).await
     }
 
     pub async fn client_with_routes(repo: DieselRepoMock, routes: Vec<Route>) -> Client {

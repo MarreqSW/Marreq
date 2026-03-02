@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
-//! ReqMan - Requirements Management System
+//! Marreq - Requirements Management System
 //!
-//! This library provides the core functionality for the ReqMan application.
+//! This library provides the core functionality for the Marreq application.
 //! It can be used both as a library (for testing) and as a binary application.
 
 #[macro_use]

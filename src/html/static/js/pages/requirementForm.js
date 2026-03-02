@@ -919,7 +919,7 @@ function initCreateAutosave(form) {
     return;
   }
 
-  const storageKey = `reqman:newRequirement:${projectId}`;
+  const storageKey = `marreq:newRequirement:${projectId}`;
   const fields = Array.from(form.elements).filter(shouldPersistField);
   let restoring = false;
   let saveTimer = null;

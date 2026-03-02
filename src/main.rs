@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
-use req_man::app;
+use marreq::app;
 
 #[rocket::main]
 #[allow(clippy::result_large_err)]

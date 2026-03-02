@@ -1,10 +1,10 @@
-# ReqMan User Manual
+# Marreq User Manual
 
-**Requirement Manager (ReqMan)** is a web-based requirements and test management system. This manual describes how to use the application from the end-user perspective.
+**Requirement Manager (Marreq)** is a web-based requirements and test management system. This manual describes how to use the application from the end-user perspective.
 
-**IBM DOORS users:** See **[Migrating from DOORS to ReqMan](DOORS_to_ReqMan_Migration.md)** for concept mapping, workflow comparison, and migration steps.
+**IBM DOORS users:** See **[Migrating from DOORS to Marreq](DOORS_to_Marreq_Migration.md)** for concept mapping, workflow comparison, and migration steps.
 
-For a **typical end-to-end workflow** (project setup → requirements → tests → traceability → approval → baselines → export), see **[Typical Workflow with ReqMan](Workflow.md)**.
+For a **typical end-to-end workflow** (project setup → requirements → tests → traceability → approval → baselines → export), see **[Typical Workflow with Marreq](Workflow.md)**.
 
 ---
 
@@ -29,7 +29,7 @@ For a **typical end-to-end workflow** (project setup → requirements → tests 
 
 ## 1. Introduction
 
-ReqMan helps you:
+Marreq helps you:
 
 - **Manage requirements** in a hierarchy, with version history, comments, and approval workflow
 - **Manage tests** — create and organize tests (including hierarchy), track test status (e.g. Pass/Fail/Pending), link tests to requirements, and see coverage in reports and on requirement pages
@@ -39,7 +39,7 @@ ReqMan helps you:
 
 Data is organized by **projects**. Each project has its own requirements, tests, categories, applicability options, and baselines. You must be logged in to use the application.
 
-See **[Typical Workflow with ReqMan](Workflow.md)** for a step-by-step workflow from project setup through baselines and export.
+See **[Typical Workflow with Marreq](Workflow.md)** for a step-by-step workflow from project setup through baselines and export.
 
 ---
 
@@ -48,7 +48,7 @@ See **[Typical Workflow with ReqMan](Workflow.md)** for a step-by-step workflow 
 ### 2.1 Logging In
 
 1. Open the application in your browser (e.g. **http://localhost:8000**).
-2. You will see the **Welcome to ReqMan** login page.
+2. You will see the **Welcome to Marreq** login page.
 3. Enter your **Username** and **Password**.
 4. Click **Sign In**.
 
@@ -228,7 +228,7 @@ If your administrator has enabled semantic search (embeddings/RAG):
 
 ## 5. Test Management
 
-Test management in ReqMan covers creating and organizing tests, tracking execution status (e.g. Pass, Fail, Pending), and linking tests to requirements for traceability and coverage. Tests are project-scoped and can be arranged in a **parent/child hierarchy**. Linking is done in the [Traceability Matrix](#6-traceability-matrix); once linked, requirement detail pages show a **Verified by** section and verification pass/fail summary.
+Test management in Marreq covers creating and organizing tests, tracking execution status (e.g. Pass, Fail, Pending), and linking tests to requirements for traceability and coverage. Tests are project-scoped and can be arranged in a **parent/child hierarchy**. Linking is done in the [Traceability Matrix](#6-traceability-matrix); once linked, requirement detail pages show a **Verified by** section and verification pass/fail summary.
 
 ### 5.1 Tests List
 
@@ -428,7 +428,7 @@ You see:
 
 - From the **Tests** list or reports: use **Export Excel** (tests) when available to download all project tests for test management or external reporting.
 - URL: `/p/<project_id>/tests.xls`.
-- The export includes test fields (name, description, source, status, reference code, etc.) so you can share or analyze test data outside ReqMan.
+- The export includes test fields (name, description, source, status, reference code, etc.) so you can share or analyze test data outside Marreq.
 
 ### 9.4 Exporting ReqIF
 
@@ -444,7 +444,7 @@ You see:
 1. Open **Import File** for the project: **Quick Actions → Import File** or **Admin → Import File**, or go to `/p/<project_id>/import_excel`.
 2. Upload a file (**.xlsx**, **.xls**, or **.csv**).
 3. Click **Upload and Map Columns**.
-4. On the mapping page, map your columns to ReqMan fields (requirements, tests, traceability).
+4. On the mapping page, map your columns to Marreq fields (requirements, tests, traceability).
 5. Complete the import; data is created/updated via the API.
 
 ### 10.2 Importing ReqIF

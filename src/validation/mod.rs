@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
-//! Input validation utilities for the ReqMan application.
+//! Input validation utilities for the Marreq application.
 //!
 //! This module provides validation functions for all input data types,
 //! ensuring data integrity and providing clear error messages.

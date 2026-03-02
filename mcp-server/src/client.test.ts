@@ -1,10 +1,10 @@
 /**
- * Unit tests for ReqManClient (read-only and Phase 2 draft_write methods).
+ * Unit tests for MarreqClient (read-only and Phase 2 draft_write methods).
  * Uses mocked fetch to assert correct URLs, methods, and bodies.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { ReqManClient } from "./client.js";
+import { MarreqClient } from "./client.js";
 import type { SessionContext } from "./context.js";
 
 const baseContext: SessionContext = {
@@ -14,11 +14,11 @@ const baseContext: SessionContext = {
   mode: "read_only",
 };
 
-function makeClient(overrides?: Partial<SessionContext>): ReqManClient {
-  return new ReqManClient({ ...baseContext, ...overrides });
+function makeClient(overrides?: Partial<SessionContext>): MarreqClient {
+  return new MarreqClient({ ...baseContext, ...overrides });
 }
 
-describe("ReqManClient", () => {
+describe("MarreqClient", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -243,7 +243,7 @@ describe("ReqManClient", () => {
 
       const client = makeClient();
       await expect(client.getRequirement(1)).rejects.toThrow(
-        /ReqMan API 401/
+        /Marreq API 401/
       );
     });
   });

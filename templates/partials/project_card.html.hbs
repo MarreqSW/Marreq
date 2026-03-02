@@ -1,36 +1,36 @@
 {{!-- Depends on: css/50-components/dashboard.css --}}
-<article class="reqman-project-card reqman-project-card--{{project_status_badge}}">
-  <div class="reqman-project-card__status-bar" aria-hidden="true"></div>
-  <div class="reqman-project-card__content">
-    <div class="reqman-project-card__header">
-      <div class="reqman-project-card__title-group">
-        <span class="reqman-project-card__icon" aria-hidden="true">
+<article class="marreq-project-card marreq-project-card--{{project_status_badge}}">
+  <div class="marreq-project-card__status-bar" aria-hidden="true"></div>
+  <div class="marreq-project-card__content">
+    <div class="marreq-project-card__header">
+      <div class="marreq-project-card__title-group">
+        <span class="marreq-project-card__icon" aria-hidden="true">
           {{project_initial}}
         </span>
-        <div class="reqman-project-card__titles">
+        <div class="marreq-project-card__titles">
           <h3>{{name}}</h3>
           {{#if project_owner_name}}
-            <p class="reqman-project-card__owner">Owned by {{project_owner_name}}</p>
+            <p class="marreq-project-card__owner">Owned by {{project_owner_name}}</p>
           {{/if}}
         </div>
       </div>
-      <span class="reqman-project-card__status reqman-badge reqman-badge--{{project_status_badge}}">
+      <span class="marreq-project-card__status marreq-badge marreq-badge--{{project_status_badge}}">
         {{status_id}}
       </span>
     </div>
     {{#if description}}
-      <p class="reqman-project-card__description">{{description}}</p>
+      <p class="marreq-project-card__description">{{description}}</p>
     {{/if}}
-    <div class="reqman-project-card__meta">
-      <div class="reqman-project-card__meta-item">
+    <div class="marreq-project-card__meta">
+      <div class="marreq-project-card__meta-item">
         <i class="fas fa-clipboard-list" aria-hidden="true"></i>
         <span>{{#if (eq requirements_count 1)}}1 requirement{{else}}{{requirements_count}} requirements{{/if}}</span>
       </div>
-      <div class="reqman-project-card__meta-item">
+      <div class="marreq-project-card__meta-item">
         <i class="fas fa-vial" aria-hidden="true"></i>
         <span>{{#if (eq tests_count 1)}}1 test{{else}}{{tests_count}} tests{{/if}}</span>
       </div>
-      <div class="reqman-project-card__meta-item">
+      <div class="marreq-project-card__meta-item">
         <i class="fas fa-id-badge" aria-hidden="true"></i>
         <span>
           {{#if role_label}}
@@ -41,35 +41,35 @@
         </span>
       </div>
       {{#if update_date}}
-        <div class="reqman-project-card__meta-item">
+        <div class="marreq-project-card__meta-item">
           <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
           <span>Updated {{update_date}}</span>
         </div>
       {{else}}
         {{#if creation_date}}
-          <div class="reqman-project-card__meta-item">
+          <div class="marreq-project-card__meta-item">
             <i class="fas fa-calendar-plus" aria-hidden="true"></i>
             <span>Created {{creation_date}}</span>
           </div>
         {{/if}}
       {{/if}}
     </div>
-    <div class="reqman-project-card__actions">
-      <a href="/p/{{project_id}}" class="reqman-btn reqman-btn--primary">
+    <div class="marreq-project-card__actions">
+      <a href="/p/{{project_id}}" class="marreq-btn marreq-btn--primary">
         <i class="fas fa-eye" aria-hidden="true"></i>
         Open
       </a>
-      <a href="/p/{{project_id}}/requirements" class="reqman-btn reqman-btn--outline">
+      <a href="/p/{{project_id}}/requirements" class="marreq-btn marreq-btn--outline">
         <i class="fas fa-clipboard-list" aria-hidden="true"></i>
         Requirements
       </a>
       {{#if show_admin_actions}}
       {{#if user.is_admin}}
-      <a href="/p/{{project_id}}/edit" class="reqman-btn reqman-btn--outline">
+      <a href="/p/{{project_id}}/edit" class="marreq-btn marreq-btn--outline">
         <i class="fas fa-edit" aria-hidden="true"></i>
         Edit
       </a>
-      <button type="button" class="reqman-btn reqman-btn--outline" data-action="delete-project" data-project-id="{{project_id}}" data-project-name="{{name}}">
+      <button type="button" class="marreq-btn marreq-btn--outline" data-action="delete-project" data-project-id="{{project_id}}" data-project-name="{{name}}">
         <i class="fas fa-trash" aria-hidden="true"></i>
         Delete
       </button>

@@ -1,8 +1,8 @@
 {{!-- Test detail page - styled to match requirement detail layout --}}
 {{#*inline "page"}}
-<div class="reqman-requirement-detail-page" aria-live="polite">
-  <header class="reqman-requirement-header card shadow-sm border-0">
-    <div class="reqman-requirement-header__body">
+<div class="marreq-requirement-detail-page" aria-live="polite">
+  <header class="marreq-requirement-header card shadow-sm border-0">
+    <div class="marreq-requirement-header__body">
       <div class="d-flex flex-column gap-4">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
           <div class="d-flex flex-wrap align-items-center gap-3">
@@ -57,9 +57,9 @@
           </nav>
         </div>
 
-        <section class="reqman-requirement-statement-card p-4 p-lg-5 rounded-4 bg-white">
+        <section class="marreq-requirement-statement-card p-4 p-lg-5 rounded-4 bg-white">
           <div class="text-uppercase small text-muted mb-2">Test Description</div>
-          <div class="reqman-requirement-header__statement fs-5 lh-base text-break fw-semibold mb-3">
+          <div class="marreq-requirement-header__statement fs-5 lh-base text-break fw-semibold mb-3">
             {{#if description}}
             <p class="mb-0">{{description}}</p>
             {{else}}
@@ -100,13 +100,13 @@
     </div>
   </header>
 
-  <div class="reqman-requirement-detail-grid">
-    <div class="reqman-requirement-detail-main">
+  <div class="marreq-requirement-detail-grid">
+    <div class="marreq-requirement-detail-main">
       <section class="card shadow-sm border-0 requirement-main-card mb-3">
         <div class="card-header requirement-card-header border-0 d-flex justify-content-between align-items-center">
           <div class="text-uppercase small text-muted">Verification</div>
           {{#if status_id}}
-          <span class="badge reqman-requirements-status-badge reqman-requirements-status-badge--{{status_variant}}" role="status" aria-label="Test status"{{#if status_tag_color}} style="background-color: {{status_tag_color}}; color: #fff; border-color: {{status_tag_color}};"{{/if}}>{{status_id}}</span>
+          <span class="badge marreq-requirements-status-badge marreq-requirements-status-badge--{{status_variant}}" role="status" aria-label="Test status"{{#if status_tag_color}} style="background-color: {{status_tag_color}}; color: #fff; border-color: {{status_tag_color}};"{{/if}}>{{status_id}}</span>
           {{/if}}
         </div>
         <div class="card-body">
@@ -190,7 +190,7 @@
       </section>
     </div>
 
-    <aside class="reqman-requirement-detail-sidebar" aria-label="Test metadata and relationships">
+    <aside class="marreq-requirement-detail-sidebar" aria-label="Test metadata and relationships">
       <section class="card shadow-sm border-0 requirement-side-card mb-3">
         <div class="card-header requirement-card-header border-0 d-flex justify-content-between align-items-center">
           <div class="text-uppercase small text-muted mb-0">Key Info</div>

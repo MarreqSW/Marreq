@@ -1,10 +1,10 @@
-<article class="reqman-list-page__row">
-  <div class="reqman-list-page__row-main">
-    <div class="reqman-list-page__row-headline">
-      <h3 class="reqman-list-page__row-title">{{name}}</h3>
+<article class="marreq-list-page__row">
+  <div class="marreq-list-page__row-main">
+    <div class="marreq-list-page__row-headline">
+      <h3 class="marreq-list-page__row-title">{{name}}</h3>
     </div>
     {{#if description}}
-      <p class="reqman-list-page__row-description">{{description}}</p>
+      <p class="marreq-list-page__row-description">{{description}}</p>
     {{/if}}
     <div class="text-muted small mt-1">
       Created {{created_at}}
@@ -13,11 +13,11 @@
       {{/if}}
     </div>
   </div>
-  <div class="reqman-list-page__row-meta">
-    <span class="reqman-list-page__row-id" title="Baseline ID">#{{id}}</span>
-    <div class="reqman-list-page__row-actions">
-      <a href="/p/{{@root.selected_project_id}}/baselines/{{id}}" class="btn btn-secondary btn-sm reqman-list-page__action-btn">View</a>
-      <a href="/p/{{@root.selected_project_id}}/export_reqif?baseline_id={{id}}" class="btn btn-outline btn-sm reqman-list-page__action-btn" title="Export this baseline as ReqIF 1.2">Export ReqIF</a>
+  <div class="marreq-list-page__row-meta">
+    <span class="marreq-list-page__row-id" title="Baseline ID">#{{id}}</span>
+    <div class="marreq-list-page__row-actions">
+      <a href="/p/{{@root.selected_project_id}}/baselines/{{id}}" class="btn btn-secondary btn-sm marreq-list-page__action-btn">View</a>
+      <a href="/p/{{@root.selected_project_id}}/export_reqif?baseline_id={{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn" title="Export this baseline as ReqIF 1.2">Export ReqIF</a>
     </div>
   </div>
 </article>

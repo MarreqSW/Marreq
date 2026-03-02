@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
-//! Service layer for the ReqMan application.
+//! Service layer for the Marreq application.
 //!
 //! This module provides business logic services that abstract database operations
 //! and provide a clean interface for route handlers.

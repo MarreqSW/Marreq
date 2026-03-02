@@ -132,6 +132,7 @@ impl<'a> IndexingService<'a> {
 
         requirement_embeddings::table
             .find(requirement_id)
+            .select(RequirementEmbedding::as_select())
             .first(conn.as_mut())
             .optional()
             .map_err(RepoError::Db)

@@ -391,7 +391,9 @@ async fn post_test(
         let matrix_item = NewMatrixLink {
             req_id: *req,
             test_id: id,
-            project_id: new_test.project_id,
+            // Use the route's project_id (from the URL) rather than the form field to
+            // prevent a tampered form from creating cross-project links.
+            project_id,
             triggering_version_id: None,
             triggering_user_id: None,
         };
@@ -399,13 +401,17 @@ async fn post_test(
             .repo_write()
             .insert_new_matrix_item(&matrix_item)
             .map_err(|e| {
+                use crate::repository::errors::RepoError;
+                let msg = match e {
+                    RepoError::CrossProjectViolation(ref detail) => {
+                        format!("Cannot link requirement across projects: {}", detail)
+                    }
+                    _ => "Failed to link requirements".to_string(),
+                };
                 eprintln!("Error inserting matrix item: {:?}", e);
                 Redirect::to(uri!(
                     "/p",
-                    new_test(
-                        project_id = project_id,
-                        error = Some("Failed to link requirements".to_string())
-                    )
+                    new_test(project_id = project_id, error = Some(msg))
                 ))
             })?;
     }

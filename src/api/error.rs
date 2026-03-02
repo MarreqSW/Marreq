@@ -18,6 +18,8 @@ pub enum ApiError {
     NotFound(String),
     Forbidden(String),
     Conflict(String),
+    /// Returned when a row would cross a project boundary (HTTP 422).
+    UnprocessableEntity(String),
     Internal(String),
 }
 
@@ -28,6 +30,7 @@ impl ApiError {
             | ApiError::NotFound(msg)
             | ApiError::Forbidden(msg)
             | ApiError::Conflict(msg)
+            | ApiError::UnprocessableEntity(msg)
             | ApiError::Internal(msg) => msg,
         }
     }
@@ -38,6 +41,7 @@ impl ApiError {
             ApiError::NotFound(_) => Status::NotFound,
             ApiError::Forbidden(_) => Status::Forbidden,
             ApiError::Conflict(_) => Status::Conflict,
+            ApiError::UnprocessableEntity(_) => Status::UnprocessableEntity,
             ApiError::Internal(_) => Status::InternalServerError,
         }
     }
@@ -76,6 +80,7 @@ impl From<RepoError> for ApiError {
             RepoError::BadInput(msg) => ApiError::BadRequest(msg),
             RepoError::Unauthorized => ApiError::Forbidden("operation not permitted".into()),
             RepoError::Duplicate(msg) => ApiError::Conflict(msg),
+            RepoError::CrossProjectViolation(msg) => ApiError::UnprocessableEntity(msg),
         }
     }
 }

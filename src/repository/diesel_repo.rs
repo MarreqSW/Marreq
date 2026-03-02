@@ -25,7 +25,10 @@ use diesel::expression_methods::BoolExpressionMethods;
 use diesel::expression_methods::NullableExpressionMethods;
 use diesel::pg::{upsert::excluded, PgConnection};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
-use diesel::{Connection, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl, SelectableHelper};
+use diesel::{
+    Connection, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl,
+    SelectableHelper,
+};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -910,7 +913,10 @@ impl RequirementsRepository for DieselRepo {
                     .on(requirements::current_version_id.eq(requirement_versions::id.nullable())),
             )
             .filter(requirements::id.eq(requirement_id))
-            .select((RequirementContainer::as_select(), RequirementVersion::as_select()))
+            .select((
+                RequirementContainer::as_select(),
+                RequirementVersion::as_select(),
+            ))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -932,7 +938,10 @@ impl RequirementsRepository for DieselRepo {
                     .on(requirements::current_version_id.eq(requirement_versions::id.nullable())),
             )
             .order(requirements::id)
-            .select((RequirementContainer::as_select(), RequirementVersion::as_select()))
+            .select((
+                RequirementContainer::as_select(),
+                RequirementVersion::as_select(),
+            ))
             .load(conn.as_mut())
             .map_err(RepoError::from)?;
         Ok(rows
@@ -955,7 +964,10 @@ impl RequirementsRepository for DieselRepo {
             )
             .filter(requirements::project_id.eq(project_id_param))
             .order(requirements::id)
-            .select((RequirementContainer::as_select(), RequirementVersion::as_select()))
+            .select((
+                RequirementContainer::as_select(),
+                RequirementVersion::as_select(),
+            ))
             .load(conn.as_mut())
             .map_err(RepoError::from)?;
         Ok(rows
@@ -1020,7 +1032,10 @@ impl RequirementsRepository for DieselRepo {
             .order(requirements::id)
             .limit(limit)
             .offset(offset)
-            .select((RequirementContainer::as_select(), RequirementVersion::as_select()))
+            .select((
+                RequirementContainer::as_select(),
+                RequirementVersion::as_select(),
+            ))
             .load(conn.as_mut())
             .map_err(RepoError::from)?;
         // Sort empty stable_code last (same as legacy)
@@ -1524,7 +1539,10 @@ impl TestsCaseRepository for DieselRepo {
                 requirement_versions::table
                     .on(requirements::current_version_id.eq(requirement_versions::id.nullable())),
             )
-            .select((RequirementContainer::as_select(), RequirementVersion::as_select()))
+            .select((
+                RequirementContainer::as_select(),
+                RequirementVersion::as_select(),
+            ))
             .load(conn.as_mut())
             .map_err(RepoError::from)?;
         Ok(rows
@@ -2067,7 +2085,10 @@ impl BaselineRepository for DieselRepo {
                         requirements::current_version_id.eq(requirement_versions::id.nullable()),
                     ))
                     .filter(requirements::project_id.eq(project_id))
-                    .select((RequirementContainer::as_select(), RequirementVersion::as_select()))
+                    .select((
+                        RequirementContainer::as_select(),
+                        RequirementVersion::as_select(),
+                    ))
                     .load(conn)?;
             for (container, version) in rows {
                 let br = NewBaselineRequirement {
@@ -2145,7 +2166,10 @@ impl BaselineRepository for DieselRepo {
                 requirements::table.on(baseline_requirements::requirement_id.eq(requirements::id)),
             )
             .filter(baseline_requirements::baseline_id.eq(baseline_id))
-            .select((RequirementContainer::as_select(), RequirementVersion::as_select()))
+            .select((
+                RequirementContainer::as_select(),
+                RequirementVersion::as_select(),
+            ))
             .load(conn.as_mut())?;
         Ok(rows
             .into_iter()

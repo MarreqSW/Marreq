@@ -16,6 +16,9 @@ pub enum RepoError {
     BadInput(String),
     #[error("unauthorized")]
     Unauthorized,
+    /// A uniqueness constraint was violated (e.g. duplicate username or email).
+    #[error("duplicate: {0}")]
+    Duplicate(String),
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
-//! ReqIF 1.2 export: build XML from ReqMan requirements.
+//! ReqIF 1.2 export: build XML from Marreq requirements.
 
 use crate::models::Requirement;
 use std::collections::HashMap;
@@ -29,12 +29,12 @@ pub fn to_reqif(
     out.push('\n');
     out.push_str(&format!(r#"<REQ-IF xmlns="{}">"#, REQIF_NS));
     out.push_str("\n  <THE-HEADER>");
-    out.push_str("\n    <REPOSITORY-ID>ReqMan-");
+    out.push_str("\n    <REPOSITORY-ID>Marreq-");
     out.push_str(&escape_xml(project_name));
     out.push_str("</REPOSITORY-ID>");
-    out.push_str("\n    <REQ-IF-TOOL-ID>ReqMan</REQ-IF-TOOL-ID>");
+    out.push_str("\n    <REQ-IF-TOOL-ID>Marreq</REQ-IF-TOOL-ID>");
     out.push_str("\n    <REQ-IF-VERSION>1.2</REQ-IF-VERSION>");
-    out.push_str("\n    <SOURCE-TOOL-ID>ReqMan</SOURCE-TOOL-ID>");
+    out.push_str("\n    <SOURCE-TOOL-ID>Marreq</SOURCE-TOOL-ID>");
     out.push_str("\n    <TITLE>");
     out.push_str(&escape_xml(project_name));
     out.push_str("</TITLE>");

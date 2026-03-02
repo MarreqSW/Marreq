@@ -1,26 +1,26 @@
 {{!--
 Depends on: css/pages/verification.css, js/pages/verification.js
-Dynamic classes: reqman-list-page__row (visibility toggled)
+Dynamic classes: marreq-list-page__row (visibility toggled)
 --}}
-<article class="reqman-list-page__row" data-verification-row
+<article class="marreq-list-page__row" data-verification-row
   data-search-text="{{title}} {{tag}} {{description}} {{id}}">
-  <div class="reqman-list-page__row-main">
-    <div class="reqman-list-page__row-headline">
-      <span class="reqman-list-page__tag" aria-label="Verification tag {{tag}}">{{tag}}</span>
-      <h3 class="reqman-list-page__row-title">{{title}}</h3>
+  <div class="marreq-list-page__row-main">
+    <div class="marreq-list-page__row-headline">
+      <span class="marreq-list-page__tag" aria-label="Verification tag {{tag}}">{{tag}}</span>
+      <h3 class="marreq-list-page__row-title">{{title}}</h3>
     </div>
     {{#if description}}
-    <p class="reqman-list-page__row-description">{{description}}</p>
+    <p class="marreq-list-page__row-description">{{description}}</p>
     {{/if}}
   </div>
-  <div class="reqman-list-page__row-meta">
-    <span class="reqman-list-page__row-id" title="Verification method ID">#{{id}}</span>
-    <div class="reqman-list-page__row-actions">
+  <div class="marreq-list-page__row-meta">
+    <span class="marreq-list-page__row-id" title="Verification method ID">#{{id}}</span>
+    <div class="marreq-list-page__row-actions">
       <a href="/p/{{@root.selected_project_id}}/requirements?verification_filter={{id}}"
-        class="btn btn-secondary btn-sm reqman-list-page__action-btn">View Requirements</a>
+        class="btn btn-secondary btn-sm marreq-list-page__action-btn">View Requirements</a>
       <a href="/p/{{@root.selected_project_id}}/verification/edit/{{id}}"
-        class="btn btn-outline btn-sm reqman-list-page__action-btn">Edit</a>
-      <button class="btn btn-danger btn-sm reqman-list-page__action-btn" type="button" data-action="delete-verification"
+        class="btn btn-outline btn-sm marreq-list-page__action-btn">Edit</a>
+      <button class="btn btn-danger btn-sm marreq-list-page__action-btn" type="button" data-action="delete-verification"
         data-verification-id="{{id}}" data-verification-title="verification {{tag}}"
         data-project-id="{{@root.selected_project_id}}">Delete</button>
     </div>

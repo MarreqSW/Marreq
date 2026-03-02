@@ -1,4 +1,4 @@
-export class ReqManClient {
+export class MarreqClient {
     ctx;
     constructor(ctx) {
         this.ctx = ctx;
@@ -15,7 +15,7 @@ export class ReqManClient {
         });
         if (!res.ok) {
             const text = await res.text();
-            throw new Error(`ReqMan API ${res.status}: ${text}`);
+            throw new Error(`Marreq API ${res.status}: ${text}`);
         }
         if (res.status === 204 || res.headers.get("content-length") === "0") {
             return undefined;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 #![cfg(feature = "test-helpers")]
 
@@ -17,10 +17,10 @@ use rocket::local::asynchronous::Client;
 
 mod test_support {
     use super::*;
-    use req_man::app::AppState;
-    use req_man::auth::hash_password;
-    use req_man::auth::session::SESSION_COOKIE;
-    use req_man::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use marreq::app::AppState;
+    use marreq::auth::hash_password;
+    use marreq::auth::session::SESSION_COOKIE;
+    use marreq::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
     pub type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
@@ -35,8 +35,8 @@ mod test_support {
         let rocket = rocket::build()
             .manage(managed_state(repo))
             .attach(rocket_dyn_templates::Template::fairing())
-            .mount("/", req_man::routes::html::auth::routes())
-            .mount("/api", req_man::api::routes()); // Mount API for verification if needed
+            .mount("/", marreq::routes::html::auth::routes())
+            .mount("/api", marreq::api::routes()); // Mount API for verification if needed
 
         Client::tracked(rocket).await.expect("rocket instance")
     }
@@ -84,7 +84,7 @@ async fn login_success_redirects_to_dashboard() {
     // Verify session cookie is set
     let cookie = response
         .cookies()
-        .get(req_man::auth::session::SESSION_COOKIE);
+        .get(marreq::auth::session::SESSION_COOKIE);
     assert!(cookie.is_some());
 
     // Verify session works by making an authenticated request
@@ -112,7 +112,7 @@ async fn login_failure_redirects_with_error() {
     // Verify no session cookie
     let cookie = response
         .cookies()
-        .get(req_man::auth::session::SESSION_COOKIE);
+        .get(marreq::auth::session::SESSION_COOKIE);
     assert!(cookie.is_none());
 }
 
@@ -169,7 +169,7 @@ async fn logout_clears_session() {
     // Verify session cookie is cleared (expired)
     let cookie = response
         .cookies()
-        .get(req_man::auth::session::SESSION_COOKIE);
+        .get(marreq::auth::session::SESSION_COOKIE);
     assert!(cookie.is_some());
     // Rocket sets expiration to past to clear it
     assert!(cookie.unwrap().expires().is_some());

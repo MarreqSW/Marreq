@@ -2,30 +2,30 @@
   PARTIAL: Filter Controls
   Search bar and filter dropdowns for tests
 --}}
-<section class="reqman-requirements-controls c-card" aria-label="Filters">
-  <div class="reqman-requirements-controls__inner">
+<section class="marreq-requirements-controls c-card" aria-label="Filters">
+  <div class="marreq-requirements-controls__inner">
     <form
       method="GET"
       action="{{#if project.id}}/p/{{project.id}}/tests{{else}}/tests{{/if}}"
-      class="reqman-requirements-filter-bar"
+      class="marreq-requirements-filter-bar"
       id="testsFilterForm">
-      <div class="reqman-requirements-filter-bar__search">
+      <div class="marreq-requirements-filter-bar__search">
         <label for="testsSearch" class="u-visually-hidden">Search tests</label>
         <input type="search"
           id="testsSearch"
-          class="reqman-requirements-filter-bar__search-input"
+          class="marreq-requirements-filter-bar__search-input"
           name="search"
           placeholder="Filter by name, reference, or description…"
           value="{{search_query}}"
           autocomplete="off" />
-        <span class="reqman-requirements-filter-bar__shortcut" aria-hidden="true">/</span>
+        <span class="marreq-requirements-filter-bar__shortcut" aria-hidden="true">/</span>
       </div>
-      <div class="reqman-requirements-filter-bar__selects">
+      <div class="marreq-requirements-filter-bar__selects">
         <label for="statusFilter" class="u-visually-hidden">Filter by status</label>
         <select
           id="statusFilter"
           name="status_filter"
-          class="reqman-requirements-filter-bar__select"
+          class="marreq-requirements-filter-bar__select"
           data-filter-control="status"
           data-filter-label="Status">
           <option value="">Status · All</option>
@@ -40,7 +40,7 @@
         <select
           id="verificationFilter"
           name="verification_filter"
-          class="reqman-requirements-filter-bar__select"
+          class="marreq-requirements-filter-bar__select"
           data-filter-control="verification"
           data-filter-label="Verification">
           <option value="">Verification · All</option>
@@ -55,7 +55,7 @@
         <select
           id="categoryFilter"
           name="category_filter"
-          class="reqman-requirements-filter-bar__select"
+          class="marreq-requirements-filter-bar__select"
           data-filter-control="category"
           data-filter-label="Category">
           <option value="">Category · All</option>
@@ -67,18 +67,18 @@
         </select>
       </div>
 
-      <div class="reqman-requirements-filter-bar__actions">
-        <button type="button" class="reqman-requirements-filter-bar__clear" data-action="clear-filters">
+      <div class="marreq-requirements-filter-bar__actions">
+        <button type="button" class="marreq-requirements-filter-bar__clear" data-action="clear-filters">
           Clear filters
         </button>
-        <button type="submit" class="reqman-requirements-filter-bar__submit">
+        <button type="submit" class="marreq-requirements-filter-bar__submit">
           Apply
         </button>
       </div>
     </form>
 
     <div
-      class="reqman-requirements-filter-chips"
+      class="marreq-requirements-filter-chips"
       aria-live="polite"
       id="testsFilterChips"
       hidden>

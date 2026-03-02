@@ -1,5 +1,5 @@
 [default.databases.my_db]
-url = "postgres://rust:rust@127.0.0.1:5432/reqman"
+url = "postgres://rust:rust@127.0.0.1:5432/marreq"
 pool_size = 2
 
 [release]

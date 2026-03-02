@@ -1,12 +1,12 @@
-# ReqMan CI/CD Workflows
+# Marreq CI/CD Workflows
 
-This directory contains GitHub Actions workflows and supporting files for automated testing, linting, and quality checks for the ReqMan project.
+This directory contains GitHub Actions workflows and supporting files for automated testing, linting, and quality checks for the Marreq project.
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Workflows](#workflows)
-  - [ReqMan CI Pipeline](#reqman-ci-pipeline)
+  - [Marreq CI Pipeline](#marreq-ci-pipeline)
 - [Acceptance Criteria](#acceptance-criteria)
   - [1. Code Formatting](#1-code-formatting)
   - [2. CSS Linting](#2-css-linting)
@@ -36,9 +36,9 @@ All checks must pass before a pull request can be merged.
 
 ## Workflows
 
-### ReqMan CI Pipeline
+### Marreq CI Pipeline
 
-**File:** `reqman-ci.yml`
+**File:** `marreq-ci.yml`
 
 **Triggered on:**
 - Pull request opened, synchronized, reopened, or marked ready for review
@@ -74,7 +74,7 @@ All checks must pass before a pull request can be merged.
 
 **Acceptance Criteria:**
 - All CSS files pass `stylelint` checks with `stylelint-config-standard`
-- Selectors follow BEM-style naming with required prefixes: `reqman-`, `c-`, `o-`, `u-`, `is-`, `has-`, `status-`, or `js-`
+- Selectors follow BEM-style naming with required prefixes: `marreq-`, `c-`, `o-`, `u-`, `is-`, `has-`, `status-`, or `js-`
 - Maximum selector specificity: `0,3,0`
 - No ID selectors allowed
 - No `!important` declarations
@@ -177,8 +177,8 @@ Before running checks locally, ensure you have:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/mariusmm/ReqMan.git
-   cd ReqMan
+   git clone https://github.com/mariusmm/Marreq.git
+   cd Marreq
    ```
 
 2. **Start the database**
@@ -271,7 +271,7 @@ npm run test:coverage
 
 ```bash
 # Set database URL (or use .env file)
-export DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/reqman
+export DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/marreq
 
 # Run tests with coverage
 cargo llvm-cov --workspace --all-features --doctests

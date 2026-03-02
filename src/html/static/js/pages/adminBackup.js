@@ -17,7 +17,7 @@ export function init() {
   if (backupForm && backupButton) {
     backupButton.addEventListener('click', (event) => {
       event.preventDefault();
-      const filename = `reqman-backup_${timestamp()}.sql`;
+      const filename = `marreq-backup_${timestamp()}.sql`;
       backupForm.action = `/admin/backup/generate/${filename}`;
       backupForm.submit();
     });
@@ -25,7 +25,7 @@ export function init() {
 
   if (logsLink) {
     logsLink.addEventListener('click', (event) => {
-      const filename = `reqman-logs_${timestamp()}.json`;
+      const filename = `marreq-logs_${timestamp()}.json`;
       logsLink.href = `/export_logs?filename=${filename}`;
     });
   }

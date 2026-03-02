@@ -36,7 +36,7 @@ describe('Sidebar', () => {
   });
 
   it('should restore collapsed state from localStorage on desktop', () => {
-    localStorage.setItem('reqman_sidebar_collapsed', 'true');
+    localStorage.setItem('marreq_sidebar_collapsed', 'true');
     Object.defineProperty(window, 'innerWidth', { value: 1200, writable: true, configurable: true });
 
     document.body.innerHTML = `
@@ -47,11 +47,11 @@ describe('Sidebar', () => {
     initSidebar();
 
     const sidebar = document.getElementById('mainSidebar');
-    expect(sidebar.classList.contains('reqman-sidebar--collapsed')).toBe(true);
+    expect(sidebar.classList.contains('marreq-sidebar--collapsed')).toBe(true);
   });
 
   it('should not restore collapsed state on mobile', () => {
-    localStorage.setItem('reqman_sidebar_collapsed', 'true');
+    localStorage.setItem('marreq_sidebar_collapsed', 'true');
     Object.defineProperty(window, 'innerWidth', { value: 800, writable: true, configurable: true });
 
     document.body.innerHTML = `
@@ -62,7 +62,7 @@ describe('Sidebar', () => {
     initSidebar();
 
     const sidebar = document.getElementById('mainSidebar');
-    expect(sidebar.classList.contains('reqman-sidebar--collapsed')).toBe(false);
+    expect(sidebar.classList.contains('marreq-sidebar--collapsed')).toBe(false);
   });
 
   it('should toggle sidebar on desktop toggle click', () => {
@@ -76,13 +76,13 @@ describe('Sidebar', () => {
     const sidebar = document.getElementById('mainSidebar');
     const toggle = document.getElementById('sidebarToggle');
 
-    expect(sidebar.classList.contains('reqman-sidebar--collapsed')).toBe(false);
+    expect(sidebar.classList.contains('marreq-sidebar--collapsed')).toBe(false);
 
     toggle.click();
-    expect(sidebar.classList.contains('reqman-sidebar--collapsed')).toBe(true);
+    expect(sidebar.classList.contains('marreq-sidebar--collapsed')).toBe(true);
 
     toggle.click();
-    expect(sidebar.classList.contains('reqman-sidebar--collapsed')).toBe(false);
+    expect(sidebar.classList.contains('marreq-sidebar--collapsed')).toBe(false);
   });
 
   it('should save collapsed state to localStorage on desktop', () => {
@@ -96,7 +96,7 @@ describe('Sidebar', () => {
     const toggle = document.getElementById('sidebarToggle');
     toggle.click();
 
-    expect(localStorage.getItem('reqman_sidebar_collapsed')).toBe('true');
+    expect(localStorage.getItem('marreq_sidebar_collapsed')).toBe('true');
   });
 
   it('should not save collapsed state to localStorage on mobile', () => {
@@ -112,7 +112,7 @@ describe('Sidebar', () => {
     const toggle = document.getElementById('sidebarToggle');
     toggle.click();
 
-    expect(localStorage.getItem('reqman_sidebar_collapsed')).toBeNull();
+    expect(localStorage.getItem('marreq_sidebar_collapsed')).toBeNull();
   });
 
   it('should handle mobile toggle button', () => {
@@ -128,13 +128,13 @@ describe('Sidebar', () => {
     const sidebar = document.getElementById('mainSidebar');
     const mobileToggle = document.getElementById('mobileToggle');
 
-    expect(sidebar.classList.contains('reqman-sidebar--mobile-open')).toBe(false);
+    expect(sidebar.classList.contains('marreq-sidebar--mobile-open')).toBe(false);
 
     mobileToggle.click();
-    expect(sidebar.classList.contains('reqman-sidebar--mobile-open')).toBe(true);
+    expect(sidebar.classList.contains('marreq-sidebar--mobile-open')).toBe(true);
 
     mobileToggle.click();
-    expect(sidebar.classList.contains('reqman-sidebar--mobile-open')).toBe(false);
+    expect(sidebar.classList.contains('marreq-sidebar--mobile-open')).toBe(false);
   });
 
   it('should close mobile sidebar when clicking outside', () => {
@@ -155,10 +155,10 @@ describe('Sidebar', () => {
     const outside = document.getElementById('outside');
 
     mobileToggle.click();
-    expect(sidebar.classList.contains('reqman-sidebar--mobile-open')).toBe(true);
+    expect(sidebar.classList.contains('marreq-sidebar--mobile-open')).toBe(true);
 
     outside.click();
-    expect(sidebar.classList.contains('reqman-sidebar--mobile-open')).toBe(false);
+    expect(sidebar.classList.contains('marreq-sidebar--mobile-open')).toBe(false);
   });
 
   it('should not close mobile sidebar when clicking inside sidebar', () => {
@@ -178,10 +178,10 @@ describe('Sidebar', () => {
     const inside = document.getElementById('inside');
 
     mobileToggle.click();
-    expect(sidebar.classList.contains('reqman-sidebar--mobile-open')).toBe(true);
+    expect(sidebar.classList.contains('marreq-sidebar--mobile-open')).toBe(true);
 
     inside.click();
-    expect(sidebar.classList.contains('reqman-sidebar--mobile-open')).toBe(true);
+    expect(sidebar.classList.contains('marreq-sidebar--mobile-open')).toBe(true);
   });
 
   it('should not close mobile sidebar when clicking mobile toggle', () => {
@@ -198,11 +198,11 @@ describe('Sidebar', () => {
     const mobileToggle = document.getElementById('mobileToggle');
 
     mobileToggle.click();
-    expect(sidebar.classList.contains('reqman-sidebar--mobile-open')).toBe(true);
+    expect(sidebar.classList.contains('marreq-sidebar--mobile-open')).toBe(true);
 
     // Clicking toggle again should close it (not prevented by outside click handler)
     mobileToggle.click();
-    expect(sidebar.classList.contains('reqman-sidebar--mobile-open')).toBe(false);
+    expect(sidebar.classList.contains('marreq-sidebar--mobile-open')).toBe(false);
   });
 
   it('should handle localStorage errors gracefully', () => {

@@ -1,13 +1,13 @@
 {{!-- Depends on: css/50-components/dashboard.css, js/modules/sidebar.js --}}
-<header class="reqman-main__header">
+<header class="marreq-main__header">
   <button
     type="button"
-    class="reqman-mobile-toggle"
+    class="marreq-mobile-toggle"
     id="mobileToggle"
     aria-label="Toggle navigation">
     <i class="fas fa-bars" aria-hidden="true"></i>
   </button>
-  <div class="reqman-main__title">
+  <div class="marreq-main__title">
     <h1>
       {{#if user.name}}
         Welcome back, {{user.name}}
@@ -15,7 +15,7 @@
         Requirements Dashboard
       {{/if}}
     </h1>
-    <p class="reqman-main__subtitle">
+    <p class="marreq-main__subtitle">
       Manage requirements, tests, and traceability across all your projects
     </p>
   </div>

@@ -49,7 +49,7 @@ echo "4️⃣ Running frontend tests..."
 npm test
 
 echo "5️⃣ Running backend tests with coverage..."
-export DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/reqman
+export DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/marreq
 cargo +nightly llvm-cov $CARGO_ARGS --workspace --all-features --doctests --fail-under-lines 70
 
 echo "✅ All checks passed!"

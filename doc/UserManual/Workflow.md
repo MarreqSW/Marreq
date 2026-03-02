@@ -1,12 +1,12 @@
-# Typical Workflow with ReqMan
+# Typical Workflow with Marreq
 
-This document describes a **typical end-to-end workflow** for using ReqMan: from project setup through requirements, **test management**, traceability, approval, baselines, and export. For detailed steps on each screen, see the [User Manual](UserManual.md), in particular [Test Management](UserManual.md#5-test-management) and [Traceability Matrix](UserManual.md#6-traceability-matrix).
+This document describes a **typical end-to-end workflow** for using Marreq: from project setup through requirements, **test management**, traceability, approval, baselines, and export. For detailed steps on each screen, see the [User Manual](UserManual.md), in particular [Test Management](UserManual.md#5-test-management) and [Traceability Matrix](UserManual.md#6-traceability-matrix).
 
 ---
 
 ## Overview
 
-A common ReqMan workflow follows this sequence:
+A common Marreq workflow follows this sequence:
 
 1. **Set up the project** and configuration (categories, applicability, verification, requirement and **test statuses**).
 2. **Capture requirements** (create, optionally import, organize in hierarchy).
@@ -71,7 +71,7 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 
 - **Create requirements** one by one: **Requirements → New Requirement**. Fill in title, statement, rationale, category, status, applicability, verification method(s), and optionally parent requirement (for hierarchy) and reviewer.
 - **Or import** existing data:
-  - **Import File**: upload Excel/CSV, map columns to ReqMan fields, then run the import (see [User Manual – Import](UserManual.md#10-import)).
+  - **Import File**: upload Excel/CSV, map columns to Marreq fields, then run the import (see [User Manual – Import](UserManual.md#10-import)).
   - **Import ReqIF**: upload ReqIF 1.2 XML to bring in requirements (and optionally comments) from another tool.
 - **Refine**: use the **Requirements** list in card/table/tree view, filter by status/category/applicability, and **Edit** requirements to adjust content or set parent/child relationships.
 - **Optional**: use **Semantic Search (AI)** (if enabled) to find related requirements or answer questions over the requirement set.

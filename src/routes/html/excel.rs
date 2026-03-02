@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 #![allow(clippy::result_large_err)]
 
@@ -46,11 +46,11 @@ fn render_import_page_html(name: &str, project_id: i32, error_html: &str) -> Str
     <!doctype html>
     <html lang='en'>
     <head>
-        <title>ReqMan - Import File</title>
+        <title>Marreq - Import File</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link rel='stylesheet' href='/static/reqman.css'>
+        <link rel='stylesheet' href='/static/marreq.css'>
     </head>
     <body>
         <div class="container mt-4">
@@ -193,11 +193,11 @@ pub async fn upload_excel_file(
     <!doctype html>
     <html lang='en'>
     <head>
-        <title>ReqMan - Map Columns</title>
+        <title>Marreq - Map Columns</title>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link rel='stylesheet' href='/static/reqman.css'>
+        <link rel='stylesheet' href='/static/marreq.css'>
     </head>
     <body>
         <div class="container mt-4">
@@ -371,11 +371,11 @@ pub fn process_excel_import(
             <!doctype html>
             <html lang='en'>
             <head>
-                <title>ReqMan - Import Results</title>
+                <title>Marreq - Import Results</title>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-                <link rel='stylesheet' href='/static/reqman.css'>
+                <link rel='stylesheet' href='/static/marreq.css'>
             </head>
             <body>
                 <div class="container mt-4">
@@ -421,11 +421,11 @@ pub fn process_excel_import(
             <!doctype html>
             <html lang='en'>
             <head>
-                <title>ReqMan - Import Error</title>
+                <title>Marreq - Import Error</title>
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-                <link rel='stylesheet' href='/static/reqman.css'>
+                <link rel='stylesheet' href='/static/marreq.css'>
             </head>
             <body>
                 <div class="container mt-4">

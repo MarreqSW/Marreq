@@ -82,7 +82,7 @@
 }
 
 /* Status badge styling - now uses the same classes as Card and Table views */
-.c-tree__requirement-card .reqman-requirements-status-badge {
+.c-tree__requirement-card .marreq-requirements-status-badge {
   align-items: center;
   border-radius: var(--radius-xl);
   display: inline-flex;

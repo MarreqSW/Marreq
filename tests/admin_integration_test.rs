@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 #![cfg(feature = "test-helpers")]
 
@@ -12,16 +12,16 @@
 //! - Log viewing and export
 //! - Log cleanup
 
-use req_man::models::*;
+use marreq::models::*;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::Value;
 
 mod test_support {
     use super::*;
-    use req_man::app::AppState;
-    use req_man::auth::session::SESSION_COOKIE;
-    use req_man::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use marreq::app::AppState;
+    use marreq::auth::session::SESSION_COOKIE;
+    use marreq::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
     pub type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
@@ -39,12 +39,12 @@ mod test_support {
             .mount(
                 "/",
                 rocket::routes![
-                    req_man::routes::html::admin::admin_dashboard,
-                    req_man::routes::html::admin::admin_users_page,
-                    req_man::routes::html::admin::admin_backup_page,
-                    req_man::routes::html::logs::show_logs,
-                    req_man::routes::html::logs::export_logs,
-                    req_man::routes::html::logs::cleanup_logs
+                    marreq::routes::html::admin::admin_dashboard,
+                    marreq::routes::html::admin::admin_users_page,
+                    marreq::routes::html::admin::admin_backup_page,
+                    marreq::routes::html::logs::show_logs,
+                    marreq::routes::html::logs::export_logs,
+                    marreq::routes::html::logs::cleanup_logs
                 ],
             );
 

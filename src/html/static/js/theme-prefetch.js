@@ -1,7 +1,7 @@
 (function applyStoredTheme() {
   var theme = null;
   try {
-    theme = localStorage.getItem('reqman-theme');
+    theme = localStorage.getItem('marreq-theme');
   } catch (error) {
     theme = null;
   }

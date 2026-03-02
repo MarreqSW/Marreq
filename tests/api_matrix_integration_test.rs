@@ -207,7 +207,8 @@ use test_support::*;
 #[test]
 fn link_creates_new_matrix_entry() {
     let mut repo = base_repo();
-    repo.requirements.insert(5, sample_requirement(5, 1, "Req 5"));
+    repo.requirements
+        .insert(5, sample_requirement(5, 1, "Req 5"));
     repo.tests.insert(10, sample_test(10, 1, "Test 10"));
     let state = managed_state(repo);
     let service = MatrixService::new(&state);
@@ -227,8 +228,10 @@ fn link_creates_new_matrix_entry() {
 #[test]
 fn link_can_create_multiple_links() {
     let mut repo = base_repo();
-    repo.requirements.insert(1, sample_requirement(1, 1, "Req 1"));
-    repo.requirements.insert(2, sample_requirement(2, 1, "Req 2"));
+    repo.requirements
+        .insert(1, sample_requirement(1, 1, "Req 1"));
+    repo.requirements
+        .insert(2, sample_requirement(2, 1, "Req 2"));
     repo.tests.insert(1, sample_test(1, 1, "Test 1"));
     repo.tests.insert(2, sample_test(2, 1, "Test 2"));
     let state = managed_state(repo);
@@ -258,7 +261,8 @@ fn link_sets_correct_project_id() {
             owner_id: Some(1),
         },
     );
-    repo.requirements.insert(100, sample_requirement(100, 42, "Req 100"));
+    repo.requirements
+        .insert(100, sample_requirement(100, 42, "Req 100"));
     repo.tests.insert(200, sample_test(200, 42, "Test 200"));
     let state = managed_state(repo);
     let service = MatrixService::new(&state);

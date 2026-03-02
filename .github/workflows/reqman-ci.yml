@@ -100,7 +100,7 @@ jobs:
           tool: cargo-llvm-cov
 
       - name: Initialize database
-        run: ./scripts/setup_database.sh
+        run: ./scripts/db_setup.sh
 
       - name: Generate coverage reports
         run: |

@@ -32,22 +32,40 @@ use diesel::{
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-/// Convert a Diesel error to [`RepoError`], translating unique-constraint violations into
-/// the more descriptive [`RepoError::Duplicate`] variant.
-///
-/// The constraint name is inspected to produce a human-readable field name; unknown
-/// constraint names fall back to the raw Diesel error path.
-fn map_unique_violation(e: diesel::result::Error) -> RepoError {
+/// Map a Diesel DB error to the most specific [`RepoError`] variant:
+/// - `UniqueViolation`  → [`RepoError::Duplicate`] with a field-level message.
+/// - PL/pgSQL triggers  → [`RepoError::CrossProjectViolation`] when the message
+///   begins with the token `[cross_project]`.
+/// - Everything else    → [`RepoError::Db`] (the default `From` impl).
+fn map_db_error(e: diesel::result::Error) -> RepoError {
     use diesel::result::{DatabaseErrorKind, Error as DE};
-    if let DE::DatabaseError(DatabaseErrorKind::UniqueViolation, ref info) = e {
-        let field = match info.constraint_name().unwrap_or("") {
-            c if c.contains("username") => "username",
-            c if c.contains("email") => "email",
-            _ => "value",
-        };
-        return RepoError::Duplicate(format!("{} is already taken", field));
+    if let DE::DatabaseError(ref kind, ref info) = e {
+        match kind {
+            DatabaseErrorKind::UniqueViolation => {
+                let field = match info.constraint_name().unwrap_or("") {
+                    c if c.contains("username") => "username",
+                    c if c.contains("email") => "email",
+                    _ => "value",
+                };
+                return RepoError::Duplicate(format!("{} is already taken", field));
+            }
+            DatabaseErrorKind::Unknown => {
+                let msg = info.message();
+                if let Some(detail) = msg.strip_prefix("[cross_project]") {
+                    return RepoError::CrossProjectViolation(detail.trim().to_string());
+                }
+            }
+            _ => {}
+        }
     }
     e.into()
+}
+
+/// Compatibility alias kept so existing call-sites in identity-constraint code
+/// continue to compile without changes.
+#[inline]
+fn map_unique_violation(e: diesel::result::Error) -> RepoError {
+    map_db_error(e)
 }
 
 /// Database connection wrapper for use in Rocket handlers
@@ -1197,7 +1215,8 @@ impl RequirementsRepository for DieselRepo {
                     requirement_version_verification_methods::verification_method_id
                         .eq(verification_method_id),
                 ))
-                .execute(conn.as_mut())?;
+                .execute(conn.as_mut())
+                .map_err(map_db_error)?;
         }
         Ok(())
     }
@@ -1408,7 +1427,7 @@ impl RequirementVersionLinksRepository for DieselRepo {
             .values(new)
             .returning(schema::requirement_version_links::all_columns)
             .get_result(conn.as_mut())
-            .map_err(RepoError::from)
+            .map_err(map_db_error)
     }
 
     fn delete_requirement_version_link(
@@ -1651,7 +1670,8 @@ impl TestsCaseRepository for DieselRepo {
                         .execute(conn)?;
                 }
                 Ok(())
-            })?;
+            })
+            .map_err(map_db_error)?;
         Ok(())
     }
 }
@@ -1828,7 +1848,8 @@ impl MatrixRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         diesel::insert_into(schema::matrix::table)
             .values(new)
-            .execute(conn.as_mut())?;
+            .execute(conn.as_mut())
+            .map_err(map_db_error)?;
         Ok(())
     }
 
@@ -2040,7 +2061,8 @@ impl CustomFieldRepository for DieselRepo {
                     dsl::custom_field_definition_id.eq(field_id),
                     dsl::value.eq(value.as_deref()),
                 ))
-                .execute(conn.as_mut())?;
+                .execute(conn.as_mut())
+                .map_err(map_db_error)?;
         }
         Ok(())
     }

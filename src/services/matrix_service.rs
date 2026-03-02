@@ -116,6 +116,26 @@ impl<'a> MatrixService<'a> {
         id: i32,
         project_id: i32,
     ) -> Result<(), RepoError> {
+        // Validate project consistency before inserting (defence-in-depth; the DB
+        // trigger is the authoritative enforcement layer).
+        {
+            use crate::repository::RequirementsRepository;
+            let repo = self.state.repo_read();
+            let req = repo.get_requirement_by_id(requirement_id)?;
+            let test = repo.get_test_by_id(id)?;
+            if req.project_id != project_id {
+                return Err(RepoError::CrossProjectViolation(format!(
+                    "requirement {} belongs to project {} but link declares project_id={}",
+                    requirement_id, req.project_id, project_id
+                )));
+            }
+            if test.project_id != project_id {
+                return Err(RepoError::CrossProjectViolation(format!(
+                    "test {} belongs to project {} but link declares project_id={}",
+                    id, test.project_id, project_id
+                )));
+            }
+        }
         let payload = NewMatrixLink {
             req_id: requirement_id,
             test_id: id,
@@ -500,7 +520,48 @@ mod tests {
 
     #[test]
     fn link_inserts_new_matrix_entry() {
-        let repo = DieselRepoMock::default();
+        use crate::models::{Requirement, TestCase};
+        let mut repo = DieselRepoMock::default();
+        // Seed requirement 5 and test 6 in project 42 so the cross-project check passes.
+        repo.requirements.insert(
+            5,
+            Requirement {
+                id: 5,
+                current_version_id: None,
+                same_as_current: None,
+                title: "R5".to_string(),
+                description: String::new(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "R-005".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: None,
+                applicability_id: 1,
+                justification: None,
+                project_id: 42,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
+                custom_fields: None,
+            },
+        );
+        repo.tests.insert(
+            6,
+            TestCase {
+                id: 6,
+                name: "T6".to_string(),
+                reference_code: "TST-006".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: None,
+                project_id: 42,
+            },
+        );
         let state = state_with_repo(repo);
         let service = MatrixService::new(&state);
 
@@ -510,6 +571,119 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].req_id, 5);
         assert_eq!(entries[0].test_id, 6);
+    }
+
+    /// Requirement belongs to project 1, test to project 2 → must be rejected.
+    #[test]
+    fn link_rejects_requirement_from_different_project() {
+        use crate::models::{Requirement, TestCase};
+        use crate::repository::errors::RepoError;
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(
+            10,
+            Requirement {
+                id: 10,
+                current_version_id: None,
+                same_as_current: None,
+                title: "R10".to_string(),
+                description: String::new(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "R-010".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: None,
+                applicability_id: 1,
+                justification: None,
+                project_id: 1, // ← project 1
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
+                custom_fields: None,
+            },
+        );
+        repo.tests.insert(
+            20,
+            TestCase {
+                id: 20,
+                name: "T20".to_string(),
+                reference_code: "TST-020".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: None,
+                project_id: 2, // ← project 2
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        let err = service.link(&actor(), 10, 20, 1).unwrap_err();
+        assert!(
+            matches!(err, RepoError::CrossProjectViolation(_)),
+            "expected CrossProjectViolation, got {:?}",
+            err
+        );
+    }
+
+    /// project_id argument doesn't match the requirement's actual project.
+    #[test]
+    fn link_rejects_mismatched_project_id_argument() {
+        use crate::models::{Requirement, TestCase};
+        use crate::repository::errors::RepoError;
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(
+            1,
+            Requirement {
+                id: 1,
+                current_version_id: None,
+                same_as_current: None,
+                title: "R1".to_string(),
+                description: String::new(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "R-001".to_string(),
+                category_id: 1,
+                parent_id: None,
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: None,
+                applicability_id: 1,
+                justification: None,
+                project_id: 5,
+                approval_state: "draft".to_string(),
+                approved_by: None,
+                approved_at: None,
+                custom_fields: None,
+            },
+        );
+        repo.tests.insert(
+            1,
+            TestCase {
+                id: 1,
+                name: "T1".to_string(),
+                reference_code: "TST-001".to_string(),
+                description: String::new(),
+                source: String::new(),
+                status_id: 1,
+                parent_id: None,
+                project_id: 5,
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = MatrixService::new(&state);
+
+        // project_id=99 is wrong — requirement and test are both in project 5
+        let err = service.link(&actor(), 1, 1, 99).unwrap_err();
+        assert!(
+            matches!(err, RepoError::CrossProjectViolation(_)),
+            "expected CrossProjectViolation, got {:?}",
+            err
+        );
     }
 
     #[test]

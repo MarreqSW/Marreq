@@ -14,6 +14,7 @@ pub mod api;
 pub mod app;
 pub mod auth;
 pub mod config;
+pub mod db_types;
 pub mod diff;
 pub mod errors;
 pub mod fairings;

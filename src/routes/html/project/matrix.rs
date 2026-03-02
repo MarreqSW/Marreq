@@ -97,8 +97,11 @@ async fn get_matrix(
         view.total_pages,
     );
 
-    // Build final context
+    // Build final context; use route project_id for selected_project_id so matrix
+    // links and forms (e.g. clear suspect) always target the current project, not
+    // the cookie-selected project.
     let mut ctx = build_context_with_projects(state, user, cookies);
+    ctx["selected_project_id"] = json!(project_id);
     ctx["requirements"] = json!(requirements_with_matrix);
     ctx["tests"] = json!(tests_with_status);
     ctx["total_tests"] = json!(view.tests.len() as i32);

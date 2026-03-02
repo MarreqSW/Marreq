@@ -397,45 +397,12 @@ print_step "Step 6/7: Setting up PostgreSQL database..."
 
 cd "${PROJECT_ROOT}"
 
-# Start the database container
-print_info "Starting database container..."
-$DC up -d db
+# db_setup.sh handles: starting the container, waiting for pg_isready,
+# creating the database if absent, and applying all migrations via Diesel.
+bash "${SCRIPT_DIR}/db_setup.sh"
 
-# Wait for database to be ready
-print_info "Waiting for PostgreSQL to be ready..."
-DB_CID=$($DC ps -q db || true)
-MAX_RETRIES=30
-RETRY_COUNT=0
-until docker exec "${DB_CID}" pg_isready -U rust -q 2>/dev/null; do
-    RETRY_COUNT=$((RETRY_COUNT + 1))
-    if [[ ${RETRY_COUNT} -ge ${MAX_RETRIES} ]]; then
-        print_error "PostgreSQL failed to become ready after ${MAX_RETRIES} attempts."
-        exit 1
-    fi
-    echo "   Waiting for database... (attempt ${RETRY_COUNT}/${MAX_RETRIES})"
-    sleep 2
-done
-print_success "PostgreSQL is ready"
-
-# Run the database setup script
-if [[ -f "${SCRIPT_DIR}/setup_database.sh" ]]; then
-    print_info "Running database setup script..."
-    bash "${SCRIPT_DIR}/setup_database.sh"
-else
-    print_warning "Database setup script not found. Running minimal setup..."
-    
-    # Create database if it doesn't exist
-    if ! docker exec "${DB_CID}" psql -U rust -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='reqman'" | grep -q 1; then
-        docker exec "${DB_CID}" psql -U rust -d postgres -c "CREATE DATABASE reqman;"
-        print_success "Created 'reqman' database"
-    fi
-    
-    # Run migrations if diesel is available
-    if command -v diesel &> /dev/null; then
-        diesel migration run
-        print_success "Ran database migrations"
-    fi
-fi
+# Load demo/test data for the development environment
+bash "${SCRIPT_DIR}/db_seed.sh"
 
 print_success "Database setup complete"
 
@@ -534,7 +501,7 @@ echo ""
 echo -e "${BLUE}📖 Useful Commands:${NC}"
 echo "   • View logs:           $DC logs -f"
 echo "   • Stop database:       $DC down"
-echo "   • Reset database:      ./scripts/clear_database.sh && ./scripts/setup_database.sh"
+echo "   • Reset database:      ./scripts/db_reset.sh && ./scripts/db_setup.sh --seed"
 echo "   • Check Ollama:        ollama list"
 echo "   • Pull new model:      ollama pull <model_name>"
 echo ""

@@ -1,41 +1,163 @@
-# ReqMan Scripts
+# ReqMan Database Scripts
 
-This directory contains utility scripts for managing the ReqMan application database and testing components.
+This directory contains all scripts needed to set up, migrate, seed, and
+maintain the ReqMan database.  **Diesel is the single authority for schema
+management.**  No script in this directory applies DDL directly, all schema
+changes go through `migrations/`.
 
-## Scripts Overview
+---
 
-### 1. `setup_database.sh`
+## Prerequisites
 
-**Purpose**: Initialize or reset the ReqMan database with schema and sample data.
+| Requirement | Install command |
+|---|---|
+| Docker with Compose | https://docs.docker.com/compose/install/ |
+| `diesel` CLI | `cargo install diesel_cli --no-default-features --features postgres` |
+| `.env` file with `DATABASE_URL` | See example below |
 
-**What it does**:
-- Detects and uses either `docker compose` (v2) or `docker-compose` (legacy)
-- Verifies Docker daemon is running
-- Checks that the PostgreSQL database container (`db` service) is running
-- Waits for PostgreSQL to be ready to accept connections (up to 30 retries)
-- Creates the `reqman` database if it doesn't exist
-- Cleans existing tables (drops all ReqMan-related tables)
-- Initializes the database with complete schema and sample data from `scripts/init_complete.sql`
-- Verifies the setup by showing:
-  - Created tables
-  - Sample users (all with password: 'ChangeMe123!')
-  - Created projects
-  - Project memberships
-  - Data counts for each entity type
-
-**Usage**:
-```bash
-./scripts/setup_database.sh
+Minimum `.env`:
+```
+DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/reqman
 ```
 
-**Prerequisites**:
-- Docker must be running
-- Database service must be started: `docker compose up -d`
-- `scripts/init_complete.sql` must exist (or set `INIT_SQL` to a custom SQL file)
+---
 
-#### 👥 Pre-configured Users
+## Scripts at a Glance
 
-All users have password: `ChangeMe123!`
+| Script | Purpose |
+|---|---|
+| `db_setup.sh` | **Fresh install**, create DB + apply all migrations |
+| `db_seed.sh` | Load demo/test data (dev/testing only) |
+| `db_migrate.sh` | Apply or revert migrations after a version update |
+| `db_backup.sh` | Dump the database to a compressed archive |
+| `db_reset.sh` | Drop the database entirely (dev resets only) |
+| `lazy_setup.sh` | One-click developer bootstrap (full install) |
+| `reindex_project.sh` | Trigger semantic-search re-indexing via API |
+| `test_excel_parser.sh` | Integration test for the Excel parser binary |
+| `init_complete.sql` | Demo/test seed data (used by `db_seed.sh`) |
+
+---
+
+## Workflows
+
+### 1. First-time setup (recommended: Docker)
+
+```bash
+# 1. Start the database container, create the DB, apply all migrations
+./scripts/db_setup.sh
+
+# 2. (Optional) Load demo/test data
+./scripts/db_seed.sh
+
+# 3. Start ReqMan
+cargo run --bin req_man
+```
+
+`db_setup.sh` will:
+- Start the `db` Docker service if it is not running
+- Wait for PostgreSQL to be ready
+- Create the `reqman` database if it does not exist
+- Run `diesel migration run` (applies every migration in `migrations/` in order)
+
+### 2. Combined setup + seed in one command
+
+```bash
+./scripts/db_setup.sh --seed
+```
+
+### 3. Applying updates after pulling a new version
+
+```bash
+git pull
+./scripts/db_migrate.sh up
+cargo build --release
+```
+
+### 4. Rolling back a migration (development)
+
+```bash
+# Revert the most recent migration
+./scripts/db_migrate.sh down
+
+# Revert 2 migrations
+./scripts/db_migrate.sh down 2
+```
+
+### 5. Check migration status
+
+```bash
+./scripts/db_migrate.sh list
+```
+
+Output legend: `[X]` = applied, `[ ]` = pending.
+
+### 6. Backup before an update
+
+```bash
+# Save to ./backups/reqman_<timestamp>.sql.gz  (directory auto-created)
+./scripts/db_backup.sh
+
+# Custom output path
+./scripts/db_backup.sh /var/backups/reqman_prod.sql.gz
+```
+
+Restore:
+```bash
+gunzip -c backups/reqman_<timestamp>.sql.gz | \
+  docker exec -i <container> psql -U rust -d reqman
+```
+
+### 7. Full reset (development only)
+
+```bash
+# ⚠  Destroys all data
+./scripts/db_reset.sh             # drops the database
+./scripts/db_setup.sh --seed      # recreate and reload demo data
+```
+
+---
+
+## Working Without Docker (bare-metal PostgreSQL)
+
+Set `DATABASE_URL` to point at your server and ensure `psql` is in `PATH`.
+`db_setup.sh` detects the absence of Docker Compose and switches to a
+psql-based flow automatically:
+
+```bash
+export DATABASE_URL=postgres://myuser:mypass@myhost:5432/reqman
+./scripts/db_setup.sh
+```
+
+The same applies to `db_migrate.sh`, `db_seed.sh`, and `db_backup.sh`.
+
+---
+
+## How Migrations Work
+
+Schema is managed exclusively through Diesel migrations in `migrations/`.
+
+| Migration | Description |
+|---|---|
+| `2026-01-31-000001_baseline_schema` | Full initial schema (all tables, indexes, triggers) |
+
+Diesel tracks applied migrations in the `__diesel_schema_migrations` table.
+Running `diesel migration run` (or `db_migrate.sh up`) is idempotent, already
+applied migrations are skipped.
+
+To add a new migration:
+```bash
+diesel migration generate <migration_name>
+# Edit migrations/<timestamp>_<name>/up.sql and down.sql
+./scripts/db_migrate.sh up
+```
+
+---
+
+## Demo Data (`init_complete.sql`)
+
+`db_seed.sh` executes `init_complete.sql`, which inserts:
+
+**Users** (all passwords: `ChangeMe123!`):
 
 | Username | Name | Role | Project |
 |----------|------|------|---------|
@@ -46,98 +168,31 @@ All users have password: `ChangeMe123!`
 | `qa_wilson` | QA Specialist Tom Wilson | User | Space Project |
 | `admin` | System Administrator | Admin | ReqMan Project |
 
+**Projects**: Space Project, ReqMan Project, Empty Project
+
+The seed file also includes sample requirements, tests, matrix traceability,
+custom fields, and logs.  It refuses to run if the schema is not present or
+if data already exists.
 
 ---
 
-### 2. `clear_database.sh`
+## Utility Scripts
 
-**Purpose**: Completely remove the ReqMan database and clean up all associated objects.
+### `reindex_project.sh`
 
-**What it does**:
-- Detects and uses either `docker compose` (v2) or `docker-compose` (legacy)
-- Verifies Docker daemon is running
-- Checks that the PostgreSQL database container (`db` service) is running
-- Drops the `reqman` database forcefully (terminates all connections)
-- Cleans up any leftover objects owned by the `rust` user
-- Verifies that the database has been successfully removed
+Triggers semantic-search re-indexing for a project via the REST API.
+Useful after bulk-importing requirements or if the embedding index is stale.
 
-**Usage**:
 ```bash
-./scripts/clear_database.sh
+./scripts/reindex_project.sh
+# Prompts for URL, username, password, and project ID
 ```
 
-**Prerequisites**:
-- Docker must be running
-- Database service must be started: `docker compose up -d`
+### `test_excel_parser.sh`
 
-**Warning**: This script permanently deletes all data in the `reqman` database. Use with caution!
+Integration test for the Excel parser binary.  Requires a running ReqMan
+server at `http://127.0.0.1:8000`.
 
----
-
-### 3. `test_excel_parser.sh`
-
-**Purpose**: Test the Excel parser component by downloading exports from ReqMan and parsing them.
-
-**What it does**:
-- Checks if the ReqMan server is running on `http://127.0.0.1:8000`
-- Creates a `test_exports/` directory
-- Downloads Excel exports from the running server:
-  - `requirements.xls` - All requirements
-  - `tests.xls` - All tests
-  - `matrix.xls` - Requirements-tests matrix
-- Tests parsing of requirements and tests files (dry run mode)
-- Generates JSON files from the Excel exports:
-  - `requirements.json`
-  - `tests.json`
-- Lists all generated files
-
-**Usage**:
 ```bash
 ./scripts/test_excel_parser.sh
 ```
-
-**Prerequisites**:
-- ReqMan server must be running: `cargo run --bin req_man`
-- Excel parser must be built: `cd excel_parser && cargo build --release`
-
-**Output**: Generated files are saved in the `test_exports/` directory.
-
----
-
-## Common Workflow
-
-### Initial Setup
-1. Start Docker services: `docker compose up -d`
-2. Initialize the database: `./scripts/setup_database.sh`
-3. Start the application: `cargo run --bin req_man`
-
-### Reset Database
-1. Clear existing database: `./scripts/clear_database.sh`
-2. Reinitialize: `./scripts/setup_database.sh`
-
-### Test Excel Parser
-1. Ensure ReqMan is running with data
-2. Run the test script: `./scripts/test_excel_parser.sh`
-3. Check generated files in `test_exports/`
-
----
-
-## Error Handling
-
-All scripts include:
-- Exit on error with `set -euo pipefail`
-- Clear error messages with ❌ indicators
-- Success confirmations with ✅ indicators
-- Prerequisite checks before executing main logic
-
-## Environment Variables
-
-### `setup_database.sh`
-- `INIT_SQL`: Path to the SQL initialization file (default: `init_complete.sql`)
-
-## Notes
-
-- All scripts detect Docker Compose version automatically (v2 or legacy)
-- Scripts use color-coded emoji indicators for better readability
-- Database scripts require the `db` service to be running before execution
-- The test script requires a running ReqMan server instance

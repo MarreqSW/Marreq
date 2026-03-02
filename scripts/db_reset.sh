@@ -1,8 +1,19 @@
 #!/bin/bash
 set -euo pipefail
 
+# db_reset.sh — Drop the ReqMan database entirely
+#
+# ⚠  DESTRUCTIVE — permanently deletes all data.  Use for development resets.
+#
+# Typical workflow after this script:
+#   ./scripts/db_setup.sh        # re-apply schema via Diesel
+#   ./scripts/db_seed.sh         # optionally reload demo/test data
+#
+# Prerequisites:
+#   • Docker running with the 'db' service up.
+
 echo "=========================================="
-echo "ReqMan Database Cleanup Script"
+echo "ReqMan — Database Reset (DROP DATABASE)"
 echo "=========================================="
 echo ""
 

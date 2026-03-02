@@ -119,6 +119,10 @@ impl From<ApiError> for Status {
             ApiError::Validation(_) => Status::BadRequest,
             ApiError::Authentication(_) => Status::Unauthorized,
             ApiError::Authorization(_) => Status::Forbidden,
+            // Unique constraint violations → 409 Conflict
+            ApiError::Repository(crate::repository::errors::RepoError::Duplicate(_)) => {
+                Status::Conflict
+            }
             ApiError::Database(_) | ApiError::Repository(_) | ApiError::Internal(_) => {
                 Status::InternalServerError
             }

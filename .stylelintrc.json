@@ -3,10 +3,10 @@
   "plugins": ["stylelint-order"],
   "rules": {
     "selector-class-pattern": [
-      "^(?:reqman|c|o|u|is|has|status|js)-[a-z0-9]+(?:-[a-z0-9]+)*(?:__(?:[a-z0-9]+(?:-[a-z0-9]+)*))?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$",
+      "^(?:marreq|c|o|u|is|has|status|js)-[a-z0-9]+(?:-[a-z0-9]+)*(?:__(?:[a-z0-9]+(?:-[a-z0-9]+)*))?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$",
       {
         "resolveNestedSelectors": true,
-        "message": "Use kebab-case with optional BEM, prefixed by reqman-|c-|o-|u-|is-|has-|status-|js-."
+        "message": "Use kebab-case with optional BEM, prefixed by marreq-|c-|o-|u-|is-|has-|status-|js-."
       }
     ],
     "selector-max-specificity": "0,3,0",

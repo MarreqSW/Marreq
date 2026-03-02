@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 use std::collections::HashMap;
 
@@ -607,7 +607,7 @@ mod tests {
             new_values: None,
             description: Some("Created project".into()),
             ip_address: Some("127.0.0.1".into()),
-            user_agent: Some("reqman-test".into()),
+            user_agent: Some("marreq-test".into()),
             created_at: timestamp(),
         }
     }

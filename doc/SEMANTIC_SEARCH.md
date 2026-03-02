@@ -1,6 +1,6 @@
 # Semantic Search (AI) — Setup + Internals
 
-ReqMan includes an optional **semantic search** feature for requirements:
+Marreq includes an optional **semantic search** feature for requirements:
 - **Hybrid search**: lexical full‑text search + vector similarity search
 - **RAG answers**: optional AI answers grounded in your requirements with citations
 - **Automatic indexing**: new/updated requirements are queued for embedding generation
@@ -30,9 +30,9 @@ This project uses migrations for schema and `init_complete.sql` for sample data:
 Manual equivalent:
 
 ```bash
-docker exec -i $(docker compose ps -q db) psql -U rust -d postgres -c "CREATE DATABASE reqman;"
-DATABASE_URL='postgres://rust:rust@localhost:5432/reqman' diesel migration run
-docker exec -i $(docker compose ps -q db) psql -U rust -d reqman < scripts/init_complete.sql
+docker exec -i $(docker compose ps -q db) psql -U rust -d postgres -c "CREATE DATABASE marreq;"
+DATABASE_URL='postgres://rust:rust@localhost:5432/Marreq' diesel migration run
+docker exec -i $(docker compose ps -q db) psql -U rust -d marreq < scripts/init_complete.sql
 ```
 
 ### 3) Install and run Ollama
@@ -63,10 +63,10 @@ RAG_ENABLED=true
 RAG_MODEL=llama3.2
 ```
 
-### 6) Start ReqMan
+### 6) Start Marreq
 
 ```bash
-cargo run --bin req_man
+cargo run --bin marreq
 ```
 
 ### 7) One-time reindex (for existing requirements)
@@ -84,18 +84,18 @@ curl -X POST http://localhost:8000/api/projects/1/requirements/reindex \
 
 ### Hybrid retrieval
 
-ReqMan combines:
+Marreq combines:
 1) **Lexical search** via Postgres full‑text search (`tsvector`)
 2) **Vector search** via pgvector cosine similarity over embeddings
 3) **Fusion** using Reciprocal Rank Fusion (RRF)
 
 ### RAG answers
 
-When enabled, ReqMan can generate an answer by:
+When enabled, Marreq can generate an answer by:
 1) retrieving top‑K relevant requirements, then
 2) asking an Ollama LLM to answer using that retrieved context.
 
-ReqMan attempts to extract citations like `[REQ-123]` from the answer.
+Marreq attempts to extract citations like `[REQ-123]` from the answer.
 
 ---
 
@@ -191,7 +191,7 @@ The lexical pass ranks requirements using Postgres full‑text search:
 - ranks via `ts_rank_cd(search_vector, to_tsquery(...))`
 - filters via `search_vector @@ to_tsquery(...)`
 
-ReqMan builds an OR‑based `tsquery` string for “question-like” inputs:
+Marreq builds an OR‑based `tsquery` string for “question-like” inputs:
 - splits words
 - drops short words and a small stop-word list
 - adds `:*` prefix matching
@@ -205,13 +205,13 @@ The vector pass:
 
 ### 3) Fusion (RRF)
 
-ReqMan combines the two ranked lists using Reciprocal Rank Fusion:
+Marreq combines the two ranked lists using Reciprocal Rank Fusion:
 - contribution is `1 / (RRF_K + rank)` with `RRF_K = 60`
 - avoids mixing raw lexical/vectors scores directly (no scale matching problems)
 
 ### 4) Reference-code shortcut
 
-If the query looks like a reference code (dash + digits), ReqMan short-circuits to a direct lookup.
+If the query looks like a reference code (dash + digits), Marreq short-circuits to a direct lookup.
 
 ---
 

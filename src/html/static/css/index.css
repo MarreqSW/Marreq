@@ -1,5 +1,5 @@
 /* 
- * ReqMan frontend stylesheet entry point.
+ * Marreq frontend stylesheet entry point.
  * Maintains ITCSS-inspired layer ordering from low-level tokens to page overrides.
  */
 @import url('./00-settings/tokens.css');

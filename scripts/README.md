@@ -1,7 +1,7 @@
-# ReqMan Database Scripts
+# Marreq Database Scripts
 
 This directory contains all scripts needed to set up, migrate, seed, and
-maintain the ReqMan database.  **Diesel is the single authority for schema
+maintain the Marreq database.  **Diesel is the single authority for schema
 management.**  No script in this directory applies DDL directly, all schema
 changes go through `migrations/`.
 
@@ -17,7 +17,7 @@ changes go through `migrations/`.
 
 Minimum `.env`:
 ```
-DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/reqman
+DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/marreq
 ```
 
 ---
@@ -49,14 +49,14 @@ DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/reqman
 # 2. (Optional) Load demo/test data
 ./scripts/db_seed.sh
 
-# 3. Start ReqMan
+# 3. Start Marreq
 cargo run --bin req_man
 ```
 
 `db_setup.sh` will:
 - Start the `db` Docker service if it is not running
 - Wait for PostgreSQL to be ready
-- Create the `reqman` database if it does not exist
+- Create the `marreq` database if it does not exist
 - Run `diesel migration run` (applies every migration in `migrations/` in order)
 
 ### 2. Combined setup + seed in one command
@@ -94,17 +94,17 @@ Output legend: `[X]` = applied, `[ ]` = pending.
 ### 6. Backup before an update
 
 ```bash
-# Save to ./backups/reqman_<timestamp>.sql.gz  (directory auto-created)
+# Save to ./backups/marreq_<timestamp>.sql.gz  (directory auto-created)
 ./scripts/db_backup.sh
 
 # Custom output path
-./scripts/db_backup.sh /var/backups/reqman_prod.sql.gz
+./scripts/db_backup.sh /var/backups/marreq_prod.sql.gz
 ```
 
 Restore:
 ```bash
-gunzip -c backups/reqman_<timestamp>.sql.gz | \
-  docker exec -i <container> psql -U rust -d reqman
+gunzip -c backups/marreq_<timestamp>.sql.gz | \
+  docker exec -i <container> psql -U rust -d marreq
 ```
 
 ### 7. Full reset (development only)
@@ -124,7 +124,7 @@ Set `DATABASE_URL` to point at your server and ensure `psql` is in `PATH`.
 psql-based flow automatically:
 
 ```bash
-export DATABASE_URL=postgres://myuser:mypass@myhost:5432/reqman
+export DATABASE_URL=postgres://myuser:mypass@myhost:5432/marreq
 ./scripts/db_setup.sh
 ```
 
@@ -161,14 +161,14 @@ diesel migration generate <migration_name>
 
 | Username | Name | Role | Project |
 |----------|------|------|---------|
-| `alice` | Alice Johnson | Admin | ReqMan Project |
+| `alice` | Alice Johnson | Admin | Marreq Project |
 | `dr_smith` | Dr. Sarah Smith | Admin | Space Project |
 | `eng_jones` | Engineer Mike Jones | User | Space Project |
 | `tech_lee` | Technician Lisa Lee | User | Space Project |
 | `qa_wilson` | QA Specialist Tom Wilson | User | Space Project |
-| `admin` | System Administrator | Admin | ReqMan Project |
+| `admin` | System Administrator | Admin | Marreq Project |
 
-**Projects**: Space Project, ReqMan Project, Empty Project
+**Projects**: Space Project, Marreq Project, Empty Project
 
 The seed file also includes sample requirements, tests, matrix traceability,
 custom fields, and logs.  It refuses to run if the schema is not present or
@@ -190,7 +190,7 @@ Useful after bulk-importing requirements or if the embedding index is stale.
 
 ### `test_excel_parser.sh`
 
-Integration test for the Excel parser binary.  Requires a running ReqMan
+Integration test for the Excel parser binary.  Requires a running Marreq
 server at `http://127.0.0.1:8000`.
 
 ```bash

@@ -635,7 +635,7 @@ describe('Requirement Form', () => {
 
     it('should restore draft from localStorage', async () => {
       const projectId = '1';
-      const storageKey = `reqman:newRequirement:${projectId}`;
+      const storageKey = `marreq:newRequirement:${projectId}`;
       
       localStorage.setItem(storageKey, JSON.stringify({
         savedAt: Date.now(),
@@ -682,7 +682,7 @@ describe('Requirement Form', () => {
       const { init: initForm } = await import('@pages/requirementForm.js');
       initForm();
 
-      const storageKey = `reqman:newRequirement:${projectId}`;
+      const storageKey = `marreq:newRequirement:${projectId}`;
       
       // First verify autosave is initialized by checking storage is initially empty
       expect(localStorage.getItem(storageKey)).toBeNull();
@@ -705,7 +705,7 @@ describe('Requirement Form', () => {
 
     it('should clear draft on form submit', async () => {
       const projectId = '1';
-      const storageKey = `reqman:newRequirement:${projectId}`;
+      const storageKey = `marreq:newRequirement:${projectId}`;
       
       localStorage.setItem(storageKey, JSON.stringify({
         savedAt: Date.now(),

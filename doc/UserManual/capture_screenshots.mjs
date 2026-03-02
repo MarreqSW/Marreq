@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Capture screenshots for the ReqMan User Manual.
- * Run with the ReqMan app and DB up: cargo run --bin req_man (and docker compose up -d db, setup_database.sh).
+ * Capture screenshots for the Marreq User Manual.
+ * Run with the Marreq app and DB up: cargo run --bin marreq (and docker compose up -d db, setup_database.sh).
  * Then: node doc/UserManual/capture_screenshots.mjs
  * Or: node capture_screenshots.mjs from doc/UserManual.
  *
@@ -15,9 +15,9 @@ import { mkdir } from 'fs/promises';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, 'screenshots');
-const BASE_URL = process.env.REQMAN_URL || 'http://localhost:8000';
-const USER = process.env.REQMAN_USER || 'alice';
-const PASS = process.env.REQMAN_PASS || 'ChangeMe123!';
+const BASE_URL = process.env.MARREQ_URL || 'http://localhost:8000';
+const USER = process.env.MARREQ_USER || 'alice';
+const PASS = process.env.MARREQ_PASS || 'ChangeMe123!';
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });

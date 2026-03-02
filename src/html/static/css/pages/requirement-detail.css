@@ -28,7 +28,7 @@
    REQUIREMENT DETAIL PAGE ROOT
    ============================================================ */
 
-.reqman-requirement-detail-page {
+.marreq-requirement-detail-page {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
@@ -37,7 +37,7 @@
 }
 
 @media (min-width: 1024px) {
-  .reqman-requirement-detail-page {
+  .marreq-requirement-detail-page {
     gap: var(--space-8);
     padding-block: var(--space-8);
   }
@@ -47,7 +47,7 @@
    HEADER SECTION - Main requirement information
    ============================================================ */
 
-.reqman-requirement-header {
+.marreq-requirement-header {
   background: linear-gradient(135deg, var(--surface-color), var(--surface-accent));
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -56,22 +56,22 @@
   transition: box-shadow var(--transition-base);
 }
 
-.reqman-requirement-header:hover {
+.marreq-requirement-header:hover {
   box-shadow: var(--shadow-lg);
 }
 
-.reqman-requirement-header__body {
+.marreq-requirement-header__body {
   padding: var(--space-6);
 }
 
 @media (min-width: 768px) {
-  .reqman-requirement-header__body {
+  .marreq-requirement-header__body {
     padding: var(--space-8);
   }
 }
 
 @media (min-width: 1024px) {
-  .reqman-requirement-header__body {
+  .marreq-requirement-header__body {
     padding: calc(var(--space-8) * 1.5);
   }
 }
@@ -80,7 +80,7 @@
    STATEMENT CARD - Highlighted requirement statement
    ============================================================ */
 
-.reqman-requirement-statement-card {
+.marreq-requirement-statement-card {
   background: linear-gradient(145deg, var(--surface-color), rgb(248 250 252 / 0.6));
   border: 2px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -89,19 +89,19 @@
   position: relative;
 }
 
-[data-theme='dark'] .reqman-requirement-statement-card {
+[data-theme='dark'] .marreq-requirement-statement-card {
   background: linear-gradient(145deg, var(--surface-color), rgb(15 23 42 / 0.8));
   border-color: var(--border-color);
   box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.3);
 }
 
 @media (min-width: 768px) {
-  .reqman-requirement-statement-card {
+  .marreq-requirement-statement-card {
     padding: var(--space-8);
   }
 }
 
-.reqman-requirement-header__statement {
+.marreq-requirement-header__statement {
   color: var(--text-primary);
   font-weight: 400;
   line-height: 1.6;
@@ -111,20 +111,20 @@
    DETAIL GRID - Main content and sidebar layout
    ============================================================ */
 
-.reqman-requirement-detail-grid {
+.marreq-requirement-detail-grid {
   display: grid;
   gap: var(--space-6);
   grid-template-columns: 1fr;
 }
 
 @media (min-width: 1024px) {
-  .reqman-requirement-detail-grid {
+  .marreq-requirement-detail-grid {
     gap: var(--space-8);
     grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
   }
 }
 
-.reqman-requirement-detail-main {
+.marreq-requirement-detail-main {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
@@ -132,19 +132,19 @@
 }
 
 @media (min-width: 1024px) {
-  .reqman-requirement-detail-main {
+  .marreq-requirement-detail-main {
     gap: var(--space-6);
   }
 }
 
-.reqman-requirement-detail-sidebar {
+.marreq-requirement-detail-sidebar {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
 }
 
 @media (min-width: 1024px) {
-  .reqman-requirement-detail-sidebar {
+  .marreq-requirement-detail-sidebar {
     gap: var(--space-6);
   }
 }
@@ -159,7 +159,7 @@
    AVATAR COMPONENTS
    ============================================================ */
 
-.reqman-requirement-avatar {
+.marreq-requirement-avatar {
   align-items: center;
   border-radius: 50%;
   display: inline-flex;
@@ -184,25 +184,25 @@
    ============================================================ */
 
 @media (max-width: 768px) {
-  .reqman-requirement-detail-page {
+  .marreq-requirement-detail-page {
     gap: var(--space-4);
     padding-block: var(--space-4);
   }
 
-  .reqman-requirement-header__body {
+  .marreq-requirement-header__body {
     padding: var(--space-4);
   }
 
-  .reqman-requirement-statement-card {
+  .marreq-requirement-statement-card {
     padding: var(--space-4);
   }
 
-  .reqman-requirement-detail-grid {
+  .marreq-requirement-detail-grid {
     gap: var(--space-4);
   }
 
-  .reqman-requirement-detail-main,
-  .reqman-requirement-detail-sidebar {
+  .marreq-requirement-detail-main,
+  .marreq-requirement-detail-sidebar {
     gap: var(--space-4);
   }
 }
@@ -236,7 +236,7 @@
    ANIMATIONS
    ============================================================ */
 
-@keyframes reqman-requirement-detail-fade-in {
+@keyframes marreq-requirement-detail-fade-in {
   from {
     opacity: 0;
     transform: translateY(12px);
@@ -248,16 +248,16 @@
   }
 }
 
-.reqman-requirement-detail-page > .reqman-requirement-header,
-.reqman-requirement-detail-page > .reqman-requirement-detail-grid {
-  animation: reqman-requirement-detail-fade-in 0.3s ease-out backwards;
+.marreq-requirement-detail-page > .marreq-requirement-header,
+.marreq-requirement-detail-page > .marreq-requirement-detail-grid {
+  animation: marreq-requirement-detail-fade-in 0.3s ease-out backwards;
 }
 
-.reqman-requirement-detail-page > .reqman-requirement-header {
+.marreq-requirement-detail-page > .marreq-requirement-header {
   animation-delay: 0ms;
 }
 
-.reqman-requirement-detail-page > .reqman-requirement-detail-grid {
+.marreq-requirement-detail-page > .marreq-requirement-detail-grid {
   animation-delay: 50ms;
 }
 
@@ -266,21 +266,21 @@
    ============================================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  .reqman-requirement-detail-page {
+  .marreq-requirement-detail-page {
     animation-delay: 0ms;
     animation-duration: 0.01ms;
     transition-duration: 0.01ms;
   }
 
-  .reqman-requirement-detail-page > .reqman-requirement-header,
-  .reqman-requirement-detail-page > .reqman-requirement-detail-grid {
+  .marreq-requirement-detail-page > .marreq-requirement-header,
+  .marreq-requirement-detail-page > .marreq-requirement-detail-grid {
     animation: none;
   }
 }
 
 /* Focus visible for keyboard navigation */
-.reqman-requirement-header button:focus-visible,
-.reqman-requirement-relationship-link:focus-visible {
+.marreq-requirement-header button:focus-visible,
+.marreq-requirement-relationship-link:focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
 }
@@ -289,27 +289,27 @@
    APPROVAL WORKFLOW - Badges and section
    ============================================================ */
 
-.reqman-approval-section {
+.marreq-approval-section {
   border-bottom: 1px solid var(--border-color);
   padding: var(--space-3) 0;
 }
 
-.reqman-approval-badge {
+.marreq-approval-badge {
   font-weight: 600;
   text-transform: capitalize;
 }
 
-.reqman-approval-badge--draft {
+.marreq-approval-badge--draft {
   background-color: #6c757d;
   color: #fff;
 }
 
-.reqman-approval-badge--reviewed {
+.marreq-approval-badge--reviewed {
   background-color: #ffc107;
   color: #000;
 }
 
-.reqman-approval-badge--approved {
+.marreq-approval-badge--approved {
   background-color: #198754;
   color: #fff;
 }
@@ -327,11 +327,11 @@
    ============================================================ */
 
 @media print {
-  .reqman-requirement-detail-page {
+  .marreq-requirement-detail-page {
     padding: 0;
   }
 
-  .reqman-requirement-header {
+  .marreq-requirement-header {
     box-shadow: none;
   }
 }

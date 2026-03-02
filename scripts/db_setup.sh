@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-# db_setup.sh — Fresh database setup for ReqMan
+# db_setup.sh — Fresh database setup for Marreq
 #
-# Creates the reqman database (if absent) and applies all pending migrations
+# Creates the marreq database (if absent) and applies all pending migrations
 # using Diesel.  Diesel is the single authority for schema management; no
 # manual DDL is executed by this script.
 #
@@ -17,7 +17,7 @@ set -euo pipefail
 #   • diesel CLI installed:
 #       cargo install diesel_cli --no-default-features --features postgres
 #   • DATABASE_URL in .env or environment
-#       default: postgres://rust:rust@127.0.0.1:5432/reqman
+#       default: postgres://rust:rust@127.0.0.1:5432/marreq
 #
 # For non-Docker (bare-metal) setups, ensure DATABASE_URL points to your
 # server and that psql is available in PATH.  The script auto-detects whether
@@ -44,7 +44,7 @@ error()   { echo -e "${RED}❌ $*${NC}" >&2; exit 1; }
 
 echo -e "${BLUE}"
 echo "==========================================="
-echo "   ReqMan — Database Setup"
+echo "   Marreq — Database Setup"
 echo "==========================================="
 echo -e "${NC}"
 
@@ -55,7 +55,7 @@ if [[ -f "${PROJECT_ROOT}/.env" ]]; then
 fi
 
 # Default credentials — must match docker-compose.yml
-DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/reqman}"
+DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/marreq}"
 DB_USER="${DATABASE_URL%@*}"           # strip host/port/db
 DB_USER="${DB_USER##*:}"              # strip scheme and name, keep password
 DB_USER="${DATABASE_URL#*://}"        # scheme://user:pass@...
@@ -163,7 +163,7 @@ echo "Next steps:"
 if [[ "${SEED}" == "false" ]]; then
   echo "  Load demo/test data : ./scripts/db_seed.sh"
 fi
-echo "  Start ReqMan        : cargo run --bin req_man"
+echo "  Start Marreq        : cargo run --bin marreq"
 echo "  Apply future updates: ./scripts/db_migrate.sh up"
 echo "  Backup database     : ./scripts/db_backup.sh"
 echo -e "${BLUE}───────────────────────────────────────────────${NC}"

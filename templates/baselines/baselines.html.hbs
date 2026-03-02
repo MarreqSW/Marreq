@@ -1,18 +1,18 @@
 {{!-- Baselines list for a project --}}
 {{#*inline "page"}}
-<section class="reqman-list-page">
-  <div class="reqman-list-page__header">
-    <h1 class="reqman-list-page__title">Baselines</h1>
+<section class="marreq-list-page">
+  <div class="marreq-list-page__header">
+    <h1 class="marreq-list-page__title">Baselines</h1>
     <a href="/p/{{selected_project_id}}/baselines/new" class="btn btn-primary">New Baseline</a>
   </div>
 
   <p class="text-secondary mb-3">Immutable snapshots of requirements and traceability. Create a baseline to capture the current state for export or comparison.</p>
 
-  <div class="reqman-list-page__list" id="baseline-list">
+  <div class="marreq-list-page__list" id="baseline-list">
     {{#each baselines}}
       {{> baselines/baseline_item}}
     {{else}}
-      <p class="reqman-list-page__empty">No baselines yet. Create one to snapshot current requirements and traceability.</p>
+      <p class="marreq-list-page__empty">No baselines yet. Create one to snapshot current requirements and traceability.</p>
     {{/each}}
   </div>
 </section>

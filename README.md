@@ -1,4 +1,4 @@
-# Requirement Manager (ReqMan)
+# Requirement Manager (Marreq)
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/972f03dc70864d4e807afd7d2adcd1b0)](https://app.codacy.com?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
@@ -52,10 +52,10 @@ A comprehensive web-based requirements and test management system built with Rus
 - **API tokens**: Bearer token auth for headless clients (e.g. MCP); tokens can be scoped to a project (see [MCP Setup](doc/MCP_SETUP.md))
 
 ### 🤖 MCP (Model Context Protocol)
-- **MCP server**: Optional TypeScript MCP server in `mcp-server/` that exposes ReqMan data as MCP tools for AI assistants (Cursor, Claude, etc.). Talks to the ReqMan REST API with Bearer token; all tools are project-scoped.
+- **MCP server**: Optional TypeScript MCP server in `mcp-server/` that exposes Marreq data as MCP tools for AI assistants (Cursor, Claude, etc.). Talks to the Marreq REST API with Bearer token; all tools are project-scoped.
 - **Read-only (default)**: get_requirement, list_requirements, get_versions, compare_versions, trace_up, trace_down, coverage_report, get_baseline, diff_baselines.
-- **Phase 2 (draft_write)**: When `REQMAN_MODE=draft_write`, additional tools: create_requirement, patch_requirement, set_approval, create_baseline.
-- **Audit**: Every tool call is logged to ReqMan (POST /api/mcp/audit) for compliance.
+- **Phase 2 (draft_write)**: When `MARREQ_MODE=draft_write`, additional tools: create_requirement, patch_requirement, set_approval, create_baseline.
+- **Audit**: Every tool call is logged to Marreq (POST /api/mcp/audit) for compliance.
 - See [MCP Setup](doc/MCP_SETUP.md) for environment variables, tool list, and how to run the server.
 
 ### ✅ Requirement approval workflow (UI)
@@ -130,7 +130,7 @@ For a fully initialized database with pre-configured users and sample data, use 
 Typical flow:
 - Start database: `docker compose up -d db`
 - Initialize DB with sample data: `./scripts/setup_database.sh`
-- Start app: `cargo run --bin req_man`
+- Start app: `cargo run --bin marreq`
 
 Then open **http://localhost:8000** in your browser (demo admin user `alice` uses password `ChangeMe123!`).
 
@@ -318,7 +318,7 @@ diesel migration redo
 
 ### Project Structure
 ```
-ReqMan/
+Marreq/
 ├── src/
 │   ├── main.rs              # Application entry point
 │   ├── models.rs            # Data models
@@ -385,10 +385,10 @@ This project is open source. See LICENSE file for details.
 #### Database Connection Issues
 ```bash
 # Check if database container is running
-docker ps | grep reqman_db_1
+docker ps | grep Marreq_db_1
 
 # Check database connectivity
-docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT 1;"
+docker exec Marreq_db_1 psql -U rust -d marreq -c "SELECT 1;"
 
 # Restart database container
 docker-compose restart
@@ -405,7 +405,7 @@ lsof -i :8000
 kill <PID>
 
 # Start application with specific binary
-cargo run --bin req_man
+cargo run --bin marreq
 ```
 
 #### Login Issues
@@ -416,7 +416,7 @@ cargo run --bin req_man
 #### Database Reset
 ```bash
 # Complete database reset
-docker exec reqman_db_1 psql -U rust -d postgres -c "DROP DATABASE IF EXISTS reqman;"
+docker exec Marreq_db_1 psql -U rust -d postgres -c "DROP DATABASE IF EXISTS marreq;"
 ./scripts/setup_database.sh
 ```
 
@@ -424,13 +424,13 @@ docker exec reqman_db_1 psql -U rust -d postgres -c "DROP DATABASE IF EXISTS req
 
 ```bash
 # Verify database setup
-docker exec reqman_db_1 psql -U rust -d reqman -c "\dt"
+docker exec Marreq_db_1 psql -U rust -d marreq -c "\dt"
 
 # Check user creation
-docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT username, name, is_admin FROM users;"
+docker exec Marreq_db_1 psql -U rust -d marreq -c "SELECT username, name, is_admin FROM users;"
 
 # Verify sample data
-docker exec reqman_db_1 psql -U rust -d reqman -c "SELECT COUNT(*) as requirements FROM requirements;"
+docker exec Marreq_db_1 psql -U rust -d marreq -c "SELECT COUNT(*) as requirements FROM requirements;"
 ```
 
 ### Performance Issues

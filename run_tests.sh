@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Running all ReqMan tests..."
+echo "🚀 Running all Marreq tests..."
 echo "----------------------------------------"
 
 # Run tests and capture output while also showing it

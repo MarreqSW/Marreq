@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 #![cfg(feature = "test-helpers")]
 
@@ -16,8 +16,8 @@
 //! These tests document the expected behavior when constraints ARE enforced by a real database.
 //! In a real database, these operations would return BadRequest errors for constraint violations.
 
-use req_man::models::*;
-use req_man::status_enums::ProjectStatus;
+use marreq::models::*;
+use marreq::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::json;
@@ -25,9 +25,9 @@ use serde_json::json;
 mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
-    use req_man::app::AppState;
-    use req_man::auth::session::SESSION_COOKIE;
-    use req_man::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use marreq::app::AppState;
+    use marreq::auth::session::SESSION_COOKIE;
+    use marreq::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
     pub type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
@@ -48,7 +48,7 @@ mod test_support {
     pub async fn test_client(repo: DieselRepoMock) -> Client {
         let rocket = rocket::build()
             .manage(managed_state(repo))
-            .mount("/api", req_man::api::routes());
+            .mount("/api", marreq::api::routes());
 
         Client::tracked(rocket).await.expect("rocket instance")
     }

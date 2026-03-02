@@ -40,7 +40,7 @@ describe('Theme', () => {
 
   describe('getStoredTheme', () => {
     it('should return stored theme from localStorage', () => {
-      localStorage.setItem('reqman-theme', 'dark');
+      localStorage.setItem('marreq-theme', 'dark');
       expect(getStoredTheme()).toBe('dark');
     });
 
@@ -62,7 +62,7 @@ describe('Theme', () => {
   describe('setStoredTheme', () => {
     it('should store theme in localStorage', () => {
       setStoredTheme('dark');
-      expect(localStorage.getItem('reqman-theme')).toBe('dark');
+      expect(localStorage.getItem('marreq-theme')).toBe('dark');
     });
 
     it('should handle localStorage errors gracefully', () => {
@@ -78,12 +78,12 @@ describe('Theme', () => {
 
   describe('resolvePreferredTheme', () => {
     it('should return stored dark theme', () => {
-      localStorage.setItem('reqman-theme', 'dark');
+      localStorage.setItem('marreq-theme', 'dark');
       expect(resolvePreferredTheme()).toBe('dark');
     });
 
     it('should return stored light theme', () => {
-      localStorage.setItem('reqman-theme', 'light');
+      localStorage.setItem('marreq-theme', 'light');
       expect(resolvePreferredTheme()).toBe('light');
     });
 
@@ -122,7 +122,7 @@ describe('Theme', () => {
     });
 
     it('should prioritize stored theme over system preference', () => {
-      localStorage.setItem('reqman-theme', 'light');
+      localStorage.setItem('marreq-theme', 'light');
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
         configurable: true,
@@ -226,12 +226,12 @@ describe('Theme', () => {
       toggle.click();
 
       expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-      expect(localStorage.getItem('reqman-theme')).toBe('dark');
+      expect(localStorage.getItem('marreq-theme')).toBe('dark');
 
       toggle.click();
 
       expect(document.documentElement.hasAttribute('data-theme')).toBe(false);
-      expect(localStorage.getItem('reqman-theme')).toBe('light');
+      expect(localStorage.getItem('marreq-theme')).toBe('light');
     });
 
     it('should update toggle meta on click', () => {
@@ -272,7 +272,7 @@ describe('Theme', () => {
     });
 
     it('should not listen to system changes when theme is stored', () => {
-      localStorage.setItem('reqman-theme', 'dark');
+      localStorage.setItem('marreq-theme', 'dark');
       let changeHandler;
       const mockMatchMedia = vi.fn(() => ({
         matches: false,

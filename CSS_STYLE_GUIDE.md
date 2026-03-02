@@ -1,4 +1,4 @@
-# 🧹 CSS Style Guide — ReqMan Stylelint Rules
+# 🧹 CSS Style Guide — Marreq Stylelint Rules
 
 This repository uses **Stylelint** to enforce consistent, maintainable, and modern CSS conventions.
 The configuration lives in `.stylelintrc` and extends the official [`stylelint-config-standard`](https://github.com/stylelint/stylelint-config-standard).
@@ -24,7 +24,7 @@ The goal is clean, scalable, and conflict-free styles across all components.
 ### Rule: `selector-class-pattern`
 
 ```regex
-^(?:reqman|c|o|u|is|has|status|js)-[a-z0-9]+(?:-[a-z0-9]+)*(?:__(?:[a-z0-9]+(?:-[a-z0-9]+)*))?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$
+^(?:marreq|c|o|u|is|has|status|js)-[a-z0-9]+(?:-[a-z0-9]+)*(?:__(?:[a-z0-9]+(?:-[a-z0-9]+)*))?(?:--[a-z0-9]+(?:-[a-z0-9]+)*)?$
 ```
 
 Classes must:
@@ -35,7 +35,7 @@ Classes must:
 
 | Prefix    | Meaning                               | Example                     |
 | --------- | ------------------------------------- | --------------------------- |
-| `reqman-` | Project-wide namespace                | `reqman-header`             |
+| `marreq-` | Project-wide namespace                | `marreq-header`             |
 | `c-`      | Component                             | `c-button`, `c-card__title` |
 | `o-`      | Object (layout or structural utility) | `o-grid`                    |
 | `u-`      | Utility class                         | `u-hidden`                  |

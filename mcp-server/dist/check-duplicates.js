@@ -1,11 +1,11 @@
 /**
- * List all requirements via ReqMan API (same as MCP list_requirements) and find duplicates.
- * Run with same env as MCP server: REQMAN_BASE_URL, REQMAN_API_TOKEN, REQMAN_PROJECT_ID.
+ * List all requirements via Marreq API (same as MCP list_requirements) and find duplicates.
+ * Run with same env as MCP server: MARREQ_BASE_URL, MARREQ_API_TOKEN, MARREQ_PROJECT_ID.
  *
  * Usage: npx tsx src/check-duplicates.ts   OR   npm run build && node dist/check-duplicates.js
  */
 import { loadContext } from "./context.js";
-import { ReqManClient } from "./client.js";
+import { MarreqClient } from "./client.js";
 function normalize(s) {
     return s
         .toLowerCase()
@@ -14,7 +14,7 @@ function normalize(s) {
 }
 function main() {
     const ctx = loadContext();
-    const client = new ReqManClient(ctx);
+    const client = new MarreqClient(ctx);
     client
         .listRequirements()
         .then((reqs) => {

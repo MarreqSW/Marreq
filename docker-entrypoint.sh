@@ -13,7 +13,7 @@ if [ -n "${DATABASE_URL}" ]; then
   diesel migration run
   echo "Migrations complete."
 
-  AUTO_SEED="${REQMAN_AUTO_SEED:-true}"
+  AUTO_SEED="${MARREQ_AUTO_SEED:-true}"
   if [ "$AUTO_SEED" = "true" ]; then
     HAS_PROJECTS_DATA=$(psql "${DATABASE_URL}" -t -A -c "SELECT EXISTS (SELECT 1 FROM projects LIMIT 1);" 2>/dev/null | tr -d '[:space:]' || echo "f")
     if [ "$HAS_PROJECTS_DATA" != "t" ]; then

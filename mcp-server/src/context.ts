@@ -13,34 +13,34 @@ export interface SessionContext {
 }
 
 export function loadContext(): SessionContext {
-  const baseUrl = process.env.REQMAN_BASE_URL;
-  const apiToken = process.env.REQMAN_API_TOKEN;
-  const projectId = process.env.REQMAN_PROJECT_ID;
+  const baseUrl = process.env.MARREQ_BASE_URL;
+  const apiToken = process.env.MARREQ_API_TOKEN;
+  const projectId = process.env.MARREQ_PROJECT_ID;
 
   if (!baseUrl || !apiToken || !projectId) {
     throw new Error(
-      "REQMAN_BASE_URL, REQMAN_API_TOKEN, and REQMAN_PROJECT_ID must be set"
+      "MARREQ_BASE_URL, MARREQ_API_TOKEN, and MARREQ_PROJECT_ID must be set"
     );
   }
 
-  const mode = (process.env.REQMAN_MODE ?? "read_only") as
+  const mode = (process.env.MARREQ_MODE ?? "read_only") as
     | "read_only"
     | "draft_write";
   if (mode !== "read_only" && mode !== "draft_write") {
-    throw new Error("REQMAN_MODE must be read_only or draft_write");
+    throw new Error("MARREQ_MODE must be read_only or draft_write");
   }
 
   return {
     baseUrl: baseUrl.replace(/\/$/, ""),
     apiToken,
     projectId: parseInt(projectId, 10),
-    userId: process.env.REQMAN_USER_ID
-      ? parseInt(process.env.REQMAN_USER_ID, 10)
+    userId: process.env.MARREQ_USER_ID
+      ? parseInt(process.env.MARREQ_USER_ID, 10)
       : undefined,
-    role: process.env.REQMAN_ROLE
-      ? parseInt(process.env.REQMAN_ROLE, 10)
+    role: process.env.MARREQ_ROLE
+      ? parseInt(process.env.MARREQ_ROLE, 10)
       : undefined,
-    sessionId: process.env.REQMAN_SESSION_ID,
+    sessionId: process.env.MARREQ_SESSION_ID,
     mode,
   };
 }

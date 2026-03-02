@@ -9,24 +9,20 @@ if [ -n "${DATABASE_URL}" ]; then
   done
   echo "Database is up."
 
-  # If schema does not exist, run init_complete.sql (schema + seed) then mark migrations applied.
-  # This avoids races with initdb.d and ensures diesel does not re-run baseline.
-  HAS_PROJECTS=$(psql "${DATABASE_URL}" -t -A -c "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='projects');" 2>/dev/null | tr -d '[:space:]' || echo "f")
-  if [ "$HAS_PROJECTS" != "t" ]; then
-    echo "Schema not found. Running init_complete.sql..."
-    psql "${DATABASE_URL}" -f /app/scripts/init_complete.sql
-    echo "Schema and seed data initialized."
-  fi
+  echo "Running migrations..."
+  diesel migration run
+  echo "Migrations complete."
 
-  # Mark baseline/seed as applied when schema exists (so diesel skips them).
-  psql "${DATABASE_URL}" -f /app/scripts/backfill_diesel_migrations.sql
-
-  if [ "$HAS_PROJECTS" != "t" ]; then
-    echo "Running migrations..."
-    diesel migration run
-    echo "Migrations complete."
-  else
-    echo "Schema already present; migrations marked applied."
+  AUTO_SEED="${REQMAN_AUTO_SEED:-true}"
+  if [ "$AUTO_SEED" = "true" ]; then
+    HAS_PROJECTS_DATA=$(psql "${DATABASE_URL}" -t -A -c "SELECT EXISTS (SELECT 1 FROM projects LIMIT 1);" 2>/dev/null | tr -d '[:space:]' || echo "f")
+    if [ "$HAS_PROJECTS_DATA" != "t" ]; then
+      echo "No projects found. Running sample data seed (init_complete.sql)..."
+      psql "${DATABASE_URL}" -f /app/scripts/init_complete.sql
+      echo "Sample data seed complete."
+    else
+      echo "Projects already exist; skipping sample data seed."
+    fi
   fi
 fi
 

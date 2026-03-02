@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 use crate::helper_functions::decorators;
 use crate::models::*;
@@ -126,7 +126,7 @@ pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::er
     // Decorate requirements to get real names instead of IDs
     let decorated_requirements = decorators::decorate_requirements(all_requirements.clone());
 
-    let temp_path: PathBuf = std::env::temp_dir().join(format!("reqman_requirements_{}.xls", pid));
+    let temp_path: PathBuf = std::env::temp_dir().join(format!("marreq_requirements_{}.xls", pid));
     let path_str = temp_path
         .to_str()
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid temp path"))?;
@@ -249,7 +249,7 @@ pub fn create_tests_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Er
     let decorated_tests = decorators::decorate_tests(all_tests);
 
     // Write to a temp file to avoid fixed path and propagate read errors
-    let temp_path: PathBuf = std::env::temp_dir().join(format!("reqman_tests_{}.xls", pid));
+    let temp_path: PathBuf = std::env::temp_dir().join(format!("marreq_tests_{}.xls", pid));
     let path_str = temp_path
         .to_str()
         .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid temp path"))?;

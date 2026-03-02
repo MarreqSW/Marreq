@@ -1,6 +1,6 @@
 # Ollama Setup Guide for Semantic Search
 
-This guide explains how to set up [Ollama](https://ollama.ai) for ReqMan's semantic search feature. Ollama is an open-source tool that runs large language models locally.
+This guide explains how to set up [Ollama](https://ollama.ai) for Marreq's semantic search feature. Ollama is an open-source tool that runs large language models locally.
 
 ## Why Ollama?
 
@@ -95,7 +95,7 @@ curl http://localhost:11434/api/chat -d '{
 
 ## Configuration
 
-Set these environment variables in your ReqMan deployment:
+Set these environment variables in your Marreq deployment:
 
 ### Basic Configuration (Embeddings Only)
 
@@ -203,8 +203,8 @@ services:
     #         - capabilities: [gpu]
     restart: unless-stopped
 
-  reqman:
-    # ... your ReqMan configuration
+  Marreq:
+    # ... your Marreq configuration
     environment:
       - EMBEDDINGS_ENABLED=true
       - EMBEDDING_PROVIDER=ollama

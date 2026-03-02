@@ -1,4 +1,4 @@
-# Test Coverage Recommendations for ReqMan
+# Test Coverage Recommendations for Marreq
 
 ## Executive Summary
 

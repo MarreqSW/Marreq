@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# db_reset.sh — Drop the ReqMan database entirely
+# db_reset.sh — Drop the Marreq database entirely
 #
 # ⚠  DESTRUCTIVE — permanently deletes all data.  Use for development resets.
 #
@@ -13,7 +13,7 @@ set -euo pipefail
 #   • Docker running with the 'db' service up.
 
 echo "=========================================="
-echo "ReqMan — Database Reset (DROP DATABASE)"
+echo "Marreq — Database Reset (DROP DATABASE)"
 echo "=========================================="
 echo ""
 
@@ -49,9 +49,9 @@ psqlc() {
   docker exec -i "${DB_CID}" psql -v ON_ERROR_STOP=1 -qAt "$@"
 }
 
-echo "💣 Dropping database 'reqman' if it exists..."
-psqlc -U rust -d postgres -c "DROP DATABASE IF EXISTS reqman WITH (FORCE);"
-echo "✅ Database 'reqman' dropped"
+echo "💣 Dropping database 'marreq' if it exists..."
+psqlc -U rust -d postgres -c "DROP DATABASE IF EXISTS marreq WITH (FORCE);"
+echo "✅ Database 'marreq' dropped"
 echo ""
 
 echo "🧹 Dropping any leftover objects owned by user 'rust'..."
@@ -70,15 +70,15 @@ SQL
 echo "✅ User-owned objects cleaned"
 echo ""
 
-echo "📋 Verifying that 'reqman' database no longer exists..."
-if psqlc -U rust -d postgres -c "SELECT 1 FROM pg_database WHERE datname='reqman';" | grep -qx "1"; then
-  echo "❌ Error: 'reqman' still exists!"
+echo "📋 Verifying that 'marreq' database no longer exists..."
+if psqlc -U rust -d postgres -c "SELECT 1 FROM pg_database WHERE datname='marreq';" | grep -qx "1"; then
+  echo "❌ Error: 'marreq' still exists!"
   exit 1
 fi
-echo "✅ 'reqman' successfully removed"
+echo "✅ 'marreq' successfully removed"
 echo ""
 
 echo "=========================================="
-echo "🎉 ReqMan Database Cleanup Complete!"
+echo "🎉 Marreq Database Cleanup Complete!"
 echo "=========================================="
 echo ""

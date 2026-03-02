@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 ReqMan
+// Copyright (C) 2026 Marreq
 
 #![cfg(feature = "test-helpers")]
 
@@ -16,16 +16,16 @@
 //! - Coverage analysis
 //! - Matrix view generation with filters and pagination
 
-use req_man::models::*;
-use req_man::services::{MatrixFilters, MatrixPagination, MatrixService, SortOrder};
-use req_man::status_enums::ProjectStatus;
+use marreq::models::*;
+use marreq::services::{MatrixFilters, MatrixPagination, MatrixService, SortOrder};
+use marreq::status_enums::ProjectStatus;
 use std::collections::HashSet;
 
 mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
-    use req_man::app::AppState;
-    use req_man::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use marreq::app::AppState;
+    use marreq::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
     pub type TestAppState = AppState<CacheRepository<DieselRepoMock>>;

@@ -9,7 +9,7 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}ReqMan Reindexing Tool${NC}"
+echo -e "${GREEN}Marreq Reindexing Tool${NC}"
 echo "----------------------"
 
 # 1. Get Base URL

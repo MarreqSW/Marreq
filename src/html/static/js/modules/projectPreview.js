@@ -22,7 +22,7 @@ function getOrCreateTooltip() {
   if (tooltipEl) return tooltipEl;
   tooltipEl = document.createElement('div');
   tooltipEl.id = 'project-preview-card';
-  tooltipEl.className = 'reqman-project-preview';
+  tooltipEl.className = 'marreq-project-preview';
   tooltipEl.setAttribute('role', 'tooltip');
   tooltipEl.hidden = true;
   document.body.appendChild(tooltipEl);
@@ -38,14 +38,14 @@ function renderCard(link) {
   const descSnippet = description.length > 120 ? description.slice(0, 117) + '…' : description;
   const card = getOrCreateTooltip();
   card.innerHTML = `
-    <div class="reqman-project-preview__bar" aria-hidden="true"></div>
-    <div class="reqman-project-preview__content">
-      <div class="reqman-project-preview__header">
-        <span class="reqman-project-preview__icon" aria-hidden="true">${escapeHtml((name[0] || 'P').toUpperCase())}</span>
-        <h4 class="reqman-project-preview__title">${escapeHtml(name)}</h4>
+    <div class="marreq-project-preview__bar" aria-hidden="true"></div>
+    <div class="marreq-project-preview__content">
+      <div class="marreq-project-preview__header">
+        <span class="marreq-project-preview__icon" aria-hidden="true">${escapeHtml((name[0] || 'P').toUpperCase())}</span>
+        <h4 class="marreq-project-preview__title">${escapeHtml(name)}</h4>
       </div>
-      ${descSnippet ? `<p class="reqman-project-preview__description">${escapeHtml(descSnippet)}</p>` : ''}
-      <a href="${escapeHtml(href)}" class="reqman-project-preview__action">View project</a>
+      ${descSnippet ? `<p class="marreq-project-preview__description">${escapeHtml(descSnippet)}</p>` : ''}
+      <a href="${escapeHtml(href)}" class="marreq-project-preview__action">View project</a>
     </div>
   `;
   return card;

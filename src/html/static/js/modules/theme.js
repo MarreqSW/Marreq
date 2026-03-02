@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'reqman-theme';
+const STORAGE_KEY = 'marreq-theme';
 const root = document.documentElement;
 
 export function applyTheme(theme) {

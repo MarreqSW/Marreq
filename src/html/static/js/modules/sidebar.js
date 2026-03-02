@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'reqman_sidebar_collapsed';
+const STORAGE_KEY = 'marreq_sidebar_collapsed';
 const DESKTOP_BREAKPOINT = 992;
 
 function isDesktop() {
@@ -16,14 +16,14 @@ export function initSidebar() {
 
   try {
     if (localStorage.getItem(STORAGE_KEY) === 'true' && isDesktop()) {
-      sidebar.classList.add('reqman-sidebar--collapsed');
+      sidebar.classList.add('marreq-sidebar--collapsed');
     }
   } catch (error) {
     /* ignore */
   }
 
   const toggleSidebar = () => {
-    const collapsed = sidebar.classList.toggle('reqman-sidebar--collapsed');
+    const collapsed = sidebar.classList.toggle('marreq-sidebar--collapsed');
     if (isDesktop()) {
       try {
         localStorage.setItem(STORAGE_KEY, String(collapsed));
@@ -39,7 +39,7 @@ export function initSidebar() {
 
   if (mobileToggle) {
     mobileToggle.addEventListener('click', () => {
-      sidebar.classList.toggle('reqman-sidebar--mobile-open');
+      sidebar.classList.toggle('marreq-sidebar--mobile-open');
     });
   }
 
@@ -48,9 +48,9 @@ export function initSidebar() {
       window.innerWidth < DESKTOP_BREAKPOINT &&
       !sidebar.contains(event.target) &&
       (!mobileToggle || !mobileToggle.contains(event.target)) &&
-      sidebar.classList.contains('reqman-sidebar--mobile-open')
+      sidebar.classList.contains('marreq-sidebar--mobile-open')
     ) {
-      sidebar.classList.remove('reqman-sidebar--mobile-open');
+      sidebar.classList.remove('marreq-sidebar--mobile-open');
     }
   });
 }

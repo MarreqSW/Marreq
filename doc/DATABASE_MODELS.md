@@ -12,7 +12,7 @@
 
 ## Overview
 
-ReqMan uses PostgreSQL as a relational database with Diesel as the ORM. The schema is designed to manage requirements management projects with complete traceability between requirements and tests.
+Marreq uses PostgreSQL as a relational database with Diesel as the ORM. The schema is designed to manage requirements management projects with complete traceability between requirements and tests.
 
 ### Technologies
 - **Database**: PostgreSQL

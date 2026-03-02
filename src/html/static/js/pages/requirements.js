@@ -95,7 +95,7 @@ function decorateStatusBadges() {
   const statusLabelToTagColor = new Map(
     (config.statuses || []).map((s) => [normalize(s.title), s.tag_color]).filter(([, c]) => c)
   );
-  const badges = document.querySelectorAll('.reqman-requirements-status-badge');
+  const badges = document.querySelectorAll('.marreq-requirements-status-badge');
   badges.forEach((badge) => {
     const label = badge.dataset.status || badge.textContent;
     const definition = state.statusMap.get(normalize(label));
@@ -106,9 +106,9 @@ function decorateStatusBadges() {
     }
 
     const variant = statusVariant(label);
-    badge.classList.add(`reqman-requirements-status-badge--${variant}`);
+    badge.classList.add(`marreq-requirements-status-badge--${variant}`);
 
-    const row = badge.closest('tr') || badge.closest('.reqman-requirement-card') || badge.closest('.c-tree__node');
+    const row = badge.closest('tr') || badge.closest('.marreq-requirement-card') || badge.closest('.c-tree__node');
     const statusId = row ? parseInt(row.dataset.statusId, 10) : NaN;
     const tagColor =
       (!Number.isNaN(statusId) && statusIdToTagColor.get(statusId)) ||
@@ -161,24 +161,24 @@ function textFrom(root, selector) {
 
 function collectRows(table) {
   const entries = [];
-  table.querySelectorAll('.reqman-requirements-row').forEach((row) => {
+  table.querySelectorAll('.marreq-requirements-row').forEach((row) => {
     const requirementId = row.dataset.requirementId;
     const detail = table.querySelector(
-      `.reqman-requirements-row__details[data-details-for="${requirementId}"]`,
+      `.marreq-requirements-row__details[data-details-for="${requirementId}"]`,
     );
 
-    const keyText = textFrom(row, '.reqman-requirements-key__value');
-    const titleText = textFrom(row, '.reqman-requirements-title');
-    const categoryText = textFrom(row, '.reqman-requirements-row__cell--category');
-    const parentText = textFrom(row, '.reqman-requirements-row__cell--parent');
+    const keyText = textFrom(row, '.marreq-requirements-key__value');
+    const titleText = textFrom(row, '.marreq-requirements-title');
+    const categoryText = textFrom(row, '.marreq-requirements-row__cell--category');
+    const parentText = textFrom(row, '.marreq-requirements-row__cell--parent');
     const statusText = (row.dataset.statusLabel || '').trim();
-    const verificationText = textFrom(row, '.reqman-requirements-row__cell--verification');
-    const updatedNode = row.querySelector('.reqman-requirements-row__cell--updated time');
+    const verificationText = textFrom(row, '.marreq-requirements-row__cell--verification');
+    const updatedNode = row.querySelector('.marreq-requirements-row__cell--updated time');
     const updatedDisplay = updatedNode ? updatedNode.textContent.trim() : '';
     const updatedValue = parseDateValue(
       (updatedNode && updatedNode.getAttribute('datetime')) || updatedDisplay,
     );
-    const authorText = textFrom(row, '.reqman-requirements-row__cell--author');
+    const authorText = textFrom(row, '.marreq-requirements-row__cell--author');
     const detailText = detail ? detail.textContent.trim() : '';
 
     const searchText = [
@@ -219,17 +219,17 @@ function collectRows(table) {
 
 function collectCards(container) {
   const entries = [];
-  container.querySelectorAll('.reqman-requirement-card').forEach((card) => {
+  container.querySelectorAll('.marreq-requirement-card').forEach((card) => {
     const requirementId = card.dataset.requirementId;
 
-    const keyText = textFrom(card, '.reqman-requirement-card__reference-text');
-    const titleText = textFrom(card, '.reqman-requirement-card__title');
+    const keyText = textFrom(card, '.marreq-requirement-card__reference-text');
+    const titleText = textFrom(card, '.marreq-requirement-card__title');
     const statusText = (card.dataset.statusLabel || '').trim();
     const verificationText = card.dataset.verification || '';
     const categoryText = card.dataset.category || '';
-    const descriptionText = textFrom(card, '.reqman-requirement-card__description');
-    const authorText = textFrom(card, '.reqman-requirement-card__author');
-    const dateText = textFrom(card, '.reqman-requirement-card__date');
+    const descriptionText = textFrom(card, '.marreq-requirement-card__description');
+    const authorText = textFrom(card, '.marreq-requirement-card__author');
+    const dateText = textFrom(card, '.marreq-requirement-card__date');
 
     const searchText = [
       keyText,
@@ -297,13 +297,13 @@ function ensureNoResultsBanner() {
     return state.noResultsBanner;
   }
 
-  const host = document.querySelector('.reqman-requirements-table-section');
+  const host = document.querySelector('.marreq-requirements-table-section');
   if (!host) {
     return null;
   }
 
   const banner = document.createElement('div');
-  banner.className = 'reqman-requirements-search-empty';
+  banner.className = 'marreq-requirements-search-empty';
   banner.hidden = true;
   banner.innerHTML = `
     <strong>No matches.</strong>
@@ -341,8 +341,8 @@ function applySearch(term = '') {
     if (matches) {
       visibleCount += 1;
       if (!wasVisible) {
-        entry.row.classList.add('reqman-requirements-row--enter');
-        requestAnimationFrame(() => entry.row.classList.remove('reqman-requirements-row--enter'));
+        entry.row.classList.add('marreq-requirements-row--enter');
+        requestAnimationFrame(() => entry.row.classList.remove('marreq-requirements-row--enter'));
       }
     }
   });
@@ -424,7 +424,7 @@ function initSearch(input) {
 
 function updateSortIndicators(table, activeKey, order) {
   table.querySelectorAll('th[data-sort-key]').forEach((th) => {
-    const indicator = th.querySelector('.reqman-requirements-table__sort-indicator');
+    const indicator = th.querySelector('.marreq-requirements-table__sort-indicator');
     if (th.dataset.sortKey === activeKey) {
       if (indicator) {
         indicator.textContent = order === 'asc' ? '↑' : '↓';
@@ -477,7 +477,7 @@ function initSorting(table) {
 }
 
 function toggleRowDetails(button) {
-  const row = button.closest('.reqman-requirements-row');
+  const row = button.closest('.marreq-requirements-row');
   const targetId = button.getAttribute('aria-controls');
   const expanded = button.getAttribute('aria-expanded') === 'true';
   const nextState = !expanded;
@@ -616,7 +616,7 @@ function renderFilterChips(form) {
 
     const chip = document.createElement('button');
     chip.type = 'button';
-    chip.className = 'reqman-requirements-filter-chip';
+    chip.className = 'marreq-requirements-filter-chip';
     chip.dataset.filterKey = control.name;
     chip.dataset.action = 'remove-filter';
     chip.innerHTML = `${prefix}: ${optionLabel} <span aria-hidden="true">×</span><span class="u-visually-hidden">Clear ${prefix}: ${optionLabel}</span>`;
@@ -730,7 +730,7 @@ function showDuplicateModal(requirement) {
  * current values after an inline edit.
  */
 function updateRequirementPreviewInRow(row, field, displayText, projectId, parentId) {
-  const titleLink = row.querySelector('a.reqman-requirements-title[data-requirement-preview]');
+  const titleLink = row.querySelector('a.marreq-requirements-title[data-requirement-preview]');
   if (field === 'status' && titleLink && displayText != null) {
     titleLink.setAttribute('data-requirement-preview-status', displayText);
   }
@@ -738,7 +738,7 @@ function updateRequirementPreviewInRow(row, field, displayText, projectId, paren
     titleLink.setAttribute('data-requirement-preview-category', displayText);
   }
   if (field === 'parent') {
-    const parentLink = row.querySelector('.reqman-requirements-row__cell--parent a[data-requirement-preview]');
+    const parentLink = row.querySelector('.marreq-requirements-row__cell--parent a[data-requirement-preview]');
     if (parentLink && projectId != null) {
       parentLink.setAttribute('data-requirement-preview-id', String(parentId ?? 0));
       parentLink.setAttribute('data-requirement-preview-project-id', String(projectId));
@@ -777,11 +777,11 @@ function openInlineEdit(cell, field, row, config) {
   if (field === 'parent') return;
   const requirementId = parseInt(row.dataset.requirementId, 10);
   if (!requirementId) return;
-  const displayEl = cell.querySelector('.reqman-requirements-cell__display');
-  if (!displayEl || cell.querySelector('.reqman-inline-edit-select')) return;
+  const displayEl = cell.querySelector('.marreq-requirements-cell__display');
+  if (!displayEl || cell.querySelector('.marreq-inline-edit-select')) return;
 
   const select = document.createElement('select');
-  select.className = 'reqman-inline-edit-select';
+  select.className = 'marreq-inline-edit-select';
   select.setAttribute('aria-label', `Change ${field}`);
 
   if (field === 'category') {
@@ -851,7 +851,7 @@ function openInlineEdit(cell, field, row, config) {
     displayEl.hidden = false;
     try {
       await patchJson(`/api/requirements/${requirementId}`, payload);
-      const projectId = window.__reqmanProjectId || '';
+      const projectId = window.__marreqProjectId || '';
       if (field === 'category') {
         row.dataset.categoryId = String(categoryId ?? '');
         displayEl.textContent = displayText;
@@ -864,7 +864,7 @@ function openInlineEdit(cell, field, row, config) {
         displayEl.textContent = displayText;
         displayEl.dataset.status = displayText;
         displayEl.dataset.statusId = String(statusId);
-        displayEl.className = 'reqman-requirements-status-badge reqman-requirements-cell__display reqman-requirements-status-badge--' + statusVariant(displayText);
+        displayEl.className = 'marreq-requirements-status-badge marreq-requirements-cell__display marreq-requirements-status-badge--' + statusVariant(displayText);
         if (tagColor) {
           displayEl.style.backgroundColor = tagColor;
           displayEl.style.color = '#fff';
@@ -933,18 +933,18 @@ function initInlineEdit(table) {
   if (sc?.textContent) {
     try {
       const c = JSON.parse(sc.textContent.trim());
-      window.__reqmanProjectId = c.projectId ?? '';
+      window.__marreqProjectId = c.projectId ?? '';
     } catch {
-      window.__reqmanProjectId = '';
+      window.__marreqProjectId = '';
     }
   }
   table.addEventListener('click', (e) => {
-    if (e.target.closest('.reqman-inline-edit-select')) return;
+    if (e.target.closest('.marreq-inline-edit-select')) return;
     const cell = e.target.closest('[data-inline-edit]');
     if (!cell || !table.contains(cell)) return;
     e.preventDefault();
     e.stopPropagation();
-    const row = cell.closest('.reqman-requirements-row');
+    const row = cell.closest('.marreq-requirements-row');
     if (!row) return;
     openInlineEdit(cell, cell.dataset.inlineEdit, row, config);
   });
@@ -1029,7 +1029,7 @@ function handleBadgeOverflow(card) {
   const metadata = card.querySelector('[data-badge-rail]');
   if (!metadata) return;
 
-  const rail = metadata.querySelector('.reqman-requirement-card__badge-rail');
+  const rail = metadata.querySelector('.marreq-requirement-card__badge-rail');
   const overflowChip = metadata.querySelector('[data-overflow]');
   if (!rail || !overflowChip) return;
 
@@ -1077,7 +1077,7 @@ function handleBadgeOverflow(card) {
 }
 
 function initBadgeOverflow() {
-  const cards = document.querySelectorAll('.reqman-requirement-card');
+  const cards = document.querySelectorAll('.marreq-requirement-card');
   cards.forEach((card) => handleBadgeOverflow(card));
 
   // Re-calculate on window resize (debounced)
@@ -1154,7 +1154,7 @@ function initViewSwitcher() {
 
 export function init() {
   const table = document.getElementById('requirementsTable');
-  const cardsContainer = document.querySelector('.reqman-requirements-cards-grid');
+  const cardsContainer = document.querySelector('.marreq-requirements-cards-grid');
   const treeRoot = document.querySelector('.c-tree');
   const searchInput = document.getElementById('requirementsSearch');
   const filtersForm = document.getElementById('requirementsFilterForm');

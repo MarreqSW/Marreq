@@ -13,12 +13,12 @@ This guide explains how to test the **approval workflow** for requirement versio
 
 1. **App and DB running**  
    - Database set up (e.g. `./scripts/setup_database.sh`)  
-   - App: `cargo run --bin req_man` (or your usual run)
+   - App: `cargo run --bin marreq` (or your usual run)
 
 2. **Logged-in session**  
    - Open http://localhost:8000 (or your base URL) and log in (e.g. **alice** / **ChangeMe123!**).  
    - You need a user that is **Owner** or **Manager** of the project (or admin).  
-   - Default data: **alice** is Owner of project 2 (ReqMan Project), **admin** is Manager of project 2.
+   - Default data: **alice** is Owner of project 2 (Marreq Project), **admin** is Manager of project 2.
 
 ## Step 1: Get requirement and version IDs
 
@@ -43,7 +43,7 @@ Example: for requirement `1`, you might get `version_id = 1`. Use that `requirem
 
   ```text
   # Netscape HTTP Cookie File
-  localhost	FALSE	/	FALSE	0	reqman_session	<value-from-browser>
+  localhost	FALSE	/	FALSE	0	marreq_session	<value-from-browser>
   ```
 
   Or use the browser’s “Copy as cURL” for a request after login and reuse the `Cookie` header in curl with `-H "Cookie: ..."`.

@@ -1,19 +1,19 @@
 {{!-- Depends on: css/index.css, js/app.js --}}
 {{#*inline "page"}}
-<div class="reqman-portal">
+<div class="marreq-portal">
   {{> partials/sidebar user=user}}
 
-  <main class="reqman-main" id="mainContent">
+  <main class="marreq-main" id="mainContent">
     {{> partials/header user=user}}
 
-    <section class="reqman-section">
-      <h2 class="reqman-section__title">Quick Actions</h2>
-      <div class="reqman-quick-actions">
+    <section class="marreq-section">
+      <h2 class="marreq-section__title">Quick Actions</h2>
+      <div class="marreq-quick-actions">
         {{> partials/quick_action_card
             href="/projects"
             icon="fas fa-folder-tree"
             label="Browse Projects"
-            modifier="reqman-action-card--primary"}}
+            modifier="marreq-action-card--primary"}}
         {{#if user.is_admin}}
           {{> partials/quick_action_card
               href="/new_project"
@@ -32,28 +32,28 @@
       </div>
     </section>
 
-    <section class="reqman-section">
-      <div class="reqman-section__header">
-        <h2 class="reqman-section__title">Your Projects</h2>
-        <a href="/projects" class="reqman-link-arrow">
+    <section class="marreq-section">
+      <div class="marreq-section__header">
+        <h2 class="marreq-section__title">Your Projects</h2>
+        <a href="/projects" class="marreq-link-arrow">
           View all
           <i class="fas fa-arrow-right" aria-hidden="true"></i>
         </a>
       </div>
 
       {{#if projects}}
-        <div class="reqman-projects-grid">
+        <div class="marreq-projects-grid">
           {{#each projects}}
             {{> partials/project_card user=../user}}
           {{/each}}
         </div>
       {{else}}
-        <div class="reqman-empty-state">
+        <div class="marreq-empty-state">
           <i class="fas fa-folder-open" aria-hidden="true"></i>
           <h3>No Projects Yet</h3>
           <p>Create your first project to start managing requirements and tests</p>
           {{#if user.is_admin}}
-          <a href="/new_project" class="reqman-btn reqman-btn--primary">
+          <a href="/new_project" class="marreq-btn marreq-btn--primary">
             <i class="fas fa-plus" aria-hidden="true"></i>
             Create Project
           </a>
@@ -62,9 +62,9 @@
       {{/if}}
     </section>
 
-    <section class="reqman-section">
-      <h2 class="reqman-section__title">Recent Activity</h2>
-      <div class="reqman-placeholder-feature">
+    <section class="marreq-section">
+      <h2 class="marreq-section__title">Recent Activity</h2>
+      <div class="marreq-placeholder-feature">
         <i class="fas fa-clock" aria-hidden="true"></i>
         <h3>Activity Feed Coming Soon</h3>
         <p>Track project updates, requirement changes, and team activities in real-time</p>

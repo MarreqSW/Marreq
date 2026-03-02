@@ -1,10 +1,10 @@
 {{!-- Depends on: css/50-components/dashboard.css, js/modules/sidebar.js --}}
-<aside class="reqman-sidebar" id="mainSidebar">
-  <div class="reqman-sidebar__header">
-    <a href="/" class="reqman-sidebar__brand">
-      <span class="reqman-sidebar__brand-text">ReqMan</span>
+<aside class="marreq-sidebar" id="mainSidebar">
+  <div class="marreq-sidebar__header">
+    <a href="/" class="marreq-sidebar__brand">
+      <span class="marreq-sidebar__brand-text">Marreq</span>
     </a>
-    <div class="reqman-sidebar__header-actions">
+    <div class="marreq-sidebar__header-actions">
       <button
         data-theme-toggle
         class="theme-toggle c-theme-toggle"
@@ -17,7 +17,7 @@
       </button>
       <button
         type="button"
-        class="reqman-sidebar__toggle"
+        class="marreq-sidebar__toggle"
         id="sidebarToggle"
         aria-label="Toggle sidebar">
         <i class="fas fa-chevron-left" aria-hidden="true"></i>
@@ -25,86 +25,86 @@
     </div>
   </div>
 
-  <nav class="reqman-sidebar__nav" aria-label="Main navigation">
-    <div class="reqman-nav-section">
-      <h3 class="reqman-nav-section__title">Overview</h3>
-      <ul class="reqman-nav-list">
+  <nav class="marreq-sidebar__nav" aria-label="Main navigation">
+    <div class="marreq-nav-section">
+      <h3 class="marreq-nav-section__title">Overview</h3>
+      <ul class="marreq-nav-list">
         <li>
-          <a href="/" class="reqman-nav-link reqman-nav-link--active" aria-current="page">
+          <a href="/" class="marreq-nav-link marreq-nav-link--active" aria-current="page">
             <i class="fas fa-chart-line" aria-hidden="true"></i>
-            <span class="reqman-nav-link__label">Dashboard</span>
+            <span class="marreq-nav-link__label">Dashboard</span>
           </a>
         </li>
         <li>
-          <a href="#activity" class="reqman-nav-link reqman-nav-link--disabled" title="Coming soon">
+          <a href="#activity" class="marreq-nav-link marreq-nav-link--disabled" title="Coming soon">
             <i class="fas fa-stream" aria-hidden="true"></i>
-            <span class="reqman-nav-link__label">Activity Feed</span>
-            <span class="reqman-badge reqman-badge--soon">Soon</span>
+            <span class="marreq-nav-link__label">Activity Feed</span>
+            <span class="marreq-badge marreq-badge--soon">Soon</span>
           </a>
         </li>
       </ul>
     </div>
 
-    <div class="reqman-nav-section">
-      <h3 class="reqman-nav-section__title">Projects</h3>
-      <ul class="reqman-nav-list">
+    <div class="marreq-nav-section">
+      <h3 class="marreq-nav-section__title">Projects</h3>
+      <ul class="marreq-nav-list">
         <li>
-          <a href="/projects" class="reqman-nav-link">
+          <a href="/projects" class="marreq-nav-link">
             <i class="fas fa-folder-tree" aria-hidden="true"></i>
-            <span class="reqman-nav-link__label">All Projects</span>
+            <span class="marreq-nav-link__label">All Projects</span>
           </a>
         </li>
         {{#if user.is_admin}}
         <li>
-          <a href="/new_project" class="reqman-nav-link">
+          <a href="/new_project" class="marreq-nav-link">
             <i class="fas fa-plus-circle" aria-hidden="true"></i>
-            <span class="reqman-nav-link__label">Create Project</span>
+            <span class="marreq-nav-link__label">Create Project</span>
           </a>
         </li>
         {{/if}}
       </ul>
     </div>
 
-    <div class="reqman-nav-section">
-      <h3 class="reqman-nav-section__title">Workflows</h3>
-      <ul class="reqman-nav-list">
+    <div class="marreq-nav-section">
+      <h3 class="marreq-nav-section__title">Workflows</h3>
+      <ul class="marreq-nav-list">
         <li>
-          <a href="#change-requests" class="reqman-nav-link reqman-nav-link--disabled" title="Coming soon">
+          <a href="#change-requests" class="marreq-nav-link marreq-nav-link--disabled" title="Coming soon">
             <i class="fas fa-code-branch" aria-hidden="true"></i>
-            <span class="reqman-nav-link__label">Change Requests</span>
-            <span class="reqman-badge reqman-badge--soon">Soon</span>
+            <span class="marreq-nav-link__label">Change Requests</span>
+            <span class="marreq-badge marreq-badge--soon">Soon</span>
           </a>
         </li>
         <li>
-          <a href="#reviews" class="reqman-nav-link reqman-nav-link--disabled" title="Coming soon">
+          <a href="#reviews" class="marreq-nav-link marreq-nav-link--disabled" title="Coming soon">
             <i class="fas fa-user-check" aria-hidden="true"></i>
-            <span class="reqman-nav-link__label">Reviews</span>
-            <span class="reqman-badge reqman-badge--soon">Soon</span>
+            <span class="marreq-nav-link__label">Reviews</span>
+            <span class="marreq-badge marreq-badge--soon">Soon</span>
           </a>
         </li>
       </ul>
     </div>
 
     {{#if user.is_admin}}
-    <div class="reqman-nav-section">
-      <h3 class="reqman-nav-section__title">Administration</h3>
-      <ul class="reqman-nav-list">
+    <div class="marreq-nav-section">
+      <h3 class="marreq-nav-section__title">Administration</h3>
+      <ul class="marreq-nav-list">
         <li>
-          <a href="/admin" class="reqman-nav-link">
+          <a href="/admin" class="marreq-nav-link">
             <i class="fas fa-shield-alt" aria-hidden="true"></i>
-            <span class="reqman-nav-link__label">Admin Panel</span>
+            <span class="marreq-nav-link__label">Admin Panel</span>
           </a>
         </li>
         <li>
-          <a href="/admin/users" class="reqman-nav-link">
+          <a href="/admin/users" class="marreq-nav-link">
             <i class="fas fa-users-cog" aria-hidden="true"></i>
-            <span class="reqman-nav-link__label">User Management</span>
+            <span class="marreq-nav-link__label">User Management</span>
           </a>
         </li>
         <li>
-          <a href="/logs" class="reqman-nav-link">
+          <a href="/logs" class="marreq-nav-link">
             <i class="fas fa-list-alt" aria-hidden="true"></i>
-            <span class="reqman-nav-link__label">System Logs</span>
+            <span class="marreq-nav-link__label">System Logs</span>
           </a>
         </li>
       </ul>

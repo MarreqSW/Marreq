@@ -1,7 +1,7 @@
 {
-  "name": "reqman-mcp-server",
+  "name": "marreq-mcp-server",
   "version": "0.1.0",
-  "description": "MCP server for ReqMan - read-only tools that call ReqMan REST API",
+  "description": "MCP server for Marreq - read-only tools that call Marreq REST API",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

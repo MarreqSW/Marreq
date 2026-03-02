@@ -1,6 +1,6 @@
 import type { SessionContext } from "./context.js";
 
-export class ReqManClient {
+export class MarreqClient {
   constructor(private ctx: SessionContext) {}
 
   private async request<T>(
@@ -18,7 +18,7 @@ export class ReqManClient {
     });
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`ReqMan API ${res.status}: ${text}`);
+      throw new Error(`Marreq API ${res.status}: ${text}`);
     }
     if (res.status === 204 || res.headers.get("content-length") === "0") {
       return undefined as T;

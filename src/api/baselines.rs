@@ -21,10 +21,11 @@ pub struct CreateBaselineRequest {
 /// List baselines (session or Bearer). Project-scoped.
 #[get("/projects/<project_id>/baselines")]
 pub async fn list(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<Baseline>>> {
+    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
     let service = BaselineService::new(state.inner());
     let baselines = service.list_by_project(project_id)?;
     Ok(Json(baselines))
@@ -33,11 +34,12 @@ pub async fn list(
 /// Get baseline by id (session or Bearer). Project-scoped.
 #[get("/projects/<project_id>/baselines/<baseline_id>")]
 pub async fn get(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Baseline>> {
+    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
     let service = BaselineService::new(state.inner());
     let baseline = service.get_by_id(baseline_id)?;
     if baseline.project_id != project_id {
@@ -56,6 +58,7 @@ pub async fn create(
     state: &State<AppState>,
     payload: Json<CreateBaselineRequest>,
 ) -> ApiResult<Json<Baseline>> {
+    require_project_permission(state, access.user(), project_id, Permission::EditRequirements)?;
     let payload = payload.into_inner();
     let new_baseline = NewBaseline {
         name: payload.name,
@@ -69,11 +72,12 @@ pub async fn create(
 /// Retrieve baseline contents: requirements as at baseline time (from snapshot). Session or Bearer.
 #[get("/projects/<project_id>/baselines/<baseline_id>/requirements")]
 pub async fn get_requirements(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<Requirement>>> {
+    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
     let service = BaselineService::new(state.inner());
     let baseline = service.get_by_id(baseline_id)?;
     if baseline.project_id != project_id {
@@ -88,11 +92,12 @@ pub async fn get_requirements(
 /// Retrieve baseline traceability snapshot (requirement–test links). Session or Bearer.
 #[get("/projects/<project_id>/baselines/<baseline_id>/traceability")]
 pub async fn get_traceability(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<BaselineTraceability>>> {
+    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
     let service = BaselineService::new(state.inner());
     let baseline = service.get_by_id(baseline_id)?;
     if baseline.project_id != project_id {
@@ -107,12 +112,13 @@ pub async fn get_traceability(
 /// Compare two baselines. Query: baseline_a, baseline_b. Accepts session or Bearer token.
 #[get("/projects/<project_id>/baselines/diff?<baseline_a>&<baseline_b>")]
 pub async fn diff_baselines(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     baseline_a: i32,
     baseline_b: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<BaselineDiff>> {
+    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
     let service = BaselineService::new(state.inner());
     let diff = service.diff_baselines(project_id, baseline_a, baseline_b)?;
     Ok(Json(diff))

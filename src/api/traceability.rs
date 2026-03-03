@@ -22,11 +22,12 @@ pub struct ClearSuspectRequest {
 /// Returns multiple parents from requirement version links (DAG).
 #[get("/projects/<project_id>/requirements/<id>/trace_up")]
 pub async fn trace_up(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<TraceUpResponse>> {
+    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
     let service = RequirementService::new(state.inner());
     let requirement = service.get_by_id(id)?;
     if requirement.project_id != project_id {
@@ -68,11 +69,12 @@ pub struct TraceUpResponse {
 /// Trace down: child requirements and linked tests. Project-scoped; accepts session or Bearer.
 #[get("/projects/<project_id>/requirements/<id>/trace_down")]
 pub async fn trace_down(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<TraceDownResponse>> {
+    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
     let req_service = RequirementService::new(state.inner());
     let requirement = req_service.get_by_id(id)?;
     if requirement.project_id != project_id {
@@ -96,10 +98,11 @@ pub struct TraceDownResponse {
 /// Coverage report: requirements without tests, tests without requirements, suspect links. Project-scoped.
 #[get("/projects/<project_id>/coverage_report")]
 pub async fn coverage_report(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<CoverageReport>> {
+    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
     let repo = state.repo_read();
     let requirements = repo.get_requirements_by_project(project_id)?;
     let tests = repo.get_tests_by_project(project_id)?;

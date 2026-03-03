@@ -26,11 +26,12 @@ pub struct CreateRequirementVersionLinkRequest {
 /// Create a requirement version link. Project-scoped; both versions must belong to the project.
 #[post("/projects/<project_id>/requirement-version-links", data = "<body>")]
 pub async fn create(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     body: Json<CreateRequirementVersionLinkRequest>,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementVersionLink>> {
+    require_project_permission(state, access.user(), project_id, Permission::EditRequirements)?;
     let b = body.into_inner();
     let service = RequirementService::new(state.inner());
     let repo = state.inner().repo_read();
@@ -59,13 +60,14 @@ pub async fn create(
 /// List requirement version links for a project. Query: source_version_id, target_version_id, link_type (all optional).
 #[get("/projects/<project_id>/requirement-version-links?<source_version_id>&<target_version_id>&<link_type>")]
 pub async fn list(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     source_version_id: Option<i32>,
     target_version_id: Option<i32>,
     link_type: Option<String>,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<RequirementVersionLink>>> {
+    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
     let repo = state.inner().repo_read();
     let links = repo.list_links_by_project(
         project_id,
@@ -79,11 +81,12 @@ pub async fn list(
 /// Delete a requirement version link by id. Link must belong to the project.
 #[delete("/projects/<project_id>/requirement-version-links/<link_id>")]
 pub async fn delete(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     link_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementVersionLink>> {
+    require_project_permission(state, access.user(), project_id, Permission::EditRequirements)?;
     let service = RequirementService::new(state.inner());
     let link = service.delete_requirement_version_link(project_id, link_id)?;
     Ok(Json(link))

@@ -1,58 +1,49 @@
 /*
- * Requirement editor experience.
- * Layout leans on existing design tokens for a calm, editorial workspace.
+ * Edit-specific overrides for the requirement form.
+ * Shared layout, fields, cards, and components now live in:
+ *   - pages/requirement-form.css      (c-reqform-*)
+ *   - 50-components/dropdown.css      (c-custom-dropdown__*)
+ *   - 50-components/pill-select.css   (c-pill-select__*)
+ *   - 50-components/trace-builder.css (c-trace-builder__*)
+ *
+ * This file retains only styles unique to the /requirements/:id/edit page:
+ *   status chip, rich-text toolbar, preview, collapsible, dropzone, version.
  */
-.c-requirement-editor {
-  background: transparent;
-  color: var(--text-primary);
+
+/* ── Edit-page field header (label + inline actions side-by-side) ─── */
+.c-editor-field__header {
+  align-items: baseline;
   display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  margin: 0 auto;
-  max-width: 1240px;
-  padding: var(--space-6) var(--space-6) var(--space-8);
+  justify-content: space-between;
 }
 
-.c-editor-topbar {
-  backdrop-filter: blur(18px);
-  background: var(--surface-color);
-  background: color-mix(in srgb, var(--surface-color) 92%, transparent);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  position: sticky;
-  top: calc(var(--header-height) + var(--space-2));
-  z-index: 1100;
+/* ── Headline input (title field on edit page) ───────────────────── */
+.c-editor-field__input--headline {
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
-.c-editor-topbar__context {
-  align-items: flex-start;
-  display: flex;
-  gap: var(--space-4);
+/* ── Edit-page section spacing ───────────────────────────────────── */
+.c-editor-section__title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
 }
 
-.c-editor-breadcrumb {
+/* ── Edit topbar status group ────────────────────────────────────── */
+.c-editor-topbar__status {
   align-items: center;
-  color: var(--text-secondary);
-  display: inline-flex;
-  font-size: 0.875rem;
-  gap: var(--space-2);
+  display: flex;
+  gap: var(--space-3);
 }
 
-.c-editor-breadcrumb__link {
-  color: inherit;
-  text-decoration: none;
+.c-editor-actions {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
 }
 
-.c-editor-breadcrumb__link:hover {
-  color: var(--primary-color);
-  text-decoration: underline;
-}
-
+/* ── Status chip ──────────────────────────────────────────────────── */
 .c-editor-status {
   position: relative;
 }
@@ -87,8 +78,8 @@
 .c-editor-status__menu {
   background-color: var(--surface-color, #fff);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
   left: 0;
   min-width: 10rem;
   padding: var(--space-1);
@@ -100,7 +91,7 @@
 .c-editor-status__menu button {
   background: none;
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   cursor: pointer;
   display: block;
   padding: var(--space-2) var(--space-3);
@@ -114,52 +105,13 @@
   outline: none;
 }
 
-.c-editor-topbar__actions {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  justify-content: space-between;
-}
-
-.c-editor-topbar__status {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
+/* ── Version indicator ────────────────────────────────────────────── */
 .c-editor-version {
   color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
-.c-editor-actions {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.c-editor-autosave {
-  align-items: center;
-  background: var(--surface-subtle);
-  border-radius: 999px;
-  color: var(--text-secondary);
-  display: inline-flex;
-  font-size: 0.8rem;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-3);
-}
-
-.c-editor-autosave__dot {
-  background: var(--warning-color);
-  border-radius: 50%;
-  display: inline-block;
-  height: 6px;
-  width: 6px;
-}
-
+/* ── Cancel link (text-style) ─────────────────────────────────────── */
 .c-editor-actions__cancel {
   color: var(--text-secondary);
   font-weight: 500;
@@ -171,88 +123,7 @@
   text-decoration: underline;
 }
 
-.c-editor-layout {
-  display: flex;
-  gap: var(--space-6);
-  position: relative;
-  z-index: 0;
-}
-
-.c-editor-main {
-  display: flex;
-  flex: 1 1 0%;
-  flex-direction: column;
-  gap: var(--space-6);
-}
-
-.c-editor-section {
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-5);
-}
-
-.c-editor-section__title {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  margin: 0;
-  text-transform: uppercase;
-}
-
-.c-editor-field__header {
-  align-items: baseline;
-  display: flex;
-  justify-content: space-between;
-}
-
-.c-editor-inline-actions {
-  align-items: center;
-  display: flex;
-  gap: var(--space-2);
-}
-
-.c-editor-field__label {
-  color: var(--text-primary);
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.c-editor-field__input,
-.c-editor-field__textarea {
-  background: var(--surface-muted);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  font: inherit;
-  padding: var(--space-3);
-  transition: border-color var(--transition-base), box-shadow var(--transition-base);
-  width: 100%;
-}
-
-.c-editor-field__input:focus,
-.c-editor-field__textarea:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12);
-  outline: none;
-}
-
-.c-editor-field__textarea {
-  min-height: 160px;
-  resize: vertical;
-}
-
-.c-editor-field__help,
-.c-editor-hint {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-
+/* ── Rich-text toolbar ────────────────────────────────────────────── */
 .c-editor-toolbar {
   align-items: center;
   background: var(--surface-muted);
@@ -286,6 +157,7 @@
   gap: var(--space-3);
 }
 
+/* ── Preview pane ─────────────────────────────────────────────────── */
 .c-editor-preview {
   background: var(--surface-muted);
   border: 1px dashed var(--border-color);
@@ -309,6 +181,13 @@
   padding: 0 var(--space-1);
 }
 
+/* ── Inline actions (preview toggle etc.) ─────────────────────────── */
+.c-editor-inline-actions {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}
+
 .c-editor-inline-actions__button {
   background: none;
   border: none;
@@ -318,10 +197,6 @@
   padding: var(--space-1) var(--space-2);
 }
 
-.c-editor-breadcrumb__sep {
-  color: var(--text-secondary);
-}
-
 .c-editor-inline-actions__button:hover,
 .c-editor-inline-actions__button:focus-visible {
   color: var(--primary-color);
@@ -329,6 +204,7 @@
   text-decoration: underline;
 }
 
+/* ── Collapsible panel (rationale) ────────────────────────────────── */
 .c-editor-collapsible__trigger {
   align-items: baseline;
   background: none;
@@ -354,6 +230,7 @@
   margin-top: var(--space-3);
 }
 
+/* ── Dropzone (attachments) ───────────────────────────────────────── */
 .c-editor-dropzone {
   align-items: center;
   background: var(--surface-muted);
@@ -418,74 +295,10 @@
   gap: var(--space-1);
 }
 
-.c-editor-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  width: clamp(280px, 32%, 360px);
-}
-
-.c-editor-meta-group {
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  display: grid;
-  gap: var(--space-4);
-  padding: var(--space-5);
-}
-
-.c-editor-meta__title {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  margin: 0;
-  text-transform: uppercase;
-}
-
-.c-editor-field {
-  display: grid;
-  gap: var(--space-2);
-}
-
-@media (max-width: 1100px) {
-  .c-editor-layout {
-    flex-direction: column;
-  }
-
-  .c-editor-sidebar {
-    position: relative;
-    width: 100%;
-  }
-}
-
+/* ── Responsive ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .c-requirement-editor {
-    padding: var(--space-4) var(--space-3) var(--space-6);
-  }
-
-  .c-editor-topbar {
-    position: relative;
-  }
-
-  .c-editor-topbar__context,
-  .c-editor-topbar__actions {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: var(--space-3);
-  }
-
-  .c-editor-actions {
-    width: 100%;
-  }
-
-  .c-editor-autosave {
-    width: auto;
-  }
-
-  .c-editor-section,
-  .c-editor-meta-group {
+  .c-editor-dropzone {
+    min-height: 120px;
     padding: var(--space-4);
   }
 }

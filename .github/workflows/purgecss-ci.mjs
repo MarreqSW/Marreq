@@ -7,7 +7,7 @@ const cfg = (await import('./purgecss.config.cjs')).default ?? (await import('./
 const results = await new PurgeCSS().purge({
   ...cfg,
   rejected: true,           // ask PurgeCSS to list what it would remove
-  defaultExtractor: (c) => c.match(/[\w-/:%.@]+(?<!:)/g) || [],
+  defaultExtractor: (c) => c.match(/[\w-/:%@]+(?<!:)/g) || [],
 });
 
 let total = 0;

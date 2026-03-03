@@ -33,11 +33,9 @@ impl<'a> StatusService<'a> {
         &self,
         project_id: i32,
     ) -> Result<Vec<RequirementStatus>, RepoError> {
-        let all_statuses = self.state.repo_read().get_requirement_status_all()?;
-        Ok(all_statuses
-            .into_iter()
-            .filter(|s| s.project_id == project_id)
-            .collect())
+        self.state
+            .repo_read()
+            .get_requirement_status_by_project(project_id)
     }
 
     /// Retrieve test statuses.
@@ -50,11 +48,9 @@ impl<'a> StatusService<'a> {
         &self,
         project_id: i32,
     ) -> Result<Vec<TestStatus>, RepoError> {
-        let all_statuses = self.state.repo_read().get_test_status_all()?;
-        Ok(all_statuses
-            .into_iter()
-            .filter(|s| s.project_id == project_id)
-            .collect())
+        self.state
+            .repo_read()
+            .get_test_status_by_project(project_id)
     }
 
     /// Retrieve a single requirement status by identifier.

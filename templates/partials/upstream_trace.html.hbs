@@ -1,0 +1,84 @@
+{{!--
+  Upstream Trace — shared partial for requirement create & edit forms.
+  Uses c-trace-builder BEM classes from 50-components/trace-builder.css
+  and c-custom-dropdown from 50-components/dropdown.css for selectors.
+
+  Required context:
+    parent_links_edit  — [{target_requirement_id, link_type, reference?, title}]
+    linked_requirements — [{id, title, reference}] (all linkable requirements)
+    link_types          — [String] (e.g. "DERIVES_FROM", "REFINES")
+--}}
+<section class="c-trace-builder" data-role="upstream-trace">
+  <h2 class="c-trace-builder__title">Upstream Trace</h2>
+  <div class="c-trace-builder__body">
+    <label class="c-trace-builder__label">Parent requirements</label>
+    <p class="c-trace-builder__help">Link this requirement to one or more parent requirements (e.g.&nbsp;derives from, refines).</p>
+
+    <ul class="c-trace-builder__list" data-role="parent-links-list" aria-label="Parent links">
+      {{#each parent_links_edit}}
+      <li class="c-trace-builder__link-item" data-target-id="{{target_requirement_id}}" data-link-type="{{link_type}}">
+        <span class="c-trace-builder__link-badge">{{link_type}}</span>
+        <span class="c-trace-builder__link-label">{{#if reference}}{{reference}}{{else}}RM-{{target_requirement_id}}{{/if}} — {{title}}</span>
+        <button type="button" class="c-trace-builder__link-remove" data-role="remove-parent-link" aria-label="Remove parent link">Remove</button>
+      </li>
+      {{/each}}
+    </ul>
+
+    <div class="c-trace-builder__add-row" data-role="add-parent-link">
+      <div class="c-trace-builder__add-field">
+        <div class="c-custom-dropdown" data-dropdown="parent-requirement" data-placeholder="Select requirement...">
+          <button type="button" class="c-custom-dropdown__trigger" data-role="dropdown-trigger">
+            <span class="c-custom-dropdown__value c-custom-dropdown__value--placeholder" data-role="dropdown-value">Select requirement...</span>
+            <span class="c-custom-dropdown__arrow">&#9660;</span>
+          </button>
+          <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
+            <div class="c-custom-dropdown__search">
+              <input type="text" class="c-custom-dropdown__search-input" data-role="dropdown-search" placeholder="Search requirements..." autocomplete="off">
+            </div>
+            <div class="c-custom-dropdown__list c-custom-dropdown__list--scrollable" data-role="dropdown-list">
+              {{#each linked_requirements}}
+              <button type="button" class="c-custom-dropdown__item" data-value="{{id}}" data-reference="{{reference}}" data-title="{{title}}" data-search-text="{{#if reference}}{{reference}}{{/if}} {{title}}">
+                {{#if reference}}<span class="c-custom-dropdown__item-ref">{{reference}}</span>{{/if}}<span class="c-custom-dropdown__item-label">{{title}}</span>
+              </button>
+              {{else}}
+              <div class="c-custom-dropdown__empty">
+                No linkable requirements available
+              </div>
+              {{/each}}
+            </div>
+          </div>
+          <select id="parent_link_requirement" class="c-custom-dropdown__hidden" data-role="parent-link-requirement" hidden>
+            <option value="">Select requirement…</option>
+            {{#each linked_requirements}}
+            <option value="{{id}}" data-reference="{{reference}}" data-title="{{title}}">{{#if reference}}{{reference}}{{else}}RM-{{id}}{{/if}} — {{title}}</option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
+      <div class="c-trace-builder__add-field c-trace-builder__add-field--type">
+        <div class="c-custom-dropdown" data-dropdown="link-type" data-placeholder="Link type...">
+          <button type="button" class="c-custom-dropdown__trigger" data-role="dropdown-trigger">
+            <span class="c-custom-dropdown__value" data-role="dropdown-value">{{#each link_types}}{{#if @first}}{{this}}{{/if}}{{/each}}</span>
+            <span class="c-custom-dropdown__arrow">&#9660;</span>
+          </button>
+          <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
+            <div class="c-custom-dropdown__list" data-role="dropdown-list">
+              {{#each link_types}}
+              <button type="button" class="c-custom-dropdown__item{{#if @first}} c-custom-dropdown__item--selected{{/if}}" data-value="{{this}}">
+                {{this}}
+              </button>
+              {{/each}}
+            </div>
+          </div>
+          <select id="parent_link_type" class="c-custom-dropdown__hidden" data-role="parent-link-type" hidden>
+            {{#each link_types}}
+            <option value="{{this}}" {{#if @first}}selected{{/if}}>{{this}}</option>
+            {{/each}}
+          </select>
+        </div>
+      </div>
+      <button type="button" class="c-trace-builder__add-btn" data-role="add-parent-link-btn">Add parent</button>
+    </div>
+  </div>
+  <input type="hidden" name="parent_links" id="parent_links" value="" data-role="parent-links-value">
+</section>

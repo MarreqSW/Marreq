@@ -515,6 +515,19 @@ impl LookupRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
+    fn get_requirement_status_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<RequirementStatus>, RepoError> {
+        use schema::requirement_status::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::requirement_status
+            .filter(dsl::project_id.eq(project_id))
+            .order(dsl::id)
+            .load::<RequirementStatus>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
     fn get_requirement_status_by_id(&self, status_id: i32) -> Result<RequirementStatus, RepoError> {
         use schema::requirement_status::dsl;
         let mut conn = self.get_conn()?;
@@ -534,6 +547,16 @@ impl LookupRepository for DieselRepo {
         use schema::test_status::dsl;
         let mut conn = self.get_conn()?;
         dsl::test_status
+            .order(dsl::id)
+            .load::<TestStatus>(conn.as_mut())
+            .map_err(|e| e.into())
+    }
+
+    fn get_test_status_by_project(&self, project_id: i32) -> Result<Vec<TestStatus>, RepoError> {
+        use schema::test_status::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::test_status
+            .filter(dsl::project_id.eq(project_id))
             .order(dsl::id)
             .load::<TestStatus>(conn.as_mut())
             .map_err(|e| e.into())

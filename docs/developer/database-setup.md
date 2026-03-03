@@ -34,7 +34,7 @@ Marreq now uses a single database strategy:
    ```
 6. Start the application:
    ```bash
-   cargo run --bin req_man
+   cargo run --bin marreq
    ```
 7. Access the app at `http://localhost:8000` and log in with seeded users (password: `ChangeMe123!`).
 

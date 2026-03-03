@@ -1,95 +1,97 @@
 {{!--
-Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
+Depends on: css/pages/requirement-form.css, css/pages/requirement-create.css,
+            css/50-components/dropdown.css, css/50-components/trace-builder.css,
+            js/pages/requirementForm.js
 --}}
 {{#*inline "page"}}
-<form method="post" action="/p/{{#if project}}{{project.id}}{{else}}{{project_id}}{{/if}}/requirements/new" data-requirement-form data-allow-soft-mismatch="false" class="c-create-form create-form"
+<form method="post" action="/p/{{#if project}}{{project.id}}{{else}}{{project_id}}{{/if}}/requirements/new" data-requirement-form data-allow-soft-mismatch="false" class="c-reqform create-form"
   data-project-id="{{project_id}}" {{#if flash_success}}data-flash-success="{{flash_success}}" {{/if}}>
-  <header class="c-create-topbar">
-    <div class="c-create-topbar__context">
-      <nav class="c-create-breadcrumb" aria-label="Breadcrumb">
+  <header class="c-reqform-topbar">
+    <div class="c-reqform-topbar__context">
+      <nav class="c-reqform-breadcrumb" aria-label="Breadcrumb">
         <a href="/p/{{#if project}}{{project.id}}{{else}}{{project_id}}{{/if}}/requirements"
-          class="c-create-breadcrumb__link">
+          class="c-reqform-breadcrumb__link">
           {{#if project}}{{project.name}}{{else}}Project{{/if}}
         </a>
-        <span class="c-create-breadcrumb__sep">›</span>
-        <span class="c-create-breadcrumb__crumb">Requirements</span>
-        <span class="c-create-breadcrumb__sep">›</span>
-        <span class="c-create-breadcrumb__crumb c-create-breadcrumb__crumb--current">Add New</span>
+        <span class="c-reqform-breadcrumb__sep">›</span>
+        <span class="c-reqform-breadcrumb__crumb">Requirements</span>
+        <span class="c-reqform-breadcrumb__sep">›</span>
+        <span class="c-reqform-breadcrumb__crumb c-reqform-breadcrumb__crumb--current">Add New</span>
       </nav>
-      <h1 class="c-create-title">New Requirement</h1>
+      <h1 class="c-reqform-title">New Requirement</h1>
     </div>
-    <div class="c-create-topbar__actions">
-      <div class="c-create-autosave" aria-live="polite">
-        <span class="c-create-autosave__dot" data-role="autosave-indicator" hidden></span>
-        <span class="c-create-autosave__text" data-role="autosave-text"></span>
+    <div class="c-reqform-topbar__actions">
+      <div class="c-reqform-autosave" aria-live="polite">
+        <span class="c-reqform-autosave__dot" data-role="autosave-indicator" hidden></span>
+        <span class="c-reqform-autosave__text" data-role="autosave-text"></span>
       </div>
-      <button type="submit" class="btn btn-primary c-create-topbar__save" data-role="submit-requirement">Save</button>
+      <button type="submit" class="btn btn-primary c-reqform-topbar__save" data-role="submit-requirement">Save</button>
       <a href="/p/{{#if project}}{{project.id}}{{else}}{{project_id}}{{/if}}/requirements"
-        class="btn btn-outline-secondary c-create-topbar__cancel" data-role="cancel-create">Cancel</a>
+        class="btn btn-outline-secondary c-reqform-topbar__cancel" data-role="cancel-create">Cancel</a>
     </div>
   </header>
 
-  <div class="c-create-layout">
-    <section class="c-create-card c-create-card--primary">
-      <header class="c-create-card__header">
+  <div class="c-reqform-layout">
+    <section class="c-reqform-card c-reqform-card--primary">
+      <header class="c-reqform-card__header">
         <div>
-          <h2 class="c-create-card__title">Requirement Details</h2>
+          <h2 class="c-reqform-card__title">Requirement Details</h2>
         </div>
       </header>
 
-      <div class="c-create-card__body">
-        <div class="c-create-field">
-          <label for="title" class="c-create-field__label">
-            Title <span class="c-create-field__required">*</span>
+      <div class="c-reqform-card__body">
+        <div class="c-reqform-field">
+          <label for="title" class="c-reqform-field__label">
+            Title <span class="c-reqform-field__required">*</span>
           </label>
-          <input type="text" name="title" id="title" class="c-create-field__input" value="{{template.title}}"
+          <input type="text" name="title" id="title" class="c-reqform-field__input" value="{{template.title}}"
             placeholder="Control system shall…" required>
         </div>
 
-        <div class="c-create-field">
-          <label for="reference_code" class="c-create-field__label">
-            Reference <span class="c-create-field__optional">(optional)</span>
+        <div class="c-reqform-field">
+          <label for="reference_code" class="c-reqform-field__label">
+            Reference <span class="c-reqform-field__optional">(optional)</span>
           </label>
-          <input type="text" name="reference_code" id="reference_code" class="c-create-field__input"
+          <input type="text" name="reference_code" id="reference_code" class="c-reqform-field__input"
             value="{{template.reference_code}}" placeholder="REQ-CAT-001 (auto-generated if left blank)">
-          <div id="reference-error" class="c-create-field__error" hidden></div>
+          <div id="reference-error" class="c-reqform-field__error" hidden></div>
         </div>
 
-        <div class="c-create-field">
-          <label for="description" class="c-create-field__label">
-            Statement <span class="c-create-field__required">*</span>
+        <div class="c-reqform-field">
+          <label for="description" class="c-reqform-field__label">
+            Statement <span class="c-reqform-field__required">*</span>
           </label>
           <textarea name="description" id="description"
-            class="c-create-field__textarea c-create-field__textarea--statement" rows="6" required
+            class="c-reqform-field__textarea c-reqform-field__textarea--statement" rows="6" required
             placeholder="The system shall…">{{template.description}}</textarea>
         </div>
 
-        <div class="c-create-field">
-          <label for="justification" class="c-create-field__label">
-            Rationale <span class="c-create-field__optional">(optional)</span>
+        <div class="c-reqform-field">
+          <label for="justification" class="c-reqform-field__label">
+            Rationale <span class="c-reqform-field__optional">(optional)</span>
           </label>
-          <textarea name="justification" id="justification" class="c-create-field__textarea" rows="4"
+          <textarea name="justification" id="justification" class="c-reqform-field__textarea" rows="4"
             placeholder="What evidence or reasoning supports this?">{{template.justification}}</textarea>
         </div>
 
         {{#if custom_field_definitions}}
-        <div class="c-create-field" id="custom-fields-section">
-          <h3 class="c-create-field__label mb-2">Custom fields</h3>
+        <div class="c-reqform-field" id="custom-fields-section">
+          <h3 class="c-reqform-field__label">Custom fields</h3>
           {{#each custom_field_definitions}}
-          <div class="c-create-field mb-2" data-custom-field-id="{{id}}">
-            <label for="custom_field_{{id}}" class="c-create-field__label">{{label}}</label>
+          <div class="c-reqform-field" data-custom-field-id="{{id}}">
+            <label for="custom_field_{{id}}" class="c-reqform-field__label">{{label}}</label>
             {{#if (eq field_type "text")}}
-            <input type="text" id="custom_field_{{id}}" class="c-create-field__input c-create-field__custom-value" data-field-id="{{id}}" placeholder="">
+            <input type="text" id="custom_field_{{id}}" class="c-reqform-field__input c-reqform-field__custom-value" data-field-id="{{id}}" placeholder="">
             {{else if (eq field_type "number")}}
-            <input type="number" id="custom_field_{{id}}" class="c-create-field__input c-create-field__custom-value" data-field-id="{{id}}" placeholder="">
+            <input type="number" id="custom_field_{{id}}" class="c-reqform-field__input c-reqform-field__custom-value" data-field-id="{{id}}" placeholder="">
             {{else if (eq field_type "boolean")}}
-            <select id="custom_field_{{id}}" class="c-create-field__input c-create-field__custom-value" data-field-id="{{id}}">
+            <select id="custom_field_{{id}}" class="c-reqform-field__input c-reqform-field__custom-value" data-field-id="{{id}}">
               <option value="">—</option>
               <option value="true">Yes</option>
               <option value="false">No</option>
             </select>
             {{else if (eq field_type "enum")}}
-            <select id="custom_field_{{id}}" class="c-create-field__input c-create-field__custom-value" data-field-id="{{id}}">
+            <select id="custom_field_{{id}}" class="c-reqform-field__input c-reqform-field__custom-value" data-field-id="{{id}}">
               <option value="">—</option>
               {{#if enum_values}}
               {{#each enum_values}}
@@ -98,7 +100,7 @@ Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
               {{/if}}
             </select>
             {{else}}
-            <input type="text" id="custom_field_{{id}}" class="c-create-field__input c-create-field__custom-value" data-field-id="{{id}}" placeholder="">
+            <input type="text" id="custom_field_{{id}}" class="c-reqform-field__input c-reqform-field__custom-value" data-field-id="{{id}}" placeholder="">
             {{/if}}
           </div>
           {{/each}}
@@ -107,23 +109,23 @@ Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
       </div>
     </section>
 
-    <aside class="c-create-card c-create-card--meta">
-      <header class="c-create-card__header">
+    <aside class="c-reqform-card c-reqform-card--meta">
+      <header class="c-reqform-card__header">
         <div>
-          <h2 class="c-create-card__title">Ownership &amp; Traceability</h2>
+          <h2 class="c-reqform-card__title">Ownership &amp; Classification</h2>
         </div>
       </header>
 
-      <div class="c-create-card__body">
-        <div class="c-create-field">
-          <label for="req_author_display" class="c-create-field__label">Author</label>
-          <input type="text" id="req_author_display" class="c-create-field__input c-create-field__input--readonly"
+      <div class="c-reqform-card__body">
+        <div class="c-reqform-field">
+          <label for="req_author_display" class="c-reqform-field__label">Author</label>
+          <input type="text" id="req_author_display" class="c-reqform-field__input c-reqform-field__input--readonly"
             value="{{user.name}}" readonly>
         </div>
 
-        <div class="c-create-field">
-          <label for="reviewer_id" class="c-create-field__label">
-            Reviewer <span class="c-create-field__required">*</span>
+        <div class="c-reqform-field">
+          <label for="reviewer_id" class="c-reqform-field__label">
+            Reviewer <span class="c-reqform-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="reviewer">
             <button type="button" class="c-custom-dropdown__trigger" data-role="dropdown-trigger">
@@ -151,9 +153,9 @@ Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
           </div>
         </div>
 
-        <div class="c-create-field">
-          <label for="category_id" class="c-create-field__label">
-            Category <span class="c-create-field__required">*</span>
+        <div class="c-reqform-field">
+          <label for="category_id" class="c-reqform-field__label">
+            Category <span class="c-reqform-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="category">
             <button type="button" class="c-custom-dropdown__trigger" data-role="dropdown-trigger">
@@ -186,9 +188,9 @@ Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
           </div>
         </div>
 
-        <div class="c-create-field">
-          <label for="applicability_id" class="c-create-field__label">
-            Applicability <span class="c-create-field__required">*</span>
+        <div class="c-reqform-field">
+          <label for="applicability_id" class="c-reqform-field__label">
+            Applicability <span class="c-reqform-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="applicability">
             <button type="button" class="c-custom-dropdown__trigger" data-role="dropdown-trigger">
@@ -221,28 +223,12 @@ Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
           </div>
         </div>
 
-        <div class="c-create-field" data-dropdown="verification">
-          <label for="verification_method_ids" class="c-create-field__label">
-            Verification methods <span class="c-create-field__required">*</span>
-          </label>
-          <select name="verification_method_ids" id="verification_method_ids" class="c-create-field__input" multiple
-            required size="4">
-            {{#each verification_with_selected}}
-            <option value="{{id}}" {{#if selected}}selected{{/if}}>{{title}}</option>
-            {{/each}}
-          </select>
-          <small class="c-create-field__help">Hold Ctrl/Cmd to select multiple. At least one required.</small>
-          <div class="c-custom-dropdown__footer" style="margin-top: 0.25rem;">
-            <button type="button" class="c-custom-dropdown__action" data-action="create-verification">
-              + Create verification method
-            </button>
-          </div>
-        </div>
+        {{> partials/verification_pills}}
 
         {{#if is_admin_or_owner}}
-        <div class="c-create-field">
-          <label for="status_id" class="c-create-field__label">
-            Status <span class="c-create-field__required">*</span>
+        <div class="c-reqform-field">
+          <label for="status_id" class="c-reqform-field__label">
+            Status <span class="c-reqform-field__required">*</span>
           </label>
           <div class="c-custom-dropdown" data-dropdown="status">
             <button type="button" class="c-custom-dropdown__trigger" data-role="dropdown-trigger">
@@ -251,7 +237,7 @@ Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
             </button>
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
-                {{#each status}}
+                {{#each statuses}}
                 {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title
                 "Deprecated"))))}}
                 <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
@@ -266,7 +252,7 @@ Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
               </div>
             </div>
             <select name="status_id" id="status_id" class="c-custom-dropdown__hidden" required hidden>
-              {{#each status}}
+              {{#each statuses}}
               {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title
               "Deprecated"))))}}
               <option value="{{id}}" {{#if (eq id ../status_id)}}selected{{/if}}>
@@ -278,46 +264,12 @@ Depends on: css/pages/requirement-create.css, js/pages/requirementForm.js
           </div>
         </div>
         {{/if}}
-
-        <section class="c-editor-meta-group" data-role="upstream-trace">
-          <h2 class="c-editor-meta__title">Upstream Trace</h2>
-          <div class="c-editor-field">
-            <label class="c-editor-field__label">Parent requirements</label>
-            <p class="c-editor-field__help mb-2">Link this requirement to one or more parent requirements (e.g. derives from, refines).</p>
-            <ul class="list-unstyled mb-3" data-role="parent-links-list" aria-label="Parent links">
-              {{#each parent_links_edit}}
-              <li class="d-flex align-items-center gap-2 mb-2" data-target-id="{{target_requirement_id}}" data-link-type="{{link_type}}">
-                <span class="badge bg-secondary">{{link_type}}</span>
-                <span class="flex-grow-1">{{#if reference}}{{reference}}{{else}}RM-{{target_requirement_id}}{{/if}} — {{title}}</span>
-                <button type="button" class="btn btn-sm btn-outline-danger" data-role="remove-parent-link" aria-label="Remove parent link">Remove</button>
-              </li>
-              {{/each}}
-            </ul>
-            <div class="d-flex flex-wrap gap-2 align-items-end" data-role="add-parent-link">
-              <div class="flex-grow-1 min-w-0">
-                <label for="parent_link_requirement" class="form-label visually-hidden">Requirement</label>
-                <select id="parent_link_requirement" class="form-select form-select-sm" data-role="parent-link-requirement" aria-label="Select parent requirement">
-                  <option value="">Select requirement…</option>
-                  {{#each parent}}
-                  <option value="{{id}}" data-reference="{{reference}}" data-title="{{title}}">{{#if reference}}{{reference}}{{else}}RM-{{id}}{{/if}} — {{title}}</option>
-                  {{/each}}
-                </select>
-              </div>
-              <div>
-                <label for="parent_link_type" class="form-label visually-hidden">Link type</label>
-                <select id="parent_link_type" class="form-select form-select-sm" data-role="parent-link-type" aria-label="Link type">
-                  {{#each link_types}}
-                  <option value="{{this}}">{{this}}</option>
-                  {{/each}}
-                </select>
-              </div>
-              <button type="button" class="btn btn-sm btn-outline-primary" data-role="add-parent-link-btn">Add parent</button>
-            </div>
-          </div>
-          <input type="hidden" name="parent_links" id="parent_links" value="" data-role="parent-links-value">
-        </section>
       </div>
     </aside>
+  </div>
+
+  <div class="c-reqform-section--full">
+    {{> partials/upstream_trace}}
   </div>
 
   <input type="hidden" id="id" name="id" value="None">

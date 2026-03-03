@@ -23,21 +23,25 @@
 //!
 //! # Status Definitions
 //!
-//! This module enforces the canonical status definitions from the database:
+//! This module defines the canonical status variants. Statuses are stored
+//! per-project in the database (tables `requirement_status`, `test_status`)
+//! with auto-increment IDs that vary between projects. Business logic must
+//! **never** rely on numeric IDs — use `from_title()` or `from_tag()` to
+//! resolve a database row back to its semantic enum variant.
 //!
 //! **Requirement Statuses** (in lifecycle order):
-//! - Draft (1): Initial state, editable by users
-//! - Proposal (2): Awaiting approval, editable by users
-//! - Accepted (3): Approved, counts toward coverage
-//! - Rejected (4): Not accepted, needs revision
-//! - Cancelled (5): Will not be implemented
-//! - Finished (6): Completed
+//! - Draft: Initial state, editable by users
+//! - Proposal: Awaiting approval, editable by users
+//! - Accepted: Approved, counts toward coverage
+//! - Rejected: Not accepted, needs revision
+//! - Cancelled: Will not be implemented
+//! - Finished: Completed
 //!
 //! **Test Statuses**:
-//! - Passed (1): Test successful
-//! - Failed (2): Test failed
-//! - Pending (3): Awaiting execution
-//! - In Progress (4): Currently executing
+//! - Passed: Test successful
+//! - Failed: Test failed
+//! - Pending: Awaiting execution
+//! - In Progress: Currently executing
 //!
 //! **Project Statuses**:
 //! - Active: Project is currently active and in progress
@@ -62,12 +66,12 @@ use serde::{Deserialize, Serialize};
 /// - Finished: Completed
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RequirementStatusEnum {
-    Draft = 1,
-    Proposal = 2,
-    Accepted = 3,
-    Rejected = 4,
-    Cancelled = 5,
-    Finished = 6,
+    Draft,
+    Proposal,
+    Accepted,
+    Rejected,
+    Cancelled,
+    Finished,
 }
 
 impl RequirementStatusEnum {
@@ -109,15 +113,16 @@ impl RequirementStatusEnum {
         }
     }
 
-    /// Convert from a database ID to the enum variant.
-    pub fn from_id(id: i32) -> Option<Self> {
-        match id {
-            1 => Some(RequirementStatusEnum::Draft),
-            2 => Some(RequirementStatusEnum::Proposal),
-            3 => Some(RequirementStatusEnum::Accepted),
-            4 => Some(RequirementStatusEnum::Rejected),
-            5 => Some(RequirementStatusEnum::Cancelled),
-            6 => Some(RequirementStatusEnum::Finished),
+    /// Convert from a tag string (short name) to the enum variant.
+    pub fn from_tag(tag: &str) -> Option<Self> {
+        let normalized = tag.trim().to_ascii_lowercase();
+        match normalized.as_str() {
+            "drf" => Some(RequirementStatusEnum::Draft),
+            "pro" => Some(RequirementStatusEnum::Proposal),
+            "acc" => Some(RequirementStatusEnum::Accepted),
+            "rej" => Some(RequirementStatusEnum::Rejected),
+            "can" => Some(RequirementStatusEnum::Cancelled),
+            "fsh" => Some(RequirementStatusEnum::Finished),
             _ => None,
         }
     }
@@ -136,9 +141,16 @@ impl RequirementStatusEnum {
         }
     }
 
-    /// Get the database ID for this status.
-    pub fn id(&self) -> i32 {
-        *self as i32
+    /// Canonical ordering for display (stable across projects, not a DB id).
+    pub fn canonical_order(&self) -> i32 {
+        match self {
+            RequirementStatusEnum::Draft => 0,
+            RequirementStatusEnum::Proposal => 1,
+            RequirementStatusEnum::Accepted => 2,
+            RequirementStatusEnum::Rejected => 3,
+            RequirementStatusEnum::Cancelled => 4,
+            RequirementStatusEnum::Finished => 5,
+        }
     }
 
     /// Returns all status variants in order.
@@ -183,10 +195,10 @@ impl std::fmt::Display for RequirementStatusEnum {
 /// - In Progress: Test is currently being executed
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TestStatusEnum {
-    Passed = 1,
-    Failed = 2,
-    Pending = 3,
-    InProgress = 4,
+    Passed,
+    Failed,
+    Pending,
+    InProgress,
 }
 
 impl TestStatusEnum {
@@ -220,13 +232,14 @@ impl TestStatusEnum {
         }
     }
 
-    /// Convert from a database ID to the enum variant.
-    pub fn from_id(id: i32) -> Option<Self> {
-        match id {
-            1 => Some(TestStatusEnum::Passed),
-            2 => Some(TestStatusEnum::Failed),
-            3 => Some(TestStatusEnum::Pending),
-            4 => Some(TestStatusEnum::InProgress),
+    /// Convert from a tag string (short name) to the enum variant.
+    pub fn from_tag(tag: &str) -> Option<Self> {
+        let normalized = tag.trim().to_ascii_lowercase();
+        match normalized.as_str() {
+            "pass" => Some(TestStatusEnum::Passed),
+            "fail" => Some(TestStatusEnum::Failed),
+            "pend" => Some(TestStatusEnum::Pending),
+            "prog" => Some(TestStatusEnum::InProgress),
             _ => None,
         }
     }
@@ -243,9 +256,14 @@ impl TestStatusEnum {
         }
     }
 
-    /// Get the database ID for this status.
-    pub fn id(&self) -> i32 {
-        *self as i32
+    /// Canonical ordering for display (stable across projects, not a DB id).
+    pub fn canonical_order(&self) -> i32 {
+        match self {
+            TestStatusEnum::Passed => 0,
+            TestStatusEnum::Failed => 1,
+            TestStatusEnum::Pending => 2,
+            TestStatusEnum::InProgress => 3,
+        }
     }
 
     /// Returns all status variants in order.
@@ -485,10 +503,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn requirement_status_id_round_trip() {
+    fn requirement_status_tag_round_trip() {
         for status in RequirementStatusEnum::all() {
-            let id = status.id();
-            let recovered = RequirementStatusEnum::from_id(id);
+            let tag = status.short_name();
+            let recovered = RequirementStatusEnum::from_tag(tag);
             assert_eq!(Some(status), recovered);
         }
     }
@@ -506,7 +524,7 @@ mod tests {
     fn requirement_status_properties() {
         assert_eq!(RequirementStatusEnum::Draft.title(), "Draft");
         assert_eq!(RequirementStatusEnum::Draft.short_name(), "Drf");
-        assert_eq!(RequirementStatusEnum::Draft.id(), 1);
+        assert_eq!(RequirementStatusEnum::Draft.canonical_order(), 0);
         assert!(!RequirementStatusEnum::Draft.is_verified());
         assert!(RequirementStatusEnum::Draft.is_editable_by_user());
 
@@ -516,10 +534,10 @@ mod tests {
     }
 
     #[test]
-    fn test_status_id_round_trip() {
+    fn test_status_tag_round_trip() {
         for status in TestStatusEnum::all() {
-            let id = status.id();
-            let recovered = TestStatusEnum::from_id(id);
+            let tag = status.short_name();
+            let recovered = TestStatusEnum::from_tag(tag);
             assert_eq!(Some(status), recovered);
         }
     }
@@ -537,7 +555,7 @@ mod tests {
     fn test_status_properties() {
         assert_eq!(TestStatusEnum::Passed.title(), "Passed");
         assert_eq!(TestStatusEnum::Passed.short_name(), "Pass");
-        assert_eq!(TestStatusEnum::Passed.id(), 1);
+        assert_eq!(TestStatusEnum::Passed.canonical_order(), 0);
         assert!(TestStatusEnum::Passed.is_passed());
 
         assert_eq!(TestStatusEnum::InProgress.title(), "In Progress");
@@ -545,10 +563,10 @@ mod tests {
     }
 
     #[test]
-    fn requirement_status_from_invalid_id() {
-        assert_eq!(RequirementStatusEnum::from_id(999), None);
-        assert_eq!(RequirementStatusEnum::from_id(0), None);
-        assert_eq!(RequirementStatusEnum::from_id(-1), None);
+    fn requirement_status_from_invalid_tag() {
+        assert_eq!(RequirementStatusEnum::from_tag("xyz"), None);
+        assert_eq!(RequirementStatusEnum::from_tag(""), None);
+        assert_eq!(RequirementStatusEnum::from_tag("   "), None);
     }
 
     #[test]

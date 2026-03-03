@@ -6,7 +6,9 @@
 use super::base_service::{
     check_project_permission, serialize_for_logging, validate_entity_access,
 };
-use crate::models::{NewRequirement, Requirement, User};
+use crate::models::{NewRequirement, ProjectMember, Requirement, User};
+use crate::permissions::Permission;
+use crate::repository::diesel_repo_mock::DieselRepoMock;
 use chrono::{NaiveDate, NaiveDateTime};
 
 fn timestamp() -> NaiveDateTime {
@@ -87,11 +89,20 @@ fn serialize_payload_for_logging() {
 fn admin_user_has_access() {
     let mut admin = sample_user();
     admin.is_admin = true;
-    assert!(check_project_permission(&admin, 42).is_ok());
+    let repo = DieselRepoMock::default();
+    assert!(check_project_permission(&repo, &admin, 42, Permission::ViewRequirements).is_ok());
 }
 
 #[test]
 fn regular_user_validation_passes() {
     let user = sample_user();
-    assert!(validate_entity_access(&user, 1).is_ok());
+    let mut repo = DieselRepoMock::default();
+    repo.project_members.push(ProjectMember {
+        project_id: 1,
+        user_id: 1,
+        role: 4, // Viewer
+        created_at: timestamp(),
+        updated_at: timestamp(),
+    });
+    assert!(validate_entity_access(&repo, &user, 1).is_ok());
 }

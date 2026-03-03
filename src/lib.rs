@@ -24,6 +24,7 @@ pub mod html;
 pub mod importers;
 pub mod logger;
 pub mod models;
+pub mod permissions;
 pub mod repository;
 pub mod reqif;
 pub mod routes;

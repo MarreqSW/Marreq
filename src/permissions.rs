@@ -86,12 +86,7 @@ where
 }
 
 /// Returns true only if the user has the given permission in the project. Fail-closed.
-pub fn has_permission<R>(
-    repo: &R,
-    user: &User,
-    project_id: i32,
-    permission: Permission,
-) -> bool
+pub fn has_permission<R>(repo: &R, user: &User, project_id: i32, permission: Permission) -> bool
 where
     R: ProjectMembersRepository,
 {

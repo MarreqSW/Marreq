@@ -6,6 +6,8 @@
 //! Fairings are middleware-like components that execute at various stages
 //! of the Rocket lifecycle.
 
+pub mod cache_control;
 pub mod semantic_index;
 
+pub use cache_control::AntiCacheFairing;
 pub use semantic_index::SemanticIndexFairing;

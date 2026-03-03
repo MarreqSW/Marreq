@@ -78,12 +78,12 @@ fn decorate_requirements_impl<R: Repository>(
             let author = repo
                 .get_user_by_id(r.author_id)
                 .map(|u| u.name)
-                .unwrap_or_else(|_| format!("Unknown User ({})", r.author_id));
+                .unwrap_or_default();
 
             let reviewer = repo
                 .get_user_by_id(r.reviewer_id)
                 .map(|u| u.name)
-                .unwrap_or_else(|_| format!("Unknown User ({})", r.reviewer_id));
+                .unwrap_or_default();
 
             let category = repo
                 .get_category_by_id(r.category_id)

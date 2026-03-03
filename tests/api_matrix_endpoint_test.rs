@@ -13,7 +13,6 @@
 
 use marreq::auth::session::SESSION_COOKIE;
 use marreq::models::*;
-use marreq::repository::diesel_repo_mock::DieselRepoMock;
 use marreq::status_enums::ProjectStatus;
 use rocket::http::{Cookie, Status};
 use rocket::local::asynchronous::Client;
@@ -102,23 +101,36 @@ mod test_support {
 use test_support::*;
 
 // ============================================================================
-// GET /api/matrix - Authentication Tests
+// GET /api/matrix - Authentication Tests (ASVS V8.2.1)
 // ============================================================================
 
 #[rocket::async_test]
-async fn get_matrix_does_not_require_authentication() {
-    // Matrix endpoint is public (no authentication required)
+async fn get_matrix_unauthenticated_returns_401() {
+    // ASVS V8.2.1 regression: endpoint must reject callers with no credentials.
     let client = test_client(base_repo()).await;
 
     let response = client.get("/api/matrix").dispatch().await;
 
-    // May return InternalServerError if database connection fails (expected with mock)
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::InternalServerError);
+    assert_eq!(response.status(), Status::Unauthorized);
 }
 
 #[rocket::async_test]
-async fn get_matrix_with_valid_session_returns_ok() {
+async fn get_matrix_non_admin_returns_403() {
+    // ASVS V8.2.1: non-admin authenticated users must not enumerate cross-project links.
+    let client = test_client(base_repo()).await;
+
+    // user id 2 exists in base_repo() as a regular (non-admin) user
+    let response = client
+        .get("/api/matrix")
+        .private_cookie(session_cookie(2))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn get_matrix_with_admin_session_returns_ok() {
     let mut repo = base_repo();
     repo.matrices.push(sample_matrix_link(1, 1, 1));
 
@@ -126,33 +138,11 @@ async fn get_matrix_with_valid_session_returns_ok() {
 
     let response = client
         .get("/api/matrix")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(1)) // admin user
         .dispatch()
         .await;
 
-    // Note: May return InternalServerError if database connection fails
-    // This is expected with mock repository for this endpoint
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::InternalServerError);
-}
-
-#[rocket::async_test]
-async fn get_matrix_with_invalid_session_still_works() {
-    // Matrix endpoint is public, so invalid session doesn't matter
-    let client = test_client(base_repo()).await;
-
-    let mut invalid_cookie = Cookie::new(SESSION_COOKIE, "999");
-    invalid_cookie.set_path("/");
-
-    let response = client
-        .get("/api/matrix")
-        .private_cookie(invalid_cookie)
-        .dispatch()
-        .await;
-
-    // Should still work (or return InternalServerError if DB fails)
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::InternalServerError);
+    assert_eq!(response.status(), Status::Ok);
 }
 
 // ============================================================================
@@ -169,21 +159,16 @@ async fn get_matrix_returns_json_array() {
 
     let response = client
         .get("/api/matrix")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(1)) // admin
         .dispatch()
         .await;
 
-    if response.status() == Status::Ok {
-        let content_type = response.content_type();
-        assert!(content_type.is_some());
-        assert_eq!(content_type.unwrap().to_string(), "application/json");
+    assert_eq!(response.status(), Status::Ok);
+    let content_type = response.content_type().unwrap();
+    assert_eq!(content_type.to_string(), "application/json");
 
-        let body: Option<Vec<Value>> = response.into_json().await;
-        // If successful, should be an array (Vec<Value> is already an array)
-        if let Some(_array) = body {
-            // Vec<Value> is already an array, no need to check
-        }
-    }
+    let body: Vec<Value> = response.into_json().await.expect("json array");
+    assert_eq!(body.len(), 2);
 }
 
 // ============================================================================
@@ -191,19 +176,20 @@ async fn get_matrix_returns_json_array() {
 // ============================================================================
 
 #[rocket::async_test]
-async fn get_matrix_handles_database_errors_gracefully() {
-    let repo = DieselRepoMock::default(); // Empty repo might cause connection issues
-    let client = test_client(repo).await;
+async fn get_matrix_unknown_session_returns_401() {
+    // A valid-looking cookie for a user that doesn't exist must yield 401.
+    let client = test_client(base_repo()).await;
+
+    let mut unknown_cookie = Cookie::new(SESSION_COOKIE, "999");
+    unknown_cookie.set_path("/");
 
     let response = client
         .get("/api/matrix")
-        .private_cookie(session_cookie(1))
+        .private_cookie(unknown_cookie)
         .dispatch()
         .await;
 
-    // Should return either Ok (if mock works) or InternalServerError (if DB connection fails)
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::InternalServerError);
+    assert_eq!(response.status(), Status::Unauthorized);
 }
 
 // ============================================================================
@@ -212,17 +198,16 @@ async fn get_matrix_handles_database_errors_gracefully() {
 
 #[rocket::async_test]
 async fn get_matrix_returns_empty_array_when_no_links() {
-    let repo = base_repo(); // No matrix links
+    let repo = base_repo(); // admin present, no matrix links
     let client = test_client(repo).await;
 
     let response = client
         .get("/api/matrix")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(1)) // admin
         .dispatch()
         .await;
 
-    if response.status() == Status::Ok {
-        let matrix: Vec<Value> = response.into_json().await.expect("json");
-        assert_eq!(matrix.len(), 0);
-    }
+    assert_eq!(response.status(), Status::Ok);
+    let matrix: Vec<Value> = response.into_json().await.expect("json");
+    assert_eq!(matrix.len(), 0);
 }

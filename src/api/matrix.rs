@@ -6,8 +6,11 @@ use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::MatrixLink;
 use crate::services::MatrixService;
 
+/// `GET /api/matrix` — list all traceability links across all projects.
+/// Restricted to administrators (ASVS V8.2.1): prevents cross-project data leakage to
+/// unauthenticated or unprivileged callers.
 #[get("/matrix")]
-pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<MatrixLink>>> {
+pub async fn list(_admin: AdminOnly, state: &State<AppState>) -> ApiResult<Json<Vec<MatrixLink>>> {
     let service = MatrixService::new(state.inner());
     let entries = service.list_all()?;
     Ok(Json(entries))
@@ -75,10 +78,28 @@ mod tests {
         Client::tracked(rocket).await.unwrap()
     }
 
+    fn admin_cookie() -> Cookie<'static> {
+        let mut c = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
+        c.set_path("/");
+        c
+    }
+
+    #[rocket::async_test]
+    async fn list_unauthenticated_returns_401() {
+        // ASVS V8.2.1: unauthenticated requests must be rejected.
+        let client = client_with_routes(DieselRepoMock::default().with_admin_user(), false).await;
+        let response = client.get("/api/matrix").dispatch().await;
+        assert_eq!(response.status(), Status::Unauthorized);
+    }
+
     #[rocket::async_test]
     async fn list_returns_empty_without_data() {
-        let client = client_with_routes(DieselRepoMock::default(), false).await;
-        let response = client.get("/api/matrix").dispatch().await;
+        let client = client_with_routes(DieselRepoMock::default().with_admin_user(), false).await;
+        let response = client
+            .get("/api/matrix")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.unwrap();
         assert_eq!(body, "[]");
@@ -86,7 +107,7 @@ mod tests {
 
     #[rocket::async_test]
     async fn list_returns_all_links() {
-        let mut repo = DieselRepoMock::default();
+        let mut repo = DieselRepoMock::default().with_admin_user();
         repo.projects.insert(
             7,
             Project {
@@ -113,7 +134,11 @@ mod tests {
             triggering_user_id: None,
         });
         let client = client_with_routes(repo, false).await;
-        let response = client.get("/api/matrix").dispatch().await;
+        let response = client
+            .get("/api/matrix")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
         assert_eq!(response.status(), Status::Ok);
         let body: Vec<MatrixLink> = response.into_json().await.unwrap();
         assert_eq!(body.len(), 1);

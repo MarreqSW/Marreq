@@ -521,15 +521,21 @@ async fn status_create_does_not_require_authentication() {
 // ============================================================================
 
 #[rocket::async_test]
-async fn matrix_list_does_not_require_authentication() {
-    // Matrix endpoint doesn't require auth based on the code
+async fn matrix_list_requires_admin_authentication() {
+    // ASVS V8.2.1 regression: GET /api/matrix must not be publicly accessible.
     let client = test_client(base_repo()).await;
 
-    let response = client.get("/api/matrix").dispatch().await;
+    // Unauthenticated
+    let unauth = client.get("/api/matrix").dispatch().await;
+    assert_eq!(unauth.status(), Status::Unauthorized);
 
-    // Matrix endpoint is public, may return error if DB connection fails
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::InternalServerError);
+    // Non-admin user (id 2 in base_repo)
+    let non_admin = client
+        .get("/api/matrix")
+        .private_cookie(session_cookie(2))
+        .dispatch()
+        .await;
+    assert_eq!(non_admin.status(), Status::Forbidden);
 }
 
 // ============================================================================

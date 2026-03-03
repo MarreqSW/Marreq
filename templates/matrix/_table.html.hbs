@@ -87,9 +87,9 @@
                   data-test-id="{{#with (lookup @root.tests @index)}}{{id}}{{/with}}"
                   data-linked="{{this.linked}}"
                   data-suspect="{{this.suspect}}"
-                  data-test-status="{{this.status_id}}">
+                  data-test-status="{{this.status_title}}">
                 {{#if this.linked}}
-                  <div class="c-matrix-link-indicator {{#if this.suspect}}c-matrix-link-indicator--suspect{{/if}}" data-tooltip="{{#if this.suspect}}Suspect – re-review needed{{/if}}{{#unless this.suspect}}Linked – {{#if (eq this.status_id 1)}}Passed{{else if (eq this.status_id 2)}}Failed{{else if (eq this.status_id 3)}}Pending{{else if (eq this.status_id 4)}}In Progress{{else}}Unknown{{/if}}{{/unless}}">
+                  <div class="c-matrix-link-indicator {{#if this.suspect}}c-matrix-link-indicator--suspect{{/if}}" data-tooltip="{{#if this.suspect}}Suspect – re-review needed{{/if}}{{#unless this.suspect}}Linked – {{this.status_title}}{{/unless}}">
                     {{#if this.suspect}}
                       <span class="c-matrix-status-dot status-suspect" aria-label="Suspect – re-review needed" title="Suspect">⚠</span>
                       <form method="post" action="/p/{{@root.selected_project_id}}/matrix/clear_suspect" class="d-inline ms-1" style="display:inline;">
@@ -98,16 +98,16 @@
                         <button type="submit" class="btn btn-sm btn-outline-secondary" title="Clear suspect flag">Clear</button>
                       </form>
                     {{else}}
-                    {{#if (eq this.status_id 1)}}
+                    {{#if (eq this.status_title "Passed")}}
                       <span class="c-matrix-status-dot status-passed" aria-label="Test passed" title="Passed">●</span>
-                    {{else if (eq this.status_id 2)}}
+                    {{else if (eq this.status_title "Failed")}}
                       <span class="c-matrix-status-dot status-failed" aria-label="Test failed" title="Failed">✕</span>
-                    {{else if (eq this.status_id 3)}}
+                    {{else if (eq this.status_title "Pending")}}
                       <span class="c-matrix-status-dot status-pending" aria-label="Test pending" title="Pending">○</span>
-                    {{else if (eq this.status_id 4)}}
+                    {{else if (eq this.status_title "In Progress")}}
                       <span class="c-matrix-status-dot status-in-progress" aria-label="Test in progress" title="In Progress">◐</span>
                     {{else}}
-                      <span class="c-matrix-status-dot status-pending" aria-label="Test status" title="Unknown">○</span>
+                      <span class="c-matrix-status-dot status-pending" aria-label="Test status" title="{{this.status_title}}">○</span>
                     {{/if}}
                     {{/if}}
                   </div>

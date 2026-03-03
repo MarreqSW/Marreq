@@ -698,7 +698,7 @@ async fn show_requirement_id(
     test_status_list.retain(|s| TestStatusEnum::from_title(&s.title).is_some());
     test_status_list.sort_by_key(|s| {
         TestStatusEnum::from_title(&s.title)
-            .map(|e| e.id())
+            .map(|e| e.canonical_order())
             .unwrap_or(i32::MAX)
     });
     let test_statuses: Vec<serde_json::Value> = test_status_list
@@ -946,7 +946,7 @@ async fn show_requirement_version(
     test_status_list.retain(|s| TestStatusEnum::from_title(&s.title).is_some());
     test_status_list.sort_by_key(|s| {
         TestStatusEnum::from_title(&s.title)
-            .map(|e| e.id())
+            .map(|e| e.canonical_order())
             .unwrap_or(i32::MAX)
     });
     let test_statuses: Vec<serde_json::Value> = test_status_list
@@ -1360,8 +1360,11 @@ async fn delete_requirement_route(
     }
 
     // Permission gate: allow only Draft or Proposal status, or admin
-    // Use the enum to check if the status is editable
-    let is_editable = RequirementStatusEnum::from_id(req.status_id)
+    // Resolve status by looking up the title from the project's status list (not hardcoded IDs)
+    let is_editable = StatusService::new(state.inner())
+        .get_requirement_status(req.status_id)
+        .ok()
+        .and_then(|status| RequirementStatusEnum::from_title(&status.title))
         .map(|status| status.is_editable_by_user())
         .unwrap_or(false);
 
@@ -1432,7 +1435,7 @@ async fn new_requirement(
         description: tr.map(|r| r.description.clone()).unwrap_or_default(),
         author_id: user.id,
         category_id: tr.map(|r| r.category_id).unwrap_or_default(),
-        status_id: 0, // Draft
+        status_id: 0, // placeholder; resolved to project's Draft status below
         reference_code: tr.map(|r| r.reference_code.clone()).unwrap_or_default(),
         reviewer_id: tr.map(|r| r.reviewer_id).unwrap_or_default(),
         applicability_id: tr.map(|r| r.applicability_id).unwrap_or_default(),
@@ -1446,7 +1449,8 @@ async fn new_requirement(
         .iter()
         .find(|st| st.title.eq_ignore_ascii_case("Draft"))
         .map(|st| st.id)
-        .unwrap_or(RequirementStatusEnum::Draft.id());
+        .or_else(|| statuses.first().map(|st| st.id))
+        .unwrap_or(0);
 
     let created_flash = created.and_then(|flag| {
         if flag == "1" || flag.eq_ignore_ascii_case("true") {
@@ -1600,7 +1604,8 @@ async fn post_requirement(
             .iter()
             .find(|s| s.title.eq_ignore_ascii_case("Draft"))
             .map(|s| s.id)
-            .unwrap_or_else(|| RequirementStatusEnum::Draft.id());
+            .or_else(|| statuses.first().map(|s| s.id))
+            .unwrap_or(0);
     }
     if req.reviewer_id <= 0 {
         req.reviewer_id = user.id;

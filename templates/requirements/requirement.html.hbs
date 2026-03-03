@@ -325,6 +325,7 @@
           </div>
           <nav class="ms-lg-auto" aria-label="Requirement actions">
             <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
+              {{#if can_edit_requirements}}
               <a href="/p/{{project_id}}/requirements/edit/{{requirement_data.requirement.id}}"
                 class="btn btn-primary btn-sm {{#if requirement_data.approval_is_approved}}marreq-edit-approved-link{{/if}}"
                 aria-label="Edit requirement"
@@ -334,6 +335,7 @@
                 </svg>
                 <span class="ms-1">Edit</span>
               </a>
+              {{/if}}
               <a href="/logs/REQUIREMENT/{{requirement_data.requirement.id}}" class="btn btn-outline-secondary btn-sm"
                 aria-label="View requirement history">
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
@@ -341,6 +343,7 @@
                 </svg>
                 <span class="ms-1">History</span>
               </a>
+              {{#if can_edit_requirements}}
               <div class="btn-group">
                 <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown"
                   aria-expanded="false" aria-label="More actions">
@@ -389,6 +392,7 @@
                   </li>
                 </ul>
               </div>
+              {{/if}}
             </div>
           </nav>
         </div>

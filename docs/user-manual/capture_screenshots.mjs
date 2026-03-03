@@ -2,8 +2,8 @@
 /**
  * Capture screenshots for the Marreq User Manual.
  * Run with the Marreq app and DB up: cargo run --bin marreq (and docker compose up -d db, setup_database.sh).
- * Then: node doc/UserManual/capture_screenshots.mjs
- * Or: node capture_screenshots.mjs from doc/UserManual.
+ * Then: node docs/user-manual/capture_screenshots.mjs
+ * Or: node capture_screenshots.mjs from docs/user-manual.
  *
  * Requires: npm install -D playwright && npx playwright install chromium
  */

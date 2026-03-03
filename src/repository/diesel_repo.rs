@@ -42,12 +42,20 @@ fn map_db_error(e: diesel::result::Error) -> RepoError {
     if let DE::DatabaseError(ref kind, ref info) = e {
         match kind {
             DatabaseErrorKind::UniqueViolation => {
-                let field = match info.constraint_name().unwrap_or("") {
-                    c if c.contains("username") => "username",
-                    c if c.contains("email") => "email",
-                    _ => "value",
+                let msg = match info.constraint_name().unwrap_or("") {
+                    c if c.contains("username") => "username is already taken".to_string(),
+                    c if c.contains("email") => "email is already taken".to_string(),
+                    c if c.contains("tests_project_id_reference_code")
+                        => "reference_code is already used in this project".to_string(),
+                    c if c.contains("requirement_status_project_id_tag")
+                        || c.contains("test_status_project_id_tag")
+                        || c.contains("categories_project_id_tag")
+                        || c.contains("applicability_project_id_tag")
+                        || c.contains("verification_project_id_tag") =>
+                        "tag is already used in this project".to_string(),
+                    _ => "value is already taken".to_string(),
                 };
-                return RepoError::Duplicate(format!("{} is already taken", field));
+                return RepoError::Duplicate(msg);
             }
             DatabaseErrorKind::Unknown => {
                 let msg = info.message();

@@ -16,9 +16,9 @@ use crate::app::AppState;
 use crate::config;
 use crate::helper_functions::generate_requirement_reference;
 use crate::models::*;
+use crate::permissions::{has_permission, Permission};
 use crate::repository::errors::RepoError;
 use crate::repository::CustomFieldRepository;
-use crate::repository::ProjectMembersRepository;
 use crate::services::{
     change_summary, log_change_details, resolve_change_details_labels, ApplicabilityService,
     CategoryService, CommentService, CustomFieldService, DecoratedRequirementService,
@@ -472,7 +472,7 @@ async fn show_requirements(
     let inline_edit_config_json =
         serde_json::to_string(&inline_edit_config).unwrap_or_else(|_| "{}".to_string());
 
-    let ctx = json!({
+    let mut ctx = json!({
         "user": user,
         "requirements": json!(requirements),
         "tree_data": tree_data,
@@ -519,6 +519,14 @@ async fn show_requirements(
             &build_requirements_query(view.as_deref(), status_filter, verification_filter, category_filter, applicability_filter, approval_filter.as_deref(), custom_filters.as_deref()),
         )),
     });
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        let perms = super::helpers::project_permissions_context(state, &user, project_id);
+        if let Some(perms_obj) = perms.as_object() {
+            for (k, v) in perms_obj {
+                ctx_obj.insert(k.clone(), v.clone());
+            }
+        }
+    }
 
     Ok(Template::render("requirements/requirements", ctx))
 }
@@ -675,15 +683,9 @@ async fn show_requirement_id(
             (r.id, format!("{} — {}", ref_display, r.title))
         })
         .collect();
-    let members = repo
-        .get_members_by_project(requirement.project_id)
-        .unwrap_or_default();
+    let can_approve = has_permission(&*repo, &user, project_id, Permission::ApproveVersions);
     drop(repo);
 
-    let can_approve = user.is_admin
-        || members
-            .iter()
-            .any(|m| m.user_id == user.id && (m.role == 1 || m.role == 2));
     let approved_by_name = requirement
         .approved_by
         .and_then(|uid| user_service.get_by_id(uid).ok())
@@ -798,7 +800,7 @@ async fn show_requirement_id(
         }
     });
 
-    let ctx = json!({
+    let mut ctx = json!({
         "user": user,
         "project_id": project_id,
         "project": json!({
@@ -815,6 +817,14 @@ async fn show_requirement_id(
         "approval_is_reviewed": requirement.approval_state.eq_ignore_ascii_case("reviewed"),
         "approval_is_approved": requirement.approval_state.eq_ignore_ascii_case("approved"),
     });
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        let perms = super::helpers::project_permissions_context(state, &user, project_id);
+        if let Some(perms_obj) = perms.as_object() {
+            for (k, v) in perms_obj {
+                ctx_obj.insert(k.clone(), v.clone());
+            }
+        }
+    }
 
     Ok(Template::render("requirements/requirement", ctx))
 }
@@ -926,13 +936,13 @@ async fn show_requirement_version(
         })
         .collect();
     let repo_version = state.repo_read();
-    let members_version = repo_version
-        .get_members_by_project(current.project_id)
-        .unwrap_or_default();
-    let can_approve_version = user.is_admin
-        || members_version
-            .iter()
-            .any(|m| m.user_id == user.id && (m.role == 1 || m.role == 2));
+    let can_approve_version = has_permission(
+        &*repo_version,
+        &user,
+        project_id,
+        Permission::ApproveVersions,
+    );
+    drop(repo_version);
     let approved_by_name_version = requirement
         .approved_by
         .and_then(|uid| user_service.get_by_id(uid).ok())
@@ -1087,7 +1097,7 @@ async fn show_requirement_version(
             "can_comment_on_version": can_comment_on_version_view,
         }
     });
-    let ctx = json!({
+    let mut ctx = json!({
         "user": user,
         "project_id": project_id,
         "project": json!({ "id": selected_project.id, "name": selected_project.name }),
@@ -1100,6 +1110,14 @@ async fn show_requirement_version(
         "approved_by_name": approved_by_name_version,
         "approved_at_formatted": approved_at_formatted_version,
     });
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        let perms = super::helpers::project_permissions_context(state, &user, project_id);
+        if let Some(perms_obj) = perms.as_object() {
+            for (k, v) in perms_obj {
+                ctx_obj.insert(k.clone(), v.clone());
+            }
+        }
+    }
     Ok(Template::render("requirements/requirement", ctx))
 }
 
@@ -1111,6 +1129,14 @@ async fn get_edit_requirement(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::EditRequirements,
+    ) {
+        return Err(requirements_list_redirect(project_id));
+    }
     let name = ProjectService::new(state.inner())
         .get_by_id(project_id)?
         .name;
@@ -1349,6 +1375,14 @@ async fn delete_requirement_route(
     state: &State<AppState>,
 ) -> Result<Redirect, rocket::http::Status> {
     let user = project_access.into_user();
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::EditRequirements,
+    ) {
+        return Err(rocket::http::Status::Forbidden);
+    }
 
     let service = RequirementService::new(state.inner());
     let req = service
@@ -1390,6 +1424,14 @@ async fn new_requirement(
     template: Option<i32>, // use this requirement as a template
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::EditRequirements,
+    ) {
+        return Err(requirements_list_redirect(project_id));
+    }
     let requirement_service = RequirementService::new(state.inner());
 
     let project = ProjectService::new(state.inner()).get_by_id(project_id)?;

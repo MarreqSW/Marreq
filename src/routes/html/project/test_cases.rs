@@ -63,7 +63,7 @@ async fn show_tests(
     let service = TestService::new(state.inner());
     let repo = state.repo_read();
 
-    let mut ctx = build_context_with_projects(state, user, cookies);
+    let mut ctx = build_context_with_projects(state, user.clone(), cookies);
     ctx["selected_project_id"] = json!(project_id);
 
     // Get project info
@@ -195,6 +195,15 @@ async fn show_tests(
         ctx["page_title"] = json!("Tests");
     }
 
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        let perms = super::helpers::project_permissions_context(state, &user, project_id);
+        if let Some(perms_obj) = perms.as_object() {
+            for (k, v) in perms_obj {
+                ctx_obj.insert(k.clone(), v.clone());
+            }
+        }
+    }
+
     Ok(Template::render("tests/tests", ctx))
 }
 
@@ -313,6 +322,13 @@ async fn show_test_id(
         ctx_map.insert("page_title".into(), json!(format!("{} - Test", ref_code)));
     } else {
         ctx_map.insert("page_title".into(), json!("Test"));
+    }
+
+    let perms = super::helpers::project_permissions_context(state, &user, project_id);
+    if let Some(perms_obj) = perms.as_object() {
+        for (k, v) in perms_obj {
+            ctx_map.insert(k.clone(), v.clone());
+        }
     }
 
     Ok(Template::render(

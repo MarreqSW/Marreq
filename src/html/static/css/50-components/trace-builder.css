@@ -1,0 +1,185 @@
+/*
+ * Trace-builder component.
+ * Full-width upstream/downstream traceability link builder.
+ * Replaces mixed Bootstrap utility + c-editor-meta-group patterns.
+ * Selectors use the shared c-custom-dropdown component (dropdown.css).
+ *
+ * Markup contract:
+ *   section.c-trace-builder[data-role="upstream-trace"]
+ *     h2.c-trace-builder__title
+ *     .c-trace-builder__body
+ *       label.c-trace-builder__label
+ *       p.c-trace-builder__help
+ *       ul.c-trace-builder__list[data-role="parent-links-list"]
+ *         li.c-trace-builder__link-item[data-target-id][data-link-type]
+ *           span.c-trace-builder__link-badge
+ *           span.c-trace-builder__link-label
+ *           button.c-trace-builder__link-remove[data-role="remove-parent-link"]
+ *       .c-trace-builder__add-row[data-role="add-parent-link"]
+ *         .c-trace-builder__add-field
+ *           .c-custom-dropdown  (shared dropdown)
+ *         .c-trace-builder__add-field.c-trace-builder__add-field--type
+ *           .c-custom-dropdown  (shared dropdown)
+ *         button.c-trace-builder__add-btn[data-role="add-parent-link-btn"]
+ *       input[type=hidden][data-role="parent-links-value"]
+ */
+.c-trace-builder {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.c-trace-builder__title {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.c-trace-builder__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.c-trace-builder__label {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.c-trace-builder__help {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  margin: 0;
+}
+
+/* Parent-link list */
+.c-trace-builder__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.c-trace-builder__link-item {
+  align-items: center;
+  display: flex;
+  gap: var(--space-2);
+}
+
+.c-trace-builder__link-badge {
+  background-color: var(--surface-muted);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 2px var(--space-2);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.c-trace-builder__link-label {
+  color: var(--text-primary);
+  flex: 1;
+  font-size: var(--text-sm);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.c-trace-builder__link-remove {
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--error-color);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  transition: background-color var(--transition-base), border-color var(--transition-base);
+  white-space: nowrap;
+}
+
+.c-trace-builder__link-remove:hover {
+  background-color: var(--alert-error-bg, #fef2f2);
+  border-color: var(--error-color);
+}
+
+.c-trace-builder__link-remove:focus {
+  border-color: var(--error-color);
+  box-shadow: 0 0 0 2px rgb(239 68 68 / 0.15);
+  outline: none;
+}
+
+/* Add-row */
+.c-trace-builder__add-row {
+  align-items: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.c-trace-builder__add-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.c-trace-builder__add-field--type {
+  flex: 0 0 auto;
+  min-width: 160px;
+}
+
+.c-trace-builder__add-btn {
+  background-color: var(--surface-color);
+  border: 1px solid var(--primary-color);
+  border-radius: var(--radius-md);
+  color: var(--primary-color);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: var(--space-2) var(--space-3);
+  transition: background-color var(--transition-base), color var(--transition-base);
+  white-space: nowrap;
+}
+
+.c-trace-builder__add-btn:hover {
+  background-color: var(--primary-color);
+  color: var(--text-inverse, #fff);
+}
+
+.c-trace-builder__add-btn:focus {
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .c-trace-builder {
+    padding: var(--space-4);
+  }
+
+  .c-trace-builder__add-row {
+    flex-direction: column;
+  }
+
+  .c-trace-builder__add-field--type {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .c-trace-builder__link-remove,
+  .c-trace-builder__add-btn {
+    transition: none;
+  }
+}

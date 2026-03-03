@@ -6,6 +6,7 @@
 use super::helpers::*;
 use super::prelude::*;
 use crate::models::CustomFieldDefinitionPayload;
+use crate::permissions::{has_permission, Permission};
 use crate::services::CustomFieldService;
 use rocket::form::FromForm;
 
@@ -71,7 +72,7 @@ async fn show_custom_fields(
         None
     };
 
-    let ctx = json!({
+    let mut ctx = json!({
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
@@ -80,6 +81,14 @@ async fn show_custom_fields(
         "delete_error_message": delete_error_message,
         "page_title": "Custom fields"
     });
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        let perms = super::helpers::project_permissions_context(state, &user, project_id);
+        if let Some(perms_obj) = perms.as_object() {
+            for (k, v) in perms_obj {
+                ctx_obj.insert(k.clone(), v.clone());
+            }
+        }
+    }
 
     Ok(Template::render("custom_fields/custom_fields", ctx))
 }
@@ -91,6 +100,14 @@ async fn new_custom_field(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::ManageCustomFields,
+    ) {
+        return Err(Redirect::to(list_url(project_id)));
+    }
     let projects = get_accessible_projects(state, &user);
 
     let ctx = json!({
@@ -109,7 +126,15 @@ async fn post_custom_field(
     form: Form<CustomFieldForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let _user = project_access.into_user();
+    let user = project_access.into_user();
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::ManageCustomFields,
+    ) {
+        return Ok(Redirect::to(list_url(project_id)));
+    }
     let service = CustomFieldService::new(state.inner());
 
     let new_url = uri!("/p", new_custom_field(project_id));
@@ -133,6 +158,14 @@ async fn get_edit_custom_field(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::ManageCustomFields,
+    ) {
+        return Err(Redirect::to(list_url(project_id)));
+    }
     let service = CustomFieldService::new(state.inner());
 
     let custom_field = service
@@ -173,7 +206,15 @@ async fn post_edit_custom_field(
     form: Form<CustomFieldForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let _user = project_access.into_user();
+    let user = project_access.into_user();
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::ManageCustomFields,
+    ) {
+        return Ok(Redirect::to(list_url(project_id)));
+    }
     let service = CustomFieldService::new(state.inner());
 
     let edit_url = uri!("/p", get_edit_custom_field(project_id, field_id));
@@ -204,7 +245,15 @@ async fn delete_custom_field_route(
     field_id: i32,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, DeleteCustomFieldError> {
-    let _user = project_access.into_user();
+    let user = project_access.into_user();
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::ManageCustomFields,
+    ) {
+        return Ok(rocket::http::Status::Forbidden);
+    }
     let service = CustomFieldService::new(state.inner());
 
     let def = match service.get_by_id(field_id) {

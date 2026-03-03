@@ -40,10 +40,17 @@ pub async fn list_members(
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<MemberResponse>>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let repo = state.repo_read();
     let _ = repo.get_project_by_id(project_id).map_err(ApiError::from)?;
-    let members = repo.get_members_by_project(project_id).map_err(ApiError::from)?;
+    let members = repo
+        .get_members_by_project(project_id)
+        .map_err(ApiError::from)?;
     let out: Vec<MemberResponse> = members
         .into_iter()
         .map(|m| MemberResponse {
@@ -70,9 +77,14 @@ pub async fn set_member_role(
     state: &State<AppState>,
     body: Json<SetRoleRequest>,
 ) -> ApiResult<Json<MemberResponse>> {
-    require_project_permission(state, access.user(), project_id, Permission::ManageProjectMembers)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ManageProjectMembers,
+    )?;
     let role = body.into_inner().role;
-    if role < 1 || role > 4 {
+    if !(1..=4).contains(&role) {
         return Err(ApiError::BadRequest(
             "role must be 1 (Admin), 2 (Reviewer), 3 (Author), or 4 (Viewer)".into(),
         ));
@@ -100,8 +112,16 @@ pub async fn remove_member(
     user_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Status> {
-    require_project_permission(state, access.user(), project_id, Permission::ManageProjectMembers)?;
-    let members = state.repo_read().get_members_by_project(project_id).map_err(ApiError::from)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ManageProjectMembers,
+    )?;
+    let members = state
+        .repo_read()
+        .get_members_by_project(project_id)
+        .map_err(ApiError::from)?;
     let admin_count = members.iter().filter(|m| m.role == 1).count();
     let target = members.iter().find(|m| m.user_id == user_id);
     if let Some(m) = target {

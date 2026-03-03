@@ -218,11 +218,7 @@ pub(crate) fn describe_project_role(role: i32) -> &'static str {
 }
 
 /// Build template context with project permission flags. Call when rendering a project-scoped page.
-pub(crate) fn project_permissions_context(
-    state: &AppState,
-    user: &User,
-    project_id: i32,
-) -> Value {
+pub(crate) fn project_permissions_context(state: &AppState, user: &User, project_id: i32) -> Value {
     use crate::permissions::{has_permission, Permission};
     let repo = state.repo_read();
     json!({

@@ -27,7 +27,12 @@ pub async fn trace_up(
     id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<TraceUpResponse>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementService::new(state.inner());
     let requirement = service.get_by_id(id)?;
     if requirement.project_id != project_id {
@@ -74,7 +79,12 @@ pub async fn trace_down(
     id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<TraceDownResponse>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let req_service = RequirementService::new(state.inner());
     let requirement = req_service.get_by_id(id)?;
     if requirement.project_id != project_id {
@@ -102,7 +112,12 @@ pub async fn coverage_report(
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<CoverageReport>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let repo = state.repo_read();
     let requirements = repo.get_requirements_by_project(project_id)?;
     let tests = repo.get_tests_by_project(project_id)?;

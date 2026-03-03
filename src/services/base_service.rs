@@ -39,11 +39,7 @@ where
 }
 
 /// Validate that a user may access an entity belonging to `entity_project_id` (at least view).
-pub fn validate_entity_access<R>(
-    repo: &R,
-    user: &User,
-    entity_project_id: i32,
-) -> ApiResult<()>
+pub fn validate_entity_access<R>(repo: &R, user: &User, entity_project_id: i32) -> ApiResult<()>
 where
     R: ProjectMembersRepository,
 {

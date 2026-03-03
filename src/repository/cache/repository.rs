@@ -213,6 +213,8 @@ impl Cache {
         self.remove(&keys::VerificationMethod::by_project(project_id));
         self.remove(&keys::Categories::by_project(project_id));
         self.remove(&keys::Applicability::by_project(project_id));
+        self.remove(&keys::RequirementStatus::by_project(project_id));
+        self.remove(&keys::TestStatus::by_project(project_id));
         self.remove(&keys::Projects::by_id(project_id));
         self.remove(&keys::ProjectMembers::by_project(project_id));
         self.remove(keys::PROJECTS_ALL);
@@ -262,6 +264,16 @@ impl Cache {
         self.remove(&keys::RequirementStatus::by_id(status_id));
         self.remove(keys::REQUIREMENT_STATUS_ALL);
         self.remove(keys::TEST_STATUS_ALL);
+    }
+
+    /// Invalidate requirement statuses list for a project (by_project cache)
+    pub fn invalidate_requirement_status_by_project(&self, project_id: i32) {
+        self.remove(&keys::RequirementStatus::by_project(project_id));
+    }
+
+    /// Invalidate test statuses list for a project (by_project cache)
+    pub fn invalidate_test_status_by_project(&self, project_id: i32) {
+        self.remove(&keys::TestStatus::by_project(project_id));
     }
 
     /// Invalidate all verification-related cache entries
@@ -373,6 +385,8 @@ mod tests {
         cache.set(&keys::VerificationMethod::by_project(pid), "v".to_string());
         cache.set(&keys::Categories::by_project(pid), "c".to_string());
         cache.set(&keys::Applicability::by_project(pid), "a".to_string());
+        cache.set(&keys::RequirementStatus::by_project(pid), "rs".to_string());
+        cache.set(&keys::TestStatus::by_project(pid), "ts".to_string());
         cache.set(&keys::Projects::by_id(pid), "p".to_string());
         cache.set(&keys::ProjectMembers::by_project(pid), "pm".to_string());
         cache.set(keys::PROJECTS_ALL, "pa".to_string());
@@ -386,6 +400,10 @@ mod tests {
             .is_none());
         assert!(cache.get(&keys::Categories::by_project(pid)).is_none());
         assert!(cache.get(&keys::Applicability::by_project(pid)).is_none());
+        assert!(cache
+            .get(&keys::RequirementStatus::by_project(pid))
+            .is_none());
+        assert!(cache.get(&keys::TestStatus::by_project(pid)).is_none());
         assert!(cache.get(&keys::Projects::by_id(pid)).is_none());
         assert!(cache.get(&keys::ProjectMembers::by_project(pid)).is_none());
         assert!(cache.get(keys::PROJECTS_ALL).is_none());

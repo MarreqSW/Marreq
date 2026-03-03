@@ -2,7 +2,9 @@
 <section class="marreq-list-page">
   <div class="marreq-list-page__header">
     <h1 class="marreq-list-page__title">Custom fields</h1>
+    {{#if can_manage_custom_fields}}
     <a href="/p/{{selected_project_id}}/custom_fields/new" class="btn btn-primary">New custom field</a>
+    {{/if}}
   </div>
 
   {{#if delete_error_message}}
@@ -26,6 +28,7 @@
           <span class="badge bg-secondary mt-1">In use by {{lookup ../in_use_counts this.id}} version(s)</span>
           {{/if}}
         </div>
+        {{#if ../can_manage_custom_fields}}
         <div class="d-flex gap-2">
           <a href="/p/{{../selected_project_id}}/custom_fields/edit/{{this.id}}" class="btn btn-outline btn-sm">Edit</a>
           <button
@@ -37,6 +40,7 @@
             data-project-id="{{../selected_project_id}}"
           >Delete</button>
         </div>
+        {{/if}}
       </div>
     </article>
     {{else}}

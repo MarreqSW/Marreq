@@ -72,8 +72,7 @@ async fn show_project_members(
     drop(repo);
 
     let owner_count = memberships.iter().filter(|member| member.role == 1).count();
-    let can_manage_members =
-        is_project_owner(state, project_id, user.id) || user.is_admin;
+    let can_manage_members = is_project_owner(state, project_id, user.id) || user.is_admin;
 
     let user_lookup: HashMap<i32, &User> = users.iter().map(|member| (member.id, member)).collect();
 

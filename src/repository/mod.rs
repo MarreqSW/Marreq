@@ -126,9 +126,14 @@ pub trait TestsCaseRepository {
 
 pub trait LookupRepository {
     fn get_requirement_status_all(&self) -> Result<Vec<RequirementStatus>, RepoError>;
+    fn get_requirement_status_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<RequirementStatus>, RepoError>;
     fn get_requirement_status_by_id(&self, status_id: i32) -> Result<RequirementStatus, RepoError>;
 
     fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError>;
+    fn get_test_status_by_project(&self, project_id: i32) -> Result<Vec<TestStatus>, RepoError>;
     fn get_test_status_by_id(&self, status_id: i32) -> Result<TestStatus, RepoError>;
 
     fn get_categories_all(&self) -> Result<Vec<Category>, RepoError>;

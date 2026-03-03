@@ -86,12 +86,18 @@ pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec
 /// Query: approval_state (draft|reviewed|approved), has_tests (true|false).
 #[get("/projects/<project_id>/requirements?<approval_state>&<has_tests>")]
 pub async fn list_by_project(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     approval_state: Option<String>,
     has_tests: Option<bool>,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<Requirement>>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementService::new(state.inner());
     let requirements = service.list_by_project_with_approval_and_tests(
         project_id,
@@ -111,11 +117,17 @@ pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<
 /// Project-scoped get with trace summary (parent_id, child_ids, linked_test_ids). Accepts session or Bearer.
 #[get("/projects/<project_id>/requirements/<id>", rank = 2)]
 pub async fn get_by_project(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementWithTraceSummary>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementService::new(state.inner());
     let requirement = service.get_by_id(id)?;
     if requirement.project_id != project_id {
@@ -157,11 +169,17 @@ pub async fn list_versions(
 /// Project-scoped list versions (session or Bearer). Enforces requirement belongs to project.
 #[get("/projects/<project_id>/requirements/<id>/versions")]
 pub async fn list_versions_by_project(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<RequirementVersion>>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementService::new(state.inner());
     let requirement = service.get_by_id(id)?;
     if requirement.project_id != project_id {
@@ -192,12 +210,18 @@ pub async fn get_version(
 /// Project-scoped get version (session or Bearer). Enforces requirement belongs to project.
 #[get("/projects/<project_id>/requirements/<req_id>/versions/<version_id>")]
 pub async fn get_version_by_project(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     req_id: i32,
     version_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementVersion>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementService::new(state.inner());
     let requirement = service.get_by_id(req_id)?;
     if requirement.project_id != project_id {
@@ -425,6 +449,12 @@ pub async fn create_by_project(
     state: &State<AppState>,
     payload: Json<RequirementCreateRequest>,
 ) -> ApiResult<Value> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
     let payload = payload.into_inner();
     if payload.project_id != project_id {
         return Err(ApiError::BadRequest(
@@ -494,6 +524,12 @@ pub async fn patch_by_project(
     patch: Json<RequirementPatch>,
     state: &State<AppState>,
 ) -> ApiResult<Value> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
     let patch = patch.into_inner();
     let any_updates = patch.title.is_some()
         || patch.description.is_some()
@@ -592,20 +628,13 @@ pub async fn set_version_approval_by_project(
     if requirement.project_id != project_id {
         return Err(ApiError::NotFound("requirement not in project".into()));
     }
-    let members = state
-        .repo_read()
-        .get_members_by_project(requirement.project_id)
-        .map_err(ApiError::from)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ApproveVersions,
+    )?;
     let u = access.user();
-    let can_approve = u.is_admin
-        || members
-            .iter()
-            .any(|m| m.user_id == u.id && (m.role == 1 || m.role == 2));
-    if !can_approve {
-        return Err(ApiError::Forbidden(
-            "only project owners or managers can approve requirement versions".into(),
-        ));
-    }
     let new_state = payload.state.trim();
     if new_state != "reviewed" && new_state != "approved" {
         return Err(ApiError::BadRequest(

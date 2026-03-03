@@ -92,6 +92,30 @@ pub fn change_user_password<R: Repository>(
     change_user_password_impl(repo, user_id, current_password, new_password)
 }
 
+/// Set a user's password as admin (no current password required).
+/// Caller must ensure the requester is an admin; this function only performs the update.
+pub fn admin_set_user_password<R: Repository>(
+    repo: &mut R,
+    target_user_id: i32,
+    new_password: &str,
+) -> Result<(), AuthError> {
+    let user = repo.get_user_by_id(target_user_id)?;
+
+    validate_password(
+        new_password,
+        PasswordContext {
+            username: Some(&user.username),
+            email: Some(&user.email),
+            full_name: Some(&user.name),
+        },
+    )
+    .map_err(|e| AuthError::PasswordPolicy(e.to_string()))?;
+
+    let new_hash = hash_password(new_password).map_err(|e| AuthError::Verify(e.to_string()))?;
+    repo.update_user_password(target_user_id, &new_hash)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -184,5 +208,58 @@ mod tests {
             change_user_password_impl(&mut repo, 5, "pw-123456", "dave-password-2026").unwrap_err();
 
         assert!(matches!(err, AuthError::PasswordPolicy(_)));
+    }
+
+    // --- admin_set_user_password ---
+
+    #[test]
+    fn admin_set_user_password_updates_hash_and_verifies() {
+        let old_hash = hash_password("old-secret").unwrap();
+        let user = DieselRepoMock::make_user(1, "alice", &old_hash);
+        let mut repo = DieselRepoMock::with_users([user]);
+
+        admin_set_user_password(&mut repo, 1, "new-password-123").expect("should succeed");
+
+        let updated = repo.get_user_by_id(1).unwrap();
+        assert_ne!(updated.password_hash, old_hash);
+        assert!(verify_password("new-password-123", &updated.password_hash).unwrap());
+        assert!(!verify_password("old-secret", &updated.password_hash).unwrap());
+    }
+
+    #[test]
+    fn admin_set_user_password_fails_when_user_not_found() {
+        let mut repo = DieselRepoMock::with_users([]);
+        let result = admin_set_user_password(&mut repo, 99, "new-password-123");
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), AuthError::Repo(_)));
+    }
+
+    #[test]
+    fn admin_set_user_password_rejects_policy_violation() {
+        let user = DieselRepoMock::make_user(2, "bob", "hash");
+        let mut repo = DieselRepoMock::with_users([user]);
+
+        let err = admin_set_user_password(&mut repo, 2, "short").unwrap_err();
+        assert!(matches!(err, AuthError::PasswordPolicy(_)));
+    }
+
+    #[test]
+    fn admin_set_user_password_rejects_context_specific_password() {
+        let user = DieselRepoMock::make_user(3, "carol", "hash");
+        let mut repo = DieselRepoMock::with_users([user]);
+
+        let err =
+            admin_set_user_password(&mut repo, 3, "carol-password-2026").unwrap_err();
+        assert!(matches!(err, AuthError::PasswordPolicy(_)));
+    }
+
+    #[test]
+    fn admin_set_user_password_propagates_update_failure() {
+        let user = DieselRepoMock::make_user(4, "dave", "hash");
+        let mut repo = DieselRepoMock::with_users([user]);
+        repo.force_err = true;
+
+        let result = admin_set_user_password(&mut repo, 4, "new-password-123");
+        assert!(result.is_err());
     }
 }

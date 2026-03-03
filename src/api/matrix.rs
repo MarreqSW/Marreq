@@ -16,10 +16,16 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<MatrixLink>>> {
 /// Project-scoped matrix (traceability links). Accepts session or Bearer token.
 #[get("/projects/<project_id>/matrix")]
 pub async fn list_by_project(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<MatrixLink>>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = MatrixService::new(state.inner());
     let entries = service.list_by_project(project_id)?;
     Ok(Json(entries))

@@ -10,6 +10,8 @@
 
 use crate::errors::{ApiError, ApiResult};
 use crate::models::User;
+use crate::permissions::{has_permission, Permission};
+use crate::repository::ProjectMembersRepository;
 
 /// Serialize a value into JSON so it can be stored in the audit log.
 pub fn serialize_for_logging<T>(data: &T) -> ApiResult<String>
@@ -19,19 +21,27 @@ where
     serde_json::to_string(data).map_err(ApiError::Serialization)
 }
 
-/// Ensure the provided user may access the requested project.
-pub fn check_project_permission(user: &User, _project_id: i32) -> ApiResult<()> {
-    if user.is_admin {
-        return Ok(());
+/// Ensure the provided user has the given permission in the project. Fail-closed.
+pub fn check_project_permission<R>(
+    repo: &R,
+    user: &User,
+    project_id: i32,
+    permission: Permission,
+) -> ApiResult<()>
+where
+    R: ProjectMembersRepository,
+{
+    if has_permission(repo, user, project_id, permission) {
+        Ok(())
+    } else {
+        Err(ApiError::Authorization("permission denied".into()))
     }
-
-    // Project level permissions are not implemented yet.  Non admin users are
-    // currently allowed to view all projects, which matches the behaviour prior
-    // to the service refactor.
-    Ok(())
 }
 
-/// Validate that a user may access an entity belonging to `entity_project_id`.
-pub fn validate_entity_access(user: &User, entity_project_id: i32) -> ApiResult<()> {
-    check_project_permission(user, entity_project_id)
+/// Validate that a user may access an entity belonging to `entity_project_id` (at least view).
+pub fn validate_entity_access<R>(repo: &R, user: &User, entity_project_id: i32) -> ApiResult<()>
+where
+    R: ProjectMembersRepository,
+{
+    check_project_permission(repo, user, entity_project_id, Permission::ViewRequirements)
 }

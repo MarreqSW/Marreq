@@ -51,6 +51,7 @@
             data-requirement-preview-status="{{requirement.status_id}}"
             data-requirement-preview-category="{{requirement.category_id}}">{{requirement.title}}</a>
         </div>
+        {{#if @root.can_edit_requirements}}
         <div class="c-tree__actions">
           <a href="/p/{{requirement.project_id}}/requirements/edit/{{requirement.id}}" 
              class="c-tree__action-button" 
@@ -69,6 +70,7 @@
             </svg>
           </a>
         </div>
+        {{/if}}
         <div class="requirement-status">
           <span class="marreq-requirements-status-badge marreq-requirements-status-badge--{{requirement.status_id}}"
             data-status="{{requirement.status_id}}"

@@ -319,15 +319,30 @@ impl<'a> RequirementService<'a> {
             ));
         }
         let repo = self.repo_read();
-        let _source_ver = repo.get_requirement_version_by_id(source_version_id)?;
-        let _target_ver = repo.get_requirement_version_by_id(target_version_id)?;
-        let project_id_from_source = repo
-            .get_requirement_version_by_id(source_version_id)
-            .and_then(|v| {
-                repo.get_requirement_by_id(v.requirement_id)
-                    .map(|r| r.project_id)
-            });
-        let project_id_for_list = project_id_from_source.unwrap_or(project_id);
+        let source_ver = repo.get_requirement_version_by_id(source_version_id)?;
+        let target_ver = repo.get_requirement_version_by_id(target_version_id)?;
+        let source_req = repo.get_requirement_by_id(source_ver.requirement_id)?;
+        let target_req = repo.get_requirement_by_id(target_ver.requirement_id)?;
+        // Both versions must belong to the same project, and that project must match project_id.
+        if source_req.project_id != project_id {
+            return Err(RepoError::CrossProjectViolation(format!(
+                "source version {} belongs to project {} but link declares project_id={}",
+                source_version_id, source_req.project_id, project_id
+            )));
+        }
+        if target_req.project_id != project_id {
+            return Err(RepoError::CrossProjectViolation(format!(
+                "target version {} belongs to project {} but link declares project_id={}",
+                target_version_id, target_req.project_id, project_id
+            )));
+        }
+        if source_req.project_id != target_req.project_id {
+            return Err(RepoError::CrossProjectViolation(format!(
+                "source version {} (project {}) and target version {} (project {}) are in different projects",
+                source_version_id, source_req.project_id, target_version_id, target_req.project_id
+            )));
+        }
+        let project_id_for_list = project_id;
         if Self::would_create_cycle(
             &repo,
             source_version_id,
@@ -1077,6 +1092,71 @@ mod tests {
         assert!(matches!(err, RepoError::BadInput(_)));
     }
 
+    /// Link source version comes from project 7, target from project 99 → must be rejected.
+    #[test]
+    fn create_requirement_version_link_rejects_cross_project_versions() {
+        let mut repo = DieselRepoMock::default();
+        // Source: version 10 → requirement 1 in project 7
+        let mut r1 = requirement(1, 7, "REQ-001");
+        r1.current_version_id = Some(10);
+        // Target: version 20 → requirement 2 in project 99
+        let mut r2 = requirement(2, 99, "REQ-002");
+        r2.current_version_id = Some(20);
+        repo.requirements.insert(1, r1);
+        repo.requirements.insert(2, r2);
+        repo.requirement_versions.insert(
+            10,
+            RequirementVersion {
+                id: 10,
+                requirement_id: 1,
+                title: "R1".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: timestamp(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        repo.requirement_versions.insert(
+            20,
+            RequirementVersion {
+                id: 20,
+                requirement_id: 2,
+                title: "R2".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: timestamp(),
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let err = service
+            .create_requirement_version_link(10, 20, "DERIVES_FROM", 7, None, None)
+            .unwrap_err();
+        assert!(
+            matches!(err, RepoError::CrossProjectViolation(_)),
+            "expected CrossProjectViolation, got {:?}",
+            err
+        );
+    }
+
     #[test]
     fn get_by_parent_id_returns_children() {
         use crate::models::entities::RequirementVersionLink;
@@ -1298,5 +1378,79 @@ mod tests {
 
         let result = service.get_by_id(999);
         assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    // ── cross-project verification methods ───────────────────────────────────
+
+    /// Assigning a verification method that belongs to a different project must
+    /// be rejected with `CrossProjectViolation`.
+    #[test]
+    fn create_rejects_verification_method_from_different_project() {
+        use crate::models::entities::VerificationMethod;
+
+        let mut repo = DieselRepoMock::default();
+        // Verification method belongs to project 99, but the requirement will be
+        // created in project 7 (via new_payload()).
+        repo.verifications.insert(
+            5,
+            VerificationMethod {
+                id: 5,
+                title: "Foreign VM".into(),
+                description: "".into(),
+                tag: "VM-005".into(),
+                project_id: 99,
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let err = service
+            .create(&actor(), new_payload(), &[5], None)
+            .unwrap_err();
+        assert!(
+            matches!(err, RepoError::CrossProjectViolation(_)),
+            "expected CrossProjectViolation, got {:?}",
+            err
+        );
+    }
+
+    // ── cross-project custom field values ────────────────────────────────────
+
+    /// Supplying a custom field definition that belongs to a different project
+    /// must be rejected with `CrossProjectViolation`.
+    #[test]
+    fn create_rejects_custom_field_from_different_project() {
+        use crate::models::entities::CustomFieldDefinition;
+        use crate::models::forms::CustomFieldValueInput;
+
+        let mut repo = DieselRepoMock::default();
+        // Custom field definition belongs to project 99, requirement goes into project 7.
+        repo.custom_field_definitions.insert(
+            10,
+            CustomFieldDefinition {
+                id: 10,
+                project_id: 99,
+                label: "Foreign Field".into(),
+                field_type: "text".into(),
+                enum_values: None,
+                sort_order: 0,
+                created_at: timestamp(),
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let custom_fields = vec![CustomFieldValueInput {
+            field_id: 10,
+            value: Some("bad".into()),
+        }];
+        let err = service
+            .create(&actor(), new_payload(), &[], Some(&custom_fields))
+            .unwrap_err();
+        assert!(
+            matches!(err, RepoError::CrossProjectViolation(_)),
+            "expected CrossProjectViolation, got {:?}",
+            err
+        );
     }
 }

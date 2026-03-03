@@ -38,7 +38,7 @@ function initReferenceValidation(form) {
 function initStatusControls(form) {
   const toggle = form.querySelector('[data-role="status-toggle"]');
   const menu = form.querySelector('[data-role="status-menu"]');
-  const statusLabel = toggle?.querySelector('.c-editor-status__label');
+  const statusLabel = toggle?.querySelector('.c-editor-status__label, .editor-status__label');
   const select = form.querySelector('#status_id');
 
   if (!toggle || !menu || !statusLabel || !select) {
@@ -500,7 +500,7 @@ function initRichText(form) {
   const preview = form.querySelector('[data-role="preview"]');
   const previewContent = form.querySelector('[data-role="preview-content"]');
   const previewToggle = form.querySelector('[data-role="preview-toggle"]');
-  const toolbarButtons = form.querySelectorAll('.c-editor-toolbar [data-format]');
+  const toolbarButtons = form.querySelectorAll('.c-editor-toolbar [data-format], .editor-toolbar [data-format]');
 
   if (!textarea || !preview || !previewContent || !previewToggle) {
     return;

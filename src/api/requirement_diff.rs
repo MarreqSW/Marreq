@@ -26,13 +26,19 @@ pub async fn diff_versions(
 /// Project-scoped diff two versions (session or Bearer). Enforces requirement belongs to project.
 #[get("/projects/<project_id>/requirements/<req_id>/versions/<v1>/diff/<v2>")]
 pub async fn diff_versions_by_project(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     req_id: i32,
     v1: i32,
     v2: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementDiff>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let req_service = RequirementService::new(state.inner());
     let requirement = req_service.get_by_id(req_id)?;
     if requirement.project_id != project_id {
@@ -46,12 +52,18 @@ pub async fn diff_versions_by_project(
 /// Diff the requirement as stored in the baseline vs the current version (session or Bearer).
 #[get("/projects/<project_id>/baselines/<baseline_id>/requirements/<req_id>/diff/current")]
 pub async fn diff_baseline_vs_current(
-    _access: ProjectAccessOrBearer,
+    access: ProjectAccessOrBearer,
     project_id: i32,
     baseline_id: i32,
     req_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementDiff>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementDiffService::new(state.inner());
     let diff = service.diff_baseline_vs_current(project_id, baseline_id, req_id)?;
     Ok(Json(diff))

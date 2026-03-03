@@ -40,12 +40,18 @@
     {{/if}}
   </div>
   {{#if project.id}}
-    <a href="/p/{{project.id}}/tests/new" class="btn btn-primary marreq-requirements-header__primary" id="newTestButton">
-      New Test
-    </a>
+  {{#if can_edit_requirements}}
+  <a href="/p/{{project.id}}/tests/new" class="btn btn-primary marreq-requirements-header__primary" id="newTestButton">
+    New Test
+  </a>
   {{else}}
-    <button type="button" class="btn btn-primary marreq-requirements-header__primary" id="newTestButton" disabled aria-disabled="true">
-      New Test
-    </button>
+  <button type="button" class="btn btn-primary marreq-requirements-header__primary" id="newTestButton" disabled aria-disabled="true">
+    New Test
+  </button>
+  {{/if}}
+  {{else}}
+  <button type="button" class="btn btn-primary marreq-requirements-header__primary" id="newTestButton" disabled aria-disabled="true">
+    New Test
+  </button>
   {{/if}}
 </div>

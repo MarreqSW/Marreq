@@ -11,6 +11,7 @@
           </div>
           <nav class="ms-lg-auto" aria-label="Test actions">
             <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
+              {{#if can_edit_requirements}}
               <a href="/p/{{selected_project_id}}/tests/edit/{{id}}" class="btn btn-primary btn-sm"
                 aria-label="Edit test">
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
@@ -18,6 +19,7 @@
                 </svg>
                 <span class="ms-1">Edit</span>
               </a>
+              {{/if}}
               <a href="/logs/TEST/{{id}}" class="btn btn-outline-secondary btn-sm" aria-label="View test history">
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                   <use href="#icon-clock-history" />
@@ -39,6 +41,7 @@
                       <span class="ms-2">Copy link</span>
                     </button>
                   </li>
+                  {{#if can_edit_requirements}}
                   <li>
                     <hr class="dropdown-divider">
                   </li>
@@ -51,6 +54,7 @@
                       <span class="ms-2">Delete</span>
                     </button>
                   </li>
+                  {{/if}}
                 </ul>
               </div>
             </div>

@@ -90,7 +90,7 @@ module.exports = {
     ],
   },
   // Don't remove CSS that might be used dynamically
-  defaultExtractor: (content) => content.match(/[\w-/:%.@]+(?<!:)/g) || [],
+  defaultExtractor: (content) => content.match(/[\w-/:%@]+(?<!:)/g) || [],
   // Report which selectors were removed
   rejected: true,
   rejectedCss: true,

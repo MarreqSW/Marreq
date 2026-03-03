@@ -169,6 +169,86 @@ async fn post_edit_user(
     }
 }
 
+#[get("/<user_id>/change_password?<error>&<success>")]
+async fn admin_change_password_page(
+    admin: AdminOnly,
+    user_id: i32,
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+    error: Option<String>,
+    success: Option<String>,
+) -> Result<Template, Redirect> {
+    let current_user = admin.into_inner();
+    let target_user = state
+        .repo_read()
+        .get_user_by_id(user_id)
+        .map_err(|_| Redirect::to(uri!("/admin/users")))?;
+
+    let mut ctx = build_context_with_projects(state, current_user.clone(), cookies);
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        ctx_obj.insert("target_user".to_string(), json!(target_user));
+        ctx_obj.insert("user_id".to_string(), json!(user_id));
+        ctx_obj.insert("error".to_string(), json!(error));
+        ctx_obj.insert("success".to_string(), json!(success));
+        ctx_obj.insert(
+            "page_title".to_string(),
+            json!(format!("Change password - {}", target_user.username)),
+        );
+    }
+
+    Ok(Template::render("admin/change_user_password", ctx))
+}
+
+#[post("/<user_id>/change_password", data = "<form>")]
+async fn post_admin_change_password(
+    admin: AdminOnly,
+    user_id: i32,
+    form: Form<AdminSetPasswordForm>,
+    state: &State<AppState>,
+) -> Result<Redirect, Redirect> {
+    let _admin = admin.into_inner();
+    let form = form.into_inner();
+
+    if form.new_password != form.confirm_password {
+        return Err(Redirect::to(uri!(
+            "/user",
+            admin_change_password_page(
+                user_id = user_id,
+                error = Some("New passwords do not match".to_string()),
+                success = Option::<String>::None
+            )
+        )));
+    }
+
+    let mut repo = state.repo_write();
+    match crate::auth::admin_set_user_password(&mut *repo, user_id, &form.new_password) {
+        Ok(()) => Ok(Redirect::to(uri!(
+            "/user",
+            admin_change_password_page(
+                user_id = user_id,
+                error = Option::<String>::None,
+                success = Some("Password changed successfully".to_string())
+            )
+        ))),
+        Err(err) => {
+            let error_msg = match err {
+                AuthError::PasswordPolicy(reason) => reason,
+                AuthError::Verify(_) => "Password verification failed".to_string(),
+                AuthError::Repo(_) => "User not found or database error".to_string(),
+                _ => "Failed to set password".to_string(),
+            };
+            Err(Redirect::to(uri!(
+                "/user",
+                admin_change_password_page(
+                    user_id = user_id,
+                    error = Some(error_msg),
+                    success = Option::<String>::None
+                )
+            )))
+        }
+    }
+}
+
 #[get("/new?<error>")]
 async fn new_user(
     admin: AdminOnly,
@@ -231,6 +311,8 @@ pub fn routes() -> Vec<Route> {
         delete_user_route,
         edit_user,
         post_edit_user,
+        admin_change_password_page,
+        post_admin_change_password,
         new_user,
         post_user
     ]
@@ -294,6 +376,8 @@ mod tests {
                     delete_user_route,
                     edit_user,
                     post_edit_user,
+                    admin_change_password_page,
+                    post_admin_change_password,
                     new_user,
                     post_user
                 ],
@@ -453,5 +537,64 @@ mod tests {
         assert_eq!(updated.name, "Jane Updated");
         assert_eq!(updated.username, "jane_updated");
         assert_eq!(updated.email, "jane_updated@example.com");
+    }
+
+    #[rocket::async_test]
+    async fn admin_change_password_page_accessible_by_admin() {
+        let client = test_client(base_repo()).await;
+        let response = get(&client, "/user/2/change_password").await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Change Password"));
+        assert!(body.contains("jane"));
+    }
+
+    #[rocket::async_test]
+    async fn admin_change_password_success_updates_password() {
+        let client = test_client(base_repo()).await;
+        let response = client
+            .post("/user/2/change_password")
+            .header(ContentType::Form)
+            .body("new_password=new-password-123&confirm_password=new-password-123")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        let loc = response.headers().get_one("Location").expect("Location header");
+        assert!(loc.contains("/user/2/change_password"));
+        assert!(loc.contains("success"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo_read();
+        let updated = repo.get_user_by_id(USER_ID).expect("user");
+        assert!(crate::auth::verify_password("new-password-123", &updated.password_hash).unwrap());
+    }
+
+    #[rocket::async_test]
+    async fn admin_change_password_page_forbidden_for_non_admin() {
+        let client = test_client(base_repo()).await;
+        let response = client
+            .get("/user/2/change_password")
+            .private_cookie(user_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Forbidden);
+    }
+
+    #[rocket::async_test]
+    async fn post_admin_change_password_forbidden_for_non_admin() {
+        let client = test_client(base_repo()).await;
+        let response = client
+            .post("/user/2/change_password")
+            .header(ContentType::Form)
+            .body("new_password=new-password-123&confirm_password=new-password-123")
+            .private_cookie(user_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Forbidden);
     }
 }

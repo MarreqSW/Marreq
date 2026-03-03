@@ -328,6 +328,14 @@ pub struct ChangePasswordForm {
     pub confirm_password: String,
 }
 
+/// Form used when an admin sets another user's password (no current password).
+#[derive(Serialize, Deserialize, FromForm)]
+#[serde(crate = "rocket::serde")]
+pub struct AdminSetPasswordForm {
+    pub new_password: String,
+    pub confirm_password: String,
+}
+
 /// API request DTO for creating a new user with plain password.
 ///
 /// Unlike [`NewUser`], this accepts a plain `password` field which is hashed

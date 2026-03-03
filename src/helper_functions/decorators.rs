@@ -75,21 +75,15 @@ fn decorate_requirements_impl<R: Repository>(
                 .map(|s| (s.title, s.tag_color))
                 .unwrap_or_else(|_| (format!("Unknown Status ({})", r.status_id), None));
 
-            let author = if r.author_id != 0 {
-                repo.get_user_by_id(r.author_id)
-                    .map(|u| u.name)
-                    .unwrap_or_default()
-            } else {
-                String::new()
-            };
+            let author = repo
+                .get_user_by_id(r.author_id)
+                .map(|u| u.name)
+                .unwrap_or_default();
 
-            let reviewer = if r.reviewer_id != 0 {
-                repo.get_user_by_id(r.reviewer_id)
-                    .map(|u| u.name)
-                    .unwrap_or_default()
-            } else {
-                String::new()
-            };
+            let reviewer = repo
+                .get_user_by_id(r.reviewer_id)
+                .map(|u| u.name)
+                .unwrap_or_default();
 
             let category = repo
                 .get_category_by_id(r.category_id)

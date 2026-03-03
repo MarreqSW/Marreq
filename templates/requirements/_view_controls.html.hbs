@@ -88,10 +88,17 @@ View switcher buttons, export/import, and new requirement button
     {{/if}}
   </div>
   {{#if project.id}}
+  {{#if can_edit_requirements}}
   <a href="/p/{{project.id}}/requirements/new" class="btn btn-primary marreq-requirements-header__primary"
     id="newRequirementButton">
     New Requirement
   </a>
+  {{else}}
+  <button type="button" class="btn btn-primary marreq-requirements-header__primary" id="newRequirementButton" disabled
+    aria-disabled="true">
+    New Requirement
+  </button>
+  {{/if}}
   {{else}}
   <button type="button" class="btn btn-primary marreq-requirements-header__primary" id="newRequirementButton" disabled
     aria-disabled="true">

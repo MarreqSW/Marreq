@@ -126,6 +126,7 @@
             </svg>
             <span class="u-visually-hidden">View</span>
           </a>
+          {{#if ../can_edit_requirements}}
           <a 
             href="/p/{{../project.id}}/requirements/edit/{{id}}" 
             class="marreq-requirement-card__action"
@@ -146,6 +147,7 @@
             </svg>
             <span class="u-visually-hidden">Duplicate</span>
           </button>
+          {{/if}}
         </div>
       </footer>
     </article>

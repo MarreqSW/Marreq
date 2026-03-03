@@ -102,6 +102,7 @@ Modern card-based layout for test browsing
             </svg>
             <span class="u-visually-hidden">View</span>
           </a>
+          {{#if ../can_edit_requirements}}
           <a href="/p/{{../project.id}}/tests/edit/{{id}}" class="marreq-requirement-card__action"
             title="Edit test">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
@@ -122,6 +123,7 @@ Modern card-based layout for test browsing
             </svg>
             <span class="u-visually-hidden">Delete</span>
           </button>
+          {{/if}}
           {{/if}}
         </div>
       </footer>

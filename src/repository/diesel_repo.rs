@@ -45,14 +45,17 @@ fn map_db_error(e: diesel::result::Error) -> RepoError {
                 let msg = match info.constraint_name().unwrap_or("") {
                     c if c.contains("username") => "username is already taken".to_string(),
                     c if c.contains("email") => "email is already taken".to_string(),
-                    c if c.contains("tests_project_id_reference_code")
-                        => "reference_code is already used in this project".to_string(),
+                    c if c.contains("tests_project_id_reference_code") => {
+                        "reference_code is already used in this project".to_string()
+                    }
                     c if c.contains("requirement_status_project_id_tag")
                         || c.contains("test_status_project_id_tag")
                         || c.contains("categories_project_id_tag")
                         || c.contains("applicability_project_id_tag")
                         || c.contains("verification_project_id_tag") =>
-                        "tag is already used in this project".to_string(),
+                    {
+                        "tag is already used in this project".to_string()
+                    }
                     _ => "value is already taken".to_string(),
                 };
                 return RepoError::Duplicate(msg);

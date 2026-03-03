@@ -226,7 +226,7 @@ mod tests {
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Mars Lander"));
         assert!(!body.contains("Venus Rover"));
-        assert!(body.contains("Role: Manager"));
+        assert!(body.contains("Role: Reviewer"));
         assert!(body.contains("Owned by Mission Owner"));
     }
 

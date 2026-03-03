@@ -310,6 +310,20 @@ impl LookupRepository for DieselRepoMock {
         Ok(self.requirement_statuses.values().cloned().collect())
     }
 
+    fn get_requirement_status_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<RequirementStatus>, RepoError> {
+        let mut list: Vec<_> = self
+            .requirement_statuses
+            .values()
+            .filter(|s| s.project_id == project_id)
+            .cloned()
+            .collect();
+        list.sort_by_key(|s| s.id);
+        Ok(list)
+    }
+
     fn get_requirement_status_by_id(&self, status_id: i32) -> Result<RequirementStatus, RepoError> {
         self.requirement_statuses
             .get(&status_id)
@@ -319,6 +333,17 @@ impl LookupRepository for DieselRepoMock {
 
     fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
         Ok(self.test_statuses.values().cloned().collect())
+    }
+
+    fn get_test_status_by_project(&self, project_id: i32) -> Result<Vec<TestStatus>, RepoError> {
+        let mut list: Vec<_> = self
+            .test_statuses
+            .values()
+            .filter(|s| s.project_id == project_id)
+            .cloned()
+            .collect();
+        list.sort_by_key(|s| s.id);
+        Ok(list)
     }
 
     fn get_test_status_by_id(&self, status_id: i32) -> Result<TestStatus, RepoError> {

@@ -123,6 +123,10 @@ impl From<ApiError> for Status {
             ApiError::Repository(crate::repository::errors::RepoError::Duplicate(_)) => {
                 Status::Conflict
             }
+            // Cross-project integrity violations → 422 Unprocessable Entity
+            ApiError::Repository(crate::repository::errors::RepoError::CrossProjectViolation(
+                _,
+            )) => Status::UnprocessableEntity,
             ApiError::Database(_) | ApiError::Repository(_) | ApiError::Internal(_) => {
                 Status::InternalServerError
             }

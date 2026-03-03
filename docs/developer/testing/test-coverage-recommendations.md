@@ -260,7 +260,7 @@ The service layer has minimal unit test coverage. While integration tests cover 
 
 ### **`tests/api_constraint_violation_test.rs`** ⚠️ HIGH PRIORITY
 **Status**: File exists but may need expansion
-**Missing Tests** (from API_TEST_COVERAGE_ANALYSIS.md):
+**Missing Tests** (from `api-test-coverage-analysis.md`):
 - Unique constraint violations (duplicate usernames, emails, reference codes)
 - Foreign key constraint violations
 - NOT NULL constraint violations

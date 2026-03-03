@@ -9,6 +9,7 @@ pub mod comments;
 pub mod custom_fields;
 pub mod error;
 pub mod matrix;
+pub mod members;
 pub mod mcp;
 pub mod prelude;
 pub mod requirement_diff;
@@ -96,6 +97,10 @@ pub fn routes() -> Vec<Route> {
         requirement_version_links::list,
         requirement_version_links::delete,
         requirement_version_links::link_types,
+        members::get_my_permissions,
+        members::list_members,
+        members::set_member_role,
+        members::remove_member,
         cache::stats,
         cache::clear,
         cache::cleanup,

@@ -1,0 +1,361 @@
+/*
+ * Shared requirement form styles.
+ * Consumed by both /requirements/new and /requirements/:id/edit.
+ * Uses the unified c-reqform-* BEM namespace.
+ *
+ * Page-specific overrides live in requirement-create.css and requirement-editor.css.
+ */
+
+/* ── Container ────────────────────────────────────────────────────── */
+.c-reqform {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin: 0 auto;
+  max-width: 1180px;
+  padding: var(--space-6) var(--space-4) var(--space-8);
+}
+
+/* ── Topbar ───────────────────────────────────────────────────────── */
+.c-reqform-topbar {
+  align-items: flex-start;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  padding: var(--space-5);
+  position: relative;
+}
+
+.c-reqform-topbar--sticky {
+  backdrop-filter: blur(18px);
+  background: color-mix(in srgb, var(--surface-color) 92%, transparent);
+  position: sticky;
+  top: calc(var(--header-height) + var(--space-2));
+  z-index: 1100;
+}
+
+.c-reqform-topbar__context {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.c-reqform-topbar__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+}
+
+.c-reqform-topbar__save {
+  white-space: nowrap;
+}
+
+.c-reqform-topbar__cancel {
+  white-space: nowrap;
+}
+
+/* ── Breadcrumb ───────────────────────────────────────────────────── */
+.c-reqform-breadcrumb {
+  align-items: center;
+  color: var(--text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  gap: var(--space-2);
+}
+
+.c-reqform-breadcrumb__link {
+  color: var(--primary-color);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.c-reqform-breadcrumb__link:hover {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+.c-reqform-breadcrumb__crumb {
+  color: var(--text-secondary);
+}
+
+.c-reqform-breadcrumb__crumb--current {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.c-reqform-breadcrumb__sep {
+  color: var(--text-secondary);
+}
+
+/* ── Title ────────────────────────────────────────────────────────── */
+.c-reqform-title {
+  color: var(--text-primary);
+  font-size: clamp(1.75rem, 1.4rem + 1vw, 2.25rem);
+  font-weight: 600;
+  margin: 0;
+}
+
+/* ── Autosave indicator ───────────────────────────────────────────── */
+.c-reqform-autosave {
+  align-items: center;
+  color: var(--text-secondary);
+  display: inline-flex;
+  font-size: var(--text-xs);
+  gap: var(--space-1);
+}
+
+.c-reqform-autosave__dot {
+  animation: c-reqform-pulse 1.2s ease-in-out infinite;
+  background: var(--warning-color, #f59e0b);
+  border-radius: 50%;
+  height: 8px;
+  width: 8px;
+}
+
+@keyframes c-reqform-pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+}
+
+/* ── Layout grid ──────────────────────────────────────────────────── */
+.c-reqform-layout {
+  align-items: start;
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+
+/* ── Full-width section (e.g. Upstream Trace) ─────────────────────── */
+.c-reqform-section--full {
+  margin-top: var(--space-2);
+}
+
+/* ── Cards ────────────────────────────────────────────────────────── */
+.c-reqform-card {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+
+.c-reqform-card__header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-3);
+}
+
+.c-reqform-card__title {
+  color: var(--text-primary);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.c-reqform-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+/* ── Fields ───────────────────────────────────────────────────────── */
+.c-reqform-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.c-reqform-field__label {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.c-reqform-field__required {
+  color: var(--error-color);
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.c-reqform-field__optional {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.c-reqform-field__input,
+.c-reqform-field__textarea,
+.c-reqform-field__select {
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  padding: var(--space-3);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  width: 100%;
+}
+
+.c-reqform-field__input:focus,
+.c-reqform-field__textarea:focus,
+.c-reqform-field__select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
+  outline: none;
+}
+
+.c-reqform-field__input--readonly {
+  background-color: var(--surface-muted);
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.c-reqform-field__input--headline {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.c-reqform-field__textarea {
+  min-height: 128px;
+  resize: vertical;
+}
+
+.c-reqform-field__textarea--statement {
+  min-height: 168px;
+}
+
+.c-reqform-field__error {
+  color: var(--error-color);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  margin-top: var(--space-2);
+}
+
+.c-reqform-field__help {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.c-reqform-field__meta {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.c-reqform-field-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.c-reqform-field.is-enhanced .c-reqform-field__select {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+
+/* ── Section title (sidebar groups) ───────────────────────────────── */
+.c-reqform-meta-group {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.c-reqform-meta__title {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+/* ── Hint (below fields) ──────────────────────────────────────────── */
+.c-reqform-hint {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .c-reqform-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .c-reqform-topbar {
+    flex-direction: column;
+  }
+
+  .c-reqform-topbar__actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .c-reqform {
+    padding: var(--space-4) var(--space-3) var(--space-6);
+  }
+
+  .c-reqform-topbar {
+    padding: var(--space-4);
+  }
+
+  .c-reqform-card__header {
+    padding: var(--space-4) var(--space-4) var(--space-3);
+  }
+
+  .c-reqform-card__body {
+    padding: var(--space-4);
+  }
+
+  .c-reqform-meta-group {
+    padding: var(--space-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .c-reqform-autosave__dot {
+    animation: none;
+  }
+
+  .c-reqform-field__input,
+  .c-reqform-field__textarea,
+  .c-reqform-field__select {
+    transition: none;
+  }
+}

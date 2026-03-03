@@ -51,7 +51,7 @@ DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/marreq
 ./scripts/db_seed.sh
 
 # 3. Start Marreq
-cargo run --bin req_man
+cargo run --bin marreq
 ```
 
 `db_setup.sh` will:

@@ -1,0 +1,251 @@
+# Database Schema (ER Diagram)
+
+This is the current database entity-relationship diagram in Mermaid format.
+
+Source file: `docs/architecture/diagrams/database-schema.mmd`.
+
+```mermaid
+%% Marreq database schema (Mermaid ER diagram)
+%% Reflects current schema: projects, users, requirements + versioning, baselines, traceability, lookup tables.
+
+erDiagram
+    %% ========== Core: Projects & Users ==========
+    projects ||--o{ project_members : "has"
+    users ||--o{ project_members : "member of"
+    projects }o--o| users : "owner_id"
+
+    projects {
+        int id PK
+        varchar name
+        text description
+        timestamp creation_date
+        timestamp update_date
+        varchar status
+        int owner_id FK
+    }
+
+    users {
+        int id PK
+        varchar username
+        varchar name
+        varchar email
+        timestamp creation_date
+        timestamp last_login
+        varchar password_hash
+        bool is_admin
+    }
+
+    project_members {
+        int project_id PK,FK
+        int user_id PK,FK
+        int role
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% ========== Requirements (container + versions) ==========
+    projects ||--o{ requirements : "contains"
+    requirements ||--o{ requirement_versions : "versions"
+    requirements }o--o| requirement_versions : "current_version_id"
+    requirement_versions }o--o| requirement_versions : "parent_id"
+    requirement_status ||--o{ requirement_versions : "status"
+    applicability ||--o{ requirement_versions : "applicability"
+    categories ||--o{ requirement_versions : "category"
+    requirement_versions ||--o{ requirement_version_verification_methods : "has"
+    verification ||--o{ requirement_version_verification_methods : "used by"
+
+    requirements {
+        int id PK
+        int project_id FK
+        varchar stable_code
+        int current_version_id FK "nullable"
+    }
+
+    requirement_versions {
+        int id PK
+        int requirement_id FK
+        varchar title
+        text description
+        int status_id FK
+        int author_id
+        int reviewer_id
+        int category_id FK
+        int parent_id FK "nullable"
+        int applicability_id FK
+        text justification "nullable"
+        timestamp deadline_date "nullable"
+        timestamp created_at
+        varchar approval_state
+        int approved_by FK "nullable"
+        timestamp approved_at "nullable"
+    }
+
+    requirement_version_verification_methods {
+        int requirement_version_id PK,FK
+        int verification_method_id PK,FK
+    }
+
+    %% ========== Lookup / config (per project) ==========
+    projects ||--o{ requirement_status : "has"
+    projects ||--o{ test_status : "has"
+    projects ||--o{ categories : "has"
+    projects ||--o{ applicability : "has"
+    projects ||--o{ verification : "has"
+
+    requirement_status {
+        int id PK
+        varchar title
+        varchar description
+        varchar tag
+        int project_id FK
+    }
+
+    test_status {
+        int id PK
+        varchar title
+        varchar description
+        varchar tag
+        int project_id FK
+    }
+
+    categories {
+        int id PK
+        varchar title
+        varchar description
+        varchar tag
+        int project_id FK
+    }
+
+    applicability {
+        int id PK
+        varchar title
+        varchar description
+        varchar tag
+        int project_id FK
+    }
+
+    verification {
+        int id PK
+        varchar title
+        varchar description
+        varchar tag
+        int project_id FK
+    }
+
+    %% ========== Tests ==========
+    projects ||--o{ tests : "contains"
+    test_status ||--o{ tests : "status"
+    tests }o--o| tests : "parent_id"
+
+    tests {
+        int id PK
+        varchar name
+        varchar reference_code
+        text description
+        varchar source
+        int status_id FK
+        int parent_id FK "nullable"
+        int project_id FK
+    }
+
+    %% ========== Traceability (live matrix) ==========
+    matrix }o--|| requirements : "req_id"
+    matrix }o--|| tests : "test_id"
+    matrix }o--|| projects : "project_id"
+    matrix }o--o| requirement_versions : "triggering_version_id"
+    matrix }o--o| users : "triggering_user_id"
+    matrix }o--o| users : "cleared_by"
+
+    matrix {
+        int req_id PK,FK
+        int test_id PK,FK
+        int project_id FK
+        timestamp creation_date
+        bool suspect
+        timestamp suspect_at "nullable"
+        text suspect_reason "nullable"
+        int cleared_by FK "nullable"
+        timestamp cleared_at "nullable"
+        int triggering_version_id FK "nullable"
+        int triggering_user_id FK "nullable"
+    }
+
+    %% ========== Baselines (immutable snapshots) ==========
+    projects ||--o{ baselines : "has"
+    users ||--o{ baselines : "created_by"
+    baselines ||--o{ baseline_requirements : "has"
+    baselines ||--o{ baseline_traceability : "has"
+    baseline_requirements }o--|| requirements : "requirement_id"
+    baseline_requirements }o--|| requirement_versions : "version_id"
+    baseline_traceability }o--|| requirements : "requirement_id"
+    baseline_traceability }o--|| tests : "test_id"
+
+    baselines {
+        int id PK
+        int project_id FK
+        varchar name
+        text description "nullable"
+        timestamp created_at
+        int created_by FK
+    }
+
+    baseline_requirements {
+        int baseline_id PK,FK
+        int requirement_id PK,FK
+        int version_id FK
+    }
+
+    baseline_traceability {
+        int baseline_id PK,FK
+        int requirement_id PK,FK
+        int test_id PK,FK
+        bool suspect
+        timestamp suspect_at "nullable"
+        text suspect_reason "nullable"
+    }
+
+    %% ========== Audit ==========
+    users ||--o{ logs : "performs"
+    projects ||--o{ logs : "project_id nullable"
+
+    logs {
+        int log_id PK
+        int user_id FK
+        varchar action_type
+        varchar entity_type
+        int entity_id "nullable"
+        int project_id FK "nullable"
+        text old_values "nullable"
+        text new_values "nullable"
+        text description "nullable"
+        varchar ip_address "nullable"
+        text user_agent "nullable"
+        timestamp created_at
+    }
+
+    %% ========== Semantic search (optional) ==========
+    requirement_embeddings }o--|| requirements : "requirement_id"
+    requirement_embeddings }o--|| projects : "project_id"
+    embedding_index_queue }o--|| requirements : "requirement_id"
+    embedding_index_queue }o--|| projects : "project_id"
+
+    requirement_embeddings {
+        int requirement_id PK,FK
+        int project_id FK
+        vector embedding "nullable"
+        varchar embedding_model
+        varchar content_hash
+        timestamp updated_at
+    }
+
+    embedding_index_queue {
+        int id PK
+        int requirement_id FK
+        int project_id FK
+        varchar status
+        text error_message "nullable"
+        timestamp created_at
+        timestamp processed_at "nullable"
+    }
+```
+

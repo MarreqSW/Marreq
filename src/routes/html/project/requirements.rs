@@ -472,7 +472,7 @@ async fn show_requirements(
     let inline_edit_config_json =
         serde_json::to_string(&inline_edit_config).unwrap_or_else(|_| "{}".to_string());
 
-    let ctx = json!({
+    let mut ctx = json!({
         "user": user,
         "requirements": json!(requirements),
         "tree_data": tree_data,
@@ -519,6 +519,14 @@ async fn show_requirements(
             &build_requirements_query(view.as_deref(), status_filter, verification_filter, category_filter, applicability_filter, approval_filter.as_deref(), custom_filters.as_deref()),
         )),
     });
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        let perms = super::helpers::project_permissions_context(state, &user, project_id);
+        if let Some(perms_obj) = perms.as_object() {
+            for (k, v) in perms_obj {
+                ctx_obj.insert(k.clone(), v.clone());
+            }
+        }
+    }
 
     Ok(Template::render("requirements/requirements", ctx))
 }
@@ -928,8 +936,12 @@ async fn show_requirement_version(
         })
         .collect();
     let repo_version = state.repo_read();
-    let can_approve_version =
-        has_permission(&*repo_version, &user, project_id, Permission::ApproveVersions);
+    let can_approve_version = has_permission(
+        &*repo_version,
+        &user,
+        project_id,
+        Permission::ApproveVersions,
+    );
     drop(repo_version);
     let approved_by_name_version = requirement
         .approved_by
@@ -1117,7 +1129,12 @@ async fn get_edit_requirement(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    if !has_permission(&*state.repo_read(), &user, project_id, Permission::EditRequirements) {
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::EditRequirements,
+    ) {
         return Err(requirements_list_redirect(project_id));
     }
     let name = ProjectService::new(state.inner())
@@ -1358,7 +1375,12 @@ async fn delete_requirement_route(
     state: &State<AppState>,
 ) -> Result<Redirect, rocket::http::Status> {
     let user = project_access.into_user();
-    if !has_permission(&*state.repo_read(), &user, project_id, Permission::EditRequirements) {
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::EditRequirements,
+    ) {
         return Err(rocket::http::Status::Forbidden);
     }
 
@@ -1399,7 +1421,12 @@ async fn new_requirement(
     template: Option<i32>, // use this requirement as a template
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    if !has_permission(&*state.repo_read(), &user, project_id, Permission::EditRequirements) {
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::EditRequirements,
+    ) {
         return Err(requirements_list_redirect(project_id));
     }
     let requirement_service = RequirementService::new(state.inner());

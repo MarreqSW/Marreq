@@ -92,7 +92,12 @@ pub async fn list_by_project(
     has_tests: Option<bool>,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<Requirement>>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementService::new(state.inner());
     let requirements = service.list_by_project_with_approval_and_tests(
         project_id,
@@ -117,7 +122,12 @@ pub async fn get_by_project(
     id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementWithTraceSummary>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementService::new(state.inner());
     let requirement = service.get_by_id(id)?;
     if requirement.project_id != project_id {
@@ -164,7 +174,12 @@ pub async fn list_versions_by_project(
     id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<RequirementVersion>>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementService::new(state.inner());
     let requirement = service.get_by_id(id)?;
     if requirement.project_id != project_id {
@@ -201,7 +216,12 @@ pub async fn get_version_by_project(
     version_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementVersion>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementService::new(state.inner());
     let requirement = service.get_by_id(req_id)?;
     if requirement.project_id != project_id {
@@ -429,7 +449,12 @@ pub async fn create_by_project(
     state: &State<AppState>,
     payload: Json<RequirementCreateRequest>,
 ) -> ApiResult<Value> {
-    require_project_permission(state, access.user(), project_id, Permission::EditRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
     let payload = payload.into_inner();
     if payload.project_id != project_id {
         return Err(ApiError::BadRequest(
@@ -499,7 +524,12 @@ pub async fn patch_by_project(
     patch: Json<RequirementPatch>,
     state: &State<AppState>,
 ) -> ApiResult<Value> {
-    require_project_permission(state, access.user(), project_id, Permission::EditRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
     let patch = patch.into_inner();
     let any_updates = patch.title.is_some()
         || patch.description.is_some()
@@ -598,7 +628,12 @@ pub async fn set_version_approval_by_project(
     if requirement.project_id != project_id {
         return Err(ApiError::NotFound("requirement not in project".into()));
     }
-    require_project_permission(state, access.user(), project_id, Permission::ApproveVersions)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ApproveVersions,
+    )?;
     let u = access.user();
     let new_state = payload.state.trim();
     if new_state != "reviewed" && new_state != "approved" {

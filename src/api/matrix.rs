@@ -20,7 +20,12 @@ pub async fn list_by_project(
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<MatrixLink>>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = MatrixService::new(state.inner());
     let entries = service.list_by_project(project_id)?;
     Ok(Json(entries))

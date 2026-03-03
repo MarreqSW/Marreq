@@ -31,7 +31,12 @@ pub async fn create(
     body: Json<CreateRequirementVersionLinkRequest>,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementVersionLink>> {
-    require_project_permission(state, access.user(), project_id, Permission::EditRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
     let b = body.into_inner();
     let service = RequirementService::new(state.inner());
     let repo = state.inner().repo_read();
@@ -67,7 +72,12 @@ pub async fn list(
     link_type: Option<String>,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<RequirementVersionLink>>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let repo = state.inner().repo_read();
     let links = repo.list_links_by_project(
         project_id,
@@ -86,7 +96,12 @@ pub async fn delete(
     link_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementVersionLink>> {
-    require_project_permission(state, access.user(), project_id, Permission::EditRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
     let service = RequirementService::new(state.inner());
     let link = service.delete_requirement_version_link(project_id, link_id)?;
     Ok(Json(link))

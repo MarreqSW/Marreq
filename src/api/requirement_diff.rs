@@ -33,7 +33,12 @@ pub async fn diff_versions_by_project(
     v2: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementDiff>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let req_service = RequirementService::new(state.inner());
     let requirement = req_service.get_by_id(req_id)?;
     if requirement.project_id != project_id {
@@ -53,7 +58,12 @@ pub async fn diff_baseline_vs_current(
     req_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementDiff>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementDiffService::new(state.inner());
     let diff = service.diff_baseline_vs_current(project_id, baseline_id, req_id)?;
     Ok(Json(diff))

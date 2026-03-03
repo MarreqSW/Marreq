@@ -12,7 +12,11 @@ pub struct ProjectMemberForm {
     pub role: i32,
 }
 
-fn can_manage_members(state: &State<AppState>, user: &crate::models::User, project_id: i32) -> bool {
+fn can_manage_members(
+    state: &State<AppState>,
+    user: &crate::models::User,
+    project_id: i32,
+) -> bool {
     let repo = state.repo_read();
     has_permission(&*repo, user, project_id, Permission::ManageProjectMembers)
 }

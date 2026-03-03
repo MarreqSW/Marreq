@@ -100,7 +100,12 @@ async fn new_custom_field(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    if !has_permission(&*state.repo_read(), &user, project_id, Permission::ManageCustomFields) {
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::ManageCustomFields,
+    ) {
         return Err(Redirect::to(list_url(project_id)));
     }
     let projects = get_accessible_projects(state, &user);
@@ -122,7 +127,12 @@ async fn post_custom_field(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
-    if !has_permission(&*state.repo_read(), &user, project_id, Permission::ManageCustomFields) {
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::ManageCustomFields,
+    ) {
         return Ok(Redirect::to(list_url(project_id)));
     }
     let service = CustomFieldService::new(state.inner());
@@ -148,7 +158,12 @@ async fn get_edit_custom_field(
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
-    if !has_permission(&*state.repo_read(), &user, project_id, Permission::ManageCustomFields) {
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::ManageCustomFields,
+    ) {
         return Err(Redirect::to(list_url(project_id)));
     }
     let service = CustomFieldService::new(state.inner());
@@ -192,7 +207,12 @@ async fn post_edit_custom_field(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
-    if !has_permission(&*state.repo_read(), &user, project_id, Permission::ManageCustomFields) {
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::ManageCustomFields,
+    ) {
         return Ok(Redirect::to(list_url(project_id)));
     }
     let service = CustomFieldService::new(state.inner());
@@ -226,7 +246,12 @@ async fn delete_custom_field_route(
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, DeleteCustomFieldError> {
     let user = project_access.into_user();
-    if !has_permission(&*state.repo_read(), &user, project_id, Permission::ManageCustomFields) {
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::ManageCustomFields,
+    ) {
         return Ok(rocket::http::Status::Forbidden);
     }
     let service = CustomFieldService::new(state.inner());

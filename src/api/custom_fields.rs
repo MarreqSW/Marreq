@@ -17,8 +17,16 @@ pub async fn list_by_project(
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<CustomFieldDefinition>>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
-    let _ = state.repo_read().get_project_by_id(project_id).map_err(ApiError::from)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let _ = state
+        .repo_read()
+        .get_project_by_id(project_id)
+        .map_err(ApiError::from)?;
     let service = CustomFieldService::new(state.inner());
     let list = service.list_by_project(project_id)?;
     Ok(Json(list))
@@ -31,7 +39,12 @@ pub async fn get(
     field_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<CustomFieldDefinition>> {
-    require_project_permission(state, access.user(), project_id, Permission::ViewRequirements)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = CustomFieldService::new(state.inner());
     let def = service.get_by_id(field_id)?;
     if def.project_id != project_id {
@@ -47,7 +60,12 @@ pub async fn create(
     state: &State<AppState>,
     payload: Json<CustomFieldDefinitionPayload>,
 ) -> ApiResult<Value> {
-    require_project_permission(state, access.user(), project_id, Permission::ManageCustomFields)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ManageCustomFields,
+    )?;
     let service = CustomFieldService::new(state.inner());
     let id = service.create(project_id, payload.into_inner())?;
     Ok(json!({ "status": "ok", "id": id }))
@@ -61,7 +79,12 @@ pub async fn update(
     state: &State<AppState>,
     payload: Json<CustomFieldDefinitionPayload>,
 ) -> ApiResult<Value> {
-    require_project_permission(state, access.user(), project_id, Permission::ManageCustomFields)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ManageCustomFields,
+    )?;
     let service = CustomFieldService::new(state.inner());
     service.update(field_id, payload.into_inner())?;
     let def = service.get_by_id(field_id)?;
@@ -81,7 +104,12 @@ pub async fn delete(
     field_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Value> {
-    require_project_permission(state, access.user(), project_id, Permission::ManageCustomFields)?;
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ManageCustomFields,
+    )?;
     let service = CustomFieldService::new(state.inner());
     let def = service.get_by_id(field_id)?;
     if def.project_id != project_id {

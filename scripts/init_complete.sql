@@ -341,27 +341,27 @@ INSERT INTO tests (reference_code, name, description, status_id, source, project
 INSERT INTO matrix (req_id, test_id, project_id) VALUES
     (
         (SELECT id FROM requirements WHERE stable_code = 'REQ-PWR-001' ORDER BY id LIMIT 1),
-        (SELECT id FROM tests WHERE reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
     (
         (SELECT id FROM requirements WHERE stable_code = 'REQ-PWR-002' ORDER BY id LIMIT 1),
-        (SELECT id FROM tests WHERE reference_code = 'TEST-PWR-002' ORDER BY id LIMIT 1),
+        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-002' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
     (
         (SELECT id FROM requirements WHERE stable_code = 'REQ-COMM-001' ORDER BY id LIMIT 1),
-        (SELECT id FROM tests WHERE reference_code = 'TEST-COMM-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-COMM-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
     (
         (SELECT id FROM requirements WHERE stable_code = 'REQ-ACS-001' ORDER BY id LIMIT 1),
-        (SELECT id FROM tests WHERE reference_code = 'TEST-ACS-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-ACS-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
     (
         (SELECT id FROM requirements WHERE stable_code = 'REQ-THERM-001' ORDER BY id LIMIT 1),
-        (SELECT id FROM tests WHERE reference_code = 'TEST-THERM-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-THERM-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project')
     );
 
@@ -475,7 +475,7 @@ INSERT INTO logs (user_id, action_type, entity_type, entity_id, project_id, desc
         (SELECT id FROM users WHERE username = 'eng_jones' ORDER BY id LIMIT 1),
         'CREATE',
         'TEST',
-        (SELECT id FROM tests WHERE reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project'),
         'Test TEST-PWR-001 created by Engineer Jones',
         NOW() - INTERVAL '4 hours'
@@ -484,7 +484,7 @@ INSERT INTO logs (user_id, action_type, entity_type, entity_id, project_id, desc
         (SELECT id FROM users WHERE username = 'tech_lee' ORDER BY id LIMIT 1),
         'UPDATE',
         'TEST',
-        (SELECT id FROM tests WHERE reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project'),
         'Test TEST-PWR-001 status updated to Passed by Technician Lee',
         NOW() - INTERVAL '2 hours'

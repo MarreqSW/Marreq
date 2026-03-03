@@ -1,5 +1,7 @@
 import { initRequirementReferenceValidation } from '../modules/referenceValidator.js';
 import { showNotification } from '../modules/notifications.js';
+import { initCustomDropdowns } from '../modules/customDropdown.js';
+import { initTraceBuilder, syncParentLinksFromList } from '../modules/traceBuilder.js';
 
 function collectCategories(select) {
   return Array.from(select.options)
@@ -36,7 +38,7 @@ function initReferenceValidation(form) {
 function initStatusControls(form) {
   const toggle = form.querySelector('[data-role="status-toggle"]');
   const menu = form.querySelector('[data-role="status-menu"]');
-  const statusLabel = toggle?.querySelector('.editor-status__label');
+  const statusLabel = toggle?.querySelector('.c-editor-status__label');
   const select = form.querySelector('#status_id');
 
   if (!toggle || !menu || !statusLabel || !select) {
@@ -98,156 +100,6 @@ function initStatusControls(form) {
     if (selectedOption) {
       statusLabel.textContent = selectedOption.textContent.trim();
     }
-  });
-}
-
-function initCustomDropdowns(form) {
-  const dropdowns = form.querySelectorAll('[data-dropdown]');
-  
-  dropdowns.forEach((dropdown) => {
-    const trigger = dropdown.querySelector('[data-role="dropdown-trigger"]');
-    const menu = dropdown.querySelector('[data-role="dropdown-menu"]');
-    const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
-    const items = dropdown.querySelectorAll('.c-custom-dropdown__item');
-    const hiddenSelect = dropdown.querySelector('select');
-    const searchInput = dropdown.querySelector('[data-role="dropdown-search"]');
-    
-    if (!trigger || !menu || !valueDisplay || !hiddenSelect) {
-      return;
-    }
-    
-    function closeMenu() {
-      menu.hidden = true;
-      trigger.setAttribute('aria-expanded', 'false');
-      if (searchInput) {
-        searchInput.value = '';
-        filterItems('');
-      }
-    }
-    
-    function openMenu() {
-      menu.hidden = false;
-      trigger.setAttribute('aria-expanded', 'true');
-      updateSelectedState();
-      if (searchInput) {
-        setTimeout(() => searchInput.focus(), 50);
-      }
-    }
-    
-    function filterItems(query) {
-      const lowerQuery = query.toLowerCase();
-      items.forEach((item) => {
-        const searchText = (item.getAttribute('data-search-text') || item.textContent || '').toLowerCase();
-        if (!query || searchText.includes(lowerQuery)) {
-          item.classList.remove('c-custom-dropdown__item--hidden');
-        } else {
-          item.classList.add('c-custom-dropdown__item--hidden');
-        }
-      });
-    }
-    
-    function updateSelectedState() {
-      const currentValue = hiddenSelect.value;
-      items.forEach((item) => {
-        if (item.getAttribute('data-value') === currentValue) {
-          item.classList.add('c-custom-dropdown__item--selected');
-        } else {
-          item.classList.remove('c-custom-dropdown__item--selected');
-        }
-      });
-    }
-    
-    function updateDisplay() {
-      const selectedOption = hiddenSelect.options[hiddenSelect.selectedIndex];
-      if (selectedOption && selectedOption.value) {
-        valueDisplay.textContent = selectedOption.textContent.trim();
-        valueDisplay.classList.remove('c-custom-dropdown__value--placeholder');
-      } else {
-        const placeholder = dropdown.dataset.dropdown;
-        valueDisplay.textContent = `Select ${placeholder}...`;
-        valueDisplay.classList.add('c-custom-dropdown__value--placeholder');
-      }
-      updateSelectedState();
-    }
-    
-    // Search functionality
-    if (searchInput) {
-      searchInput.addEventListener('input', (event) => {
-        filterItems(event.target.value);
-      });
-      
-      searchInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          closeMenu();
-          trigger.focus();
-        }
-      });
-    }
-    
-    // Toggle dropdown
-    trigger.addEventListener('click', (event) => {
-      event.preventDefault();
-      const isOpen = trigger.getAttribute('aria-expanded') === 'true';
-      
-      // Close all other dropdowns first
-      document.querySelectorAll('[data-dropdown]').forEach((otherDropdown) => {
-        if (otherDropdown !== dropdown) {
-          const otherTrigger = otherDropdown.querySelector('[data-role="dropdown-trigger"]');
-          const otherMenu = otherDropdown.querySelector('[data-role="dropdown-menu"]');
-          if (otherTrigger && otherMenu) {
-            otherMenu.hidden = true;
-            otherTrigger.setAttribute('aria-expanded', 'false');
-          }
-        }
-      });
-      
-      if (isOpen) {
-        closeMenu();
-      } else {
-        openMenu();
-      }
-    });
-    
-    // Handle item selection
-    items.forEach((item) => {
-      item.addEventListener('click', (event) => {
-        event.preventDefault();
-        const value = item.getAttribute('data-value');
-        
-        if (value) {
-          hiddenSelect.value = value;
-          
-          // Copy data attributes from item to select option
-          const tag = item.getAttribute('data-tag');
-          const selectedOption = hiddenSelect.options[hiddenSelect.selectedIndex];
-          if (tag && selectedOption) {
-            selectedOption.setAttribute('data-tag', tag);
-          }
-          
-          hiddenSelect.dispatchEvent(new Event('change', { bubbles: true }));
-          updateDisplay();
-          closeMenu();
-        }
-      });
-    });
-    
-    // Close on click outside
-    document.addEventListener('click', (event) => {
-      if (!menu.hidden && !dropdown.contains(event.target)) {
-        closeMenu();
-      }
-    });
-    
-    // Close on Escape key
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && trigger.getAttribute('aria-expanded') === 'true') {
-        closeMenu();
-        trigger.focus();
-      }
-    });
-    
-    // Initialize display
-    updateDisplay();
   });
 }
 
@@ -409,7 +261,7 @@ function initInlineCreation(form) {
     },
     verification: {
       label: 'Verification methods',
-      select: form.querySelector('#verification_method_ids') || form.querySelector('#verification_method_id'),
+      select: form.querySelector('#verification_method_ids'),
       modal: document.querySelector('#verificationModal'),
       form: document.querySelector('#inlineVerificationForm'),
       dropdown: form.querySelector('[data-dropdown="verification"]'),
@@ -420,55 +272,39 @@ function initInlineCreation(form) {
         tag: (fd.get('tag') || '').toString().trim(),
       }),
       apply: (data) => {
-        const select = form.querySelector('#verification_method_ids') || form.querySelector('#verification_method_id');
+        const select = form.querySelector('#verification_method_ids');
         const dropdown = form.querySelector('[data-dropdown="verification"]');
+        if (!select) return;
 
-        if (!select) {
-          return;
-        }
-
+        // Add option to hidden select and mark selected
         const option = document.createElement('option');
         option.value = String(data.id);
         option.textContent = data.label;
+        option.selected = true;
         select.append(option);
-        if (select.multiple) {
-          option.selected = true;
-        } else {
-          select.value = String(data.id);
-        }
         select.dispatchEvent(new Event('change', { bubbles: true }));
 
+        // Add visible item to dropdown list
         if (dropdown) {
           const list = dropdown.querySelector('[data-role="dropdown-list"]');
           if (list) {
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'c-custom-dropdown__item';
+            button.className = 'c-custom-dropdown__item c-custom-dropdown__item--selected';
             button.setAttribute('data-value', String(data.id));
+            button.setAttribute('data-multi-item', '');
             button.textContent = data.label;
-            button.addEventListener('click', (event) => {
-              event.preventDefault();
-              if (select.multiple) {
-                option.selected = true;
-              } else {
-                select.value = String(data.id);
-              }
-              select.dispatchEvent(new Event('change', { bubbles: true }));
-              const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
-              const menu = dropdown.querySelector('[data-role="dropdown-menu"]');
-              const trigger = dropdown.querySelector('[data-role="dropdown-trigger"]');
-              if (valueDisplay) {
-                valueDisplay.textContent = data.label;
-                valueDisplay.classList.remove('c-custom-dropdown__value--placeholder');
-              }
-              if (menu) menu.hidden = true;
-              if (trigger) trigger.setAttribute('aria-expanded', 'false');
-            });
             list.append(button);
           }
+          // Reinitialise this dropdown so the new item gets a click handler
+          initCustomDropdowns(dropdown);
+          // Update trigger display
           const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
-          if (valueDisplay) {
-            valueDisplay.textContent = data.label;
+          const selectedCount = select.selectedOptions.length;
+          if (valueDisplay && selectedCount > 0) {
+            valueDisplay.textContent = selectedCount === 1
+              ? select.selectedOptions[0].textContent.trim()
+              : `${selectedCount} selected`;
             valueDisplay.classList.remove('c-custom-dropdown__value--placeholder');
           }
         }
@@ -562,7 +398,7 @@ function escapeHtml(value) {
 
 function renderPreviewContent(raw) {
   if (!raw) {
-    return '<p class="editor-preview__empty">Start by writing what the system <em>shall</em> do.</p>';
+    return '<p class="c-editor-preview__empty">Start by writing what the system <em>shall</em> do.</p>';
   }
 
   const escaped = escapeHtml(raw);
@@ -664,7 +500,7 @@ function initRichText(form) {
   const preview = form.querySelector('[data-role="preview"]');
   const previewContent = form.querySelector('[data-role="preview-content"]');
   const previewToggle = form.querySelector('[data-role="preview-toggle"]');
-  const toolbarButtons = form.querySelectorAll('.editor-toolbar [data-format]');
+  const toolbarButtons = form.querySelectorAll('.c-editor-toolbar [data-format]');
 
   if (!textarea || !preview || !previewContent || !previewToggle) {
     return;
@@ -758,9 +594,9 @@ function initAttachments(form) {
     list.innerHTML = state
       .map(
         (file) => `
-          <li class="editor-dropzone__item">
-            <span class="editor-dropzone__icon">${file.icon}</span>
-            <div class="editor-dropzone__meta">
+          <li class="c-editor-dropzone__item">
+            <span class="c-editor-dropzone__icon">${file.icon}</span>
+            <div class="c-editor-dropzone__meta">
               <strong>${file.name}</strong>
               <small>${formatFileSize(file.size)} · ${file.status}</small>
             </div>
@@ -824,16 +660,16 @@ function initAttachments(form) {
 
   zone.addEventListener('dragover', (event) => {
     event.preventDefault();
-    zone.classList.add('editor-dropzone--active');
+    zone.classList.add('c-editor-dropzone--active');
   });
 
   zone.addEventListener('dragleave', () => {
-    zone.classList.remove('editor-dropzone--active');
+    zone.classList.remove('c-editor-dropzone--active');
   });
 
   zone.addEventListener('drop', (event) => {
     event.preventDefault();
-    zone.classList.remove('editor-dropzone--active');
+    zone.classList.remove('c-editor-dropzone--active');
     if (event.dataTransfer?.files?.length) {
       handleFiles(event.dataTransfer.files);
     }
@@ -1056,91 +892,13 @@ function initAutosave(form) {
 function collectCustomFieldValues(form) {
   const hidden = form.querySelector('#custom_field_values');
   if (!hidden) return;
-  const inputs = form.querySelectorAll('.c-create-field__custom-value');
+  const inputs = form.querySelectorAll('.c-reqform-field__custom-value');
   const arr = Array.from(inputs).map((el) => {
     const fieldId = Number(el.getAttribute('data-field-id'));
     const value = el.value?.trim() || null;
     return { field_id: fieldId, value };
   });
   hidden.value = JSON.stringify(arr);
-}
-
-function syncParentLinksFromList(form) {
-  const list = form.querySelector('[data-role="parent-links-list"]');
-  const hidden = form.querySelector('#parent_links');
-  const parentIdField = form.querySelector('#parent_id');
-  if (!list || !hidden) return;
-  const items = list.querySelectorAll('li[data-target-id][data-link-type]');
-  const arr = Array.from(items).map((li) => ({
-    target_requirement_id: parseInt(li.dataset.targetId, 10),
-    link_type: li.dataset.linkType || 'DERIVES_FROM',
-  }));
-  hidden.value = JSON.stringify(arr);
-  if (parentIdField) {
-    parentIdField.value = arr.length > 0 ? String(arr[0].target_requirement_id) : '0';
-  }
-}
-
-function initParentLinks(form) {
-  const section = form.querySelector('[data-role="upstream-trace"]');
-  const list = form.querySelector('[data-role="parent-links-list"]');
-  const addBlock = form.querySelector('[data-role="add-parent-link"]');
-  const requirementSelect = form.querySelector('[data-role="parent-link-requirement"]');
-  const linkTypeSelect = form.querySelector('[data-role="parent-link-type"]');
-  const addBtn = form.querySelector('[data-role="add-parent-link-btn"]');
-  const hidden = form.querySelector('#parent_links');
-  if (!section || !list || !addBlock || !requirementSelect || !linkTypeSelect || !addBtn || !hidden) {
-    return;
-  }
-
-  syncParentLinksFromList(form);
-
-  addBtn.addEventListener('click', () => {
-    const reqId = requirementSelect.value;
-    const linkType = linkTypeSelect.value;
-    if (!reqId) {
-      showNotification('Select a requirement to add as parent', 'error');
-      return;
-    }
-    const opt = requirementSelect.options[requirementSelect.selectedIndex];
-    const reference = opt?.getAttribute('data-reference') ?? '';
-    const title = opt?.getAttribute('data-title') ?? '';
-    const displayRef = reference || `RM-${reqId}`;
-    const existing = list.querySelector(`li[data-target-id="${reqId}"]`);
-    if (existing) {
-      showNotification('This requirement is already added as a parent', 'error');
-      return;
-    }
-    const li = document.createElement('li');
-    li.className = 'd-flex align-items-center gap-2 mb-2';
-    li.dataset.targetId = reqId;
-    li.dataset.linkType = linkType;
-    li.innerHTML = `
-      <span class="badge bg-secondary">${escapeHtmlForParentLink(linkType)}</span>
-      <span class="flex-grow-1">${escapeHtmlForParentLink(displayRef)} — ${escapeHtmlForParentLink(title)}</span>
-      <button type="button" class="btn btn-sm btn-outline-danger" data-role="remove-parent-link" aria-label="Remove parent link">Remove</button>
-    `;
-    li.querySelector('[data-role="remove-parent-link"]').addEventListener('click', () => {
-      li.remove();
-      syncParentLinksFromList(form);
-    });
-    list.appendChild(li);
-    syncParentLinksFromList(form);
-  });
-
-  list.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-role="remove-parent-link"]');
-    if (btn) {
-      btn.closest('li')?.remove();
-      syncParentLinksFromList(form);
-    }
-  });
-}
-
-function escapeHtmlForParentLink(s) {
-  const div = document.createElement('div');
-  div.textContent = s;
-  return div.innerHTML;
 }
 
 export function init() {
@@ -1162,7 +920,7 @@ export function init() {
     initInlineCreation(form);
     initSuccessToast(form);
   }
-  initParentLinks(form);
+  initTraceBuilder(form);
   initStatusControls(form);
   initRichText(form);
   initRationale(form);

@@ -1257,7 +1257,7 @@ async fn get_edit_requirement(
         "applicability": applicability,
         "custom_field_definitions": custom_field_definitions,
         "custom_field_definitions_with_values": custom_field_definitions_with_values,
-        "linked_requirement_options": linked_requirement_options,
+        "linked_requirements": linked_requirement_options,
         "parent_links_edit": parent_links_edit,
         "link_types": link_types,
         "user": user,
@@ -1519,8 +1519,8 @@ async fn new_requirement(
 
     let ctx = json!({
         "categories": categories,
-        "status": statuses,
-        "parent": parents,
+        "statuses": statuses,
+        "linked_requirements": parents,
         "link_types": link_types,
         "parent_links_edit": parent_links_edit,
         "users": users,

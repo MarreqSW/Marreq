@@ -79,11 +79,14 @@ async fn get_matrix(
         })?;
 
     // Build matrix cells for template (with suspect state)
+    let test_status_title_map =
+        StatusService::new(state.inner()).test_status_id_to_title_map(project_id);
     let (requirements_with_matrix, _) = build_matrix_rows(
         &view.requirements,
         &view.tests,
         &view.links,
         &view.suspect_links,
+        &test_status_title_map,
     );
 
     // Build tests with status names
@@ -162,6 +165,7 @@ fn build_matrix_rows(
     tests: &[TestCase],
     links: &HashSet<(i32, i32)>,
     suspect_links: &HashSet<(i32, i32)>,
+    test_status_title_map: &std::collections::HashMap<i32, String>,
 ) -> (Vec<serde_json::Value>, usize) {
     use serde_json::json;
 
@@ -174,10 +178,14 @@ fn build_matrix_rows(
                     let key = (req.id, test.id);
                     let linked = links.contains(&key);
                     let suspect = linked && suspect_links.contains(&key);
+                    let status_title = test_status_title_map
+                        .get(&test.status_id)
+                        .cloned()
+                        .unwrap_or_else(|| "Unknown".to_string());
                     json!({
                         "linked": linked,
                         "suspect": suspect,
-                        "status_id": test.status_id
+                        "status_title": status_title
                     })
                 })
                 .collect();

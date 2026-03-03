@@ -3,6 +3,8 @@
 
 //! Service exposing helpers for requirement and test statuses.
 
+use std::collections::HashMap;
+
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{NewRequirementStatus, NewTestStatus, RequirementStatus, TestStatus};
 use crate::repository::errors::RepoError;
@@ -64,6 +66,52 @@ impl<'a> StatusService<'a> {
     pub fn get_status_name(&self, id: i32) -> Result<String, RepoError> {
         let status = self.state.repo_read().get_requirement_status_by_id(id)?;
         Ok(status.title)
+    }
+
+    /// Resolve a requirement status by its canonical title within a project.
+    ///
+    /// Performs a case-insensitive match on `title` among statuses belonging to
+    /// the given project.  Returns `None` when no matching status exists.
+    pub fn resolve_requirement_status_by_title(
+        &self,
+        project_id: i32,
+        title: &str,
+    ) -> Option<RequirementStatus> {
+        let statuses = self.list_requirement_statuses_by_project(project_id).ok()?;
+        statuses
+            .into_iter()
+            .find(|s| s.title.eq_ignore_ascii_case(title))
+    }
+
+    /// Resolve a test status by its canonical title within a project.
+    ///
+    /// Performs a case-insensitive match on `title` among statuses belonging to
+    /// the given project.  Returns `None` when no matching status exists.
+    pub fn resolve_test_status_by_title(&self, project_id: i32, title: &str) -> Option<TestStatus> {
+        let statuses = self.list_test_statuses_by_project(project_id).ok()?;
+        statuses
+            .into_iter()
+            .find(|s| s.title.eq_ignore_ascii_case(title))
+    }
+
+    /// Build a map from status id → title for all requirement statuses in a project.
+    /// Useful for resolving a requirement's `status_id` FK to a semantic name.
+    pub fn requirement_status_id_to_title_map(&self, project_id: i32) -> HashMap<i32, String> {
+        self.list_requirement_statuses_by_project(project_id)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|s| (s.id, s.title))
+            .collect()
+    }
+
+    /// Build a map from status id → title for all test statuses in a project.
+    /// Useful for resolving a test's `status_id` FK to a semantic name.
+    pub fn test_status_id_to_title_map(&self, project_id: i32) -> HashMap<i32, String> {
+        self.list_test_statuses_by_project(project_id)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|s| (s.id, s.title))
+            .collect()
     }
 
     /// Create a new requirement status entry (user-created; is_system is always false).

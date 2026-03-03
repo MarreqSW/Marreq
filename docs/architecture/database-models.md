@@ -215,7 +215,7 @@ erDiagram
 
 ## Data Models
 
-For complete details of each table, consult the schema at [`src/schema.rs`](../src/schema.rs).
+For complete details of each table, consult the schema at [`src/schema.rs`](../../src/schema.rs).
 
 ### Main Entities
 
@@ -339,16 +339,16 @@ diesel migration revert                   # Revert
 diesel print-schema > src/schema.rs      # Regenerate schema
 ```
 
-See [`migrations/`](../migrations/) folder for all migrations.
+See [`migrations/`](../../migrations/) folder for all migrations.
 
 ---
 
 ## Additional Resources
 
-- **Diesel Schema**: [`src/schema.rs`](../src/schema.rs)
-- **Rust Models**: [`src/models/entities.rs`](../src/models/entities.rs)
-- **Migrations**: [`migrations/`](../migrations/)
-- **DB Setup**: [`DATABASE_SETUP_README.md`](../DATABASE_SETUP_README.md)
+- **Diesel Schema**: [`src/schema.rs`](../../src/schema.rs)
+- **Rust Models**: [`src/models/entities.rs`](../../src/models/entities.rs)
+- **Migrations**: [`migrations/`](../../migrations/)
+- **DB Setup**: [`docs/developer/database-setup.md`](../developer/database-setup.md)
 
 ---
 

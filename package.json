@@ -5,7 +5,7 @@
   "description": "A comprehensive web-based requirements and test management system built with Rust, Rocket, and PostgreSQL. This software provides a complete solution for managing hierarchical requirements, tests, traceability matrices, and generating reports.",
   "main": "index.js",
   "directories": {
-    "doc": "doc",
+    "doc": "docs",
     "test": "tests"
   },
   "scripts": {
@@ -15,7 +15,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "check:unused-css": "node .github/workflows/purgecss-ci.mjs",
-    "screenshots:manual": "node doc/UserManual/capture_screenshots.mjs"
+    "screenshots:manual": "node docs/user-manual/capture_screenshots.mjs"
   },
   "repository": {
     "type": "git",

@@ -35,7 +35,7 @@ fn project_test_statuses(state: &AppState, project_id: i32) -> Vec<crate::models
     let mut canonical = canonical;
     canonical.sort_by_key(|s| {
         TestStatusEnum::from_title(&s.title)
-            .map(|e| e.id())
+            .map(|e| e.canonical_order())
             .unwrap_or(i32::MAX)
     });
     let mut rest = rest;
@@ -79,23 +79,45 @@ async fn show_tests(
     let all_tests = service.list_by_project(project_id).unwrap_or_default();
 
     // Calculate metrics before filtering
-    // Using enum definitions for test statuses: Passed=1, Failed=2, Pending=3, InProgress=4
+    // Resolve status IDs to titles for semantic comparison (project-safe)
+    let test_status_titles: std::collections::HashMap<i32, String> =
+        StatusService::new(state.inner()).test_status_id_to_title_map(project_id);
     let total = all_tests.len();
     let passed = all_tests
         .iter()
-        .filter(|t| t.status_id == TestStatusEnum::Passed.id())
+        .filter(|t| {
+            test_status_titles
+                .get(&t.status_id)
+                .and_then(|title| TestStatusEnum::from_title(title))
+                == Some(TestStatusEnum::Passed)
+        })
         .count();
     let failed = all_tests
         .iter()
-        .filter(|t| t.status_id == TestStatusEnum::Failed.id())
+        .filter(|t| {
+            test_status_titles
+                .get(&t.status_id)
+                .and_then(|title| TestStatusEnum::from_title(title))
+                == Some(TestStatusEnum::Failed)
+        })
         .count();
     let pending = all_tests
         .iter()
-        .filter(|t| t.status_id == TestStatusEnum::Pending.id())
+        .filter(|t| {
+            test_status_titles
+                .get(&t.status_id)
+                .and_then(|title| TestStatusEnum::from_title(title))
+                == Some(TestStatusEnum::Pending)
+        })
         .count();
     let in_progress = all_tests
         .iter()
-        .filter(|t| t.status_id == TestStatusEnum::InProgress.id())
+        .filter(|t| {
+            test_status_titles
+                .get(&t.status_id)
+                .and_then(|title| TestStatusEnum::from_title(title))
+                == Some(TestStatusEnum::InProgress)
+        })
         .count();
     //let pass_rate_percent = if total > 0 { (passed * 100) / total } else { 0 };
     let pass_rate_percent = (passed * 100).checked_div(total).unwrap_or(0);
@@ -520,8 +542,11 @@ async fn delete_test_route(
     let test = service.get_by_id(test_id).map_err(|_| Status::NotFound)?;
 
     // Permission gate: only allow deletion of tests in Passed or Failed status, or if admin
-    // Using enum to check if the test is in a deletable state
-    let is_deletable = TestStatusEnum::from_id(test.status_id)
+    // Resolve the test's status title from the project's status list (not hardcoded IDs)
+    let is_deletable = StatusService::new(state.inner())
+        .get_test_status(test.status_id)
+        .ok()
+        .and_then(|status| TestStatusEnum::from_title(&status.title))
         .map(|status| matches!(status, TestStatusEnum::Passed | TestStatusEnum::Failed))
         .unwrap_or(false);
 

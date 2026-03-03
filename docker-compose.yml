@@ -45,7 +45,7 @@ services:
       ROCKET_DATABASES: '{my_db={url="postgres://rust:rust@db:5432/marreq"}}'
       # Listen on all interfaces so the host can reach the app (default 127.0.0.1 is container-only)
       ROCKET_ADDRESS: '0.0.0.0'
-      # Semantic search via Ollama (see doc/OLLAMA_SETUP.md)
+      # Semantic search via Ollama (see docs/developer/ollama-setup.md)
       EMBEDDINGS_ENABLED: 'true'
       EMBEDDING_PROVIDER: 'ollama'
       EMBEDDING_MODEL: 'nomic-embed-text'

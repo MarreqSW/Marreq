@@ -12,6 +12,6 @@ The User Manual references these screenshots. To generate them:
    - `npx playwright install chromium`
 
 3. **Capture screenshots** (from the repo root):
-   - `node doc/UserManual/capture_screenshots.mjs`
+   - `node docs/user-manual/capture_screenshots.mjs`
 
 Screenshots are saved here as `login.png`, `home.png`, `projects.png`, `project-detail.png`, `requirements-list.png`, `requirement-detail.png`, `tests-list.png`, `matrix.png`, `baselines-list.png`, and `reports.png`. Optional env vars: `MARREQ_URL` (default `http://localhost:8000`), `MARREQ_USER`, `MARREQ_PASS`.

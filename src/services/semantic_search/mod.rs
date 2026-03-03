@@ -18,7 +18,7 @@
 //! - `RAG_ENABLED=true` - Enable RAG answer generation
 //! - `RAG_MODEL=llama3.2` - Ollama LLM model for answers
 //!
-//! See doc/OLLAMA_SETUP.md for installation and setup instructions.
+//! See docs/developer/ollama-setup.md for installation and setup instructions.
 
 pub mod config;
 pub mod document_builder;

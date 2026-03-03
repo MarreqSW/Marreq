@@ -562,7 +562,10 @@ mod tests {
             .await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        let loc = response.headers().get_one("Location").expect("Location header");
+        let loc = response
+            .headers()
+            .get_one("Location")
+            .expect("Location header");
         assert!(loc.contains("/user/2/change_password"));
         assert!(loc.contains("success"));
 

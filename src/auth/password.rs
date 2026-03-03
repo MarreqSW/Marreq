@@ -248,8 +248,7 @@ mod tests {
         let user = DieselRepoMock::make_user(3, "carol", "hash");
         let mut repo = DieselRepoMock::with_users([user]);
 
-        let err =
-            admin_set_user_password(&mut repo, 3, "carol-password-2026").unwrap_err();
+        let err = admin_set_user_password(&mut repo, 3, "carol-password-2026").unwrap_err();
         assert!(matches!(err, AuthError::PasswordPolicy(_)));
     }
 

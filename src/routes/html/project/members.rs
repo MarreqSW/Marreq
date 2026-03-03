@@ -72,7 +72,8 @@ async fn show_project_members(
     drop(repo);
 
     let owner_count = memberships.iter().filter(|member| member.role == 1).count();
-    let can_manage_members = is_project_owner(state, project_id, user.id);
+    let can_manage_members =
+        is_project_owner(state, project_id, user.id) || user.is_admin;
 
     let user_lookup: HashMap<i32, &User> = users.iter().map(|member| (member.id, member)).collect();
 
@@ -180,7 +181,7 @@ async fn add_project_member(
 ) -> Redirect {
     let user = project_access.into_user();
 
-    if !is_project_owner(state, project_id, user.id) {
+    if !is_project_owner(state, project_id, user.id) && !user.is_admin {
         return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
     }
 
@@ -207,7 +208,7 @@ async fn remove_project_member(
 ) -> Redirect {
     let user = project_access.into_user();
 
-    if !is_project_owner(state, project_id, user.id) {
+    if !is_project_owner(state, project_id, user.id) && !user.is_admin {
         return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
     }
 

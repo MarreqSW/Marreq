@@ -37,7 +37,7 @@ docker exec -i $(docker compose ps -q db) psql -U rust -d marreq < scripts/init_
 
 ### 3) Install and run Ollama
 
-See `doc/OLLAMA_SETUP.md` for full instructions. Minimal:
+See [ollama-setup.md](ollama-setup.md) for full instructions. Minimal:
 
 ```bash
 ollama serve

@@ -1,6 +1,6 @@
 # Typical Workflow with Marreq
 
-This document describes a **typical end-to-end workflow** for using Marreq: from project setup through requirements, **test management**, traceability, approval, baselines, and export. For detailed steps on each screen, see the [User Manual](UserManual.md), in particular [Test Management](UserManual.md#5-test-management) and [Traceability Matrix](UserManual.md#6-traceability-matrix).
+This document describes a **typical end-to-end workflow** for using Marreq: from project setup through requirements, **test management**, traceability, approval, baselines, and export. For detailed steps on each screen, see the [User Manual](user-manual.md), in particular [Test Management](user-manual.md#5-test-management) and [Traceability Matrix](user-manual.md#6-traceability-matrix).
 
 ---
 
@@ -71,7 +71,7 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 
 - **Create requirements** one by one: **Requirements → New Requirement**. Fill in title, statement, rationale, category, status, applicability, verification method(s), and optionally parent requirement (for hierarchy) and reviewer.
 - **Or import** existing data:
-  - **Import File**: upload Excel/CSV, map columns to Marreq fields, then run the import (see [User Manual – Import](UserManual.md#10-import)).
+  - **Import File**: upload Excel/CSV, map columns to Marreq fields, then run the import (see [User Manual – Import](user-manual.md#10-import)).
   - **Import ReqIF**: upload ReqIF 1.2 XML to bring in requirements (and optionally comments) from another tool.
 - **Refine**: use the **Requirements** list in card/table/tree view, filter by status/category/applicability, and **Edit** requirements to adjust content or set parent/child relationships.
 - **Optional**: use **Semantic Search (AI)** (if enabled) to find related requirements or answer questions over the requirement set.
@@ -139,4 +139,4 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 - **After changes**: Traceability links may be marked **suspect** when a requirement or test changes; review and **Clear suspect** from the matrix when the link is still valid (user and timestamp are recorded).
 - **History**: Use **Version history** on requirements and **Diff** (between versions or baseline vs current) to see what changed and when.
 
-For detailed instructions on each action, see the [User Manual](UserManual.md), including [Test Management](UserManual.md#5-test-management).
+For detailed instructions on each action, see the [User Manual](user-manual.md), including [Test Management](user-manual.md#5-test-management).

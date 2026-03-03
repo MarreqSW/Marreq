@@ -8,7 +8,6 @@
  *       label.c-pill-select__pill
  *         input[type=checkbox].c-pill-select__checkbox (visually hidden)
  *         span.c-pill-select__label
- *     .c-pill-select__footer  (optional — e.g. "+ Create" action)
  */
 .c-pill-select {
   display: flex;
@@ -66,21 +65,6 @@
 
 .c-pill-select__label {
   pointer-events: none;
-}
-
-.c-pill-select__empty {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  padding: var(--space-2) 0;
-}
-
-.c-pill-select__help {
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-}
-
-.c-pill-select__footer {
-  padding-top: var(--space-1);
 }
 
 @media (prefers-reduced-motion: reduce) {

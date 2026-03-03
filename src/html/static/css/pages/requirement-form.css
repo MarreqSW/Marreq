@@ -208,8 +208,7 @@
 }
 
 .c-reqform-field__input,
-.c-reqform-field__textarea,
-.c-reqform-field__select {
+.c-reqform-field__textarea {
   background-color: var(--surface-muted);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -222,8 +221,7 @@
 }
 
 .c-reqform-field__input:focus,
-.c-reqform-field__textarea:focus,
-.c-reqform-field__select:focus {
+.c-reqform-field__textarea:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
   outline: none;
@@ -233,11 +231,6 @@
   background-color: var(--surface-muted);
   color: var(--text-secondary);
   cursor: default;
-}
-
-.c-reqform-field__input--headline {
-  font-size: 1.125rem;
-  font-weight: 600;
 }
 
 .c-reqform-field__textarea {
@@ -259,29 +252,6 @@
 .c-reqform-field__help {
   color: var(--text-secondary);
   font-size: var(--text-xs);
-}
-
-.c-reqform-field__meta {
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-weight: 500;
-}
-
-.c-reqform-field-grid {
-  display: grid;
-  gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-}
-
-.c-reqform-field.is-enhanced .c-reqform-field__select {
-  border: 0;
-  clip: rect(0, 0, 0, 0);
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  padding: 0;
-  position: absolute;
-  width: 1px;
 }
 
 /* ── Section title (sidebar groups) ───────────────────────────────── */
@@ -354,8 +324,7 @@
   }
 
   .c-reqform-field__input,
-  .c-reqform-field__textarea,
-  .c-reqform-field__select {
+  .c-reqform-field__textarea {
     transition: none;
   }
 }

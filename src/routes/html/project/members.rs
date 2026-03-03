@@ -3,6 +3,7 @@
 
 use super::helpers::*;
 use super::prelude::*;
+use crate::permissions::{has_permission, Permission};
 use rocket::serde::json::Value;
 
 #[derive(FromForm)]
@@ -11,19 +12,9 @@ pub struct ProjectMemberForm {
     pub role: i32,
 }
 
-fn is_project_owner(state: &State<AppState>, project_id: i32, user_id: i32) -> bool {
-    if let Ok(project) = state.repo_read().get_project_by_id(project_id) {
-        if project.owner_id == Some(user_id) {
-            return true;
-        }
-    }
-    if let Ok(members) = state.repo_read().get_members_by_project(project_id) {
-        members
-            .into_iter()
-            .any(|member| member.user_id == user_id && member.role == 1)
-    } else {
-        false
-    }
+fn can_manage_members(state: &State<AppState>, user: &crate::models::User, project_id: i32) -> bool {
+    let repo = state.repo_read();
+    has_permission(&*repo, user, project_id, Permission::ManageProjectMembers)
 }
 
 fn can_remove_member(
@@ -72,7 +63,7 @@ async fn show_project_members(
     drop(repo);
 
     let owner_count = memberships.iter().filter(|member| member.role == 1).count();
-    let can_manage_members = is_project_owner(state, project_id, user.id) || user.is_admin;
+    let can_manage_members = can_manage_members(state, &user, project_id);
 
     let user_lookup: HashMap<i32, &User> = users.iter().map(|member| (member.id, member)).collect();
 
@@ -180,7 +171,7 @@ async fn add_project_member(
 ) -> Redirect {
     let user = project_access.into_user();
 
-    if !is_project_owner(state, project_id, user.id) && !user.is_admin {
+    if !can_manage_members(state, &user, project_id) {
         return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
     }
 
@@ -207,7 +198,7 @@ async fn remove_project_member(
 ) -> Redirect {
     let user = project_access.into_user();
 
-    if !is_project_owner(state, project_id, user.id) && !user.is_admin {
+    if !can_manage_members(state, &user, project_id) {
         return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
     }
 

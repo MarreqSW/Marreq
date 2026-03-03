@@ -35,8 +35,6 @@ Use `MARREQ_API_TOKEN="$RAW_TOKEN"` when starting the MCP server. If `project_id
 
 ## 2. Environment variables for the MCP server
 
-Environment variable names use the `MARREQ_*` prefix (formerly `REQMAN_*`). Update your config if you used the old names.
-
 Set these before starting the MCP server (e.g. in a `.env` file or your shell):
 
 | Variable | Required | Description |

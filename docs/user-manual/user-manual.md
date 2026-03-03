@@ -2,9 +2,9 @@
 
 **Requirement Manager (Marreq)** is a web-based requirements and test management system. This manual describes how to use the application from the end-user perspective.
 
-**IBM DOORS users:** See **[Migrating from DOORS to Marreq](DOORS_to_Marreq_Migration.md)** for concept mapping, workflow comparison, and migration steps.
+**IBM DOORS users:** See **[Migrating from DOORS to Marreq](doors-to-marreq-migration.md)** for concept mapping, workflow comparison, and migration steps.
 
-For a **typical end-to-end workflow** (project setup → requirements → tests → traceability → approval → baselines → export), see **[Typical Workflow with Marreq](Workflow.md)**.
+For a **typical end-to-end workflow** (project setup → requirements → tests → traceability → approval → baselines → export), see **[Typical Workflow with Marreq](workflow.md)**.
 
 ---
 
@@ -39,7 +39,7 @@ Marreq helps you:
 
 Data is organized by **projects**. Each project has its own requirements, tests, categories, applicability options, and baselines. You must be logged in to use the application.
 
-See **[Typical Workflow with Marreq](Workflow.md)** for a step-by-step workflow from project setup through baselines and export.
+See **[Typical Workflow with Marreq](workflow.md)** for a step-by-step workflow from project setup through baselines and export.
 
 ---
 
@@ -549,4 +549,4 @@ Analytics views over log data (if implemented).
 
 ## Support
 
-For installation, database setup, API reference, and MCP (Model Context Protocol) integration, see the main project **README** and **doc/** (e.g. `DATABASE_SETUP_README.md`, `doc/MCP_SETUP.md`). For bugs or feature requests, use the project’s issue tracker.
+For installation, database setup, API reference, and MCP (Model Context Protocol) integration, see the main project **README** and the [docs index](../README.md) plus the developer docs (e.g. [database setup](../developer/database-setup.md), [MCP setup](../developer/mcp-setup.md)). For bugs or feature requests, use the project’s issue tracker.

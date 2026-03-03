@@ -400,7 +400,9 @@ mod tests {
             .is_none());
         assert!(cache.get(&keys::Categories::by_project(pid)).is_none());
         assert!(cache.get(&keys::Applicability::by_project(pid)).is_none());
-        assert!(cache.get(&keys::RequirementStatus::by_project(pid)).is_none());
+        assert!(cache
+            .get(&keys::RequirementStatus::by_project(pid))
+            .is_none());
         assert!(cache.get(&keys::TestStatus::by_project(pid)).is_none());
         assert!(cache.get(&keys::Projects::by_id(pid)).is_none());
         assert!(cache.get(&keys::ProjectMembers::by_project(pid)).is_none());

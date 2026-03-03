@@ -572,7 +572,8 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
     fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError> {
         let id = self.inner.create_requirement_status(new)?;
         self.cache.invalidate_status(id);
-        self.cache.invalidate_requirement_status_by_project(new.project_id);
+        self.cache
+            .invalidate_requirement_status_by_project(new.project_id);
         Ok(id)
     }
 
@@ -591,7 +592,8 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         let res = self.inner.update_requirement_status(id, payload)?;
         if res {
             self.cache.invalidate_status(id);
-            self.cache.invalidate_requirement_status_by_project(payload.project_id);
+            self.cache
+                .invalidate_requirement_status_by_project(payload.project_id);
         }
         Ok(res)
     }
@@ -599,7 +601,8 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
     fn delete_requirement_status(&mut self, id: i32) -> Result<RequirementStatus, RepoError> {
         let status = self.inner.delete_requirement_status(id)?;
         self.cache.invalidate_status(id);
-        self.cache.invalidate_requirement_status_by_project(status.project_id);
+        self.cache
+            .invalidate_requirement_status_by_project(status.project_id);
         Ok(status)
     }
 
@@ -607,7 +610,8 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         let res = self.inner.update_test_status(id, payload)?;
         if res {
             self.cache.invalidate_status(id);
-            self.cache.invalidate_test_status_by_project(payload.project_id);
+            self.cache
+                .invalidate_test_status_by_project(payload.project_id);
         }
         Ok(res)
     }
@@ -615,7 +619,8 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
     fn delete_test_status(&mut self, id: i32) -> Result<TestStatus, RepoError> {
         let status = self.inner.delete_test_status(id)?;
         self.cache.invalidate_status(id);
-        self.cache.invalidate_test_status_by_project(status.project_id);
+        self.cache
+            .invalidate_test_status_by_project(status.project_id);
         Ok(status)
     }
 

@@ -214,13 +214,24 @@ pub(crate) fn decorate_tests_cached(
 }
 
 pub(crate) fn describe_project_role(role: i32) -> &'static str {
-    match role {
-        1 => "Owner",
-        2 => "Manager",
-        3 => "Contributor",
-        4 => "Viewer",
-        _ => "Member",
-    }
+    crate::permissions::role_label(role)
+}
+
+/// Build template context with project permission flags. Call when rendering a project-scoped page.
+pub(crate) fn project_permissions_context(
+    state: &AppState,
+    user: &User,
+    project_id: i32,
+) -> Value {
+    use crate::permissions::{has_permission, Permission};
+    let repo = state.repo_read();
+    json!({
+        "can_view_requirements": has_permission(&*repo, user, project_id, Permission::ViewRequirements),
+        "can_edit_requirements": has_permission(&*repo, user, project_id, Permission::EditRequirements),
+        "can_approve": has_permission(&*repo, user, project_id, Permission::ApproveVersions),
+        "can_manage_custom_fields": has_permission(&*repo, user, project_id, Permission::ManageCustomFields),
+        "can_manage_members": has_permission(&*repo, user, project_id, Permission::ManageProjectMembers),
+    })
 }
 
 pub(crate) fn get_category_by_id_cached(state: &AppState, id: i32) -> Category {
@@ -377,18 +388,18 @@ mod tests {
     }
 
     #[test]
-    fn describe_project_role_owner() {
-        assert_eq!(describe_project_role(1), "Owner");
+    fn describe_project_role_admin() {
+        assert_eq!(describe_project_role(1), "Admin");
     }
 
     #[test]
-    fn describe_project_role_manager() {
-        assert_eq!(describe_project_role(2), "Manager");
+    fn describe_project_role_reviewer() {
+        assert_eq!(describe_project_role(2), "Reviewer");
     }
 
     #[test]
-    fn describe_project_role_contributor() {
-        assert_eq!(describe_project_role(3), "Contributor");
+    fn describe_project_role_author() {
+        assert_eq!(describe_project_role(3), "Author");
     }
 
     #[test]

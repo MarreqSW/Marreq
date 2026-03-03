@@ -4,6 +4,32 @@
 #![allow(clippy::result_large_err)]
 
 use super::prelude::*;
+use rocket::response::Responder;
+
+/// A redirect response that also sends `Clear-Site-Data` to instruct the
+/// browser to purge cached data on logout (ASVS V14.3.1).
+pub struct ClearSiteDataRedirect {
+    inner: Redirect,
+}
+
+impl ClearSiteDataRedirect {
+    pub fn to<U: TryInto<rocket::http::uri::Reference<'static>>>(uri: U) -> Self {
+        Self {
+            inner: Redirect::to(uri),
+        }
+    }
+}
+
+impl<'r, 'o: 'r> Responder<'r, 'o> for ClearSiteDataRedirect {
+    fn respond_to(self, req: &'r rocket::Request<'_>) -> rocket::response::Result<'o> {
+        let mut response = self.inner.respond_to(req)?;
+        response.set_header(rocket::http::Header::new(
+            "Clear-Site-Data",
+            r#""cache", "cookies", "storage""#,
+        ));
+        Ok(response)
+    }
+}
 
 #[get("/login?<error>")]
 pub fn login_page(error: Option<String>) -> Template {
@@ -44,10 +70,10 @@ pub fn login(
 }
 
 #[get("/logout")]
-pub fn logout(cookies: &CookieJar<'_>, state: &State<AppState>) -> Redirect {
+pub fn logout(cookies: &CookieJar<'_>, state: &State<AppState>) -> ClearSiteDataRedirect {
     let mut repo = state.repo_write();
     logout_user(cookies, &mut *repo);
-    Redirect::to(uri!(login_page(error = Option::<String>::None)))
+    ClearSiteDataRedirect::to(uri!(login_page(error = Option::<String>::None)))
 }
 
 #[get("/change_password?<error>&<success>")]

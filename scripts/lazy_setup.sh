@@ -492,10 +492,10 @@ echo "   • Ollama:    http://localhost:11434"
 echo ""
 
 echo -e "${BLUE}🚀 To start Marreq:${NC}"
-echo "   cargo run --release --bin req_man"
+echo "   cargo run --release --bin marreq"
 echo ""
 echo -e "${BLUE}   Or for development:${NC}"
-echo "   cargo run --bin req_man"
+echo "   cargo run --bin marreq"
 echo ""
 
 echo -e "${BLUE}📖 Useful Commands:${NC}"
@@ -508,7 +508,7 @@ echo ""
 
 if [[ "$AUTO_START" == "true" ]]; then
     echo -e "${GREEN}🚀 Starting Marreq...${NC}"
-    cargo run --release --bin req_man
+    cargo run --release --bin marreq
 fi
 
 echo -e "${GREEN}✅ All done! Happy requirements managing! 📋${NC}"

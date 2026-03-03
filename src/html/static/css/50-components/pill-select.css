@@ -1,0 +1,74 @@
+/*
+ * Pill-select component.
+ * A multi-select alternative rendered as toggleable pills with hidden checkboxes.
+ *
+ * Markup contract:
+ *   .c-pill-select[data-pill-select]
+ *     .c-pill-select__list
+ *       label.c-pill-select__pill
+ *         input[type=checkbox].c-pill-select__checkbox (visually hidden)
+ *         span.c-pill-select__label
+ */
+.c-pill-select {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.c-pill-select__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.c-pill-select__pill {
+  align-items: center;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: var(--text-sm);
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  transition: background-color var(--transition-base), border-color var(--transition-base),
+    color var(--transition-base);
+  user-select: none;
+}
+
+.c-pill-select__pill:hover {
+  border-color: var(--primary-color);
+}
+
+.c-pill-select__pill:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
+}
+
+.c-pill-select__pill.is-selected {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--text-inverse, #fff);
+}
+
+.c-pill-select__checkbox {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+
+.c-pill-select__label {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .c-pill-select__pill {
+    transition: none;
+  }
+}

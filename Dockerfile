@@ -45,7 +45,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Copy binary and migrations from builder
-COPY --from=builder /app/target/release/req_man /app/req_man
+COPY --from=builder /app/target/release/marreq /app/marreq
 COPY --from=builder /app/migrations /app/migrations 
 COPY --from=builder /app/scripts /app/scripts
 COPY --from=builder /usr/local/cargo/bin/diesel /usr/local/bin/diesel
@@ -63,4 +63,4 @@ EXPOSE 8000
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["/app/req_man"]
+CMD ["/app/marreq"]

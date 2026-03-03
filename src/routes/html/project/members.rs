@@ -72,7 +72,7 @@ async fn show_project_members(
     drop(repo);
 
     let owner_count = memberships.iter().filter(|member| member.role == 1).count();
-    let can_manage_members = is_project_owner(state, project_id, user.id);
+    let can_manage_members = is_project_owner(state, project_id, user.id) || user.is_admin;
 
     let user_lookup: HashMap<i32, &User> = users.iter().map(|member| (member.id, member)).collect();
 
@@ -180,7 +180,7 @@ async fn add_project_member(
 ) -> Redirect {
     let user = project_access.into_user();
 
-    if !is_project_owner(state, project_id, user.id) {
+    if !is_project_owner(state, project_id, user.id) && !user.is_admin {
         return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
     }
 
@@ -207,7 +207,7 @@ async fn remove_project_member(
 ) -> Redirect {
     let user = project_access.into_user();
 
-    if !is_project_owner(state, project_id, user.id) {
+    if !is_project_owner(state, project_id, user.id) && !user.is_admin {
         return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
     }
 
@@ -258,6 +258,7 @@ mod tests {
     const OWNER_ID: i32 = 1;
     const MEMBER_ID: i32 = 2;
     const CANDIDATE_ID: i32 = 3;
+    const ADMIN_ID: i32 = 4;
     const PROJECT_ID: i32 = 1;
 
     fn sample_project() -> Project {
@@ -293,6 +294,14 @@ mod tests {
         user
     }
 
+    fn admin_user() -> User {
+        let mut user = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        user.name = "Site Administrator".into();
+        user.username = "admin".into();
+        user.is_admin = true;
+        user
+    }
+
     fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
         repo.users.insert(OWNER_ID, owner_user());
@@ -320,6 +329,13 @@ mod tests {
         let mut repo = base_repo();
         repo.project_members
             .retain(|member| member.user_id != MEMBER_ID);
+        repo
+    }
+
+    /// Same as base_repo but with an admin user (id 4) who is not a project member.
+    fn base_repo_with_admin() -> DieselRepoMock {
+        let mut repo = base_repo();
+        repo.users.insert(ADMIN_ID, admin_user());
         repo
     }
 
@@ -356,8 +372,36 @@ mod tests {
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Project Members"));
-        assert!(body.contains("Only project owners can add or remove members"));
+        assert!(body.contains("Only project owners and administrators can add or remove members"));
         assert!(!body.contains("Add a Member"));
+    }
+
+    #[rocket::async_test]
+    async fn show_project_members_displays_management_for_admin() {
+        let client = test_client(base_repo_with_admin()).await;
+        let response = get_with_session(&client, "/p/1/members", ADMIN_ID).await;
+
+        assert_eq!(response.status(), HttpStatus::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Project Members"));
+        assert!(body.contains("Add a Member"));
+    }
+
+    #[rocket::async_test]
+    async fn add_project_member_as_admin_persists_membership() {
+        let client = test_client(base_repo_with_admin()).await;
+        let response =
+            post_form_with_session(&client, "/p/1/members", "id=3&role=2", ADMIN_ID).await;
+
+        assert_eq!(response.status(), HttpStatus::SeeOther);
+        assert_eq!(response.headers().get_one("Location"), Some("/p/1/members"));
+
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        let repo = state.repo.read().expect("repo lock");
+        let members = repo
+            .get_members_by_project(PROJECT_ID)
+            .expect("project members");
+        assert!(members.iter().any(|member| member.user_id == CANDIDATE_ID));
     }
 
     #[rocket::async_test]

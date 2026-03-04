@@ -7,6 +7,7 @@ pub use rocket::State;
 
 pub use crate::api::error::{ApiError, ApiResult};
 pub use crate::app::AppState;
+pub use crate::auth::guards::AdminOnly;
 pub use crate::auth::guards::ApiUser;
 pub use crate::permissions::Permission;
 pub use crate::repository::RepoLockExt;

@@ -47,7 +47,8 @@ mod test_support {
         // Create a user with known password hash
         // "secret" -> hashed
         let pwd_hash = hash_password("secret").expect("hash");
-        let user = DieselRepoMock::make_user(1, "alice", &pwd_hash);
+        let mut user = DieselRepoMock::make_user(1, "alice", &pwd_hash);
+        user.is_admin = true;
         repo.users.insert(1, user);
 
         repo

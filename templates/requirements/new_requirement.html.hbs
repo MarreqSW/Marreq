@@ -238,12 +238,9 @@ Depends on: css/pages/requirement-form.css, css/pages/requirement-create.css,
             <div class="c-custom-dropdown__menu" data-role="dropdown-menu" hidden>
               <div class="c-custom-dropdown__list" data-role="dropdown-list">
                 {{#each statuses}}
-                {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title
-                "Deprecated"))))}}
                 <button type="button" class="c-custom-dropdown__item" data-value="{{id}}">
                   {{title}}
                 </button>
-                {{/if}}
                 {{else}}
                 <div class="c-custom-dropdown__empty">
                   No status options available yet
@@ -253,12 +250,9 @@ Depends on: css/pages/requirement-form.css, css/pages/requirement-create.css,
             </div>
             <select name="status_id" id="status_id" class="c-custom-dropdown__hidden" required hidden>
               {{#each statuses}}
-              {{#if (or (eq title "Draft") (or (eq title "Accepted") (or (eq title "Rejected") (eq title
-              "Deprecated"))))}}
               <option value="{{id}}" {{#if (eq id ../status_id)}}selected{{/if}}>
                 {{title}}
               </option>
-              {{/if}}
               {{/each}}
             </select>
           </div>

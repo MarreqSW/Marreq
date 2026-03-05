@@ -7,7 +7,9 @@
 //! of the Rocket lifecycle.
 
 pub mod cache_control;
+pub mod csrf;
 pub mod semantic_index;
 
 pub use cache_control::AntiCacheFairing;
+pub use csrf::{csrf_denied, CsrfFairing};
 pub use semantic_index::SemanticIndexFairing;

@@ -4,9 +4,9 @@
 use super::errors::AuthError;
 use super::password_policy::{validate_password, PasswordContext};
 use crate::repository::Repository;
+use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::{password_hash::SaltString, Argon2};
-use rand_core::OsRng;
 use rocket::http::CookieJar;
 use thiserror::Error;
 

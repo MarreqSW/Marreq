@@ -21,7 +21,7 @@ pub const SESSION_COOKIE: &str = "__Host-session";
 /// - `SameSite=Strict` – never sent on cross-site requests (CSRF mitigation).
 /// - `Path=/`      – required for the `__Host-` prefix.
 /// - No `Domain`   – required for the `__Host-` prefix (host-bound).
-/// Store the authenticated user's id in a private cookie.
+///   Store the authenticated user's id in a private cookie.
 ///
 /// Security attributes (ASVS V3.4):
 /// - `HttpOnly=true` – prevents JavaScript from accessing the session token.

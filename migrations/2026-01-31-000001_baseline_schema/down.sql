@@ -26,5 +26,10 @@ DROP TABLE IF EXISTS projects CASCADE;
 
 DROP FUNCTION IF EXISTS requirement_versions_search_vector_update() CASCADE;
 DROP FUNCTION IF EXISTS forbid_baseline_update_delete() CASCADE;
+DROP FUNCTION IF EXISTS check_rv_category_project_consistency() CASCADE;
+DROP FUNCTION IF EXISTS check_cfv_project_consistency() CASCADE;
+DROP FUNCTION IF EXISTS check_rvvm_project_consistency() CASCADE;
+DROP FUNCTION IF EXISTS check_rvl_project_consistency() CASCADE;
+DROP FUNCTION IF EXISTS check_matrix_project_consistency() CASCADE;
 DROP FUNCTION IF EXISTS diesel_manage_updated_at(regclass) CASCADE;
 DROP FUNCTION IF EXISTS diesel_set_updated_at() CASCADE;

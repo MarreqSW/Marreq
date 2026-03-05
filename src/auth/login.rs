@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Marreq
 
 use super::errors::AuthError;
+use crate::auth::csrf::{generate_csrf_token, set_csrf_cookie};
 use crate::auth::set_session_cookie;
 use crate::models::*;
 use crate::repository::Repository;
@@ -21,8 +22,12 @@ pub fn login_user<R: Repository>(
 ) -> Result<(), AuthError> {
     let user = authenticate_user(&*repo, &login_form.username, &login_form.password)?;
 
-    // Store session information
+    // Store session information.
     set_session_cookie(cookies, user.id);
+
+    // Mint a fresh CSRF token on every login so that pre-login tokens are
+    // invalidated (CSRF token rotation – mitigates session-fixation variants).
+    set_csrf_cookie(cookies, generate_csrf_token());
 
     // Log the login - don't fail auth if logging fails
     let log = NewLog {

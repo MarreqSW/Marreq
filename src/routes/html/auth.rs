@@ -49,13 +49,31 @@ pub fn login(
     login_form: Form<LoginForm>,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
+    limiter: &State<crate::auth::rate_limiter::LoginRateLimiter>,
+    client_ip: Option<std::net::IpAddr>,
 ) -> Result<Redirect, Redirect> {
-    let mut repo = state.repo_write();
     let form = login_form.into_inner();
+    let ip = client_ip;
+
+    // --- Brute-force / credential-stuffing check (ASVS V2.2.1 / V6.3.1) ---
+    match limiter.check_and_delay(&form.username, ip) {
+        crate::auth::rate_limiter::RateLimitOutcome::Locked(_) => {
+            return Err(Redirect::to(uri!(login_page(
+                error = Some("Too many failed attempts. Please try again later.".to_string())
+            ))));
+        }
+        crate::auth::rate_limiter::RateLimitOutcome::Allowed => {}
+    }
+
+    let mut repo = state.repo_write();
 
     match login_user(&mut *repo, &form, cookies) {
-        Ok(()) => Ok(Redirect::to(uri!(crate::routes::html::dashboard::index))),
+        Ok(()) => {
+            limiter.record_success(&form.username, ip);
+            Ok(Redirect::to(uri!(crate::routes::html::dashboard::index)))
+        }
         Err(err) => {
+            limiter.record_failure(&form.username, ip);
             let error_msg = match err {
                 AuthError::InvalidCredentials => "Invalid username or password",
                 AuthError::Verify(_) => "Password verification failed",
@@ -73,7 +91,7 @@ pub fn login(
     }
 }
 
-#[get("/logout")]
+#[post("/logout")]
 pub fn logout(cookies: &CookieJar<'_>, state: &State<AppState>) -> ClearSiteDataRedirect {
     let mut repo = state.repo_write();
     logout_user(cookies, &mut *repo);

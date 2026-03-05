@@ -40,7 +40,7 @@ mod tests {
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use crate::status_enums::ProjectStatus;
     use chrono::NaiveDate;
-    use rocket::http::Cookie;
+    use rocket::http::{Cookie, SameSite};
     use rocket::local::asynchronous::Client;
     use std::sync::{Arc, RwLock};
 
@@ -149,6 +149,9 @@ mod tests {
             .private_cookie({
                 let mut c = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
                 c.set_path("/");
+                c.set_http_only(true);
+                c.set_secure(true);
+                c.set_same_site(SameSite::Strict);
                 c
             })
             .dispatch()
@@ -212,6 +215,9 @@ mod tests {
             .private_cookie({
                 let mut c = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
                 c.set_path("/");
+                c.set_http_only(true);
+                c.set_secure(true);
+                c.set_same_site(SameSite::Strict);
                 c
             })
             .dispatch()

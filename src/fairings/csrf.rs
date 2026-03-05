@@ -62,7 +62,10 @@ pub const CSRF_DENIED_PATH: &str = "/_csrf_denied";
 ///
 /// Mount this at `/` in `app.rs`:
 /// ```rust
-/// .mount("/", routes![csrf_denied])
+/// use marreq::fairings::csrf::csrf_denied;
+///
+/// let rocket = rocket::build().mount("/", rocket::routes![csrf_denied]);
+/// # let _ = rocket;
 /// ```
 #[get("/_csrf_denied")]
 pub fn csrf_denied() -> status::Custom<&'static str> {
@@ -77,7 +80,10 @@ pub fn csrf_denied() -> status::Custom<&'static str> {
 ///
 /// Attach via:
 /// ```rust
-/// rocket.attach(CsrfFairing::new())
+/// use marreq::fairings::csrf::CsrfFairing;
+///
+/// let rocket = rocket::build().attach(CsrfFairing::new());
+/// # let _ = rocket;
 /// ```
 pub struct CsrfFairing {
     /// Allowed `Origin` values.  Mutated in `on_ignite`; read in `on_request`.

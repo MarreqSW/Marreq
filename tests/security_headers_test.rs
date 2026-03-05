@@ -3,12 +3,15 @@
 
 #![cfg(feature = "test-helpers")]
 
-//! Integration tests for security-related HTTP headers (ASVS V14.3).
+//! Integration tests for security-related HTTP headers (ASVS V14.3, V3.4).
 //!
 //! Verifies:
 //! - Anti-caching headers on authenticated HTML responses (V14.3.2)
 //! - `Clear-Site-Data` header on logout responses (V14.3.1)
 //! - Static assets are NOT affected by anti-caching headers
+//! - `Strict-Transport-Security` (HSTS) present on all responses (V3.4.1)
+//! - `Content-Security-Policy` with `frame-ancestors 'self'` (V3.4.3)
+//! - `X-Content-Type-Options: nosniff` on all responses (V3.4.4)
 
 use rocket::http::{ContentType, Status};
 
@@ -37,6 +40,7 @@ mod support {
 
         let rocket = rocket::build()
             .manage(state)
+            .attach(marreq::fairings::SecurityHeadersFairing)
             .attach(marreq::fairings::AntiCacheFairing)
             .attach(rocket_dyn_templates::Template::fairing())
             .mount("/", marreq::routes::html::auth::routes())
@@ -196,5 +200,102 @@ async fn static_assets_no_anti_cache_headers() {
     assert!(
         cache_control.is_none() || cache_control != Some("no-store"),
         "Static assets must NOT have Cache-Control: no-store"
+    );
+}
+
+// ============================================================================
+// Baseline security headers (ASVS V3.4.1, V3.4.3, V3.4.4)
+// ============================================================================
+
+#[rocket::async_test]
+async fn hsts_header_on_html_response() {
+    let client = test_client(base_repo()).await;
+
+    let response = client.get("/login").dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(
+        response.headers().get_one("Strict-Transport-Security"),
+        Some("max-age=31536000; includeSubDomains"),
+        "HSTS header must be present on HTML responses (ASVS V3.4.1)"
+    );
+}
+
+#[rocket::async_test]
+async fn csp_header_on_html_response() {
+    let client = test_client(base_repo()).await;
+
+    let response = client.get("/login").dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let csp = response
+        .headers()
+        .get_one("Content-Security-Policy")
+        .expect("Content-Security-Policy header must be present (ASVS V3.4.3)");
+
+    assert!(
+        csp.contains("frame-ancestors 'self'"),
+        "CSP must include frame-ancestors 'self' to prevent clickjacking (ASVS V3.4.3)"
+    );
+    assert!(
+        csp.contains("default-src 'self'"),
+        "CSP must include default-src 'self'"
+    );
+    assert!(
+        csp.contains("object-src 'none'"),
+        "CSP must block plugins via object-src 'none'"
+    );
+    assert!(
+        csp.contains("form-action 'self'"),
+        "CSP must restrict form submissions to same origin"
+    );
+}
+
+#[rocket::async_test]
+async fn x_content_type_options_nosniff_on_html_response() {
+    let client = test_client(base_repo()).await;
+
+    let response = client.get("/login").dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(
+        response.headers().get_one("X-Content-Type-Options"),
+        Some("nosniff"),
+        "X-Content-Type-Options: nosniff must be present (ASVS V3.4.4)"
+    );
+}
+
+#[rocket::async_test]
+async fn security_headers_present_on_redirect() {
+    let client = test_client(base_repo()).await;
+
+    // Successful login produces a redirect.
+    let response = client
+        .post("/login")
+        .header(ContentType::Form)
+        .body("username=alice&password=secret")
+        .dispatch()
+        .await;
+
+    assert!(
+        response.status().code >= 300 && response.status().code < 400,
+        "Login must redirect"
+    );
+    assert_eq!(
+        response.headers().get_one("Strict-Transport-Security"),
+        Some("max-age=31536000; includeSubDomains"),
+        "HSTS must also be set on redirect responses"
+    );
+    assert_eq!(
+        response.headers().get_one("X-Content-Type-Options"),
+        Some("nosniff"),
+        "X-Content-Type-Options must also be set on redirect responses"
+    );
+    assert!(
+        response
+            .headers()
+            .get_one("Content-Security-Policy")
+            .is_some(),
+        "CSP must also be set on redirect responses"
     );
 }

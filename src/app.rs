@@ -96,6 +96,7 @@ pub fn build() -> Rocket<Build> {
             "/static",
             rocket::fs::FileServer::from(rocket::fs::relative!("src/html/static")),
         )
+        .attach(crate::fairings::SecurityHeadersFairing)
         .attach(crate::fairings::CsrfFairing::new())
         .attach(crate::html::cors::CorsFairing(
             crate::html::cors::CorsPolicy::from_env(),

@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-use rocket::http::{Cookie, CookieJar};
+use rocket::http::{Cookie, CookieJar, SameSite};
 
 /// Name of the session cookie used to store the authenticated user id.
 pub const SESSION_COOKIE: &str = "id";
 
 /// Store the authenticated user's id in a private cookie.
+///
+/// Security attributes (ASVS V3.4):
+/// - `HttpOnly=true` – prevents JavaScript from accessing the session token.
+/// - `SameSite=Lax` – mitigates CSRF: the cookie is not sent on
+///   cross-site non-safe requests initiated by third-party pages (first-line
+///   CSRF defence alongside the [`CsrfFairing`](crate::fairings::CsrfFairing)).
 pub fn set_session_cookie(cookies: &CookieJar<'_>, user_id: i32) {
     let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
     cookie.set_path("/");
     cookie.set_http_only(true);
+    cookie.set_same_site(SameSite::Lax);
     cookies.add_private(cookie);
 }
 

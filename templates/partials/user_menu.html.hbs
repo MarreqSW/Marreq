@@ -38,9 +38,12 @@
             <hr class="dropdown-divider">
           </li>
           <li>
-            <a class="dropdown-item text-danger" href="/logout">
-              <i class="fas fa-sign-out-alt me-2"></i> Logout
-            </a>
+            {{!-- POST form for logout prevents CSRF via state-changing GET (ASVS V3.5.3). --}}
+            <form method="POST" action="/logout" style="margin:0">
+              <button type="submit" class="dropdown-item text-danger" style="background:none;border:none;width:100%;text-align:left">
+                <i class="fas fa-sign-out-alt me-2"></i> Logout
+              </button>
+            </form>
           </li>
         </ul>
       </div>

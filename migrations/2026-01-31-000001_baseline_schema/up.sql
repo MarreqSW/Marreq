@@ -462,3 +462,371 @@ INSERT INTO users (username, name, email, is_admin, password_hash)
 SELECT 'alice', 'Alice Johnson', 'alice@marreq.com', true,
        '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0'
 WHERE NOT EXISTS (SELECT 1 FROM users LIMIT 1);
+
+-- =============================================================================
+-- SQUASHED: UNIQUE USER IDENTITY (CASE-INSENSITIVE)
+-- =============================================================================
+
+DO $$
+DECLARE
+    dup_user_count  INTEGER;
+    dup_email_count INTEGER;
+    dup_report      TEXT;
+BEGIN
+    SELECT COUNT(*) INTO dup_user_count
+    FROM (
+        SELECT lower(username)
+        FROM users
+        GROUP BY lower(username)
+        HAVING COUNT(*) > 1
+    ) t;
+
+    SELECT COUNT(*) INTO dup_email_count
+    FROM (
+        SELECT lower(email)
+        FROM users
+        GROUP BY lower(email)
+        HAVING COUNT(*) > 1
+    ) t;
+
+    IF dup_user_count > 0 OR dup_email_count > 0 THEN
+        SELECT string_agg(line, E'\n') INTO dup_report
+        FROM (
+            SELECT '  [username] ' || lower(username) ||
+                   ' — ' || COUNT(*) || ' rows (ids: ' ||
+                   string_agg(id::text, ', ' ORDER BY id) || ')' AS line
+            FROM users
+            GROUP BY lower(username)
+            HAVING COUNT(*) > 1
+
+            UNION ALL
+
+            SELECT '  [email]    ' || lower(email) ||
+                   ' — ' || COUNT(*) || ' rows (ids: ' ||
+                   string_agg(id::text, ', ' ORDER BY id) || ')' AS line
+            FROM users
+            GROUP BY lower(email)
+            HAVING COUNT(*) > 1
+        ) problems;
+
+        RAISE EXCEPTION
+            E'Cannot enforce unique user identity: % duplicate group(s) detected.\n'
+            'Resolve the following conflicts before re-running this migration:\n%',
+            dup_user_count + dup_email_count,
+            dup_report;
+    END IF;
+END;
+$$;
+
+DROP INDEX IF EXISTS idx_users_username;
+CREATE UNIQUE INDEX idx_users_username_lower ON users (lower(username));
+CREATE UNIQUE INDEX idx_users_email_lower    ON users (lower(email));
+
+-- =============================================================================
+-- SQUASHED: DB-LEVEL CROSS-PROJECT INTEGRITY TRIGGERS
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION check_matrix_project_consistency()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    req_project_id  INTEGER;
+    test_project_id INTEGER;
+BEGIN
+    SELECT project_id INTO req_project_id
+    FROM requirements WHERE id = NEW.req_id;
+
+    SELECT project_id INTO test_project_id
+    FROM tests WHERE id = NEW.test_id;
+
+    IF req_project_id IS NULL THEN
+        RAISE EXCEPTION '[cross_project] requirement % does not exist', NEW.req_id;
+    END IF;
+    IF test_project_id IS NULL THEN
+        RAISE EXCEPTION '[cross_project] test % does not exist', NEW.test_id;
+    END IF;
+    IF req_project_id <> NEW.project_id THEN
+        RAISE EXCEPTION
+            '[cross_project] requirement % belongs to project % but matrix row declares project_id=%',
+            NEW.req_id, req_project_id, NEW.project_id;
+    END IF;
+    IF test_project_id <> NEW.project_id THEN
+        RAISE EXCEPTION
+            '[cross_project] test % belongs to project % but matrix row declares project_id=%',
+            NEW.test_id, test_project_id, NEW.project_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER matrix_project_consistency
+    BEFORE INSERT OR UPDATE ON matrix
+    FOR EACH ROW EXECUTE FUNCTION check_matrix_project_consistency();
+
+CREATE OR REPLACE FUNCTION check_rvl_project_consistency()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    src_project_id INTEGER;
+    tgt_project_id INTEGER;
+BEGIN
+    SELECT r.project_id INTO src_project_id
+    FROM requirement_versions rv
+    JOIN requirements r ON r.id = rv.requirement_id
+    WHERE rv.id = NEW.source_version_id;
+
+    SELECT r.project_id INTO tgt_project_id
+    FROM requirement_versions rv
+    JOIN requirements r ON r.id = rv.requirement_id
+    WHERE rv.id = NEW.target_version_id;
+
+    IF src_project_id IS NULL THEN
+        RAISE EXCEPTION
+            '[cross_project] source requirement version % does not exist', NEW.source_version_id;
+    END IF;
+    IF tgt_project_id IS NULL THEN
+        RAISE EXCEPTION
+            '[cross_project] target requirement version % does not exist', NEW.target_version_id;
+    END IF;
+    IF src_project_id <> NEW.project_id THEN
+        RAISE EXCEPTION
+            '[cross_project] source version % belongs to project % but link declares project_id=%',
+            NEW.source_version_id, src_project_id, NEW.project_id;
+    END IF;
+    IF tgt_project_id <> NEW.project_id THEN
+        RAISE EXCEPTION
+            '[cross_project] target version % belongs to project % but link declares project_id=%',
+            NEW.target_version_id, tgt_project_id, NEW.project_id;
+    END IF;
+    IF src_project_id <> tgt_project_id THEN
+        RAISE EXCEPTION
+            '[cross_project] source version % (project %) and target version % (project %) are in different projects',
+            NEW.source_version_id, src_project_id, NEW.target_version_id, tgt_project_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER rvl_project_consistency
+    BEFORE INSERT OR UPDATE ON requirement_version_links
+    FOR EACH ROW EXECUTE FUNCTION check_rvl_project_consistency();
+
+CREATE OR REPLACE FUNCTION check_rvvm_project_consistency()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    ver_project_id INTEGER;
+    vm_project_id  INTEGER;
+BEGIN
+    SELECT r.project_id INTO ver_project_id
+    FROM requirement_versions rv
+    JOIN requirements r ON r.id = rv.requirement_id
+    WHERE rv.id = NEW.requirement_version_id;
+
+    SELECT project_id INTO vm_project_id
+    FROM verification WHERE id = NEW.verification_method_id;
+
+    IF ver_project_id IS NULL OR vm_project_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    IF ver_project_id <> vm_project_id THEN
+        RAISE EXCEPTION
+            '[cross_project] requirement version % (project %) cannot use verification method % from project %',
+            NEW.requirement_version_id, ver_project_id,
+            NEW.verification_method_id, vm_project_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER rvvm_project_consistency
+    BEFORE INSERT OR UPDATE ON requirement_version_verification_methods
+    FOR EACH ROW EXECUTE FUNCTION check_rvvm_project_consistency();
+
+CREATE OR REPLACE FUNCTION check_cfv_project_consistency()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    ver_project_id INTEGER;
+    def_project_id INTEGER;
+BEGIN
+    SELECT r.project_id INTO ver_project_id
+    FROM requirement_versions rv
+    JOIN requirements r ON r.id = rv.requirement_id
+    WHERE rv.id = NEW.requirement_version_id;
+
+    SELECT project_id INTO def_project_id
+    FROM custom_field_definitions WHERE id = NEW.custom_field_definition_id;
+
+    IF ver_project_id IS NULL OR def_project_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    IF ver_project_id <> def_project_id THEN
+        RAISE EXCEPTION
+            '[cross_project] requirement version % (project %) cannot use custom field definition % from project %',
+            NEW.requirement_version_id, ver_project_id,
+            NEW.custom_field_definition_id, def_project_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER cfv_project_consistency
+    BEFORE INSERT OR UPDATE ON custom_field_values
+    FOR EACH ROW EXECUTE FUNCTION check_cfv_project_consistency();
+
+-- =============================================================================
+-- SQUASHED: MISSING FOREIGN KEYS + CATEGORY CROSS-PROJECT CHECK
+-- =============================================================================
+
+UPDATE projects
+SET    owner_id = NULL
+WHERE  owner_id IS NOT NULL
+  AND  owner_id NOT IN (SELECT id FROM users);
+
+ALTER TABLE projects
+    ADD CONSTRAINT projects_owner_id_fk
+        FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN projects.owner_id IS
+    'FK → users(id) ON DELETE SET NULL; NULL means the owning account was removed.';
+
+ALTER TABLE requirement_versions
+    ALTER COLUMN author_id DROP DEFAULT;
+
+UPDATE requirement_versions
+SET    author_id = (SELECT id FROM users ORDER BY id LIMIT 1)
+WHERE  author_id NOT IN (SELECT id FROM users);
+
+ALTER TABLE requirement_versions
+    ADD CONSTRAINT requirement_versions_author_id_fk
+        FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE RESTRICT;
+
+COMMENT ON COLUMN requirement_versions.author_id IS
+    'FK → users(id) ON DELETE RESTRICT; the authoring user must exist before deletion.';
+
+ALTER TABLE requirement_versions
+    ALTER COLUMN reviewer_id DROP DEFAULT;
+
+UPDATE requirement_versions
+SET    reviewer_id = (SELECT id FROM users ORDER BY id LIMIT 1)
+WHERE  reviewer_id NOT IN (SELECT id FROM users);
+
+ALTER TABLE requirement_versions
+    ADD CONSTRAINT requirement_versions_reviewer_id_fk
+        FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE RESTRICT;
+
+COMMENT ON COLUMN requirement_versions.reviewer_id IS
+    'FK → users(id) ON DELETE RESTRICT; the reviewer must exist before deletion.';
+
+ALTER TABLE requirement_versions
+    ALTER COLUMN category_id DROP DEFAULT;
+
+UPDATE requirement_versions rv
+SET    category_id = (
+           SELECT c.id
+           FROM   categories c
+           JOIN   requirements req ON req.id = rv.requirement_id
+           WHERE  c.project_id = req.project_id
+           ORDER  BY c.id
+           LIMIT  1
+       )
+WHERE  NOT EXISTS (
+           SELECT 1
+           FROM   categories c
+           JOIN   requirements req ON req.id = rv.requirement_id
+           WHERE  c.id = rv.category_id
+             AND  c.project_id = req.project_id
+       );
+
+ALTER TABLE requirement_versions
+    ADD CONSTRAINT requirement_versions_category_id_fk
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT;
+
+COMMENT ON COLUMN requirement_versions.category_id IS
+    'FK → categories(id) ON DELETE RESTRICT; must be a category belonging to the same project.';
+
+CREATE OR REPLACE FUNCTION check_rv_category_project_consistency()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+    cat_project_id INTEGER;
+    req_project_id INTEGER;
+BEGIN
+    SELECT project_id INTO cat_project_id
+    FROM   categories WHERE id = NEW.category_id;
+
+    SELECT r.project_id INTO req_project_id
+    FROM   requirements r WHERE r.id = NEW.requirement_id;
+
+    IF cat_project_id IS NULL THEN
+        RAISE EXCEPTION
+            '[cross_project] category % does not exist', NEW.category_id;
+    END IF;
+    IF req_project_id IS NULL THEN
+        RAISE EXCEPTION
+            '[cross_project] requirement % does not exist', NEW.requirement_id;
+    END IF;
+    IF cat_project_id <> req_project_id THEN
+        RAISE EXCEPTION
+            '[cross_project] category % belongs to project % but requirement version belongs to project %',
+            NEW.category_id, cat_project_id, req_project_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER rv_category_project_consistency
+    BEFORE INSERT OR UPDATE ON requirement_versions
+    FOR EACH ROW EXECUTE FUNCTION check_rv_category_project_consistency();
+
+UPDATE tests
+SET    parent_id = NULL
+WHERE  parent_id IS NOT NULL
+  AND  parent_id NOT IN (SELECT id FROM tests);
+
+ALTER TABLE tests
+    ADD CONSTRAINT tests_parent_id_fk
+        FOREIGN KEY (parent_id) REFERENCES tests(id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN tests.parent_id IS
+    'Self-referencing FK → tests(id) ON DELETE SET NULL; NULL when parent test is deleted.';
+
+-- =============================================================================
+-- SQUASHED: PROJECT-SCOPED UNIQUENESS CONSTRAINTS
+-- =============================================================================
+
+ALTER TABLE tests
+    DROP CONSTRAINT IF EXISTS tests_reference_code_unique;
+
+ALTER TABLE tests
+    ADD CONSTRAINT tests_project_id_reference_code_unique UNIQUE (project_id, reference_code);
+
+ALTER TABLE requirement_status
+    ADD CONSTRAINT requirement_status_project_id_tag_unique UNIQUE (project_id, tag);
+
+ALTER TABLE test_status
+    ADD CONSTRAINT test_status_project_id_tag_unique UNIQUE (project_id, tag);
+
+ALTER TABLE categories
+    ADD CONSTRAINT categories_project_id_tag_unique UNIQUE (project_id, tag);
+
+ALTER TABLE applicability
+    ADD CONSTRAINT applicability_project_id_tag_unique UNIQUE (project_id, tag);
+
+ALTER TABLE verification
+    ADD CONSTRAINT verification_project_id_tag_unique UNIQUE (project_id, tag);
+
+-- =============================================================================
+-- SQUASHED: PERFORMANCE INDEXES
+-- =============================================================================
+
+CREATE INDEX idx_requirement_status_project_id ON requirement_status(project_id);
+CREATE INDEX idx_test_status_project_id ON test_status(project_id);
+CREATE INDEX idx_requirement_versions_status_id ON requirement_versions(status_id);
+CREATE INDEX idx_requirement_versions_category_id ON requirement_versions(category_id);
+CREATE INDEX idx_requirement_versions_applicability_id ON requirement_versions(applicability_id);
+CREATE INDEX idx_rvvm_verification_method_id ON requirement_version_verification_methods(verification_method_id, requirement_version_id);
+CREATE INDEX idx_custom_field_values_definition_value ON custom_field_values(custom_field_definition_id, value);

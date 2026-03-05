@@ -222,8 +222,12 @@
             </li>
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/user/profile">My Profile</a></li>
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/change_password">Change Password</a></li>
-            <li><a class="dropdown-item nav-user-logout c-navbar__dropdown-item c-navbar__user-logout"
-                href="/logout">Logout</a></li>
+            <li>
+              {{!-- POST form for logout prevents CSRF via state-changing GET (ASVS V3.5.3). --}}
+              <form method="POST" action="/logout" style="margin:0">
+                <button type="submit" class="dropdown-item nav-user-logout c-navbar__dropdown-item c-navbar__user-logout">Logout</button>
+              </form>
+            </li>
           </ul>
         </div>
       </div>

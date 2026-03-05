@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+use crate::auth::csrf::clear_csrf_cookie;
 use crate::auth::{clear_session_cookie, read_session_user_id};
 use crate::models::NewLog;
 use crate::repository::LogRepository;
@@ -15,8 +16,10 @@ pub fn logout_user<R: LogRepository>(cookies: &CookieJar<'_>, repo: &mut R) {
     // Get user info before clearing cookies
     let user_id = read_session_user_id(cookies);
 
-    // Remove the session cookie
+    // Remove the session cookie and the CSRF token cookie together so that
+    // outstanding CSRF tokens cannot be replayed after logout.
     clear_session_cookie(cookies);
+    clear_csrf_cookie(cookies);
 
     // Remove legacy cookies from previous versions if they exist
     for legacy in &["username", "name"] {

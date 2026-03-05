@@ -81,6 +81,7 @@ pub fn build() -> Rocket<Build> {
     rocket::build()
         .manage(AppState { repo })
         .mount("/", crate::routes::html::routes())
+        .mount("/", routes![crate::fairings::csrf_denied])
         .mount("/p", crate::routes::html::project::routes())
         .mount("/user", crate::routes::html::user::routes())
         .mount("/api", crate::api::routes())
@@ -95,6 +96,7 @@ pub fn build() -> Rocket<Build> {
             "/static",
             rocket::fs::FileServer::from(rocket::fs::relative!("src/html/static")),
         )
+        .attach(crate::fairings::CsrfFairing::new())
         .attach(crate::html::cors::CorsFairing(
             crate::html::cors::CorsPolicy::from_env(),
         ))

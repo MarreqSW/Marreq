@@ -138,7 +138,7 @@ mod tests {
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use crate::status_enums::ProjectStatus;
     use chrono::NaiveDate;
-    use rocket::http::{ContentType, Cookie, Status};
+    use rocket::http::{ContentType, Cookie, SameSite, Status};
     use rocket::local::asynchronous::Client;
     use serde_json::Value;
     use std::sync::{Arc, RwLock};
@@ -172,6 +172,9 @@ mod tests {
     fn auth_cookie() -> Cookie<'static> {
         let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
         cookie.set_path("/");
+        cookie.set_http_only(true);
+        cookie.set_secure(true);
+        cookie.set_same_site(SameSite::Strict);
         cookie
     }
 

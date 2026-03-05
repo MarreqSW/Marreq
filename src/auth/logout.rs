@@ -22,7 +22,7 @@ pub fn logout_user<R: LogRepository>(cookies: &CookieJar<'_>, repo: &mut R) {
     clear_csrf_cookie(cookies);
 
     // Remove legacy cookies from previous versions if they exist
-    for legacy in &["username", "name"] {
+    for legacy in &["id", "username", "name"] {
         let mut cookie = rocket::http::Cookie::new(*legacy, "");
         cookie.set_path("/");
         cookies.remove_private(cookie);

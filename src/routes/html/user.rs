@@ -324,7 +324,7 @@ mod tests {
     use crate::app::AppState;
     use crate::auth::session::SESSION_COOKIE;
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{ContentType, Cookie, Status};
+    use rocket::http::{ContentType, Cookie, SameSite, Status};
     use rocket::local::asynchronous::{Client, LocalResponse};
     use rocket_dyn_templates::Template;
     use std::sync::{Arc, RwLock};
@@ -388,12 +388,18 @@ mod tests {
     fn admin_cookie() -> Cookie<'static> {
         let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
         cookie.set_path("/");
+        cookie.set_http_only(true);
+        cookie.set_secure(true);
+        cookie.set_same_site(SameSite::Strict);
         cookie
     }
 
     fn user_cookie() -> Cookie<'static> {
         let mut cookie = Cookie::new(SESSION_COOKIE, USER_ID.to_string());
         cookie.set_path("/");
+        cookie.set_http_only(true);
+        cookie.set_secure(true);
+        cookie.set_same_site(SameSite::Strict);
         cookie
     }
 

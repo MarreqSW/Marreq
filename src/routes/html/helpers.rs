@@ -87,11 +87,15 @@ pub(crate) fn build_context_with_projects(
     cookies: &CookieJar<'_>,
 ) -> rocket::serde::json::Value {
     let (projects, selected_project_id) = get_user_projects_and_selection(state, &user, cookies);
+    // Mint / refresh the CSRF token so the template context always carries a
+    // valid token for the <meta name="csrf-token"> tag used by AJAX clients.
+    let csrf_token = crate::auth::csrf::get_or_create_csrf_token(cookies);
 
     json!({
         "user": user,
         "projects": projects,
-        "selected_project_id": selected_project_id
+        "selected_project_id": selected_project_id,
+        "csrf_token": csrf_token
     })
 }
 

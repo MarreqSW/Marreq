@@ -32,10 +32,14 @@ impl<'r, 'o: 'r> Responder<'r, 'o> for ClearSiteDataRedirect {
 }
 
 #[get("/login?<error>")]
-pub fn login_page(error: Option<String>) -> Template {
+pub fn login_page(cookies: &CookieJar<'_>, error: Option<String>) -> Template {
+    // Mint a CSRF token for this unauthenticated session so the layout meta
+    // tag is populated and AJAX callers can read it before authentication.
+    let csrf_token = crate::auth::csrf::get_or_create_csrf_token(cookies);
     let ctx = json!({
         "page_title": "Login",
-        "error": error
+        "error": error,
+        "csrf_token": csrf_token
     });
     Template::render("login", ctx)
 }
@@ -79,19 +83,22 @@ pub fn logout(cookies: &CookieJar<'_>, state: &State<AppState>) -> ClearSiteData
 #[get("/change_password?<error>&<success>")]
 pub fn change_password_page(
     state: &State<AppState>,
+    cookies: &CookieJar<'_>,
     error: Option<String>,
     success: Option<String>,
 ) -> Template {
     // Get projects for navigation
     let projects = state.repo_read().get_projects_all().unwrap_or_default();
     let selected_project_id: Option<i32> = None; // No project selected on change password page
+    let csrf_token = crate::auth::csrf::get_or_create_csrf_token(cookies);
 
     let ctx = json!({
         "page_title": "Change Password",
         "projects": projects,
         "selected_project_id": selected_project_id,
         "error": error,
-        "success": success
+        "success": success,
+        "csrf_token": csrf_token
     });
     Template::render("change_password", ctx)
 }
@@ -157,6 +164,7 @@ mod tests {
     use crate::app::AppState;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::repository::CacheRepository;
+    use rocket::local::blocking::Client;
     use rocket::State;
     use std::sync::{Arc, RwLock};
 
@@ -173,33 +181,48 @@ mod tests {
         State::from(state)
     }
 
+    /// Build a minimal Rocket instance and return its cookie jar so that
+    /// handlers that call `get_or_create_csrf_token` have a working key.
+    fn test_client() -> Client {
+        Client::tracked(rocket::build()).expect("valid rocket instance")
+    }
+
     #[test]
     fn login_page_without_error() {
-        let template = login_page(None);
+        let client = test_client();
+        let cookies = client.cookies();
+        let template = login_page(&cookies, None);
         let rendered = format!("{:?}", template);
         assert!(rendered.contains("login"));
     }
 
     #[test]
     fn login_page_with_error() {
-        let template = login_page(Some("Invalid credentials".to_string()));
+        let client = test_client();
+        let cookies = client.cookies();
+        let template = login_page(&cookies, Some("Invalid credentials".to_string()));
         let rendered = format!("{:?}", template);
         assert!(rendered.contains("login"));
     }
 
     #[test]
     fn change_password_page_without_messages() {
+        let client = test_client();
+        let cookies = client.cookies();
         let state = app_state();
-        let template = change_password_page(state_guard(&state), None, None);
+        let template = change_password_page(state_guard(&state), &cookies, None, None);
         let rendered = format!("{:?}", template);
         assert!(rendered.contains("change_password"));
     }
 
     #[test]
     fn change_password_page_with_error() {
+        let client = test_client();
+        let cookies = client.cookies();
         let state = app_state();
         let template = change_password_page(
             state_guard(&state),
+            &cookies,
             Some("Password too short".to_string()),
             None,
         );
@@ -209,9 +232,12 @@ mod tests {
 
     #[test]
     fn change_password_page_with_success() {
+        let client = test_client();
+        let cookies = client.cookies();
         let state = app_state();
         let template = change_password_page(
             state_guard(&state),
+            &cookies,
             None,
             Some("Password changed".to_string()),
         );

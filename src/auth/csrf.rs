@@ -16,7 +16,7 @@
 //!    - the `X-CSRF-Token` header against the `csrf` cookie value, **or**
 //!    - the `Origin` / `Referer` header against the application's own origin.
 
-use rand_core::{OsRng, RngCore};
+use argon2::password_hash::rand_core::{OsRng, RngCore};
 use rocket::http::{Cookie, CookieJar, SameSite};
 
 /// Name of the private CSRF cookie that stores the token.

@@ -15,7 +15,7 @@ use marreq::auth::session::SESSION_COOKIE;
 use marreq::models::*;
 use marreq::repository::diesel_repo_mock::DieselRepoMock;
 use marreq::status_enums::ProjectStatus;
-use rocket::http::{Cookie, Status};
+use rocket::http::{Cookie, SameSite, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::Value;
 
@@ -53,6 +53,9 @@ mod test_support {
     pub fn session_cookie(user_id: i32) -> Cookie<'static> {
         let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
         cookie.set_path("/");
+        cookie.set_http_only(true);
+        cookie.set_secure(true);
+        cookie.set_same_site(SameSite::Strict);
         cookie
     }
 

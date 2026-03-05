@@ -3,7 +3,8 @@
 
 use crate::models::{Category, RequirementStatus};
 use printpdf::{
-    BuiltinFont, Mm, Op, PdfDocument, PdfPage, PdfSaveOptions, PdfWarnMsg, Point, Pt, TextItem,
+    BuiltinFont, Mm, Op, PdfDocument, PdfFontHandle, PdfPage, PdfSaveOptions, PdfWarnMsg, Point,
+    Pt, TextItem,
 };
 use std::collections::HashMap;
 
@@ -224,13 +225,12 @@ fn push_text(ops: &mut Vec<Op>, font: BuiltinFont, size: f32, x: Mm, y: Mm, text
     ops.push(Op::SetTextCursor {
         pos: Point::new(x, y),
     });
-    ops.push(Op::SetFontSizeBuiltinFont {
+    ops.push(Op::SetFont {
+        font: PdfFontHandle::Builtin(font),
         size: Pt(size),
-        font,
     });
-    ops.push(Op::WriteTextBuiltinFont {
+    ops.push(Op::ShowText {
         items: vec![TextItem::Text(text.to_string())],
-        font,
     });
     ops.push(Op::EndTextSection);
 }

@@ -34,6 +34,7 @@ mod test_support {
     pub async fn test_client(repo: DieselRepoMock) -> Client {
         let rocket = rocket::build()
             .manage(managed_state(repo))
+            .manage(marreq::auth::rate_limiter::LoginRateLimiter::new())
             .attach(rocket_dyn_templates::Template::fairing())
             .mount("/", marreq::routes::html::auth::routes())
             .mount("/api", marreq::api::routes()); // Mount API for verification if needed
@@ -149,7 +150,7 @@ async fn login_page_uses_masked_password_with_password_manager_autocomplete() {
 }
 
 // ============================================================================
-// GET /logout
+// POST /logout
 // ============================================================================
 
 #[rocket::async_test]
@@ -158,7 +159,7 @@ async fn logout_clears_session() {
 
     // Manually set session cookie to simulate logged in state
     let response = client
-        .get("/logout")
+        .post("/logout")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;

@@ -8,6 +8,7 @@ pub mod login;
 pub mod logout;
 pub mod password;
 pub mod password_policy;
+pub mod rate_limiter;
 pub mod session;
 
 pub use csrf::*;
@@ -17,4 +18,5 @@ pub use login::*;
 pub use logout::*;
 pub use password::*;
 pub use password_policy::*;
+pub use rate_limiter::*;
 pub use session::*;

@@ -40,6 +40,7 @@ mod support {
 
         let rocket = rocket::build()
             .manage(state)
+            .manage(marreq::auth::rate_limiter::LoginRateLimiter::new())
             .attach(marreq::fairings::SecurityHeadersFairing)
             .attach(marreq::fairings::AntiCacheFairing)
             .attach(rocket_dyn_templates::Template::fairing())
@@ -133,7 +134,7 @@ async fn logout_has_clear_site_data_header() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/logout")
+        .post("/logout")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -171,7 +172,7 @@ async fn logout_also_has_anti_cache_headers() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/logout")
+        .post("/logout")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;

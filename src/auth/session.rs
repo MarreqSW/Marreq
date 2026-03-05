@@ -21,12 +21,18 @@ pub const SESSION_COOKIE: &str = "__Host-session";
 /// - `SameSite=Strict` – never sent on cross-site requests (CSRF mitigation).
 /// - `Path=/`      – required for the `__Host-` prefix.
 /// - No `Domain`   – required for the `__Host-` prefix (host-bound).
+/// Store the authenticated user's id in a private cookie.
+///
+/// Security attributes (ASVS V3.4):
+/// - `HttpOnly=true` – prevents JavaScript from accessing the session token.
+/// - `SameSite=Lax` – mitigates CSRF: the cookie is not sent on
+///   cross-site non-safe requests initiated by third-party pages (first-line
+///   CSRF defence alongside the [`CsrfFairing`](crate::fairings::CsrfFairing)).
 pub fn set_session_cookie(cookies: &CookieJar<'_>, user_id: i32) {
     let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
     cookie.set_path("/");
     cookie.set_http_only(true);
-    cookie.set_secure(true);
-    cookie.set_same_site(SameSite::Strict);
+    cookie.set_same_site(SameSite::Lax);
     cookies.add_private(cookie);
 }
 

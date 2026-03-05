@@ -1,0 +1,26 @@
+# Changelog
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.0] - 05/03/2026
+
+### Added
+- Multi-project requirements and tests management with project-scoped isolation.
+- Requirement versioning with approval states (`draft`, `reviewed`, `approved`) and version diff endpoints/UI.
+- Requirement comments on requirement/version detail views, including export support.
+- Traceability matrix with suspect-link metadata and requirement/test relationship views.
+- Immutable project baselines (snapshot of requirement versions + traceability) with baseline detail and diff-vs-current UI.
+- Excel export/import workflows and ReqIF 1.2 import/export for current project and baseline snapshots.
+- REST API coverage for requirements, tests, categories, applicability, matrix, baselines, and project-scoped endpoints.
+- Bearer API tokens (including optional project scoping) for headless clients.
+- Optional MCP server integration with read-only and controlled draft-write tool modes plus audit logging.
+- Semantic search infrastructure with embedding storage, indexing queue, and reindex utility script.
+- Audit/event logging for core user and entity operations.
+
+### Removed
+
+### Changed
+
+### Fixed

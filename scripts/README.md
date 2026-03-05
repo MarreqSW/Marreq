@@ -35,7 +35,6 @@ DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/marreq
 | `reindex_project.sh` | Trigger semantic-search re-indexing via API |
 | `test_excel_parser.sh` | Integration test for the Excel parser binary |
 | `init_complete.sql` | Demo/test seed data (used by `db_seed.sh`) |
-| `check_project_scoped_uniqueness.sql` | Pre-migration check: report duplicate (project_id, tag) before running migration `000004_project_scoped_uniqueness` |
 
 ---
 

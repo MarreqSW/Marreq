@@ -100,7 +100,9 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::auth::session::SESSION_COOKIE;
-    use crate::models::{Project, ProjectMember, Requirement, RequirementStatus, Verification, User};
+    use crate::models::{
+        Project, ProjectMember, Requirement, RequirementStatus, User, Verification,
+    };
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};

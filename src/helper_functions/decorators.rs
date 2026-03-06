@@ -294,7 +294,7 @@ fn decorate_verifications_impl<R: Repository>(
                 verification_parent_description: parent_desc,
                 verification_parent_status_id: parent_status,
                 verification_parent_status_variant: parent_status_variant,
-                verification_parent_status_tag_color: verification_parent_status_tag_color,
+                verification_parent_status_tag_color,
                 verification_parent_source: parent_source,
                 project_id: v.project_id,
             }

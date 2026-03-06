@@ -67,7 +67,10 @@ impl<'a> DecoratedTestService<'a> {
         &self,
         requirement_id: i32,
     ) -> Result<Vec<DecoratedVerification>, RepoError> {
-        self.decorate_vec(self.requirement_service.get_linked_verifications(requirement_id)?)
+        self.decorate_vec(
+            self.requirement_service
+                .get_linked_verifications(requirement_id)?,
+        )
     }
 
     /// Create a new verification entry and log the action.
@@ -183,7 +186,7 @@ impl<'a> DecoratedTestService<'a> {
             verification_parent_description: parent_desc,
             verification_parent_status_id: parent_status,
             verification_parent_status_variant: parent_status_variant,
-            verification_parent_status_tag_color: verification_parent_status_tag_color,
+            verification_parent_status_tag_color,
             verification_parent_source: parent_source,
             project_id: verification.project_id,
         })

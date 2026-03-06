@@ -277,11 +277,9 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         })
     }
 
+    /// Bypasses cache so login always sees the current password hash from the database.
     fn get_user_by_username(&self, uname: &str) -> Result<Option<User>, RepoError> {
-        let key = format!("user:username:{}", uname);
-        self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_user_by_username(uname)
-        })
+        self.inner.get_user_by_username(uname)
     }
 
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
@@ -291,31 +289,65 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
     }
 
     fn update_user_password(&mut self, user_id: i32, new_hash: &str) -> Result<(), RepoError> {
+        let username = self
+            .inner
+            .get_user_by_id(user_id)
+            .ok()
+            .map(|u| u.username.to_lowercase());
         self.inner.update_user_password(user_id, new_hash)?;
         self.cache.invalidate_user(user_id);
+        if let Some(ref u) = username {
+            self.cache.remove(&format!("user:username:{}", u));
+        }
         Ok(())
     }
 
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError> {
+        let username = user_data.id.and_then(|id| {
+            self.inner
+                .get_user_by_id(id)
+                .ok()
+                .map(|u| u.username.to_lowercase())
+        });
         let res = self.inner.update_user(user_data)?;
         if let Some(id) = user_data.id {
             self.cache.invalidate_user(id);
+        }
+        if let Some(ref u) = username {
+            self.cache.remove(&format!("user:username:{}", u));
         }
         Ok(res)
     }
 
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError> {
+        let username = user_data.id.and_then(|id| {
+            self.inner
+                .get_user_by_id(id)
+                .ok()
+                .map(|u| u.username.to_lowercase())
+        });
         let res = self.inner.update_user_without_password(user_data)?;
         if let Some(id) = user_data.id {
             self.cache.invalidate_user(id);
+        }
+        if let Some(ref u) = username {
+            self.cache.remove(&format!("user:username:{}", u));
         }
         Ok(res)
     }
 
     fn delete_user(&mut self, user_id: i32) -> Result<User, RepoError> {
+        let username = self
+            .inner
+            .get_user_by_id(user_id)
+            .ok()
+            .map(|u| u.username.to_lowercase());
         let memberships = self.inner.get_projects_for_user(user_id)?;
         let user = self.inner.delete_user(user_id)?;
         self.cache.invalidate_user(user_id);
+        if let Some(ref u) = username {
+            self.cache.remove(&format!("user:username:{}", u));
+        }
         for membership in memberships {
             self.cache
                 .invalidate_project_membership(membership.project_id, user_id);

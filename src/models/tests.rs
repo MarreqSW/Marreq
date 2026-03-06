@@ -856,24 +856,24 @@ mod tests {
 
         #[test]
         fn new_test_form_field_access() {
-            let form = NewTestForm {
+            let form = NewVerificationForm {
                 name: "Test".to_string(),
                 reference_code: "REF".to_string(),
                 description: "Desc".to_string(),
                 source: "source.rs".to_string(),
                 status_id: 1,
                 parent_id: None,
-                test_req: vec![1, 2, 3],
+                verification_req: vec![1, 2, 3],
                 project_id: 1,
             };
 
             assert_eq!(form.name, "Test");
-            assert_eq!(form.test_req, vec![1, 2, 3]);
+            assert_eq!(form.verification_req, vec![1, 2, 3]);
         }
 
         #[test]
         fn edit_test_form_field_access() {
-            let form = EditTestForm {
+            let form = EditVerificationForm {
                 id: 10,
                 reference_code: "REF".to_string(),
                 name: "Test".to_string(),

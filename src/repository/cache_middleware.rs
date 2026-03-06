@@ -1100,19 +1100,19 @@ mod tests {
             approved_at: None,
             custom_fields: None,
         };
-        let test = TestCase {
+        let verification = Verification {
             id: 1,
             name: "Test".into(),
             description: "".into(),
             source: "src".into(),
             status_id: 1,
-            reference_code: "TEST-1".into(),
+            reference_code: "VER-001".into(),
             parent_id: None,
             project_id: 1,
         };
         let matrix = MatrixLink {
             req_id: 1,
-            test_id: 1,
+            verification_id: 1,
             creation_date: epoch(),
             project_id: 1,
             suspect: false,
@@ -1134,12 +1134,12 @@ mod tests {
         categories.insert(1, category);
         let mut applicability = HashMap::new();
         applicability.insert(1, app);
-        let mut verifications = HashMap::new();
-        verifications.insert(1, ver);
+        let mut verification_methods = HashMap::new();
+        verification_methods.insert(1, ver);
         let mut requirements = HashMap::new();
         requirements.insert(1, requirement);
-        let mut tests = HashMap::new();
-        tests.insert(1, test);
+        let mut verifications = HashMap::new();
+        verifications.insert(1, verification);
         let mut projects = HashMap::new();
         projects.insert(1, project);
 
@@ -1148,15 +1148,15 @@ mod tests {
             users,
             statuses,
             requirement_statuses,
-            test_statuses: HashMap::new(),
-            verifications,
+            verification_statuses: HashMap::new(),
+            verification_methods,
             categories,
             applicability,
             requirements,
             requirement_verification_methods: Vec::new(),
             requirement_versions: HashMap::new(),
             next_version_id: 1,
-            tests,
+            verifications,
             projects,
             matrices: vec![matrix],
             project_members: Vec::new(),
@@ -1432,19 +1432,19 @@ mod tests {
         let mut repo = CacheRepository::new(populated_repo(), 60);
         let cache = repo.cache();
 
-        repo.get_test_by_id(1).unwrap();
-        assert!(cache.get(&keys::Tests::by_id(1)).is_some());
-        repo.get_tests_all().unwrap();
-        assert!(cache.get(keys::TESTS_ALL).is_some());
-        repo.get_tests_by_project(1).unwrap();
-        assert!(cache.get(&keys::Tests::by_project(1)).is_some());
+        repo.get_verification_by_id(1).unwrap();
+        assert!(cache.get(&keys::Verifications::by_id(1)).is_some());
+        repo.get_verifications_all().unwrap();
+        assert!(cache.get(keys::VERIFICATIONS_ALL).is_some());
+        repo.get_verifications_by_project(1).unwrap();
+        assert!(cache.get(&keys::Verifications::by_project(1)).is_some());
 
-        let reqs = repo.get_requirements_for_test(1).unwrap();
+        let reqs = repo.get_requirements_for_verification(1).unwrap();
         assert_eq!(reqs.len(), 1);
-        let tests = repo.get_tests_for_requirement(1).unwrap();
+        let tests = repo.get_verifications_for_requirement(1).unwrap();
         assert_eq!(tests.len(), 1);
 
-        let new_test = NewTestCase {
+        let new_test = NewVerification {
             id: None,
             name: "T2".into(),
             description: "".into(),
@@ -1454,29 +1454,29 @@ mod tests {
             parent_id: None,
             project_id: 1,
         };
-        let tid = repo.insert_test(&new_test).unwrap();
-        assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
+        let tid = repo.insert_verification(&new_test).unwrap();
+        assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());
 
-        let edit_test = NewTestCase {
+        let edit_test = NewVerification {
             id: Some(tid),
             name: "T2".into(),
             description: "".into(),
             source: "s".into(),
             status_id: 1,
-            reference_code: "TEST-2".into(),
+            reference_code: "VER-002".into(),
             parent_id: None,
             project_id: 1,
         };
-        repo.edit_test(&edit_test).unwrap();
-        assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
+        repo.edit_verification(&edit_test).unwrap();
+        assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());
 
-        repo.update_test_requirement_links(tid, &[1]).unwrap();
-        assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
+        repo.update_verification_requirement_links(tid, &[1]).unwrap();
+        assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());
         assert!(cache.get(&keys::Requirements::by_id(1)).is_none());
 
-        repo.get_tests_all().unwrap();
-        repo.delete_test(tid).unwrap();
-        assert!(cache.get(keys::TESTS_ALL).is_none());
+        repo.get_verifications_all().unwrap();
+        repo.delete_verification(tid).unwrap();
+        assert!(cache.get(keys::VERIFICATIONS_ALL).is_none());
     }
 
     #[test]
@@ -1545,10 +1545,10 @@ mod tests {
         repo.edit_applicability(&ea).unwrap();
         repo.delete_applicability(aid).unwrap();
 
-        // Verification operations
-        repo.get_verification_all().unwrap();
-        repo.get_verification_by_id(1).unwrap();
-        repo.get_verification_by_project(1).unwrap();
+        // Verification method operations
+        repo.get_verification_methods_all().unwrap();
+        repo.get_verification_method_by_id(1).unwrap();
+        repo.get_verification_methods_by_project(1).unwrap();
 
         // Project operations
         repo.get_projects_all().unwrap();
@@ -1574,7 +1574,7 @@ mod tests {
         assert!(cache.get(&keys::Matrix::by_project(1)).is_some());
         repo.insert_new_matrix_item(&NewMatrixLink {
             req_id: 1,
-            test_id: 1,
+            verification_id: 1,
             project_id: 1,
             triggering_version_id: None,
             triggering_user_id: None,
@@ -1735,7 +1735,7 @@ mod tests {
         // Insert new matrix item should invalidate cache
         repo.insert_new_matrix_item(&NewMatrixLink {
             req_id: 1,
-            test_id: 1,
+            verification_id: 1,
             project_id: 1,
             triggering_version_id: None,
             triggering_user_id: None,
@@ -1826,9 +1826,9 @@ mod tests {
         let _ = repo.get_requirements_all();
         let _ = repo.get_requirement_by_id(1);
         let _ = repo.get_requirements_by_project(1);
-        let _ = repo.get_tests_all();
-        let _ = repo.get_test_by_id(1);
-        let _ = repo.get_tests_by_project(1);
+        let _ = repo.get_verifications_all();
+        let _ = repo.get_verification_by_id(1);
+        let _ = repo.get_verifications_by_project(1);
         let _ = repo.get_projects_all();
         let _ = repo.get_project_by_id(1);
         let _ = repo.get_categories_all();
@@ -1837,18 +1837,18 @@ mod tests {
         let _ = repo.get_applicability_all();
         let _ = repo.get_applicability_by_id(1);
         let _ = repo.get_applicability_by_project(1);
-        let _ = repo.get_verification_all();
+        let _ = repo.get_verification_methods_all();
         let _ = repo.get_verification_by_id(1);
-        let _ = repo.get_verification_by_project(1);
+        let _ = repo.get_verification_methods_by_project(1);
         let _ = repo.get_requirement_status_all();
         let _ = repo.get_requirement_status_by_id(1);
-        let _ = repo.get_test_status_all();
-        let _ = repo.get_test_status_by_id(1);
+        let _ = repo.get_verification_status_all();
+        let _ = repo.get_verification_status_by_id(1);
         let _ = repo.get_members_by_project(1);
         let _ = repo.get_projects_for_user(1);
         let _ = repo.get_matrix_by_project(1);
-        let _ = repo.get_requirements_for_test(1);
-        let _ = repo.get_tests_for_requirement(1);
+        let _ = repo.get_requirements_for_verification(1);
+        let _ = repo.get_verifications_for_requirement(1);
         let _ = repo.get_logs_recent(10);
         let _ = repo.get_logs_by_entity("requirement", 1);
 

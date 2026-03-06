@@ -360,8 +360,8 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Applicability, Category, Project, ProjectMember, Requirement, RequirementStatus, TestCase,
-        TestStatus, VerificationMethod,
+        Applicability, Category, Project, ProjectMember, Requirement, RequirementStatus, Verification, VerificationMethod,
+        VerificationStatus,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
@@ -409,8 +409,8 @@ mod tests {
         }
     }
 
-    fn sample_test_status(id: i32, title: &str) -> TestStatus {
-        TestStatus {
+    fn sample_test_status(id: i32, title: &str) -> VerificationStatus {
+        VerificationStatus {
             id,
             title: title.to_string(),
             description: format!("{title} status"),
@@ -497,14 +497,14 @@ mod tests {
         });
 
         repo.statuses.insert(1, sample_status(1, "Planned"));
-        repo.test_statuses.insert(1, sample_test_status(1, "Draft"));
-        repo.test_statuses
+        repo.verification_statuses.insert(1, sample_test_status(1, "Draft"));
+        repo.verification_statuses
             .insert(2, sample_test_status(2, "Proposal"));
-        repo.test_statuses
+        repo.verification_statuses
             .insert(3, sample_test_status(3, "Active"));
 
         repo.categories.insert(1, sample_category(1, "Systems"));
-        repo.verifications
+        repo.verification_methods
             .insert(1, sample_verification(1, "Analysis"));
         repo.applicability.insert(1, sample_applicability(1, "All"));
         repo.requirements.insert(1, sample_requirement(1));
@@ -704,9 +704,9 @@ mod tests {
             },
         );
 
-        repo.tests.insert(
+        repo.verifications.insert(
             1,
-            TestCase {
+            Verification {
                 id: 1,
                 name: "Test 1".to_string(),
                 reference_code: "TST-1".to_string(),
@@ -815,9 +815,9 @@ mod tests {
             },
         );
 
-        repo.tests.insert(
+        repo.verifications.insert(
             1,
-            TestCase {
+            Verification {
                 id: 1,
                 name: "Test 1".to_string(),
                 reference_code: "TST-1".to_string(),

@@ -193,7 +193,7 @@ impl<'a> DecoratedTestService<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{MatrixLink, Requirement, TestCase, TestStatus};
+    use crate::models::{MatrixLink, Requirement, Verification, VerificationStatus};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -211,8 +211,8 @@ mod tests {
         }
     }
 
-    fn make_test(id: i32, parent: i32, status: i32) -> TestCase {
-        TestCase {
+    fn make_test(id: i32, parent: i32, status: i32) -> Verification {
+        Verification {
             id,
             name: format!("Test {id}"),
             description: "desc".into(),
@@ -227,9 +227,9 @@ mod tests {
     #[test]
     fn decorate_returns_status_and_parent_name() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
@@ -239,37 +239,37 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.tests.insert(1, make_test(1, 0, 1));
-        repo.tests.insert(5, make_test(5, 0, 1));
-        repo.tests.insert(6, make_test(6, 5, 1));
+        repo.verifications.insert(1, make_test(1, 0, 1));
+        repo.verifications.insert(5, make_test(5, 0, 1));
+        repo.verifications.insert(6, make_test(6, 5, 1));
 
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);
 
         let decorated = service.get_by_id(6).unwrap();
         assert_eq!(decorated.status_id, "Open");
-        assert_eq!(decorated.test_parent_title, "Test 5");
+        assert_eq!(decorated.verification_parent_title, "Test 5");
     }
 
     #[test]
     fn decorate_handles_missing_status_and_parent() {
         let mut repo = DieselRepoMock::default();
-        repo.tests.insert(1, make_test(1, 999, 77));
+        repo.verifications.insert(1, make_test(1, 999, 77));
 
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);
 
         let decorated = service.get_by_id(1).unwrap();
         assert_eq!(decorated.status_id, "Unknown Status (77)");
-        assert_eq!(decorated.test_parent_title, "[Deleted Parent]");
+        assert_eq!(decorated.verification_parent_title, "[Deleted Parent]");
     }
 
     #[test]
     fn get_linked_to_requirement_decorates_results() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Ready".into(),
                 description: String::new(),
@@ -279,7 +279,7 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.tests.insert(10, make_test(10, 0, 1));
+        repo.verifications.insert(10, make_test(10, 0, 1));
         repo.requirements.insert(
             3,
             Requirement {
@@ -308,7 +308,7 @@ mod tests {
         );
         repo.matrices.push(MatrixLink {
             req_id: 3,
-            test_id: 10,
+            verification_id: 10,
             creation_date: ts(),
             project_id: 99,
             suspect: false,
@@ -332,9 +332,9 @@ mod tests {
     #[test]
     fn list_all_decorates_all_tests() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
@@ -344,8 +344,8 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.tests.insert(1, make_test(1, 0, 1));
-        repo.tests.insert(2, make_test(2, 0, 1));
+        repo.verifications.insert(1, make_test(1, 0, 1));
+        repo.verifications.insert(2, make_test(2, 0, 1));
 
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);
@@ -361,9 +361,9 @@ mod tests {
     #[test]
     fn list_by_project_decorates_filtered_tests() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
@@ -378,8 +378,8 @@ mod tests {
         let mut test2 = make_test(2, 0, 1);
         test2.project_id = 2;
 
-        repo.tests.insert(1, test1);
-        repo.tests.insert(2, test2);
+        repo.verifications.insert(1, test1);
+        repo.verifications.insert(2, test2);
 
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);
@@ -392,9 +392,9 @@ mod tests {
     #[test]
     fn get_by_parent_id_decorates_children() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
@@ -404,9 +404,9 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.tests.insert(1, make_test(1, 0, 1));
-        repo.tests.insert(2, make_test(2, 1, 1));
-        repo.tests.insert(3, make_test(3, 1, 1));
+        repo.verifications.insert(1, make_test(1, 0, 1));
+        repo.verifications.insert(2, make_test(2, 1, 1));
+        repo.verifications.insert(3, make_test(3, 1, 1));
 
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);
@@ -420,9 +420,9 @@ mod tests {
     #[test]
     fn get_by_parent_id_returns_empty_when_no_children() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
@@ -432,7 +432,7 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.tests.insert(1, make_test(1, 0, 1));
+        repo.verifications.insert(1, make_test(1, 0, 1));
 
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);
@@ -444,9 +444,9 @@ mod tests {
     #[test]
     fn decorate_handles_no_parent() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
@@ -459,14 +459,14 @@ mod tests {
         let mut test = make_test(1, 0, 1);
         test.parent_id = None;
 
-        repo.tests.insert(1, test);
+        repo.verifications.insert(1, test);
 
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);
 
         let decorated = service.get_by_id(1).unwrap();
-        assert_eq!(decorated.test_parent_id, None);
-        assert_eq!(decorated.test_parent_title, "");
+        assert_eq!(decorated.verification_parent_id, None);
+        assert_eq!(decorated.verification_parent_title, "");
     }
 
     #[test]
@@ -476,7 +476,7 @@ mod tests {
         let service = DecoratedTestService::new(&state);
 
         let actor = DieselRepoMock::make_user(1, "actor", "");
-        let payload = NewTestCase {
+        let payload = NewVerification {
             id: None,
             reference_code: "TEST-NEW".into(),
             name: "New Test".into(),
@@ -494,13 +494,13 @@ mod tests {
     #[test]
     fn update_delegates_to_test_service() {
         let mut repo = DieselRepoMock::default();
-        repo.tests.insert(1, make_test(1, 0, 1));
+        repo.verifications.insert(1, make_test(1, 0, 1));
 
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);
 
         let actor = DieselRepoMock::make_user(1, "actor", "");
-        let payload = NewTestCase {
+        let payload = NewVerification {
             id: Some(1),
             reference_code: "TEST-1".into(),
             name: "Updated Test".into(),
@@ -518,7 +518,7 @@ mod tests {
     #[test]
     fn delete_delegates_to_test_service() {
         let mut repo = DieselRepoMock::default();
-        repo.tests.insert(1, make_test(1, 0, 1));
+        repo.verifications.insert(1, make_test(1, 0, 1));
 
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);

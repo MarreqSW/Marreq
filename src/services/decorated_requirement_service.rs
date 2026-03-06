@@ -362,7 +362,7 @@ mod tests {
         let mut repo = DieselRepoMock::default();
 
         // Add verification method
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             1,
             VerificationMethod {
                 id: 1,

@@ -6,7 +6,7 @@ use rocket::serde::{Deserialize, Serialize};
 use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::{
-    NewRequirement, Requirement, RequirementVersion, RequirementVersionLink, TestCase,
+    NewRequirement, Requirement, RequirementVersion, RequirementVersionLink, Verification,
 };
 use crate::repository::{ProjectMembersRepository, RequirementsRepository};
 use crate::services::RequirementService;
@@ -134,7 +134,7 @@ pub async fn get_by_project(
         return Err(ApiError::NotFound("requirement not in project".into()));
     }
     let children = service.get_children_by_parent_and_project(project_id, id)?;
-    let linked_tests = service.get_linked_tests(id)?;
+    let linked_tests = service.get_linked_verifications(id)?;
     let parent_links = requirement
         .current_version_id
         .map(|vid| {
@@ -242,11 +242,11 @@ pub async fn get_impacted_tests(
     _user: ApiUser,
     id: i32,
     state: &State<AppState>,
-) -> ApiResult<Json<Vec<TestCase>>> {
+) -> ApiResult<Json<Vec<Verification>>> {
     let service = RequirementService::new(state.inner());
     let _requirement = service.get_by_id(id)?;
-    let tests = service.get_impacted_tests(id)?;
-    Ok(Json(tests))
+    let verifications = service.get_impacted_verifications(id)?;
+    Ok(Json(verifications))
 }
 
 #[derive(Debug, Deserialize)]

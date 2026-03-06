@@ -18,7 +18,7 @@ async fn show_test_statuses(
     let projects = get_accessible_projects(state, &user);
     let service = StatusService::new(state.inner());
     let statuses = service
-        .list_test_statuses_by_project(project_id)
+        .list_verification_statuses_by_project(project_id)
         .unwrap_or_default();
 
     let ctx = json!({
@@ -54,7 +54,7 @@ async fn new_test_status(
 async fn post_test_status(
     project_access: ProjectAccess,
     project_id: i32,
-    form: Form<NewTestStatus>,
+    form: Form<NewVerificationStatus>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let _user = project_access.into_user();
@@ -67,7 +67,7 @@ async fn post_test_status(
     payload.project_id = project_id;
     payload.tag_color = payload.tag_color.filter(|s| !s.is_empty());
 
-    if let Err(_e) = service.create_test_status(payload) {
+    if let Err(_e) = service.create_verification_status(payload) {
         #[cfg(debug_assertions)]
         eprintln!("create_test_status error: {:?}", _e);
         return Ok(Redirect::to(new_url));
@@ -87,7 +87,7 @@ async fn get_edit_test_status(
     let service = StatusService::new(state.inner());
 
     let status = service
-        .get_test_status(status_id)
+        .get_verification_status(status_id)
         .map_err(|_| Redirect::to(uri!("/p", show_test_statuses(project_id))))?;
 
     if status.project_id != project_id {
@@ -119,7 +119,7 @@ async fn post_edit_test_status(
     project_access: ProjectAccess,
     project_id: i32,
     status_id: i32,
-    form: Form<NewTestStatus>,
+    form: Form<NewVerificationStatus>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let _user = project_access.into_user();
@@ -133,7 +133,7 @@ async fn post_edit_test_status(
     payload.project_id = project_id;
     payload.tag_color = payload.tag_color.filter(|s| !s.is_empty());
 
-    if let Err(_e) = service.update_test_status(status_id, &payload) {
+    if let Err(_e) = service.update_verification_status(status_id, &payload) {
         #[cfg(debug_assertions)]
         eprintln!("update_test_status error: {:?}", _e);
         return Ok(Redirect::to(edit_url));
@@ -152,7 +152,7 @@ async fn delete_test_status_route(
     let _user = project_access.into_user();
     let service = StatusService::new(state.inner());
 
-    let status = match service.get_test_status(status_id) {
+    let status = match service.get_verification_status(status_id) {
         Ok(s) => s,
         Err(_) => return Ok(rocket::http::Status::NotFound),
     };
@@ -164,7 +164,7 @@ async fn delete_test_status_route(
         )));
     }
 
-    match service.delete_test_status(status_id) {
+    match service.delete_verification_status(status_id) {
         Ok(_) => Ok(rocket::http::Status::Ok),
         Err(_e) => {
             #[cfg(debug_assertions)]

@@ -14,7 +14,7 @@ use crate::services::{
 #[allow(dead_code)]
 struct ClearSuspectForm {
     req_id: i32,
-    test_id: i32,
+    verification_id: i32,
 }
 
 #[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<page>&<per_page>&<search>&<suspect_filter>")]
@@ -80,7 +80,7 @@ async fn get_matrix(
 
     // Build matrix cells for template (with suspect state)
     let test_status_title_map =
-        StatusService::new(state.inner()).test_status_id_to_title_map(project_id);
+        StatusService::new(state.inner()).verification_status_id_to_title_map(project_id);
     let (requirements_with_matrix, _) = build_matrix_rows(
         &view.requirements,
         &view.tests,
@@ -132,7 +132,7 @@ async fn get_matrix(
     ctx["show_first_ellipsis"] = json!(pagination_ctx.show_first_ellipsis);
     ctx["show_last_ellipsis"] = json!(pagination_ctx.show_last_ellipsis);
     ctx["test_statuses"] = json!(StatusService::new(state.inner())
-        .list_test_statuses_by_project(project_id)
+        .list_verification_statuses_by_project(project_id)
         .unwrap_or_default());
     ctx["statuses"] = json!(StatusService::new(state.inner())
         .list_requirement_statuses_by_project(project_id)
@@ -162,7 +162,7 @@ async fn get_matrix(
 /// Build matrix rows with linkage and suspect information
 fn build_matrix_rows(
     reqs: &[Requirement],
-    tests: &[TestCase],
+    tests: &[Verification],
     links: &HashSet<(i32, i32)>,
     suspect_links: &HashSet<(i32, i32)>,
     test_status_title_map: &std::collections::HashMap<i32, String>,
@@ -219,7 +219,10 @@ fn build_matrix_rows(
 }
 
 /// Build tests list with status names
-fn build_tests_with_status(tests: &[TestCase], state: &State<AppState>) -> Vec<serde_json::Value> {
+fn build_tests_with_status(
+    tests: &[Verification],
+    state: &State<AppState>,
+) -> Vec<serde_json::Value> {
     use serde_json::json;
 
     tests
@@ -335,12 +338,12 @@ async fn post_clear_suspect(
         .map_err(|_| Redirect::to(uri!(crate::routes::html::dashboard::index)))?;
     let link_exists = links
         .iter()
-        .any(|m| m.req_id == form.req_id && m.test_id == form.test_id);
+        .any(|m| m.req_id == form.req_id && m.verification_id == form.verification_id);
     if !link_exists {
         return Err(Redirect::to(format!("/p/{}/matrix", project_id)));
     }
     let service = MatrixService::new(state.inner());
-    let _ = service.clear_suspect(&user, form.req_id, form.test_id);
+    let _ = service.clear_suspect(&user, form.req_id, form.verification_id);
     Ok(Redirect::to(format!("/p/{}/matrix", project_id)))
 }
 

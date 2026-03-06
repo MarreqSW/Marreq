@@ -6,19 +6,20 @@ use crate::models::entities::{
     Applicability, Baseline, BaselineTraceability, Category, CustomFieldDefinition,
     CustomFieldValue, CustomFieldValueDisplay, Log, MatrixLink, NewRequirementComment,
     NewRequirementVersionLink, Project, ProjectMember, Requirement, RequirementComment,
-    RequirementContainer, RequirementStatus, RequirementVersion, RequirementVersionLink, TestCase,
-    TestStatus, User, VerificationMethod,
+    RequirementContainer, RequirementStatus, RequirementVersion, RequirementVersionLink, User,
+    Verification, VerificationMethod, VerificationStatus,
 };
 use crate::models::forms::{
     CustomFieldDefinitionPayload, NewApplicability, NewBaselineRequirement, NewBaselineRow,
     NewBaselineTraceability, NewCategory, NewCustomFieldDefinitionRow, NewLog, NewMatrixLink,
     NewProject, NewProjectMember, NewRequirement, NewRequirementContainer, NewRequirementStatus,
-    NewTestCase, NewTestStatus, NewUser, NewVerificationMethod, UpdateProject, UpdateUser,
+    NewUser, NewVerification, NewVerificationMethod, NewVerificationStatus, UpdateProject, UpdateUser,
 };
 use crate::repository::{
     ApiTokensRepository, BaselineRepository, CustomFieldRepository, LookupRepository,
     MatrixRepository, ProjectMembersRepository, ProjectsRepository, RequirementCommentsRepository,
-    RequirementVersionLinksRepository, RequirementsRepository, TestsCaseRepository, UserRepository,
+    RequirementVersionLinksRepository, RequirementsRepository, UserRepository,
+    VerificationsRepository,
 };
 use crate::schema;
 use diesel::expression_methods::BoolExpressionMethods;
@@ -543,29 +544,35 @@ impl LookupRepository for DieselRepo {
             })
     }
 
-    fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
-        use schema::test_status::dsl;
+    fn get_verification_status_all(&self) -> Result<Vec<VerificationStatus>, RepoError> {
+        use schema::verification_status::dsl;
         let mut conn = self.get_conn()?;
-        dsl::test_status
+        dsl::verification_status
             .order(dsl::id)
-            .load::<TestStatus>(conn.as_mut())
+            .load::<VerificationStatus>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_test_status_by_project(&self, project_id: i32) -> Result<Vec<TestStatus>, RepoError> {
-        use schema::test_status::dsl;
+    fn get_verification_status_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<VerificationStatus>, RepoError> {
+        use schema::verification_status::dsl;
         let mut conn = self.get_conn()?;
-        dsl::test_status
+        dsl::verification_status
             .filter(dsl::project_id.eq(project_id))
             .order(dsl::id)
-            .load::<TestStatus>(conn.as_mut())
+            .load::<VerificationStatus>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_test_status_by_id(&self, status_id: i32) -> Result<TestStatus, RepoError> {
-        use schema::test_status::dsl;
+    fn get_verification_status_by_id(
+        &self,
+        status_id: i32,
+    ) -> Result<VerificationStatus, RepoError> {
+        use schema::verification_status::dsl;
         let mut conn = self.get_conn()?;
-        dsl::test_status
+        dsl::verification_status
             .filter(dsl::id.eq(status_id))
             .get_result(conn.as_mut())
             .map_err(|e| {
@@ -646,23 +653,23 @@ impl LookupRepository for DieselRepo {
             .map_err(|e| e.into())
     }
 
-    fn get_verification_all(&self) -> Result<Vec<VerificationMethod>, RepoError> {
-        use schema::verification::dsl;
+    fn get_verification_methods_all(&self) -> Result<Vec<VerificationMethod>, RepoError> {
+        use schema::verification_methods::dsl;
         let mut conn = self.get_conn()?;
-        dsl::verification
+        dsl::verification_methods
             .order(dsl::id)
             .load::<VerificationMethod>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_verification_by_id(
+    fn get_verification_method_by_id(
         &self,
-        verification_id: i32,
+        verification_method_id: i32,
     ) -> Result<VerificationMethod, RepoError> {
-        use schema::verification::dsl;
+        use schema::verification_methods::dsl;
         let mut conn = self.get_conn()?;
-        dsl::verification
-            .filter(dsl::id.eq(verification_id))
+        dsl::verification_methods
+            .filter(dsl::id.eq(verification_method_id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -673,34 +680,42 @@ impl LookupRepository for DieselRepo {
             })
     }
 
-    fn get_verification_by_project(
+    fn get_verification_methods_by_project(
         &self,
         project_id: i32,
     ) -> Result<Vec<VerificationMethod>, RepoError> {
-        use schema::verification::dsl;
+        use schema::verification_methods::dsl;
         let mut conn = self.get_conn()?;
-        dsl::verification
+        dsl::verification_methods
             .filter(dsl::project_id.eq(project_id))
             .order(dsl::id)
             .load::<VerificationMethod>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError> {
+    fn insert_new_verification_method(
+        &mut self,
+        new: &NewVerificationMethod,
+    ) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
-        let result = diesel::insert_into(schema::verification::table)
+        let result = diesel::insert_into(schema::verification_methods::table)
             .values(new)
             .get_result::<VerificationMethod>(conn.as_mut())?;
         Ok(result.id)
     }
 
-    fn edit_verification(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError> {
-        use schema::verification::dsl;
+    fn edit_verification_method(
+        &mut self,
+        new: &NewVerificationMethod,
+    ) -> Result<bool, RepoError> {
+        use schema::verification_methods::dsl;
         let mut conn = self.get_conn()?;
-        let verification_id = new
+        let verification_method_id = new
             .id
             .ok_or(RepoError::Db(diesel::result::Error::NotFound))?;
-        let updated = diesel::update(dsl::verification.filter(dsl::id.eq(verification_id)))
+        let updated = diesel::update(
+            dsl::verification_methods.filter(dsl::id.eq(verification_method_id)),
+        )
             .set((
                 dsl::title.eq(&new.title),
                 dsl::description.eq(&new.description),
@@ -710,14 +725,14 @@ impl LookupRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_verification(
+    fn delete_verification_method(
         &mut self,
-        verification_id: i32,
+        verification_method_id: i32,
     ) -> Result<VerificationMethod, RepoError> {
-        use schema::verification::dsl;
+        use schema::verification_methods::dsl;
         let mut conn = self.get_conn()?;
-        let verification = dsl::verification
-            .filter(dsl::id.eq(verification_id))
+        let verification = dsl::verification_methods
+            .filter(dsl::id.eq(verification_method_id))
             .get_result::<VerificationMethod>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -726,8 +741,10 @@ impl LookupRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::verification.filter(dsl::id.eq(verification_id)))
-            .execute(conn.as_mut())?;
+        diesel::delete(
+            dsl::verification_methods.filter(dsl::id.eq(verification_method_id)),
+        )
+        .execute(conn.as_mut())?;
         Ok(verification)
     }
 
@@ -824,11 +841,15 @@ impl LookupRepository for DieselRepo {
         Ok(res.id)
     }
 
-    fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError> {
+    fn create_verification_status(
+        &mut self,
+        new: &NewVerificationStatus,
+    ) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
-        let res: TestStatus = diesel::insert_into(schema::test_status::table)
-            .values(new)
-            .get_result(conn.as_mut())?;
+        let res: VerificationStatus =
+            diesel::insert_into(schema::verification_status::table)
+                .values(new)
+                .get_result(conn.as_mut())?;
         Ok(res.id)
     }
 
@@ -875,14 +896,18 @@ impl LookupRepository for DieselRepo {
         Ok(status)
     }
 
-    fn update_test_status(&mut self, id: i32, payload: &NewTestStatus) -> Result<bool, RepoError> {
-        use schema::test_status::dsl;
-        let status = self.get_test_status_by_id(id)?;
+    fn update_verification_status(
+        &mut self,
+        id: i32,
+        payload: &NewVerificationStatus,
+    ) -> Result<bool, RepoError> {
+        use schema::verification_status::dsl;
+        let status = self.get_verification_status_by_id(id)?;
         if status.is_system {
             return Err(RepoError::BadInput("Cannot modify system status".into()));
         }
         let mut conn = self.get_conn()?;
-        let updated = diesel::update(dsl::test_status.filter(dsl::id.eq(id)))
+        let updated = diesel::update(dsl::verification_status.filter(dsl::id.eq(id)))
             .set((
                 dsl::title.eq(&payload.title),
                 dsl::description.eq(&payload.description),
@@ -893,24 +918,28 @@ impl LookupRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_test_status(&mut self, id: i32) -> Result<TestStatus, RepoError> {
-        use schema::{test_status::dsl, tests};
-        let status = self.get_test_status_by_id(id)?;
+    fn delete_verification_status(
+        &mut self,
+        id: i32,
+    ) -> Result<VerificationStatus, RepoError> {
+        use schema::{verification_status::dsl, verifications};
+        let status = self.get_verification_status_by_id(id)?;
         if status.is_system {
             return Err(RepoError::BadInput("Cannot delete system status".into()));
         }
         let mut conn = self.get_conn()?;
-        let in_use: i64 = tests::table
-            .filter(tests::status_id.eq(id))
+        let in_use: i64 = verifications::table
+            .filter(verifications::status_id.eq(id))
             .count()
             .get_result(conn.as_mut())
             .map_err(RepoError::from)?;
         if in_use > 0 {
             return Err(RepoError::BadInput(
-                "Cannot delete status: it is in use by tests".into(),
+                "Cannot delete status: it is in use by verifications".into(),
             ));
         }
-        diesel::delete(dsl::test_status.filter(dsl::id.eq(id))).execute(conn.as_mut())?;
+        diesel::delete(dsl::verification_status.filter(dsl::id.eq(id)))
+            .execute(conn.as_mut())?;
         Ok(status)
     }
 }
@@ -1521,12 +1550,12 @@ impl RequirementVersionLinksRepository for DieselRepo {
     }
 }
 
-impl TestsCaseRepository for DieselRepo {
-    fn get_test_by_id(&self, test_id: i32) -> Result<TestCase, RepoError> {
-        use schema::tests::dsl;
+impl VerificationsRepository for DieselRepo {
+    fn get_verification_by_id(&self, verification_id: i32) -> Result<Verification, RepoError> {
+        use schema::verifications::dsl;
         let mut conn = self.get_conn()?;
-        dsl::tests
-            .filter(dsl::id.eq(test_id))
+        dsl::verifications
+            .filter(dsl::id.eq(verification_id))
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -1537,77 +1566,86 @@ impl TestsCaseRepository for DieselRepo {
             })
     }
 
-    fn get_tests_all(&self) -> Result<Vec<TestCase>, RepoError> {
-        use schema::tests::dsl;
+    fn get_verifications_all(&self) -> Result<Vec<Verification>, RepoError> {
+        use schema::verifications::dsl;
         let mut conn = self.get_conn()?;
-        dsl::tests
+        dsl::verifications
             .order(dsl::id)
-            .load::<TestCase>(conn.as_mut())
+            .load::<Verification>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_tests_by_project(&self, project: i32) -> Result<Vec<TestCase>, RepoError> {
-        use schema::tests::dsl;
+    fn get_verifications_by_project(
+        &self,
+        project: i32,
+    ) -> Result<Vec<Verification>, RepoError> {
+        use schema::verifications::dsl;
         let mut conn = self.get_conn()?;
-        dsl::tests
+        dsl::verifications
             .filter(dsl::project_id.eq(project))
-            .load::<TestCase>(conn.as_mut())
+            .load::<Verification>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_tests_for_requirement(&self, requirement_id: i32) -> Result<Vec<TestCase>, RepoError> {
+    fn get_verifications_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<Verification>, RepoError> {
         use schema::matrix::dsl;
-        use schema::tests::dsl as t;
+        use schema::verifications::dsl as v;
         let mut conn = self.get_conn()?;
         dsl::matrix
             .filter(dsl::req_id.eq(requirement_id))
-            .inner_join(t::tests.on(dsl::test_id.eq(t::id)))
+            .inner_join(v::verifications.on(dsl::verification_id.eq(v::id)))
             .select((
-                t::id,
-                t::name,
-                t::reference_code,
-                t::description,
-                t::source,
-                t::status_id,
-                t::parent_id,
-                t::project_id,
+                v::id,
+                v::name,
+                v::reference_code,
+                v::description,
+                v::source,
+                v::status_id,
+                v::parent_id,
+                v::project_id,
             ))
-            .load::<TestCase>(conn.as_mut())
+            .load::<Verification>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_impacted_tests_for_requirement(
+    fn get_impacted_verifications_for_requirement(
         &self,
         requirement_id: i32,
-    ) -> Result<Vec<TestCase>, RepoError> {
+    ) -> Result<Vec<Verification>, RepoError> {
         use schema::matrix::dsl;
-        use schema::tests::dsl as t;
+        use schema::verifications::dsl as v;
         let mut conn = self.get_conn()?;
         dsl::matrix
             .filter(dsl::req_id.eq(requirement_id))
             .filter(dsl::suspect.eq(true))
-            .inner_join(t::tests.on(dsl::test_id.eq(t::id)))
+            .inner_join(v::verifications.on(dsl::verification_id.eq(v::id)))
             .select((
-                t::id,
-                t::name,
-                t::reference_code,
-                t::description,
-                t::source,
-                t::status_id,
-                t::parent_id,
-                t::project_id,
+                v::id,
+                v::name,
+                v::reference_code,
+                v::description,
+                v::source,
+                v::status_id,
+                v::parent_id,
+                v::project_id,
             ))
-            .load::<TestCase>(conn.as_mut())
+            .load::<Verification>(conn.as_mut())
             .map_err(|e| e.into())
     }
 
-    fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError> {
+    fn get_requirements_for_verification(
+        &self,
+        verification_id: i32,
+    ) -> Result<Vec<Requirement>, RepoError> {
         use schema::matrix;
         use schema::requirement_versions;
         use schema::requirements;
         let mut conn = self.get_conn()?;
         let rows: Vec<(RequirementContainer, RequirementVersion)> = matrix::table
-            .filter(matrix::test_id.eq(test_id))
+            .filter(matrix::verification_id.eq(verification_id))
             .inner_join(requirements::table.on(matrix::req_id.eq(requirements::id)))
             .inner_join(
                 requirement_versions::table
@@ -1625,21 +1663,23 @@ impl TestsCaseRepository for DieselRepo {
             .collect())
     }
 
-    fn insert_test(&mut self, new: &NewTestCase) -> Result<i32, RepoError> {
+    fn insert_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
-        let res: TestCase = diesel::insert_into(schema::tests::table)
+        let res: Verification = diesel::insert_into(schema::verifications::table)
             .values(new)
             .get_result(conn.as_mut())?;
         Ok(res.id)
     }
 
-    fn edit_test(&mut self, new: &NewTestCase) -> Result<bool, RepoError> {
-        use crate::schema::tests::dsl;
+    fn edit_verification(&mut self, new: &NewVerification) -> Result<bool, RepoError> {
+        use crate::schema::verifications::dsl;
         let mut conn = self.get_conn()?;
-        let test_id_value = new
+        let verification_id_value = new
             .id
             .ok_or(RepoError::Db(diesel::result::Error::NotFound))?;
-        let updated = diesel::update(dsl::tests.filter(dsl::id.eq(test_id_value)))
+        let updated = diesel::update(
+            dsl::verifications.filter(dsl::id.eq(verification_id_value)),
+        )
             .set((
                 dsl::name.eq(&new.name),
                 dsl::description.eq(&new.description),
@@ -1652,12 +1692,12 @@ impl TestsCaseRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_test(&mut self, test_id: i32) -> Result<TestCase, RepoError> {
-        use crate::schema::tests::dsl;
+    fn delete_verification(&mut self, verification_id: i32) -> Result<Verification, RepoError> {
+        use crate::schema::verifications::dsl;
         let mut conn = self.get_conn()?;
-        let test = dsl::tests
-            .filter(dsl::id.eq(test_id))
-            .get_result::<TestCase>(conn.as_mut())
+        let verification = dsl::verifications
+            .filter(dsl::id.eq(verification_id))
+            .get_result::<Verification>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
                     RepoError::NotFound
@@ -1665,13 +1705,14 @@ impl TestsCaseRepository for DieselRepo {
                     e.into()
                 }
             })?;
-        diesel::delete(dsl::tests.filter(dsl::id.eq(test_id))).execute(conn.as_mut())?;
-        Ok(test)
+        diesel::delete(dsl::verifications.filter(dsl::id.eq(verification_id)))
+            .execute(conn.as_mut())?;
+        Ok(verification)
     }
 
-    fn update_test_requirement_links(
+    fn update_verification_requirement_links(
         &mut self,
-        test_id: i32,
+        verification_id: i32,
         requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
         use schema::matrix::dsl;
@@ -1679,22 +1720,20 @@ impl TestsCaseRepository for DieselRepo {
 
         conn.as_mut()
             .transaction::<_, diesel::result::Error, _>(|conn| {
-                // Delete existing links
-                diesel::delete(dsl::matrix.filter(dsl::test_id.eq(test_id))).execute(conn)?;
+                diesel::delete(dsl::matrix.filter(dsl::verification_id.eq(verification_id)))
+                    .execute(conn)?;
 
-                // Insert new links
                 for requirement_id in requirement_ids {
-                    // Get the project_id from the test to maintain consistency
-                    use crate::schema::tests::dsl::tests;
-                    use crate::schema::tests::dsl::{id as test_id_col, project_id as t_pid};
-                    let project_id: i32 = tests
-                        .filter(test_id_col.eq(test_id))
-                        .select(t_pid)
+                    use crate::schema::verifications::dsl::verifications;
+                    use crate::schema::verifications::dsl::{id as verification_id_col, project_id as v_pid};
+                    let project_id: i32 = verifications
+                        .filter(verification_id_col.eq(verification_id))
+                        .select(v_pid)
                         .first(conn)?;
 
                     let new_matrix = NewMatrixLink {
                         req_id: *requirement_id,
-                        test_id,
+                        verification_id,
                         project_id,
                         triggering_version_id: None,
                         triggering_user_id: None,
@@ -1915,7 +1954,7 @@ impl MatrixRepository for DieselRepo {
     fn clear_suspect(
         &mut self,
         req_id: i32,
-        test_id: i32,
+        verification_id: i32,
         cleared_by_user_id: i32,
     ) -> Result<(bool, Option<i32>), RepoError> {
         use schema::matrix::dsl;
@@ -1924,7 +1963,7 @@ impl MatrixRepository for DieselRepo {
         let project_id: Option<i32> = diesel::update(
             dsl::matrix
                 .filter(dsl::req_id.eq(req_id))
-                .filter(dsl::test_id.eq(test_id)),
+                .filter(dsl::verification_id.eq(verification_id)),
         )
         .set((
             dsl::suspect.eq(false),
@@ -2186,7 +2225,7 @@ impl BaselineRepository for DieselRepo {
                 let bt = NewBaselineTraceability {
                     baseline_id,
                     requirement_id: link.req_id,
-                    test_id: link.test_id,
+                    verification_id: link.verification_id,
                     suspect: link.suspect,
                     suspect_at: link.suspect_at,
                     suspect_reason: link.suspect_reason.clone(),
@@ -2278,7 +2317,7 @@ impl BaselineRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         dsl::baseline_traceability
             .filter(dsl::baseline_id.eq(baseline_id))
-            .order((dsl::requirement_id.asc(), dsl::test_id.asc()))
+            .order((dsl::requirement_id.asc(), dsl::verification_id.asc()))
             .load(conn.as_mut())
             .map_err(RepoError::from)
     }

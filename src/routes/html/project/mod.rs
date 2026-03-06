@@ -39,7 +39,7 @@ pub(crate) mod prelude {
     pub(crate) use crate::models::*;
     pub(crate) use crate::repository::{
         LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository,
-        RequirementsRepository, TestsCaseRepository, UserRepository,
+        RequirementsRepository, UserRepository, VerificationsRepository,
     };
 }
 

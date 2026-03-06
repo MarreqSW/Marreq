@@ -313,14 +313,14 @@ mod tests {
         #[test]
         fn valid_test_passes() {
             let test = valid_test();
-            assert!(validate_test(&test).is_ok());
+            assert!(validate_verification(&test).is_ok());
         }
 
         #[test]
         fn test_name_required() {
             let mut test = valid_test();
             test.name = "".to_string();
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
             match result.unwrap_err() {
                 ValidationError::Required { field } => assert_eq!(field, "name"),
@@ -332,7 +332,7 @@ mod tests {
         fn test_name_whitespace_only() {
             let mut test = valid_test();
             test.name = "   ".to_string();
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
         }
 
@@ -340,7 +340,7 @@ mod tests {
         fn test_name_too_short() {
             let mut test = valid_test();
             test.name = "AB".to_string();
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
             match result.unwrap_err() {
                 ValidationError::TooShort { field, min } => {
@@ -355,14 +355,14 @@ mod tests {
         fn test_name_exactly_min_length() {
             let mut test = valid_test();
             test.name = "ABC".to_string();
-            assert!(validate_test(&test).is_ok());
+            assert!(validate_verification(&test).is_ok());
         }
 
         #[test]
         fn test_name_too_long() {
             let mut test = valid_test();
             test.name = "A".repeat(256);
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
             match result.unwrap_err() {
                 ValidationError::TooLong { field, max } => {
@@ -377,7 +377,7 @@ mod tests {
         fn test_reference_code_required() {
             let mut test = valid_test();
             test.reference_code = "".to_string();
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
             match result.unwrap_err() {
                 ValidationError::Required { field } => assert_eq!(field, "reference_code"),
@@ -389,7 +389,7 @@ mod tests {
         fn test_reference_code_whitespace_only() {
             let mut test = valid_test();
             test.reference_code = "   ".to_string();
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
         }
 
@@ -397,7 +397,7 @@ mod tests {
         fn test_reference_code_too_long() {
             let mut test = valid_test();
             test.reference_code = "TEST-".to_string() + &"1".repeat(50);
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
             match result.unwrap_err() {
                 ValidationError::TooLong { field, max } => {
@@ -412,21 +412,21 @@ mod tests {
         fn test_reference_code_valid_format() {
             let mut test = valid_test();
             test.reference_code = "TEST-1".to_string();
-            assert!(validate_test(&test).is_ok());
+            assert!(validate_verification(&test).is_ok());
         }
 
         #[test]
         fn test_reference_code_valid_large_number() {
             let mut test = valid_test();
             test.reference_code = "TEST-12345".to_string();
-            assert!(validate_test(&test).is_ok());
+            assert!(validate_verification(&test).is_ok());
         }
 
         #[test]
         fn test_reference_code_invalid_no_dash() {
             let mut test = valid_test();
             test.reference_code = "TEST1".to_string();
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
             match result.unwrap_err() {
                 ValidationError::Custom(msg) => {
@@ -440,7 +440,7 @@ mod tests {
         fn test_reference_code_invalid_lowercase() {
             let mut test = valid_test();
             test.reference_code = "test-1".to_string();
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
         }
 
@@ -448,7 +448,7 @@ mod tests {
         fn test_reference_code_invalid_letters_after_dash() {
             let mut test = valid_test();
             test.reference_code = "TEST-ABC".to_string();
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
         }
 
@@ -456,7 +456,7 @@ mod tests {
         fn test_description_required() {
             let mut test = valid_test();
             test.description = "".to_string();
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
         }
 
@@ -464,7 +464,7 @@ mod tests {
         fn test_description_too_long() {
             let mut test = valid_test();
             test.description = "A".repeat(2001);
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
         }
 
@@ -472,7 +472,7 @@ mod tests {
         fn test_status_id_zero() {
             let mut test = valid_test();
             test.status_id = 0;
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
         }
 
@@ -480,7 +480,7 @@ mod tests {
         fn test_parent_id_zero() {
             let mut test = valid_test();
             test.parent_id = Some(0);
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
         }
 
@@ -488,7 +488,7 @@ mod tests {
         fn test_parent_id_negative() {
             let mut test = valid_test();
             test.parent_id = Some(-1);
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
         }
 
@@ -496,14 +496,14 @@ mod tests {
         fn test_parent_id_none_allowed() {
             let mut test = valid_test();
             test.parent_id = None;
-            assert!(validate_test(&test).is_ok());
+            assert!(validate_verification(&test).is_ok());
         }
 
         #[test]
         fn test_project_id_zero() {
             let mut test = valid_test();
             test.project_id = 0;
-            let result = validate_test(&test);
+            let result = validate_verification(&test);
             assert!(result.is_err());
         }
     }
@@ -1122,10 +1122,10 @@ mod tests {
     }
 
     // ============================================================================
-    // Tests for validate_test_status
+    // Tests for validate_verification_status
     // ============================================================================
 
-    mod validate_test_status_tests {
+    mod validate_verification_status_tests {
         use super::*;
 
         fn valid_test_status() -> VerificationStatus {
@@ -1143,14 +1143,14 @@ mod tests {
         #[test]
         fn valid_test_status_passes() {
             let status = valid_test_status();
-            assert!(validate_test_status(&status).is_ok());
+            assert!(validate_verification_status(&status).is_ok());
         }
 
         #[test]
         fn test_status_title_required() {
             let mut status = valid_test_status();
             status.title = "".to_string();
-            let result = validate_test_status(&status);
+            let result = validate_verification_status(&status);
             assert!(result.is_err());
         }
 
@@ -1158,7 +1158,7 @@ mod tests {
         fn test_status_title_too_short() {
             let mut status = valid_test_status();
             status.title = "A".to_string();
-            let result = validate_test_status(&status);
+            let result = validate_verification_status(&status);
             assert!(result.is_err());
         }
 
@@ -1166,7 +1166,7 @@ mod tests {
         fn test_status_title_too_long() {
             let mut status = valid_test_status();
             status.title = "A".repeat(51);
-            let result = validate_test_status(&status);
+            let result = validate_verification_status(&status);
             assert!(result.is_err());
         }
 
@@ -1174,14 +1174,14 @@ mod tests {
         fn test_status_description_empty_allowed() {
             let mut status = valid_test_status();
             status.description = "".to_string();
-            assert!(validate_test_status(&status).is_ok());
+            assert!(validate_verification_status(&status).is_ok());
         }
 
         #[test]
         fn test_status_description_too_long() {
             let mut status = valid_test_status();
             status.description = "A".repeat(201);
-            let result = validate_test_status(&status);
+            let result = validate_verification_status(&status);
             assert!(result.is_err());
         }
     }
@@ -1500,7 +1500,7 @@ mod tests {
                 parent_id: Some(10),
                 project_id: 1,
             };
-            assert!(validate_test(&test).is_ok());
+            assert!(validate_verification(&test).is_ok());
         }
 
         #[test]

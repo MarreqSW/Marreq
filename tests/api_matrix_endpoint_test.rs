@@ -85,10 +85,10 @@ mod test_support {
         repo
     }
 
-    pub fn sample_matrix_link(req_id: i32, test_id: i32, project_id: i32) -> MatrixLink {
+    pub fn sample_matrix_link(req_id: i32, verification_id: i32, project_id: i32) -> MatrixLink {
         MatrixLink {
             req_id,
-            test_id,
+            verification_id,
             creation_date: timestamp(),
             project_id,
             suspect: false,

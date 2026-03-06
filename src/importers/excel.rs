@@ -421,7 +421,7 @@ impl ExcelImporter {
 
         // Resolve foreign key references
         let status_id = if let Some(status_name) = test_data.get("status_id") {
-            self.resolve_test_status_id(status_name, project_id)?
+            self.resolve_verification_status_id(status_name, project_id)?
         } else {
             1 // Default status
         };
@@ -540,7 +540,7 @@ impl ExcelImporter {
         Ok(1)
     }
 
-    fn resolve_test_status_id(&self, status_name: &str, project_id: i32) -> Result<i32> {
+    fn resolve_verification_status_id(&self, status_name: &str, project_id: i32) -> Result<i32> {
         let repo = DieselRepo::new().map_err(|e| anyhow!("{}", e))?;
         let statuses = repo.get_verification_status_all().map_err(|e| anyhow!("{}", e))?;
 

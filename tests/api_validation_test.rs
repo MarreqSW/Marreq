@@ -389,7 +389,7 @@ async fn create_test_with_missing_fields_returns_error() {
 #[rocket::async_test]
 async fn update_test_field_with_invalid_field_name_returns_error() {
     let mut repo = base_repo();
-    repo.tests.insert(
+    repo.verifications.insert(
         1,
         TestCase {
             id: 1,
@@ -425,7 +425,7 @@ async fn update_test_field_with_invalid_field_name_returns_error() {
 #[rocket::async_test]
 async fn update_test_field_with_invalid_status_value_returns_error() {
     let mut repo = base_repo();
-    repo.tests.insert(
+    repo.verifications.insert(
         1,
         TestCase {
             id: 1,

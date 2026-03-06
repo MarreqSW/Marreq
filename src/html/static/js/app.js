@@ -52,15 +52,15 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectId = button.getAttribute('data-project-id');
       const testId = button.getAttribute('data-test-id');
-      return `/p/${projectId}/tests/delete/${testId}`;
+      return `/p/${projectId}/verifications/delete/${testId}`;
     },
     getMessage: (button) => {
-      const name = button.getAttribute('data-test-name') || 'Test';
-      return `Are you sure you want to delete test "${name}"? This action cannot be undone.`;
+      const name = button.getAttribute('data-test-name') || 'Verification';
+      return `Are you sure you want to delete verification "${name}"? This action cannot be undone.`;
     },
     onSuccess: (button) => {
       const projectId = button.getAttribute('data-project-id');
-      window.location.href = `/p/${projectId}/tests`;
+      window.location.href = `/p/${projectId}/verifications`;
     },
   });
 
@@ -133,14 +133,14 @@ function initGlobalDeleteHandlers() {
   });
 
   registerDeleteAction({
-    selector: '[data-action="delete-test-status"]',
+    selector: '[data-action="delete-verification-status"]',
     getUrl: (button) => {
       const projectId = button.getAttribute('data-project-id');
       const statusId = button.getAttribute('data-status-id');
-      return `/p/${projectId}/test_statuses/delete/${statusId}`;
+      return `/p/${projectId}/verification_statuses/delete/${statusId}`;
     },
     getMessage: (button) => {
-      const title = button.getAttribute('data-status-title') || 'this test status';
+      const title = button.getAttribute('data-status-title') || 'this verification status';
       return `Are you sure you want to delete ${title}? This action cannot be undone.`;
     },
   });

@@ -95,7 +95,7 @@ mod test_support {
             },
         );
 
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
             TestStatus {
                 id: 1,
@@ -538,7 +538,7 @@ async fn create_test_with_invalid_status_id_returns_error() {
         "test_name": "Test Case",
         "test_description": "Description",
         "test_reference": "TEST-001",
-        "test_status": 999,
+        "status_id": 999,
         "test_source": "manual",
         "project_id": 1
     });

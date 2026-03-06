@@ -24,6 +24,8 @@ use crate::repository::{
 };
 use crate::schema;
 use diesel::expression_methods::BoolExpressionMethods;
+use diesel::prelude::define_sql_function;
+use diesel::sql_types::Text;
 use diesel::expression_methods::NullableExpressionMethods;
 use diesel::pg::{upsert::excluded, PgConnection};
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
@@ -33,6 +35,8 @@ use diesel::{
 };
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
+
+define_sql_function!(fn lower(x: Text) -> Text);
 
 /// Map a Diesel DB error to the most specific [`RepoError`] variant:
 /// - `UniqueViolation`  → [`RepoError::Duplicate`] with a field-level message.
@@ -289,9 +293,9 @@ impl UserRepository for DieselRepo {
     fn get_user_by_username(&self, uname: &str) -> Result<Option<User>, RepoError> {
         use crate::schema::users::dsl;
         let mut conn = self.get_conn()?;
-
+        // Case-insensitive lookup so "alice" / "Alice" / "ALICE" all work (uname is already lowercased by auth).
         dsl::users
-            .filter(dsl::username.eq(uname))
+            .filter(lower(dsl::username).eq(uname))
             .first::<User>(conn.as_mut())
             .optional()
             .map_err(|e| e.into())

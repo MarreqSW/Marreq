@@ -426,9 +426,17 @@ async fn post_test(
         source: new_test.source.clone(),
         status_id: new_test.status_id,
         reference_code: new_test.reference_code.clone(),
-        parent_id: new_test.parent_id.and_then(|id| if id == 0 { None } else { Some(id) }),
+        parent_id: new_test
+            .parent_id
+            .and_then(|id| if id == 0 { None } else { Some(id) }),
         project_id,
-        verification_method_id: new_test.verification_method_id.and_then(|id| if id == 0 { None } else { Some(id) }),
+        verification_method_id: new_test.verification_method_id.and_then(|id| {
+            if id == 0 {
+                None
+            } else {
+                Some(id)
+            }
+        }),
     };
 
     let id = service.create(&user, my_new_verification).map_err(|e| {
@@ -549,9 +557,17 @@ async fn post_edit_test(
         source: f.source,
         status_id: f.status_id,
         reference_code: f.reference_code,
-        parent_id: f.parent_id.and_then(|id| if id == 0 { None } else { Some(id) }),
+        parent_id: f
+            .parent_id
+            .and_then(|id| if id == 0 { None } else { Some(id) }),
         project_id: f.project_id,
-        verification_method_id: f.verification_method_id.and_then(|id| if id == 0 { None } else { Some(id) }),
+        verification_method_id: f.verification_method_id.and_then(|id| {
+            if id == 0 {
+                None
+            } else {
+                Some(id)
+            }
+        }),
     };
 
     service

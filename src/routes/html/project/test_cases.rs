@@ -12,7 +12,7 @@ use crate::helper_functions::decorators::decorate_requirements_with_repo;
 use crate::models::EntityType;
 use crate::services::{
     change_summary, log_change_details, resolve_change_details_labels, LabelResolvers, LogService,
-    StatusService, TestService,
+    StatusService, VerificationService,
 };
 use crate::status_enums::TestStatusEnum;
 
@@ -25,9 +25,12 @@ struct UpdateTestStatusForm {
 
 /// Returns all test statuses for the project, with canonical four first (Passed, Failed, Pending, In Progress), then the rest by id.
 /// Use for dropdowns, filters, and inline edit so user-created statuses are shown.
-fn project_test_statuses(state: &AppState, project_id: i32) -> Vec<crate::models::TestStatus> {
+fn project_test_statuses(
+    state: &AppState,
+    project_id: i32,
+) -> Vec<crate::models::VerificationStatus> {
     let statuses = StatusService::new(state)
-        .list_test_statuses_by_project(project_id)
+        .list_verification_statuses_by_project(project_id)
         .unwrap_or_default();
     let (canonical, rest): (Vec<_>, Vec<_>) = statuses
         .into_iter()
@@ -60,7 +63,7 @@ async fn show_tests(
 
     let user = project_access.into_user();
     let is_admin = user.is_admin;
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
     let repo = state.repo_read();
 
     let mut ctx = build_context_with_projects(state, user.clone(), cookies);
@@ -81,7 +84,7 @@ async fn show_tests(
     // Calculate metrics before filtering
     // Resolve status IDs to titles for semantic comparison (project-safe)
     let test_status_titles: std::collections::HashMap<i32, String> =
-        StatusService::new(state.inner()).test_status_id_to_title_map(project_id);
+        StatusService::new(state.inner()).verification_status_id_to_title_map(project_id);
     let total = all_tests.len();
     let passed = all_tests
         .iter()
@@ -160,7 +163,7 @@ async fn show_tests(
     let statuses = project_test_statuses(state.inner(), project_id);
 
     let verifications = repo
-        .get_verification_by_project(project_id)
+        .get_verification_methods_by_project(project_id)
         .unwrap_or_default();
     let categories = repo
         .get_categories_by_project(project_id)
@@ -217,7 +220,7 @@ async fn show_test_id(
     use serde_json::json;
 
     let user = project_access.into_user();
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
 
     let test = match service.get_by_id(test_id) {
         Ok(t) => t,
@@ -240,7 +243,7 @@ async fn show_test_id(
     let decorated_requirements = decorate_requirements_with_repo(&*repo, linked_requirements);
 
     let history_entries = LogService::new(state.inner())
-        .entity_logs(&EntityType::Test.to_string(), test_id)
+        .entity_logs(&EntityType::Verification.to_string(), test_id)
         .unwrap_or_default();
 
     let repo = state.repo_read();
@@ -251,7 +254,7 @@ async fn show_test_id(
         .map(|s| (s.id, s.title))
         .collect();
     let test_status_map: HashMap<i32, String> = repo
-        .get_test_status_all()
+        .get_verification_status_all()
         .unwrap_or_default()
         .into_iter()
         .map(|s| (s.id, s.title))
@@ -269,13 +272,13 @@ async fn show_test_id(
         .map(|a| (a.id, a.title))
         .collect();
     let verification_map: HashMap<i32, String> = repo
-        .get_verification_by_project(project_id)
+        .get_verification_methods_by_project(project_id)
         .unwrap_or_default()
         .into_iter()
         .map(|v| (v.id, v.title))
         .collect();
     let parent_label_map: HashMap<i32, String> = repo
-        .get_tests_by_project(project_id)
+        .get_verifications_by_project(project_id)
         .unwrap_or_default()
         .into_iter()
         .map(|t| (t.id, t.reference_code))
@@ -367,7 +370,7 @@ async fn new_test(
             })
             .collect();
     ctx["status"] = json!(status_with_default);
-    ctx["parents"] = json!(repo.get_tests_by_project(project_id).unwrap_or_default());
+    ctx["parents"] = json!(repo.get_verifications_by_project(project_id).unwrap_or_default());
     ctx["users"] = json!(repo.get_users_all().unwrap_or_default());
     ctx["requirements"] = json!(repo
         .get_requirements_by_project(project_id)
@@ -394,13 +397,13 @@ async fn new_test(
 async fn post_test(
     project_access: ProjectAccess,
     project_id: i32,
-    new_test: Form<NewTestForm>,
+    new_test: Form<NewVerificationForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
 
-    let my_new_test = NewTestCase {
+    let my_new_verification = NewVerification {
         id: None,
         name: new_test.name.clone(),
         description: new_test.description.clone(),
@@ -411,7 +414,7 @@ async fn post_test(
         project_id,
     };
 
-    let id = service.create(&user, my_new_test).map_err(|e| {
+    let id = service.create(&user, my_new_verification).map_err(|e| {
         eprintln!("Error inserting new test: {:?}", e);
         Redirect::to(uri!(
             "/p",
@@ -424,11 +427,11 @@ async fn post_test(
 
     // Link requirements
     #[cfg(debug_assertions)]
-    println!("NewTestForm requirements: {:#?}", new_test.test_req);
-    for req in new_test.test_req.iter() {
+    println!("NewVerificationForm requirements: {:#?}", new_test.verification_req);
+    for req in new_test.verification_req.iter() {
         let matrix_item = NewMatrixLink {
             req_id: *req,
-            test_id: id,
+            verification_id: id,
             // Use the route's project_id (from the URL) rather than the form field to
             // prevent a tampered form from creating cross-project links.
             project_id,
@@ -469,7 +472,7 @@ async fn get_edit_test(
     let user = project_access.into_user();
     let repo = state.repo_read();
 
-    let test = match repo.get_test_by_id(test_id) {
+    let test = match repo.get_verification_by_id(test_id) {
         Ok(t) => t,
         Err(_) => return Err(Redirect::to(format!("/p/{}/tests", project_id))),
     };
@@ -482,12 +485,12 @@ async fn get_edit_test(
 
     let ctx = json!({
         "tests": test0,
-        "test_status_id": test0.test_status_id,
+        "test_status_id": test0.verification_status_id,
         "categories": repo.get_categories_by_project(project_id).unwrap_or_default(),
         "status": project_test_statuses(state.inner(), project_id),
-        "parent": repo.get_tests_by_project(project_id).unwrap_or_default(),
+        "parent": repo.get_verifications_by_project(project_id).unwrap_or_default(),
         "users": repo.get_users_all().unwrap_or_default(),
-        "verification": repo.get_verification_by_project(project_id).unwrap_or_default(),
+        "verification": repo.get_verification_methods_by_project(project_id).unwrap_or_default(),
         "linked_requirements": linked_requirements,
         "linked_req_ids": linked_req_ids,
         "requirements": repo.get_requirements_by_project(project_id).unwrap_or_default(),
@@ -506,17 +509,17 @@ async fn post_edit_test(
     project_access: ProjectAccess,
     project_id: i32,
     test_id: i32,
-    edit_test_form: Form<EditTestForm>,
+    edit_test_form: Form<EditVerificationForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
     let to_list = || Redirect::to(format!("/p/{}/tests", project_id));
 
     // Own the form to avoid cloning strings
     let f = edit_test_form.into_inner();
 
-    let new_test = NewTestCase {
+    let new_verification = NewVerification {
         id: Some(f.id),
         name: f.name,
         description: f.description,
@@ -527,14 +530,14 @@ async fn post_edit_test(
         project_id: f.project_id,
     };
 
-    service.update(&user, test_id, new_test).map_err(|e| {
+    service.update(&user, test_id, new_verification).map_err(|e| {
         eprintln!("Error editing test: {e:?}");
         to_list()
     })?;
 
     state
         .repo_write()
-        .update_test_requirement_links(f.id, &f.linked_requirements)
+        .update_verification_requirement_links(f.id, &f.linked_requirements)
         .map_err(|e| {
             eprintln!("Error updating test requirement links: {e:?}");
             to_list()
@@ -553,14 +556,14 @@ async fn delete_test_route(
     use rocket::http::Status;
 
     let user = project_access.into_user();
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
 
     let test = service.get_by_id(test_id).map_err(|_| Status::NotFound)?;
 
     // Permission gate: only allow deletion of tests in Passed or Failed status, or if admin
     // Resolve the test's status title from the project's status list (not hardcoded IDs)
     let is_deletable = StatusService::new(state.inner())
-        .get_test_status(test.status_id)
+        .get_verification_status(test.status_id)
         .ok()
         .and_then(|status| TestStatusEnum::from_title(&status.title))
         .map(|status| matches!(status, TestStatusEnum::Passed | TestStatusEnum::Failed))
@@ -591,7 +594,7 @@ async fn update_test_status_route(
     use rocket::http::Status;
 
     let user = project_access.into_user();
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
 
     let test = service
         .get_by_id(test_id)
@@ -605,7 +608,7 @@ async fn update_test_status_route(
     }
 
     let status_id = payload.status_id;
-    let updated = NewTestCase {
+    let updated = NewVerification {
         id: Some(test.id),
         reference_code: test.reference_code,
         name: test.name,

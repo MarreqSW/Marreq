@@ -72,9 +72,9 @@ pub struct DecoratedRequirement {
     pub custom_fields: Option<Vec<crate::models::CustomFieldValueDisplay>>,
 }
 
-/// Test case information with resolved foreign keys for presentation.
+/// Verification (formerly test case) information with resolved foreign keys for presentation.
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct DecoratedTestCase {
+pub struct DecoratedVerification {
     pub id: i32,
     pub reference_code: String,
     pub name: String,
@@ -83,18 +83,17 @@ pub struct DecoratedTestCase {
     pub status_id: String,
     /// CSS variant for status badge: passed, failed, proposal, draft, default
     pub status_variant: String,
-    pub test_status_id: i32, // Add numeric status ID for access control
+    pub verification_status_id: i32, // numeric status ID for access control
     /// Optional tag color (hex) for status badge background.
     pub status_tag_color: Option<String>,
-    pub test_parent_id: Option<i32>,
-    pub test_parent_title: String,
-    /// Parent test fields for hover preview card (same shape as main test).
-    pub test_parent_reference_code: String,
-    pub test_parent_description: String,
-    pub test_parent_status_id: String,
-    pub test_parent_status_variant: String,
-    /// Parent's status tag color (hex) for badge, if set.
-    pub test_parent_status_tag_color: Option<String>,
-    pub test_parent_source: String,
+    pub verification_parent_id: Option<i32>,
+    pub verification_parent_title: String,
+    /// Parent verification fields for hover preview card.
+    pub verification_parent_reference_code: String,
+    pub verification_parent_description: String,
+    pub verification_parent_status_id: String,
+    pub verification_parent_status_variant: String,
+    pub verification_parent_status_tag_color: Option<String>,
+    pub verification_parent_source: String,
     pub project_id: i32,
 }

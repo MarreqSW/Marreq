@@ -4,9 +4,9 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::models::{NewTestCase, TestCase};
+use crate::models::{NewVerification, Verification};
 use crate::repository::errors::RepoError;
-use crate::services::TestService;
+use crate::services::VerificationService;
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -16,26 +16,26 @@ pub struct FieldUpdateRequest {
 }
 
 #[get("/tests")]
-pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<TestCase>>> {
-    let service = TestService::new(state.inner());
-    let tests = service.list_all()?;
-    Ok(Json(tests))
+pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Verification>>> {
+    let service = VerificationService::new(state.inner());
+    let verifications = service.list_all()?;
+    Ok(Json(verifications))
 }
 
 #[get("/tests/<id>")]
-pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<TestCase>> {
-    let service = TestService::new(state.inner());
-    let test = service.get_by_id(id)?;
-    Ok(Json(test))
+pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Verification>> {
+    let service = VerificationService::new(state.inner());
+    let verification = service.get_by_id(id)?;
+    Ok(Json(verification))
 }
 
 #[post("/tests", data = "<payload>")]
 pub async fn create(
     user: ApiUser,
     state: &State<AppState>,
-    payload: Json<NewTestCase>,
+    payload: Json<NewVerification>,
 ) -> ApiResult<Value> {
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
     let id = service.create(user.user(), payload.into_inner())?;
 
     Ok(json!({ "status": "ok", "id": id }))
@@ -43,7 +43,7 @@ pub async fn create(
 
 #[delete("/tests/<id>")]
 pub async fn delete(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Status> {
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
     service.delete(user.user(), id)?;
     Ok(Status::NoContent)
 }
@@ -56,22 +56,22 @@ pub async fn update_field(
     update: Json<FieldUpdateRequest>,
 ) -> ApiResult<Value> {
     let update = update.into_inner();
-    let service = TestService::new(state.inner());
-    let mut test = service.get_by_id(id)?;
+    let service = VerificationService::new(state.inner());
+    let mut verification = service.get_by_id(id)?;
 
     match update.field.as_str() {
-        "name" => test.name = update.value,
-        "description" => test.description = update.value,
-        "source" => test.source = update.value,
+        "name" => verification.name = update.value,
+        "description" => verification.description = update.value,
+        "source" => verification.source = update.value,
         "status_id" => {
-            test.status_id = update
+            verification.status_id = update
                 .value
                 .parse()
                 .map_err(|_| RepoError::BadInput("invalid status id".into()))?;
         }
-        "reference_code" => test.reference_code = update.value,
+        "reference_code" => verification.reference_code = update.value,
         "parent_id" => {
-            test.parent_id = if update.value.is_empty() || update.value == "0" {
+            verification.parent_id = if update.value.is_empty() || update.value == "0" {
                 None
             } else {
                 Some(
@@ -89,15 +89,15 @@ pub async fn update_field(
         }
     }
 
-    let payload = NewTestCase {
-        id: Some(test.id),
-        reference_code: test.reference_code.clone(),
-        name: test.name.clone(),
-        description: test.description.clone(),
-        source: test.source.clone(),
-        status_id: test.status_id,
-        parent_id: test.parent_id,
-        project_id: test.project_id,
+    let payload = NewVerification {
+        id: Some(verification.id),
+        reference_code: verification.reference_code.clone(),
+        name: verification.name.clone(),
+        description: verification.description.clone(),
+        source: verification.source.clone(),
+        status_id: verification.status_id,
+        parent_id: verification.parent_id,
+        project_id: verification.project_id,
     };
 
     service.update(user.user(), id, payload)?;
@@ -167,7 +167,7 @@ mod tests {
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
-        let items: Vec<TestCase> = response.into_json().await.unwrap();
+        let items: Vec<Verification> = response.into_json().await.unwrap();
         assert!(items.is_empty());
     }
 
@@ -224,8 +224,8 @@ mod tests {
             .private_cookie(auth_cookie())
             .dispatch()
             .await;
-        let test: TestCase = get_response.into_json().await.unwrap();
-        assert_eq!(test.name, "Updated");
+        let verification: Verification = get_response.into_json().await.unwrap();
+        assert_eq!(verification.name, "Updated");
     }
 
     #[rocket::async_test]

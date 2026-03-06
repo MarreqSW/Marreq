@@ -5,7 +5,7 @@ use super::helpers::*;
 use super::prelude::*;
 use crate::app::DieselCachedRepo;
 use crate::helper_functions::reports::{generate_requirements_pdf_report, RequirementsPdfRow};
-use crate::models::{Category, Requirement, TestCase, User};
+use crate::models::{Category, Requirement, User, Verification};
 use crate::services::{CustomFieldService, ProjectService, RequirementService};
 use std::collections::HashMap;
 
@@ -16,11 +16,11 @@ fn round1(x: f64) -> f64 {
 fn get_details(
     project_id: i32,
     repo: &DieselCachedRepo,
-) -> (Vec<Requirement>, Vec<TestCase>, Vec<Category>) {
+) -> (Vec<Requirement>, Vec<Verification>, Vec<Category>) {
     (
         repo.get_requirements_by_project(project_id)
             .unwrap_or_default(),
-        repo.get_tests_by_project(project_id).unwrap_or_default(),
+        repo.get_verifications_by_project(project_id).unwrap_or_default(),
         repo.get_categories_by_project(project_id)
             .unwrap_or_default(),
     )
@@ -230,7 +230,7 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Category, MatrixLink, Project, ProjectMember, Requirement, RequirementStatus, TestCase,
+        Category, MatrixLink, Project, ProjectMember, Requirement, RequirementStatus, Verification,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
@@ -303,14 +303,14 @@ mod tests {
         }
     }
 
-    fn sample_test(id: i32, status_id: i32, name: &str) -> TestCase {
-        TestCase {
+    fn sample_verification(id: i32, status_id: i32, name: &str) -> Verification {
+        Verification {
             id,
             name: name.to_string(),
             description: "Validation test".to_string(),
             source: "Spec".to_string(),
             status_id,
-            reference_code: format!("TEST-{id:03}"),
+            reference_code: format!("VER-{id:03}"),
             parent_id: None,
             project_id: PROJECT_ID,
         }
@@ -330,7 +330,7 @@ mod tests {
         repo.requirement_statuses
             .insert(2, sample_status(2, "In Review"));
         repo.requirements.insert(1, sample_requirement(1));
-        repo.tests.insert(1, sample_test(1, 1, "System Validation"));
+        repo.verifications.insert(1, sample_verification(1, 1, "System Validation"));
         repo.matrices.push(MatrixLink {
             req_id: 1,
             test_id: 1,

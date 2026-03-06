@@ -1,150 +1,135 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-//! Service for managing verification methods attached to requirements.
+//! Verification service for managing verification (test case) business logic.
+//!
+//! This service handles all verification-related operations including CRUD operations,
+//! validation, caching, and audit logging.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{NewVerificationMethod, VerificationMethod};
+use crate::logger::{LogCtx, Logger};
+use crate::models::{NewVerification, User, Verification};
 use crate::repository::errors::RepoError;
-use crate::repository::LookupRepository;
+use crate::repository::PooledConnectionWrapper;
+use crate::repository::VerificationsRepository;
 
-/// Default verification methods created for new projects (same set as Space Project / p/1/verification).
-const DEFAULT_VERIFICATION_METHODS: &[(&str, &str, &str)] = &[
-    (
-        "Inspection",
-        "Nondestructive examination of a system or component",
-        "INSP",
-    ),
-    (
-        "Analysis",
-        "Verification using mathematical models and calculations",
-        "ANALYSIS",
-    ),
-    (
-        "Demonstration",
-        "Manipulation of the product as intended in its operational environment",
-        "DEMO",
-    ),
-    (
-        "Test",
-        "Controlled verification with predefined inputs and expected outputs",
-        "TEST",
-    ),
-];
-
-/// High-level operations for verification methods backed by the shared [`AppState`].
+/// Service wrapper that provides verification operations backed by the shared AppState.
 pub struct VerificationService<'a> {
     state: &'a AppState<DieselCachedRepo>,
 }
 
 impl<'a> VerificationService<'a> {
-    /// Create a new service instance bound to the provided application state.
+    /// Create a new service instance bound to the provided state.
     pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
         Self { state }
     }
 
-    /// Create the default set of verification methods for a new project.
-    /// Called automatically when a project is created.
-    pub fn initialize_default_verification_methods(
-        &self,
-        project_id: i32,
-    ) -> Result<(), RepoError> {
-        let mut repo = self.state.repo_write();
-        for (title, description, tag) in DEFAULT_VERIFICATION_METHODS {
-            let payload = NewVerificationMethod {
-                id: None,
-                title: (*title).to_string(),
-                description: (*description).to_string(),
-                tag: (*tag).to_string(),
-                project_id,
-            };
-            repo.insert_new_verification(&payload)?;
-        }
-        Ok(())
+    /// Retrieve all Verification entries.
+    pub fn list_all(&self) -> Result<Vec<Verification>, RepoError> {
+        self.state.repo_read().get_verifications_all()
     }
 
-    /// List verification methods scoped to a project.
-    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<VerificationMethod>, RepoError> {
-        self.state
-            .repo_read()
-            .get_verification_by_project(project_id)
+    /// Retrieve Verification entries scoped to a project.
+    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Verification>, RepoError> {
+        self.state.repo_read().get_verifications_by_project(project_id)
     }
 
-    /// Retrieve a verification method by identifier.
-    pub fn get_by_id(&self, id: i32) -> Result<VerificationMethod, RepoError> {
+    /// Retrieve a single Verification by identifier.
+    pub fn get_by_id(&self, id: i32) -> Result<Verification, RepoError> {
         self.state.repo_read().get_verification_by_id(id)
     }
 
-    pub fn get_verification_name(&self, id: i32) -> Result<String, RepoError> {
-        let verification = self.state.repo_read().get_verification_by_id(id)?;
-        Ok(verification.title)
+    /// Get verifications by status
+    pub async fn get_by_status(&self, _status_id: i32) -> Result<Vec<Verification>, RepoError> {
+        todo!()
     }
 
-    /// Create a new verification entry.
-    pub fn create(&self, mut payload: NewVerificationMethod) -> Result<i32, RepoError> {
-        sanitize(&mut payload.title);
-        sanitize(&mut payload.description);
+    /// Get verifications by parent (hierarchical structure)
+    pub async fn get_by_parent(&self, _parent_id: i32) -> Result<Vec<Verification>, RepoError> {
+        todo!()
+    }
 
-        validate(&payload)?;
-
+    /// Create a new verification entry and log the action.
+    pub fn create(&self, user: &User, new_verification: NewVerification) -> Result<i32, RepoError> {
         let id = {
             let mut repo = self.state.repo_write();
-            repo.insert_new_verification(&payload)?
+            repo.insert_verification(&new_verification)?
         };
 
+        self.log_created(user, id, &new_verification);
         Ok(id)
     }
 
-    /// Update an existing verification method.
+    /// Update an existing verification entry and log the change.
     pub fn update(
         &self,
+        user: &User,
         id: i32,
-        mut payload: NewVerificationMethod,
-    ) -> Result<VerificationMethod, RepoError> {
-        sanitize(&mut payload.title);
-        sanitize(&mut payload.description);
-        validate(&payload)?;
+        mut updated_verification: NewVerification,
+    ) -> Result<Verification, RepoError> {
+        let before = self.get_by_id(id)?;
 
-        payload.id = Some(id);
-
-        let mut repo = self.state.repo_write();
-        let updated = repo.edit_verification(&payload)?;
-        if !updated {
-            return Err(RepoError::NotFound);
+        updated_verification.id = Some(id);
+        {
+            let mut repo = self.state.repo_write();
+            let updated = repo.edit_verification(&updated_verification)?;
+            if !updated {
+                return Err(RepoError::NotFound);
+            }
         }
-        drop(repo);
-        self.get_by_id(id)
+
+        let after = self.get_by_id(id)?;
+        self.log_updated(user, &before, &after);
+        Ok(after)
     }
 
-    /// Delete a verification method. Requirement–verification links are removed by the database (CASCADE).
-    pub fn delete(&self, id: i32) -> Result<VerificationMethod, RepoError> {
-        let mut repo = self.state.repo_write();
-        repo.delete_verification(id)
-    }
-}
+    /// Delete a verification entry and log the removal.
+    pub fn delete(&self, user: &User, id: i32) -> Result<Verification, RepoError> {
+        let deleted = {
+            let mut repo = self.state.repo_write();
+            repo.delete_verification(id)?
+        };
 
-fn sanitize(value: &mut String) {
-    *value = value.trim().to_string();
-}
+        self.log_deleted(user, &deleted);
+        Ok(deleted)
+    }
 
-fn validate(payload: &NewVerificationMethod) -> Result<(), RepoError> {
-    if payload.title.is_empty() {
-        return Err(RepoError::BadInput("title is required".to_string()));
+    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
+        self.state.repo_read().inner_repo().get_conn()
     }
-    if payload.title.len() > 120 {
-        return Err(RepoError::BadInput(
-            "title must be at most 120 characters".to_string(),
-        ));
+
+    fn log_created(&self, user: &User, id: i32, entity: &NewVerification) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.id);
+            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!("Failed to log verification creation {id}: {_err}");
+            }
+        }
     }
-    if payload.description.is_empty() {
-        return Err(RepoError::BadInput("description is required".to_string()));
+
+    fn log_updated(&self, user: &User, before: &Verification, after: &Verification) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.id);
+            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "Failed to log verification update {} -> {}: {_err}",
+                    before.id, after.id
+                );
+            }
+        }
     }
-    if payload.description.len() > 500 {
-        return Err(RepoError::BadInput(
-            "description must be at most 500 characters".to_string(),
-        ));
+
+    fn log_deleted(&self, user: &User, entity: &Verification) {
+        if let Ok(mut conn) = self.db_connection() {
+            let ctx = LogCtx::new(user.id);
+            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!("Failed to log verification deletion {}: {_err}", entity.id);
+            }
+        }
     }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -159,100 +144,135 @@ mod tests {
         }
     }
 
-    use crate::status_enums::ProjectStatus;
+    fn actor() -> User {
+        DieselRepoMock::make_user(1, "actor", "")
+    }
 
-    #[test]
-    fn create_trim_and_persists() {
-        let mut repo = DieselRepoMock::default();
-        repo.projects.insert(
-            1,
-            crate::models::Project {
-                id: 1,
-                name: "Demo".into(),
-                description: None,
-                creation_date: None,
-                update_date: None,
-                status: ProjectStatus::Active,
-                owner_id: None,
-            },
-        );
+    fn verification(id: i32, project_id: i32, reference: &str) -> Verification {
+        Verification {
+            id,
+            name: format!("Verification {id}"),
+            description: "desc".into(),
+            source: "manual".into(),
+            status_id: 1,
+            reference_code: reference.into(),
+            parent_id: Some(1),
+            project_id,
+        }
+    }
 
-        let state = state_with_repo(repo);
-        let service = VerificationService::new(&state);
-
-        let payload = NewVerificationMethod {
+    fn new_payload(project_id: i32) -> NewVerification {
+        NewVerification {
             id: None,
-            title: "  Analysis ".into(),
-            description: "  Evaluate expected metrics  ".into(),
-            tag: "ANALYSIS".into(),
-            project_id: 1,
-        };
-
-        let id = service.create(payload).expect("created");
-        let stored = service.get_by_id(id).expect("stored");
-
-        assert_eq!(stored.title, "Analysis");
-        assert_eq!(stored.description, "Evaluate expected metrics");
+            reference_code: "VER-1".into(),
+            name: "Case".into(),
+            description: "Description".into(),
+            source: "manual".into(),
+            status_id: 1,
+            parent_id: Some(1),
+            project_id,
+        }
     }
 
     #[test]
-    fn reject_empty_payload() {
-        let state = state_with_repo(DieselRepoMock::default());
-        let service = VerificationService::new(&state);
-        let payload = NewVerificationMethod {
-            id: None,
-            title: "".into(),
-            description: "".into(),
-            tag: "".into(),
-            project_id: 1,
-        };
-
-        let result = service.create(payload);
-        assert!(matches!(result, Err(RepoError::BadInput(_))));
-    }
-
-    #[test]
-    fn list_by_project_filters_verification_methods() {
-        let mut repo = DieselRepoMock::default();
-        repo.verifications.insert(
-            1,
-            VerificationMethod {
-                id: 1,
-                title: "Analysis".into(),
-                description: "Analysis method".into(),
-                tag: "ANALYSIS".into(),
-                project_id: 10,
-            },
-        );
-        repo.verifications.insert(
-            2,
-            VerificationMethod {
-                id: 2,
-                title: "Test".into(),
-                description: "Test method".into(),
-                tag: "TEST".into(),
-                project_id: 10,
-            },
-        );
-        repo.verifications.insert(
-            3,
-            VerificationMethod {
-                id: 3,
-                title: "Review".into(),
-                description: "Review method".into(),
-                tag: "REVIEW".into(),
-                project_id: 20,
-            },
-        );
-
+    fn create_inserts_verification_entry() {
+        let repo = DieselRepoMock::default();
         let state = state_with_repo(repo);
         let service = VerificationService::new(&state);
 
-        let methods = service.list_by_project(10).unwrap();
-        assert_eq!(methods.len(), 2);
-        let titles: Vec<&str> = methods.iter().map(|v| v.title.as_str()).collect();
-        assert!(titles.contains(&"Analysis"));
-        assert!(titles.contains(&"Test"));
+        let payload = new_payload(3);
+        let id = service.create(&actor(), payload).unwrap();
+
+        let stored = service.get_by_id(id).unwrap();
+        assert_eq!(stored.name, "Case");
+        assert_eq!(stored.project_id, 3);
+    }
+
+    #[test]
+    fn update_modifies_existing_verification() {
+        let mut repo = DieselRepoMock::default();
+        repo.verifications.insert(1, verification(1, 3, "VER-1"));
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let mut payload = new_payload(5);
+        payload.name = "Updated".into();
+        payload.description = "New".into();
+
+        let updated = service.update(&actor(), 1, payload).unwrap();
+        assert_eq!(updated.name, "Updated");
+        assert_eq!(updated.description, "New");
+        assert_eq!(updated.project_id, 5);
+    }
+
+    #[test]
+    fn delete_removes_verification() {
+        let mut repo = DieselRepoMock::default();
+        repo.verifications.insert(2, verification(2, 4, "VER-2"));
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let removed = service.delete(&actor(), 2).unwrap();
+        assert_eq!(removed.id, 2);
+        assert!(matches!(service.get_by_id(2), Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn list_by_project_filters_verifications() {
+        let mut repo = DieselRepoMock::default();
+        repo.verifications.insert(1, verification(1, 8, "VER-1"));
+        repo.verifications.insert(2, verification(2, 9, "VER-2"));
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let items = service.list_by_project(8).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].reference_code, "VER-1");
+    }
+
+    #[test]
+    fn create_handles_missing_required_fields() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let mut payload = new_payload(1);
+        payload.name = "".to_string();
+
+        let result = service.create(&actor(), payload);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn update_returns_not_found_when_verification_does_not_exist() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let payload = new_payload(1);
+        let result = service.update(&actor(), 999, payload);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn update_handles_missing_verification() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let payload = new_payload(1);
+        let result = service.update(&actor(), 999, payload);
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn delete_returns_not_found_when_verification_does_not_exist() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        let result = service.delete(&actor(), 999);
+        assert!(matches!(result, Err(RepoError::NotFound)));
     }
 
     #[test]
@@ -261,12 +281,12 @@ mod tests {
         let state = state_with_repo(repo);
         let service = VerificationService::new(&state);
 
-        let methods = service.list_by_project(999).unwrap();
-        assert_eq!(methods.len(), 0);
+        let items = service.list_by_project(999).unwrap();
+        assert_eq!(items.len(), 0);
     }
 
     #[test]
-    fn get_by_id_returns_not_found_for_missing_verification() {
+    fn get_by_id_returns_not_found_for_nonexistent_id() {
         let repo = DieselRepoMock::default();
         let state = state_with_repo(repo);
         let service = VerificationService::new(&state);
@@ -276,281 +296,25 @@ mod tests {
     }
 
     #[test]
-    fn get_verification_name_returns_title() {
+    fn list_all_returns_all_verifications() {
         let mut repo = DieselRepoMock::default();
-        repo.verifications.insert(
-            1,
-            VerificationMethod {
-                id: 1,
-                title: "Analysis".into(),
-                description: "Analysis method".into(),
-                tag: "ANALYSIS".into(),
-                project_id: 1,
-            },
-        );
-
+        repo.verifications.insert(1, verification(1, 7, "VER-1"));
+        repo.verifications.insert(2, verification(2, 8, "VER-2"));
+        repo.verifications.insert(3, verification(3, 9, "VER-3"));
         let state = state_with_repo(repo);
         let service = VerificationService::new(&state);
 
-        let name = service.get_verification_name(1).unwrap();
-        assert_eq!(name, "Analysis");
+        let items = service.list_all().unwrap();
+        assert_eq!(items.len(), 3);
     }
 
     #[test]
-    fn get_verification_name_returns_not_found_for_missing_verification() {
+    fn list_all_returns_empty_when_no_verifications() {
         let repo = DieselRepoMock::default();
         let state = state_with_repo(repo);
         let service = VerificationService::new(&state);
 
-        let result = service.get_verification_name(999);
-        assert!(matches!(result, Err(RepoError::NotFound)));
-    }
-
-    #[test]
-    fn create_rejects_title_too_long() {
-        let mut repo = DieselRepoMock::default();
-        repo.projects.insert(
-            1,
-            crate::models::Project {
-                id: 1,
-                name: "Demo".into(),
-                description: None,
-                creation_date: None,
-                update_date: None,
-                status: ProjectStatus::Active,
-                owner_id: None,
-            },
-        );
-
-        let state = state_with_repo(repo);
-        let service = VerificationService::new(&state);
-
-        let payload = NewVerificationMethod {
-            id: None,
-            title: "A".repeat(121), // Too long (max 120 chars)
-            description: "Description".into(),
-            tag: "TAG".into(),
-            project_id: 1,
-        };
-
-        let err = service.create(payload).unwrap_err();
-        assert!(matches!(err, RepoError::BadInput(_)));
-    }
-
-    #[test]
-    fn create_rejects_description_too_long() {
-        let mut repo = DieselRepoMock::default();
-        repo.projects.insert(
-            1,
-            crate::models::Project {
-                id: 1,
-                name: "Demo".into(),
-                description: None,
-                creation_date: None,
-                update_date: None,
-                status: ProjectStatus::Active,
-                owner_id: None,
-            },
-        );
-
-        let state = state_with_repo(repo);
-        let service = VerificationService::new(&state);
-
-        let payload = NewVerificationMethod {
-            id: None,
-            title: "Title".into(),
-            description: "A".repeat(501), // Too long (max 500 chars)
-            tag: "TAG".into(),
-            project_id: 1,
-        };
-
-        let err = service.create(payload).unwrap_err();
-        assert!(matches!(err, RepoError::BadInput(_)));
-    }
-
-    #[test]
-    fn create_accepts_valid_payload() {
-        let mut repo = DieselRepoMock::default();
-        repo.projects.insert(
-            1,
-            crate::models::Project {
-                id: 1,
-                name: "Demo".into(),
-                description: None,
-                creation_date: None,
-                update_date: None,
-                status: ProjectStatus::Active,
-                owner_id: None,
-            },
-        );
-
-        let state = state_with_repo(repo);
-        let service = VerificationService::new(&state);
-
-        let payload = NewVerificationMethod {
-            id: None,
-            title: "Valid Title".into(),
-            description: "Valid description".into(),
-            tag: "TAG".into(),
-            project_id: 1,
-        };
-
-        let id = service.create(payload).unwrap();
-        let stored = service.get_by_id(id).unwrap();
-        assert_eq!(stored.title, "Valid Title");
-        assert_eq!(stored.description, "Valid description");
-    }
-
-    #[test]
-    fn update_modifies_existing_verification() {
-        let mut repo = DieselRepoMock::default();
-        repo.projects.insert(
-            1,
-            crate::models::Project {
-                id: 1,
-                name: "Demo".into(),
-                description: None,
-                creation_date: None,
-                update_date: None,
-                status: ProjectStatus::Active,
-                owner_id: None,
-            },
-        );
-        repo.verifications.insert(
-            1,
-            VerificationMethod {
-                id: 1,
-                title: "Analysis".into(),
-                description: "Original".into(),
-                tag: "ANALYSIS".into(),
-                project_id: 1,
-            },
-        );
-
-        let state = state_with_repo(repo);
-        let service = VerificationService::new(&state);
-
-        let payload = NewVerificationMethod {
-            id: Some(1),
-            title: "Updated Title".into(),
-            description: "Updated description".into(),
-            tag: "UPDATED".into(),
-            project_id: 1,
-        };
-
-        let updated = service.update(1, payload).unwrap();
-        assert_eq!(updated.title, "Updated Title");
-        assert_eq!(updated.description, "Updated description");
-        assert_eq!(updated.tag, "UPDATED");
-
-        let stored = service.get_by_id(1).unwrap();
-        assert_eq!(stored.title, "Updated Title");
-    }
-
-    #[test]
-    fn update_returns_not_found_for_missing_id() {
-        let mut repo = DieselRepoMock::default();
-        repo.projects.insert(
-            1,
-            crate::models::Project {
-                id: 1,
-                name: "Demo".into(),
-                description: None,
-                creation_date: None,
-                update_date: None,
-                status: ProjectStatus::Active,
-                owner_id: None,
-            },
-        );
-
-        let state = state_with_repo(repo);
-        let service = VerificationService::new(&state);
-
-        let payload = NewVerificationMethod {
-            id: Some(99),
-            title: "Title".into(),
-            description: "Description".into(),
-            tag: "TAG".into(),
-            project_id: 1,
-        };
-
-        let result = service.update(99, payload);
-        assert!(matches!(result, Err(RepoError::NotFound)));
-    }
-
-    #[test]
-    fn update_rejects_invalid_payload() {
-        let mut repo = DieselRepoMock::default();
-        repo.projects.insert(
-            1,
-            crate::models::Project {
-                id: 1,
-                name: "Demo".into(),
-                description: None,
-                creation_date: None,
-                update_date: None,
-                status: ProjectStatus::Active,
-                owner_id: None,
-            },
-        );
-        repo.verifications.insert(
-            1,
-            VerificationMethod {
-                id: 1,
-                title: "Analysis".into(),
-                description: "Desc".into(),
-                tag: "ANALYSIS".into(),
-                project_id: 1,
-            },
-        );
-
-        let state = state_with_repo(repo);
-        let service = VerificationService::new(&state);
-
-        let payload = NewVerificationMethod {
-            id: Some(1),
-            title: "".into(),
-            description: "Description".into(),
-            tag: "TAG".into(),
-            project_id: 1,
-        };
-
-        let result = service.update(1, payload);
-        assert!(matches!(result, Err(RepoError::BadInput(_))));
-    }
-
-    #[test]
-    fn delete_removes_verification() {
-        let mut repo = DieselRepoMock::default();
-        repo.verifications.insert(
-            1,
-            VerificationMethod {
-                id: 1,
-                title: "Analysis".into(),
-                description: "Analysis method".into(),
-                tag: "ANALYSIS".into(),
-                project_id: 1,
-            },
-        );
-
-        let state = state_with_repo(repo);
-        let service = VerificationService::new(&state);
-
-        let deleted = service.delete(1).unwrap();
-        assert_eq!(deleted.title, "Analysis");
-        assert_eq!(deleted.id, 1);
-
-        let result = service.get_by_id(1);
-        assert!(matches!(result, Err(RepoError::NotFound)));
-    }
-
-    #[test]
-    fn delete_returns_not_found_for_missing_id() {
-        let repo = DieselRepoMock::default();
-        let state = state_with_repo(repo);
-        let service = VerificationService::new(&state);
-
-        let result = service.delete(999);
-        assert!(matches!(result, Err(RepoError::NotFound)));
+        let items = service.list_all().unwrap();
+        assert_eq!(items.len(), 0);
     }
 }

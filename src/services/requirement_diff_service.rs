@@ -128,7 +128,7 @@ impl<'a> RequirementDiffService<'a> {
                 .added_ids
                 .iter()
                 .filter_map(|&id| {
-                    repo.get_verification_by_id(id)
+                    repo.get_verification_method_by_id(id)
                         .ok()
                         .map(|v| v.title.clone())
                 })
@@ -140,7 +140,7 @@ impl<'a> RequirementDiffService<'a> {
                 .removed_ids
                 .iter()
                 .filter_map(|&id| {
-                    repo.get_verification_by_id(id)
+                    repo.get_verification_method_by_id(id)
                         .ok()
                         .map(|v| v.title.clone())
                 })
@@ -152,7 +152,7 @@ impl<'a> RequirementDiffService<'a> {
                 .unchanged_ids
                 .iter()
                 .filter_map(|&id| {
-                    repo.get_verification_by_id(id)
+                    repo.get_verification_method_by_id(id)
                         .ok()
                         .map(|v| v.title.clone())
                 })

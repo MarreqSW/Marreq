@@ -157,10 +157,11 @@ pub struct NewRequirementVersionLink {
 /// Link between a requirement and a test in the traceability matrix.
 /// Suspect state: when a requirement changes, links are marked suspect until reviewed.
 #[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[diesel(table_name = crate::schema::matrix)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct MatrixLink {
     pub req_id: i32,
-    pub test_id: i32,
+    pub verification_id: i32,
     pub creation_date: chrono::NaiveDateTime,
     pub project_id: i32,
     pub suspect: bool,
@@ -193,13 +194,13 @@ pub struct BaselineRequirement {
     pub version_id: i32,
 }
 
-/// Snapshot row: requirement–test traceability at baseline time.
+/// Snapshot row: requirement–verification traceability at baseline time.
 #[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
 #[diesel(table_name = crate::schema::baseline_traceability)]
 pub struct BaselineTraceability {
     pub baseline_id: i32,
     pub requirement_id: i32,
-    pub test_id: i32,
+    pub verification_id: i32,
     pub suspect: bool,
     pub suspect_at: Option<chrono::NaiveDateTime>,
     pub suspect_reason: Option<String>,
@@ -227,10 +228,11 @@ pub struct User {
     pub is_admin: bool,
 }
 
-/// A test case that can verify one or more requirements.
+/// A verification (formerly test case) that can verify one or more requirements.
 #[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[diesel(table_name = crate::schema::verifications)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct TestCase {
+pub struct Verification {
     pub id: i32,
     pub name: String,
     pub reference_code: String,
@@ -317,10 +319,11 @@ pub struct RequirementStatus {
     pub tag_color: Option<String>,
 }
 
-/// Test status with optional system flag (system statuses are immutable).
+/// Verification status with optional system flag (system statuses are immutable).
 #[derive(Debug, Serialize, Deserialize, Queryable, Clone)]
+#[diesel(table_name = crate::schema::verification_status)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct TestStatus {
+pub struct VerificationStatus {
     pub id: i32,
     pub title: String,
     pub description: String,
@@ -330,7 +333,16 @@ pub struct TestStatus {
     pub tag_color: Option<String>,
 }
 
-define_tagged_entity!(VerificationMethod);
+#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[diesel(table_name = crate::schema::verification_methods)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct VerificationMethod {
+    pub id: i32,
+    pub title: String,
+    pub description: String,
+    pub tag: String,
+    pub project_id: i32,
+}
 
 /// Project-scoped custom field definition (label, type, optional enum values).
 #[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
@@ -403,12 +415,14 @@ impl ActionType {
 pub enum EntityType {
     Project,
     Requirement,
-    Test,
     Category,
     Applicability,
     User,
     MatrixLink,
+    /// Verification (formerly test case) that verifies requirements.
     Verification,
+    /// Verification method (e.g. Test, Analysis, Review) attached to requirement versions.
+    VerificationMethod,
     Comment,
 }
 
@@ -417,12 +431,12 @@ impl std::fmt::Display for EntityType {
         match self {
             EntityType::Project => write!(f, "PROJECT"),
             EntityType::Requirement => write!(f, "REQUIREMENT"),
-            EntityType::Test => write!(f, "TEST"),
             EntityType::Category => write!(f, "CATEGORY"),
             EntityType::Applicability => write!(f, "APPLICABILITY"),
             EntityType::User => write!(f, "USER"),
             EntityType::MatrixLink => write!(f, "MATRIX"),
             EntityType::Verification => write!(f, "VERIFICATION"),
+            EntityType::VerificationMethod => write!(f, "VERIFICATION_METHOD"),
             EntityType::Comment => write!(f, "COMMENT"),
         }
     }
@@ -434,12 +448,12 @@ impl EntityType {
         match self {
             EntityType::Project => "project",
             EntityType::Requirement => "requirement",
-            EntityType::Test => "test",
             EntityType::Category => "category",
             EntityType::Applicability => "applicability",
             EntityType::User => "user",
             EntityType::MatrixLink => "matrix",
             EntityType::Verification => "verification",
+            EntityType::VerificationMethod => "verification method",
             EntityType::Comment => "comment",
         }
     }
@@ -475,13 +489,13 @@ impl fmt::Display for RequirementStatus {
 
 impl fmt::Display for MatrixLink {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Matrix: Req {} <-> Test {}", self.req_id, self.test_id)
+        write!(f, "Matrix: Req {} <-> Verification {}", self.req_id, self.verification_id)
     }
 }
 
-impl fmt::Display for TestCase {
+impl fmt::Display for Verification {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Test #{}: {}", self.id, self.name)
+        write!(f, "Verification #{}: {}", self.id, self.name)
     }
 }
 
@@ -532,5 +546,6 @@ impl_loggable!(Project, EntityType::Project, id, name);
 impl_loggable!(Requirement, EntityType::Requirement, project_id, title);
 impl_loggable!(Category, EntityType::Category, project_id, title);
 impl_loggable!(Applicability, EntityType::Applicability, project_id, title);
-impl_loggable!(TestCase, EntityType::Test, project_id, name);
+impl_loggable!(Verification, EntityType::Verification, project_id, name);
+impl_loggable!(VerificationMethod, EntityType::VerificationMethod, project_id, title);
 impl_loggable!(User, EntityType::User, username, no_project);

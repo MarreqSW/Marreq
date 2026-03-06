@@ -974,7 +974,7 @@ mod tests {
             "/p/1/verifications/new",
             concat!(
                 "name=Thermal+Check&reference_code=TEST-002&description=Thermal+validation&",
-                "source=Spec&status_id=1&parent_id=0&test_req=1&project_id=1"
+                "source=Spec&status_id=1&parent_id=0&verification_req=1&project_id=1"
             ),
             ADMIN_ID,
         )

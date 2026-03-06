@@ -466,7 +466,7 @@ mod tests {
     #[test]
     fn decorate_handles_missing_verification() {
         let mut repo = setup_repo_with_lookup_data();
-        repo.verifications.remove(&1);
+        repo.verification_methods.remove(&1);
         repo.requirements.insert(1, requirement(1, 1));
         repo.requirement_verification_methods.push((1, 1));
 

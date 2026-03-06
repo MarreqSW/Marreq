@@ -297,6 +297,10 @@ fn decorate_verifications_impl<R: Repository>(
                 verification_parent_status_tag_color,
                 verification_parent_source: parent_source,
                 project_id: v.project_id,
+                verification_method_id: v.verification_method_id,
+                verification_method_title: v
+                    .verification_method_id
+                    .and_then(|id| repo.get_verification_method_by_id(id).ok().map(|m| m.title)),
             }
         })
         .collect()
@@ -648,6 +652,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
 
@@ -660,6 +665,7 @@ mod tests {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
         let t2 = Verification {
             id: 21,
@@ -670,6 +676,7 @@ mod tests {
             status_id: 99,
             parent_id: Some(10),
             project_id: 1,
+            verification_method_id: None,
         };
         let t3 = Verification {
             id: 22,
@@ -680,6 +687,7 @@ mod tests {
             status_id: 1,
             parent_id: Some(999),
             project_id: 1,
+            verification_method_id: None,
         };
 
         let decorated = decorate_verifications_impl(&repo, vec![t1, t2, t3]);
@@ -751,6 +759,7 @@ mod tests {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
         repo.requirements.insert(1, req);
         repo.verifications.insert(10, test);

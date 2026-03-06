@@ -1143,6 +1143,7 @@ mod tests {
             reference_code: "VER-001".into(),
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
         let matrix = MatrixLink {
             req_id: 1,
@@ -1487,6 +1488,7 @@ mod tests {
             reference_code: "TEST-2".into(),
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
         let tid = repo.insert_verification(&new_test).unwrap();
         assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());
@@ -1500,6 +1502,7 @@ mod tests {
             reference_code: "VER-002".into(),
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
         repo.edit_verification(&edit_test).unwrap();
         assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());

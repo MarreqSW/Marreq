@@ -96,4 +96,8 @@ pub struct DecoratedVerification {
     pub verification_parent_status_tag_color: Option<String>,
     pub verification_parent_source: String,
     pub project_id: i32,
+    /// Project-scoped verification method (type) ID, if set.
+    pub verification_method_id: Option<i32>,
+    /// Human-readable verification method (type) title for display.
+    pub verification_method_title: Option<String>,
 }

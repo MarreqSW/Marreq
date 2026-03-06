@@ -122,6 +122,7 @@ mod tests {
                     status_id: 1,
                     parent_id: None,
                     project_id: 0,
+                    verification_method_id: None,
                 },
                 Verification {
                     id: 2,
@@ -132,6 +133,7 @@ mod tests {
                     status_id: 2,
                     parent_id: None,
                     project_id: 0,
+                    verification_method_id: None,
                 },
             ],
             Some(1),
@@ -152,6 +154,7 @@ mod tests {
                     status_id: 1,
                     parent_id: None,
                     project_id: 0,
+                    verification_method_id: None,
                 },
                 Verification {
                     id: 2,
@@ -162,6 +165,7 @@ mod tests {
                     status_id: 2,
                     parent_id: None,
                     project_id: 0,
+                    verification_method_id: None,
                 },
             ],
             None,

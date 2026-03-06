@@ -20,6 +20,9 @@
             Status
             <span class="marreq-requirements-table__sort-indicator" aria-hidden="true">↕</span>
           </th>
+          <th scope="col" data-sort-key="verification_type">
+            Verification type
+          </th>
           <th scope="col" data-sort-key="source" class="is-sortable">
             Source
             <span class="marreq-requirements-table__sort-indicator" aria-hidden="true">↕</span>
@@ -79,23 +82,30 @@
               {{status_id}}
             </span>
           </td>
+          <td class="marreq-requirements-row__cell marreq-requirements-row__cell--verification-type">
+            {{#if verification_method_title}}
+              <span>{{verification_method_title}}</span>
+            {{else}}
+              <span class="marreq-requirements-cell-muted">—</span>
+            {{/if}}
+          </td>
           <td class="marreq-requirements-row__cell marreq-requirements-row__cell--verification">
             <span class="marreq-requirements-cell-muted">{{source}}</span>
           </td>
           <td class="marreq-requirements-row__cell marreq-requirements-row__cell--parent">
-            {{#if test_parent_title}}
+            {{#if verification_parent_title}}
               <a
-                href="/p/{{../project.id}}/verifications/show/{{test_parent_id}}"
-                title="{{test_parent_title}}"
+                href="/p/{{../project.id}}/verifications/show/{{verification_parent_id}}"
+                title="{{verification_parent_title}}"
                 data-test-preview
                 data-test-preview-project-id="{{../project.id}}"
-                data-test-preview-id="{{test_parent_id}}"
-                data-test-preview-ref="{{test_parent_reference_code}}"
-                data-test-preview-title="{{test_parent_title}}"
-                data-test-preview-description="{{test_parent_description}}"
-                data-test-preview-status="{{test_parent_status_id}}"
-                data-test-preview-source="{{test_parent_source}}">
-                {{test_parent_title}}
+                data-test-preview-id="{{verification_parent_id}}"
+                data-test-preview-ref="{{verification_parent_reference_code}}"
+                data-test-preview-title="{{verification_parent_title}}"
+                data-test-preview-description="{{verification_parent_description}}"
+                data-test-preview-status="{{verification_parent_status_id}}"
+                data-test-preview-source="{{verification_parent_source}}">
+                {{verification_parent_title}}
               </a>
             {{else}}
               <span class="marreq-requirements-cell-muted">—</span>
@@ -148,11 +158,15 @@
           class="marreq-requirements-row__details"
           data-details-for="{{id}}"
           hidden>
-          <td colspan="6">
+          <td colspan="7">
             <dl class="marreq-requirements-details-grid">
               <div>
                 <dt>Description</dt>
                 <dd>{{description}}</dd>
+              </div>
+              <div>
+                <dt>Verification type</dt>
+                <dd>{{#if verification_method_title}}{{verification_method_title}}{{else}}—{{/if}}</dd>
               </div>
               <div>
                 <dt>Category</dt>
@@ -161,8 +175,8 @@
               <div>
                 <dt>Parent</dt>
                 <dd>
-                  {{#if test_parent_id}}
-                    <a href="/p/{{../project.id}}/verifications/show/{{test_parent_id}}">{{test_parent_title}}</a>
+                  {{#if verification_parent_id}}
+                    <a href="/p/{{../project.id}}/verifications/show/{{verification_parent_id}}">{{verification_parent_title}}</a>
                   {{else}}
                     —
                   {{/if}}

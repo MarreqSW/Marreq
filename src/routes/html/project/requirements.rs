@@ -23,7 +23,7 @@ use crate::services::{
     change_summary, log_change_details, resolve_change_details_labels, ApplicabilityService,
     CategoryService, CommentService, CustomFieldService, DecoratedRequirementService,
     DecoratedTestService, LabelResolvers, LogService, ProjectService, RequirementAnalyticsService,
-    RequirementService, StatusService, UserService, VerificationService,
+    RequirementService, StatusService, UserService,
 };
 use crate::status_enums::{RequirementStatusEnum, TestStatusEnum};
 
@@ -462,12 +462,15 @@ async fn show_requirements(
     let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
     let statuses =
         StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
-    let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
+    let verification_methods = state
+        .repo_read()
+        .get_verification_methods_by_project(project_id)
+        .unwrap_or_default();
 
     let inline_edit_config = json!({
         "categories": categories.iter().map(|c| json!({"id": c.id, "title": c.title})).collect::<Vec<_>>(),
         "statuses": statuses.iter().map(|s| json!({"id": s.id, "title": s.title, "tag_color": s.tag_color})).collect::<Vec<_>>(),
-        "verifications": verifications.iter().map(|v| json!({"id": v.id, "name": v.name})).collect::<Vec<_>>(),
+        "verifications": verification_methods.iter().map(|v| json!({"id": v.id, "title": v.title})).collect::<Vec<_>>(),
     });
     let inline_edit_config_json =
         serde_json::to_string(&inline_edit_config).unwrap_or_else(|_| "{}".to_string());
@@ -487,7 +490,7 @@ async fn show_requirements(
             }
         }),
         "statuses": statuses,
-        "verifications": verifications,
+        "verifications": verification_methods,
         "categories": categories,
         "applicability": ApplicabilityService::new(state.inner()).list_by_project(project_id)?,
         "custom_field_definitions": custom_field_definitions_with_filter_values(

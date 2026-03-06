@@ -314,6 +314,7 @@ mod tests {
             reference_code: format!("VER-{id:03}"),
             parent_id: None,
             project_id: PROJECT_ID,
+            verification_method_id: None,
         }
     }
 

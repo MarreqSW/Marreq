@@ -1092,29 +1092,31 @@ function initBadgeOverflow() {
 
 function initViewSwitcher() {
   const VIEW_KEY = 'requirements_view_preference';
-  
+  const DEFAULT_VIEW = 'table';
+  const VALID_VIEWS = ['table', 'card', 'tree'];
+
   const cardBtn = document.getElementById('cardViewBtn');
   const tableBtn = document.getElementById('tableViewBtn');
   const treeBtn = document.getElementById('treeViewBtn');
-  
+
   const cardView = document.getElementById('cardView');
   const tableView = document.getElementById('tableView');
   const treeView = document.getElementById('treeView');
-  
+
   if (!cardBtn || !tableBtn || !treeBtn || !cardView || !tableView || !treeView) {
     return;
   }
-  
+
   function switchView(viewName) {
     cardView.style.display = 'none';
     tableView.style.display = 'none';
     treeView.style.display = 'none';
-    
+
     cardBtn.classList.remove('active');
     tableBtn.classList.remove('active');
     treeBtn.classList.remove('active');
-    
-    switch(viewName) {
+
+    switch (viewName) {
       case 'card':
         cardView.style.display = 'block';
         cardBtn.classList.add('active');
@@ -1132,23 +1134,24 @@ function initViewSwitcher() {
         tableBtn.classList.add('active');
         break;
     }
-    
+
     try {
       localStorage.setItem(VIEW_KEY, viewName);
     } catch (e) {
       console.warn('Could not save view preference:', e);
     }
   }
-  
+
   cardBtn.addEventListener('click', () => switchView('card'));
   tableBtn.addEventListener('click', () => switchView('table'));
   treeBtn.addEventListener('click', () => switchView('tree'));
-  
+
   try {
-    const savedView = localStorage.getItem(VIEW_KEY) || 'table';
-    switchView(savedView);
+    const saved = localStorage.getItem(VIEW_KEY);
+    const view = saved && VALID_VIEWS.includes(saved) ? saved : DEFAULT_VIEW;
+    switchView(view);
   } catch (e) {
-    switchView('table');
+    switchView(DEFAULT_VIEW);
   }
 }
 

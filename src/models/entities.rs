@@ -241,6 +241,8 @@ pub struct Verification {
     pub status_id: i32,
     pub parent_id: Option<i32>,
     pub project_id: i32,
+    /// Project-scoped verification method (e.g. Test, Analysis, Review).
+    pub verification_method_id: Option<i32>,
 }
 
 /// A project groups a collection of requirements and tests.

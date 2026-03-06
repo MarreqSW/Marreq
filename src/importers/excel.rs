@@ -456,6 +456,7 @@ impl ExcelImporter {
             status_id,
             parent_id,
             project_id,
+            verification_method_id: None,
         };
 
         DieselRepo::new()

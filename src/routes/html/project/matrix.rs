@@ -716,6 +716,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
 
@@ -827,6 +828,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
 

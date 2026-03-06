@@ -1119,6 +1119,7 @@ impl VerificationsRepository for DieselRepoMock {
             reference_code: _new.reference_code.clone(),
             parent_id: _new.parent_id,
             project_id: _new.project_id,
+            verification_method_id: _new.verification_method_id,
         };
         self.verifications.insert(id, verification);
         Ok(id)
@@ -1134,6 +1135,7 @@ impl VerificationsRepository for DieselRepoMock {
                 verification.status_id = _new.status_id;
                 verification.parent_id = _new.parent_id;
                 verification.project_id = _new.project_id;
+                verification.verification_method_id = _new.verification_method_id;
                 Ok(true)
             }
             None => Err(RepoError::NotFound),

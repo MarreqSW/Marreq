@@ -1312,6 +1312,7 @@ mod tests {
             reference_code: "VER-1".into(),
             parent_id: None,
             project_id: 7,
+            verification_method_id: None,
         };
         repo.verifications.insert(10, verification1);
         repo.matrices.push(MatrixLink {

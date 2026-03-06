@@ -207,11 +207,11 @@
               <dt class="col-6 text-uppercase small text-muted">Status</dt>
               <dd class="col-6 fw-semibold text-end text-lg-start">{{status_id}}</dd>
               <dt class="col-6 text-uppercase small text-muted">Parent</dt>
-              <dd class="col-6 fw-semibold text-end text-lg-start">{{#if test_parent_id}}<a
-                  href="/p/{{selected_project_id}}/verifications/show/{{test_parent_id}}">{{verification_parent_title}}</a>{{else}}—{{/if}}
+              <dd class="col-6 fw-semibold text-end text-lg-start">{{#if verification_parent_id}}<a
+                  href="/p/{{selected_project_id}}/verifications/show/{{verification_parent_id}}">{{verification_parent_title}}</a>{{else}}—{{/if}}
               </dd>
               <dt class="col-6 text-uppercase small text-muted">Verification type</dt>
-              <dd class="col-6 fw-semibold text-end text-lg-start">—</dd>
+              <dd class="col-6 fw-semibold text-end text-lg-start">{{#if verification_type_title}}{{verification_type_title}}{{else}}—{{/if}}</dd>
             </dl>
           </div>
         </div>

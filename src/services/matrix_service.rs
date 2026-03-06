@@ -562,6 +562,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 42,
+                verification_method_id: None,
             },
         );
         let state = state_with_repo(repo);
@@ -618,6 +619,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 2, // ← project 2
+                verification_method_id: None,
             },
         );
         let state = state_with_repo(repo);
@@ -674,6 +676,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 5,
+                verification_method_id: None,
             },
         );
         let state = state_with_repo(repo);
@@ -732,6 +735,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
         repo.verifications.insert(
@@ -745,6 +749,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
 
@@ -862,6 +867,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
 
@@ -877,6 +883,7 @@ mod tests {
                 status_id: 2,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
 
@@ -1437,6 +1444,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
         repo.matrices.push(MatrixLink {
@@ -1543,6 +1551,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
         repo.matrices.push(MatrixLink {
@@ -1611,6 +1620,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
         repo.matrices.push(MatrixLink {

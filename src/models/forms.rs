@@ -279,6 +279,7 @@ pub struct NewVerification {
     pub status_id: i32,
     pub parent_id: Option<i32>,
     pub project_id: i32,
+    pub verification_method_id: Option<i32>,
 }
 
 /// Form data submitted when creating a new verification along with linked
@@ -292,6 +293,7 @@ pub struct NewVerificationForm {
     pub source: String,
     pub status_id: i32,
     pub parent_id: Option<i32>,
+    pub verification_method_id: Option<i32>,
     pub verification_req: Vec<i32>,
     pub project_id: i32,
 }
@@ -307,6 +309,7 @@ pub struct EditVerificationForm {
     pub source: String,
     pub status_id: i32,
     pub parent_id: Option<i32>,
+    pub verification_method_id: Option<i32>,
     pub linked_requirements: Vec<i32>,
     pub project_id: i32,
 }
@@ -635,6 +638,7 @@ mod forms_tests {
             source: "Spec".into(),
             status_id: 1,
             parent_id: None,
+            verification_method_id: None,
             verification_req: vec![1, 2],
             project_id: 10,
         };
@@ -652,6 +656,7 @@ mod forms_tests {
             source: "S".into(),
             status_id: 1,
             parent_id: None,
+            verification_method_id: None,
             linked_requirements: vec![10, 20],
             project_id: 1,
         };
@@ -754,6 +759,7 @@ mod forms_tests {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
         assert_eq!(NewVerification::entity_type(), EntityType::Verification);
         assert_eq!(t.id(), 7);

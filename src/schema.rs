@@ -375,6 +375,7 @@ diesel::table! {
         status_id -> Int4,
         parent_id -> Nullable<Int4>,
         project_id -> Int4,
+        verification_method_id -> Nullable<Int4>,
     }
 }
 
@@ -420,6 +421,7 @@ diesel::joinable!(user_api_tokens -> users (user_id));
 diesel::joinable!(verification_methods -> projects (project_id));
 diesel::joinable!(verification_status -> projects (project_id));
 diesel::joinable!(verifications -> projects (project_id));
+diesel::joinable!(verifications -> verification_methods (verification_method_id));
 diesel::joinable!(verifications -> verification_status (status_id));
 
 diesel::allow_tables_to_appear_in_same_query!(

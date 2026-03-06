@@ -206,6 +206,7 @@ mod tests {
                 reference_code: format!("TST-{id}"),
                 parent_id: None,
                 project_id,
+                verification_method_id: None,
             }
         }
 

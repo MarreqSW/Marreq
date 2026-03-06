@@ -111,7 +111,7 @@ mod test_support {
             },
         );
 
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             1,
             VerificationMethod {
                 id: 1,
@@ -391,7 +391,7 @@ async fn update_test_field_with_invalid_field_name_returns_error() {
     let mut repo = base_repo();
     repo.verifications.insert(
         1,
-        TestCase {
+        Verification {
             id: 1,
             name: "Test".into(),
             description: "Description".into(),
@@ -400,6 +400,7 @@ async fn update_test_field_with_invalid_field_name_returns_error() {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         },
     );
 
@@ -427,7 +428,7 @@ async fn update_test_field_with_invalid_status_value_returns_error() {
     let mut repo = base_repo();
     repo.verifications.insert(
         1,
-        TestCase {
+        Verification {
             id: 1,
             name: "Test".into(),
             description: "Description".into(),
@@ -436,6 +437,7 @@ async fn update_test_field_with_invalid_status_value_returns_error() {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         },
     );
 

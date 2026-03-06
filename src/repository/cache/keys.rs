@@ -7,7 +7,7 @@ use std::fmt::Display;
 pub const PROJECTS_NAV: &str = "projects:nav";
 pub const PROJECTS_ALL: &str = "projects:all";
 pub const REQUIREMENT_STATUS_ALL: &str = "requirement_status:all";
-pub const TEST_STATUS_ALL: &str = "status_id:all";
+pub const VERIFICATION_STATUS_ALL: &str = "verification_status:all";
 pub const CATEGORIES_ALL: &str = "categories:all";
 pub const APPLICABILITY_ALL: &str = "applicability:all";
 pub const VERIFICATION_ALL: &str = "verification:all";
@@ -20,7 +20,7 @@ pub const CACHE_PERFORMANCE: &str = "cache:performance";
 
 // Global lists
 pub const REQUIREMENTS_ALL: &str = "requirements:all";
-pub const TESTS_ALL: &str = "tests:all";
+pub const VERIFICATIONS_ALL: &str = "verifications:all";
 
 /// Generic builder for "prefix[:project]:id" style keys.
 pub trait Keyspace {
@@ -62,10 +62,10 @@ pub struct Users;
 pub struct Requirements;
 pub struct RequirementTitle;
 pub struct RequirementStatus;
-pub struct Tests;
-pub struct TestStatus;
+pub struct Verifications;
+pub struct VerificationStatus;
 pub struct Matrix;
-pub struct LinkedTests;
+pub struct LinkedVerifications;
 pub struct LinkedRequirements;
 pub struct ProjectMembers;
 
@@ -88,11 +88,11 @@ impl Keyspace for VerificationMethod {
 impl Keyspace for Users {
     const PREFIX: &'static str = "user";
 }
-impl Keyspace for Tests {
-    const PREFIX: &'static str = "test";
+impl Keyspace for Verifications {
+    const PREFIX: &'static str = "verifications";
 }
-impl Keyspace for TestStatus {
-    const PREFIX: &'static str = "status_id";
+impl Keyspace for VerificationStatus {
+    const PREFIX: &'static str = "verification_status";
 }
 impl Keyspace for Matrix {
     const PREFIX: &'static str = "matrix";
@@ -109,8 +109,8 @@ impl Keyspace for RequirementTitle {
 impl Keyspace for LinkedRequirements {
     const PREFIX: &'static str = "linked_tests";
 }
-impl Keyspace for LinkedTests {
-    const PREFIX: &'static str = "linked_requirements";
+impl Keyspace for LinkedVerifications {
+    const PREFIX: &'static str = "linked_verifications";
 }
 impl Keyspace for ProjectMembers {
     const PREFIX: &'static str = "project_member";
@@ -143,7 +143,7 @@ mod tests {
         assert_eq!(PROJECTS_NAV, "projects:nav");
         assert_eq!(PROJECTS_ALL, "projects:all");
         assert_eq!(REQUIREMENT_STATUS_ALL, "requirement_status:all");
-        assert_eq!(TEST_STATUS_ALL, "status_id:all");
+        assert_eq!(VERIFICATION_STATUS_ALL, "verification_status:all");
         assert_eq!(CATEGORIES_ALL, "categories:all");
         assert_eq!(APPLICABILITY_ALL, "applicability:all");
         assert_eq!(VERIFICATION_ALL, "verification:all");
@@ -152,7 +152,7 @@ mod tests {
         assert_eq!(CACHE_HEALTH, "cache:health");
         assert_eq!(CACHE_PERFORMANCE, "cache:performance");
         assert_eq!(REQUIREMENTS_ALL, "requirements:all");
-        assert_eq!(TESTS_ALL, "tests:all");
+        assert_eq!(VERIFICATIONS_ALL, "verifications:all");
     }
 
     #[test]
@@ -165,11 +165,11 @@ mod tests {
         check_keyspace!(Users, "user");
         check_keyspace!(Requirements, "requirement");
         check_keyspace!(RequirementTitle, "requirement_title");
-        check_keyspace!(Tests, "test");
-        check_keyspace!(TestStatus, "status_id");
+        check_keyspace!(Verifications, "verifications");
+        check_keyspace!(VerificationStatus, "verification_status");
         check_keyspace!(Matrix, "matrix");
         check_keyspace!(LinkedRequirements, "linked_tests");
-        check_keyspace!(LinkedTests, "linked_requirements");
+        check_keyspace!(LinkedVerifications, "linked_verifications");
         check_keyspace!(ProjectMembers, "project_member");
 
         assert_eq!(ProjectMembers::for_user(5), "project_member:user:5");

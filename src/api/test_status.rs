@@ -5,16 +5,16 @@
 //! System statuses cannot be updated or deleted.
 
 use crate::api::prelude::*;
-use crate::models::{NewTestStatus, TestStatus};
+use crate::models::{NewVerificationStatus, VerificationStatus};
 use crate::services::StatusService;
 
 #[get("/test-status")]
 pub async fn list_test_statuses(
     _user: ApiUser,
     state: &State<AppState>,
-) -> ApiResult<Json<Vec<TestStatus>>> {
+) -> ApiResult<Json<Vec<VerificationStatus>>> {
     let service = StatusService::new(state.inner());
-    let statuses = service.list_test_statuses()?;
+    let statuses = service.list_verification_statuses()?;
     Ok(Json(statuses))
 }
 
@@ -25,7 +25,7 @@ pub async fn get_test_status(
     state: &State<AppState>,
 ) -> ApiResult<Json<Value>> {
     let service = StatusService::new(state.inner());
-    let status = service.get_test_status(id)?;
+    let status = service.get_verification_status(id)?;
     Ok(Json(json!({
         "id": status.id,
         "title": status.title,
@@ -41,10 +41,10 @@ pub async fn get_test_status(
 pub async fn create_test_status(
     _user: ApiUser,
     state: &State<AppState>,
-    payload: Json<NewTestStatus>,
+    payload: Json<NewVerificationStatus>,
 ) -> ApiResult<(Status, Value)> {
     let service = StatusService::new(state.inner());
-    let id = service.create_test_status(payload.into_inner())?;
+    let id = service.create_verification_status(payload.into_inner())?;
     Ok((Status::Created, json!({ "status": "ok", "id": id })))
 }
 
@@ -53,10 +53,10 @@ pub async fn update_test_status(
     _user: ApiUser,
     id: i32,
     state: &State<AppState>,
-    payload: Json<NewTestStatus>,
+    payload: Json<NewVerificationStatus>,
 ) -> ApiResult<Value> {
     let service = StatusService::new(state.inner());
-    service.update_test_status(id, &payload.into_inner())?;
+    service.update_verification_status(id, &payload.into_inner())?;
     Ok(json!({ "status": "ok" }))
 }
 
@@ -67,6 +67,6 @@ pub async fn delete_test_status(
     state: &State<AppState>,
 ) -> ApiResult<Status> {
     let service = StatusService::new(state.inner());
-    service.delete_test_status(id)?;
+    service.delete_verification_status(id)?;
     Ok(Status::NoContent)
 }

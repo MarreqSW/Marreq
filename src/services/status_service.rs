@@ -6,7 +6,9 @@
 use std::collections::HashMap;
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{NewRequirementStatus, NewTestStatus, RequirementStatus, TestStatus};
+use crate::models::{
+    NewRequirementStatus, NewVerificationStatus, RequirementStatus, VerificationStatus,
+};
 use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 use crate::status_enums::{RequirementStatusEnum, TestStatusEnum};
@@ -38,19 +40,19 @@ impl<'a> StatusService<'a> {
             .get_requirement_status_by_project(project_id)
     }
 
-    /// Retrieve test statuses.
-    pub fn list_test_statuses(&self) -> Result<Vec<TestStatus>, RepoError> {
-        self.state.repo_read().get_test_status_all()
+    /// Retrieve verification statuses.
+    pub fn list_verification_statuses(&self) -> Result<Vec<VerificationStatus>, RepoError> {
+        self.state.repo_read().get_verification_status_all()
     }
 
-    /// Retrieve test statuses for a specific project.
-    pub fn list_test_statuses_by_project(
+    /// Retrieve verification statuses for a specific project.
+    pub fn list_verification_statuses_by_project(
         &self,
         project_id: i32,
-    ) -> Result<Vec<TestStatus>, RepoError> {
+    ) -> Result<Vec<VerificationStatus>, RepoError> {
         self.state
             .repo_read()
-            .get_test_status_by_project(project_id)
+            .get_verification_status_by_project(project_id)
     }
 
     /// Retrieve a single requirement status by identifier.
@@ -58,9 +60,9 @@ impl<'a> StatusService<'a> {
         self.state.repo_read().get_requirement_status_by_id(id)
     }
 
-    /// Retrieve a single test status by identifier.
-    pub fn get_test_status(&self, id: i32) -> Result<TestStatus, RepoError> {
-        self.state.repo_read().get_test_status_by_id(id)
+    /// Retrieve a single verification status by identifier.
+    pub fn get_verification_status(&self, id: i32) -> Result<VerificationStatus, RepoError> {
+        self.state.repo_read().get_verification_status_by_id(id)
     }
 
     pub fn get_status_name(&self, id: i32) -> Result<String, RepoError> {
@@ -83,12 +85,16 @@ impl<'a> StatusService<'a> {
             .find(|s| s.title.eq_ignore_ascii_case(title))
     }
 
-    /// Resolve a test status by its canonical title within a project.
+    /// Resolve a verification status by its canonical title within a project.
     ///
     /// Performs a case-insensitive match on `title` among statuses belonging to
     /// the given project.  Returns `None` when no matching status exists.
-    pub fn resolve_test_status_by_title(&self, project_id: i32, title: &str) -> Option<TestStatus> {
-        let statuses = self.list_test_statuses_by_project(project_id).ok()?;
+    pub fn resolve_verification_status_by_title(
+        &self,
+        project_id: i32,
+        title: &str,
+    ) -> Option<VerificationStatus> {
+        let statuses = self.list_verification_statuses_by_project(project_id).ok()?;
         statuses
             .into_iter()
             .find(|s| s.title.eq_ignore_ascii_case(title))
@@ -104,10 +110,13 @@ impl<'a> StatusService<'a> {
             .collect()
     }
 
-    /// Build a map from status id → title for all test statuses in a project.
-    /// Useful for resolving a test's `status_id` FK to a semantic name.
-    pub fn test_status_id_to_title_map(&self, project_id: i32) -> HashMap<i32, String> {
-        self.list_test_statuses_by_project(project_id)
+    /// Build a map from status id → title for all verification statuses in a project.
+    /// Useful for resolving a verification's `status_id` FK to a semantic name.
+    pub fn verification_status_id_to_title_map(
+        &self,
+        project_id: i32,
+    ) -> HashMap<i32, String> {
+        self.list_verification_statuses_by_project(project_id)
             .unwrap_or_default()
             .into_iter()
             .map(|s| (s.id, s.title))
@@ -143,14 +152,20 @@ impl<'a> StatusService<'a> {
         Ok(id)
     }
 
-    /// Create a new test status entry (user-created; is_system is always false).
-    pub fn create_test_status(&self, mut payload: NewTestStatus) -> Result<i32, RepoError> {
+    /// Create a new verification status entry (user-created; is_system is always false).
+    pub fn create_verification_status(
+        &self,
+        mut payload: NewVerificationStatus,
+    ) -> Result<i32, RepoError> {
         payload.is_system = false;
-        self.create_system_test_status(payload)
+        self.create_system_verification_status(payload)
     }
 
-    /// Create a test status with explicit is_system (used for default statuses).
-    fn create_system_test_status(&self, mut payload: NewTestStatus) -> Result<i32, RepoError> {
+    /// Create a verification status with explicit is_system (used for default statuses).
+    fn create_system_verification_status(
+        &self,
+        mut payload: NewVerificationStatus,
+    ) -> Result<i32, RepoError> {
         sanitize_string(&mut payload.title);
         sanitize_string(&mut payload.description);
         sanitize_string(&mut payload.tag);
@@ -169,7 +184,7 @@ impl<'a> StatusService<'a> {
 
         let id = {
             let mut repo = self.state.repo_write();
-            repo.create_test_status(&payload)?
+            repo.create_verification_status(&payload)?
         };
 
         Ok(id)
@@ -205,9 +220,13 @@ impl<'a> StatusService<'a> {
         repo.delete_requirement_status(id)
     }
 
-    /// Update a test status (title, description, tag). Fails if the status is system.
-    pub fn update_test_status(&self, id: i32, payload: &NewTestStatus) -> Result<bool, RepoError> {
-        let status = self.get_test_status(id)?;
+    /// Update a verification status (title, description, tag). Fails if the status is system.
+    pub fn update_verification_status(
+        &self,
+        id: i32,
+        payload: &NewVerificationStatus,
+    ) -> Result<bool, RepoError> {
+        let status = self.get_verification_status(id)?;
         if status.is_system {
             return Err(RepoError::BadInput("Cannot modify system status".into()));
         }
@@ -226,17 +245,20 @@ impl<'a> StatusService<'a> {
         })
         .map_err(|err| RepoError::BadInput(err.to_string()))?;
         let mut repo = self.state.repo_write();
-        repo.update_test_status(id, &payload)
+        repo.update_verification_status(id, &payload)
     }
 
-    /// Delete a test status. Fails if system or in use.
-    pub fn delete_test_status(&self, id: i32) -> Result<TestStatus, RepoError> {
-        let status = self.get_test_status(id)?;
+    /// Delete a verification status. Fails if system or in use.
+    pub fn delete_verification_status(
+        &self,
+        id: i32,
+    ) -> Result<VerificationStatus, RepoError> {
+        let status = self.get_verification_status(id)?;
         if status.is_system {
             return Err(RepoError::BadInput("Cannot delete system status".into()));
         }
         let mut repo = self.state.repo_write();
-        repo.delete_test_status(id)
+        repo.delete_verification_status(id)
     }
 
     /// Initialize default requirement and test statuses for a new project.
@@ -265,9 +287,9 @@ impl<'a> StatusService<'a> {
             self.create_system_requirement_status(payload)?;
         }
 
-        // Initialize test statuses from enum
+        // Initialize verification statuses from enum
         for status_enum in TestStatusEnum::all() {
-            let payload = NewTestStatus {
+            let payload = NewVerificationStatus {
                 id: None,
                 title: status_enum.title().to_string(),
                 description: status_enum.description().to_string(),
@@ -276,7 +298,7 @@ impl<'a> StatusService<'a> {
                 is_system: true,
                 tag_color: None,
             };
-            self.create_system_test_status(payload)?;
+            self.create_system_verification_status(payload)?;
         }
 
         Ok(())
@@ -321,9 +343,9 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             3,
-            TestStatus {
+            VerificationStatus {
                 id: 3,
                 title: "Ready".into(),
                 description: "ready".into(),
@@ -343,9 +365,9 @@ mod tests {
         let service = StatusService::new(&state);
 
         assert_eq!(service.list_requirement_statuses().unwrap().len(), 1);
-        assert_eq!(service.list_test_statuses().unwrap().len(), 1);
+        assert_eq!(service.list_verification_statuses().unwrap().len(), 1);
         assert_eq!(service.get_requirement_status(2).unwrap().title, "Draft");
-        assert_eq!(service.get_test_status(3).unwrap().title, "Ready");
+        assert_eq!(service.get_verification_status(3).unwrap().title, "Ready");
     }
 
     #[test]
@@ -411,13 +433,13 @@ mod tests {
             .collect();
         assert_eq!(project_req_statuses.len(), 6); // Draft, Proposal, Accepted, Rejected, Cancelled, Finished
 
-        // Verify all test statuses were created
-        let test_statuses = service.list_test_statuses().unwrap();
-        let project_test_statuses: Vec<_> = test_statuses
+        // Verify all verification statuses were created
+        let verification_statuses = service.list_verification_statuses().unwrap();
+        let project_verification_statuses: Vec<_> = verification_statuses
             .iter()
             .filter(|s| s.project_id == project_id)
             .collect();
-        assert_eq!(project_test_statuses.len(), 4); // Passed, Failed, Pending, In Progress
+        assert_eq!(project_verification_statuses.len(), 4); // Passed, Failed, Pending, In Progress
 
         // Verify specific statuses exist with correct titles
         let req_titles: Vec<_> = project_req_statuses
@@ -428,13 +450,13 @@ mod tests {
         assert!(req_titles.contains(&"Accepted"));
         assert!(req_titles.contains(&"Finished"));
 
-        let test_titles: Vec<_> = project_test_statuses
+        let verification_titles: Vec<_> = project_verification_statuses
             .iter()
             .map(|s| s.title.as_str())
             .collect();
-        assert!(test_titles.contains(&"Passed"));
-        assert!(test_titles.contains(&"Failed"));
-        assert!(test_titles.contains(&"Pending"));
+        assert!(verification_titles.contains(&"Passed"));
+        assert!(verification_titles.contains(&"Failed"));
+        assert!(verification_titles.contains(&"Pending"));
     }
 
     #[test]
@@ -488,11 +510,11 @@ mod tests {
     }
 
     #[test]
-    fn list_test_statuses_by_project_filters_correctly() {
+    fn list_verification_statuses_by_project_filters_correctly() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Passed".into(),
                 description: "passed".into(),
@@ -502,9 +524,9 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             2,
-            TestStatus {
+            VerificationStatus {
                 id: 2,
                 title: "Failed".into(),
                 description: "failed".into(),
@@ -514,9 +536,9 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             3,
-            TestStatus {
+            VerificationStatus {
                 id: 3,
                 title: "Pending".into(),
                 description: "pending".into(),
@@ -530,7 +552,7 @@ mod tests {
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        let statuses = service.list_test_statuses_by_project(10).unwrap();
+        let statuses = service.list_verification_statuses_by_project(10).unwrap();
         assert_eq!(statuses.len(), 2);
         let titles: Vec<&str> = statuses.iter().map(|s| s.title.as_str()).collect();
         assert!(titles.contains(&"Passed"));
@@ -571,12 +593,12 @@ mod tests {
     }
 
     #[test]
-    fn create_test_status_trims_input() {
+    fn create_verification_status_trims_input() {
         let repo = populated_repo();
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        let payload = NewTestStatus {
+        let payload = NewVerificationStatus {
             id: None,
             title: "  In Progress  ".into(),
             description: "  Description  ".into(),
@@ -586,22 +608,22 @@ mod tests {
             tag_color: None,
         };
 
-        let id = service.create_test_status(payload).unwrap();
+        let id = service.create_verification_status(payload).unwrap();
 
         let repo_guard = state.repo_read();
-        let stored = repo_guard.inner_repo().test_statuses.get(&id).unwrap();
+        let stored = repo_guard.inner_repo().verification_statuses.get(&id).unwrap();
         assert_eq!(stored.title, "In Progress");
         assert_eq!(stored.description, "Description");
         assert_eq!(stored.tag, "PROG");
     }
 
     #[test]
-    fn create_test_status_rejects_invalid_title() {
+    fn create_verification_status_rejects_invalid_title() {
         let repo = populated_repo();
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        let payload = NewTestStatus {
+        let payload = NewVerificationStatus {
             id: None,
             title: " ".into(),
             description: "Desc".into(),
@@ -611,7 +633,7 @@ mod tests {
             tag_color: None,
         };
 
-        let err = service.create_test_status(payload).unwrap_err();
+        let err = service.create_verification_status(payload).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
     }
 
@@ -626,12 +648,12 @@ mod tests {
     }
 
     #[test]
-    fn list_test_statuses_by_project_returns_empty_for_nonexistent_project() {
+    fn list_verification_statuses_by_project_returns_empty_for_nonexistent_project() {
         let repo = DieselRepoMock::default();
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        let statuses = service.list_test_statuses_by_project(999).unwrap();
+        let statuses = service.list_verification_statuses_by_project(999).unwrap();
         assert_eq!(statuses.len(), 0);
     }
 
@@ -646,12 +668,12 @@ mod tests {
     }
 
     #[test]
-    fn get_test_status_returns_not_found_for_missing_status() {
+    fn get_verification_status_returns_not_found_for_missing_status() {
         let repo = DieselRepoMock::default();
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        let result = service.get_test_status(999);
+        let result = service.get_verification_status(999);
         assert!(matches!(result, Err(RepoError::NotFound)));
     }
 
@@ -711,11 +733,11 @@ mod tests {
     }
 
     #[test]
-    fn update_test_status_rejects_system_status() {
+    fn update_verification_status_rejects_system_status() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Passed".into(),
                 description: "".into(),
@@ -728,7 +750,7 @@ mod tests {
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        let payload = NewTestStatus {
+        let payload = NewVerificationStatus {
             id: Some(1),
             title: "Custom".into(),
             description: "".into(),
@@ -737,17 +759,17 @@ mod tests {
             is_system: false,
             tag_color: None,
         };
-        let err = service.update_test_status(1, &payload).unwrap_err();
+        let err = service.update_verification_status(1, &payload).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
         assert!(err.to_string().to_lowercase().contains("system"));
     }
 
     #[test]
-    fn delete_test_status_rejects_system_status() {
+    fn delete_verification_status_rejects_system_status() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Passed".into(),
                 description: "".into(),
@@ -760,7 +782,7 @@ mod tests {
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        let err = service.delete_test_status(1).unwrap_err();
+        let err = service.delete_verification_status(1).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
         assert!(err.to_string().to_lowercase().contains("system"));
     }

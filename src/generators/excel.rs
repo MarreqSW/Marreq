@@ -5,7 +5,7 @@ use crate::helper_functions::decorators;
 use crate::models::*;
 use crate::repository::{
     CustomFieldRepository, DieselRepo, RequirementCommentsRepository, RequirementsRepository,
-    TestsCaseRepository, UserRepository,
+    UserRepository, VerificationsRepository,
 };
 use diesel::prelude::*;
 use std::fs;
@@ -31,7 +31,7 @@ pub fn create_matrix_workbook(
 
     // Get tests for the project
     let all_tests = repo
-        .get_tests_by_project(project_id)
+        .get_verifications_by_project(project_id)
         .map_err(|e| format!("Error querying tests by project: {:?}", e))?;
 
     eprintln!(
@@ -42,7 +42,7 @@ pub fn create_matrix_workbook(
 
     // Decorate requirements and tests to get real names
     let mut decorated_reqs = decorators::decorate_requirements(all_reqs);
-    let mut decorated_tests = decorators::decorate_tests(all_tests);
+    let mut decorated_tests = decorators::decorate_verifications(all_tests);
 
     // Sort requirements by ID
     decorated_reqs.sort_by_key(|req| req.id);
@@ -84,7 +84,7 @@ pub fn create_matrix_workbook(
             // Check if this requirement is linked to this test
             let test_present: i64 = matrix
                 .filter(req_id.eq(req.id))
-                .filter(crate::schema::matrix::dsl::test_id.eq(test.id))
+                .filter(crate::schema::matrix::dsl::verification_id.eq(test.id))
                 .count()
                 .get_result(connection.as_mut())
                 .map_err(|e| format!("Error checking matrix link: {:?}", e))?;
@@ -236,17 +236,17 @@ pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::er
 }
 
 pub fn create_tests_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    use crate::schema::tests::dsl::*;
+    use crate::schema::verifications::dsl::*;
 
     let mut connection = DieselRepo::new()?.get_conn()?;
 
-    let all_tests = tests
-        .filter(crate::schema::tests::project_id.eq(pid))
-        .load::<TestCase>(connection.as_mut())
+    let all_tests = verifications
+        .filter(crate::schema::verifications::project_id.eq(pid))
+        .load::<Verification>(connection.as_mut())
         .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
     // Decorate tests to get real names instead of IDs
-    let decorated_tests = decorators::decorate_tests(all_tests);
+    let decorated_tests = decorators::decorate_verifications(all_tests);
 
     // Write to a temp file to avoid fixed path and propagate read errors
     let temp_path: PathBuf = std::env::temp_dir().join(format!("marreq_tests_{}.xls", pid));
@@ -274,7 +274,7 @@ pub fn create_tests_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Er
         worksheet.write_string(row, 3, &test.source, None)?;
         worksheet.write_string(row, 4, &test.reference_code, None)?;
         worksheet.write_string(row, 5, &test.status_id, None)?;
-        worksheet.write_string(row, 6, &test.test_parent_title, None)?;
+        worksheet.write_string(row, 6, &test.verification_parent_title, None)?;
     }
 
     workbook.close()?;

@@ -6,7 +6,8 @@
 use super::*;
 use crate::models::{
     CustomFieldDefinition, CustomFieldDefinitionPayload, NewRequirementComment,
-    NewRequirementVersionLink, RequirementComment, RequirementVersion, RequirementVersionLink,
+    NewRequirementVersionLink, NewVerification, NewVerificationStatus, RequirementComment,
+    RequirementVersion, RequirementVersionLink, Verification, VerificationStatus,
 };
 use crate::repository::errors::RepoError;
 use chrono::{NaiveDate, NaiveDateTime};
@@ -16,8 +17,8 @@ pub struct DieselRepoMock {
     pub users: HashMap<i32, User>,
     pub statuses: HashMap<i32, RequirementStatus>,
     pub requirement_statuses: HashMap<i32, RequirementStatus>,
-    pub test_statuses: HashMap<i32, TestStatus>,
-    pub verifications: HashMap<i32, VerificationMethod>,
+    pub verification_statuses: HashMap<i32, VerificationStatus>,
+    pub verification_methods: HashMap<i32, VerificationMethod>,
     pub categories: HashMap<i32, Category>,
     pub applicability: HashMap<i32, Applicability>,
     pub requirements: HashMap<i32, Requirement>,
@@ -27,7 +28,7 @@ pub struct DieselRepoMock {
     pub requirement_versions: HashMap<i32, RequirementVersion>,
     /// Next version id when creating versions
     pub next_version_id: i32,
-    pub tests: HashMap<i32, TestCase>,
+    pub verifications: HashMap<i32, Verification>,
     pub projects: HashMap<i32, Project>,
     pub matrices: Vec<MatrixLink>,
     pub project_members: Vec<ProjectMember>,
@@ -64,15 +65,15 @@ impl Default for DieselRepoMock {
             users: HashMap::new(),
             statuses: HashMap::new(),
             requirement_statuses: HashMap::new(),
-            test_statuses: HashMap::new(),
-            verifications: HashMap::new(),
+            verification_statuses: HashMap::new(),
+            verification_methods: HashMap::new(),
             categories: HashMap::new(),
             applicability: HashMap::new(),
             requirements: HashMap::new(),
             requirement_verification_methods: Vec::new(),
             requirement_versions: HashMap::new(),
             next_version_id: 1,
-            tests: HashMap::new(),
+            verifications: HashMap::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
@@ -103,15 +104,15 @@ impl DieselRepoMock {
             users: map,
             statuses: HashMap::new(),
             requirement_statuses: HashMap::new(),
-            test_statuses: HashMap::new(),
-            verifications: HashMap::new(),
+            verification_statuses: HashMap::new(),
+            verification_methods: HashMap::new(),
             categories: HashMap::new(),
             applicability: HashMap::new(),
             requirements: HashMap::new(),
             requirement_verification_methods: Vec::new(),
             requirement_versions: HashMap::new(),
             next_version_id: 1,
-            tests: HashMap::new(),
+            verifications: HashMap::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
@@ -135,15 +136,15 @@ impl DieselRepoMock {
             users: HashMap::new(),
             statuses: HashMap::new(),
             requirement_statuses: HashMap::new(),
-            test_statuses: HashMap::new(),
-            verifications: HashMap::new(),
+            verification_statuses: HashMap::new(),
+            verification_methods: HashMap::new(),
             categories: HashMap::new(),
             applicability: HashMap::new(),
             requirements: HashMap::new(),
             requirement_verification_methods: Vec::new(),
             requirement_versions: HashMap::new(),
             next_version_id: 1,
-            tests: HashMap::new(),
+            verifications: HashMap::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
@@ -331,13 +332,16 @@ impl LookupRepository for DieselRepoMock {
             .ok_or(RepoError::NotFound)
     }
 
-    fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
-        Ok(self.test_statuses.values().cloned().collect())
+    fn get_verification_status_all(&self) -> Result<Vec<VerificationStatus>, RepoError> {
+        Ok(self.verification_statuses.values().cloned().collect())
     }
 
-    fn get_test_status_by_project(&self, project_id: i32) -> Result<Vec<TestStatus>, RepoError> {
+    fn get_verification_status_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<VerificationStatus>, RepoError> {
         let mut list: Vec<_> = self
-            .test_statuses
+            .verification_statuses
             .values()
             .filter(|s| s.project_id == project_id)
             .cloned()
@@ -346,8 +350,11 @@ impl LookupRepository for DieselRepoMock {
         Ok(list)
     }
 
-    fn get_test_status_by_id(&self, status_id: i32) -> Result<TestStatus, RepoError> {
-        self.test_statuses
+    fn get_verification_status_by_id(
+        &self,
+        status_id: i32,
+    ) -> Result<VerificationStatus, RepoError> {
+        self.verification_statuses
             .get(&status_id)
             .cloned()
             .ok_or(RepoError::NotFound)
@@ -396,36 +403,41 @@ impl LookupRepository for DieselRepoMock {
             .collect())
     }
 
-    fn get_verification_all(&self) -> Result<Vec<VerificationMethod>, RepoError> {
-        Ok(self.verifications.values().cloned().collect())
+    fn get_verification_methods_all(&self) -> Result<Vec<VerificationMethod>, RepoError> {
+        Ok(self.verification_methods.values().cloned().collect())
     }
 
-    fn get_verification_by_id(
+    fn get_verification_method_by_id(
         &self,
-        verification_id: i32,
+        verification_method_id: i32,
     ) -> Result<VerificationMethod, RepoError> {
-        self.verifications
-            .get(&verification_id)
+        self.verification_methods
+            .get(&verification_method_id)
             .cloned()
             .ok_or(RepoError::NotFound)
     }
 
-    fn get_verification_by_project(
+    fn get_verification_methods_by_project(
         &self,
         project_id: i32,
     ) -> Result<Vec<VerificationMethod>, RepoError> {
         Ok(self
-            .verifications
+            .verification_methods
             .values()
             .filter(|v| v.project_id == project_id)
             .cloned()
             .collect())
     }
 
-    fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError> {
+    fn insert_new_verification_method(
+        &mut self,
+        new: &NewVerificationMethod,
+    ) -> Result<i32, RepoError> {
         let id = new
             .id
-            .unwrap_or_else(|| self.verifications.keys().max().map(|i| i + 1).unwrap_or(1));
+            .unwrap_or_else(|| {
+                self.verification_methods.keys().max().map(|i| i + 1).unwrap_or(1)
+            });
         let verification = VerificationMethod {
             id,
             title: new.title.clone(),
@@ -433,13 +445,16 @@ impl LookupRepository for DieselRepoMock {
             tag: new.tag.clone(),
             project_id: new.project_id,
         };
-        self.verifications.insert(id, verification);
+        self.verification_methods.insert(id, verification);
         Ok(id)
     }
 
-    fn edit_verification(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError> {
+    fn edit_verification_method(
+        &mut self,
+        new: &NewVerificationMethod,
+    ) -> Result<bool, RepoError> {
         let id = new.id.ok_or(RepoError::NotFound)?;
-        match self.verifications.get_mut(&id) {
+        match self.verification_methods.get_mut(&id) {
             Some(v) => {
                 v.title = new.title.clone();
                 v.description = new.description.clone();
@@ -451,16 +466,16 @@ impl LookupRepository for DieselRepoMock {
         }
     }
 
-    fn delete_verification(
+    fn delete_verification_method(
         &mut self,
-        verification_id: i32,
+        verification_method_id: i32,
     ) -> Result<VerificationMethod, RepoError> {
         let verification = self
-            .verifications
-            .remove(&verification_id)
+            .verification_methods
+            .remove(&verification_method_id)
             .ok_or(RepoError::NotFound)?;
         self.requirement_verification_methods
-            .retain(|(_, vid)| *vid != verification_id);
+            .retain(|(_, vid)| *vid != verification_method_id);
         Ok(verification)
     }
 
@@ -551,11 +566,16 @@ impl LookupRepository for DieselRepoMock {
         Ok(id)
     }
 
-    fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError> {
+    fn create_verification_status(
+        &mut self,
+        new: &NewVerificationStatus,
+    ) -> Result<i32, RepoError> {
         let id = new
             .id
-            .unwrap_or_else(|| self.test_statuses.keys().max().map(|i| i + 1).unwrap_or(1));
-        let status = TestStatus {
+            .unwrap_or_else(|| {
+                self.verification_statuses.keys().max().map(|i| i + 1).unwrap_or(1)
+            });
+        let status = VerificationStatus {
             id,
             title: new.title.clone(),
             description: new.description.clone(),
@@ -564,7 +584,7 @@ impl LookupRepository for DieselRepoMock {
             is_system: new.is_system,
             tag_color: new.tag_color.clone(),
         };
-        self.test_statuses.insert(id, status);
+        self.verification_statuses.insert(id, status);
         Ok(id)
     }
 
@@ -616,8 +636,15 @@ impl LookupRepository for DieselRepoMock {
         Ok(status)
     }
 
-    fn update_test_status(&mut self, id: i32, payload: &NewTestStatus) -> Result<bool, RepoError> {
-        let status = self.test_statuses.get_mut(&id).ok_or(RepoError::NotFound)?;
+    fn update_verification_status(
+        &mut self,
+        id: i32,
+        payload: &NewVerificationStatus,
+    ) -> Result<bool, RepoError> {
+        let status = self
+            .verification_statuses
+            .get_mut(&id)
+            .ok_or(RepoError::NotFound)?;
         if status.is_system {
             return Err(RepoError::BadInput("Cannot modify system status".into()));
         }
@@ -628,22 +655,25 @@ impl LookupRepository for DieselRepoMock {
         Ok(true)
     }
 
-    fn delete_test_status(&mut self, id: i32) -> Result<TestStatus, RepoError> {
+    fn delete_verification_status(
+        &mut self,
+        id: i32,
+    ) -> Result<VerificationStatus, RepoError> {
         let status = self
-            .test_statuses
+            .verification_statuses
             .get(&id)
             .cloned()
             .ok_or(RepoError::NotFound)?;
         if status.is_system {
             return Err(RepoError::BadInput("Cannot delete system status".into()));
         }
-        let in_use = self.tests.values().any(|t| t.status_id == id);
+        let in_use = self.verifications.values().any(|v| v.status_id == id);
         if in_use {
             return Err(RepoError::BadInput(
-                "Cannot delete status: it is in use by tests".into(),
+                "Cannot delete status: it is in use by verifications".into(),
             ));
         }
-        self.test_statuses.remove(&id).ok_or(RepoError::NotFound)
+        self.verification_statuses.remove(&id).ok_or(RepoError::NotFound)
     }
 }
 
@@ -790,7 +820,7 @@ impl RequirementsRepository for DieselRepoMock {
                 if ver_id <= 0 {
                     continue;
                 }
-                if let Some(vm) = self.verifications.get(&ver_id) {
+                if let Some(vm) = self.verification_methods.get(&ver_id) {
                     if vm.project_id != req_project {
                         return Err(RepoError::CrossProjectViolation(format!(
                             "requirement {} (project {}) cannot use verification method {} from project {}",
@@ -1004,29 +1034,38 @@ impl RequirementsRepository for DieselRepoMock {
     }
 }
 
-impl TestsCaseRepository for DieselRepoMock {
-    fn get_test_by_id(&self, test_id: i32) -> Result<TestCase, RepoError> {
-        self.tests.get(&test_id).cloned().ok_or(RepoError::NotFound)
+impl VerificationsRepository for DieselRepoMock {
+    fn get_verification_by_id(&self, verification_id: i32) -> Result<Verification, RepoError> {
+        self.verifications
+            .get(&verification_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
     }
 
-    fn get_tests_all(&self) -> Result<Vec<TestCase>, RepoError> {
-        Ok(self.tests.values().cloned().collect())
+    fn get_verifications_all(&self) -> Result<Vec<Verification>, RepoError> {
+        Ok(self.verifications.values().cloned().collect())
     }
 
-    fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<TestCase>, RepoError> {
+    fn get_verifications_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<Verification>, RepoError> {
         Ok(self
-            .tests
+            .verifications
             .values()
-            .filter(|t| t.project_id == project_id)
+            .filter(|v| v.project_id == project_id)
             .cloned()
             .collect())
     }
 
-    fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError> {
+    fn get_requirements_for_verification(
+        &self,
+        verification_id: i32,
+    ) -> Result<Vec<Requirement>, RepoError> {
         let ids: Vec<i32> = self
             .matrices
             .iter()
-            .filter(|m| m.test_id == test_id)
+            .filter(|m| m.verification_id == verification_id)
             .map(|m| m.req_id)
             .collect();
         Ok(ids
@@ -1035,40 +1074,43 @@ impl TestsCaseRepository for DieselRepoMock {
             .collect())
     }
 
-    fn get_tests_for_requirement(&self, requirement_id: i32) -> Result<Vec<TestCase>, RepoError> {
+    fn get_verifications_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<Verification>, RepoError> {
         let ids: Vec<i32> = self
             .matrices
             .iter()
             .filter(|m| m.req_id == requirement_id)
-            .map(|m| m.test_id)
+            .map(|m| m.verification_id)
             .collect();
         Ok(ids
             .into_iter()
-            .filter_map(|id| self.tests.get(&id).cloned())
+            .filter_map(|id| self.verifications.get(&id).cloned())
             .collect())
     }
 
-    fn get_impacted_tests_for_requirement(
+    fn get_impacted_verifications_for_requirement(
         &self,
         requirement_id: i32,
-    ) -> Result<Vec<TestCase>, RepoError> {
+    ) -> Result<Vec<Verification>, RepoError> {
         let ids: Vec<i32> = self
             .matrices
             .iter()
             .filter(|m| m.req_id == requirement_id && m.suspect)
-            .map(|m| m.test_id)
+            .map(|m| m.verification_id)
             .collect();
         Ok(ids
             .into_iter()
-            .filter_map(|id| self.tests.get(&id).cloned())
+            .filter_map(|id| self.verifications.get(&id).cloned())
             .collect())
     }
 
-    fn insert_test(&mut self, _new: &NewTestCase) -> Result<i32, RepoError> {
+    fn insert_verification(&mut self, _new: &NewVerification) -> Result<i32, RepoError> {
         let id = _new
             .id
-            .unwrap_or_else(|| self.tests.keys().max().map(|i| i + 1).unwrap_or(1));
-        let test = TestCase {
+            .unwrap_or_else(|| self.verifications.keys().max().map(|i| i + 1).unwrap_or(1));
+        let verification = Verification {
             id,
             name: _new.name.clone(),
             description: _new.description.clone(),
@@ -1078,51 +1120,55 @@ impl TestsCaseRepository for DieselRepoMock {
             parent_id: _new.parent_id,
             project_id: _new.project_id,
         };
-        self.tests.insert(id, test);
+        self.verifications.insert(id, verification);
         Ok(id)
     }
 
-    fn edit_test(&mut self, _new: &NewTestCase) -> Result<bool, RepoError> {
+    fn edit_verification(&mut self, _new: &NewVerification) -> Result<bool, RepoError> {
         let id = _new.id.ok_or(RepoError::NotFound)?;
-        match self.tests.get_mut(&id) {
-            Some(test) => {
-                test.name = _new.name.clone();
-                test.description = _new.description.clone();
-                test.source = _new.source.clone();
-                test.status_id = _new.status_id;
-                test.parent_id = _new.parent_id;
-                test.project_id = _new.project_id;
+        match self.verifications.get_mut(&id) {
+            Some(verification) => {
+                verification.name = _new.name.clone();
+                verification.description = _new.description.clone();
+                verification.source = _new.source.clone();
+                verification.status_id = _new.status_id;
+                verification.parent_id = _new.parent_id;
+                verification.project_id = _new.project_id;
                 Ok(true)
             }
             None => Err(RepoError::NotFound),
         }
     }
 
-    fn delete_test(&mut self, test_id: i32) -> Result<TestCase, RepoError> {
-        self.tests.remove(&test_id).ok_or(RepoError::NotFound)
+    fn delete_verification(&mut self, verification_id: i32) -> Result<Verification, RepoError> {
+        self.verifications
+            .remove(&verification_id)
+            .ok_or(RepoError::NotFound)
     }
 
-    fn update_test_requirement_links(
+    fn update_verification_requirement_links(
         &mut self,
-        _test_id: i32,
+        _verification_id: i32,
         _requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
-        // Remove existing links for this test
-        self.matrices.retain(|m| m.test_id != _test_id);
-        let project_id = self.tests.get(&_test_id).map(|t| t.project_id).unwrap_or(0);
+        self.matrices.retain(|m| m.verification_id != _verification_id);
+        let project_id = self
+            .verifications
+            .get(&_verification_id)
+            .map(|v| v.project_id)
+            .unwrap_or(0);
         for &id in _requirement_ids {
-            // Mirror the DB trigger: reject requirements from a different project
             if let Some(req) = self.requirements.get(&id) {
                 if req.project_id != project_id {
                     return Err(RepoError::CrossProjectViolation(format!(
-                        "requirement {} belongs to project {} but test {} is in project {}",
-                        id, req.project_id, _test_id, project_id
+                        "requirement {} belongs to project {} but verification {} is in project {}",
+                        id, req.project_id, _verification_id, project_id
                     )));
                 }
             }
             self.matrices.push(MatrixLink {
                 req_id: id,
-                test_id: _test_id,
+                verification_id: _verification_id,
                 creation_date: epoch(),
                 project_id,
                 suspect: false,
@@ -1210,17 +1256,17 @@ impl MatrixRepository for DieselRepoMock {
                 )));
             }
         }
-        if let Some(test) = self.tests.get(&new.test_id) {
-            if test.project_id != new.project_id {
+        if let Some(verification) = self.verifications.get(&new.verification_id) {
+            if verification.project_id != new.project_id {
                 return Err(RepoError::CrossProjectViolation(format!(
-                    "test {} belongs to project {} but matrix row declares project_id={}",
-                    new.test_id, test.project_id, new.project_id
+                    "verification {} belongs to project {} but matrix row declares project_id={}",
+                    new.verification_id, verification.project_id, new.project_id
                 )));
             }
         }
         self.matrices.push(MatrixLink {
             req_id: new.req_id,
-            test_id: new.test_id,
+            verification_id: new.verification_id,
             creation_date: epoch(),
             project_id: new.project_id,
             suspect: false,
@@ -1268,7 +1314,7 @@ impl MatrixRepository for DieselRepoMock {
     ) -> Result<(bool, Option<i32>), RepoError> {
         let now = epoch();
         for link in self.matrices.iter_mut() {
-            if link.req_id == req_id && link.test_id == test_id {
+            if link.req_id == req_id && link.verification_id == test_id {
                 link.suspect = false;
                 link.suspect_at = None;
                 link.suspect_reason = None;
@@ -1466,7 +1512,7 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
                 .push(crate::models::BaselineTraceability {
                     baseline_id: id,
                     requirement_id: link.req_id,
-                    test_id: link.test_id,
+                    verification_id: link.verification_id,
                     suspect: link.suspect,
                     suspect_at: link.suspect_at,
                     suspect_reason: link.suspect_reason.clone(),

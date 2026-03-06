@@ -727,7 +727,7 @@ mod tests {
         let body = response.into_string().await.expect("response body");
         assert!(body.starts_with("Title,Reference"));
         assert!(body.contains("Test Requirement,REF-001"));
-        assert!(body.contains("Test #1"));
+        assert!(body.contains("Verification #1"));
     }
 
     #[rocket::async_test]

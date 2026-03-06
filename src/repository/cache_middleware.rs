@@ -1360,9 +1360,9 @@ mod tests {
         assert_eq!(user.username, "alice");
         assert!(cache.get(&keys::Users::by_id(1)).unwrap().contains("alice"));
 
-        // Username lookup is cached
+        // Username lookup bypasses cache so login always sees current password from DB
         repo.get_user_by_username("alice").unwrap();
-        assert!(cache.get("user:username:alice").is_some());
+        assert!(cache.get("user:username:alice").is_none());
 
         // Populate list cache then insert new user to invalidate it
         repo.get_users_all().unwrap();

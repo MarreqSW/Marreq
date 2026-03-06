@@ -45,19 +45,19 @@
   </div>
   <div class="c-dashboard-card__actions">
     {{#if selected_project_id}}
-    <a href="/p/{{selected_project_id}}/tests" class="btn btn-primary c-dashboard-card__action">View Tests</a>
-    <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success c-dashboard-card__action">Export Excel</a>
+    <a href="/p/{{selected_project_id}}/verifications" class="btn btn-primary c-dashboard-card__action">View Verifications</a>
+    <a href="/p/{{selected_project_id}}/verifications.xls" class="btn btn-success c-dashboard-card__action">Export Excel</a>
     {{#if user.is_admin}}
     <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
     {{/if}}
-    <a href="/p/{{selected_project_id}}/tests/new" class="btn btn-outline c-dashboard-card__action">New Test</a>
+    <a href="/p/{{selected_project_id}}/verifications/new" class="btn btn-outline c-dashboard-card__action">New Verification</a>
     {{else}}
-    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Tests</span>
+    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Verifications</span>
     <span class="btn btn-success disabled c-dashboard-card__action" aria-disabled="true">Export Excel</span>
     {{#if user.is_admin}}
     <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
     {{/if}}
-    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Test</span>
+    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Verification</span>
     {{/if}}
   </div>
   {{/partials/metrics_card}}
@@ -139,11 +139,11 @@
   </div>
   <div class="c-dashboard-card__actions">
     {{#if selected_project_id}}
-    <a href="/p/{{selected_project_id}}/test_statuses" class="btn btn-primary c-dashboard-card__action">View test statuses</a>
-    <a href="/p/{{selected_project_id}}/test_statuses/new" class="btn btn-outline c-dashboard-card__action">New test status</a>
+    <a href="/p/{{selected_project_id}}/verification_statuses" class="btn btn-primary c-dashboard-card__action">View verification statuses</a>
+    <a href="/p/{{selected_project_id}}/test_statuses/new" class="btn btn-outline c-dashboard-card__action">New verification status</a>
     {{else}}
-    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View test statuses</span>
-    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New test status</span>
+    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View verification statuses</span>
+    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New verification status</span>
     {{/if}}
   </div>
   {{/partials/metrics_card}}

@@ -106,7 +106,7 @@ function openInlineEditForTest(cell, row, config) {
     if (select.parentNode) select.remove();
     displayEl.hidden = false;
     try {
-      await postJson(`/p/${projectId}/tests/update-status/${testId}`, { status_id: v });
+      await postJson(`/p/${projectId}/verifications/update-status/${testId}`, { status_id: v });
       const variant = testStatusVariant(displayText);
       const tagColor = s?.tag_color || null;
       row.dataset.statusId = String(v);
@@ -332,7 +332,7 @@ function initDeleteButtons() {
     }
 
     try {
-      const response = await fetch(`/p/${projectId}/tests/delete/${testId}`, {
+      const response = await fetch(`/p/${projectId}/verifications/delete/${testId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

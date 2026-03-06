@@ -24,11 +24,11 @@ use crate::repository::{
 };
 use crate::schema;
 use diesel::expression_methods::BoolExpressionMethods;
-use diesel::prelude::define_sql_function;
-use diesel::sql_types::Text;
 use diesel::expression_methods::NullableExpressionMethods;
 use diesel::pg::{upsert::excluded, PgConnection};
+use diesel::prelude::define_sql_function;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
+use diesel::sql_types::Text;
 use diesel::{
     Connection, ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, RunQueryDsl,
     SelectableHelper,

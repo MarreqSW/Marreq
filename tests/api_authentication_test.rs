@@ -223,7 +223,7 @@ async fn tests_create_requires_authentication() {
         "test_name": "Test",
         "test_description": "Test description",
         "test_reference": "TEST-001",
-        "test_status": 1,
+        "status_id": 1,
         "test_source": "manual",
         "project_id": 1
     });

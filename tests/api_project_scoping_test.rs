@@ -455,7 +455,7 @@ async fn delete_requirement_works_for_any_authenticated_user() {
 async fn list_tests_returns_only_user_projects() {
     let mut repo = base_repo();
 
-    repo.tests.insert(
+    repo.verifications.insert(
         1,
         TestCase {
             id: 1,
@@ -469,7 +469,7 @@ async fn list_tests_returns_only_user_projects() {
         },
     );
 
-    repo.tests.insert(
+    repo.verifications.insert(
         2,
         TestCase {
             id: 2,
@@ -483,7 +483,7 @@ async fn list_tests_returns_only_user_projects() {
         },
     );
 
-    repo.tests.insert(
+    repo.verifications.insert(
         3,
         TestCase {
             id: 3,
@@ -524,7 +524,7 @@ async fn list_tests_returns_only_user_projects() {
 async fn get_test_works_for_any_authenticated_user() {
     let mut repo = base_repo();
 
-    repo.tests.insert(
+    repo.verifications.insert(
         1,
         TestCase {
             id: 1,

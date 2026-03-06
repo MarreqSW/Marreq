@@ -26,7 +26,7 @@ Modern card-based layout for test browsing
       <div class="marreq-requirement-card__body">
         <h3 class="marreq-requirement-card__title">
           <a
-            href="/p/{{../project.id}}/tests/show/{{id}}"
+            href="/p/{{../project.id}}/verifications/show/{{id}}"
             class="marreq-requirement-card__title-link"
             data-test-preview
             data-test-preview-project-id="{{../project.id}}"
@@ -93,7 +93,7 @@ Modern card-based layout for test browsing
         </div>
 
         <div class="marreq-requirement-card__actions">
-          <a href="/p/{{../project.id}}/tests/show/{{id}}"
+          <a href="/p/{{../project.id}}/verifications/show/{{id}}"
             class="marreq-requirement-card__action marreq-requirement-card__action--primary" title="View details">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
               <path
@@ -103,7 +103,7 @@ Modern card-based layout for test browsing
             <span class="u-visually-hidden">View</span>
           </a>
           {{#if ../can_edit_requirements}}
-          <a href="/p/{{../project.id}}/tests/edit/{{id}}" class="marreq-requirement-card__action"
+          <a href="/p/{{../project.id}}/verifications/edit/{{id}}" class="marreq-requirement-card__action"
             title="Edit test">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
               <path
@@ -140,6 +140,6 @@ Modern card-based layout for test browsing
       aria-disabled="true">Next</button>
   </nav>
   {{else}}
-  {{> tests/_empty_state}}
+  {{> verifications/_empty_state}}
   {{/if}}
 </section>

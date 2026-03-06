@@ -87,7 +87,7 @@ mod test_support {
             updated_at: timestamp(),
         });
 
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
             TestStatus {
                 id: 1,
@@ -100,7 +100,7 @@ mod test_support {
             },
         );
 
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             2,
             TestStatus {
                 id: 2,
@@ -113,7 +113,7 @@ mod test_support {
             },
         );
 
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             3,
             TestStatus {
                 id: 3,
@@ -179,9 +179,9 @@ async fn get_tests_returns_empty_list_when_no_tests() {
 #[rocket::async_test]
 async fn get_tests_returns_all_tests() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test 1"));
-    repo.tests.insert(2, sample_test(2, 1, "Test 2"));
-    repo.tests.insert(3, sample_test(3, 1, "Test 3"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test 1"));
+    repo.verifications.insert(2, sample_test(2, 1, "Test 2"));
+    repo.verifications.insert(3, sample_test(3, 1, "Test 3"));
 
     let client = test_client(repo).await;
 
@@ -212,7 +212,7 @@ async fn get_tests_requires_authentication() {
 #[rocket::async_test]
 async fn get_test_by_id_returns_correct_test() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Integration Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Integration Test"));
 
     let client = test_client(repo).await;
 
@@ -245,7 +245,7 @@ async fn get_test_with_nonexistent_id_returns_404() {
 #[rocket::async_test]
 async fn get_test_requires_authentication() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 
@@ -317,7 +317,7 @@ async fn post_test_requires_authentication() {
 #[rocket::async_test]
 async fn update_field_changes_test_name() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Original Name"));
+    repo.verifications.insert(1, sample_test(1, 1, "Original Name"));
 
     let client = test_client(repo).await;
 
@@ -352,7 +352,7 @@ async fn update_field_changes_test_name() {
 #[rocket::async_test]
 async fn update_field_changes_test_status() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 
@@ -385,7 +385,7 @@ async fn update_field_changes_test_status() {
 #[rocket::async_test]
 async fn update_field_with_invalid_field_returns_error() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 
@@ -408,12 +408,12 @@ async fn update_field_with_invalid_field_returns_error() {
 #[rocket::async_test]
 async fn update_field_with_invalid_status_value_returns_error() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 
     let update = json!({
-        "field": "test_status",
+        "field": "status_id",
         "value": "invalid"
     });
 
@@ -435,7 +435,7 @@ async fn update_field_with_invalid_status_value_returns_error() {
 #[rocket::async_test]
 async fn delete_test_removes_test() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "To Delete"));
+    repo.verifications.insert(1, sample_test(1, 1, "To Delete"));
 
     let client = test_client(repo).await;
 
@@ -473,7 +473,7 @@ async fn delete_nonexistent_test_returns_404() {
 #[rocket::async_test]
 async fn delete_test_requires_authentication() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "To Delete"));
+    repo.verifications.insert(1, sample_test(1, 1, "To Delete"));
 
     let client = test_client(repo).await;
 
@@ -489,7 +489,7 @@ async fn delete_test_requires_authentication() {
 #[rocket::async_test]
 async fn create_test_with_parent() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Parent Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Parent Test"));
 
     let client = test_client(repo).await;
 
@@ -522,8 +522,8 @@ async fn create_test_with_parent() {
 #[rocket::async_test]
 async fn update_test_parent() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Parent Test"));
-    repo.tests.insert(2, sample_test(2, 1, "Child Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Parent Test"));
+    repo.verifications.insert(2, sample_test(2, 1, "Child Test"));
 
     let client = test_client(repo).await;
 
@@ -560,7 +560,7 @@ async fn update_test_parent() {
 #[rocket::async_test]
 async fn update_test_description() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 
@@ -592,7 +592,7 @@ async fn update_test_description() {
 #[rocket::async_test]
 async fn update_test_source() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 

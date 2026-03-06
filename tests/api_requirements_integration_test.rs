@@ -144,7 +144,7 @@ mod test_support {
             },
         );
 
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             1,
             VerificationMethod {
                 id: 1,
@@ -154,7 +154,7 @@ mod test_support {
                 project_id: 1,
             },
         );
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             2,
             VerificationMethod {
                 id: 2,

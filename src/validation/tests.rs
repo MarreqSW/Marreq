@@ -297,8 +297,8 @@ mod tests {
     mod validate_test_tests {
         use super::*;
 
-        fn valid_test() -> NewTestCase {
-            NewTestCase {
+        fn valid_test() -> NewVerification {
+            NewVerification {
                 id: None,
                 reference_code: "TEST-1".to_string(),
                 name: "Valid Test Name".to_string(),
@@ -1128,8 +1128,8 @@ mod tests {
     mod validate_test_status_tests {
         use super::*;
 
-        fn valid_test_status() -> TestStatus {
-            TestStatus {
+        fn valid_test_status() -> VerificationStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Valid Status".to_string(),
                 description: "Valid description".to_string(),
@@ -1490,7 +1490,7 @@ mod tests {
 
         #[test]
         fn test_with_all_fields_valid() {
-            let test = NewTestCase {
+            let test = NewVerification {
                 id: Some(1),
                 reference_code: "TEST-123".to_string(),
                 name: "Complete Test".to_string(),

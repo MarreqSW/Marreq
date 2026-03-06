@@ -338,7 +338,7 @@ mod tests {
         );
 
         // Verify test statuses were created
-        let test_statuses = status_service.list_test_statuses().unwrap();
+        let test_statuses = status_service.list_verification_statuses().unwrap();
         let project_test_statuses: Vec<_> = test_statuses
             .iter()
             .filter(|s| s.project_id == project_id)

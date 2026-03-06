@@ -333,7 +333,7 @@ mod tests {
         repo.verifications.insert(1, sample_verification(1, 1, "System Validation"));
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 1,
+            verification_id: 1,
             creation_date: timestamp(),
             project_id: PROJECT_ID,
             suspect: false,

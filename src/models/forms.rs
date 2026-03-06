@@ -628,23 +628,23 @@ mod forms_tests {
 
     #[test]
     fn new_test_form_fields() {
-        let form = NewTestForm {
+        let form = NewVerificationForm {
             name: "T1".into(),
             reference_code: "T-001".into(),
             description: "D".into(),
             source: "Spec".into(),
             status_id: 1,
             parent_id: None,
-            test_req: vec![1, 2],
+            verification_req: vec![1, 2],
             project_id: 10,
         };
-        assert_eq!(form.test_req.len(), 2);
+        assert_eq!(form.verification_req.len(), 2);
         assert_eq!(form.project_id, 10);
     }
 
     #[test]
     fn edit_test_form_linked_requirements() {
-        let form = EditTestForm {
+        let form = EditVerificationForm {
             id: 5,
             reference_code: "T-005".into(),
             name: "Test".into(),

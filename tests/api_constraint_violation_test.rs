@@ -509,7 +509,7 @@ async fn create_test_with_invalid_project_id_returns_error() {
     });
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(payload.to_string())
@@ -544,7 +544,7 @@ async fn create_test_with_invalid_status_id_returns_error() {
     });
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(payload.to_string())

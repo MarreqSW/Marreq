@@ -212,7 +212,8 @@ async fn get_tests_requires_authentication() {
 #[rocket::async_test]
 async fn get_test_by_id_returns_correct_test() {
     let mut repo = base_repo();
-    repo.verifications.insert(1, sample_test(1, 1, "Integration Test"));
+    repo.verifications
+        .insert(1, sample_test(1, 1, "Integration Test"));
 
     let client = test_client(repo).await;
 
@@ -317,7 +318,8 @@ async fn post_test_requires_authentication() {
 #[rocket::async_test]
 async fn update_field_changes_test_name() {
     let mut repo = base_repo();
-    repo.verifications.insert(1, sample_test(1, 1, "Original Name"));
+    repo.verifications
+        .insert(1, sample_test(1, 1, "Original Name"));
 
     let client = test_client(repo).await;
 
@@ -489,7 +491,8 @@ async fn delete_test_requires_authentication() {
 #[rocket::async_test]
 async fn create_test_with_parent() {
     let mut repo = base_repo();
-    repo.verifications.insert(1, sample_test(1, 1, "Parent Test"));
+    repo.verifications
+        .insert(1, sample_test(1, 1, "Parent Test"));
 
     let client = test_client(repo).await;
 
@@ -522,8 +525,10 @@ async fn create_test_with_parent() {
 #[rocket::async_test]
 async fn update_test_parent() {
     let mut repo = base_repo();
-    repo.verifications.insert(1, sample_test(1, 1, "Parent Test"));
-    repo.verifications.insert(2, sample_test(2, 1, "Child Test"));
+    repo.verifications
+        .insert(1, sample_test(1, 1, "Parent Test"));
+    repo.verifications
+        .insert(2, sample_test(2, 1, "Child Test"));
 
     let client = test_client(repo).await;
 

@@ -542,7 +542,9 @@ impl ExcelImporter {
 
     fn resolve_verification_status_id(&self, status_name: &str, project_id: i32) -> Result<i32> {
         let repo = DieselRepo::new().map_err(|e| anyhow!("{}", e))?;
-        let statuses = repo.get_verification_status_all().map_err(|e| anyhow!("{}", e))?;
+        let statuses = repo
+            .get_verification_status_all()
+            .map_err(|e| anyhow!("{}", e))?;
 
         // Prefer matching within the selected project first.
         if let Some(status) = statuses

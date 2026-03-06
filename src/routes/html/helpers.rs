@@ -11,7 +11,9 @@ use rocket::serde::json::{json, Value};
 use rocket::State;
 
 use crate::app::AppState;
-use crate::helper_functions::{decorators::decorate_verifications_with_repo, get_selected_project_id};
+use crate::helper_functions::{
+    decorators::decorate_verifications_with_repo, get_selected_project_id,
+};
 use crate::models::{
     Category, DecoratedVerification, Project, ProjectMember, Requirement, User, Verification,
 };

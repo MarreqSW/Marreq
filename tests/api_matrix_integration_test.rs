@@ -263,7 +263,8 @@ fn link_sets_correct_project_id() {
     );
     repo.requirements
         .insert(100, sample_requirement(100, 42, "Req 100"));
-    repo.verifications.insert(200, sample_test(200, 42, "Test 200"));
+    repo.verifications
+        .insert(200, sample_test(200, 42, "Test 200"));
     let state = managed_state(repo);
     let service = MatrixService::new(&state);
 

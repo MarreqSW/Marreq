@@ -92,15 +92,17 @@ impl<'a> ProjectService<'a> {
             ("Analysis", "Analysis-based verification", "ANALYSIS"),
             ("Review", "Review-based verification", "REVIEW"),
         ];
-        let mut repo = self.state.repo_write();
-        for (title, description, tag) in default_methods {
-            repo.insert_new_verification_method(&NewVerificationMethod {
-                id: None,
-                title: title.to_string(),
-                description: description.to_string(),
-                tag: tag.to_string(),
-                project_id: id,
-            })?;
+        {
+            let mut repo = self.state.repo_write();
+            for (title, description, tag) in default_methods {
+                repo.insert_new_verification_method(&NewVerificationMethod {
+                    id: None,
+                    title: title.to_string(),
+                    description: description.to_string(),
+                    tag: tag.to_string(),
+                    project_id: id,
+                })?;
+            }
         }
 
         // One default category and applicability so the new-requirement form can be submitted

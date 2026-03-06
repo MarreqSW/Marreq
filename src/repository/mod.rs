@@ -105,7 +105,8 @@ pub trait RequirementsRepository {
 pub trait VerificationsRepository {
     fn get_verification_by_id(&self, verification_id: i32) -> Result<Verification, RepoError>;
     fn get_verifications_all(&self) -> Result<Vec<Verification>, RepoError>;
-    fn get_verifications_by_project(&self, project_id: i32) -> Result<Vec<Verification>, RepoError>;
+    fn get_verifications_by_project(&self, project_id: i32)
+        -> Result<Vec<Verification>, RepoError>;
     fn get_requirements_for_verification(
         &self,
         verification_id: i32,
@@ -160,15 +161,18 @@ pub trait LookupRepository {
     ) -> Result<Vec<Applicability>, RepoError>;
 
     fn get_verification_methods_all(&self) -> Result<Vec<VerificationMethod>, RepoError>;
-    fn get_verification_method_by_id(&self, verification_method_id: i32)
-        -> Result<VerificationMethod, RepoError>;
+    fn get_verification_method_by_id(
+        &self,
+        verification_method_id: i32,
+    ) -> Result<VerificationMethod, RepoError>;
     fn get_verification_methods_by_project(
         &self,
         project_id: i32,
     ) -> Result<Vec<VerificationMethod>, RepoError>;
 
     fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError>;
-    fn create_verification_status(&mut self, new: &NewVerificationStatus) -> Result<i32, RepoError>;
+    fn create_verification_status(&mut self, new: &NewVerificationStatus)
+        -> Result<i32, RepoError>;
     fn update_requirement_status(
         &mut self,
         id: i32,
@@ -180,19 +184,13 @@ pub trait LookupRepository {
         id: i32,
         payload: &NewVerificationStatus,
     ) -> Result<bool, RepoError>;
-    fn delete_verification_status(
-        &mut self,
-        id: i32,
-    ) -> Result<VerificationStatus, RepoError>;
+    fn delete_verification_status(&mut self, id: i32) -> Result<VerificationStatus, RepoError>;
 
     fn insert_new_verification_method(
         &mut self,
         new: &NewVerificationMethod,
     ) -> Result<i32, RepoError>;
-    fn edit_verification_method(
-        &mut self,
-        new: &NewVerificationMethod,
-    ) -> Result<bool, RepoError>;
+    fn edit_verification_method(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError>;
     fn delete_verification_method(
         &mut self,
         verification_method_id: i32,

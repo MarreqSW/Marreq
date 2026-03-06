@@ -29,7 +29,10 @@ async fn show_verification_statuses(
         "page_title": "Verification statuses"
     });
 
-    Ok(Template::render("verification_statuses/verification_statuses", ctx))
+    Ok(Template::render(
+        "verification_statuses/verification_statuses",
+        ctx,
+    ))
 }
 
 #[get("/<project_id>/verification_statuses/new")]
@@ -47,7 +50,10 @@ async fn new_verification_status(
         "selected_project_id": project_id,
         "page_title": "New verification status"
     });
-    Ok(Template::render("verification_statuses/new_verification_status", ctx))
+    Ok(Template::render(
+        "verification_statuses/new_verification_status",
+        ctx,
+    ))
 }
 
 #[post("/<project_id>/verification_statuses/new", data = "<form>")]
@@ -98,7 +104,10 @@ async fn get_edit_verification_status(
     }
 
     if status.is_system {
-        return Err(Redirect::to(uri!("/p", show_verification_statuses(project_id))));
+        return Err(Redirect::to(uri!(
+            "/p",
+            show_verification_statuses(project_id)
+        )));
     }
 
     let projects = get_accessible_projects(state, &user);
@@ -111,10 +120,16 @@ async fn get_edit_verification_status(
         "page_title": format!("Edit {} - Verification status", status.title)
     });
 
-    Ok(Template::render("verification_statuses/edit_verification_status", ctx))
+    Ok(Template::render(
+        "verification_statuses/edit_verification_status",
+        ctx,
+    ))
 }
 
-#[post("/<project_id>/verification_statuses/edit/<status_id>", data = "<form>")]
+#[post(
+    "/<project_id>/verification_statuses/edit/<status_id>",
+    data = "<form>"
+)]
 async fn post_edit_verification_status(
     project_access: ProjectAccess,
     project_id: i32,

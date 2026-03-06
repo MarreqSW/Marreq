@@ -31,7 +31,9 @@ impl<'a> VerificationService<'a> {
 
     /// Retrieve Verification entries scoped to a project.
     pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Verification>, RepoError> {
-        self.state.repo_read().get_verifications_by_project(project_id)
+        self.state
+            .repo_read()
+            .get_verifications_by_project(project_id)
     }
 
     /// Retrieve a single Verification by identifier.

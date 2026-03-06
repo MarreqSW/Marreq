@@ -360,8 +360,8 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::models::{
-        Applicability, Category, Project, ProjectMember, Requirement, RequirementStatus, Verification, VerificationMethod,
-        VerificationStatus,
+        Applicability, Category, Project, ProjectMember, Requirement, RequirementStatus,
+        Verification, VerificationMethod, VerificationStatus,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
@@ -497,7 +497,8 @@ mod tests {
         });
 
         repo.statuses.insert(1, sample_status(1, "Planned"));
-        repo.verification_statuses.insert(1, sample_test_status(1, "Draft"));
+        repo.verification_statuses
+            .insert(1, sample_test_status(1, "Draft"));
         repo.verification_statuses
             .insert(2, sample_test_status(2, "Proposal"));
         repo.verification_statuses

@@ -17,10 +17,10 @@ pub mod requirement_version_links;
 pub mod requirements;
 pub mod semantic_search;
 pub mod status;
-pub mod verification_status;
-pub mod verifications;
 pub mod traceability;
 pub mod users;
+pub mod verification_status;
+pub mod verifications;
 
 use rocket::Route;
 

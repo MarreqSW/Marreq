@@ -47,7 +47,9 @@ fn project_test_statuses(
     canonical
 }
 
-#[get("/<project_id>/verifications?<status_filter>&<verification_filter>&<category_filter>&<search>")]
+#[get(
+    "/<project_id>/verifications?<status_filter>&<verification_filter>&<category_filter>&<search>"
+)]
 #[allow(clippy::too_many_arguments)]
 async fn show_tests(
     project_access: ProjectAccess,
@@ -370,7 +372,9 @@ async fn new_test(
             })
             .collect();
     ctx["status"] = json!(status_with_default);
-    ctx["parents"] = json!(repo.get_verifications_by_project(project_id).unwrap_or_default());
+    ctx["parents"] = json!(repo
+        .get_verifications_by_project(project_id)
+        .unwrap_or_default());
     ctx["users"] = json!(repo.get_users_all().unwrap_or_default());
     ctx["requirements"] = json!(repo
         .get_requirements_by_project(project_id)
@@ -427,7 +431,10 @@ async fn post_test(
 
     // Link requirements
     #[cfg(debug_assertions)]
-    println!("NewVerificationForm requirements: {:#?}", new_test.verification_req);
+    println!(
+        "NewVerificationForm requirements: {:#?}",
+        new_test.verification_req
+    );
     for req in new_test.verification_req.iter() {
         let matrix_item = NewMatrixLink {
             req_id: *req,
@@ -504,7 +511,10 @@ async fn get_edit_test(
     Ok(Template::render("verifications/edit_verification", ctx))
 }
 
-#[post("/<project_id>/verifications/edit/<test_id>", data = "<edit_test_form>")]
+#[post(
+    "/<project_id>/verifications/edit/<test_id>",
+    data = "<edit_test_form>"
+)]
 async fn post_edit_test(
     project_access: ProjectAccess,
     project_id: i32,
@@ -530,10 +540,12 @@ async fn post_edit_test(
         project_id: f.project_id,
     };
 
-    service.update(&user, test_id, new_verification).map_err(|e| {
-        eprintln!("Error editing test: {e:?}");
-        to_list()
-    })?;
+    service
+        .update(&user, test_id, new_verification)
+        .map_err(|e| {
+            eprintln!("Error editing test: {e:?}");
+            to_list()
+        })?;
 
     state
         .repo_write()
@@ -583,7 +595,10 @@ async fn delete_test_route(
 
 /// POST /p/<project_id>/verifications/update-status/<test_id> — inline status update (uses same session as page).
 /// Accepts JSON body: { "status_id": 1 } for reliable parsing.
-#[post("/<project_id>/verifications/update-status/<test_id>", data = "<payload>")]
+#[post(
+    "/<project_id>/verifications/update-status/<test_id>",
+    data = "<payload>"
+)]
 async fn update_test_status_route(
     project_access: ProjectAccess,
     project_id: i32,
@@ -850,7 +865,8 @@ mod tests {
         });
 
         repo.statuses.insert(1, sample_status(1, "Planned"));
-        repo.verification_statuses.insert(1, sample_test_status(1, "Draft"));
+        repo.verification_statuses
+            .insert(1, sample_test_status(1, "Draft"));
         repo.verification_statuses
             .insert(2, sample_test_status(2, "Proposal"));
         repo.verification_statuses
@@ -867,7 +883,8 @@ mod tests {
 
     fn repo_with_tests() -> DieselRepoMock {
         let mut repo = base_repo();
-        repo.verifications.insert(1, sample_test(1, 1, "Baseline Test"));
+        repo.verifications
+            .insert(1, sample_test(1, 1, "Baseline Test"));
         repo.matrices.push(MatrixLink {
             req_id: 1,
             verification_id: 1,
@@ -977,7 +994,11 @@ mod tests {
         assert_eq!(test.name, "Thermal Check");
         assert_eq!(test.status_id, 1);
 
-        let links: Vec<_> = inner.matrices.iter().filter(|m| m.verification_id == 1).collect();
+        let links: Vec<_> = inner
+            .matrices
+            .iter()
+            .filter(|m| m.verification_id == 1)
+            .collect();
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].req_id, 1);
     }
@@ -1021,7 +1042,11 @@ mod tests {
         assert_eq!(test.name, "Updated Test");
         assert_eq!(test.status_id, 2);
 
-        let links: Vec<_> = inner.matrices.iter().filter(|m| m.verification_id == 1).collect();
+        let links: Vec<_> = inner
+            .matrices
+            .iter()
+            .filter(|m| m.verification_id == 1)
+            .collect();
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].req_id, 1);
     }

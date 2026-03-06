@@ -736,7 +736,10 @@ mod forms_tests {
             is_system: false,
             tag_color: None,
         };
-        assert_eq!(NewVerificationStatus::entity_type(), EntityType::Verification);
+        assert_eq!(
+            NewVerificationStatus::entity_type(),
+            EntityType::Verification
+        );
         assert_eq!(s.display_name(), "Pass");
     }
 

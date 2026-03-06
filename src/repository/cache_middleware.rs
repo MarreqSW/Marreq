@@ -402,7 +402,8 @@ impl<R: Repository> VerificationsRepository for CacheRepository<R> {
     ) -> Result<Vec<Requirement>, RepoError> {
         let key = keys::LinkedRequirements::for_test(verification_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_requirements_for_verification(verification_id)
+            self.inner
+                .get_requirements_for_verification(verification_id)
         })
     }
 
@@ -490,9 +491,11 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
     }
 
     fn get_verification_status_all(&self) -> Result<Vec<VerificationStatus>, RepoError> {
-        self.get_or_fetch(keys::VERIFICATION_STATUS_ALL, Duration::from_secs(900), || {
-            self.inner.get_verification_status_all()
-        })
+        self.get_or_fetch(
+            keys::VERIFICATION_STATUS_ALL,
+            Duration::from_secs(900),
+            || self.inner.get_verification_status_all(),
+        )
     }
 
     fn get_verification_status_by_project(
@@ -570,7 +573,8 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
     ) -> Result<VerificationMethod, RepoError> {
         let key = keys::VerificationMethod::by_id(verification_method_id);
         self.get_or_fetch(&key, Duration::from_secs(600), || {
-            self.inner.get_verification_method_by_id(verification_method_id)
+            self.inner
+                .get_verification_method_by_id(verification_method_id)
         })
     }
 
@@ -598,7 +602,8 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
     ) -> Result<i32, RepoError> {
         let id = self.inner.create_verification_status(new)?;
         self.cache.invalidate_status(id);
-        self.cache.invalidate_verification_status_by_project(new.project_id);
+        self.cache
+            .invalidate_verification_status_by_project(new.project_id);
         Ok(id)
     }
 
@@ -638,10 +643,7 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_verification_status(
-        &mut self,
-        id: i32,
-    ) -> Result<VerificationStatus, RepoError> {
+    fn delete_verification_status(&mut self, id: i32) -> Result<VerificationStatus, RepoError> {
         let status = self.inner.delete_verification_status(id)?;
         self.cache.invalidate_status(id);
         self.cache
@@ -659,10 +661,7 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         Ok(id)
     }
 
-    fn edit_verification_method(
-        &mut self,
-        new: &NewVerificationMethod,
-    ) -> Result<bool, RepoError> {
+    fn edit_verification_method(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError> {
         let res = self.inner.edit_verification_method(new)?;
         if let Some(id) = new.id {
             self.cache.invalidate_verification_method(id);
@@ -675,8 +674,11 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         &mut self,
         verification_method_id: i32,
     ) -> Result<VerificationMethod, RepoError> {
-        let verification = self.inner.delete_verification_method(verification_method_id)?;
-        self.cache.invalidate_verification_method(verification_method_id);
+        let verification = self
+            .inner
+            .delete_verification_method(verification_method_id)?;
+        self.cache
+            .invalidate_verification_method(verification_method_id);
         self.cache.invalidate_project(verification.project_id);
         Ok(verification)
     }
@@ -1470,7 +1472,8 @@ mod tests {
         repo.edit_verification(&edit_test).unwrap();
         assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());
 
-        repo.update_verification_requirement_links(tid, &[1]).unwrap();
+        repo.update_verification_requirement_links(tid, &[1])
+            .unwrap();
         assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());
         assert!(cache.get(&keys::Requirements::by_id(1)).is_none());
 

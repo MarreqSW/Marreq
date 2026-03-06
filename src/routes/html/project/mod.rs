@@ -12,11 +12,11 @@ mod reports;
 pub mod reqif;
 mod requirement_statuses;
 pub mod requirements;
+#[cfg(any(test, feature = "test-helpers"))]
+pub mod test_helpers;
 mod verification;
 mod verification_statuses;
 mod verifications;
-#[cfg(any(test, feature = "test-helpers"))]
-pub mod test_helpers;
 
 use super::helpers;
 use super::projects;

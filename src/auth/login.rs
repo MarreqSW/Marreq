@@ -20,11 +20,7 @@ pub fn login_user<R: Repository>(
     login_form: &LoginForm,
     cookies: &CookieJar<'_>,
 ) -> Result<(), AuthError> {
-    let user = authenticate_user(
-        &*repo,
-        &login_form.username,
-        login_form.password.trim(),
-    )?;
+    let user = authenticate_user(&*repo, &login_form.username, login_form.password.trim())?;
 
     // Store session information.
     set_session_cookie(cookies, user.id);

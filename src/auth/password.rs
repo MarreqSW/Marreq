@@ -28,6 +28,7 @@ pub fn hash_password(password: &str) -> Result<String, PasswordCryptoError> {
 }
 
 pub fn verify_password(password: &str, hash: &str) -> Result<bool, PasswordCryptoError> {
+    let hash = hash.trim();
     if hash.starts_with("$argon2") {
         let parsed =
             PasswordHash::new(hash).map_err(|e| PasswordCryptoError::Argon2(e.to_string()))?;
@@ -260,5 +261,16 @@ mod tests {
 
         let result = admin_set_user_password(&mut repo, 4, "new-password-123");
         assert!(result.is_err());
+    }
+
+    /// Hash used in migrations and scripts/init_complete.sql for seeded users (password: ChangeMe123!).
+    #[test]
+    fn seeded_demo_password_hash_verifies() {
+        const SEEDED_HASH: &str =
+            "$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0";
+        assert!(
+            verify_password("ChangeMe123!", SEEDED_HASH).unwrap(),
+            "Seeded demo password must verify; update migrations/ and scripts/ with a hash from hash_password(\"ChangeMe123!\")"
+        );
     }
 }

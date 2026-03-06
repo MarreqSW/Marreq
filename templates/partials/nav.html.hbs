@@ -7,7 +7,15 @@
 
     <div class="nav-right c-navbar__right">
       <ul class="nav-menu c-navbar__menu">
-        <li class="c-navbar__item"><a href="/" class="nav-link c-navbar__link">Home</a></li>
+        <li class="c-navbar__item">
+        {{#if project.id}}
+        <a href="/p/{{project.id}}" class="nav-link c-navbar__link">Home</a>
+        {{else if selected_project_id}}
+        <a href="/p/{{selected_project_id}}" class="nav-link c-navbar__link">Home</a>
+        {{else}}
+        <a href="/" class="nav-link c-navbar__link">Home</a>
+        {{/if}}
+        </li>
         <li class="nav-item dropdown c-navbar__item">
           <a class="nav-link dropdown-toggle c-navbar__link c-navbar__link--toggle" href="#" role="button"
             data-bs-toggle="dropdown" aria-expanded="false">

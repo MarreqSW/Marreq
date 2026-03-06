@@ -15,21 +15,21 @@ pub struct FieldUpdateRequest {
     pub value: String,
 }
 
-#[get("/tests")]
+#[get("/verifications")]
 pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Verification>>> {
     let service = VerificationService::new(state.inner());
     let verifications = service.list_all()?;
     Ok(Json(verifications))
 }
 
-#[get("/tests/<id>")]
+#[get("/verifications/<id>")]
 pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Verification>> {
     let service = VerificationService::new(state.inner());
     let verification = service.get_by_id(id)?;
     Ok(Json(verification))
 }
 
-#[post("/tests", data = "<payload>")]
+#[post("/verifications", data = "<payload>")]
 pub async fn create(
     user: ApiUser,
     state: &State<AppState>,
@@ -41,14 +41,14 @@ pub async fn create(
     Ok(json!({ "status": "ok", "id": id }))
 }
 
-#[delete("/tests/<id>")]
+#[delete("/verifications/<id>")]
 pub async fn delete(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Status> {
     let service = VerificationService::new(state.inner());
     service.delete(user.user(), id)?;
     Ok(Status::NoContent)
 }
 
-#[post("/tests/<id>/field", data = "<update>")]
+#[post("/verifications/<id>/field", data = "<update>")]
 pub async fn update_field(
     user: ApiUser,
     id: i32,
@@ -145,14 +145,14 @@ mod tests {
         cookie
     }
 
-    fn sample_test(name: &str) -> Value {
+    fn sample_verification(name: &str) -> Value {
         json!({
             "id": null,
             "name": name,
             "description": format!("{name} description"),
             "source": "manual",
             "status_id": 1,
-            "reference_code": "T-1",
+            "reference_code": "VER-001",
             "parent_id": null,
             "project_id": 1
         })
@@ -162,7 +162,7 @@ mod tests {
     async fn list_returns_empty_array() {
         let client = client_with_repo(DieselRepoMock::default()).await;
         let response = client
-            .get("/api/tests")
+            .get("/api/verifications")
             .private_cookie(auth_cookie())
             .dispatch()
             .await;
@@ -175,10 +175,10 @@ mod tests {
     async fn create_returns_identifier() {
         let client = client_with_repo(DieselRepoMock::default()).await;
         let response = client
-            .post("/api/tests")
+            .post("/api/verifications")
             .header(ContentType::JSON)
             .private_cookie(auth_cookie())
-            .body(sample_test("Baseline").to_string())
+            .body(sample_verification("Baseline").to_string())
             .dispatch()
             .await;
 
@@ -192,17 +192,17 @@ mod tests {
     async fn update_field_changes_name() {
         let client = client_with_repo(DieselRepoMock::default()).await;
         let create_response = client
-            .post("/api/tests")
+            .post("/api/verifications")
             .header(ContentType::JSON)
             .private_cookie(auth_cookie())
-            .body(sample_test("Scenario").to_string())
+            .body(sample_verification("Scenario").to_string())
             .dispatch()
             .await;
         let created: Value = create_response.into_json().await.unwrap();
         let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
 
         let response = client
-            .post(format!("/api/tests/{id}/field"))
+            .post(format!("/api/verifications/{id}/field"))
             .header(ContentType::JSON)
             .private_cookie(auth_cookie())
             .body(
@@ -220,7 +220,7 @@ mod tests {
         assert_eq!(payload.get("success"), Some(&Value::from(true)));
 
         let get_response = client
-            .get(format!("/api/tests/{id}"))
+            .get(format!("/api/verifications/{id}"))
             .private_cookie(auth_cookie())
             .dispatch()
             .await;
@@ -229,27 +229,27 @@ mod tests {
     }
 
     #[rocket::async_test]
-    async fn delete_removes_test() {
+    async fn delete_removes_verification() {
         let client = client_with_repo(DieselRepoMock::default()).await;
         let create_response = client
-            .post("/api/tests")
+            .post("/api/verifications")
             .header(ContentType::JSON)
             .private_cookie(auth_cookie())
-            .body(sample_test("Disposable").to_string())
+            .body(sample_verification("Disposable").to_string())
             .dispatch()
             .await;
         let created: Value = create_response.into_json().await.unwrap();
         let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
 
         let delete_response = client
-            .delete(format!("/api/tests/{id}"))
+            .delete(format!("/api/verifications/{id}"))
             .private_cookie(auth_cookie())
             .dispatch()
             .await;
         assert_eq!(delete_response.status(), Status::NoContent);
 
         let not_found = client
-            .get(format!("/api/tests/{id}"))
+            .get(format!("/api/verifications/{id}"))
             .private_cookie(auth_cookie())
             .dispatch()
             .await;

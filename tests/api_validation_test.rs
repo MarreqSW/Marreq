@@ -375,7 +375,7 @@ async fn create_test_with_missing_fields_returns_error() {
     });
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(payload.to_string())
@@ -411,7 +411,7 @@ async fn update_test_field_with_invalid_field_name_returns_error() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -448,7 +448,7 @@ async fn update_test_field_with_invalid_status_value_returns_error() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())

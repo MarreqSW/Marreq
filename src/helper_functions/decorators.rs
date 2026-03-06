@@ -359,7 +359,7 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             1,
             VerificationMethod {
                 id: 1,
@@ -624,9 +624,9 @@ mod tests {
     #[test]
     fn decorate_tests_impl_covers_branches() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
@@ -637,9 +637,9 @@ mod tests {
             },
         );
         // parent test for branch
-        repo.tests.insert(
+        repo.verifications.insert(
             10,
-            TestCase {
+            Verification {
                 id: 10,
                 name: "Parent".into(),
                 description: String::new(),
@@ -651,7 +651,7 @@ mod tests {
             },
         );
 
-        let t1 = TestCase {
+        let t1 = Verification {
             id: 20,
             name: "T1".into(),
             description: String::new(),
@@ -661,7 +661,7 @@ mod tests {
             parent_id: None,
             project_id: 1,
         };
-        let t2 = TestCase {
+        let t2 = Verification {
             id: 21,
             name: "T2".into(),
             description: String::new(),
@@ -671,7 +671,7 @@ mod tests {
             parent_id: Some(10),
             project_id: 1,
         };
-        let t3 = TestCase {
+        let t3 = Verification {
             id: 22,
             name: "T3".into(),
             description: String::new(),
@@ -682,17 +682,17 @@ mod tests {
             project_id: 1,
         };
 
-        let decorated = decorate_tests_impl(&repo, vec![t1, t2, t3]);
+        let decorated = decorate_verifications_impl(&repo, vec![t1, t2, t3]);
         assert_eq!(decorated.len(), 3);
         assert_eq!(decorated[0].status_id, "Open");
-        assert_eq!(decorated[0].test_parent_title, "");
+        assert_eq!(decorated[0].verification_parent_title, "");
         assert_eq!(decorated[1].status_id, "Unknown Status (99)");
-        assert_eq!(decorated[1].test_parent_title, "Parent");
-        assert_eq!(decorated[2].test_parent_title, "");
+        assert_eq!(decorated[1].verification_parent_title, "Parent");
+        assert_eq!(decorated[2].verification_parent_title, "");
     }
 
     #[test]
-    fn get_linked_tests_for_requirement_impl_works() {
+    fn get_linked_verifications_for_requirement_impl_works() {
         let now = dt();
         let mut repo = DieselRepoMock::default();
         repo.requirement_statuses.insert(
@@ -707,9 +707,9 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
@@ -742,7 +742,7 @@ mod tests {
             approved_at: None,
             custom_fields: None,
         };
-        let test = TestCase {
+        let test = Verification {
             id: 10,
             name: "T".into(),
             description: String::new(),
@@ -753,10 +753,10 @@ mod tests {
             project_id: 1,
         };
         repo.requirements.insert(1, req);
-        repo.tests.insert(10, test);
+        repo.verifications.insert(10, test);
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 10,
+            verification_id: 10,
             creation_date: now,
             project_id: 1,
             suspect: false,
@@ -768,14 +768,14 @@ mod tests {
             triggering_user_id: None,
         });
 
-        let result = get_linked_tests_for_requirement_impl(&repo, 1).unwrap();
+        let result = get_linked_verifications_for_requirement_impl(&repo, 1).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].name, "T");
         assert_eq!(result[0].status_id, "Open");
     }
 
     #[test]
-    fn get_linked_tests_for_requirement_impl_empty_when_no_links() {
+    fn get_linked_verifications_for_requirement_impl_empty_when_no_links() {
         let now = dt();
         let mut repo = DieselRepoMock::default();
         let req = Requirement {
@@ -805,7 +805,7 @@ mod tests {
         // matrix for different requirement
         repo.matrices.push(MatrixLink {
             req_id: 99,
-            test_id: 50,
+            verification_id: 50,
             creation_date: now,
             project_id: 1,
             suspect: false,
@@ -817,19 +817,19 @@ mod tests {
             triggering_user_id: None,
         });
 
-        let result = get_linked_tests_for_requirement_impl(&repo, 2).unwrap();
+        let result = get_linked_verifications_for_requirement_impl(&repo, 2).unwrap();
         assert!(result.is_empty());
     }
 
     #[test]
-    fn get_linked_tests_for_requirement_impl_errors_when_req_missing() {
+    fn get_linked_verifications_for_requirement_impl_errors_when_req_missing() {
         let repo = DieselRepoMock::default();
-        let err = get_linked_tests_for_requirement_impl(&repo, 123).unwrap_err();
+        let err = get_linked_verifications_for_requirement_impl(&repo, 123).unwrap_err();
         matches!(err, RepoError::NotFound);
     }
 
     #[test]
-    fn get_linked_tests_for_requirement_impl_errors_when_test_missing() {
+    fn get_linked_verifications_for_requirement_impl_errors_when_test_missing() {
         let now = dt();
         let mut repo = DieselRepoMock::default();
         let req = Requirement {
@@ -858,7 +858,7 @@ mod tests {
         repo.requirements.insert(3, req);
         repo.matrices.push(MatrixLink {
             req_id: 3,
-            test_id: 999,
+            verification_id: 999,
             creation_date: now,
             project_id: 1,
             suspect: false,
@@ -870,6 +870,6 @@ mod tests {
             triggering_user_id: None,
         });
 
-        assert!(get_linked_tests_for_requirement_impl(&repo, 3).is_err());
+        assert!(get_linked_verifications_for_requirement_impl(&repo, 3).is_err());
     }
 }

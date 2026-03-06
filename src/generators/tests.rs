@@ -52,8 +52,8 @@ mod tests {
     }
 
     // Helper to create a sample test case
-    fn sample_test_case(id: i32, project_id: i32) -> TestCase {
-        TestCase {
+    fn sample_test_case(id: i32, project_id: i32) -> Verification {
+        Verification {
             id,
             name: format!("Test {}", id),
             reference_code: format!("TEST-{:03}", id),
@@ -107,8 +107,8 @@ mod tests {
     }
 
     // Helper to create a sample decorated test case
-    fn sample_decorated_test_case(id: i32) -> DecoratedTestCase {
-        DecoratedTestCase {
+    fn sample_decorated_test_case(id: i32) -> DecoratedVerification {
+        DecoratedVerification {
             id,
             reference_code: format!("TEST-{:03}", id),
             name: format!("Test {}", id),
@@ -116,16 +116,16 @@ mod tests {
             source: format!("test_{}.rs", id),
             status_id: "Passed".to_string(),
             status_variant: "passed".to_string(),
-            test_status_id: 1,
+            verification_status_id: 1,
             status_tag_color: None,
-            test_parent_id: None,
-            test_parent_title: "".to_string(),
-            test_parent_reference_code: "".to_string(),
-            test_parent_description: "".to_string(),
-            test_parent_status_id: "".to_string(),
-            test_parent_status_variant: "".to_string(),
-            test_parent_status_tag_color: None,
-            test_parent_source: "".to_string(),
+            verification_parent_id: None,
+            verification_parent_title: "".to_string(),
+            verification_parent_reference_code: "".to_string(),
+            verification_parent_description: "".to_string(),
+            verification_parent_status_id: "".to_string(),
+            verification_parent_status_variant: "".to_string(),
+            verification_parent_status_tag_color: None,
+            verification_parent_source: "".to_string(),
             project_id: 1,
         }
     }
@@ -174,10 +174,10 @@ mod tests {
         #[test]
         fn decorated_test_case_with_parent() {
             let mut test = sample_decorated_test_case(2);
-            test.test_parent_id = Some(1);
-            test.test_parent_title = "Parent Test".to_string();
-            assert_eq!(test.test_parent_id, Some(1));
-            assert_eq!(test.test_parent_title, "Parent Test");
+            test.verification_parent_id = Some(1);
+            test.verification_parent_title = "Parent Test".to_string();
+            assert_eq!(test.verification_parent_id, Some(1));
+            assert_eq!(test.verification_parent_title, "Parent Test");
         }
 
         #[test]
@@ -214,7 +214,7 @@ mod tests {
 
         #[test]
         fn empty_tests_list() {
-            let tests: Vec<TestCase> = vec![];
+            let tests: Vec<Verification> = vec![];
             assert_eq!(tests.len(), 0);
         }
 
@@ -226,7 +226,7 @@ mod tests {
 
         #[test]
         fn empty_decorated_tests_list() {
-            let tests: Vec<DecoratedTestCase> = vec![];
+            let tests: Vec<DecoratedVerification> = vec![];
             assert_eq!(tests.len(), 0);
         }
     }
@@ -539,7 +539,7 @@ mod tests {
         fn empty_matrix_scenario() {
             // Test behavior with no requirements or tests
             let reqs: Vec<DecoratedRequirement> = vec![];
-            let tests: Vec<DecoratedTestCase> = vec![];
+            let tests: Vec<DecoratedVerification> = vec![];
 
             assert_eq!(reqs.len(), 0);
             assert_eq!(tests.len(), 0);

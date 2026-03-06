@@ -232,7 +232,7 @@ function initCreateTestModal() {
     successMessage: 'Test added successfully',
     errorMessage: 'Error adding test',
     handleSubmit: async ({ data }) => {
-      await postJson('/api/tests', data);
+      await postJson('/api/verifications', data);
       setTimeout(() => window.location.reload(), 600);
     },
   });

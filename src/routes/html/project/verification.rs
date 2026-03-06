@@ -245,7 +245,7 @@ mod tests {
         repo.users.insert(ADMIN_ID, admin);
         repo.projects
             .insert(PRIMARY_PROJECT, sample_project(PRIMARY_PROJECT, "Mars"));
-        repo.verifications
+        repo.verification_methods
             .insert(1, sample_verification(1, PRIMARY_PROJECT, "Analysis"));
         repo.project_members.push(ProjectMember {
             project_id: PRIMARY_PROJECT,
@@ -314,7 +314,7 @@ mod tests {
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
         let list = repo
-            .get_verification_by_project(PRIMARY_PROJECT)
+            .get_verification_methods_by_project(PRIMARY_PROJECT)
             .expect("verifications");
         assert_eq!(list.len(), 2);
         assert!(list.iter().any(|v| v.title == "Test"));
@@ -334,7 +334,7 @@ mod tests {
     async fn get_edit_verification_redirects_when_project_mismatch() {
         let mut repo = base_repo();
         repo.projects.insert(2, sample_project(2, "Venus"));
-        repo.verifications
+        repo.verification_methods
             .insert(2, sample_verification(2, 2, "Review"));
         let client = test_client(repo).await;
         let response = get_with_session(&client, "/p/1/verification/edit/2", ADMIN_ID).await;
@@ -364,7 +364,7 @@ mod tests {
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
-        let verification = repo.get_verification_by_id(1).expect("verification");
+        let verification = repo.get_verification_method_by_id(1).expect("verification");
         assert_eq!(verification.title, "Analysis Rev");
         assert_eq!(verification.description, "Updated desc");
     }
@@ -373,7 +373,7 @@ mod tests {
     async fn post_edit_verification_redirects_when_project_mismatch() {
         let mut repo = base_repo();
         repo.projects.insert(2, sample_project(2, "Venus"));
-        repo.verifications
+        repo.verification_methods
             .insert(2, sample_verification(2, 2, "Review"));
         let client = test_client(repo).await;
         let response = post_form_with_session(
@@ -392,7 +392,7 @@ mod tests {
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
-        let verification = repo.get_verification_by_id(2).expect("verification");
+        let verification = repo.get_verification_method_by_id(2).expect("verification");
         assert_eq!(verification.project_id, 2);
     }
 
@@ -405,7 +405,7 @@ mod tests {
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
         let list = repo
-            .get_verification_by_project(PRIMARY_PROJECT)
+            .get_verification_methods_by_project(PRIMARY_PROJECT)
             .expect("verifications");
         assert!(list.is_empty());
     }
@@ -414,7 +414,7 @@ mod tests {
     async fn delete_verification_route_redirects_on_project_mismatch() {
         let mut repo = base_repo();
         repo.projects.insert(2, sample_project(2, "Venus"));
-        repo.verifications
+        repo.verification_methods
             .insert(2, sample_verification(2, 2, "Review"));
         let client = test_client(repo).await;
         let response = delete_with_session(&client, "/p/1/verification/delete/2", ADMIN_ID).await;
@@ -426,7 +426,7 @@ mod tests {
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
-        assert!(repo.get_verification_by_id(2).is_ok());
+        assert!(repo.get_verification_method_by_id(2).is_ok());
     }
 
     #[rocket::async_test]

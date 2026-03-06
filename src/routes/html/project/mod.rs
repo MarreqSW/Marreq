@@ -12,11 +12,11 @@ mod reports;
 pub mod reqif;
 mod requirement_statuses;
 pub mod requirements;
-mod test_cases;
+mod verification;
+mod verification_statuses;
+mod verifications;
 #[cfg(any(test, feature = "test-helpers"))]
 pub mod test_helpers;
-mod test_statuses;
-mod verification;
 
 use super::helpers;
 use super::projects;
@@ -52,13 +52,13 @@ pub fn routes() -> Vec<Route> {
     routes.extend(categories::routes());
     routes.extend(custom_fields::routes());
     routes.extend(requirement_statuses::routes());
-    routes.extend(test_statuses::routes());
+    routes.extend(verification_statuses::routes());
     routes.extend(matrix::routes());
     routes.extend(members::routes());
     routes.extend(reports::routes());
     routes.extend(reqif::routes());
     routes.extend(requirements::routes());
-    routes.extend(test_cases::routes());
+    routes.extend(verifications::routes());
     routes.extend(verification::routes());
     routes.extend(project_routes::routes());
     routes

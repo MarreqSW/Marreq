@@ -55,7 +55,7 @@
           </td>
           <td class="marreq-requirements-row__cell marreq-requirements-row__cell--title">
             <a
-              href="/p/{{../project.id}}/tests/show/{{id}}"
+              href="/p/{{../project.id}}/verifications/show/{{id}}"
               class="marreq-requirements-title"
               title="{{name}}"
               data-test-preview
@@ -85,7 +85,7 @@
           <td class="marreq-requirements-row__cell marreq-requirements-row__cell--parent">
             {{#if test_parent_title}}
               <a
-                href="/p/{{../project.id}}/tests/show/{{test_parent_id}}"
+                href="/p/{{../project.id}}/verifications/show/{{test_parent_id}}"
                 title="{{test_parent_title}}"
                 data-test-preview
                 data-test-preview-project-id="{{../project.id}}"
@@ -104,7 +104,7 @@
           <td class="marreq-requirements-row__cell marreq-requirements-row__cell--actions">
             <div class="marreq-requirements-row__actions">
               <a 
-                href="/p/{{../project.id}}/tests/show/{{id}}" 
+                href="/p/{{../project.id}}/verifications/show/{{id}}" 
                 class="marreq-requirements-row__action marreq-requirements-row__action--icon"
                 title="View test">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
@@ -115,7 +115,7 @@
               </a>
               {{#if ../can_edit_requirements}}
               <a 
-                href="/p/{{../project.id}}/tests/edit/{{id}}" 
+                href="/p/{{../project.id}}/verifications/edit/{{id}}" 
                 class="marreq-requirements-row__action marreq-requirements-row__action--icon"
                 title="Edit test">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
@@ -162,7 +162,7 @@
                 <dt>Parent</dt>
                 <dd>
                   {{#if test_parent_id}}
-                    <a href="/p/{{../project.id}}/tests/show/{{test_parent_id}}">{{test_parent_title}}</a>
+                    <a href="/p/{{../project.id}}/verifications/show/{{test_parent_id}}">{{test_parent_title}}</a>
                   {{else}}
                     —
                   {{/if}}
@@ -181,6 +181,6 @@
     <button type="button" class="marreq-requirements-pagination__button is-disabled" disabled aria-disabled="true">Next</button>
   </nav>
   {{else}}
-  {{> tests/_empty_state}}
+  {{> verifications/_empty_state}}
   {{/if}}
 </section>

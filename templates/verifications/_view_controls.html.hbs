@@ -20,7 +20,7 @@
       </button>
     </div>
     {{#if project.id}}
-    <a href="/p/{{project.id}}/tests.xls" class="btn btn-outline-secondary btn-sm">
+    <a href="/p/{{project.id}}/verifications.xls" class="btn btn-outline-secondary btn-sm">
       Export
     </a>
     {{#if is_admin}}
@@ -41,17 +41,17 @@
   </div>
   {{#if project.id}}
   {{#if can_edit_requirements}}
-  <a href="/p/{{project.id}}/tests/new" class="btn btn-primary marreq-requirements-header__primary" id="newTestButton">
-    New Test
+  <a href="/p/{{project.id}}/verifications/new" class="btn btn-primary marreq-requirements-header__primary" id="newVerificationButton">
+    New Verification
   </a>
   {{else}}
-  <button type="button" class="btn btn-primary marreq-requirements-header__primary" id="newTestButton" disabled aria-disabled="true">
-    New Test
+  <button type="button" class="btn btn-primary marreq-requirements-header__primary" id="newVerificationButton" disabled aria-disabled="true">
+    New Verification
   </button>
   {{/if}}
   {{else}}
-  <button type="button" class="btn btn-primary marreq-requirements-header__primary" id="newTestButton" disabled aria-disabled="true">
-    New Test
+  <button type="button" class="btn btn-primary marreq-requirements-header__primary" id="newVerificationButton" disabled aria-disabled="true">
+    New Verification
   </button>
   {{/if}}
 </div>

@@ -449,8 +449,8 @@ mod tests {
 
         #[test]
         fn tests_workbook_path() {
-            let path = "target/tests.xls";
-            assert_eq!(path, "target/tests.xls");
+            let path = "target/verifications.xls";
+            assert_eq!(path, "target/verifications.xls");
             assert!(path.ends_with(".xls"));
         }
 

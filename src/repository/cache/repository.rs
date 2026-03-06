@@ -400,7 +400,9 @@ mod tests {
         assert!(cache
             .get(&keys::RequirementStatus::by_project(pid))
             .is_none());
-        assert!(cache.get(&keys::VerificationStatus::by_project(pid)).is_none());
+        assert!(cache
+            .get(&keys::VerificationStatus::by_project(pid))
+            .is_none());
         assert!(cache.get(&keys::Projects::by_id(pid)).is_none());
         assert!(cache.get(&keys::ProjectMembers::by_project(pid)).is_none());
         assert!(cache.get(keys::PROJECTS_ALL).is_none());
@@ -436,7 +438,10 @@ mod tests {
         let cache = Cache::new(300);
         let rid = 42;
         cache.set(&keys::Requirements::by_id(rid), "r".to_string());
-        cache.set(&keys::LinkedVerifications::for_requirement(rid), "lt".to_string());
+        cache.set(
+            &keys::LinkedVerifications::for_requirement(rid),
+            "lt".to_string(),
+        );
         cache.set(&keys::RequirementTitle::by_id(rid), "rt".to_string());
         cache.set(keys::REQUIREMENTS_ALL, "ra".to_string());
         cache.invalidate_requirement(rid);

@@ -489,7 +489,11 @@ impl fmt::Display for RequirementStatus {
 
 impl fmt::Display for MatrixLink {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Matrix: Req {} <-> Verification {}", self.req_id, self.verification_id)
+        write!(
+            f,
+            "Matrix: Req {} <-> Verification {}",
+            self.req_id, self.verification_id
+        )
     }
 }
 
@@ -547,5 +551,10 @@ impl_loggable!(Requirement, EntityType::Requirement, project_id, title);
 impl_loggable!(Category, EntityType::Category, project_id, title);
 impl_loggable!(Applicability, EntityType::Applicability, project_id, title);
 impl_loggable!(Verification, EntityType::Verification, project_id, name);
-impl_loggable!(VerificationMethod, EntityType::VerificationMethod, project_id, title);
+impl_loggable!(
+    VerificationMethod,
+    EntityType::VerificationMethod,
+    project_id,
+    title
+);
 impl_loggable!(User, EntityType::User, username, no_project);

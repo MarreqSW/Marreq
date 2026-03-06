@@ -433,11 +433,13 @@ impl LookupRepository for DieselRepoMock {
         &mut self,
         new: &NewVerificationMethod,
     ) -> Result<i32, RepoError> {
-        let id = new
-            .id
-            .unwrap_or_else(|| {
-                self.verification_methods.keys().max().map(|i| i + 1).unwrap_or(1)
-            });
+        let id = new.id.unwrap_or_else(|| {
+            self.verification_methods
+                .keys()
+                .max()
+                .map(|i| i + 1)
+                .unwrap_or(1)
+        });
         let verification = VerificationMethod {
             id,
             title: new.title.clone(),
@@ -449,10 +451,7 @@ impl LookupRepository for DieselRepoMock {
         Ok(id)
     }
 
-    fn edit_verification_method(
-        &mut self,
-        new: &NewVerificationMethod,
-    ) -> Result<bool, RepoError> {
+    fn edit_verification_method(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError> {
         let id = new.id.ok_or(RepoError::NotFound)?;
         match self.verification_methods.get_mut(&id) {
             Some(v) => {
@@ -570,11 +569,13 @@ impl LookupRepository for DieselRepoMock {
         &mut self,
         new: &NewVerificationStatus,
     ) -> Result<i32, RepoError> {
-        let id = new
-            .id
-            .unwrap_or_else(|| {
-                self.verification_statuses.keys().max().map(|i| i + 1).unwrap_or(1)
-            });
+        let id = new.id.unwrap_or_else(|| {
+            self.verification_statuses
+                .keys()
+                .max()
+                .map(|i| i + 1)
+                .unwrap_or(1)
+        });
         let status = VerificationStatus {
             id,
             title: new.title.clone(),
@@ -655,10 +656,7 @@ impl LookupRepository for DieselRepoMock {
         Ok(true)
     }
 
-    fn delete_verification_status(
-        &mut self,
-        id: i32,
-    ) -> Result<VerificationStatus, RepoError> {
+    fn delete_verification_status(&mut self, id: i32) -> Result<VerificationStatus, RepoError> {
         let status = self
             .verification_statuses
             .get(&id)
@@ -673,7 +671,9 @@ impl LookupRepository for DieselRepoMock {
                 "Cannot delete status: it is in use by verifications".into(),
             ));
         }
-        self.verification_statuses.remove(&id).ok_or(RepoError::NotFound)
+        self.verification_statuses
+            .remove(&id)
+            .ok_or(RepoError::NotFound)
     }
 }
 
@@ -1151,7 +1151,8 @@ impl VerificationsRepository for DieselRepoMock {
         _verification_id: i32,
         _requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
-        self.matrices.retain(|m| m.verification_id != _verification_id);
+        self.matrices
+            .retain(|m| m.verification_id != _verification_id);
         let project_id = self
             .verifications
             .get(&_verification_id)

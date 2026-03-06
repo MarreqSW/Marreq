@@ -73,7 +73,10 @@ pub async fn post_verification(
         ..form.into_inner()
     };
 
-    if let Err(_err) = state.repo_write().insert_new_verification_method(&new_verification) {
+    if let Err(_err) = state
+        .repo_write()
+        .insert_new_verification_method(&new_verification)
+    {
         #[cfg(debug_assertions)]
         eprintln!("Error inserting verification method: {_err:?}");
         return Ok(Redirect::to(new_url));
@@ -179,7 +182,10 @@ pub async fn delete_verification_route(
         )));
     }
 
-    match state.repo_write().delete_verification_method(verification_id) {
+    match state
+        .repo_write()
+        .delete_verification_method(verification_id)
+    {
         Ok(_) => Ok(Status::Ok),
         Err(_err) => {
             #[cfg(debug_assertions)]

@@ -20,7 +20,8 @@ fn get_details(
     (
         repo.get_requirements_by_project(project_id)
             .unwrap_or_default(),
-        repo.get_verifications_by_project(project_id).unwrap_or_default(),
+        repo.get_verifications_by_project(project_id)
+            .unwrap_or_default(),
         repo.get_categories_by_project(project_id)
             .unwrap_or_default(),
     )
@@ -330,7 +331,8 @@ mod tests {
         repo.requirement_statuses
             .insert(2, sample_status(2, "In Review"));
         repo.requirements.insert(1, sample_requirement(1));
-        repo.verifications.insert(1, sample_verification(1, 1, "System Validation"));
+        repo.verifications
+            .insert(1, sample_verification(1, 1, "System Validation"));
         repo.matrices.push(MatrixLink {
             req_id: 1,
             verification_id: 1,

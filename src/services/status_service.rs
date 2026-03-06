@@ -94,7 +94,9 @@ impl<'a> StatusService<'a> {
         project_id: i32,
         title: &str,
     ) -> Option<VerificationStatus> {
-        let statuses = self.list_verification_statuses_by_project(project_id).ok()?;
+        let statuses = self
+            .list_verification_statuses_by_project(project_id)
+            .ok()?;
         statuses
             .into_iter()
             .find(|s| s.title.eq_ignore_ascii_case(title))
@@ -112,10 +114,7 @@ impl<'a> StatusService<'a> {
 
     /// Build a map from status id → title for all verification statuses in a project.
     /// Useful for resolving a verification's `status_id` FK to a semantic name.
-    pub fn verification_status_id_to_title_map(
-        &self,
-        project_id: i32,
-    ) -> HashMap<i32, String> {
+    pub fn verification_status_id_to_title_map(&self, project_id: i32) -> HashMap<i32, String> {
         self.list_verification_statuses_by_project(project_id)
             .unwrap_or_default()
             .into_iter()
@@ -249,10 +248,7 @@ impl<'a> StatusService<'a> {
     }
 
     /// Delete a verification status. Fails if system or in use.
-    pub fn delete_verification_status(
-        &self,
-        id: i32,
-    ) -> Result<VerificationStatus, RepoError> {
+    pub fn delete_verification_status(&self, id: i32) -> Result<VerificationStatus, RepoError> {
         let status = self.get_verification_status(id)?;
         if status.is_system {
             return Err(RepoError::BadInput("Cannot delete system status".into()));
@@ -611,7 +607,11 @@ mod tests {
         let id = service.create_verification_status(payload).unwrap();
 
         let repo_guard = state.repo_read();
-        let stored = repo_guard.inner_repo().verification_statuses.get(&id).unwrap();
+        let stored = repo_guard
+            .inner_repo()
+            .verification_statuses
+            .get(&id)
+            .unwrap();
         assert_eq!(stored.title, "In Progress");
         assert_eq!(stored.description, "Description");
         assert_eq!(stored.tag, "PROG");

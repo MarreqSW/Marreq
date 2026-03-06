@@ -23,7 +23,11 @@ pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec
 }
 
 #[get("/verifications/<id>")]
-pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Verification>> {
+pub async fn get(
+    _user: ApiUser,
+    id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Verification>> {
     let service = VerificationService::new(state.inner());
     let verification = service.get_by_id(id)?;
     Ok(Json(verification))

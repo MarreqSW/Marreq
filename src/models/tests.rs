@@ -229,7 +229,10 @@ mod tests {
             assert_eq!(format!("{}", EntityType::User), "USER");
             assert_eq!(format!("{}", EntityType::MatrixLink), "MATRIX");
             assert_eq!(format!("{}", EntityType::Verification), "VERIFICATION");
-            assert_eq!(format!("{}", EntityType::VerificationMethod), "VERIFICATION_METHOD");
+            assert_eq!(
+                format!("{}", EntityType::VerificationMethod),
+                "VERIFICATION_METHOD"
+            );
         }
 
         #[test]
@@ -241,7 +244,10 @@ mod tests {
             assert_eq!(EntityType::User.human_name(), "user");
             assert_eq!(EntityType::MatrixLink.human_name(), "matrix");
             assert_eq!(EntityType::Verification.human_name(), "verification");
-            assert_eq!(EntityType::VerificationMethod.human_name(), "verification method");
+            assert_eq!(
+                EntityType::VerificationMethod.human_name(),
+                "verification method"
+            );
         }
 
         // Loggable trait tests for entities
@@ -754,7 +760,10 @@ mod tests {
                 tag_color: None,
             };
 
-            assert_eq!(NewVerificationStatus::entity_type(), EntityType::Verification);
+            assert_eq!(
+                NewVerificationStatus::entity_type(),
+                EntityType::Verification
+            );
             assert_eq!(new_status.id(), 1);
             assert_eq!(new_status.project_id(), Some(1));
             assert_eq!(new_status.display_name(), "Passed");

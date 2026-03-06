@@ -41,7 +41,7 @@ pub fn show_project_id(
 
     let tests_count = verification_service
         .list_by_project(project_id)
-        .map(|v| v.len())
+        .map(|verifications| verifications.len())
         .unwrap_or(0);
 
     let ctx = json!({

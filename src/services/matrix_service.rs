@@ -772,8 +772,8 @@ mod tests {
         let lines: Vec<&str> = csv.lines().collect();
         assert_eq!(lines.len(), 2); // Header + 1 requirement row
         assert!(lines[0].starts_with("Title,Reference"));
-        assert!(lines[0].contains("Test #10"));
-        assert!(lines[0].contains("Test #20"));
+        assert!(lines[0].contains("Verification #10"));
+        assert!(lines[0].contains("Verification #20"));
         assert!(lines[1].starts_with("Test Requirement,REF-001"));
         assert!(lines[1].contains(",✓,")); // Linked to test 10
         assert!(lines[1].ends_with(",-")); // Not linked to test 20
@@ -887,8 +887,8 @@ mod tests {
         let csv = service.export_matrix_csv(1, Some(1)).unwrap();
 
         let lines: Vec<&str> = csv.lines().collect();
-        assert!(lines[0].contains("Test #10"));
-        assert!(!lines[0].contains("Test #20"));
+        assert!(lines[0].contains("Verification #10"));
+        assert!(!lines[0].contains("Verification #20"));
     }
 
     #[test]

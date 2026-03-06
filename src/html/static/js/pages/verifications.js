@@ -106,7 +106,7 @@ function openInlineEditForTest(cell, row, config) {
     if (select.parentNode) select.remove();
     displayEl.hidden = false;
     try {
-      await postJson(`/p/${projectId}/verifications/update-status/${testId}`, { status_id: v });
+      await postJson(`/p/${projectId}/tests/update-status/${testId}`, { status_id: v });
       const variant = testStatusVariant(displayText);
       const tagColor = s?.tag_color || null;
       row.dataset.statusId = String(v);
@@ -193,13 +193,12 @@ function initTestTable() {
   }
 
   initTableSort(table, {
-    id: 0,
+    reference_code: 0,
     name: 1,
-    reference_code: 2,
-    description: 3,
-    status_id: 4,
-    source: 5,
-    parent_id: 6,
+    status: 2,
+    verification_type: 3,
+    source: 4,
+    parent: 5,
   });
 
   enableInlineTextEditing(table, '.editable-field', async ({ id, field, value, revert }) => {
@@ -232,7 +231,7 @@ function initCreateTestModal() {
     successMessage: 'Test added successfully',
     errorMessage: 'Error adding test',
     handleSubmit: async ({ data }) => {
-      await postJson('/api/verifications', data);
+      await postJson('/api/tests', data);
       setTimeout(() => window.location.reload(), 600);
     },
   });
@@ -241,7 +240,7 @@ function initCreateTestModal() {
 function initFilterToggle() {
   const toggleButton = document.querySelector('.js-toggle-filters');
   const filterBody = document.querySelector('.marreq-tests-page__filters-body');
-  
+
   if (!toggleButton || !filterBody) {
     return;
   }
@@ -260,7 +259,7 @@ function initFilterToggle() {
     const isCurrentlyVisible = filterBody.style.display !== 'none';
     filterBody.style.display = isCurrentlyVisible ? 'none' : 'block';
     toggleButton.setAttribute('aria-expanded', !isCurrentlyVisible);
-    
+
     // Save state to localStorage
     localStorage.setItem('testsFiltersCollapsed', isCurrentlyVisible);
   });
@@ -268,25 +267,27 @@ function initFilterToggle() {
 
 function initViewSwitcher() {
   const VIEW_KEY = 'tests_view_preference';
-  
+  const DEFAULT_VIEW = 'table';
+  const VALID_VIEWS = ['table', 'card'];
+
   const cardBtn = document.getElementById('cardViewBtn');
   const tableBtn = document.getElementById('tableViewBtn');
-  
+
   const cardView = document.getElementById('cardView');
   const tableView = document.getElementById('tableView');
-  
+
   if (!cardBtn || !tableBtn || !cardView || !tableView) {
     return;
   }
-  
+
   function switchView(viewName) {
     cardView.style.display = 'none';
     tableView.style.display = 'none';
-    
+
     cardBtn.classList.remove('active');
     tableBtn.classList.remove('active');
-    
-    switch(viewName) {
+
+    switch (viewName) {
       case 'card':
         cardView.style.display = 'block';
         cardBtn.classList.add('active');
@@ -297,22 +298,23 @@ function initViewSwitcher() {
         tableBtn.classList.add('active');
         break;
     }
-    
+
     try {
       localStorage.setItem(VIEW_KEY, viewName);
     } catch (e) {
       console.warn('Could not save view preference:', e);
     }
   }
-  
+
   cardBtn.addEventListener('click', () => switchView('card'));
   tableBtn.addEventListener('click', () => switchView('table'));
-  
+
   try {
-    const savedView = localStorage.getItem(VIEW_KEY) || 'table';
-    switchView(savedView);
+    const saved = localStorage.getItem(VIEW_KEY);
+    const view = saved && VALID_VIEWS.includes(saved) ? saved : DEFAULT_VIEW;
+    switchView(view);
   } catch (e) {
-    switchView('table');
+    switchView(DEFAULT_VIEW);
   }
 }
 
@@ -322,17 +324,17 @@ function initDeleteButtons() {
     if (!deleteBtn) return;
 
     e.preventDefault();
-    
+
     const testId = deleteBtn.dataset.testId;
     const testName = deleteBtn.dataset.testName;
     const projectId = deleteBtn.dataset.projectId;
-    
+
     if (!confirm(`Are you sure you want to delete test "${testName}"?`)) {
       return;
     }
 
     try {
-      const response = await fetch(`/p/${projectId}/verifications/delete/${testId}`, {
+      const response = await fetch(`/p/${projectId}/tests/delete/${testId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -357,14 +359,14 @@ function initRowDetails() {
     if (!toggle) return;
 
     e.preventDefault();
-    
+
     const detailsId = toggle.getAttribute('aria-controls');
     const detailsRow = document.getElementById(detailsId);
-    
+
     if (!detailsRow) return;
 
     const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
-    
+
     if (isExpanded) {
       detailsRow.hidden = true;
       toggle.setAttribute('aria-expanded', 'false');
@@ -385,10 +387,10 @@ function initFilterClear() {
     if (!form) return;
 
     // Clear all inputs and selects
-    form.querySelectorAll('input[type="search"], input[type="text"]').forEach(input => {
+    form.querySelectorAll('input[type="search"], input[type="text"]').forEach((input) => {
       input.value = '';
     });
-    form.querySelectorAll('select').forEach(select => {
+    form.querySelectorAll('select').forEach((select) => {
       select.selectedIndex = 0;
     });
 

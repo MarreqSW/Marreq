@@ -189,6 +189,10 @@ impl<'a> DecoratedTestService<'a> {
             verification_parent_status_tag_color,
             verification_parent_source: parent_source,
             project_id: verification.project_id,
+            verification_method_id: verification.verification_method_id,
+            verification_method_title: verification
+                .verification_method_id
+                .and_then(|id| self.verification_service.get_verification_method_title(id)),
         })
     }
 }
@@ -224,6 +228,7 @@ mod tests {
             reference_code: format!("TEST-{id}"),
             parent_id: Some(parent),
             project_id: 99,
+            verification_method_id: None,
         }
     }
 
@@ -488,6 +493,7 @@ mod tests {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
 
         let id = service.create(&actor, payload).unwrap();
@@ -512,6 +518,7 @@ mod tests {
             status_id: 1,
             parent_id: None,
             project_id: 99,
+            verification_method_id: None,
         };
 
         let updated = service.update(&actor, 1, payload).unwrap();

@@ -1597,6 +1597,7 @@ impl VerificationsRepository for DieselRepo {
                 v::status_id,
                 v::parent_id,
                 v::project_id,
+                v::verification_method_id,
             ))
             .load::<Verification>(conn.as_mut())
             .map_err(|e| e.into())
@@ -1622,6 +1623,7 @@ impl VerificationsRepository for DieselRepo {
                 v::status_id,
                 v::parent_id,
                 v::project_id,
+                v::verification_method_id,
             ))
             .load::<Verification>(conn.as_mut())
             .map_err(|e| e.into())
@@ -1676,6 +1678,7 @@ impl VerificationsRepository for DieselRepo {
                 dsl::reference_code.eq(&new.reference_code),
                 dsl::status_id.eq(&new.status_id),
                 dsl::parent_id.eq(&new.parent_id),
+                dsl::verification_method_id.eq(&new.verification_method_id),
             ))
             .execute(conn.as_mut())?;
         Ok(updated > 0)

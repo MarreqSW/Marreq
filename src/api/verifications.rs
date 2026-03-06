@@ -102,6 +102,7 @@ pub async fn update_field(
         status_id: verification.status_id,
         parent_id: verification.parent_id,
         project_id: verification.project_id,
+        verification_method_id: verification.verification_method_id,
     };
 
     service.update(user.user(), id, payload)?;

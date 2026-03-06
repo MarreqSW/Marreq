@@ -52,7 +52,7 @@ function renderCard(link) {
   const status = link.getAttribute('data-test-preview-status') || '';
   const category = link.getAttribute('data-test-preview-category') || '';
   const source = link.getAttribute('data-test-preview-source') || '';
-  const href = link.getAttribute('href') || (projectId && id ? `/p/${projectId}/verifications/show/${id}` : '#');
+  const href = link.getAttribute('href') || (projectId && id ? `/p/${projectId}/tests/show/${id}` : '#');
 
   const descSnippet = description.length > 120 ? description.slice(0, 117) + '…' : description;
   const displayRef = ref || `TEST-${id}`;

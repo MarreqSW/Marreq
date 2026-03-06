@@ -10,6 +10,7 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
 use crate::models::{NewVerification, User, Verification};
 use crate::repository::errors::RepoError;
+use crate::repository::LookupRepository;
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::VerificationsRepository;
 
@@ -39,6 +40,15 @@ impl<'a> VerificationService<'a> {
     /// Retrieve a single Verification by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<Verification, RepoError> {
         self.state.repo_read().get_verification_by_id(id)
+    }
+
+    /// Return the title of a verification method by id, if it exists.
+    pub fn get_verification_method_title(&self, id: i32) -> Option<String> {
+        self.state
+            .repo_read()
+            .get_verification_method_by_id(id)
+            .ok()
+            .map(|m| m.title)
     }
 
     /// Get verifications by status
@@ -160,6 +170,7 @@ mod tests {
             reference_code: reference.into(),
             parent_id: Some(1),
             project_id,
+            verification_method_id: None,
         }
     }
 
@@ -173,6 +184,7 @@ mod tests {
             status_id: 1,
             parent_id: Some(1),
             project_id,
+            verification_method_id: None,
         }
     }
 

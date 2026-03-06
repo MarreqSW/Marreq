@@ -45,10 +45,12 @@ use rocket::{Request, Response};
 /// * `script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net` – same-origin
 ///   scripts, inline script blocks (used by current templates), and
 ///   the Bootstrap CDN bundle.
-/// * `style-src 'self' 'unsafe-inline'` – same-origin stylesheets and inline
-///   `style=` attributes (used pervasively in templates).
+/// * `style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com` –
+///   same-origin stylesheets, inline styles, Bootstrap/Font Awesome and Google Fonts CDNs.
+/// * `connect-src 'self' https://cdn.jsdelivr.net` – allow fetch/XHR to same origin and
+///   CDN (e.g. Bootstrap source maps).
 /// * `img-src 'self' data:` – embedded base64 images and same-origin images.
-/// * `font-src 'self'` – local webfonts only.
+/// * `font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com` – local and CDN webfonts.
 /// * `object-src 'none'` – block plugins (Flash, PDF, etc.).
 /// * `base-uri 'self'` – prevent `<base>` injection attacks.
 /// * `form-action 'self'` – restrict form submissions to same origin.
@@ -57,9 +59,10 @@ use rocket::{Request, Response};
 pub const CSP_VALUE: &str = "\
 default-src 'self'; \
 script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; \
-style-src 'self' 'unsafe-inline'; \
+style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; \
+connect-src 'self' https://cdn.jsdelivr.net; \
 img-src 'self' data:; \
-font-src 'self'; \
+font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com; \
 object-src 'none'; \
 base-uri 'self'; \
 form-action 'self'; \

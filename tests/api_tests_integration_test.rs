@@ -5,7 +5,7 @@
 
 //! Comprehensive integration tests for Tests API endpoints.
 //!
-//! These tests verify the complete behavior of `/api/tests` endpoints including:
+//! These tests verify the complete behavior of `/api/verifications` endpoints including:
 //! - CRUD operations
 //! - Field update API
 //! - Test hierarchy (parent-child)
@@ -158,7 +158,7 @@ mod test_support {
 use test_support::*;
 
 // ============================================================================
-// GET /api/tests - List All Tests
+// GET /api/verifications - List All Verifications
 // ============================================================================
 
 #[rocket::async_test]
@@ -166,7 +166,7 @@ async fn get_tests_returns_empty_list_when_no_tests() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/api/tests")
+        .get("/api/verifications")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -186,7 +186,7 @@ async fn get_tests_returns_all_tests() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/api/tests")
+        .get("/api/verifications")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -200,13 +200,13 @@ async fn get_tests_returns_all_tests() {
 async fn get_tests_requires_authentication() {
     let client = test_client(base_repo()).await;
 
-    let response = client.get("/api/tests").dispatch().await;
+    let response = client.get("/api/verifications").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
 
 // ============================================================================
-// GET /api/tests/{id} - Get Single Test
+// GET /api/verifications/{id} - Get Single Verification
 // ============================================================================
 
 #[rocket::async_test]
@@ -217,7 +217,7 @@ async fn get_test_by_id_returns_correct_test() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -234,7 +234,7 @@ async fn get_test_with_nonexistent_id_returns_404() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/api/tests/999")
+        .get("/api/verifications/999")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -249,13 +249,13 @@ async fn get_test_requires_authentication() {
 
     let client = test_client(repo).await;
 
-    let response = client.get("/api/tests/1").dispatch().await;
+    let response = client.get("/api/verifications/1").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
 
 // ============================================================================
-// POST /api/tests - Create New Test
+// POST /api/verifications - Create New Verification
 // ============================================================================
 
 #[rocket::async_test]
@@ -263,7 +263,7 @@ async fn post_test_creates_new_test() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(new_test_json("Smoke Test", 1).to_string())
@@ -286,7 +286,7 @@ async fn post_test_with_missing_fields_returns_error() {
     });
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(invalid_json.to_string())
@@ -301,7 +301,7 @@ async fn post_test_requires_authentication() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .body(new_test_json("New Test", 1).to_string())
         .dispatch()
@@ -311,7 +311,7 @@ async fn post_test_requires_authentication() {
 }
 
 // ============================================================================
-// POST /api/tests/{id}/field - Update Test Field
+// POST /api/verifications/{id}/field - Update Verification Field
 // ============================================================================
 
 #[rocket::async_test]
@@ -327,7 +327,7 @@ async fn update_field_changes_test_name() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -340,7 +340,7 @@ async fn update_field_changes_test_name() {
 
     // Verify the update
     let get_response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -362,7 +362,7 @@ async fn update_field_changes_test_status() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -373,7 +373,7 @@ async fn update_field_changes_test_status() {
 
     // Verify status was updated
     let get_response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -395,7 +395,7 @@ async fn update_field_with_invalid_field_returns_error() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -418,7 +418,7 @@ async fn update_field_with_invalid_status_value_returns_error() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -429,7 +429,7 @@ async fn update_field_with_invalid_status_value_returns_error() {
 }
 
 // ============================================================================
-// DELETE /api/tests/{id} - Delete Test
+// DELETE /api/verifications/{id} - Delete Verification
 // ============================================================================
 
 #[rocket::async_test]
@@ -440,7 +440,7 @@ async fn delete_test_removes_test() {
     let client = test_client(repo).await;
 
     let response = client
-        .delete("/api/tests/1")
+        .delete("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -449,7 +449,7 @@ async fn delete_test_removes_test() {
 
     // Verify test is gone
     let get_response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -462,7 +462,7 @@ async fn delete_nonexistent_test_returns_404() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .delete("/api/tests/999")
+        .delete("/api/verifications/999")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -477,7 +477,7 @@ async fn delete_test_requires_authentication() {
 
     let client = test_client(repo).await;
 
-    let response = client.delete("/api/tests/1").dispatch().await;
+    let response = client.delete("/api/verifications/1").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
@@ -497,7 +497,7 @@ async fn create_test_with_parent() {
     child_json["parent_id"] = json!(1);
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(child_json.to_string())
@@ -510,7 +510,7 @@ async fn create_test_with_parent() {
 
     // Verify parent relationship
     let get_response = client
-        .get(format!("/api/tests/{}", child_id))
+        .get(format!("/api/verifications/{}", child_id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -533,7 +533,7 @@ async fn update_test_parent() {
     });
 
     let response = client
-        .post("/api/tests/2/field")
+        .post("/api/verifications/2/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -544,7 +544,7 @@ async fn update_test_parent() {
 
     // Verify parent was set
     let get_response = client
-        .get("/api/tests/2")
+        .get("/api/verifications/2")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -570,7 +570,7 @@ async fn update_test_description() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -580,7 +580,7 @@ async fn update_test_description() {
     assert_eq!(response.status(), Status::Ok);
 
     let get_response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -602,7 +602,7 @@ async fn update_test_source() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -612,7 +612,7 @@ async fn update_test_source() {
     assert_eq!(response.status(), Status::Ok);
 
     let get_response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -631,7 +631,7 @@ async fn create_multiple_tests_sequentially() {
 
     for i in 1..=5 {
         let response = client
-            .post("/api/tests")
+            .post("/api/verifications")
             .header(ContentType::JSON)
             .private_cookie(session_cookie(1))
             .body(new_test_json(&format!("Test {}", i), 1).to_string())
@@ -645,7 +645,7 @@ async fn create_multiple_tests_sequentially() {
 
     // Verify all were created
     let list_response = client
-        .get("/api/tests")
+        .get("/api/verifications")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;

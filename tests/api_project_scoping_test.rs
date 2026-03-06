@@ -501,7 +501,7 @@ async fn list_tests_returns_only_user_projects() {
 
     // User 2 should see tests from projects 1 and 2
     let response = client
-        .get("/api/tests")
+        .get("/api/verifications")
         .private_cookie(session_cookie(2))
         .dispatch()
         .await;
@@ -542,7 +542,7 @@ async fn get_test_works_for_any_authenticated_user() {
 
     // User 3 is not a member of project 1, but API allows access
     let response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(3))
         .dispatch()
         .await;

@@ -828,7 +828,7 @@ mod tests {
         repo.requirements.insert(1, requirement(1, 7, "REQ-001"));
         repo.matrices.push(crate::models::MatrixLink {
             req_id: 1,
-            test_id: 10,
+            verification_id: 10,
             creation_date: timestamp(),
             project_id: 7,
             suspect: false,
@@ -1402,7 +1402,7 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         // Verification method belongs to project 99, but the requirement will be
         // created in project 7 (via new_payload()).
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             5,
             VerificationMethod {
                 id: 5,

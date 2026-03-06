@@ -89,7 +89,7 @@ mod test_support {
 
         repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Not Run".into(),
                 description: "".into(),
@@ -102,7 +102,7 @@ mod test_support {
 
         repo.verification_statuses.insert(
             2,
-            TestStatus {
+            VerificationStatus {
                 id: 2,
                 title: "Passed".into(),
                 description: "".into(),
@@ -115,7 +115,7 @@ mod test_support {
 
         repo.verification_statuses.insert(
             3,
-            TestStatus {
+            VerificationStatus {
                 id: 3,
                 title: "Failed".into(),
                 description: "".into(),
@@ -129,8 +129,8 @@ mod test_support {
         repo
     }
 
-    pub fn sample_test(id: i32, project_id: i32, name: &str) -> TestCase {
-        TestCase {
+    pub fn sample_test(id: i32, project_id: i32, name: &str) -> Verification {
+        Verification {
             id: id,
             name: name.to_string(),
             reference_code: format!("TST-{:03}", id),
@@ -139,6 +139,7 @@ mod test_support {
             status_id: 1,
             parent_id: None,
             project_id,
+            verification_method_id: None,
         }
     }
 
@@ -172,7 +173,7 @@ async fn get_tests_returns_empty_list_when_no_tests() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    let tests: Vec<TestCase> = response.into_json().await.expect("json");
+    let tests: Vec<Verification> = response.into_json().await.expect("json");
     assert!(tests.is_empty());
 }
 
@@ -192,7 +193,7 @@ async fn get_tests_returns_all_tests() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    let tests: Vec<TestCase> = response.into_json().await.expect("json");
+    let tests: Vec<Verification> = response.into_json().await.expect("json");
     assert_eq!(tests.len(), 3);
 }
 
@@ -224,7 +225,7 @@ async fn get_test_by_id_returns_correct_test() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    let test: TestCase = response.into_json().await.expect("json");
+    let test: Verification = response.into_json().await.expect("json");
     assert_eq!(test.id, 1);
     assert_eq!(test.name, "Integration Test");
     assert_eq!(test.reference_code, "TST-001");
@@ -347,7 +348,7 @@ async fn update_field_changes_test_name() {
         .dispatch()
         .await;
 
-    let test: TestCase = get_response.into_json().await.expect("json");
+    let test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(test.name, "Updated Name");
 }
 
@@ -380,7 +381,7 @@ async fn update_field_changes_test_status() {
         .dispatch()
         .await;
 
-    let test: TestCase = get_response.into_json().await.expect("json");
+    let test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(test.status_id, 2);
 }
 
@@ -518,7 +519,7 @@ async fn create_test_with_parent() {
         .dispatch()
         .await;
 
-    let child_test: TestCase = get_response.into_json().await.expect("json");
+    let child_test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(child_test.parent_id, Some(1));
 }
 
@@ -554,7 +555,7 @@ async fn update_test_parent() {
         .dispatch()
         .await;
 
-    let test: TestCase = get_response.into_json().await.expect("json");
+    let test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(test.parent_id, Some(1));
 }
 
@@ -590,7 +591,7 @@ async fn update_test_description() {
         .dispatch()
         .await;
 
-    let test: TestCase = get_response.into_json().await.expect("json");
+    let test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(test.description, "Updated description");
 }
 
@@ -622,7 +623,7 @@ async fn update_test_source() {
         .dispatch()
         .await;
 
-    let test: TestCase = get_response.into_json().await.expect("json");
+    let test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(test.source, "manual");
 }
 
@@ -655,6 +656,6 @@ async fn create_multiple_tests_sequentially() {
         .dispatch()
         .await;
 
-    let tests: Vec<TestCase> = list_response.into_json().await.expect("json");
+    let tests: Vec<Verification> = list_response.into_json().await.expect("json");
     assert_eq!(tests.len(), 5);
 }

@@ -5,7 +5,7 @@
 <section class="marreq-list-page marreq-category-page">
   <div class="marreq-list-page__header">
     <h1 class="marreq-list-page__title">Verification statuses</h1>
-    <a href="/p/{{selected_project_id}}/test_statuses/new" class="btn btn-primary">New verification status</a>
+    <a href="/p/{{selected_project_id}}/verification_statuses/new" class="btn btn-primary">New verification status</a>
   </div>
 
   <div class="marreq-list-page__toolbar">
@@ -29,4 +29,4 @@
   <p class="marreq-list-page__empty" id="verification-status-empty-filter" hidden>No statuses match your search.</p>
 </section>
 {{/inline}}
-{{> layout page_id="verification_statuses"}}
+{{> layout this page_id="verification_statuses"}}

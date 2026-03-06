@@ -58,7 +58,7 @@
                         {{#if (eq result.import_type "requirements")}}
                         <a href="{{#if selected_project_id}}/p/{{selected_project_id}}/requirements{{else}}/requirements{{/if}}" class="btn btn-outline-primary">View Requirements</a>
                         {{else}}
-                        <a href="/p/{{selected_project_id}}/verifications" class="btn btn-outline-primary">View Verifications</a>
+                        <a href="/p/{{selected_project_id}}/tests" class="btn btn-outline-primary">View Tests</a>
                         {{/if}}
                         {{else}}
                         <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-outline-primary">Try Import Again</a>
@@ -70,4 +70,4 @@
     </div>
 </div>
 {{/inline}}
-{{> layout}}
+{{> layout this}}

@@ -62,6 +62,7 @@ mod tests {
             status_id: 1,
             parent_id: None,
             project_id,
+            verification_method_id: None,
         }
     }
 
@@ -127,6 +128,8 @@ mod tests {
             verification_parent_status_tag_color: None,
             verification_parent_source: "".to_string(),
             project_id: 1,
+            verification_method_id: None,
+            verification_method_title: None,
         }
     }
 

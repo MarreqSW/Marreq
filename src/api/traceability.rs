@@ -396,6 +396,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: PROJECT_ID,
+                verification_method_id: None,
             },
         );
         repo.matrices.push(MatrixLink {

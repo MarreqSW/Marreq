@@ -9,7 +9,8 @@ import { initStatusColorPickers } from './modules/statusColorPicker.js';
 
 const pageControllers = {
   requirements: () => import('./pages/requirements.js'),
-  tests: () => import('./pages/tests.js'),
+  tests: () => import('./pages/verifications.js'),
+  verifications: () => import('./pages/verifications.js'),
   matrix: () => import('./pages/matrix.js'),
   'requirements-tree': () => import('./pages/requirementsTree.js'),
   categories: () => import('./pages/categories.js'),
@@ -52,15 +53,15 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectId = button.getAttribute('data-project-id');
       const testId = button.getAttribute('data-test-id');
-      return `/p/${projectId}/verifications/delete/${testId}`;
+      return `/p/${projectId}/tests/delete/${testId}`;
     },
     getMessage: (button) => {
-      const name = button.getAttribute('data-test-name') || 'Verification';
-      return `Are you sure you want to delete verification "${name}"? This action cannot be undone.`;
+      const name = button.getAttribute('data-test-name') || 'Test';
+      return `Are you sure you want to delete test "${name}"? This action cannot be undone.`;
     },
     onSuccess: (button) => {
       const projectId = button.getAttribute('data-project-id');
-      window.location.href = `/p/${projectId}/verifications`;
+      window.location.href = `/p/${projectId}/tests`;
     },
   });
 
@@ -133,14 +134,14 @@ function initGlobalDeleteHandlers() {
   });
 
   registerDeleteAction({
-    selector: '[data-action="delete-verification-status"]',
+    selector: '[data-action="delete-test-status"]',
     getUrl: (button) => {
       const projectId = button.getAttribute('data-project-id');
       const statusId = button.getAttribute('data-status-id');
-      return `/p/${projectId}/verification_statuses/delete/${statusId}`;
+      return `/p/${projectId}/test_statuses/delete/${statusId}`;
     },
     getMessage: (button) => {
-      const title = button.getAttribute('data-status-title') || 'this verification status';
+      const title = button.getAttribute('data-status-title') || 'this test status';
       return `Are you sure you want to delete ${title}? This action cannot be undone.`;
     },
   });

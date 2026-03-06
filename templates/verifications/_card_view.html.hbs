@@ -47,9 +47,33 @@ Modern card-based layout for test browsing
         {{/if}}
       </div>
 
-      {{!-- Card Metadata: Tags and Badges --}}
+      {{!-- Card Metadata: Tags and Badges (verification type, status, source, parent) --}}
       <div class="marreq-requirement-card__metadata" data-badge-rail>
         <div class="marreq-requirement-card__badge-rail">
+          {{#if verification_method_title}}
+          <span class="marreq-requirement-card__badge marreq-requirement-card__badge--verification" data-badge
+            title="Verification type: {{verification_method_title}}">
+            <svg class="marreq-requirement-card__badge-icon" width="10" height="10" fill="currentColor"
+              viewBox="0 0 16 16">
+              <path
+                d="M10.067.87a2.89 2.89 0 0 0-4.134 0l-.622.638-.89-.011a2.89 2.89 0 0 0-2.924 2.924l.01.89-.636.622a2.89 2.89 0 0 0 0 4.134l.637.622-.011.89a2.89 2.89 0 0 0 2.924 2.924l.89-.01.622.636a2.89 2.89 0 0 0 4.134 0l.622-.637.89.011a2.89 2.89 0 0 0 2.924-2.924l-.01-.89.636-.622a2.89 2.89 0 0 0 0-4.134l-.637-.622.011-.89a2.89 2.89 0 0 0-2.924-2.924l-.89.01-.622-.636zm.287 5.984-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708.708z" />
+            </svg>
+            {{verification_method_title}}
+          </span>
+          {{/if}}
+          {{#if status_id}}
+          <span class="marreq-requirement-card__badge marreq-requirement-card__badge--status" data-badge
+            title="Status: {{status_id}}">
+            <svg class="marreq-requirement-card__badge-icon" width="10" height="10" fill="currentColor"
+              viewBox="0 0 16 16">
+              <path
+                d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z" />
+              <path
+                d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z" />
+            </svg>
+            {{status_id}}
+          </span>
+          {{/if}}
           {{#if test_category}}
           <span class="marreq-requirement-card__badge marreq-requirement-card__badge--category" data-badge
             title="Category: {{test_category}}">
@@ -62,7 +86,7 @@ Modern card-based layout for test browsing
           </span>
           {{/if}}
           {{#if source}}
-          <span class="marreq-requirement-card__badge marreq-requirement-card__badge--verification" data-badge
+          <span class="marreq-requirement-card__badge marreq-requirement-card__badge--source" data-badge
             title="Source: {{source}}">
             <svg class="marreq-requirement-card__badge-icon" width="10" height="10" fill="currentColor"
               viewBox="0 0 16 16">
@@ -72,24 +96,44 @@ Modern card-based layout for test browsing
             {{source}}
           </span>
           {{/if}}
-          {{#if test_parent_title}}
-          <span class="marreq-requirement-card__badge marreq-requirement-card__badge--parent" data-badge
-            title="Parent: {{test_parent_title}}">
+          {{#if verification_parent_title}}
+          <a href="/p/{{../project.id}}/verifications/show/{{verification_parent_id}}"
+            class="marreq-requirement-card__badge marreq-requirement-card__badge--parent" data-badge
+            title="Parent: {{verification_parent_title}}">
             <svg class="marreq-requirement-card__badge-icon" width="10" height="10" fill="currentColor"
               viewBox="0 0 16 16">
               <path d="M1 0a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5v-1H2v-1h4v-9H2V2h4v3h9a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1H1z" />
             </svg>
-            {{test_parent_title}}
-          </span>
+            {{verification_parent_title}}
+          </a>
           {{/if}}
         </div>
         <span class="marreq-requirement-card__badge-overflow" data-overflow hidden></span>
       </div>
 
-      {{!-- Card Footer: Actions --}}
+      {{!-- Card Footer: Source, Status and Actions (like requirements card author/date) --}}
       <footer class="marreq-requirement-card__footer">
         <div class="marreq-requirement-card__info">
-          <!-- Reserved for future metadata like dates, authors -->
+          {{#if source}}
+          <span class="marreq-requirement-card__source" title="Source">
+            <svg class="marreq-requirement-card__info-icon" width="12" height="12" fill="currentColor"
+              viewBox="0 0 16 16">
+              <path
+                d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5v-3z" />
+            </svg>
+            {{source}}
+          </span>
+          {{/if}}
+          {{#if status_id}}
+          <span class="marreq-requirement-card__status" title="Status">
+            <svg class="marreq-requirement-card__info-icon" width="12" height="12" fill="currentColor"
+              viewBox="0 0 16 16">
+              <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z" />
+              <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z" />
+            </svg>
+            {{status_id}}
+          </span>
+          {{/if}}
         </div>
 
         <div class="marreq-requirement-card__actions">

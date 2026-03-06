@@ -165,6 +165,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             };
 
             let display = format!("{}", ver);
@@ -182,6 +183,7 @@ mod tests {
                 status_id: 1,
                 parent_id: Some(10),
                 project_id: 1,
+                verification_method_id: None,
             };
 
             let display = format!("{}", ver);
@@ -326,6 +328,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 4,
+                verification_method_id: None,
             };
 
             assert_eq!(Verification::entity_type(), EntityType::Verification);
@@ -686,6 +689,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 4,
+                verification_method_id: None,
             };
 
             assert_eq!(NewVerification::entity_type(), EntityType::Verification);
@@ -872,6 +876,7 @@ mod tests {
                 source: "source.rs".to_string(),
                 status_id: 1,
                 parent_id: None,
+                verification_method_id: None,
                 verification_req: vec![1, 2, 3],
                 project_id: 1,
             };
@@ -890,6 +895,7 @@ mod tests {
                 source: "source.rs".to_string(),
                 status_id: 1,
                 parent_id: None,
+                verification_method_id: None,
                 linked_requirements: vec![1, 2],
                 project_id: 1,
             };
@@ -1108,6 +1114,8 @@ mod tests {
                 verification_parent_status_tag_color: None,
                 verification_parent_source: "".to_string(),
                 project_id: 1,
+                verification_method_id: None,
+                verification_method_title: None,
             };
 
             assert_eq!(decorated.id, 1);
@@ -1137,6 +1145,8 @@ mod tests {
                 verification_parent_status_tag_color: None,
                 verification_parent_source: "".to_string(),
                 project_id: 1,
+                verification_method_id: None,
+                verification_method_title: None,
             };
 
             assert_eq!(decorated.verification_parent_id, Some(1));
@@ -1211,6 +1221,8 @@ mod tests {
                 verification_parent_status_tag_color: None,
                 verification_parent_source: "".to_string(),
                 project_id: 1,
+                verification_method_id: None,
+                verification_method_title: None,
             };
 
             let json = serde_json::to_string(&decorated).unwrap();
@@ -1373,6 +1385,7 @@ mod tests {
                 status_id: 1,
                 parent_id: Some(5),
                 project_id: 1,
+                verification_method_id: None,
             };
 
             assert_eq!(ver.parent_id, Some(5));
@@ -1441,6 +1454,7 @@ mod tests {
                 status_id: 1,
                 parent_id: Some(5),
                 project_id: 1,
+                verification_method_id: None,
             };
 
             assert_eq!(new_ver.id, Some(1));

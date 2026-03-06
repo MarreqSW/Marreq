@@ -322,6 +322,15 @@ async fn show_test_id(
         }
     }
 
+    let verification_type_title = test
+        .verification_method_id
+        .and_then(|id| verification_map.get(&id).cloned())
+        .unwrap_or_default();
+    ctx_map.insert(
+        "verification_type_title".into(),
+        json!(verification_type_title),
+    );
+
     // Add page title from test reference code
     if let Some(ref_code) = ctx_map.get("reference_code").and_then(|v| v.as_str()) {
         ctx_map.insert("page_title".into(), json!(format!("{} - Test", ref_code)));
@@ -379,6 +388,9 @@ async fn new_test(
     ctx["requirements"] = json!(repo
         .get_requirements_by_project(project_id)
         .unwrap_or_default());
+    ctx["verification"] = json!(repo
+        .get_verification_methods_by_project(project_id)
+        .unwrap_or_default());
     ctx["project_id"] = json!(project_id);
     ctx["selected_project_id"] = json!(project_id);
     ctx["error"] = json!(error);
@@ -414,17 +426,18 @@ async fn post_test(
         source: new_test.source.clone(),
         status_id: new_test.status_id,
         reference_code: new_test.reference_code.clone(),
-        parent_id: new_test.parent_id,
+        parent_id: new_test.parent_id.and_then(|id| if id == 0 { None } else { Some(id) }),
         project_id,
+        verification_method_id: new_test.verification_method_id.and_then(|id| if id == 0 { None } else { Some(id) }),
     };
 
     let id = service.create(&user, my_new_verification).map_err(|e| {
-        eprintln!("Error inserting new test: {:?}", e);
+        eprintln!("Error creating verification: {:?}", e);
         Redirect::to(uri!(
             "/p",
             new_test(
                 project_id = project_id,
-                error = Some("Failed to create test".to_string())
+                error = Some("Failed to create verification".to_string())
             )
         ))
     })?;
@@ -536,8 +549,9 @@ async fn post_edit_test(
         source: f.source,
         status_id: f.status_id,
         reference_code: f.reference_code,
-        parent_id: f.parent_id,
+        parent_id: f.parent_id.and_then(|id| if id == 0 { None } else { Some(id) }),
         project_id: f.project_id,
+        verification_method_id: f.verification_method_id.and_then(|id| if id == 0 { None } else { Some(id) }),
     };
 
     service
@@ -632,6 +646,7 @@ async fn update_test_status_route(
         status_id,
         parent_id: test.parent_id,
         project_id: test.project_id,
+        verification_method_id: test.verification_method_id,
     };
 
     service.update(&user, test_id, updated).map_err(|e| {
@@ -832,6 +847,7 @@ mod tests {
             reference_code: format!("TEST-{id:03}"),
             parent_id: None,
             project_id: PRIMARY_PROJECT,
+            verification_method_id: None,
         }
     }
 
@@ -962,8 +978,8 @@ mod tests {
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
-        assert!(body.contains("New Test"));
-        assert!(body.contains("Create Test"));
+        assert!(body.contains("New Verification"));
+        assert!(body.contains("Create Verification"));
     }
 
     #[rocket::async_test]
@@ -1010,7 +1026,7 @@ mod tests {
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
-        assert!(body.contains("Edit Test"));
+        assert!(body.contains("Edit Verification"));
         assert!(body.contains("Baseline Test"));
     }
 

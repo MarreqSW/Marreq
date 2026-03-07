@@ -403,9 +403,9 @@ fn export_csv_filters_tests_by_status() {
     let csv = service.export_matrix_csv(1, Some(2)).unwrap();
 
     let lines: Vec<&str> = csv.lines().collect();
-    // Should only include test 2
-    assert!(lines[0].contains("Test #2"));
-    assert!(!lines[0].contains("Test #1"));
+    // Should only include verification 2 (filtered by status Passed)
+    assert!(lines[0].contains("Verification #2"));
+    assert!(!lines[0].contains("Verification #1"));
 }
 
 // ============================================================================

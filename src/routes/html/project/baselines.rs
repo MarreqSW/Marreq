@@ -164,14 +164,26 @@ pub async fn show_baseline(
         .map(|r| (r.id, r.reference_code.clone()))
         .collect();
 
+    let snapshot_verifications = service.get_verifications(baseline_id).unwrap_or_default();
+    let test_reference: std::collections::HashMap<i32, String> =
+        if snapshot_verifications.is_empty() {
+            // Old baseline created before verification snapshot: fall back to current project verifications
+            let repo = state.repo_read();
+            let tests = repo
+                .get_verifications_by_project(project_id)
+                .unwrap_or_default();
+            tests
+                .iter()
+                .map(|t| (t.id, t.reference_code.clone()))
+                .collect()
+        } else {
+            snapshot_verifications
+                .iter()
+                .map(|v| (v.verification_id, v.reference_code.clone()))
+                .collect()
+        };
+
     let repo = state.repo_read();
-    let tests = repo
-        .get_verifications_by_project(project_id)
-        .unwrap_or_default();
-    let test_reference: std::collections::HashMap<i32, String> = tests
-        .iter()
-        .map(|t| (t.id, t.reference_code.clone()))
-        .collect();
 
     // One entry per (requirement, test) link — do not collapse to one test per requirement
     let traceability_links: Vec<serde_json::Value> = traceability

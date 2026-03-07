@@ -232,6 +232,23 @@ pub struct NewBaselineTraceability {
     pub suspect_reason: Option<String>,
 }
 
+/// Insertable row for baseline_verifications.
+#[derive(Insertable, Clone, Debug)]
+#[diesel(table_name = baseline_verifications)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewBaselineVerification {
+    pub baseline_id: i32,
+    pub verification_id: i32,
+    pub name: String,
+    pub reference_code: String,
+    pub description: String,
+    pub source: String,
+    pub status_id: i32,
+    pub parent_id: Option<i32>,
+    pub project_id: i32,
+    pub verification_method_id: Option<i32>,
+}
+
 /// Form used to insert or update [`User`] records.
 ///
 /// # Security Note

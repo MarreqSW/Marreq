@@ -48,6 +48,24 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    baseline_verifications (baseline_id, verification_id) {
+        baseline_id -> Int4,
+        verification_id -> Int4,
+        name -> Varchar,
+        reference_code -> Varchar,
+        description -> Varchar,
+        source -> Varchar,
+        status_id -> Int4,
+        parent_id -> Nullable<Int4>,
+        project_id -> Int4,
+        verification_method_id -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     baselines (id) {
         id -> Int4,
         project_id -> Int4,
@@ -386,6 +404,8 @@ diesel::joinable!(baseline_requirements -> requirements (requirement_id));
 diesel::joinable!(baseline_traceability -> baselines (baseline_id));
 diesel::joinable!(baseline_traceability -> requirements (requirement_id));
 diesel::joinable!(baseline_traceability -> verifications (verification_id));
+diesel::joinable!(baseline_verifications -> baselines (baseline_id));
+diesel::joinable!(baseline_verifications -> projects (project_id));
 diesel::joinable!(baselines -> projects (project_id));
 diesel::joinable!(baselines -> users (created_by));
 diesel::joinable!(categories -> projects (project_id));
@@ -428,6 +448,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     applicability,
     baseline_requirements,
     baseline_traceability,
+    baseline_verifications,
     baselines,
     categories,
     custom_field_definitions,

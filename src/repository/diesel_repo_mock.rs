@@ -37,6 +37,7 @@ pub struct DieselRepoMock {
     pub baselines: Vec<crate::models::Baseline>,
     pub baseline_requirements: Vec<crate::models::BaselineRequirement>,
     pub baseline_traceability: Vec<crate::models::BaselineTraceability>,
+    pub baseline_verifications: Vec<crate::models::BaselineVerification>,
     pub next_baseline_id: i32,
     pub custom_field_definitions: HashMap<i32, CustomFieldDefinition>,
     /// (requirement_version_id, custom_field_definition_id, value)
@@ -82,6 +83,7 @@ impl Default for DieselRepoMock {
             baselines: Vec::new(),
             baseline_requirements: Vec::new(),
             baseline_traceability: Vec::new(),
+            baseline_verifications: Vec::new(),
             next_baseline_id: 1,
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),
@@ -121,6 +123,7 @@ impl DieselRepoMock {
             baselines: Vec::new(),
             baseline_requirements: Vec::new(),
             baseline_traceability: Vec::new(),
+            baseline_verifications: Vec::new(),
             next_baseline_id: 1,
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),
@@ -153,6 +156,7 @@ impl DieselRepoMock {
             baselines: Vec::new(),
             baseline_requirements: Vec::new(),
             baseline_traceability: Vec::new(),
+            baseline_verifications: Vec::new(),
             next_baseline_id: 1,
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),
@@ -1521,6 +1525,25 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
                     suspect_reason: link.suspect_reason.clone(),
                 });
         }
+        for v in self
+            .verifications
+            .values()
+            .filter(|v| v.project_id == project_id)
+        {
+            self.baseline_verifications
+                .push(crate::models::BaselineVerification {
+                    baseline_id: id,
+                    verification_id: v.id,
+                    name: v.name.clone(),
+                    reference_code: v.reference_code.clone(),
+                    description: v.description.clone(),
+                    source: v.source.clone(),
+                    status_id: v.status_id,
+                    parent_id: v.parent_id,
+                    project_id: v.project_id,
+                    verification_method_id: v.verification_method_id,
+                });
+        }
         Ok(baseline)
     }
 
@@ -1609,6 +1632,18 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
             .baseline_traceability
             .iter()
             .filter(|bt| bt.baseline_id == baseline_id)
+            .cloned()
+            .collect())
+    }
+
+    fn get_verifications_for_baseline(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<crate::models::BaselineVerification>, RepoError> {
+        Ok(self
+            .baseline_verifications
+            .iter()
+            .filter(|bv| bv.baseline_id == baseline_id)
             .cloned()
             .collect())
     }

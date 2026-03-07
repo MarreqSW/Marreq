@@ -7,7 +7,15 @@
 
     <div class="nav-right c-navbar__right">
       <ul class="nav-menu c-navbar__menu">
-        <li class="c-navbar__item"><a href="/" class="nav-link c-navbar__link">Home</a></li>
+        <li class="c-navbar__item">
+        {{#if project.id}}
+        <a href="/p/{{project.id}}" class="nav-link c-navbar__link">Home</a>
+        {{else if selected_project_id}}
+        <a href="/p/{{selected_project_id}}" class="nav-link c-navbar__link">Home</a>
+        {{else}}
+        <a href="/" class="nav-link c-navbar__link">Home</a>
+        {{/if}}
+        </li>
         <li class="nav-item dropdown c-navbar__item">
           <a class="nav-link dropdown-toggle c-navbar__link c-navbar__link--toggle" href="#" role="button"
             data-bs-toggle="dropdown" aria-expanded="false">
@@ -31,13 +39,13 @@
             aria-disabled="true">Requirements</span></li>
         {{/if}}
         {{#if project.id}}
-        <li class="c-navbar__item"><a href="/p/{{project.id}}/tests" class="nav-link c-navbar__link">Tests</a></li>
+        <li class="c-navbar__item"><a href="/p/{{project.id}}/verifications" class="nav-link c-navbar__link">Verifications</a></li>
         {{else if selected_project_id}}
-        <li class="c-navbar__item"><a href="/p/{{selected_project_id}}/tests" class="nav-link c-navbar__link">Tests</a>
+        <li class="c-navbar__item"><a href="/p/{{selected_project_id}}/verifications" class="nav-link c-navbar__link">Verifications</a>
         </li>
         {{else}}
         <li class="c-navbar__item"><span class="nav-link c-navbar__link c-navbar__link--disabled"
-            aria-disabled="true">Tests</span></li>
+            aria-disabled="true">Verifications</span></li>
         {{/if}}
         {{#if project.id}}
         <li class="c-navbar__item"><a href="/p/{{project.id}}/reports" class="nav-link c-navbar__link">Reports</a></li>
@@ -72,11 +80,11 @@
             </li>
             <li>
               {{#if project.id}}
-              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/tests/new">New Test</a>
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/verifications/new">New Verification</a>
               {{else if selected_project_id}}
-              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/tests/new">New Test</a>
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/verifications/new">New Verification</a>
               {{else}}
-              <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New Test</span>
+              <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New Verification</span>
               {{/if}}
             </li>
             <li>
@@ -122,11 +130,11 @@
             </li>
             <li>
               {{#if project.id}}
-              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/test_statuses/new">New test status</a>
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/verification_statuses/new">New verification status</a>
               {{else if selected_project_id}}
-              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/test_statuses/new">New test status</a>
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/verification_statuses/new">New verification status</a>
               {{else}}
-              <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New test status</span>
+              <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">New verification status</span>
               {{/if}}
             </li>
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/user/new">New User</a></li>

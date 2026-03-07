@@ -9,7 +9,7 @@ use crate::repository::{
     ApiTokensRepository, BaselineRepository, CustomFieldRepository, LogRepository,
     LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository, Repository,
     RequirementCommentsRepository, RequirementVersionLinksRepository, RequirementsRepository,
-    TestsCaseRepository, UserRepository,
+    UserRepository, VerificationsRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -277,11 +277,9 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         })
     }
 
+    /// Bypasses cache so login always sees the current password hash from the database.
     fn get_user_by_username(&self, uname: &str) -> Result<Option<User>, RepoError> {
-        let key = format!("user:username:{}", uname);
-        self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_user_by_username(uname)
-        })
+        self.inner.get_user_by_username(uname)
     }
 
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
@@ -291,31 +289,65 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
     }
 
     fn update_user_password(&mut self, user_id: i32, new_hash: &str) -> Result<(), RepoError> {
+        let username = self
+            .inner
+            .get_user_by_id(user_id)
+            .ok()
+            .map(|u| u.username.to_lowercase());
         self.inner.update_user_password(user_id, new_hash)?;
         self.cache.invalidate_user(user_id);
+        if let Some(ref u) = username {
+            self.cache.remove(&format!("user:username:{}", u));
+        }
         Ok(())
     }
 
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError> {
+        let username = user_data.id.and_then(|id| {
+            self.inner
+                .get_user_by_id(id)
+                .ok()
+                .map(|u| u.username.to_lowercase())
+        });
         let res = self.inner.update_user(user_data)?;
         if let Some(id) = user_data.id {
             self.cache.invalidate_user(id);
+        }
+        if let Some(ref u) = username {
+            self.cache.remove(&format!("user:username:{}", u));
         }
         Ok(res)
     }
 
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError> {
+        let username = user_data.id.and_then(|id| {
+            self.inner
+                .get_user_by_id(id)
+                .ok()
+                .map(|u| u.username.to_lowercase())
+        });
         let res = self.inner.update_user_without_password(user_data)?;
         if let Some(id) = user_data.id {
             self.cache.invalidate_user(id);
+        }
+        if let Some(ref u) = username {
+            self.cache.remove(&format!("user:username:{}", u));
         }
         Ok(res)
     }
 
     fn delete_user(&mut self, user_id: i32) -> Result<User, RepoError> {
+        let username = self
+            .inner
+            .get_user_by_id(user_id)
+            .ok()
+            .map(|u| u.username.to_lowercase());
         let memberships = self.inner.get_projects_for_user(user_id)?;
         let user = self.inner.delete_user(user_id)?;
         self.cache.invalidate_user(user_id);
+        if let Some(ref u) = username {
+            self.cache.remove(&format!("user:username:{}", u));
+        }
         for membership in memberships {
             self.cache
                 .invalidate_project_membership(membership.project_id, user_id);
@@ -372,81 +404,91 @@ impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
     }
 }
 
-impl<R: Repository> TestsCaseRepository for CacheRepository<R> {
-    fn get_test_by_id(&self, test_id: i32) -> Result<TestCase, RepoError> {
-        let key = keys::Tests::by_id(test_id);
+impl<R: Repository> VerificationsRepository for CacheRepository<R> {
+    fn get_verification_by_id(&self, verification_id: i32) -> Result<Verification, RepoError> {
+        let key = keys::Verifications::by_id(verification_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_test_by_id(test_id)
+            self.inner.get_verification_by_id(verification_id)
         })
     }
 
-    fn get_tests_all(&self) -> Result<Vec<TestCase>, RepoError> {
-        self.get_or_fetch(keys::TESTS_ALL, Duration::from_secs(300), || {
-            self.inner.get_tests_all()
+    fn get_verifications_all(&self) -> Result<Vec<Verification>, RepoError> {
+        self.get_or_fetch(keys::VERIFICATIONS_ALL, Duration::from_secs(300), || {
+            self.inner.get_verifications_all()
         })
     }
 
-    fn get_tests_by_project(&self, project_id: i32) -> Result<Vec<TestCase>, RepoError> {
-        let key = keys::Tests::by_project(project_id);
+    fn get_verifications_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<Verification>, RepoError> {
+        let key = keys::Verifications::by_project(project_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_tests_by_project(project_id)
+            self.inner.get_verifications_by_project(project_id)
         })
     }
 
-    fn get_requirements_for_test(&self, test_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        let key = keys::LinkedRequirements::for_test(test_id);
+    fn get_requirements_for_verification(
+        &self,
+        verification_id: i32,
+    ) -> Result<Vec<Requirement>, RepoError> {
+        let key = keys::LinkedRequirements::for_test(verification_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_requirements_for_test(test_id)
+            self.inner
+                .get_requirements_for_verification(verification_id)
         })
     }
 
-    fn get_tests_for_requirement(&self, requirement_id: i32) -> Result<Vec<TestCase>, RepoError> {
-        let key = keys::LinkedTests::for_requirement(requirement_id);
-        self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_tests_for_requirement(requirement_id)
-        })
-    }
-
-    fn get_impacted_tests_for_requirement(
+    fn get_verifications_for_requirement(
         &self,
         requirement_id: i32,
-    ) -> Result<Vec<TestCase>, RepoError> {
-        self.inner
-            .get_impacted_tests_for_requirement(requirement_id)
+    ) -> Result<Vec<Verification>, RepoError> {
+        let key = keys::LinkedVerifications::for_requirement(requirement_id);
+        self.get_or_fetch(&key, Duration::from_secs(300), || {
+            self.inner.get_verifications_for_requirement(requirement_id)
+        })
     }
 
-    fn insert_test(&mut self, new: &NewTestCase) -> Result<i32, RepoError> {
-        let id = self.inner.insert_test(new)?;
-        self.cache.invalidate_test(id);
+    fn get_impacted_verifications_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<Verification>, RepoError> {
+        self.inner
+            .get_impacted_verifications_for_requirement(requirement_id)
+    }
+
+    fn insert_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
+        let id = self.inner.insert_verification(new)?;
+        self.cache.invalidate_verification(id);
         self.cache.invalidate_project(new.project_id);
         Ok(id)
     }
 
-    fn edit_test(&mut self, new: &NewTestCase) -> Result<bool, RepoError> {
-        let res = self.inner.edit_test(new)?;
+    fn edit_verification(&mut self, new: &NewVerification) -> Result<bool, RepoError> {
+        let res = self.inner.edit_verification(new)?;
         if let Some(id) = new.id {
-            self.cache.invalidate_test(id);
+            self.cache.invalidate_verification(id);
         }
         self.cache.invalidate_project(new.project_id);
         Ok(res)
     }
 
-    fn delete_test(&mut self, test_id: i32) -> Result<TestCase, RepoError> {
-        let test = self.inner.delete_test(test_id)?;
-        self.cache.invalidate_test(test_id);
-        self.cache.invalidate_project(test.project_id);
-        self.cache.remove(super::cache::keys::TESTS_ALL);
-        Ok(test)
+    fn delete_verification(&mut self, verification_id: i32) -> Result<Verification, RepoError> {
+        let verification = self.inner.delete_verification(verification_id)?;
+        self.cache.invalidate_verification(verification_id);
+        self.cache.invalidate_project(verification.project_id);
+        self.cache.remove(super::cache::keys::VERIFICATIONS_ALL);
+        Ok(verification)
     }
 
-    fn update_test_requirement_links(
+    fn update_verification_requirement_links(
         &mut self,
-        test_id: i32,
+        verification_id: i32,
         requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
         self.inner
-            .update_test_requirement_links(test_id, requirement_ids)?;
-        self.cache.invalidate_test(test_id);
+            .update_verification_requirement_links(verification_id, requirement_ids)?;
+        self.cache.invalidate_verification(verification_id);
         for &requirement_id in requirement_ids {
             self.cache.invalidate_requirement(requirement_id);
         }
@@ -480,23 +522,31 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         })
     }
 
-    fn get_test_status_all(&self) -> Result<Vec<TestStatus>, RepoError> {
-        self.get_or_fetch(keys::TEST_STATUS_ALL, Duration::from_secs(900), || {
-            self.inner.get_test_status_all()
+    fn get_verification_status_all(&self) -> Result<Vec<VerificationStatus>, RepoError> {
+        self.get_or_fetch(
+            keys::VERIFICATION_STATUS_ALL,
+            Duration::from_secs(900),
+            || self.inner.get_verification_status_all(),
+        )
+    }
+
+    fn get_verification_status_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<VerificationStatus>, RepoError> {
+        let key = keys::VerificationStatus::by_project(project_id);
+        self.get_or_fetch(&key, Duration::from_secs(900), || {
+            self.inner.get_verification_status_by_project(project_id)
         })
     }
 
-    fn get_test_status_by_project(&self, project_id: i32) -> Result<Vec<TestStatus>, RepoError> {
-        let key = keys::TestStatus::by_project(project_id);
+    fn get_verification_status_by_id(
+        &self,
+        status_id: i32,
+    ) -> Result<VerificationStatus, RepoError> {
+        let key = keys::VerificationStatus::by_id(status_id);
         self.get_or_fetch(&key, Duration::from_secs(900), || {
-            self.inner.get_test_status_by_project(project_id)
-        })
-    }
-
-    fn get_test_status_by_id(&self, status_id: i32) -> Result<TestStatus, RepoError> {
-        let key = keys::TestStatus::by_id(status_id);
-        self.get_or_fetch(&key, Duration::from_secs(900), || {
-            self.inner.get_test_status_by_id(status_id)
+            self.inner.get_verification_status_by_id(status_id)
         })
     }
 
@@ -543,29 +593,30 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         })
     }
 
-    fn get_verification_all(&self) -> Result<Vec<VerificationMethod>, RepoError> {
+    fn get_verification_methods_all(&self) -> Result<Vec<VerificationMethod>, RepoError> {
         self.get_or_fetch(keys::VERIFICATION_ALL, Duration::from_secs(600), || {
-            self.inner.get_verification_all()
+            self.inner.get_verification_methods_all()
         })
     }
 
-    fn get_verification_by_id(
+    fn get_verification_method_by_id(
         &self,
-        verification_id: i32,
+        verification_method_id: i32,
     ) -> Result<VerificationMethod, RepoError> {
-        let key = keys::VerificationMethod::by_id(verification_id);
+        let key = keys::VerificationMethod::by_id(verification_method_id);
         self.get_or_fetch(&key, Duration::from_secs(600), || {
-            self.inner.get_verification_by_id(verification_id)
+            self.inner
+                .get_verification_method_by_id(verification_method_id)
         })
     }
 
-    fn get_verification_by_project(
+    fn get_verification_methods_by_project(
         &self,
         project_id: i32,
     ) -> Result<Vec<VerificationMethod>, RepoError> {
         let key = keys::VerificationMethod::by_project(project_id);
         self.get_or_fetch(&key, Duration::from_secs(600), || {
-            self.inner.get_verification_by_project(project_id)
+            self.inner.get_verification_methods_by_project(project_id)
         })
     }
 
@@ -577,10 +628,14 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         Ok(id)
     }
 
-    fn create_test_status(&mut self, new: &NewTestStatus) -> Result<i32, RepoError> {
-        let id = self.inner.create_test_status(new)?;
+    fn create_verification_status(
+        &mut self,
+        new: &NewVerificationStatus,
+    ) -> Result<i32, RepoError> {
+        let id = self.inner.create_verification_status(new)?;
         self.cache.invalidate_status(id);
-        self.cache.invalidate_test_status_by_project(new.project_id);
+        self.cache
+            .invalidate_verification_status_by_project(new.project_id);
         Ok(id)
     }
 
@@ -606,46 +661,56 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
         Ok(status)
     }
 
-    fn update_test_status(&mut self, id: i32, payload: &NewTestStatus) -> Result<bool, RepoError> {
-        let res = self.inner.update_test_status(id, payload)?;
+    fn update_verification_status(
+        &mut self,
+        id: i32,
+        payload: &NewVerificationStatus,
+    ) -> Result<bool, RepoError> {
+        let res = self.inner.update_verification_status(id, payload)?;
         if res {
             self.cache.invalidate_status(id);
             self.cache
-                .invalidate_test_status_by_project(payload.project_id);
+                .invalidate_verification_status_by_project(payload.project_id);
         }
         Ok(res)
     }
 
-    fn delete_test_status(&mut self, id: i32) -> Result<TestStatus, RepoError> {
-        let status = self.inner.delete_test_status(id)?;
+    fn delete_verification_status(&mut self, id: i32) -> Result<VerificationStatus, RepoError> {
+        let status = self.inner.delete_verification_status(id)?;
         self.cache.invalidate_status(id);
         self.cache
-            .invalidate_test_status_by_project(status.project_id);
+            .invalidate_verification_status_by_project(status.project_id);
         Ok(status)
     }
 
-    fn insert_new_verification(&mut self, new: &NewVerificationMethod) -> Result<i32, RepoError> {
-        let id = self.inner.insert_new_verification(new)?;
-        self.cache.invalidate_verification(id);
+    fn insert_new_verification_method(
+        &mut self,
+        new: &NewVerificationMethod,
+    ) -> Result<i32, RepoError> {
+        let id = self.inner.insert_new_verification_method(new)?;
+        self.cache.invalidate_verification_method(id);
         self.cache.invalidate_project(new.project_id);
         Ok(id)
     }
 
-    fn edit_verification(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError> {
-        let res = self.inner.edit_verification(new)?;
+    fn edit_verification_method(&mut self, new: &NewVerificationMethod) -> Result<bool, RepoError> {
+        let res = self.inner.edit_verification_method(new)?;
         if let Some(id) = new.id {
-            self.cache.invalidate_verification(id);
+            self.cache.invalidate_verification_method(id);
         }
         self.cache.invalidate_project(new.project_id);
         Ok(res)
     }
 
-    fn delete_verification(
+    fn delete_verification_method(
         &mut self,
-        verification_id: i32,
+        verification_method_id: i32,
     ) -> Result<VerificationMethod, RepoError> {
-        let verification = self.inner.delete_verification(verification_id)?;
-        self.cache.invalidate_verification(verification_id);
+        let verification = self
+            .inner
+            .delete_verification_method(verification_method_id)?;
+        self.cache
+            .invalidate_verification_method(verification_method_id);
         self.cache.invalidate_project(verification.project_id);
         Ok(verification)
     }
@@ -1069,19 +1134,20 @@ mod tests {
             approved_at: None,
             custom_fields: None,
         };
-        let test = TestCase {
+        let verification = Verification {
             id: 1,
             name: "Test".into(),
             description: "".into(),
             source: "src".into(),
             status_id: 1,
-            reference_code: "TEST-1".into(),
+            reference_code: "VER-001".into(),
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
         let matrix = MatrixLink {
             req_id: 1,
-            test_id: 1,
+            verification_id: 1,
             creation_date: epoch(),
             project_id: 1,
             suspect: false,
@@ -1103,12 +1169,12 @@ mod tests {
         categories.insert(1, category);
         let mut applicability = HashMap::new();
         applicability.insert(1, app);
-        let mut verifications = HashMap::new();
-        verifications.insert(1, ver);
+        let mut verification_methods = HashMap::new();
+        verification_methods.insert(1, ver);
         let mut requirements = HashMap::new();
         requirements.insert(1, requirement);
-        let mut tests = HashMap::new();
-        tests.insert(1, test);
+        let mut verifications = HashMap::new();
+        verifications.insert(1, verification);
         let mut projects = HashMap::new();
         projects.insert(1, project);
 
@@ -1117,15 +1183,15 @@ mod tests {
             users,
             statuses,
             requirement_statuses,
-            test_statuses: HashMap::new(),
-            verifications,
+            verification_statuses: HashMap::new(),
+            verification_methods,
             categories,
             applicability,
             requirements,
             requirement_verification_methods: Vec::new(),
             requirement_versions: HashMap::new(),
             next_version_id: 1,
-            tests,
+            verifications,
             projects,
             matrices: vec![matrix],
             project_members: Vec::new(),
@@ -1295,9 +1361,9 @@ mod tests {
         assert_eq!(user.username, "alice");
         assert!(cache.get(&keys::Users::by_id(1)).unwrap().contains("alice"));
 
-        // Username lookup is cached
+        // Username lookup bypasses cache so login always sees current password from DB
         repo.get_user_by_username("alice").unwrap();
-        assert!(cache.get("user:username:alice").is_some());
+        assert!(cache.get("user:username:alice").is_none());
 
         // Populate list cache then insert new user to invalidate it
         repo.get_users_all().unwrap();
@@ -1401,19 +1467,19 @@ mod tests {
         let mut repo = CacheRepository::new(populated_repo(), 60);
         let cache = repo.cache();
 
-        repo.get_test_by_id(1).unwrap();
-        assert!(cache.get(&keys::Tests::by_id(1)).is_some());
-        repo.get_tests_all().unwrap();
-        assert!(cache.get(keys::TESTS_ALL).is_some());
-        repo.get_tests_by_project(1).unwrap();
-        assert!(cache.get(&keys::Tests::by_project(1)).is_some());
+        repo.get_verification_by_id(1).unwrap();
+        assert!(cache.get(&keys::Verifications::by_id(1)).is_some());
+        repo.get_verifications_all().unwrap();
+        assert!(cache.get(keys::VERIFICATIONS_ALL).is_some());
+        repo.get_verifications_by_project(1).unwrap();
+        assert!(cache.get(&keys::Verifications::by_project(1)).is_some());
 
-        let reqs = repo.get_requirements_for_test(1).unwrap();
+        let reqs = repo.get_requirements_for_verification(1).unwrap();
         assert_eq!(reqs.len(), 1);
-        let tests = repo.get_tests_for_requirement(1).unwrap();
+        let tests = repo.get_verifications_for_requirement(1).unwrap();
         assert_eq!(tests.len(), 1);
 
-        let new_test = NewTestCase {
+        let new_test = NewVerification {
             id: None,
             name: "T2".into(),
             description: "".into(),
@@ -1422,30 +1488,33 @@ mod tests {
             reference_code: "TEST-2".into(),
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
-        let tid = repo.insert_test(&new_test).unwrap();
-        assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
+        let tid = repo.insert_verification(&new_test).unwrap();
+        assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());
 
-        let edit_test = NewTestCase {
+        let edit_test = NewVerification {
             id: Some(tid),
             name: "T2".into(),
             description: "".into(),
             source: "s".into(),
             status_id: 1,
-            reference_code: "TEST-2".into(),
+            reference_code: "VER-002".into(),
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
-        repo.edit_test(&edit_test).unwrap();
-        assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
+        repo.edit_verification(&edit_test).unwrap();
+        assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());
 
-        repo.update_test_requirement_links(tid, &[1]).unwrap();
-        assert!(cache.get(&keys::Tests::by_id(tid)).is_none());
+        repo.update_verification_requirement_links(tid, &[1])
+            .unwrap();
+        assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());
         assert!(cache.get(&keys::Requirements::by_id(1)).is_none());
 
-        repo.get_tests_all().unwrap();
-        repo.delete_test(tid).unwrap();
-        assert!(cache.get(keys::TESTS_ALL).is_none());
+        repo.get_verifications_all().unwrap();
+        repo.delete_verification(tid).unwrap();
+        assert!(cache.get(keys::VERIFICATIONS_ALL).is_none());
     }
 
     #[test]
@@ -1514,10 +1583,10 @@ mod tests {
         repo.edit_applicability(&ea).unwrap();
         repo.delete_applicability(aid).unwrap();
 
-        // Verification operations
-        repo.get_verification_all().unwrap();
-        repo.get_verification_by_id(1).unwrap();
-        repo.get_verification_by_project(1).unwrap();
+        // Verification method operations
+        repo.get_verification_methods_all().unwrap();
+        repo.get_verification_method_by_id(1).unwrap();
+        repo.get_verification_methods_by_project(1).unwrap();
 
         // Project operations
         repo.get_projects_all().unwrap();
@@ -1543,7 +1612,7 @@ mod tests {
         assert!(cache.get(&keys::Matrix::by_project(1)).is_some());
         repo.insert_new_matrix_item(&NewMatrixLink {
             req_id: 1,
-            test_id: 1,
+            verification_id: 1,
             project_id: 1,
             triggering_version_id: None,
             triggering_user_id: None,
@@ -1704,7 +1773,7 @@ mod tests {
         // Insert new matrix item should invalidate cache
         repo.insert_new_matrix_item(&NewMatrixLink {
             req_id: 1,
-            test_id: 1,
+            verification_id: 1,
             project_id: 1,
             triggering_version_id: None,
             triggering_user_id: None,
@@ -1795,9 +1864,9 @@ mod tests {
         let _ = repo.get_requirements_all();
         let _ = repo.get_requirement_by_id(1);
         let _ = repo.get_requirements_by_project(1);
-        let _ = repo.get_tests_all();
-        let _ = repo.get_test_by_id(1);
-        let _ = repo.get_tests_by_project(1);
+        let _ = repo.get_verifications_all();
+        let _ = repo.get_verification_by_id(1);
+        let _ = repo.get_verifications_by_project(1);
         let _ = repo.get_projects_all();
         let _ = repo.get_project_by_id(1);
         let _ = repo.get_categories_all();
@@ -1806,18 +1875,18 @@ mod tests {
         let _ = repo.get_applicability_all();
         let _ = repo.get_applicability_by_id(1);
         let _ = repo.get_applicability_by_project(1);
-        let _ = repo.get_verification_all();
+        let _ = repo.get_verification_methods_all();
         let _ = repo.get_verification_by_id(1);
-        let _ = repo.get_verification_by_project(1);
+        let _ = repo.get_verification_methods_by_project(1);
         let _ = repo.get_requirement_status_all();
         let _ = repo.get_requirement_status_by_id(1);
-        let _ = repo.get_test_status_all();
-        let _ = repo.get_test_status_by_id(1);
+        let _ = repo.get_verification_status_all();
+        let _ = repo.get_verification_status_by_id(1);
         let _ = repo.get_members_by_project(1);
         let _ = repo.get_projects_for_user(1);
         let _ = repo.get_matrix_by_project(1);
-        let _ = repo.get_requirements_for_test(1);
-        let _ = repo.get_tests_for_requirement(1);
+        let _ = repo.get_requirements_for_verification(1);
+        let _ = repo.get_verifications_for_requirement(1);
         let _ = repo.get_logs_recent(10);
         let _ = repo.get_logs_by_entity("requirement", 1);
 

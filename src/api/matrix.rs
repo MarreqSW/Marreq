@@ -101,7 +101,7 @@ mod tests {
         );
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 2,
+            verification_id: 2,
             creation_date: epoch(),
             project_id: 7,
             suspect: false,
@@ -118,7 +118,7 @@ mod tests {
         let body: Vec<MatrixLink> = response.into_json().await.unwrap();
         assert_eq!(body.len(), 1);
         assert_eq!(body[0].req_id, 1);
-        assert_eq!(body[0].test_id, 2);
+        assert_eq!(body[0].verification_id, 2);
     }
 
     #[rocket::async_test]
@@ -185,7 +185,7 @@ mod tests {
         });
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 2,
+            verification_id: 2,
             creation_date: epoch(),
             project_id: PROJECT_ID,
             suspect: false,
@@ -198,7 +198,7 @@ mod tests {
         });
         repo.matrices.push(MatrixLink {
             req_id: 3,
-            test_id: 4,
+            verification_id: 4,
             creation_date: epoch(),
             project_id: 999,
             suspect: false,

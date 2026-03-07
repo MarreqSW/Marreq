@@ -111,7 +111,7 @@ mod test_support {
             },
         );
 
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             1,
             VerificationMethod {
                 id: 1,
@@ -375,7 +375,7 @@ async fn create_test_with_missing_fields_returns_error() {
     });
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(payload.to_string())
@@ -389,9 +389,9 @@ async fn create_test_with_missing_fields_returns_error() {
 #[rocket::async_test]
 async fn update_test_field_with_invalid_field_name_returns_error() {
     let mut repo = base_repo();
-    repo.tests.insert(
+    repo.verifications.insert(
         1,
-        TestCase {
+        Verification {
             id: 1,
             name: "Test".into(),
             description: "Description".into(),
@@ -400,6 +400,7 @@ async fn update_test_field_with_invalid_field_name_returns_error() {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         },
     );
 
@@ -411,7 +412,7 @@ async fn update_test_field_with_invalid_field_name_returns_error() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -425,9 +426,9 @@ async fn update_test_field_with_invalid_field_name_returns_error() {
 #[rocket::async_test]
 async fn update_test_field_with_invalid_status_value_returns_error() {
     let mut repo = base_repo();
-    repo.tests.insert(
+    repo.verifications.insert(
         1,
-        TestCase {
+        Verification {
             id: 1,
             name: "Test".into(),
             description: "Description".into(),
@@ -436,6 +437,7 @@ async fn update_test_field_with_invalid_status_value_returns_error() {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         },
     );
 
@@ -448,7 +450,7 @@ async fn update_test_field_with_invalid_status_value_returns_error() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())

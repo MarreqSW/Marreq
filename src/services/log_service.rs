@@ -27,6 +27,7 @@ fn field_label(key: &str) -> &'static str {
         "parent_id" => "Parent",
         "parent_requirement_ids" => "Parents",
         "source" => "Source",
+        "verification_method_id" => "Verification type",
         "verification_method_ids" => "Verification",
         _ => "Details",
     }
@@ -356,6 +357,38 @@ pub fn resolve_change_details_labels(
                 "Verification" => (
                     resolve_verification_ids_to_labels(&d.old_value, resolvers.verification_map),
                     resolve_verification_ids_to_labels(&d.new_value, resolvers.verification_map),
+                ),
+                "Verification type" => (
+                    parse_id_for_label(&d.old_value)
+                        .and_then(|id| {
+                            if id == 0 {
+                                Some("—".to_string())
+                            } else {
+                                resolvers.verification_map.get(&id).cloned()
+                            }
+                        })
+                        .unwrap_or_else(|| {
+                            if is_empty_parent_value(&d.old_value) {
+                                "—".to_string()
+                            } else {
+                                d.old_value.clone()
+                            }
+                        }),
+                    parse_id_for_label(&d.new_value)
+                        .and_then(|id| {
+                            if id == 0 {
+                                Some("—".to_string())
+                            } else {
+                                resolvers.verification_map.get(&id).cloned()
+                            }
+                        })
+                        .unwrap_or_else(|| {
+                            if is_empty_parent_value(&d.new_value) {
+                                "—".to_string()
+                            } else {
+                                d.new_value.clone()
+                            }
+                        }),
                 ),
                 "Parent" => (
                     parse_id_for_label(&d.old_value)

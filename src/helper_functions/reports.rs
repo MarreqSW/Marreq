@@ -382,7 +382,10 @@ pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn st
             "Requirements",
             "Total requirements and their status distribution",
         ),
-        ("Verifications", "Total verifications and their status distribution"),
+        (
+            "Verifications",
+            "Total verifications and their status distribution",
+        ),
         ("Coverage", "Requirements coverage analysis"),
         ("Categories", "Requirements categorized by type"),
     ];

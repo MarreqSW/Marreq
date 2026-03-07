@@ -124,13 +124,13 @@ pub struct NewRequirementStatus {
     pub tag_color: Option<String>,
 }
 
-/// Insertable test status. `is_system` is set by the service (true for defaults, false for user-created).
+/// Insertable verification status. `is_system` is set by the service (true for defaults, false for user-created).
 #[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset, Clone)]
 #[serde(crate = "rocket::serde")]
-#[diesel(table_name = test_status)]
+#[diesel(table_name = verification_status)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
-pub struct NewTestStatus {
+pub struct NewVerificationStatus {
     pub id: Option<i32>,
     pub title: String,
     pub description: String,
@@ -142,7 +142,7 @@ pub struct NewTestStatus {
     pub tag_color: Option<String>,
 }
 
-define_tagged_form!(NewVerificationMethod, verification);
+define_tagged_form!(NewVerificationMethod, verification_methods);
 
 /// Payload to create or update a custom field definition (project-scoped).
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -176,14 +176,14 @@ pub struct CustomFieldValueInput {
     pub value: Option<String>,
 }
 
-/// Form used to create a new [`MatrixLink`] entry tying a requirement to a test.
+/// Form used to create a new [`MatrixLink`] entry tying a requirement to a verification.
 #[derive(Serialize, Deserialize, Insertable)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = matrix)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NewMatrixLink {
     pub req_id: i32,
-    pub test_id: i32,
+    pub verification_id: i32,
     pub project_id: i32,
     pub triggering_version_id: Option<i32>,
     pub triggering_user_id: Option<i32>,
@@ -226,7 +226,7 @@ pub struct NewBaselineRequirement {
 pub struct NewBaselineTraceability {
     pub baseline_id: i32,
     pub requirement_id: i32,
-    pub test_id: i32,
+    pub verification_id: i32,
     pub suspect: bool,
     pub suspect_at: Option<chrono::NaiveDateTime>,
     pub suspect_reason: Option<String>,
@@ -265,12 +265,12 @@ pub struct UpdateUser {
     pub is_admin: bool,
 }
 
-/// Form used to create or update a [`TestCase`].
+/// Form used to create or update a [`Verification`].
 #[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
 #[serde(crate = "rocket::serde")]
-#[diesel(table_name = tests)]
+#[diesel(table_name = verifications)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct NewTestCase {
+pub struct NewVerification {
     pub id: Option<i32>,
     pub reference_code: String,
     pub name: String,
@@ -279,27 +279,29 @@ pub struct NewTestCase {
     pub status_id: i32,
     pub parent_id: Option<i32>,
     pub project_id: i32,
+    pub verification_method_id: Option<i32>,
 }
 
-/// Form data submitted when creating a new test along with linked
+/// Form data submitted when creating a new verification along with linked
 /// requirements.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
-pub struct NewTestForm {
+pub struct NewVerificationForm {
     pub name: String,
     pub reference_code: String,
     pub description: String,
     pub source: String,
     pub status_id: i32,
     pub parent_id: Option<i32>,
-    pub test_req: Vec<i32>,
+    pub verification_method_id: Option<i32>,
+    pub verification_req: Vec<i32>,
     pub project_id: i32,
 }
 
-/// Form used for editing an existing test and updating its requirement links.
+/// Form used for editing an existing verification and updating its requirement links.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
-pub struct EditTestForm {
+pub struct EditVerificationForm {
     pub id: i32,
     pub reference_code: String,
     pub name: String,
@@ -307,6 +309,7 @@ pub struct EditTestForm {
     pub source: String,
     pub status_id: i32,
     pub parent_id: Option<i32>,
+    pub verification_method_id: Option<i32>,
     pub linked_requirements: Vec<i32>,
     pub project_id: i32,
 }
@@ -459,11 +462,11 @@ macro_rules! impl_loggable {
 impl_loggable!(NewRequirement, EntityType::Requirement, title);
 impl_loggable!(NewCategory, EntityType::Category, title);
 impl_loggable!(NewApplicability, EntityType::Applicability, title);
-impl_loggable!(NewVerificationMethod, EntityType::Verification, title);
-impl_loggable!(NewTestCase, EntityType::Test, name);
+impl_loggable!(NewVerificationMethod, EntityType::VerificationMethod, title);
+impl_loggable!(NewVerification, EntityType::Verification, name);
 impl_loggable!(NewUser, EntityType::User, username, no_project);
 impl_loggable!(NewRequirementStatus, EntityType::Requirement, title);
-impl_loggable!(NewTestStatus, EntityType::Test, title);
+impl_loggable!(NewVerificationStatus, EntityType::Verification, title);
 
 #[cfg(test)]
 mod forms_tests {
@@ -544,13 +547,13 @@ mod forms_tests {
     fn new_matrix_link_fields() {
         let link = NewMatrixLink {
             req_id: 1,
-            test_id: 2,
+            verification_id: 2,
             project_id: 10,
             triggering_version_id: None,
             triggering_user_id: None,
         };
         assert_eq!(link.req_id, 1);
-        assert_eq!(link.test_id, 2);
+        assert_eq!(link.verification_id, 2);
         assert_eq!(link.project_id, 10);
     }
 
@@ -628,23 +631,24 @@ mod forms_tests {
 
     #[test]
     fn new_test_form_fields() {
-        let form = NewTestForm {
+        let form = NewVerificationForm {
             name: "T1".into(),
             reference_code: "T-001".into(),
             description: "D".into(),
             source: "Spec".into(),
             status_id: 1,
             parent_id: None,
-            test_req: vec![1, 2],
+            verification_method_id: None,
+            verification_req: vec![1, 2],
             project_id: 10,
         };
-        assert_eq!(form.test_req.len(), 2);
+        assert_eq!(form.verification_req.len(), 2);
         assert_eq!(form.project_id, 10);
     }
 
     #[test]
     fn edit_test_form_linked_requirements() {
-        let form = EditTestForm {
+        let form = EditVerificationForm {
             id: 5,
             reference_code: "T-005".into(),
             name: "Test".into(),
@@ -652,6 +656,7 @@ mod forms_tests {
             source: "S".into(),
             status_id: 1,
             parent_id: None,
+            verification_method_id: None,
             linked_requirements: vec![10, 20],
             project_id: 1,
         };
@@ -704,7 +709,7 @@ mod forms_tests {
         };
         assert_eq!(
             NewVerificationMethod::entity_type(),
-            EntityType::Verification
+            EntityType::VerificationMethod
         );
         assert_eq!(v.id(), 0);
         assert_eq!(v.display_name(), "Verification");
@@ -726,8 +731,8 @@ mod forms_tests {
     }
 
     #[test]
-    fn new_test_status_loggable() {
-        let s = NewTestStatus {
+    fn new_verification_status_loggable() {
+        let s = NewVerificationStatus {
             id: Some(1),
             title: "Pass".into(),
             description: "D".into(),
@@ -736,26 +741,30 @@ mod forms_tests {
             is_system: false,
             tag_color: None,
         };
-        assert_eq!(NewTestStatus::entity_type(), EntityType::Test);
+        assert_eq!(
+            NewVerificationStatus::entity_type(),
+            EntityType::Verification
+        );
         assert_eq!(s.display_name(), "Pass");
     }
 
     #[test]
-    fn new_test_case_loggable() {
-        let t = NewTestCase {
+    fn new_verification_loggable() {
+        let t = NewVerification {
             id: Some(7),
-            reference_code: "T-007".into(),
-            name: "Test Case".into(),
+            reference_code: "V-007".into(),
+            name: "Verification".into(),
             description: "D".into(),
             source: "S".into(),
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
-        assert_eq!(NewTestCase::entity_type(), EntityType::Test);
+        assert_eq!(NewVerification::entity_type(), EntityType::Verification);
         assert_eq!(t.id(), 7);
         assert_eq!(t.project_id(), Some(1));
-        assert_eq!(t.display_name(), "Test Case");
+        assert_eq!(t.display_name(), "Verification");
     }
 
     #[test]

@@ -9,18 +9,16 @@
 
 use super::{
     ApplicabilityService, CategoryService, RequirementService, StatusService, UserService,
-    VerificationService,
 };
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{
-    DecoratedRequirement, NewRequirement, ReqParentDisplay, Requirement, TestCase, User,
+    DecoratedRequirement, NewRequirement, ReqParentDisplay, Requirement, User, Verification,
 };
 use crate::repository::errors::RepoError;
 
 /// High level operations for requirements backed by the shared [`AppState`].
 pub struct DecoratedRequirementService<'a> {
     requirement_service: RequirementService<'a>,
-    verification_service: VerificationService<'a>,
     category_service: CategoryService<'a>,
     status_service: StatusService<'a>,
     user_service: UserService<'a>,
@@ -32,7 +30,6 @@ impl<'a> DecoratedRequirementService<'a> {
     pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
         Self {
             requirement_service: RequirementService::new(state),
-            verification_service: VerificationService::new(state),
             category_service: CategoryService::new(state),
             status_service: StatusService::new(state),
             user_service: UserService::new(state),
@@ -113,8 +110,8 @@ impl<'a> DecoratedRequirementService<'a> {
         self.decorate_vec(self.requirement_service.get_by_parent_id(parent_id)?)
     }
 
-    pub fn get_linked_tests(&self, id: i32) -> Result<Vec<TestCase>, RepoError> {
-        self.requirement_service.get_linked_tests(id)
+    pub fn get_linked_verifications(&self, id: i32) -> Result<Vec<Verification>, RepoError> {
+        self.requirement_service.get_linked_verifications(id)
     }
 
     /// Create a new requirement entry and log the action.
@@ -160,10 +157,9 @@ impl<'a> DecoratedRequirementService<'a> {
             verification_ids
                 .iter()
                 .map(|id| {
-                    self.verification_service
-                        .get_by_id(*id)
-                        .map(|v| v.title)
-                        .unwrap_or_else(|_| format!("Unknown Verification ({})", id))
+                    self.requirement_service
+                        .get_verification_method_title(*id)
+                        .unwrap_or_else(|| format!("Unknown Verification ({})", id))
                 })
                 .collect::<Vec<_>>()
                 .join(", ")
@@ -366,7 +362,7 @@ mod tests {
         let mut repo = DieselRepoMock::default();
 
         // Add verification method
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             1,
             VerificationMethod {
                 id: 1,
@@ -470,7 +466,7 @@ mod tests {
     #[test]
     fn decorate_handles_missing_verification() {
         let mut repo = setup_repo_with_lookup_data();
-        repo.verifications.remove(&1);
+        repo.verification_methods.remove(&1);
         repo.requirements.insert(1, requirement(1, 1));
         repo.requirement_verification_methods.push((1, 1));
 

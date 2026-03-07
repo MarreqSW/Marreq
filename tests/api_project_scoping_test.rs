@@ -178,7 +178,7 @@ mod test_support {
             },
         );
 
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             1,
             VerificationMethod {
                 id: 1,
@@ -189,7 +189,7 @@ mod test_support {
             },
         );
 
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             2,
             VerificationMethod {
                 id: 2,
@@ -455,9 +455,9 @@ async fn delete_requirement_works_for_any_authenticated_user() {
 async fn list_tests_returns_only_user_projects() {
     let mut repo = base_repo();
 
-    repo.tests.insert(
+    repo.verifications.insert(
         1,
-        TestCase {
+        Verification {
             id: 1,
             name: "Test 1".into(),
             description: "Description".into(),
@@ -466,12 +466,13 @@ async fn list_tests_returns_only_user_projects() {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         },
     );
 
-    repo.tests.insert(
+    repo.verifications.insert(
         2,
-        TestCase {
+        Verification {
             id: 2,
             name: "Test 2".into(),
             description: "Description".into(),
@@ -480,12 +481,13 @@ async fn list_tests_returns_only_user_projects() {
             status_id: 1,
             parent_id: None,
             project_id: 2,
+            verification_method_id: None,
         },
     );
 
-    repo.tests.insert(
+    repo.verifications.insert(
         3,
-        TestCase {
+        Verification {
             id: 3,
             name: "Test 3".into(),
             description: "Description".into(),
@@ -494,6 +496,7 @@ async fn list_tests_returns_only_user_projects() {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         },
     );
 
@@ -501,7 +504,7 @@ async fn list_tests_returns_only_user_projects() {
 
     // User 2 should see tests from projects 1 and 2
     let response = client
-        .get("/api/tests")
+        .get("/api/verifications")
         .private_cookie(session_cookie(2))
         .dispatch()
         .await;
@@ -524,9 +527,9 @@ async fn list_tests_returns_only_user_projects() {
 async fn get_test_works_for_any_authenticated_user() {
     let mut repo = base_repo();
 
-    repo.tests.insert(
+    repo.verifications.insert(
         1,
-        TestCase {
+        Verification {
             id: 1,
             name: "Test 1".into(),
             description: "Description".into(),
@@ -535,6 +538,7 @@ async fn get_test_works_for_any_authenticated_user() {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         },
     );
 
@@ -542,7 +546,7 @@ async fn get_test_works_for_any_authenticated_user() {
 
     // User 3 is not a member of project 1, but API allows access
     let response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(3))
         .dispatch()
         .await;

@@ -11,14 +11,16 @@ use rocket::serde::json::{json, Value};
 use rocket::State;
 
 use crate::app::AppState;
-use crate::helper_functions::{decorators::decorate_tests_with_repo, get_selected_project_id};
+use crate::helper_functions::{
+    decorators::decorate_verifications_with_repo, get_selected_project_id,
+};
 use crate::models::{
-    Category, DecoratedTestCase, Project, ProjectMember, Requirement, TestCase, User,
+    Category, DecoratedVerification, Project, ProjectMember, Requirement, User, Verification,
 };
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
     LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
-    TestsCaseRepository, UserRepository,
+    UserRepository, VerificationsRepository,
 };
 use crate::services::project_service::ProjectService;
 use crate::status_enums::ProjectStatus;
@@ -133,7 +135,7 @@ pub(crate) fn decorate_projects_for_listing(
             .unwrap_or(0);
 
         let tests_count = repo
-            .get_tests_by_project(project.id)
+            .get_verifications_by_project(project.id)
             .map(|tests| tests.len())
             .unwrap_or(0);
 
@@ -211,10 +213,10 @@ pub(crate) fn decorate_projects_for_listing(
 
 pub(crate) fn decorate_tests_cached(
     state: &AppState,
-    tests: Vec<TestCase>,
-) -> Vec<DecoratedTestCase> {
+    verifications: Vec<Verification>,
+) -> Vec<DecoratedVerification> {
     let repo = state.repo_read();
-    decorate_tests_with_repo(&*repo, tests)
+    decorate_verifications_with_repo(&*repo, verifications)
 }
 
 pub(crate) fn describe_project_role(role: i32) -> &'static str {
@@ -261,7 +263,7 @@ pub(crate) fn get_requirements_for_test_cached(
 ) -> Result<Vec<Requirement>, String> {
     state
         .repo_read()
-        .get_requirements_for_test(id)
+        .get_requirements_for_verification(id)
         .map_err(|e| e.to_string())
 }
 

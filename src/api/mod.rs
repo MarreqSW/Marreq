@@ -17,10 +17,10 @@ pub mod requirement_version_links;
 pub mod requirements;
 pub mod semantic_search;
 pub mod status;
-pub mod test_cases;
-pub mod test_status;
 pub mod traceability;
 pub mod users;
+pub mod verification_status;
+pub mod verifications;
 
 use rocket::Route;
 
@@ -53,11 +53,11 @@ pub fn routes() -> Vec<Route> {
         requirement_diff::diff_versions,
         requirement_diff::diff_versions_by_project,
         requirement_diff::diff_baseline_vs_current,
-        test_cases::list,
-        test_cases::get,
-        test_cases::create,
-        test_cases::delete,
-        test_cases::update_field,
+        verifications::list,
+        verifications::get,
+        verifications::create,
+        verifications::delete,
+        verifications::update_field,
         categories::list,
         categories::get,
         categories::create,
@@ -78,11 +78,11 @@ pub fn routes() -> Vec<Route> {
         status::create_requirement_status,
         status::update_requirement_status,
         status::delete_requirement_status,
-        test_status::list_test_statuses,
-        test_status::get_test_status,
-        test_status::create_test_status,
-        test_status::update_test_status,
-        test_status::delete_test_status,
+        verification_status::list_verification_statuses,
+        verification_status::get_verification_status,
+        verification_status::create_verification_status,
+        verification_status::update_verification_status,
+        verification_status::delete_verification_status,
         users::list,
         users::get,
         users::create,

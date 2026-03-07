@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-use crate::models::{Requirement, TestCase};
+use crate::models::{Requirement, Verification};
 
 /// When `verification_requirement_ids` is `Some`, only requirements whose id is in the slice are kept.
 pub fn filter_requirements(
@@ -35,11 +35,11 @@ pub fn filter_requirements(
 }
 
 pub fn filter_tests(
-    tests: Vec<TestCase>,
+    tests: Vec<Verification>,
     status_filter: Option<i32>,
     _verification_filter: Option<i32>,
     _category_filter: Option<i32>,
-) -> Vec<TestCase> {
+) -> Vec<Verification> {
     tests
         .into_iter()
         .filter(|test| status_filter.is_none_or(|status_id| test.status_id == status_id))
@@ -49,7 +49,7 @@ pub fn filter_tests(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Requirement, TestCase};
+    use crate::models::{Requirement, Verification};
     use chrono::NaiveDate;
 
     fn dummy_datetime() -> chrono::NaiveDateTime {
@@ -113,7 +113,7 @@ mod tests {
     fn filter_tests_filters_by_status() {
         let only_status1 = filter_tests(
             vec![
-                TestCase {
+                Verification {
                     id: 1,
                     name: "T1".into(),
                     description: String::new(),
@@ -122,8 +122,9 @@ mod tests {
                     status_id: 1,
                     parent_id: None,
                     project_id: 0,
+                    verification_method_id: None,
                 },
-                TestCase {
+                Verification {
                     id: 2,
                     name: "T2".into(),
                     description: String::new(),
@@ -132,6 +133,7 @@ mod tests {
                     status_id: 2,
                     parent_id: None,
                     project_id: 0,
+                    verification_method_id: None,
                 },
             ],
             Some(1),
@@ -143,7 +145,7 @@ mod tests {
 
         let all = filter_tests(
             vec![
-                TestCase {
+                Verification {
                     id: 1,
                     name: "T1".into(),
                     description: String::new(),
@@ -152,8 +154,9 @@ mod tests {
                     status_id: 1,
                     parent_id: None,
                     project_id: 0,
+                    verification_method_id: None,
                 },
-                TestCase {
+                Verification {
                     id: 2,
                     name: "T2".into(),
                     description: String::new(),
@@ -162,6 +165,7 @@ mod tests {
                     status_id: 2,
                     parent_id: None,
                     project_id: 0,
+                    verification_method_id: None,
                 },
             ],
             None,

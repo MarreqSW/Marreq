@@ -34,10 +34,10 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
-    baseline_traceability (baseline_id, requirement_id, test_id) {
+    baseline_traceability (baseline_id, requirement_id, verification_id) {
         baseline_id -> Int4,
         requirement_id -> Int4,
-        test_id -> Int4,
+        verification_id -> Int4,
         suspect -> Bool,
         suspect_at -> Nullable<Timestamp>,
         suspect_reason -> Nullable<Text>,
@@ -143,9 +143,9 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
-    matrix (req_id, test_id) {
+    matrix (req_id, verification_id) {
         req_id -> Int4,
-        test_id -> Int4,
+        verification_id -> Int4,
         creation_date -> Timestamp,
         project_id -> Int4,
         suspect -> Bool,
@@ -303,38 +303,6 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
-    test_status (id) {
-        id -> Int4,
-        title -> Varchar,
-        description -> Varchar,
-        tag -> Varchar,
-        project_id -> Int4,
-        is_system -> Bool,
-        #[max_length = 20]
-        tag_color -> Nullable<Varchar>,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use pgvector::sql_types::*;
-
-    tests (id) {
-        id -> Int4,
-        name -> Varchar,
-        reference_code -> Varchar,
-        description -> Varchar,
-        source -> Varchar,
-        status_id -> Int4,
-        parent_id -> Nullable<Int4>,
-        project_id -> Int4,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use pgvector::sql_types::*;
-
     user_api_tokens (id) {
         id -> Int4,
         user_id -> Int4,
@@ -369,12 +337,45 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
-    verification (id) {
+    verification_methods (id) {
         id -> Int4,
         title -> Varchar,
         description -> Varchar,
         tag -> Varchar,
         project_id -> Int4,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    verification_status (id) {
+        id -> Int4,
+        title -> Varchar,
+        description -> Varchar,
+        tag -> Varchar,
+        project_id -> Int4,
+        is_system -> Bool,
+        #[max_length = 20]
+        tag_color -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    verifications (id) {
+        id -> Int4,
+        name -> Varchar,
+        reference_code -> Varchar,
+        description -> Varchar,
+        source -> Varchar,
+        status_id -> Int4,
+        parent_id -> Nullable<Int4>,
+        project_id -> Int4,
+        verification_method_id -> Nullable<Int4>,
     }
 }
 
@@ -384,7 +385,7 @@ diesel::joinable!(baseline_requirements -> requirement_versions (version_id));
 diesel::joinable!(baseline_requirements -> requirements (requirement_id));
 diesel::joinable!(baseline_traceability -> baselines (baseline_id));
 diesel::joinable!(baseline_traceability -> requirements (requirement_id));
-diesel::joinable!(baseline_traceability -> tests (test_id));
+diesel::joinable!(baseline_traceability -> verifications (verification_id));
 diesel::joinable!(baselines -> projects (project_id));
 diesel::joinable!(baselines -> users (created_by));
 diesel::joinable!(categories -> projects (project_id));
@@ -398,7 +399,7 @@ diesel::joinable!(logs -> users (user_id));
 diesel::joinable!(matrix -> projects (project_id));
 diesel::joinable!(matrix -> requirement_versions (triggering_version_id));
 diesel::joinable!(matrix -> requirements (req_id));
-diesel::joinable!(matrix -> tests (test_id));
+diesel::joinable!(matrix -> verifications (verification_id));
 diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (user_id));
 diesel::joinable!(projects -> users (owner_id));
@@ -410,18 +411,18 @@ diesel::joinable!(requirement_embeddings -> requirements (requirement_id));
 diesel::joinable!(requirement_status -> projects (project_id));
 diesel::joinable!(requirement_version_links -> projects (project_id));
 diesel::joinable!(requirement_version_verification_methods -> requirement_versions (requirement_version_id));
-diesel::joinable!(requirement_version_verification_methods -> verification (verification_method_id));
+diesel::joinable!(requirement_version_verification_methods -> verification_methods (verification_method_id));
 diesel::joinable!(requirement_versions -> applicability (applicability_id));
 diesel::joinable!(requirement_versions -> categories (category_id));
 diesel::joinable!(requirement_versions -> requirement_status (status_id));
-diesel::joinable!(requirement_versions -> users (approved_by));
 diesel::joinable!(requirements -> projects (project_id));
-diesel::joinable!(test_status -> projects (project_id));
-diesel::joinable!(tests -> projects (project_id));
-diesel::joinable!(tests -> test_status (status_id));
 diesel::joinable!(user_api_tokens -> projects (project_id));
 diesel::joinable!(user_api_tokens -> users (user_id));
-diesel::joinable!(verification -> projects (project_id));
+diesel::joinable!(verification_methods -> projects (project_id));
+diesel::joinable!(verification_status -> projects (project_id));
+diesel::joinable!(verifications -> projects (project_id));
+diesel::joinable!(verifications -> verification_methods (verification_method_id));
+diesel::joinable!(verifications -> verification_status (status_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
@@ -443,9 +444,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     requirement_version_verification_methods,
     requirement_versions,
     requirements,
-    test_status,
-    tests,
     user_api_tokens,
     users,
-    verification,
+    verification_methods,
+    verification_status,
+    verifications,
 );

@@ -95,9 +95,9 @@ mod test_support {
             },
         );
 
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Not Run".into(),
                 description: "".into(),
@@ -130,7 +130,7 @@ mod test_support {
             },
         );
 
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             1,
             VerificationMethod {
                 id: 1,
@@ -509,7 +509,7 @@ async fn create_test_with_invalid_project_id_returns_error() {
     });
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(payload.to_string())
@@ -538,13 +538,13 @@ async fn create_test_with_invalid_status_id_returns_error() {
         "test_name": "Test Case",
         "test_description": "Description",
         "test_reference": "TEST-001",
-        "test_status": 999,
+        "status_id": 999,
         "test_source": "manual",
         "project_id": 1
     });
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(payload.to_string())

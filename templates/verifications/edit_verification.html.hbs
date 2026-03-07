@@ -3,26 +3,26 @@
 --}}
 {{#*inline "page"}}
 <div class="mb-4">
-  <h1>Edit Test</h1>
-  <p class="text-secondary">Update test case details</p>
+  <h1>Edit Verification</h1>
+  <p class="text-secondary">Update verification details</p>
 </div>
 
-<section id="Tests">
+<section id="Verifications">
   <div class="card c-card">
     <div class="card-header c-card__header">
-      <h3>Test Details</h3>
+      <h3>Verification Details</h3>
     </div>
     <div class="card-body c-card__body">
       <form method="post">
         <div class="form-group c-form-group">
-          <label for="name" class="form-label c-form-label">Test Name</label>
+          <label for="name" class="form-label c-form-label">Verification Name</label>
           <input type="text" name="name" id="name" value="{{tests.name}}" class="form-control c-form-control" required>
         </div>
 
         <div class="form-group c-form-group">
-          <label for="reference_code" class="form-label c-form-label">Test Reference</label>
+          <label for="reference_code" class="form-label c-form-label">Reference</label>
           <input type="text" name="reference_code" id="reference_code" value="{{tests.reference_code}}" class="form-control c-form-control" required>
-          <small class="text-secondary">Must follow format TEST-NUMBER (e.g., TEST-1, TEST-2)</small>
+          <small class="text-secondary">e.g. VER-1, VER-2</small>
         </div>
 
         <div class="form-group c-form-group">
@@ -46,13 +46,23 @@
           </div>
         </div>
 
+        <div class="form-group c-form-group">
+          <label for="verification_method_id" class="form-label c-form-label">Verification Method</label>
+          <select name="verification_method_id" id="verification_method_id" class="form-control c-form-control c-form-control--select">
+            <option value="0" {{#unless tests.verification_method_id}}selected{{/unless}}>None</option>
+            {{#each verification}}
+              <option value="{{id}}" {{#if (eq id ../tests.verification_method_id)}}selected{{/if}}>{{title}}</option>
+            {{/each}}
+          </select>
+        </div>
+
         <div class="o-grid o-grid--two">
           <div class="form-group c-form-group">
-            <label for="parent_id" class="form-label c-form-label">Parent Test</label>
+            <label for="parent_id" class="form-label c-form-label">Parent Verification</label>
             <select name="parent_id" id="parent_id" class="form-control c-form-control c-form-control--select">
-              <option value="0" {{#if (eq ../tests.test_parent_id 0)}}selected{{/if}}>None</option>
+              <option value="0" {{#unless ../tests.verification_parent_id}}selected{{/unless}}>None</option>
               {{#each parent }}
-                <option value="{{id}}" {{#if (eq id ../tests.test_parent_id)}}selected{{/if}}>{{name}}</option>
+                <option value="{{id}}" {{#if (eq id ../tests.verification_parent_id)}}selected{{/if}}>{{name}}</option>
               {{/each}}
             </select>
           </div>
@@ -73,13 +83,13 @@
         </div>
 
         <div class="mt-4">
-          <button type="submit" class="btn btn-primary">Update Test</button>
-          <a href="/p/{{tests.project_id}}/tests/show/{{tests.id}}" class="btn btn-outline">Cancel</a>
-          <a href="/p/{{tests.project_id}}/tests" class="btn btn-outline">Back to Tests</a>
+          <button type="submit" class="btn btn-primary">Update Verification</button>
+          <a href="/p/{{tests.project_id}}/verifications/show/{{tests.id}}" class="btn btn-outline">Cancel</a>
+          <a href="/p/{{tests.project_id}}/verifications" class="btn btn-outline">Back to Verifications</a>
         </div>
       </form>
     </div>
   </div>
 </section>
 {{/inline}}
-{{> layout page_id="test-form"}}
+{{> layout this page_id="verification-form"}}

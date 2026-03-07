@@ -93,7 +93,7 @@ pub fn validate_requirement(req: &NewRequirement) -> Result<(), ValidationError>
 }
 
 /// Validate a test before creation or update
-pub fn validate_test(test: &NewTestCase) -> Result<(), ValidationError> {
+pub fn validate_verification(test: &NewVerification) -> Result<(), ValidationError> {
     // Validate test name
     if test.name.trim().is_empty() {
         return Err(ValidationError::Required {
@@ -456,8 +456,8 @@ pub fn validate_requirement_status(status: &NewRequirementStatus) -> Result<(), 
     Ok(())
 }
 
-/// Validate a test status before creation
-pub fn validate_test_status(status: &TestStatus) -> Result<(), ValidationError> {
+/// Validate a verification status before creation
+pub fn validate_verification_status(status: &VerificationStatus) -> Result<(), ValidationError> {
     // Validate status name
     if status.title.trim().is_empty() {
         return Err(ValidationError::Required {

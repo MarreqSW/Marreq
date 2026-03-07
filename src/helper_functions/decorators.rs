@@ -19,31 +19,33 @@ pub fn decorate_requirements_with_repo<R: Repository>(
 }
 
 /// Decorate tests using the default Diesel repository.
-pub fn decorate_tests(tests: Vec<TestCase>) -> Vec<DecoratedTestCase> {
+pub fn decorate_verifications(verifications: Vec<Verification>) -> Vec<DecoratedVerification> {
     let repo = DieselRepo::new().expect("Database connection not available");
-    decorate_tests_impl(&repo, tests)
+    decorate_verifications_impl(&repo, verifications)
 }
 
-/// Decorate tests using an explicitly provided repository.
-pub fn decorate_tests_with_repo<R: Repository>(
+/// Decorate verifications using an explicitly provided repository.
+pub fn decorate_verifications_with_repo<R: Repository>(
     repo: &R,
-    tests: Vec<TestCase>,
-) -> Vec<DecoratedTestCase> {
-    decorate_tests_impl(repo, tests)
+    verifications: Vec<Verification>,
+) -> Vec<DecoratedVerification> {
+    decorate_verifications_impl(repo, verifications)
 }
 
-/// Get linked tests for a requirement using the default Diesel repository.
-pub fn get_linked_tests_for_requirement(id: i32) -> Result<Vec<DecoratedTestCase>, RepoError> {
+/// Get linked verifications for a requirement using the default Diesel repository.
+pub fn get_linked_verifications_for_requirement(
+    id: i32,
+) -> Result<Vec<DecoratedVerification>, RepoError> {
     let repo = DieselRepo::new().map_err(|e| RepoError::Pool(e.to_string()))?;
-    get_linked_tests_for_requirement_impl(&repo, id)
+    get_linked_verifications_for_requirement_impl(&repo, id)
 }
 
-/// Retrieve linked tests using an explicitly provided repository.
-pub fn get_linked_tests_for_requirement_with_repo<R: Repository>(
+/// Retrieve linked verifications using an explicitly provided repository.
+pub fn get_linked_verifications_for_requirement_with_repo<R: Repository>(
     repo: &R,
     id: i32,
-) -> Result<Vec<DecoratedTestCase>, RepoError> {
-    get_linked_tests_for_requirement_impl(repo, id)
+) -> Result<Vec<DecoratedVerification>, RepoError> {
+    get_linked_verifications_for_requirement_impl(repo, id)
 }
 
 /// Decorate a list of requirements using the provided repository for lookups.
@@ -62,7 +64,7 @@ fn decorate_requirements_impl<R: Repository>(
                 verification_ids
                     .iter()
                     .map(|id| {
-                        repo.get_verification_by_id(*id)
+                        repo.get_verification_method_by_id(*id)
                             .map(|v| v.title)
                             .unwrap_or_else(|_| format!("Unknown Verification ({})", id))
                     })
@@ -222,15 +224,18 @@ fn test_status_title_to_variant(title: &str) -> &'static str {
     }
 }
 
-/// Decorate a list of tests using repository lookups.
-fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<DecoratedTestCase> {
-    tests
+/// Decorate a list of verifications using repository lookups.
+fn decorate_verifications_impl<R: Repository>(
+    repo: &R,
+    verifications: Vec<Verification>,
+) -> Vec<DecoratedVerification> {
+    verifications
         .into_iter()
-        .map(|t| {
+        .map(|v| {
             let (status, status_tag_color) = repo
-                .get_test_status_by_id(t.status_id)
+                .get_verification_status_by_id(v.status_id)
                 .map(|s| (s.title, s.tag_color))
-                .unwrap_or_else(|_| (format!("Unknown Status ({})", t.status_id), None));
+                .unwrap_or_else(|_| (format!("Unknown Status ({})", v.status_id), None));
 
             let empty = (
                 String::new(),
@@ -248,12 +253,12 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
                 parent_status,
                 parent_status_variant,
                 parent_source,
-                test_parent_status_tag_color,
-            ) = if let Some(parent_id) = t.parent_id {
-                repo.get_test_by_id(parent_id)
+                verification_parent_status_tag_color,
+            ) = if let Some(parent_id) = v.parent_id {
+                repo.get_verification_by_id(parent_id)
                     .map(|p| {
                         let (p_status, p_tag_color) = repo
-                            .get_test_status_by_id(p.status_id)
+                            .get_verification_status_by_id(p.status_id)
                             .map(|s| (s.title, s.tag_color))
                             .unwrap_or_else(|_| {
                                 (format!("Unknown Status ({})", p.status_id), None)
@@ -273,54 +278,58 @@ fn decorate_tests_impl<R: Repository>(repo: &R, tests: Vec<TestCase>) -> Vec<Dec
                 empty
             };
 
-            DecoratedTestCase {
-                id: t.id,
-                name: t.name,
-                description: t.description,
-                source: t.source,
-                reference_code: t.reference_code,
+            DecoratedVerification {
+                id: v.id,
+                name: v.name,
+                description: v.description,
+                source: v.source,
+                reference_code: v.reference_code,
                 status_id: status.clone(),
                 status_variant: test_status_title_to_variant(&status).to_string(),
-                test_status_id: t.status_id,
+                verification_status_id: v.status_id,
                 status_tag_color,
-                test_parent_id: t.parent_id,
-                test_parent_title: parent_title,
-                test_parent_reference_code: parent_ref,
-                test_parent_description: parent_desc,
-                test_parent_status_id: parent_status,
-                test_parent_status_variant: parent_status_variant,
-                test_parent_status_tag_color,
-                test_parent_source: parent_source,
-                project_id: t.project_id,
+                verification_parent_id: v.parent_id,
+                verification_parent_title: parent_title,
+                verification_parent_reference_code: parent_ref,
+                verification_parent_description: parent_desc,
+                verification_parent_status_id: parent_status,
+                verification_parent_status_variant: parent_status_variant,
+                verification_parent_status_tag_color,
+                verification_parent_source: parent_source,
+                project_id: v.project_id,
+                verification_method_id: v.verification_method_id,
+                verification_method_title: v
+                    .verification_method_id
+                    .and_then(|id| repo.get_verification_method_by_id(id).ok().map(|m| m.title)),
             }
         })
         .collect()
 }
 
-/// Retrieve tests linked to a requirement and return them decorated.
-fn get_linked_tests_for_requirement_impl<R: Repository>(
+/// Retrieve verifications linked to a requirement and return them decorated.
+fn get_linked_verifications_for_requirement_impl<R: Repository>(
     repo: &R,
     id: i32,
-) -> Result<Vec<DecoratedTestCase>, RepoError> {
+) -> Result<Vec<DecoratedVerification>, RepoError> {
     let requirement = repo.get_requirement_by_id(id)?;
     let matrix = repo.get_matrix_by_project(requirement.project_id)?;
 
-    let test_ids: Vec<i32> = matrix
+    let verification_ids: Vec<i32> = matrix
         .into_iter()
         .filter(|m| m.req_id == id)
-        .map(|m| m.test_id)
+        .map(|m| m.verification_id)
         .collect();
 
-    if test_ids.is_empty() {
+    if verification_ids.is_empty() {
         return Ok(Vec::new());
     }
 
-    let mut tests = Vec::new();
-    for id in test_ids {
-        tests.push(repo.get_test_by_id(id)?);
+    let mut verifications = Vec::new();
+    for vid in verification_ids {
+        verifications.push(repo.get_verification_by_id(vid)?);
     }
 
-    Ok(decorate_tests_impl(repo, tests))
+    Ok(decorate_verifications_impl(repo, verifications))
 }
 
 #[cfg(test)]
@@ -354,7 +363,7 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             1,
             VerificationMethod {
                 id: 1,
@@ -619,9 +628,9 @@ mod tests {
     #[test]
     fn decorate_tests_impl_covers_branches() {
         let mut repo = DieselRepoMock::default();
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
@@ -632,9 +641,9 @@ mod tests {
             },
         );
         // parent test for branch
-        repo.tests.insert(
+        repo.verifications.insert(
             10,
-            TestCase {
+            Verification {
                 id: 10,
                 name: "Parent".into(),
                 description: String::new(),
@@ -643,10 +652,11 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
 
-        let t1 = TestCase {
+        let t1 = Verification {
             id: 20,
             name: "T1".into(),
             description: String::new(),
@@ -655,8 +665,9 @@ mod tests {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
-        let t2 = TestCase {
+        let t2 = Verification {
             id: 21,
             name: "T2".into(),
             description: String::new(),
@@ -665,8 +676,9 @@ mod tests {
             status_id: 99,
             parent_id: Some(10),
             project_id: 1,
+            verification_method_id: None,
         };
-        let t3 = TestCase {
+        let t3 = Verification {
             id: 22,
             name: "T3".into(),
             description: String::new(),
@@ -675,19 +687,20 @@ mod tests {
             status_id: 1,
             parent_id: Some(999),
             project_id: 1,
+            verification_method_id: None,
         };
 
-        let decorated = decorate_tests_impl(&repo, vec![t1, t2, t3]);
+        let decorated = decorate_verifications_impl(&repo, vec![t1, t2, t3]);
         assert_eq!(decorated.len(), 3);
         assert_eq!(decorated[0].status_id, "Open");
-        assert_eq!(decorated[0].test_parent_title, "");
+        assert_eq!(decorated[0].verification_parent_title, "");
         assert_eq!(decorated[1].status_id, "Unknown Status (99)");
-        assert_eq!(decorated[1].test_parent_title, "Parent");
-        assert_eq!(decorated[2].test_parent_title, "");
+        assert_eq!(decorated[1].verification_parent_title, "Parent");
+        assert_eq!(decorated[2].verification_parent_title, "");
     }
 
     #[test]
-    fn get_linked_tests_for_requirement_impl_works() {
+    fn get_linked_verifications_for_requirement_impl_works() {
         let now = dt();
         let mut repo = DieselRepoMock::default();
         repo.requirement_statuses.insert(
@@ -702,9 +715,9 @@ mod tests {
                 tag_color: None,
             },
         );
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Open".into(),
                 description: String::new(),
@@ -737,7 +750,7 @@ mod tests {
             approved_at: None,
             custom_fields: None,
         };
-        let test = TestCase {
+        let test = Verification {
             id: 10,
             name: "T".into(),
             description: String::new(),
@@ -746,12 +759,13 @@ mod tests {
             status_id: 1,
             parent_id: None,
             project_id: 1,
+            verification_method_id: None,
         };
         repo.requirements.insert(1, req);
-        repo.tests.insert(10, test);
+        repo.verifications.insert(10, test);
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 10,
+            verification_id: 10,
             creation_date: now,
             project_id: 1,
             suspect: false,
@@ -763,14 +777,14 @@ mod tests {
             triggering_user_id: None,
         });
 
-        let result = get_linked_tests_for_requirement_impl(&repo, 1).unwrap();
+        let result = get_linked_verifications_for_requirement_impl(&repo, 1).unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].name, "T");
         assert_eq!(result[0].status_id, "Open");
     }
 
     #[test]
-    fn get_linked_tests_for_requirement_impl_empty_when_no_links() {
+    fn get_linked_verifications_for_requirement_impl_empty_when_no_links() {
         let now = dt();
         let mut repo = DieselRepoMock::default();
         let req = Requirement {
@@ -800,7 +814,7 @@ mod tests {
         // matrix for different requirement
         repo.matrices.push(MatrixLink {
             req_id: 99,
-            test_id: 50,
+            verification_id: 50,
             creation_date: now,
             project_id: 1,
             suspect: false,
@@ -812,19 +826,19 @@ mod tests {
             triggering_user_id: None,
         });
 
-        let result = get_linked_tests_for_requirement_impl(&repo, 2).unwrap();
+        let result = get_linked_verifications_for_requirement_impl(&repo, 2).unwrap();
         assert!(result.is_empty());
     }
 
     #[test]
-    fn get_linked_tests_for_requirement_impl_errors_when_req_missing() {
+    fn get_linked_verifications_for_requirement_impl_errors_when_req_missing() {
         let repo = DieselRepoMock::default();
-        let err = get_linked_tests_for_requirement_impl(&repo, 123).unwrap_err();
+        let err = get_linked_verifications_for_requirement_impl(&repo, 123).unwrap_err();
         matches!(err, RepoError::NotFound);
     }
 
     #[test]
-    fn get_linked_tests_for_requirement_impl_errors_when_test_missing() {
+    fn get_linked_verifications_for_requirement_impl_errors_when_test_missing() {
         let now = dt();
         let mut repo = DieselRepoMock::default();
         let req = Requirement {
@@ -853,7 +867,7 @@ mod tests {
         repo.requirements.insert(3, req);
         repo.matrices.push(MatrixLink {
             req_id: 3,
-            test_id: 999,
+            verification_id: 999,
             creation_date: now,
             project_id: 1,
             suspect: false,
@@ -865,6 +879,6 @@ mod tests {
             triggering_user_id: None,
         });
 
-        assert!(get_linked_tests_for_requirement_impl(&repo, 3).is_err());
+        assert!(get_linked_verifications_for_requirement_impl(&repo, 3).is_err());
     }
 }

@@ -165,7 +165,9 @@ pub async fn show_baseline(
         .collect();
 
     let repo = state.repo_read();
-    let tests = repo.get_tests_by_project(project_id).unwrap_or_default();
+    let tests = repo
+        .get_verifications_by_project(project_id)
+        .unwrap_or_default();
     let test_reference: std::collections::HashMap<i32, String> = tests
         .iter()
         .map(|t| (t.id, t.reference_code.clone()))
@@ -180,12 +182,12 @@ pub async fn show_baseline(
                 .cloned()
                 .unwrap_or_else(|| format!("#{}", t.requirement_id));
             let tst_ref = test_reference
-                .get(&t.test_id)
+                .get(&t.verification_id)
                 .cloned()
-                .unwrap_or_else(|| format!("#{}", t.test_id));
+                .unwrap_or_else(|| format!("#{}", t.verification_id));
             serde_json::json!({
                 "requirement_id": t.requirement_id,
-                "test_id": t.test_id,
+                "verification_id": t.verification_id,
                 "requirement_reference": req_ref,
                 "test_reference": tst_ref,
                 "version_id": version_by_req.get(&t.requirement_id).copied(),

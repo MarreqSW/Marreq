@@ -3,18 +3,18 @@
 
 use super::errors::RepoError;
 use crate::models::entities::{
-    Applicability, Baseline, BaselineTraceability, Category, CustomFieldDefinition,
-    CustomFieldValue, CustomFieldValueDisplay, Log, MatrixLink, NewRequirementComment,
-    NewRequirementVersionLink, Project, ProjectMember, Requirement, RequirementComment,
-    RequirementContainer, RequirementStatus, RequirementVersion, RequirementVersionLink, User,
-    Verification, VerificationMethod, VerificationStatus,
+    Applicability, Baseline, BaselineTraceability, BaselineVerification, Category,
+    CustomFieldDefinition, CustomFieldValue, CustomFieldValueDisplay, Log, MatrixLink,
+    NewRequirementComment, NewRequirementVersionLink, Project, ProjectMember, Requirement,
+    RequirementComment, RequirementContainer, RequirementStatus, RequirementVersion,
+    RequirementVersionLink, User, Verification, VerificationMethod, VerificationStatus,
 };
 use crate::models::forms::{
     CustomFieldDefinitionPayload, NewApplicability, NewBaselineRequirement, NewBaselineRow,
-    NewBaselineTraceability, NewCategory, NewCustomFieldDefinitionRow, NewLog, NewMatrixLink,
-    NewProject, NewProjectMember, NewRequirement, NewRequirementContainer, NewRequirementStatus,
-    NewUser, NewVerification, NewVerificationMethod, NewVerificationStatus, UpdateProject,
-    UpdateUser,
+    NewBaselineTraceability, NewBaselineVerification, NewCategory, NewCustomFieldDefinitionRow,
+    NewLog, NewMatrixLink, NewProject, NewProjectMember, NewRequirement, NewRequirementContainer,
+    NewRequirementStatus, NewUser, NewVerification, NewVerificationMethod, NewVerificationStatus,
+    UpdateProject, UpdateUser,
 };
 use crate::repository::{
     ApiTokensRepository, BaselineRepository, CustomFieldRepository, LookupRepository,
@@ -2168,10 +2168,12 @@ impl BaselineRepository for DieselRepo {
     ) -> Result<Baseline, RepoError> {
         use schema::baseline_requirements;
         use schema::baseline_traceability;
+        use schema::baseline_verifications;
         use schema::baselines;
         use schema::matrix;
         use schema::requirement_versions;
         use schema::requirements;
+        use schema::verifications;
 
         let mut conn = self.get_conn()?;
         conn.as_mut().transaction::<_, RepoError, _>(|conn| {
@@ -2226,6 +2228,28 @@ impl BaselineRepository for DieselRepo {
                 };
                 diesel::insert_into(baseline_traceability::table)
                     .values(&bt)
+                    .execute(conn)?;
+            }
+
+            // Snapshot: all verifications in project (point-in-time)
+            let project_verifications: Vec<Verification> = verifications::table
+                .filter(verifications::project_id.eq(project_id))
+                .load(conn)?;
+            for v in project_verifications {
+                let bv = NewBaselineVerification {
+                    baseline_id,
+                    verification_id: v.id,
+                    name: v.name,
+                    reference_code: v.reference_code,
+                    description: v.description,
+                    source: v.source,
+                    status_id: v.status_id,
+                    parent_id: v.parent_id,
+                    project_id: v.project_id,
+                    verification_method_id: v.verification_method_id,
+                };
+                diesel::insert_into(baseline_verifications::table)
+                    .values(&bv)
                     .execute(conn)?;
             }
 
@@ -2312,6 +2336,19 @@ impl BaselineRepository for DieselRepo {
         dsl::baseline_traceability
             .filter(dsl::baseline_id.eq(baseline_id))
             .order((dsl::requirement_id.asc(), dsl::verification_id.asc()))
+            .load(conn.as_mut())
+            .map_err(RepoError::from)
+    }
+
+    fn get_verifications_for_baseline(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<BaselineVerification>, RepoError> {
+        use schema::baseline_verifications::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::baseline_verifications
+            .filter(dsl::baseline_id.eq(baseline_id))
+            .order(dsl::verification_id.asc())
             .load(conn.as_mut())
             .map_err(RepoError::from)
     }

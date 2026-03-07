@@ -14,12 +14,12 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Loggable, Logger};
 use crate::models::{
     CustomFieldValueInput, EntityType, NewRequirement, NewRequirementVersionLink, Requirement,
-    RequirementVersion, RequirementVersionLink, TestCase, User,
+    RequirementVersion, RequirementVersionLink, User, Verification,
 };
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    CustomFieldRepository, MatrixRepository, PooledConnectionWrapper,
-    RequirementVersionLinksRepository, RequirementsRepository, TestsCaseRepository,
+    CustomFieldRepository, LookupRepository, MatrixRepository, PooledConnectionWrapper,
+    RequirementVersionLinksRepository, RequirementsRepository, VerificationsRepository,
 };
 use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
@@ -416,14 +416,25 @@ impl<'a> RequirementService<'a> {
         Ok(false)
     }
 
-    pub fn get_linked_tests(&self, id: i32) -> Result<Vec<TestCase>, RepoError> {
-        self.repo_read().get_tests_for_requirement(id)
+    pub fn get_linked_verifications(&self, id: i32) -> Result<Vec<Verification>, RepoError> {
+        self.repo_read().get_verifications_for_requirement(id)
     }
 
-    /// Tests linked to the requirement that are currently marked suspect (impacted by requirement changes).
-    pub fn get_impacted_tests(&self, requirement_id: i32) -> Result<Vec<TestCase>, RepoError> {
+    /// Resolve a verification method ID to its title (for display).
+    pub fn get_verification_method_title(&self, id: i32) -> Option<String> {
         self.repo_read()
-            .get_impacted_tests_for_requirement(requirement_id)
+            .get_verification_method_by_id(id)
+            .ok()
+            .map(|m| m.title)
+    }
+
+    /// Verifications linked to the requirement that are currently marked suspect (impacted by requirement changes).
+    pub fn get_impacted_verifications(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<Verification>, RepoError> {
+        self.repo_read()
+            .get_impacted_verifications_for_requirement(requirement_id)
     }
 
     /// Create a new requirement entry and log the action.
@@ -817,7 +828,7 @@ mod tests {
         repo.requirements.insert(1, requirement(1, 7, "REQ-001"));
         repo.matrices.push(crate::models::MatrixLink {
             req_id: 1,
-            test_id: 10,
+            verification_id: 10,
             creation_date: timestamp(),
             project_id: 7,
             suspect: false,
@@ -1289,23 +1300,24 @@ mod tests {
     }
 
     #[test]
-    fn get_linked_tests_returns_tests_for_requirement() {
+    fn get_linked_verifications_returns_verifications_for_requirement() {
         let mut repo = DieselRepoMock::default();
         repo.requirements.insert(1, requirement(1, 7, "REQ-001"));
-        let test1 = TestCase {
+        let verification1 = Verification {
             id: 10,
-            name: "Test 1".into(),
+            name: "Verification 1".into(),
             description: "Desc".into(),
             source: "manual".into(),
             status_id: 1,
-            reference_code: "TEST-1".into(),
+            reference_code: "VER-1".into(),
             parent_id: None,
             project_id: 7,
+            verification_method_id: None,
         };
-        repo.tests.insert(10, test1);
+        repo.verifications.insert(10, verification1);
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 10,
+            verification_id: 10,
             creation_date: timestamp(),
             project_id: 7,
             suspect: false,
@@ -1319,9 +1331,9 @@ mod tests {
         let state = state_with_repo(repo);
         let service = RequirementService::new(&state);
 
-        let tests = service.get_linked_tests(1).unwrap();
-        assert_eq!(tests.len(), 1);
-        assert_eq!(tests[0].id, 10);
+        let verifications = service.get_linked_verifications(1).unwrap();
+        assert_eq!(verifications.len(), 1);
+        assert_eq!(verifications[0].id, 10);
     }
 
     #[test]
@@ -1391,7 +1403,7 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         // Verification method belongs to project 99, but the requirement will be
         // created in project 7 (via new_payload()).
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             5,
             VerificationMethod {
                 id: 5,

@@ -123,7 +123,7 @@ async fn workflow_traceability_lifecycle() {
 
     // 2. Create Test
     let test_response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(auth.clone())
         .body(
@@ -174,7 +174,7 @@ async fn workflow_traceability_lifecycle() {
 
     // 5. Verify Test exists
     let get_test = client
-        .get(format!("/api/tests/{}", test_id))
+        .get(format!("/api/verifications/{}", test_id))
         .private_cookie(auth.clone())
         .dispatch()
         .await;
@@ -198,7 +198,7 @@ async fn workflow_traceability_lifecycle() {
 
     // 8. Verify Test still exists
     let get_test_still = client
-        .get(format!("/api/tests/{}", test_id))
+        .get(format!("/api/verifications/{}", test_id))
         .private_cookie(auth.clone())
         .dispatch()
         .await;

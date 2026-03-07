@@ -15,13 +15,13 @@
     <span class="marreq-list-page__row-id" title="Status ID">#{{id}}</span>
     <div class="marreq-list-page__row-actions">
       {{#unless is_system}}
-        <a href="/p/{{@root.selected_project_id}}/test_statuses/edit/{{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn">Edit</a>
+        <a href="/p/{{@root.selected_project_id}}/verification_statuses/edit/{{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn">Edit</a>
         <button
           class="btn btn-danger btn-sm marreq-list-page__action-btn"
           type="button"
           data-action="delete-test-status"
           data-status-id="{{id}}"
-          data-status-title="test status {{tag}}"
+          data-status-title="verification status {{tag}}"
           data-project-id="{{@root.selected_project_id}}"
         >Delete</button>
       {{/unless}}

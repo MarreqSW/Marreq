@@ -328,7 +328,7 @@ function renderRelationships(root, view, projectId, linkedTests = []) {
 
       const link = document.createElement('a');
       link.className = 'fw-semibold';
-      link.href = `/p/${projectId}/tests/show/${test.id}`;
+      link.href = `/p/${projectId}/verifications/show/${test.id}`;
       link.textContent = `${test.reference_code || `Test #${test.id}`} · ${test.name || ''}`.trim() || `Test #${test.id}`;
 
       item.appendChild(link);
@@ -421,7 +421,7 @@ function renderVerification(root, view, canonical) {
     row.setAttribute('data-status-id', String(test.test_status_id ?? test.status_id ?? ''));
 
     const link = document.createElement('a');
-    link.href = `/p/${projectId}/tests/show/${test.id}`;
+    link.href = `/p/${projectId}/verifications/show/${test.id}`;
     link.className = 'text-decoration-none text-body flex-grow-1 me-2';
     link.style.minWidth = '0';
 
@@ -482,7 +482,7 @@ function renderVerification(root, view, canonical) {
           if (select.parentNode) select.remove();
           displayEl.hidden = false;
           try {
-            await postJson(`/p/${projectId}/tests/update-status/${test.id}`, { status_id: v });
+            await postJson(`/p/${projectId}/verifications/update-status/${test.id}`, { status_id: v });
             const variant = testStatusVariant(displayText);
             const tagColor = status?.tag_color || null;
             test.status_id = displayText;

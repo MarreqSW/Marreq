@@ -6,11 +6,11 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
 use crate::models::{
-    ActionType, EntityType, MatrixLink, NewMatrixLink, Requirement, TestCase, User,
+    ActionType, EntityType, MatrixLink, NewMatrixLink, Requirement, User, Verification,
 };
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    MatrixRepository, PooledConnectionWrapper, RequirementsRepository, TestsCaseRepository,
+    MatrixRepository, PooledConnectionWrapper, RequirementsRepository, VerificationsRepository,
 };
 use std::collections::HashSet;
 
@@ -59,26 +59,26 @@ impl<'a> MatrixService<'a> {
         let mut reqs = repo.get_requirements_by_project(project_id)?;
         reqs.sort_by_key(|r| r.id);
 
-        // Load all tests for the project
-        let mut all_tests = repo.get_tests_by_project(project_id)?;
-        all_tests.sort_by_key(|t| t.id);
+        // Load all verifications for the project
+        let mut all_verifications = repo.get_verifications_by_project(project_id)?;
+        all_verifications.sort_by_key(|t| t.id);
 
-        // Filter tests by status if specified
+        // Filter verifications by status if specified
         if let Some(status) = test_status_filter {
-            all_tests.retain(|t| t.status_id == status);
+            all_verifications.retain(|t| t.status_id == status);
         }
 
         // Load all matrix links for the project
         let all_links = repo.get_matrix_by_project(project_id)?;
         let links: HashSet<(i32, i32)> = all_links
             .into_iter()
-            .map(|m| (m.req_id, m.test_id))
+            .map(|m| (m.req_id, m.verification_id))
             .collect();
 
         // Build CSV
         let mut csv = String::from("Title,Reference");
-        for test in &all_tests {
-            csv.push_str(&format!(",Test #{}", test.id));
+        for verification in &all_verifications {
+            csv.push_str(&format!(",Verification #{}", verification.id));
         }
         csv.push('\n');
 
@@ -89,8 +89,8 @@ impl<'a> MatrixService<'a> {
                 Self::csv_escape(&req.reference_code)
             ));
 
-            for test in &all_tests {
-                let linked = links.contains(&(req.id, test.id));
+            for verification in &all_verifications {
+                let linked = links.contains(&(req.id, verification.id));
                 csv.push_str(if linked { ",✓" } else { ",-" });
             }
             csv.push('\n');
@@ -122,23 +122,23 @@ impl<'a> MatrixService<'a> {
             use crate::repository::RequirementsRepository;
             let repo = self.state.repo_read();
             let req = repo.get_requirement_by_id(requirement_id)?;
-            let test = repo.get_test_by_id(id)?;
+            let verification = repo.get_verification_by_id(id)?;
             if req.project_id != project_id {
                 return Err(RepoError::CrossProjectViolation(format!(
                     "requirement {} belongs to project {} but link declares project_id={}",
                     requirement_id, req.project_id, project_id
                 )));
             }
-            if test.project_id != project_id {
+            if verification.project_id != project_id {
                 return Err(RepoError::CrossProjectViolation(format!(
-                    "test {} belongs to project {} but link declares project_id={}",
-                    id, test.project_id, project_id
+                    "verification {} belongs to project {} but link declares project_id={}",
+                    id, verification.project_id, project_id
                 )));
             }
         }
         let payload = NewMatrixLink {
             req_id: requirement_id,
-            test_id: id,
+            verification_id: id,
             project_id,
             triggering_version_id: None,
             triggering_user_id: None,
@@ -158,14 +158,14 @@ impl<'a> MatrixService<'a> {
         &self,
         actor: &User,
         req_id: i32,
-        test_id: i32,
+        verification_id: i32,
     ) -> Result<bool, RepoError> {
         let (updated, _project_id) = {
             let mut repo = self.state.repo_write();
-            repo.clear_suspect(req_id, test_id, actor.id)?
+            repo.clear_suspect(req_id, verification_id, actor.id)?
         };
         if updated {
-            self.log_suspect_cleared(actor, req_id, test_id);
+            self.log_suspect_cleared(actor, req_id, verification_id);
         }
         Ok(updated)
     }
@@ -178,8 +178,8 @@ impl<'a> MatrixService<'a> {
         if let Ok(mut conn) = self.db_connection() {
             let ctx = LogCtx::new(actor.id);
             let description = format!(
-                "Linked requirement {} with test {}",
-                entity.req_id, entity.test_id
+                "Linked requirement {} with verification {}",
+                entity.req_id, entity.verification_id
             );
 
             if let Err(_err) = Logger::log_custom(
@@ -196,18 +196,18 @@ impl<'a> MatrixService<'a> {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log matrix link {} -> {}: {_err}",
-                    entity.req_id, entity.test_id
+                    entity.req_id, entity.verification_id
                 );
             }
         }
     }
 
-    fn log_suspect_cleared(&self, actor: &User, req_id: i32, test_id: i32) {
+    fn log_suspect_cleared(&self, actor: &User, req_id: i32, verification_id: i32) {
         if let Ok(mut conn) = self.db_connection() {
             let ctx = LogCtx::new(actor.id);
             let description = format!(
-                "Suspect flag cleared for traceability link requirement {} – test {}",
-                req_id, test_id
+                "Suspect flag cleared for traceability link requirement {} – verification {}",
+                req_id, verification_id
             );
             if let Err(_err) = Logger::log_custom(
                 conn.as_mut(),
@@ -223,7 +223,7 @@ impl<'a> MatrixService<'a> {
                 #[cfg(debug_assertions)]
                 eprintln!(
                     "Failed to log suspect cleared {} -> {}: {_err}",
-                    req_id, test_id
+                    req_id, verification_id
                 );
             }
         }
@@ -250,29 +250,31 @@ impl<'a> MatrixService<'a> {
             filters.search.as_deref(),
         );
 
-        // Load all tests
-        let mut all_tests = repo.get_tests_by_project(project_id)?;
-        all_tests.sort_by_key(|t| t.id);
+        // Load all verifications
+        let mut all_verifications = repo.get_verifications_by_project(project_id)?;
+        all_verifications.sort_by_key(|t| t.id);
 
-        // Filter tests by status
+        // Filter verifications by status
         if let Some(status) = filters.status_id {
-            all_tests.retain(|t| t.status_id == status);
+            all_verifications.retain(|t| t.status_id == status);
         }
 
         // Load matrix links (with suspect state)
         let matrix_links = repo.get_matrix_by_project(project_id)?;
-        let links: HashSet<(i32, i32)> =
-            matrix_links.iter().map(|m| (m.req_id, m.test_id)).collect();
+        let links: HashSet<(i32, i32)> = matrix_links
+            .iter()
+            .map(|m| (m.req_id, m.verification_id))
+            .collect();
         let suspect_links: HashSet<(i32, i32)> = matrix_links
             .iter()
             .filter(|m| m.suspect)
-            .map(|m| (m.req_id, m.test_id))
+            .map(|m| (m.req_id, m.verification_id))
             .collect();
 
         // Optionally filter requirements by suspect state of their links
         if let Some(suspect_only) = filters.suspect {
             all_reqs.retain(|req| {
-                all_tests.iter().any(|t| {
+                all_verifications.iter().any(|t| {
                     let key = (req.id, t.id);
                     links.contains(&key) && suspect_links.contains(&key) == suspect_only
                 })
@@ -308,7 +310,7 @@ impl<'a> MatrixService<'a> {
         let total_links = paginated_reqs
             .iter()
             .map(|req| {
-                all_tests
+                all_verifications
                     .iter()
                     .filter(|t| links.contains(&(req.id, t.id)))
                     .count()
@@ -317,7 +319,7 @@ impl<'a> MatrixService<'a> {
 
         Ok(MatrixView {
             requirements: paginated_reqs,
-            tests: all_tests,
+            tests: all_verifications,
             links,
             suspect_links,
             total_requirements,
@@ -361,10 +363,10 @@ impl<'a> MatrixService<'a> {
         desc: bool,
         links: &HashSet<(i32, i32)>,
     ) {
-        // Check if sorting by test column
-        if let Some(test_id_str) = sort_by.strip_prefix("test_") {
-            if let Ok(target_test_id) = test_id_str.parse::<i32>() {
-                reqs.sort_by_key(|r| links.contains(&(r.id, target_test_id)));
+        // Check if sorting by verification column
+        if let Some(verification_id_str) = sort_by.strip_prefix("test_") {
+            if let Ok(target_verification_id) = verification_id_str.parse::<i32>() {
+                reqs.sort_by_key(|r| links.contains(&(r.id, target_verification_id)));
                 if desc {
                     reqs.reverse();
                 }
@@ -435,7 +437,7 @@ pub enum SortOrder {
 /// Complete matrix view data ready for rendering
 pub struct MatrixView {
     pub requirements: Vec<Requirement>,
-    pub tests: Vec<TestCase>,
+    pub tests: Vec<Verification>,
     pub links: HashSet<(i32, i32)>,
     /// Links that are currently marked suspect (subset of links).
     pub suspect_links: HashSet<(i32, i32)>,
@@ -447,7 +449,7 @@ pub struct MatrixView {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::TestCase;
+    use crate::models::Verification;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -485,7 +487,7 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 10,
+            verification_id: 10,
             creation_date: timestamp(),
             project_id: 7,
             suspect: false,
@@ -498,7 +500,7 @@ mod tests {
         });
         repo.matrices.push(MatrixLink {
             req_id: 2,
-            test_id: 20,
+            verification_id: 20,
             creation_date: timestamp(),
             project_id: 99,
             suspect: false,
@@ -515,12 +517,12 @@ mod tests {
 
         let results = service.list_by_project(7).unwrap();
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].test_id, 10);
+        assert_eq!(results[0].verification_id, 10);
     }
 
     #[test]
     fn link_inserts_new_matrix_entry() {
-        use crate::models::{Requirement, TestCase};
+        use crate::models::{Requirement, Verification};
         let mut repo = DieselRepoMock::default();
         // Seed requirement 5 and test 6 in project 42 so the cross-project check passes.
         repo.requirements.insert(
@@ -549,9 +551,9 @@ mod tests {
                 custom_fields: None,
             },
         );
-        repo.tests.insert(
+        repo.verifications.insert(
             6,
-            TestCase {
+            Verification {
                 id: 6,
                 name: "T6".to_string(),
                 reference_code: "TST-006".to_string(),
@@ -560,6 +562,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 42,
+                verification_method_id: None,
             },
         );
         let state = state_with_repo(repo);
@@ -570,13 +573,13 @@ mod tests {
         let entries = service.list_by_project(42).unwrap();
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].req_id, 5);
-        assert_eq!(entries[0].test_id, 6);
+        assert_eq!(entries[0].verification_id, 6);
     }
 
     /// Requirement belongs to project 1, test to project 2 → must be rejected.
     #[test]
     fn link_rejects_requirement_from_different_project() {
-        use crate::models::{Requirement, TestCase};
+        use crate::models::{Requirement, Verification};
         use crate::repository::errors::RepoError;
         let mut repo = DieselRepoMock::default();
         repo.requirements.insert(
@@ -605,9 +608,9 @@ mod tests {
                 custom_fields: None,
             },
         );
-        repo.tests.insert(
+        repo.verifications.insert(
             20,
-            TestCase {
+            Verification {
                 id: 20,
                 name: "T20".to_string(),
                 reference_code: "TST-020".to_string(),
@@ -616,6 +619,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 2, // ← project 2
+                verification_method_id: None,
             },
         );
         let state = state_with_repo(repo);
@@ -632,7 +636,7 @@ mod tests {
     /// project_id argument doesn't match the requirement's actual project.
     #[test]
     fn link_rejects_mismatched_project_id_argument() {
-        use crate::models::{Requirement, TestCase};
+        use crate::models::{Requirement, Verification};
         use crate::repository::errors::RepoError;
         let mut repo = DieselRepoMock::default();
         repo.requirements.insert(
@@ -661,9 +665,9 @@ mod tests {
                 custom_fields: None,
             },
         );
-        repo.tests.insert(
+        repo.verifications.insert(
             1,
-            TestCase {
+            Verification {
                 id: 1,
                 name: "T1".to_string(),
                 reference_code: "TST-001".to_string(),
@@ -672,6 +676,7 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 5,
+                verification_method_id: None,
             },
         );
         let state = state_with_repo(repo);
@@ -719,9 +724,9 @@ mod tests {
         );
 
         // Add tests
-        repo.tests.insert(
+        repo.verifications.insert(
             10,
-            TestCase {
+            Verification {
                 id: 10,
                 name: "Test 10".to_string(),
                 reference_code: "TST-10".to_string(),
@@ -730,11 +735,12 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
-        repo.tests.insert(
+        repo.verifications.insert(
             20,
-            TestCase {
+            Verification {
                 id: 20,
                 name: "Test 20".to_string(),
                 reference_code: "TST-20".to_string(),
@@ -743,13 +749,14 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
 
         // Add matrix link
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 10,
+            verification_id: 10,
             creation_date: timestamp(),
             project_id: 1,
             suspect: false,
@@ -770,8 +777,8 @@ mod tests {
         let lines: Vec<&str> = csv.lines().collect();
         assert_eq!(lines.len(), 2); // Header + 1 requirement row
         assert!(lines[0].starts_with("Title,Reference"));
-        assert!(lines[0].contains("Test #10"));
-        assert!(lines[0].contains("Test #20"));
+        assert!(lines[0].contains("Verification #10"));
+        assert!(lines[0].contains("Verification #20"));
         assert!(lines[1].starts_with("Test Requirement,REF-001"));
         assert!(lines[1].contains(",✓,")); // Linked to test 10
         assert!(lines[1].ends_with(",-")); // Not linked to test 20
@@ -849,9 +856,9 @@ mod tests {
         );
 
         // Test with status 1
-        repo.tests.insert(
+        repo.verifications.insert(
             10,
-            TestCase {
+            Verification {
                 id: 10,
                 name: "Test 10".to_string(),
                 reference_code: "TST-10".to_string(),
@@ -860,13 +867,14 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
 
         // Test with status 2
-        repo.tests.insert(
+        repo.verifications.insert(
             20,
-            TestCase {
+            Verification {
                 id: 20,
                 name: "Test 20".to_string(),
                 reference_code: "TST-20".to_string(),
@@ -875,6 +883,7 @@ mod tests {
                 status_id: 2,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
 
@@ -885,8 +894,8 @@ mod tests {
         let csv = service.export_matrix_csv(1, Some(1)).unwrap();
 
         let lines: Vec<&str> = csv.lines().collect();
-        assert!(lines[0].contains("Test #10"));
-        assert!(!lines[0].contains("Test #20"));
+        assert!(lines[0].contains("Verification #10"));
+        assert!(!lines[0].contains("Verification #20"));
     }
 
     #[test]
@@ -1424,9 +1433,9 @@ mod tests {
                 custom_fields: None,
             },
         );
-        repo.tests.insert(
+        repo.verifications.insert(
             10,
-            TestCase {
+            Verification {
                 id: 10,
                 name: "Test 10".to_string(),
                 reference_code: "TST-10".to_string(),
@@ -1435,11 +1444,12 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 10,
+            verification_id: 10,
             creation_date: timestamp(),
             project_id: 1,
             suspect: false,
@@ -1466,7 +1476,7 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         repo.matrices.push(MatrixLink {
             req_id: 5,
-            test_id: 10,
+            verification_id: 10,
             creation_date: timestamp(),
             project_id: 7,
             suspect: true,
@@ -1530,9 +1540,9 @@ mod tests {
                 custom_fields: None,
             },
         );
-        repo.tests.insert(
+        repo.verifications.insert(
             10,
-            TestCase {
+            Verification {
                 id: 10,
                 name: "Test 10".to_string(),
                 reference_code: "TST-10".to_string(),
@@ -1541,11 +1551,12 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 10,
+            verification_id: 10,
             creation_date: timestamp(),
             project_id: 1,
             suspect: true,
@@ -1598,9 +1609,9 @@ mod tests {
                 },
             );
         }
-        repo.tests.insert(
+        repo.verifications.insert(
             10,
-            TestCase {
+            Verification {
                 id: 10,
                 name: "Test 10".to_string(),
                 reference_code: "TST-10".to_string(),
@@ -1609,11 +1620,12 @@ mod tests {
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             },
         );
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 10,
+            verification_id: 10,
             creation_date: timestamp(),
             project_id: 1,
             suspect: true,
@@ -1626,7 +1638,7 @@ mod tests {
         });
         repo.matrices.push(MatrixLink {
             req_id: 2,
-            test_id: 10,
+            verification_id: 10,
             creation_date: timestamp(),
             project_id: 1,
             suspect: false,

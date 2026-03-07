@@ -5,13 +5,16 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Logger};
+use crate::models::NewVerificationMethod;
 use crate::models::{
     NewApplicability, NewCategory, NewProject, NewProjectMember, Project, UpdateProject, User,
 };
 use crate::repository::errors::RepoError;
-use crate::repository::{PooledConnectionWrapper, ProjectMembersRepository, ProjectsRepository};
+use crate::repository::{
+    LookupRepository, PooledConnectionWrapper, ProjectMembersRepository, ProjectsRepository,
+};
 use crate::services::status_service::StatusService;
-use crate::services::{ApplicabilityService, CategoryService, VerificationService};
+use crate::services::{ApplicabilityService, CategoryService};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_project};
 
 /// High level project operations backed by the shared [`AppState`].
@@ -83,9 +86,24 @@ impl<'a> ProjectService<'a> {
         let status_service = StatusService::new(self.state);
         status_service.initialize_default_statuses(id)?;
 
-        // Initialize default verification methods for the new project
-        let verification_service = VerificationService::new(self.state);
-        verification_service.initialize_default_verification_methods(id)?;
+        // Initialize default verification methods for the new project (Test, Analysis, Review)
+        let default_methods = [
+            ("Test", "Execution-based verification", "TEST"),
+            ("Analysis", "Analysis-based verification", "ANALYSIS"),
+            ("Review", "Review-based verification", "REVIEW"),
+        ];
+        {
+            let mut repo = self.state.repo_write();
+            for (title, description, tag) in default_methods {
+                repo.insert_new_verification_method(&NewVerificationMethod {
+                    id: None,
+                    title: title.to_string(),
+                    description: description.to_string(),
+                    tag: tag.to_string(),
+                    project_id: id,
+                })?;
+            }
+        }
 
         // One default category and applicability so the new-requirement form can be submitted
         let category_service = CategoryService::new(self.state);
@@ -322,7 +340,7 @@ mod tests {
         );
 
         // Verify test statuses were created
-        let test_statuses = status_service.list_test_statuses().unwrap();
+        let test_statuses = status_service.list_verification_statuses().unwrap();
         let project_test_statuses: Vec<_> = test_statuses
             .iter()
             .filter(|s| s.project_id == project_id)

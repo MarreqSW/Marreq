@@ -2,11 +2,11 @@
 // Copyright (C) 2026 Marreq
 
 use crate::models::{
-    NewApplicability, NewCategory, NewRequirement, NewTestCase, NewVerificationMethod,
+    NewApplicability, NewCategory, NewRequirement, NewVerification, NewVerificationMethod,
 };
 use crate::repository::{
     DieselRepo, LookupRepository, RequirementVersionLinksRepository, RequirementsRepository,
-    TestsCaseRepository, UserRepository,
+    UserRepository, VerificationsRepository,
 };
 use anyhow::{anyhow, Result};
 use calamine::{open_workbook, DataType, Reader, Xlsx};
@@ -421,7 +421,7 @@ impl ExcelImporter {
 
         // Resolve foreign key references
         let status_id = if let Some(status_name) = test_data.get("status_id") {
-            self.resolve_test_status_id(status_name, project_id)?
+            self.resolve_verification_status_id(status_name, project_id)?
         } else {
             1 // Default status
         };
@@ -438,7 +438,7 @@ impl ExcelImporter {
         };
 
         // Create new test
-        let new_test = NewTestCase {
+        let new_verification = NewVerification {
             id: None,
             name: test_data
                 .get("name")
@@ -456,11 +456,12 @@ impl ExcelImporter {
             status_id,
             parent_id,
             project_id,
+            verification_method_id: None,
         };
 
         DieselRepo::new()
             .map_err(|e| anyhow!("{}", e))?
-            .insert_test(&new_test)
+            .insert_verification(&new_verification)
             .map_err(|e| anyhow!("{}", e))?;
         Ok(())
     }
@@ -540,9 +541,11 @@ impl ExcelImporter {
         Ok(1)
     }
 
-    fn resolve_test_status_id(&self, status_name: &str, project_id: i32) -> Result<i32> {
+    fn resolve_verification_status_id(&self, status_name: &str, project_id: i32) -> Result<i32> {
         let repo = DieselRepo::new().map_err(|e| anyhow!("{}", e))?;
-        let statuses = repo.get_test_status_all().map_err(|e| anyhow!("{}", e))?;
+        let statuses = repo
+            .get_verification_status_all()
+            .map_err(|e| anyhow!("{}", e))?;
 
         // Prefer matching within the selected project first.
         if let Some(status) = statuses
@@ -566,7 +569,7 @@ impl ExcelImporter {
 
         // Prefer matching within the selected project first.
         let methods = repo
-            .get_verification_by_project(project_id)
+            .get_verification_methods_by_project(project_id)
             .map_err(|e| anyhow!("{}", e))?;
         if let Some(method) = methods.iter().find(|m| m.title == verification_name) {
             return Ok(method.id);
@@ -581,10 +584,11 @@ impl ExcelImporter {
             project_id,
         };
 
-        DieselRepo::new()
-            .map_err(|e| anyhow!("{}", e))?
-            .insert_new_verification(&new_verification)
-            .map_err(|e| anyhow!("{}", e))
+        let mut repo = DieselRepo::new().map_err(|e| anyhow!("{}", e))?;
+        let id = repo
+            .insert_new_verification_method(&new_verification)
+            .map_err(|e| anyhow!("{}", e))?;
+        Ok(id)
     }
 
     fn resolve_user_id(
@@ -632,7 +636,7 @@ impl ExcelImporter {
     ) -> Result<i32> {
         let repo = DieselRepo::new().map_err(|e| anyhow!("{}", e))?;
         let tests = repo
-            .get_tests_by_project(project_id)
+            .get_verifications_by_project(project_id)
             .map_err(|e| anyhow!("{}", e))?;
         for test in tests {
             if test.name == name {

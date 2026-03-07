@@ -100,7 +100,9 @@ pub fn routes() -> Vec<Route> {
 mod tests {
     use super::*;
     use crate::auth::session::SESSION_COOKIE;
-    use crate::models::{Project, ProjectMember, Requirement, RequirementStatus, TestCase, User};
+    use crate::models::{
+        Project, ProjectMember, Requirement, RequirementStatus, User, Verification,
+    };
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
@@ -194,8 +196,8 @@ mod tests {
             }
         }
 
-        fn test_case(id: i32, project_id: i32) -> TestCase {
-            TestCase {
+        fn test_case(id: i32, project_id: i32) -> Verification {
+            Verification {
                 id,
                 name: format!("Test {id}"),
                 description: "Covers core scenario".into(),
@@ -204,12 +206,13 @@ mod tests {
                 reference_code: format!("TST-{id}"),
                 parent_id: None,
                 project_id,
+                verification_method_id: None,
             }
         }
 
         repo.requirements.insert(1, requirement(1, 7, created));
         repo.requirements.insert(2, requirement(2, 7, created));
-        repo.tests.insert(1, test_case(1, 7));
+        repo.verifications.insert(1, test_case(1, 7));
 
         repo.requirement_statuses.insert(
             10,

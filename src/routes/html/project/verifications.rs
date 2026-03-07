@@ -11,8 +11,8 @@ use super::prelude::*;
 use crate::helper_functions::decorators::decorate_requirements_with_repo;
 use crate::models::EntityType;
 use crate::services::{
-    change_summary, log_change_details, resolve_change_details_labels, LabelResolvers, LogService,
-    StatusService, VerificationService,
+    change_summary, log_change_details, resolve_change_details_labels, BaselineService,
+    LabelResolvers, LogService, StatusService, VerificationService,
 };
 use crate::status_enums::TestStatusEnum;
 
@@ -337,6 +337,121 @@ async fn show_test_id(
     } else {
         ctx_map.insert("page_title".into(), json!("Test"));
     }
+
+    let perms = super::helpers::project_permissions_context(state, &user, project_id);
+    if let Some(perms_obj) = perms.as_object() {
+        for (k, v) in perms_obj {
+            ctx_map.insert(k.clone(), v.clone());
+        }
+    }
+
+    Ok(Template::render(
+        "verifications/verification",
+        serde_json::Value::Object(ctx_map),
+    ))
+}
+
+/// Show verification as at baseline time (same URL schema as requirements: .../show/<id>/version/<version_or_baseline_id>).
+#[get("/<project_id>/verifications/show/<verification_id>/version/<baseline_id>")]
+async fn show_verification_version(
+    project_access: ProjectAccess,
+    project_id: i32,
+    verification_id: i32,
+    baseline_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    use serde_json::json;
+
+    let user = project_access.into_user();
+    let baseline_service = BaselineService::new(state.inner());
+    let baseline = match baseline_service.get_by_id(baseline_id) {
+        Ok(b) => b,
+        Err(_) => return Err(Redirect::to(format!("/p/{}/baselines", project_id))),
+    };
+    if baseline.project_id != project_id {
+        return Err(Redirect::to(format!("/p/{}/baselines", project_id)));
+    }
+    let snapshots = baseline_service
+        .get_verifications(baseline_id)
+        .unwrap_or_default();
+    let snapshot = snapshots
+        .iter()
+        .find(|s| s.verification_id == verification_id);
+    let snapshot = match snapshot {
+        Some(s) => s,
+        None => {
+            return Err(Redirect::to(uri!(
+                "/p",
+                show_test_id(project_id, verification_id)
+            )));
+        }
+    };
+
+    let repo = state.repo_read();
+    let status_title = repo
+        .get_verification_status_by_id(snapshot.status_id)
+        .ok()
+        .map(|s| s.title)
+        .unwrap_or_else(|| format!("Status #{}", snapshot.status_id));
+    let verification_type_title = snapshot
+        .verification_method_id
+        .and_then(|id| repo.get_verification_method_by_id(id).ok())
+        .map(|m| m.title)
+        .unwrap_or_default();
+    let parent_title = snapshot
+        .parent_id
+        .and_then(|id| repo.get_verification_by_id(id).ok())
+        .map(|v| v.reference_code)
+        .unwrap_or_default();
+    drop(repo);
+
+    let mut ctx_map = serde_json::Map::new();
+    ctx_map.insert("id".into(), json!(snapshot.verification_id));
+    ctx_map.insert(
+        "reference_code".into(),
+        json!(snapshot.reference_code.clone()),
+    );
+    ctx_map.insert("name".into(), json!(snapshot.name.clone()));
+    ctx_map.insert("description".into(), json!(snapshot.description.clone()));
+    ctx_map.insert("source".into(), json!(snapshot.source.clone()));
+    ctx_map.insert("status_id".into(), json!(status_title));
+    ctx_map.insert("status_variant".into(), json!("default"));
+    ctx_map.insert("verification_status_id".into(), json!(snapshot.status_id));
+    ctx_map.insert(
+        "verification_method_id".into(),
+        json!(snapshot.verification_method_id),
+    );
+    ctx_map.insert(
+        "verification_method_title".into(),
+        json!(verification_type_title),
+    );
+    ctx_map.insert("verification_parent_id".into(), json!(snapshot.parent_id));
+    ctx_map.insert("verification_parent_title".into(), json!(parent_title));
+    ctx_map.insert("verification_parent_reference_code".into(), json!(""));
+    ctx_map.insert("verification_parent_description".into(), json!(""));
+    ctx_map.insert("verification_parent_status_id".into(), json!(""));
+    ctx_map.insert(
+        "verification_parent_status_variant".into(),
+        json!("default"),
+    );
+    ctx_map.insert(
+        "verification_parent_status_tag_color".into(),
+        json!(Option::<String>::None),
+    );
+    ctx_map.insert("verification_parent_source".into(), json!(""));
+    ctx_map.insert("project_id".into(), json!(snapshot.project_id));
+    ctx_map.insert("selected_project_id".into(), json!(project_id));
+    ctx_map.insert("linked_requirements".into(), json!([]));
+    ctx_map.insert("history".into(), json!({ "entries": [] }));
+    ctx_map.insert("can_edit_requirements".into(), json!(false));
+    ctx_map.insert("baseline_view".into(), json!(true));
+    ctx_map.insert("baseline_id".into(), json!(baseline_id));
+    ctx_map.insert("baseline_name".into(), json!(baseline.name.clone()));
+    ctx_map.insert(
+        "page_title".into(),
+        json!(format!("{} (baseline) - Test", snapshot.reference_code)),
+    );
+    ctx_map.insert("user".into(), json!(user));
 
     let perms = super::helpers::project_permissions_context(state, &user, project_id);
     if let Some(perms_obj) = perms.as_object() {
@@ -732,6 +847,7 @@ pub fn routes() -> Vec<Route> {
         update_test_status_route,
         show_tests,
         show_test_id,
+        show_verification_version,
         new_test,
         get_edit_test,
         post_edit_test,

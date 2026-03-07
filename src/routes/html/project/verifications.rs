@@ -12,7 +12,7 @@ use crate::helper_functions::decorators::decorate_requirements_with_repo;
 use crate::models::EntityType;
 use crate::services::{
     change_summary, log_change_details, resolve_change_details_labels, LabelResolvers, LogService,
-    StatusService, TestService,
+    StatusService, VerificationService,
 };
 use crate::status_enums::TestStatusEnum;
 
@@ -25,9 +25,12 @@ struct UpdateTestStatusForm {
 
 /// Returns all test statuses for the project, with canonical four first (Passed, Failed, Pending, In Progress), then the rest by id.
 /// Use for dropdowns, filters, and inline edit so user-created statuses are shown.
-fn project_test_statuses(state: &AppState, project_id: i32) -> Vec<crate::models::TestStatus> {
+fn project_test_statuses(
+    state: &AppState,
+    project_id: i32,
+) -> Vec<crate::models::VerificationStatus> {
     let statuses = StatusService::new(state)
-        .list_test_statuses_by_project(project_id)
+        .list_verification_statuses_by_project(project_id)
         .unwrap_or_default();
     let (canonical, rest): (Vec<_>, Vec<_>) = statuses
         .into_iter()
@@ -44,7 +47,9 @@ fn project_test_statuses(state: &AppState, project_id: i32) -> Vec<crate::models
     canonical
 }
 
-#[get("/<project_id>/tests?<status_filter>&<verification_filter>&<category_filter>&<search>")]
+#[get(
+    "/<project_id>/verifications?<status_filter>&<verification_filter>&<category_filter>&<search>"
+)]
 #[allow(clippy::too_many_arguments)]
 async fn show_tests(
     project_access: ProjectAccess,
@@ -60,7 +65,7 @@ async fn show_tests(
 
     let user = project_access.into_user();
     let is_admin = user.is_admin;
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
     let repo = state.repo_read();
 
     let mut ctx = build_context_with_projects(state, user.clone(), cookies);
@@ -81,7 +86,7 @@ async fn show_tests(
     // Calculate metrics before filtering
     // Resolve status IDs to titles for semantic comparison (project-safe)
     let test_status_titles: std::collections::HashMap<i32, String> =
-        StatusService::new(state.inner()).test_status_id_to_title_map(project_id);
+        StatusService::new(state.inner()).verification_status_id_to_title_map(project_id);
     let total = all_tests.len();
     let passed = all_tests
         .iter()
@@ -160,7 +165,7 @@ async fn show_tests(
     let statuses = project_test_statuses(state.inner(), project_id);
 
     let verifications = repo
-        .get_verification_by_project(project_id)
+        .get_verification_methods_by_project(project_id)
         .unwrap_or_default();
     let categories = repo
         .get_categories_by_project(project_id)
@@ -204,10 +209,10 @@ async fn show_tests(
         }
     }
 
-    Ok(Template::render("tests/tests", ctx))
+    Ok(Template::render("verifications/verifications", ctx))
 }
 
-#[get("/<project_id>/tests/show/<test_id>")]
+#[get("/<project_id>/verifications/show/<test_id>")]
 async fn show_test_id(
     project_access: ProjectAccess,
     project_id: i32,
@@ -217,7 +222,7 @@ async fn show_test_id(
     use serde_json::json;
 
     let user = project_access.into_user();
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
 
     let test = match service.get_by_id(test_id) {
         Ok(t) => t,
@@ -240,7 +245,7 @@ async fn show_test_id(
     let decorated_requirements = decorate_requirements_with_repo(&*repo, linked_requirements);
 
     let history_entries = LogService::new(state.inner())
-        .entity_logs(&EntityType::Test.to_string(), test_id)
+        .entity_logs(&EntityType::Verification.to_string(), test_id)
         .unwrap_or_default();
 
     let repo = state.repo_read();
@@ -251,7 +256,7 @@ async fn show_test_id(
         .map(|s| (s.id, s.title))
         .collect();
     let test_status_map: HashMap<i32, String> = repo
-        .get_test_status_all()
+        .get_verification_status_all()
         .unwrap_or_default()
         .into_iter()
         .map(|s| (s.id, s.title))
@@ -269,13 +274,13 @@ async fn show_test_id(
         .map(|a| (a.id, a.title))
         .collect();
     let verification_map: HashMap<i32, String> = repo
-        .get_verification_by_project(project_id)
+        .get_verification_methods_by_project(project_id)
         .unwrap_or_default()
         .into_iter()
         .map(|v| (v.id, v.title))
         .collect();
     let parent_label_map: HashMap<i32, String> = repo
-        .get_tests_by_project(project_id)
+        .get_verifications_by_project(project_id)
         .unwrap_or_default()
         .into_iter()
         .map(|t| (t.id, t.reference_code))
@@ -317,6 +322,15 @@ async fn show_test_id(
         }
     }
 
+    let verification_type_title = test
+        .verification_method_id
+        .and_then(|id| verification_map.get(&id).cloned())
+        .unwrap_or_default();
+    ctx_map.insert(
+        "verification_type_title".into(),
+        json!(verification_type_title),
+    );
+
     // Add page title from test reference code
     if let Some(ref_code) = ctx_map.get("reference_code").and_then(|v| v.as_str()) {
         ctx_map.insert("page_title".into(), json!(format!("{} - Test", ref_code)));
@@ -332,12 +346,12 @@ async fn show_test_id(
     }
 
     Ok(Template::render(
-        "tests/test",
+        "verifications/verification",
         serde_json::Value::Object(ctx_map),
     ))
 }
 
-#[get("/<project_id>/tests/new?<error>")]
+#[get("/<project_id>/verifications/new?<error>")]
 async fn new_test(
     project_access: ProjectAccess,
     project_id: i32,
@@ -367,10 +381,15 @@ async fn new_test(
             })
             .collect();
     ctx["status"] = json!(status_with_default);
-    ctx["parents"] = json!(repo.get_tests_by_project(project_id).unwrap_or_default());
+    ctx["parents"] = json!(repo
+        .get_verifications_by_project(project_id)
+        .unwrap_or_default());
     ctx["users"] = json!(repo.get_users_all().unwrap_or_default());
     ctx["requirements"] = json!(repo
         .get_requirements_by_project(project_id)
+        .unwrap_or_default());
+    ctx["verification"] = json!(repo
+        .get_verification_methods_by_project(project_id)
         .unwrap_or_default());
     ctx["project_id"] = json!(project_id);
     ctx["selected_project_id"] = json!(project_id);
@@ -387,48 +406,60 @@ async fn new_test(
         ctx["page_title"] = json!("New Test");
     }
 
-    Ok(Template::render("tests/new_test", ctx))
+    Ok(Template::render("verifications/new_verification", ctx))
 }
 
-#[post("/<project_id>/tests/new", data = "<new_test>")]
+#[post("/<project_id>/verifications/new", data = "<new_test>")]
 async fn post_test(
     project_access: ProjectAccess,
     project_id: i32,
-    new_test: Form<NewTestForm>,
+    new_test: Form<NewVerificationForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
 
-    let my_new_test = NewTestCase {
+    let my_new_verification = NewVerification {
         id: None,
         name: new_test.name.clone(),
         description: new_test.description.clone(),
         source: new_test.source.clone(),
         status_id: new_test.status_id,
         reference_code: new_test.reference_code.clone(),
-        parent_id: new_test.parent_id,
+        parent_id: new_test
+            .parent_id
+            .and_then(|id| if id == 0 { None } else { Some(id) }),
         project_id,
+        verification_method_id: new_test.verification_method_id.and_then(|id| {
+            if id == 0 {
+                None
+            } else {
+                Some(id)
+            }
+        }),
     };
 
-    let id = service.create(&user, my_new_test).map_err(|e| {
-        eprintln!("Error inserting new test: {:?}", e);
+    let id = service.create(&user, my_new_verification).map_err(|e| {
+        eprintln!("Error creating verification: {:?}", e);
         Redirect::to(uri!(
             "/p",
             new_test(
                 project_id = project_id,
-                error = Some("Failed to create test".to_string())
+                error = Some("Failed to create verification".to_string())
             )
         ))
     })?;
 
     // Link requirements
     #[cfg(debug_assertions)]
-    println!("NewTestForm requirements: {:#?}", new_test.test_req);
-    for req in new_test.test_req.iter() {
+    println!(
+        "NewVerificationForm requirements: {:#?}",
+        new_test.verification_req
+    );
+    for req in new_test.verification_req.iter() {
         let matrix_item = NewMatrixLink {
             req_id: *req,
-            test_id: id,
+            verification_id: id,
             // Use the route's project_id (from the URL) rather than the form field to
             // prevent a tampered form from creating cross-project links.
             project_id,
@@ -457,7 +488,7 @@ async fn post_test(
     Ok(Redirect::to(uri!("/p", show_test_id(project_id, id))))
 }
 
-#[get("/<project_id>/tests/edit/<test_id>")]
+#[get("/<project_id>/verifications/edit/<test_id>")]
 async fn get_edit_test(
     project_access: ProjectAccess,
     project_id: i32,
@@ -469,9 +500,9 @@ async fn get_edit_test(
     let user = project_access.into_user();
     let repo = state.repo_read();
 
-    let test = match repo.get_test_by_id(test_id) {
+    let test = match repo.get_verification_by_id(test_id) {
         Ok(t) => t,
-        Err(_) => return Err(Redirect::to(format!("/p/{}/tests", project_id))),
+        Err(_) => return Err(Redirect::to(format!("/p/{}/verifications", project_id))),
     };
 
     let decorated = decorate_tests_cached(state, vec![test]);
@@ -482,12 +513,12 @@ async fn get_edit_test(
 
     let ctx = json!({
         "tests": test0,
-        "test_status_id": test0.test_status_id,
+        "test_status_id": test0.verification_status_id,
         "categories": repo.get_categories_by_project(project_id).unwrap_or_default(),
         "status": project_test_statuses(state.inner(), project_id),
-        "parent": repo.get_tests_by_project(project_id).unwrap_or_default(),
+        "parent": repo.get_verifications_by_project(project_id).unwrap_or_default(),
         "users": repo.get_users_all().unwrap_or_default(),
-        "verification": repo.get_verification_by_project(project_id).unwrap_or_default(),
+        "verification": repo.get_verification_methods_by_project(project_id).unwrap_or_default(),
         "linked_requirements": linked_requirements,
         "linked_req_ids": linked_req_ids,
         "requirements": repo.get_requirements_by_project(project_id).unwrap_or_default(),
@@ -498,43 +529,57 @@ async fn get_edit_test(
     #[cfg(debug_assertions)]
     println!("Tests: {:#}", ctx);
 
-    Ok(Template::render("tests/edit_test", ctx))
+    Ok(Template::render("verifications/edit_verification", ctx))
 }
 
-#[post("/<project_id>/tests/edit/<test_id>", data = "<edit_test_form>")]
+#[post(
+    "/<project_id>/verifications/edit/<test_id>",
+    data = "<edit_test_form>"
+)]
 async fn post_edit_test(
     project_access: ProjectAccess,
     project_id: i32,
     test_id: i32,
-    edit_test_form: Form<EditTestForm>,
+    edit_test_form: Form<EditVerificationForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = project_access.into_user();
-    let service = TestService::new(state.inner());
-    let to_list = || Redirect::to(format!("/p/{}/tests", project_id));
+    let service = VerificationService::new(state.inner());
+    let to_list = || Redirect::to(format!("/p/{}/verifications", project_id));
 
     // Own the form to avoid cloning strings
     let f = edit_test_form.into_inner();
 
-    let new_test = NewTestCase {
+    let new_verification = NewVerification {
         id: Some(f.id),
         name: f.name,
         description: f.description,
         source: f.source,
         status_id: f.status_id,
         reference_code: f.reference_code,
-        parent_id: f.parent_id,
+        parent_id: f
+            .parent_id
+            .and_then(|id| if id == 0 { None } else { Some(id) }),
         project_id: f.project_id,
+        verification_method_id: f.verification_method_id.and_then(|id| {
+            if id == 0 {
+                None
+            } else {
+                Some(id)
+            }
+        }),
     };
 
-    service.update(&user, test_id, new_test).map_err(|e| {
-        eprintln!("Error editing test: {e:?}");
-        to_list()
-    })?;
+    service
+        .update(&user, test_id, new_verification)
+        .map_err(|e| {
+            eprintln!("Error editing test: {e:?}");
+            to_list()
+        })?;
 
     state
         .repo_write()
-        .update_test_requirement_links(f.id, &f.linked_requirements)
+        .update_verification_requirement_links(f.id, &f.linked_requirements)
         .map_err(|e| {
             eprintln!("Error updating test requirement links: {e:?}");
             to_list()
@@ -543,7 +588,7 @@ async fn post_edit_test(
     Ok(Redirect::to(uri!("/p", show_test_id(project_id, f.id))))
 }
 
-#[delete("/<project_id>/tests/delete/<test_id>")]
+#[delete("/<project_id>/verifications/delete/<test_id>")]
 async fn delete_test_route(
     project_access: ProjectAccess,
     project_id: i32,
@@ -553,14 +598,14 @@ async fn delete_test_route(
     use rocket::http::Status;
 
     let user = project_access.into_user();
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
 
     let test = service.get_by_id(test_id).map_err(|_| Status::NotFound)?;
 
     // Permission gate: only allow deletion of tests in Passed or Failed status, or if admin
     // Resolve the test's status title from the project's status list (not hardcoded IDs)
     let is_deletable = StatusService::new(state.inner())
-        .get_test_status(test.status_id)
+        .get_verification_status(test.status_id)
         .ok()
         .and_then(|status| TestStatusEnum::from_title(&status.title))
         .map(|status| matches!(status, TestStatusEnum::Passed | TestStatusEnum::Failed))
@@ -575,12 +620,15 @@ async fn delete_test_route(
         _ => Status::InternalServerError,
     })?;
 
-    Ok(Redirect::to(format!("/p/{}/tests", project_id)))
+    Ok(Redirect::to(format!("/p/{}/verifications", project_id)))
 }
 
-/// POST /p/<project_id>/tests/update-status/<test_id> — inline status update (uses same session as page).
+/// POST /p/<project_id>/verifications/update-status/<test_id> — inline status update (uses same session as page).
 /// Accepts JSON body: { "status_id": 1 } for reliable parsing.
-#[post("/<project_id>/tests/update-status/<test_id>", data = "<payload>")]
+#[post(
+    "/<project_id>/verifications/update-status/<test_id>",
+    data = "<payload>"
+)]
 async fn update_test_status_route(
     project_access: ProjectAccess,
     project_id: i32,
@@ -591,7 +639,7 @@ async fn update_test_status_route(
     use rocket::http::Status;
 
     let user = project_access.into_user();
-    let service = TestService::new(state.inner());
+    let service = VerificationService::new(state.inner());
 
     let test = service
         .get_by_id(test_id)
@@ -605,7 +653,7 @@ async fn update_test_status_route(
     }
 
     let status_id = payload.status_id;
-    let updated = NewTestCase {
+    let updated = NewVerification {
         id: Some(test.id),
         reference_code: test.reference_code,
         name: test.name,
@@ -614,6 +662,7 @@ async fn update_test_status_route(
         status_id,
         parent_id: test.parent_id,
         project_id: test.project_id,
+        verification_method_id: test.verification_method_id,
     };
 
     service.update(&user, test_id, updated).map_err(|e| {
@@ -651,7 +700,7 @@ async fn get_requirements_xls(
     Ok((content_type, file))
 }
 
-#[get("/<project_id>/tests.xls")]
+#[get("/<project_id>/verifications.xls")]
 async fn get_tests_xls(
     project_access: ProjectAccess,
     project_id: i32,
@@ -663,12 +712,12 @@ async fn get_tests_xls(
     );
     excel::create_tests_workbook(project_id).map_err(|e| {
         eprintln!("Error creating tests workbook: {e:?}");
-        Redirect::to(format!("/p/{}/tests", project_id))
+        Redirect::to(format!("/p/{}/verifications", project_id))
     })?;
-    let path_to_file = path::Path::new("target/tests.xls");
+    let path_to_file = path::Path::new("target/verifications.xls");
     let file = NamedFile::open(&path_to_file).await.map_err(|e| {
         eprintln!("Error opening tests export file: {e:?}");
-        Redirect::to(format!("/p/{}/tests", project_id))
+        Redirect::to(format!("/p/{}/verifications", project_id))
     })?;
     let content_type = ContentType::new(
         "application",
@@ -697,7 +746,7 @@ mod tests {
     use super::*;
     use crate::models::{
         Applicability, Category, MatrixLink, Project, ProjectMember, Requirement,
-        RequirementStatus, TestCase, TestStatus, VerificationMethod,
+        RequirementStatus, Verification, VerificationMethod, VerificationStatus,
     };
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::routes::html::project::test_helpers::{
@@ -746,8 +795,8 @@ mod tests {
         }
     }
 
-    fn sample_test_status(id: i32, title: &str) -> TestStatus {
-        TestStatus {
+    fn sample_test_status(id: i32, title: &str) -> VerificationStatus {
+        VerificationStatus {
             id,
             title: title.to_string(),
             description: format!("{title} status"),
@@ -804,8 +853,8 @@ mod tests {
         }
     }
 
-    fn sample_test(id: i32, status: i32, name: &str) -> TestCase {
-        TestCase {
+    fn sample_test(id: i32, status: i32, name: &str) -> Verification {
+        Verification {
             id,
             name: name.to_string(),
             description: format!("{name} description"),
@@ -814,6 +863,7 @@ mod tests {
             reference_code: format!("TEST-{id:03}"),
             parent_id: None,
             project_id: PRIMARY_PROJECT,
+            verification_method_id: None,
         }
     }
 
@@ -847,14 +897,15 @@ mod tests {
         });
 
         repo.statuses.insert(1, sample_status(1, "Planned"));
-        repo.test_statuses.insert(1, sample_test_status(1, "Draft"));
-        repo.test_statuses
+        repo.verification_statuses
+            .insert(1, sample_test_status(1, "Draft"));
+        repo.verification_statuses
             .insert(2, sample_test_status(2, "Proposal"));
-        repo.test_statuses
+        repo.verification_statuses
             .insert(3, sample_test_status(3, "Active"));
 
         repo.categories.insert(1, sample_category(1, "Systems"));
-        repo.verifications
+        repo.verification_methods
             .insert(1, sample_verification(1, "Analysis"));
         repo.applicability.insert(1, sample_applicability(1, "All"));
         repo.requirements.insert(1, sample_requirement(1));
@@ -864,10 +915,11 @@ mod tests {
 
     fn repo_with_tests() -> DieselRepoMock {
         let mut repo = base_repo();
-        repo.tests.insert(1, sample_test(1, 1, "Baseline Test"));
+        repo.verifications
+            .insert(1, sample_test(1, 1, "Baseline Test"));
         repo.matrices.push(MatrixLink {
             req_id: 1,
-            test_id: 1,
+            verification_id: 1,
             creation_date: timestamp(),
             project_id: PRIMARY_PROJECT,
             suspect: false,
@@ -883,7 +935,7 @@ mod tests {
 
     fn repo_with_active_test() -> DieselRepoMock {
         let mut repo = base_repo();
-        repo.tests
+        repo.verifications
             .insert(1, sample_test(1, 3, "Qualification Test"));
         repo
     }
@@ -907,7 +959,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_tests_lists_known_items() {
         let client = test_client(repo_with_tests()).await;
-        let response = get_with_session(&client, "/p/1/tests", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/1/verifications", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -917,7 +969,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_test_id_displays_details() {
         let client = test_client(repo_with_tests()).await;
-        let response = get_with_session(&client, "/p/1/tests/show/1", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/1/verifications/show/1", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -928,7 +980,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_test_id_returns_error_when_missing() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/tests/show/42", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/1/verifications/show/42", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -938,12 +990,12 @@ mod tests {
     #[rocket::async_test]
     async fn new_test_form_renders() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/tests/new", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/1/verifications/new", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
-        assert!(body.contains("New Test"));
-        assert!(body.contains("Create Test"));
+        assert!(body.contains("New Verification"));
+        assert!(body.contains("Create Verification"));
     }
 
     #[rocket::async_test]
@@ -951,10 +1003,10 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/tests/new",
+            "/p/1/verifications/new",
             concat!(
                 "name=Thermal+Check&reference_code=TEST-002&description=Thermal+validation&",
-                "source=Spec&status_id=1&parent_id=0&test_req=1&project_id=1"
+                "source=Spec&status_id=1&parent_id=0&verification_req=1&project_id=1"
             ),
             ADMIN_ID,
         )
@@ -963,18 +1015,22 @@ mod tests {
         assert_eq!(response.status(), HttpStatus::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/1/tests/show/1")
+            Some("/p/1/verifications/show/1")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
         let inner = repo.inner_repo();
 
-        let test = inner.tests.get(&1).expect("inserted test");
+        let test = inner.verifications.get(&1).expect("inserted test");
         assert_eq!(test.name, "Thermal Check");
         assert_eq!(test.status_id, 1);
 
-        let links: Vec<_> = inner.matrices.iter().filter(|m| m.test_id == 1).collect();
+        let links: Vec<_> = inner
+            .matrices
+            .iter()
+            .filter(|m| m.verification_id == 1)
+            .collect();
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].req_id, 1);
     }
@@ -982,11 +1038,11 @@ mod tests {
     #[rocket::async_test]
     async fn get_edit_test_renders_existing_data() {
         let client = test_client(repo_with_tests()).await;
-        let response = get_with_session(&client, "/p/1/tests/edit/1", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/1/verifications/edit/1", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
-        assert!(body.contains("Edit Test"));
+        assert!(body.contains("Edit Verification"));
         assert!(body.contains("Baseline Test"));
     }
 
@@ -995,7 +1051,7 @@ mod tests {
         let client = test_client(repo_with_tests()).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/tests/edit/1",
+            "/p/1/verifications/edit/1",
             concat!(
                 "id=1&reference_code=TEST-001&name=Updated+Test&description=Updated+desc&",
                 "source=Updated&status_id=2&parent_id=0&linked_requirements=1&project_id=1"
@@ -1007,18 +1063,22 @@ mod tests {
         assert_eq!(response.status(), HttpStatus::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/1/tests/show/1")
+            Some("/p/1/verifications/show/1")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
         let inner = repo.inner_repo();
 
-        let test = inner.tests.get(&1).expect("existing test");
+        let test = inner.verifications.get(&1).expect("existing test");
         assert_eq!(test.name, "Updated Test");
         assert_eq!(test.status_id, 2);
 
-        let links: Vec<_> = inner.matrices.iter().filter(|m| m.test_id == 1).collect();
+        let links: Vec<_> = inner
+            .matrices
+            .iter()
+            .filter(|m| m.verification_id == 1)
+            .collect();
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].req_id, 1);
     }
@@ -1026,22 +1086,22 @@ mod tests {
     #[rocket::async_test]
     async fn delete_test_route_removes_draft() {
         let client = test_client(repo_with_tests()).await;
-        let response = delete_with_session(&client, "/p/1/tests/delete/1", ADMIN_ID).await;
+        let response = delete_with_session(&client, "/p/1/verifications/delete/1", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
         let location = response.headers().get_one("Location");
         assert!(location.is_some());
-        assert!(location.unwrap().contains("/p/1/tests"));
+        assert!(location.unwrap().contains("/p/1/verifications"));
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
-        assert!(repo.inner_repo().tests.is_empty());
+        assert!(repo.inner_repo().verifications.is_empty());
     }
 
     #[rocket::async_test]
     async fn delete_test_route_forbids_non_admin_when_status_high() {
         let client = test_client(repo_with_active_test()).await;
-        let response = delete_with_session(&client, "/p/1/tests/delete/1", USER_ID).await;
+        let response = delete_with_session(&client, "/p/1/verifications/delete/1", USER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Forbidden);
     }
@@ -1049,7 +1109,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_tests_requires_membership_for_non_admin() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/tests", USER_ID).await;
+        let response = get_with_session(&client, "/p/1/verifications", USER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
     }

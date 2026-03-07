@@ -39,32 +39,32 @@
     </div>
   </div>
 
-  {{#> partials/metrics_card title="Tests" badge=tests_count badge_class="bg-primary"}}
+  {{#> partials/metrics_card title="Verifications" badge=tests_count badge_class="bg-primary"}}
   <div class="c-dashboard-card__description">
-    <p>Manage test cases and verification methods</p>
+    <p>Manage verifications and verification methods</p>
   </div>
   <div class="c-dashboard-card__actions">
     {{#if selected_project_id}}
-    <a href="/p/{{selected_project_id}}/tests" class="btn btn-primary c-dashboard-card__action">View Tests</a>
-    <a href="/p/{{selected_project_id}}/tests.xls" class="btn btn-success c-dashboard-card__action">Export Excel</a>
+    <a href="/p/{{selected_project_id}}/verifications" class="btn btn-primary c-dashboard-card__action">View Verifications</a>
+    <a href="/p/{{selected_project_id}}/verifications.xls" class="btn btn-success c-dashboard-card__action">Export Excel</a>
     {{#if user.is_admin}}
     <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
     {{/if}}
-    <a href="/p/{{selected_project_id}}/tests/new" class="btn btn-outline c-dashboard-card__action">New Test</a>
+    <a href="/p/{{selected_project_id}}/verifications/new" class="btn btn-outline c-dashboard-card__action">New Verification</a>
     {{else}}
-    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Tests</span>
+    <span class="btn btn-primary disabled c-dashboard-card__action" aria-disabled="true">View Verifications</span>
     <span class="btn btn-success disabled c-dashboard-card__action" aria-disabled="true">Export Excel</span>
     {{#if user.is_admin}}
     <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-warning c-dashboard-card__action">Import File</a>
     {{/if}}
-    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Test</span>
+    <span class="btn btn-outline disabled c-dashboard-card__action" aria-disabled="true">New Verification</span>
     {{/if}}
   </div>
   {{/partials/metrics_card}}
 
   {{#> partials/metrics_card title="Traceability Matrix"}}
   <div class="c-dashboard-card__description">
-    <p>Link requirements to tests and generate reports</p>
+    <p>Link requirements to verifications and generate reports</p>
   </div>
   <div class="c-dashboard-card__actions">
     <a href="/p/{{selected_project_id}}/matrix" class="btn btn-primary c-dashboard-card__action">View Matrix</a>
@@ -199,4 +199,4 @@
   {{/partials/metrics_card}}
 </div>
 {{/inline}}
-{{> layout page_id="project"}}
+{{> layout this page_id="project"}}

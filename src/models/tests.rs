@@ -138,7 +138,7 @@ mod tests {
         fn matrix_link_display() {
             let link = MatrixLink {
                 req_id: 10,
-                test_id: 20,
+                verification_id: 20,
                 creation_date: test_timestamp(),
                 project_id: 1,
                 suspect: false,
@@ -151,41 +151,43 @@ mod tests {
             };
 
             let display = format!("{}", link);
-            assert_eq!(display, "Matrix: Req 10 <-> Test 20");
+            assert_eq!(display, "Matrix: Req 10 <-> Verification 20");
         }
 
         #[test]
-        fn test_case_display() {
-            let test = TestCase {
+        fn verification_display() {
+            let ver = Verification {
                 id: 5,
-                name: "Unit Test".to_string(),
-                reference_code: "TEST-005".to_string(),
-                description: "Test description".to_string(),
-                source: "test.rs".to_string(),
+                name: "Unit Verification".to_string(),
+                reference_code: "VER-005".to_string(),
+                description: "Verification description".to_string(),
+                source: "ver.rs".to_string(),
                 status_id: 1,
                 parent_id: None,
                 project_id: 1,
+                verification_method_id: None,
             };
 
-            let display = format!("{}", test);
-            assert_eq!(display, "Test #5: Unit Test");
+            let display = format!("{}", ver);
+            assert_eq!(display, "Verification #5: Unit Verification");
         }
 
         #[test]
-        fn test_case_display_with_parent() {
-            let test = TestCase {
+        fn verification_display_with_parent() {
+            let ver = Verification {
                 id: 15,
-                name: "Child Test".to_string(),
-                reference_code: "TEST-015".to_string(),
+                name: "Child Verification".to_string(),
+                reference_code: "VER-015".to_string(),
                 description: "Child".to_string(),
                 source: "child.rs".to_string(),
                 status_id: 1,
                 parent_id: Some(10),
                 project_id: 1,
+                verification_method_id: None,
             };
 
-            let display = format!("{}", test);
-            assert_eq!(display, "Test #15: Child Test");
+            let display = format!("{}", ver);
+            assert_eq!(display, "Verification #15: Child Verification");
         }
 
         // ActionType tests
@@ -224,24 +226,30 @@ mod tests {
         fn entity_type_display() {
             assert_eq!(format!("{}", EntityType::Project), "PROJECT");
             assert_eq!(format!("{}", EntityType::Requirement), "REQUIREMENT");
-            assert_eq!(format!("{}", EntityType::Test), "TEST");
             assert_eq!(format!("{}", EntityType::Category), "CATEGORY");
             assert_eq!(format!("{}", EntityType::Applicability), "APPLICABILITY");
             assert_eq!(format!("{}", EntityType::User), "USER");
             assert_eq!(format!("{}", EntityType::MatrixLink), "MATRIX");
             assert_eq!(format!("{}", EntityType::Verification), "VERIFICATION");
+            assert_eq!(
+                format!("{}", EntityType::VerificationMethod),
+                "VERIFICATION_METHOD"
+            );
         }
 
         #[test]
         fn entity_type_human_name() {
             assert_eq!(EntityType::Project.human_name(), "project");
             assert_eq!(EntityType::Requirement.human_name(), "requirement");
-            assert_eq!(EntityType::Test.human_name(), "test");
             assert_eq!(EntityType::Category.human_name(), "category");
             assert_eq!(EntityType::Applicability.human_name(), "applicability");
             assert_eq!(EntityType::User.human_name(), "user");
             assert_eq!(EntityType::MatrixLink.human_name(), "matrix");
             assert_eq!(EntityType::Verification.human_name(), "verification");
+            assert_eq!(
+                EntityType::VerificationMethod.human_name(),
+                "verification method"
+            );
         }
 
         // Loggable trait tests for entities
@@ -310,22 +318,23 @@ mod tests {
         }
 
         #[test]
-        fn test_case_loggable() {
-            let test = TestCase {
+        fn verification_loggable() {
+            let ver = Verification {
                 id: 30,
-                name: "Unit Test".to_string(),
-                reference_code: "TEST-001".to_string(),
+                name: "Unit Verification".to_string(),
+                reference_code: "VER-001".to_string(),
                 description: "Desc".to_string(),
-                source: "test.rs".to_string(),
+                source: "ver.rs".to_string(),
                 status_id: 1,
                 parent_id: None,
                 project_id: 4,
+                verification_method_id: None,
             };
 
-            assert_eq!(TestCase::entity_type(), EntityType::Test);
-            assert_eq!(test.id(), 30);
-            assert_eq!(test.project_id(), Some(4));
-            assert_eq!(test.display_name(), "Unit Test");
+            assert_eq!(Verification::entity_type(), EntityType::Verification);
+            assert_eq!(ver.id(), 30);
+            assert_eq!(ver.project_id(), Some(4));
+            assert_eq!(ver.display_name(), "Unit Verification");
         }
 
         #[test]
@@ -439,7 +448,7 @@ mod tests {
         fn matrix_link_field_access() {
             let link = MatrixLink {
                 req_id: 1,
-                test_id: 2,
+                verification_id: 2,
                 creation_date: test_timestamp(),
                 project_id: 3,
                 suspect: false,
@@ -452,7 +461,7 @@ mod tests {
             };
 
             assert_eq!(link.req_id, 1);
-            assert_eq!(link.test_id, 2);
+            assert_eq!(link.verification_id, 2);
             assert_eq!(link.project_id, 3);
         }
 
@@ -670,22 +679,23 @@ mod tests {
         }
 
         #[test]
-        fn new_test_case_loggable() {
-            let new_test = NewTestCase {
+        fn new_verification_loggable() {
+            let new_ver = NewVerification {
                 id: Some(30),
-                reference_code: "TEST-001".to_string(),
-                name: "Unit Test".to_string(),
+                reference_code: "VER-001".to_string(),
+                name: "Unit Verification".to_string(),
                 description: "Desc".to_string(),
-                source: "test.rs".to_string(),
+                source: "ver.rs".to_string(),
                 status_id: 1,
                 parent_id: None,
                 project_id: 4,
+                verification_method_id: None,
             };
 
-            assert_eq!(NewTestCase::entity_type(), EntityType::Test);
-            assert_eq!(new_test.id(), 30);
-            assert_eq!(new_test.project_id(), Some(4));
-            assert_eq!(new_test.display_name(), "Unit Test");
+            assert_eq!(NewVerification::entity_type(), EntityType::Verification);
+            assert_eq!(new_ver.id(), 30);
+            assert_eq!(new_ver.project_id(), Some(4));
+            assert_eq!(new_ver.display_name(), "Unit Verification");
         }
 
         #[test]
@@ -717,7 +727,7 @@ mod tests {
 
             assert_eq!(
                 NewVerificationMethod::entity_type(),
-                EntityType::Verification
+                EntityType::VerificationMethod
             );
             assert_eq!(new_ver.id(), 1);
             assert_eq!(new_ver.project_id(), Some(1));
@@ -743,8 +753,8 @@ mod tests {
         }
 
         #[test]
-        fn new_test_status_loggable() {
-            let new_status = NewTestStatus {
+        fn new_verification_status_loggable() {
+            let new_status = NewVerificationStatus {
                 id: Some(1),
                 title: "Passed".to_string(),
                 description: "Desc".to_string(),
@@ -754,7 +764,10 @@ mod tests {
                 tag_color: None,
             };
 
-            assert_eq!(NewTestStatus::entity_type(), EntityType::Test);
+            assert_eq!(
+                NewVerificationStatus::entity_type(),
+                EntityType::Verification
+            );
             assert_eq!(new_status.id(), 1);
             assert_eq!(new_status.project_id(), Some(1));
             assert_eq!(new_status.display_name(), "Passed");
@@ -764,14 +777,14 @@ mod tests {
         fn new_matrix_link_field_access() {
             let new_link = NewMatrixLink {
                 req_id: 1,
-                test_id: 2,
+                verification_id: 2,
                 project_id: 3,
                 triggering_version_id: None,
                 triggering_user_id: None,
             };
 
             assert_eq!(new_link.req_id, 1);
-            assert_eq!(new_link.test_id, 2);
+            assert_eq!(new_link.verification_id, 2);
             assert_eq!(new_link.project_id, 3);
         }
 
@@ -856,24 +869,25 @@ mod tests {
 
         #[test]
         fn new_test_form_field_access() {
-            let form = NewTestForm {
+            let form = NewVerificationForm {
                 name: "Test".to_string(),
                 reference_code: "REF".to_string(),
                 description: "Desc".to_string(),
                 source: "source.rs".to_string(),
                 status_id: 1,
                 parent_id: None,
-                test_req: vec![1, 2, 3],
+                verification_method_id: None,
+                verification_req: vec![1, 2, 3],
                 project_id: 1,
             };
 
             assert_eq!(form.name, "Test");
-            assert_eq!(form.test_req, vec![1, 2, 3]);
+            assert_eq!(form.verification_req, vec![1, 2, 3]);
         }
 
         #[test]
         fn edit_test_form_field_access() {
-            let form = EditTestForm {
+            let form = EditVerificationForm {
                 id: 10,
                 reference_code: "REF".to_string(),
                 name: "Test".to_string(),
@@ -881,6 +895,7 @@ mod tests {
                 source: "source.rs".to_string(),
                 status_id: 1,
                 parent_id: None,
+                verification_method_id: None,
                 linked_requirements: vec![1, 2],
                 project_id: 1,
             };
@@ -1079,59 +1094,63 @@ mod tests {
         }
 
         #[test]
-        fn decorated_test_case_field_access() {
-            let decorated = DecoratedTestCase {
+        fn decorated_verification_field_access() {
+            let decorated = DecoratedVerification {
                 id: 1,
-                reference_code: "TEST-001".to_string(),
-                name: "Unit Test".to_string(),
+                reference_code: "VER-001".to_string(),
+                name: "Unit Verification".to_string(),
                 description: "Desc".to_string(),
-                source: "test.rs".to_string(),
+                source: "ver.rs".to_string(),
                 status_id: "Passed".to_string(),
                 status_variant: "passed".to_string(),
-                test_status_id: 1,
+                verification_status_id: 1,
                 status_tag_color: None,
-                test_parent_id: None,
-                test_parent_title: "".to_string(),
-                test_parent_reference_code: "".to_string(),
-                test_parent_description: "".to_string(),
-                test_parent_status_id: "".to_string(),
-                test_parent_status_variant: "".to_string(),
-                test_parent_status_tag_color: None,
-                test_parent_source: "".to_string(),
+                verification_parent_id: None,
+                verification_parent_title: "".to_string(),
+                verification_parent_reference_code: "".to_string(),
+                verification_parent_description: "".to_string(),
+                verification_parent_status_id: "".to_string(),
+                verification_parent_status_variant: "".to_string(),
+                verification_parent_status_tag_color: None,
+                verification_parent_source: "".to_string(),
                 project_id: 1,
+                verification_method_id: None,
+                verification_method_title: None,
             };
 
             assert_eq!(decorated.id, 1);
-            assert_eq!(decorated.name, "Unit Test");
+            assert_eq!(decorated.name, "Unit Verification");
             assert_eq!(decorated.status_id, "Passed");
-            assert_eq!(decorated.test_status_id, 1);
+            assert_eq!(decorated.verification_status_id, 1);
         }
 
         #[test]
-        fn decorated_test_case_with_parent() {
-            let decorated = DecoratedTestCase {
+        fn decorated_verification_with_parent() {
+            let decorated = DecoratedVerification {
                 id: 2,
-                reference_code: "TEST-002".to_string(),
-                name: "Child Test".to_string(),
+                reference_code: "VER-002".to_string(),
+                name: "Child Verification".to_string(),
                 description: "Desc".to_string(),
                 source: "child.rs".to_string(),
                 status_id: "Pending".to_string(),
                 status_variant: "proposal".to_string(),
-                test_status_id: 3,
+                verification_status_id: 3,
                 status_tag_color: None,
-                test_parent_id: Some(1),
-                test_parent_title: "Parent Test".to_string(),
-                test_parent_reference_code: "".to_string(),
-                test_parent_description: "".to_string(),
-                test_parent_status_id: "".to_string(),
-                test_parent_status_variant: "".to_string(),
-                test_parent_status_tag_color: None,
-                test_parent_source: "".to_string(),
+                verification_parent_id: Some(1),
+                verification_parent_title: "Parent Verification".to_string(),
+                verification_parent_reference_code: "".to_string(),
+                verification_parent_description: "".to_string(),
+                verification_parent_status_id: "".to_string(),
+                verification_parent_status_variant: "".to_string(),
+                verification_parent_status_tag_color: None,
+                verification_parent_source: "".to_string(),
                 project_id: 1,
+                verification_method_id: None,
+                verification_method_title: None,
             };
 
-            assert_eq!(decorated.test_parent_id, Some(1));
-            assert_eq!(decorated.test_parent_title, "Parent Test");
+            assert_eq!(decorated.verification_parent_id, Some(1));
+            assert_eq!(decorated.verification_parent_title, "Parent Verification");
         }
 
         #[test]
@@ -1182,30 +1201,32 @@ mod tests {
         }
 
         #[test]
-        fn decorated_test_case_serialization() {
-            let decorated = DecoratedTestCase {
+        fn decorated_verification_serialization() {
+            let decorated = DecoratedVerification {
                 id: 1,
-                reference_code: "TEST-001".to_string(),
-                name: "Test".to_string(),
+                reference_code: "VER-001".to_string(),
+                name: "Verification".to_string(),
                 description: "Desc".to_string(),
-                source: "test.rs".to_string(),
+                source: "ver.rs".to_string(),
                 status_id: "Passed".to_string(),
                 status_variant: "passed".to_string(),
-                test_status_id: 1,
+                verification_status_id: 1,
                 status_tag_color: None,
-                test_parent_id: None,
-                test_parent_title: "".to_string(),
-                test_parent_reference_code: "".to_string(),
-                test_parent_description: "".to_string(),
-                test_parent_status_id: "".to_string(),
-                test_parent_status_variant: "".to_string(),
-                test_parent_status_tag_color: None,
-                test_parent_source: "".to_string(),
+                verification_parent_id: None,
+                verification_parent_title: "".to_string(),
+                verification_parent_reference_code: "".to_string(),
+                verification_parent_description: "".to_string(),
+                verification_parent_status_id: "".to_string(),
+                verification_parent_status_variant: "".to_string(),
+                verification_parent_status_tag_color: None,
+                verification_parent_source: "".to_string(),
                 project_id: 1,
+                verification_method_id: None,
+                verification_method_title: None,
             };
 
             let json = serde_json::to_string(&decorated).unwrap();
-            let deserialized: DecoratedTestCase = serde_json::from_str(&json).unwrap();
+            let deserialized: DecoratedVerification = serde_json::from_str(&json).unwrap();
 
             assert_eq!(decorated.id, deserialized.id);
             assert_eq!(decorated.name, deserialized.name);
@@ -1305,7 +1326,7 @@ mod tests {
         fn matrix_link_clone() {
             let link = MatrixLink {
                 req_id: 1,
-                test_id: 2,
+                verification_id: 2,
                 creation_date: test_timestamp(),
                 project_id: 3,
                 suspect: false,
@@ -1319,7 +1340,7 @@ mod tests {
 
             let cloned = link.clone();
             assert_eq!(link.req_id, cloned.req_id);
-            assert_eq!(link.test_id, cloned.test_id);
+            assert_eq!(link.verification_id, cloned.verification_id);
         }
 
         #[test]
@@ -1354,19 +1375,20 @@ mod tests {
         }
 
         #[test]
-        fn test_case_with_all_option_fields() {
-            let test = TestCase {
+        fn verification_with_all_option_fields() {
+            let ver = Verification {
                 id: 1,
-                name: "Test".to_string(),
+                name: "Verification".to_string(),
                 reference_code: "REF".to_string(),
                 description: "Desc".to_string(),
                 source: "source.rs".to_string(),
                 status_id: 1,
                 parent_id: Some(5),
                 project_id: 1,
+                verification_method_id: None,
             };
 
-            assert_eq!(test.parent_id, Some(5));
+            assert_eq!(ver.parent_id, Some(5));
         }
 
         #[test]
@@ -1422,20 +1444,21 @@ mod tests {
         }
 
         #[test]
-        fn new_test_case_with_all_fields() {
-            let new_test = NewTestCase {
+        fn new_verification_with_all_fields() {
+            let new_ver = NewVerification {
                 id: Some(1),
                 reference_code: "REF".to_string(),
-                name: "Test".to_string(),
+                name: "Verification".to_string(),
                 description: "Desc".to_string(),
                 source: "source.rs".to_string(),
                 status_id: 1,
                 parent_id: Some(5),
                 project_id: 1,
+                verification_method_id: None,
             };
 
-            assert_eq!(new_test.id, Some(1));
-            assert_eq!(new_test.parent_id, Some(5));
+            assert_eq!(new_ver.id, Some(1));
+            assert_eq!(new_ver.parent_id, Some(5));
         }
 
         #[test]
@@ -1473,8 +1496,8 @@ mod tests {
         }
 
         #[test]
-        fn test_status_serialization() {
-            let status = TestStatus {
+        fn verification_status_serialization() {
+            let status = VerificationStatus {
                 id: 1,
                 title: "Passed".to_string(),
                 description: "Desc".to_string(),
@@ -1485,7 +1508,7 @@ mod tests {
             };
 
             let json = serde_json::to_string(&status).unwrap();
-            let deserialized: TestStatus = serde_json::from_str(&json).unwrap();
+            let deserialized: VerificationStatus = serde_json::from_str(&json).unwrap();
 
             assert_eq!(status.id, deserialized.id);
             assert_eq!(status.title, deserialized.title);

@@ -14,7 +14,7 @@ export { init as initRequirementDetail } from './requirementDetail.js';
 export { init as initSemanticSearch } from './semanticSearch.js';
 
 // Other pages
-export { init as initTests } from './tests.js';
+export { init as initVerifications } from './verifications.js';
 export { init as initMatrix } from './matrix.js';
 export { init as initCategories } from './categories.js';
 export { init as initApplicability } from './applicability.js';

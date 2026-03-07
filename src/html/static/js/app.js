@@ -9,7 +9,8 @@ import { initStatusColorPickers } from './modules/statusColorPicker.js';
 
 const pageControllers = {
   requirements: () => import('./pages/requirements.js'),
-  tests: () => import('./pages/tests.js'),
+  tests: () => import('./pages/verifications.js'),
+  verifications: () => import('./pages/verifications.js'),
   matrix: () => import('./pages/matrix.js'),
   'requirements-tree': () => import('./pages/requirementsTree.js'),
   categories: () => import('./pages/categories.js'),
@@ -52,7 +53,7 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectId = button.getAttribute('data-project-id');
       const testId = button.getAttribute('data-test-id');
-      return `/p/${projectId}/tests/delete/${testId}`;
+      return `/p/${projectId}/verifications/delete/${testId}`;
     },
     getMessage: (button) => {
       const name = button.getAttribute('data-test-name') || 'Test';

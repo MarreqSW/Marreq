@@ -3,7 +3,6 @@
 
 use super::helpers::*;
 use super::prelude::*;
-use crate::services::VerificationService;
 use rocket::http::Status;
 
 #[get("/<project_id>/verification")]
@@ -14,8 +13,10 @@ pub async fn show_verification(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
     let projects = get_accessible_projects(state, &user);
-    let service = VerificationService::new(state.inner());
-    let verifications = service.list_by_project(project_id).unwrap_or_default();
+    let verifications = state
+        .repo_read()
+        .get_verification_methods_by_project(project_id)
+        .unwrap_or_default();
 
     let ctx = json!({
         "user": user,
@@ -57,7 +58,6 @@ pub async fn post_verification(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let _user = project_access.into_user();
-    let service = VerificationService::new(state.inner());
 
     let new_url = uri!(
         "/p",
@@ -73,7 +73,10 @@ pub async fn post_verification(
         ..form.into_inner()
     };
 
-    if let Err(_err) = service.create(new_verification) {
+    if let Err(_err) = state
+        .repo_write()
+        .insert_new_verification_method(&new_verification)
+    {
         #[cfg(debug_assertions)]
         eprintln!("Error inserting verification method: {_err:?}");
         return Ok(Redirect::to(new_url));
@@ -92,9 +95,9 @@ pub async fn get_edit_verification(
 ) -> Result<Template, Redirect> {
     let user = project_access.into_user();
     let projects = get_accessible_projects(state, &user);
-    let service = VerificationService::new(state.inner());
-    let verification = service
-        .get_by_id(verification_id)
+    let verification = state
+        .repo_read()
+        .get_verification_method_by_id(verification_id)
         .map_err(|_| Redirect::to(uri!("/p", show_verification(project_id = project_id))))?;
 
     if verification.project_id != project_id {
@@ -124,7 +127,6 @@ pub async fn post_edit_verification(
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let _user = project_access.into_user();
-    let service = VerificationService::new(state.inner());
 
     let edit_url = uri!(
         "/p",
@@ -136,8 +138,9 @@ pub async fn post_edit_verification(
     );
     let show_url = uri!("/p", show_verification(project_id = project_id));
 
-    let old = service
-        .get_by_id(verification_id)
+    let old = state
+        .repo_read()
+        .get_verification_method_by_id(verification_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
     if old.project_id != project_id {
         return Err(Redirect::to(uri!(
@@ -150,7 +153,7 @@ pub async fn post_edit_verification(
     payload.id = Some(verification_id);
     payload.project_id = project_id;
 
-    if let Err(_err) = service.update(verification_id, payload) {
+    if let Err(_err) = state.repo_write().edit_verification_method(&payload) {
         #[cfg(debug_assertions)]
         eprintln!("Error updating verification method {verification_id}: {_err:?}");
         return Ok(Redirect::to(edit_url));
@@ -168,9 +171,9 @@ pub async fn delete_verification_route(
 ) -> Result<Status, Redirect> {
     let _user = project_access.into_user();
     let show_url = uri!("/p", show_verification(project_id = project_id));
-    let service = VerificationService::new(state.inner());
-    let verification = service
-        .get_by_id(verification_id)
+    let verification = state
+        .repo_read()
+        .get_verification_method_by_id(verification_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
     if verification.project_id != project_id {
         return Err(Redirect::to(uri!(
@@ -179,7 +182,10 @@ pub async fn delete_verification_route(
         )));
     }
 
-    match service.delete(verification_id) {
+    match state
+        .repo_write()
+        .delete_verification_method(verification_id)
+    {
         Ok(_) => Ok(Status::Ok),
         Err(_err) => {
             #[cfg(debug_assertions)]
@@ -245,7 +251,7 @@ mod tests {
         repo.users.insert(ADMIN_ID, admin);
         repo.projects
             .insert(PRIMARY_PROJECT, sample_project(PRIMARY_PROJECT, "Mars"));
-        repo.verifications
+        repo.verification_methods
             .insert(1, sample_verification(1, PRIMARY_PROJECT, "Analysis"));
         repo.project_members.push(ProjectMember {
             project_id: PRIMARY_PROJECT,
@@ -314,7 +320,7 @@ mod tests {
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
         let list = repo
-            .get_verification_by_project(PRIMARY_PROJECT)
+            .get_verification_methods_by_project(PRIMARY_PROJECT)
             .expect("verifications");
         assert_eq!(list.len(), 2);
         assert!(list.iter().any(|v| v.title == "Test"));
@@ -334,7 +340,7 @@ mod tests {
     async fn get_edit_verification_redirects_when_project_mismatch() {
         let mut repo = base_repo();
         repo.projects.insert(2, sample_project(2, "Venus"));
-        repo.verifications
+        repo.verification_methods
             .insert(2, sample_verification(2, 2, "Review"));
         let client = test_client(repo).await;
         let response = get_with_session(&client, "/p/1/verification/edit/2", ADMIN_ID).await;
@@ -364,7 +370,7 @@ mod tests {
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
-        let verification = repo.get_verification_by_id(1).expect("verification");
+        let verification = repo.get_verification_method_by_id(1).expect("verification");
         assert_eq!(verification.title, "Analysis Rev");
         assert_eq!(verification.description, "Updated desc");
     }
@@ -373,7 +379,7 @@ mod tests {
     async fn post_edit_verification_redirects_when_project_mismatch() {
         let mut repo = base_repo();
         repo.projects.insert(2, sample_project(2, "Venus"));
-        repo.verifications
+        repo.verification_methods
             .insert(2, sample_verification(2, 2, "Review"));
         let client = test_client(repo).await;
         let response = post_form_with_session(
@@ -392,7 +398,7 @@ mod tests {
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
-        let verification = repo.get_verification_by_id(2).expect("verification");
+        let verification = repo.get_verification_method_by_id(2).expect("verification");
         assert_eq!(verification.project_id, 2);
     }
 
@@ -405,7 +411,7 @@ mod tests {
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
         let list = repo
-            .get_verification_by_project(PRIMARY_PROJECT)
+            .get_verification_methods_by_project(PRIMARY_PROJECT)
             .expect("verifications");
         assert!(list.is_empty());
     }
@@ -414,7 +420,7 @@ mod tests {
     async fn delete_verification_route_redirects_on_project_mismatch() {
         let mut repo = base_repo();
         repo.projects.insert(2, sample_project(2, "Venus"));
-        repo.verifications
+        repo.verification_methods
             .insert(2, sample_verification(2, 2, "Review"));
         let client = test_client(repo).await;
         let response = delete_with_session(&client, "/p/1/verification/delete/2", ADMIN_ID).await;
@@ -426,7 +432,7 @@ mod tests {
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
-        assert!(repo.get_verification_by_id(2).is_ok());
+        assert!(repo.get_verification_method_by_id(2).is_ok());
     }
 
     #[rocket::async_test]

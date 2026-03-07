@@ -23,7 +23,7 @@ use crate::services::{
     change_summary, log_change_details, resolve_change_details_labels, ApplicabilityService,
     CategoryService, CommentService, CustomFieldService, DecoratedRequirementService,
     DecoratedTestService, LabelResolvers, LogService, ProjectService, RequirementAnalyticsService,
-    RequirementService, StatusService, UserService, VerificationService,
+    RequirementService, StatusService, UserService,
 };
 use crate::status_enums::{RequirementStatusEnum, TestStatusEnum};
 
@@ -462,12 +462,15 @@ async fn show_requirements(
     let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
     let statuses =
         StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
-    let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
+    let verification_methods = state
+        .repo_read()
+        .get_verification_methods_by_project(project_id)
+        .unwrap_or_default();
 
     let inline_edit_config = json!({
         "categories": categories.iter().map(|c| json!({"id": c.id, "title": c.title})).collect::<Vec<_>>(),
         "statuses": statuses.iter().map(|s| json!({"id": s.id, "title": s.title, "tag_color": s.tag_color})).collect::<Vec<_>>(),
-        "verifications": verifications.iter().map(|v| json!({"id": v.id, "title": v.title})).collect::<Vec<_>>(),
+        "verifications": verification_methods.iter().map(|v| json!({"id": v.id, "title": v.title})).collect::<Vec<_>>(),
     });
     let inline_edit_config_json =
         serde_json::to_string(&inline_edit_config).unwrap_or_else(|_| "{}".to_string());
@@ -487,7 +490,7 @@ async fn show_requirements(
             }
         }),
         "statuses": statuses,
-        "verifications": verifications,
+        "verifications": verification_methods,
         "categories": categories,
         "applicability": ApplicabilityService::new(state.inner()).list_by_project(project_id)?,
         "custom_field_definitions": custom_field_definitions_with_filter_values(
@@ -647,7 +650,7 @@ async fn show_requirement_id(
         .map(|s| (s.id, s.title))
         .collect();
     let test_status_map: HashMap<i32, String> = repo
-        .get_test_status_all()
+        .get_verification_status_all()
         .unwrap_or_default()
         .into_iter()
         .map(|s| (s.id, s.title))
@@ -665,7 +668,7 @@ async fn show_requirement_id(
         .map(|a| (a.id, a.title))
         .collect();
     let verification_map: HashMap<i32, String> = repo
-        .get_verification_by_project(project_id)
+        .get_verification_methods_by_project(project_id)
         .unwrap_or_default()
         .into_iter()
         .map(|v| (v.id, v.title))
@@ -695,7 +698,7 @@ async fn show_requirement_id(
         .map(|t| t.format("%Y-%m-%d %H:%M UTC").to_string());
 
     let mut test_status_list = StatusService::new(state.inner())
-        .list_test_statuses_by_project(project_id)
+        .list_verification_statuses_by_project(project_id)
         .unwrap_or_default();
     test_status_list.retain(|s| TestStatusEnum::from_title(&s.title).is_some());
     test_status_list.sort_by_key(|s| {
@@ -951,7 +954,7 @@ async fn show_requirement_version(
         .approved_at
         .map(|t| t.format("%Y-%m-%d %H:%M UTC").to_string());
     let mut test_status_list = StatusService::new(state.inner())
-        .list_test_statuses_by_project(project_id)
+        .list_verification_statuses_by_project(project_id)
         .unwrap_or_default();
     test_status_list.retain(|s| TestStatusEnum::from_title(&s.title).is_some());
     test_status_list.sort_by_key(|s| {
@@ -974,7 +977,7 @@ async fn show_requirement_version(
         .map(|s| (s.id, s.title))
         .collect();
     let test_status_map: HashMap<i32, String> = repo
-        .get_test_status_all()
+        .get_verification_status_all()
         .unwrap_or_default()
         .into_iter()
         .map(|s| (s.id, s.title))
@@ -992,7 +995,7 @@ async fn show_requirement_version(
         .map(|a| (a.id, a.title))
         .collect();
     let verification_map: HashMap<i32, String> = repo
-        .get_verification_by_project(project_id)
+        .get_verification_methods_by_project(project_id)
         .unwrap_or_default()
         .into_iter()
         .map(|v| (v.id, v.title))
@@ -1183,7 +1186,8 @@ async fn get_edit_requirement(
     let statuses =
         StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
     let users = UserService::new(state.inner()).get_by_project(project_id)?;
-    let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
+    let repo = state.repo_read();
+    let verifications = repo.get_verification_methods_by_project(project_id)?;
     let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
     let custom_field_definitions = CustomFieldService::new(state.inner())
         .list_by_project(project_id)
@@ -1439,7 +1443,9 @@ async fn new_requirement(
         StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
     let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
     let users = UserService::new(state.inner()).get_by_project(project_id)?;
-    let verifications = VerificationService::new(state.inner()).list_by_project(project_id)?;
+    let verifications = state
+        .repo_read()
+        .get_verification_methods_by_project(project_id)?;
     let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
     let custom_field_definitions = CustomFieldService::new(state.inner())
         .list_by_project(project_id)
@@ -1932,8 +1938,7 @@ async fn create_verification_inline(
 ) -> Result<Json<serde_json::Value>, rocket::http::Status> {
     let data = payload.into_inner();
 
-    let verification_service = VerificationService::new(state.inner());
-    let new_verification = NewVerificationMethod {
+    let new_verification_method = NewVerificationMethod {
         id: None,
         title: data.title,
         description: data.description,
@@ -1941,10 +1946,14 @@ async fn create_verification_inline(
         project_id,
     };
 
-    let id = verification_service
-        .create(new_verification)
+    let id = state
+        .repo_write()
+        .insert_new_verification_method(&new_verification_method)
         .map_err(map_repo_error)?;
-    let stored = verification_service.get_by_id(id).map_err(map_repo_error)?;
+    let stored = state
+        .repo_read()
+        .get_verification_method_by_id(id)
+        .map_err(map_repo_error)?;
 
     Ok(Json(json!({
         "id": stored.id,
@@ -2053,7 +2062,7 @@ mod tests {
             },
         );
 
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             1,
             VerificationMethod {
                 id: 1,

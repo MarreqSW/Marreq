@@ -4,7 +4,7 @@
 #![allow(clippy::result_large_err)]
 
 use super::prelude::*;
-use crate::services::{ProjectService, RequirementService, TestService};
+use crate::services::{ProjectService, RequirementService, VerificationService};
 
 #[get("/<project_id>")]
 pub fn show_project_id(
@@ -32,16 +32,16 @@ pub fn show_project_id(
     let selected_project_name = selected_project.name.clone();
 
     let requirement_service = RequirementService::new(state.inner());
-    let test_service = TestService::new(state.inner());
+    let verification_service = VerificationService::new(state.inner());
 
     let requirements_count = requirement_service
         .list_by_project(project_id)
         .map(|reqs| reqs.len())
         .unwrap_or(0);
 
-    let tests_count = test_service
+    let tests_count = verification_service
         .list_by_project(project_id)
-        .map(|tests| tests.len())
+        .map(|verifications| verifications.len())
         .unwrap_or(0);
 
     let ctx = json!({

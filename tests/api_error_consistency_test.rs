@@ -126,8 +126,8 @@ async fn unauthorized_errors_return_401_status() {
     let endpoints = vec![
         "/api/requirements",
         "/api/requirements/1",
-        "/api/tests",
-        "/api/tests/1",
+        "/api/verifications",
+        "/api/verifications/1",
         "/api/categories",
         "/api/categories/1",
         "/api/applicability",
@@ -157,12 +157,12 @@ async fn not_found_errors_return_404_status() {
 
     let endpoints = vec![
         ("GET", "/api/requirements/999"),
-        ("GET", "/api/tests/999"),
+        ("GET", "/api/verifications/999"),
         ("GET", "/api/categories/999"),
         ("GET", "/api/applicability/999"),
         ("GET", "/api/users/999"),
         ("DELETE", "/api/requirements/999"),
-        ("DELETE", "/api/tests/999"),
+        ("DELETE", "/api/verifications/999"),
         ("DELETE", "/api/categories/999"),
         ("DELETE", "/api/applicability/999"),
         ("DELETE", "/api/users/999"),
@@ -441,7 +441,7 @@ async fn same_error_conditions_return_same_status_codes() {
     // All create endpoints with missing required fields should return same status
     let endpoints = vec![
         ("/api/requirements", json!({"req_title": "Test"})),
-        ("/api/tests", json!({"test_name": "Test"})),
+        ("/api/verifications", json!({"test_name": "Test"})),
         ("/api/categories", json!({"title": "Test"})),
         ("/api/applicability", json!({"title": "Test"})),
     ];

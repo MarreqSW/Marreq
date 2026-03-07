@@ -128,7 +128,7 @@ mod test_support {
             },
         );
 
-        repo.verifications.insert(
+        repo.verification_methods.insert(
             1,
             VerificationMethod {
                 id: 1,

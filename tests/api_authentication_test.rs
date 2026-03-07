@@ -201,7 +201,7 @@ async fn requirements_patch_requires_authentication() {
 async fn tests_list_requires_authentication() {
     let client = test_client(base_repo()).await;
 
-    let response = client.get("/api/tests").dispatch().await;
+    let response = client.get("/api/verifications").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
@@ -210,7 +210,7 @@ async fn tests_list_requires_authentication() {
 async fn tests_get_requires_authentication() {
     let client = test_client(base_repo()).await;
 
-    let response = client.get("/api/tests/1").dispatch().await;
+    let response = client.get("/api/verifications/1").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
@@ -223,13 +223,13 @@ async fn tests_create_requires_authentication() {
         "test_name": "Test",
         "test_description": "Test description",
         "test_reference": "TEST-001",
-        "test_status": 1,
+        "status_id": 1,
         "test_source": "manual",
         "project_id": 1
     });
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .body(payload.to_string())
         .dispatch()
@@ -242,7 +242,7 @@ async fn tests_create_requires_authentication() {
 async fn tests_delete_requires_authentication() {
     let client = test_client(base_repo()).await;
 
-    let response = client.delete("/api/tests/1").dispatch().await;
+    let response = client.delete("/api/verifications/1").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
@@ -257,7 +257,7 @@ async fn tests_update_field_requires_authentication() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .body(update.to_string())
         .dispatch()

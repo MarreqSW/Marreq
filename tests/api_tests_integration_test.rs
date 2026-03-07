@@ -5,7 +5,7 @@
 
 //! Comprehensive integration tests for Tests API endpoints.
 //!
-//! These tests verify the complete behavior of `/api/tests` endpoints including:
+//! These tests verify the complete behavior of `/api/verifications` endpoints including:
 //! - CRUD operations
 //! - Field update API
 //! - Test hierarchy (parent-child)
@@ -87,9 +87,9 @@ mod test_support {
             updated_at: timestamp(),
         });
 
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             1,
-            TestStatus {
+            VerificationStatus {
                 id: 1,
                 title: "Not Run".into(),
                 description: "".into(),
@@ -100,9 +100,9 @@ mod test_support {
             },
         );
 
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             2,
-            TestStatus {
+            VerificationStatus {
                 id: 2,
                 title: "Passed".into(),
                 description: "".into(),
@@ -113,9 +113,9 @@ mod test_support {
             },
         );
 
-        repo.test_statuses.insert(
+        repo.verification_statuses.insert(
             3,
-            TestStatus {
+            VerificationStatus {
                 id: 3,
                 title: "Failed".into(),
                 description: "".into(),
@@ -129,8 +129,8 @@ mod test_support {
         repo
     }
 
-    pub fn sample_test(id: i32, project_id: i32, name: &str) -> TestCase {
-        TestCase {
+    pub fn sample_test(id: i32, project_id: i32, name: &str) -> Verification {
+        Verification {
             id: id,
             name: name.to_string(),
             reference_code: format!("TST-{:03}", id),
@@ -139,6 +139,7 @@ mod test_support {
             status_id: 1,
             parent_id: None,
             project_id,
+            verification_method_id: None,
         }
     }
 
@@ -158,7 +159,7 @@ mod test_support {
 use test_support::*;
 
 // ============================================================================
-// GET /api/tests - List All Tests
+// GET /api/verifications - List All Verifications
 // ============================================================================
 
 #[rocket::async_test]
@@ -166,33 +167,33 @@ async fn get_tests_returns_empty_list_when_no_tests() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/api/tests")
+        .get("/api/verifications")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    let tests: Vec<TestCase> = response.into_json().await.expect("json");
+    let tests: Vec<Verification> = response.into_json().await.expect("json");
     assert!(tests.is_empty());
 }
 
 #[rocket::async_test]
 async fn get_tests_returns_all_tests() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test 1"));
-    repo.tests.insert(2, sample_test(2, 1, "Test 2"));
-    repo.tests.insert(3, sample_test(3, 1, "Test 3"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test 1"));
+    repo.verifications.insert(2, sample_test(2, 1, "Test 2"));
+    repo.verifications.insert(3, sample_test(3, 1, "Test 3"));
 
     let client = test_client(repo).await;
 
     let response = client
-        .get("/api/tests")
+        .get("/api/verifications")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    let tests: Vec<TestCase> = response.into_json().await.expect("json");
+    let tests: Vec<Verification> = response.into_json().await.expect("json");
     assert_eq!(tests.len(), 3);
 }
 
@@ -200,30 +201,31 @@ async fn get_tests_returns_all_tests() {
 async fn get_tests_requires_authentication() {
     let client = test_client(base_repo()).await;
 
-    let response = client.get("/api/tests").dispatch().await;
+    let response = client.get("/api/verifications").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
 
 // ============================================================================
-// GET /api/tests/{id} - Get Single Test
+// GET /api/verifications/{id} - Get Single Verification
 // ============================================================================
 
 #[rocket::async_test]
 async fn get_test_by_id_returns_correct_test() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Integration Test"));
+    repo.verifications
+        .insert(1, sample_test(1, 1, "Integration Test"));
 
     let client = test_client(repo).await;
 
     let response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    let test: TestCase = response.into_json().await.expect("json");
+    let test: Verification = response.into_json().await.expect("json");
     assert_eq!(test.id, 1);
     assert_eq!(test.name, "Integration Test");
     assert_eq!(test.reference_code, "TST-001");
@@ -234,7 +236,7 @@ async fn get_test_with_nonexistent_id_returns_404() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/api/tests/999")
+        .get("/api/verifications/999")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -245,17 +247,17 @@ async fn get_test_with_nonexistent_id_returns_404() {
 #[rocket::async_test]
 async fn get_test_requires_authentication() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 
-    let response = client.get("/api/tests/1").dispatch().await;
+    let response = client.get("/api/verifications/1").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
 
 // ============================================================================
-// POST /api/tests - Create New Test
+// POST /api/verifications - Create New Verification
 // ============================================================================
 
 #[rocket::async_test]
@@ -263,7 +265,7 @@ async fn post_test_creates_new_test() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(new_test_json("Smoke Test", 1).to_string())
@@ -286,7 +288,7 @@ async fn post_test_with_missing_fields_returns_error() {
     });
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(invalid_json.to_string())
@@ -301,7 +303,7 @@ async fn post_test_requires_authentication() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .body(new_test_json("New Test", 1).to_string())
         .dispatch()
@@ -311,13 +313,14 @@ async fn post_test_requires_authentication() {
 }
 
 // ============================================================================
-// POST /api/tests/{id}/field - Update Test Field
+// POST /api/verifications/{id}/field - Update Verification Field
 // ============================================================================
 
 #[rocket::async_test]
 async fn update_field_changes_test_name() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Original Name"));
+    repo.verifications
+        .insert(1, sample_test(1, 1, "Original Name"));
 
     let client = test_client(repo).await;
 
@@ -327,7 +330,7 @@ async fn update_field_changes_test_name() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -340,19 +343,19 @@ async fn update_field_changes_test_name() {
 
     // Verify the update
     let get_response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
 
-    let test: TestCase = get_response.into_json().await.expect("json");
+    let test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(test.name, "Updated Name");
 }
 
 #[rocket::async_test]
 async fn update_field_changes_test_status() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 
@@ -362,7 +365,7 @@ async fn update_field_changes_test_status() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -373,19 +376,19 @@ async fn update_field_changes_test_status() {
 
     // Verify status was updated
     let get_response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
 
-    let test: TestCase = get_response.into_json().await.expect("json");
+    let test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(test.status_id, 2);
 }
 
 #[rocket::async_test]
 async fn update_field_with_invalid_field_returns_error() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 
@@ -395,7 +398,7 @@ async fn update_field_with_invalid_field_returns_error() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -408,17 +411,17 @@ async fn update_field_with_invalid_field_returns_error() {
 #[rocket::async_test]
 async fn update_field_with_invalid_status_value_returns_error() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 
     let update = json!({
-        "field": "test_status",
+        "field": "status_id",
         "value": "invalid"
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -429,18 +432,18 @@ async fn update_field_with_invalid_status_value_returns_error() {
 }
 
 // ============================================================================
-// DELETE /api/tests/{id} - Delete Test
+// DELETE /api/verifications/{id} - Delete Verification
 // ============================================================================
 
 #[rocket::async_test]
 async fn delete_test_removes_test() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "To Delete"));
+    repo.verifications.insert(1, sample_test(1, 1, "To Delete"));
 
     let client = test_client(repo).await;
 
     let response = client
-        .delete("/api/tests/1")
+        .delete("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -449,7 +452,7 @@ async fn delete_test_removes_test() {
 
     // Verify test is gone
     let get_response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -462,7 +465,7 @@ async fn delete_nonexistent_test_returns_404() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .delete("/api/tests/999")
+        .delete("/api/verifications/999")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -473,11 +476,11 @@ async fn delete_nonexistent_test_returns_404() {
 #[rocket::async_test]
 async fn delete_test_requires_authentication() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "To Delete"));
+    repo.verifications.insert(1, sample_test(1, 1, "To Delete"));
 
     let client = test_client(repo).await;
 
-    let response = client.delete("/api/tests/1").dispatch().await;
+    let response = client.delete("/api/verifications/1").dispatch().await;
 
     assert_eq!(response.status(), Status::Unauthorized);
 }
@@ -489,7 +492,8 @@ async fn delete_test_requires_authentication() {
 #[rocket::async_test]
 async fn create_test_with_parent() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Parent Test"));
+    repo.verifications
+        .insert(1, sample_test(1, 1, "Parent Test"));
 
     let client = test_client(repo).await;
 
@@ -497,7 +501,7 @@ async fn create_test_with_parent() {
     child_json["parent_id"] = json!(1);
 
     let response = client
-        .post("/api/tests")
+        .post("/api/verifications")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(child_json.to_string())
@@ -510,20 +514,22 @@ async fn create_test_with_parent() {
 
     // Verify parent relationship
     let get_response = client
-        .get(format!("/api/tests/{}", child_id))
+        .get(format!("/api/verifications/{}", child_id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
 
-    let child_test: TestCase = get_response.into_json().await.expect("json");
+    let child_test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(child_test.parent_id, Some(1));
 }
 
 #[rocket::async_test]
 async fn update_test_parent() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Parent Test"));
-    repo.tests.insert(2, sample_test(2, 1, "Child Test"));
+    repo.verifications
+        .insert(1, sample_test(1, 1, "Parent Test"));
+    repo.verifications
+        .insert(2, sample_test(2, 1, "Child Test"));
 
     let client = test_client(repo).await;
 
@@ -533,7 +539,7 @@ async fn update_test_parent() {
     });
 
     let response = client
-        .post("/api/tests/2/field")
+        .post("/api/verifications/2/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -544,12 +550,12 @@ async fn update_test_parent() {
 
     // Verify parent was set
     let get_response = client
-        .get("/api/tests/2")
+        .get("/api/verifications/2")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
 
-    let test: TestCase = get_response.into_json().await.expect("json");
+    let test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(test.parent_id, Some(1));
 }
 
@@ -560,7 +566,7 @@ async fn update_test_parent() {
 #[rocket::async_test]
 async fn update_test_description() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 
@@ -570,7 +576,7 @@ async fn update_test_description() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -580,19 +586,19 @@ async fn update_test_description() {
     assert_eq!(response.status(), Status::Ok);
 
     let get_response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
 
-    let test: TestCase = get_response.into_json().await.expect("json");
+    let test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(test.description, "Updated description");
 }
 
 #[rocket::async_test]
 async fn update_test_source() {
     let mut repo = base_repo();
-    repo.tests.insert(1, sample_test(1, 1, "Test"));
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
 
     let client = test_client(repo).await;
 
@@ -602,7 +608,7 @@ async fn update_test_source() {
     });
 
     let response = client
-        .post("/api/tests/1/field")
+        .post("/api/verifications/1/field")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(update.to_string())
@@ -612,12 +618,12 @@ async fn update_test_source() {
     assert_eq!(response.status(), Status::Ok);
 
     let get_response = client
-        .get("/api/tests/1")
+        .get("/api/verifications/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
 
-    let test: TestCase = get_response.into_json().await.expect("json");
+    let test: Verification = get_response.into_json().await.expect("json");
     assert_eq!(test.source, "manual");
 }
 
@@ -631,7 +637,7 @@ async fn create_multiple_tests_sequentially() {
 
     for i in 1..=5 {
         let response = client
-            .post("/api/tests")
+            .post("/api/verifications")
             .header(ContentType::JSON)
             .private_cookie(session_cookie(1))
             .body(new_test_json(&format!("Test {}", i), 1).to_string())
@@ -645,11 +651,11 @@ async fn create_multiple_tests_sequentially() {
 
     // Verify all were created
     let list_response = client
-        .get("/api/tests")
+        .get("/api/verifications")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
 
-    let tests: Vec<TestCase> = list_response.into_json().await.expect("json");
+    let tests: Vec<Verification> = list_response.into_json().await.expect("json");
     assert_eq!(tests.len(), 5);
 }

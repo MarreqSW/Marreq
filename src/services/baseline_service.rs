@@ -80,11 +80,11 @@ impl<'a> BaselineService<'a> {
         let trace_b = self.get_traceability(baseline_b_id)?;
         let set_a: HashSet<(i32, i32)> = trace_a
             .iter()
-            .map(|t| (t.requirement_id, t.test_id))
+            .map(|t| (t.requirement_id, t.verification_id))
             .collect();
         let set_b: HashSet<(i32, i32)> = trace_b
             .iter()
-            .map(|t| (t.requirement_id, t.test_id))
+            .map(|t| (t.requirement_id, t.verification_id))
             .collect();
         let trace_only_in_a: Vec<[i32; 2]> =
             set_a.difference(&set_b).map(|&(r, t)| [r, t]).collect();

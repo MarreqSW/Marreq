@@ -1,6 +1,6 @@
 {{!--
   Tests List Page - Redesigned (aligned with requirements UI)
-  Depends on: css/pages/requirements.css, js/pages/tests.js
+  Depends on: css/pages/requirements.css, js/pages/verifications.js
   Dynamic classes: marreq-requirements-status-badge--{variant}
 --}}
 
@@ -10,17 +10,17 @@
      ============================================================ --}}
 {{#*inline "page"}}
 <div class="marreq-requirements-page" data-project-id="{{project.id}}">
-  {{> tests/_page_header}}
+  {{> verifications/_page_header}}
   <div class="marreq-requirements-main">
-    {{> tests/_metrics_section}}
-    {{> tests/_filter_controls}}
-    {{> tests/_card_view}}
-    {{> tests/_table_view}}
+    {{> verifications/_metrics_section}}
+    {{> verifications/_filter_controls}}
+    {{> verifications/_card_view}}
+    {{> verifications/_table_view}}
   </div>
 </div>
 {{!-- Hidden data for JS --}}
 <script type="application/json" id="testsInlineEditConfig">{{{inline_edit_config_json}}}</script>
 {{/inline}}
 
-{{> layout page_id="tests"}}
+{{> layout this page_id="verifications"}}
 

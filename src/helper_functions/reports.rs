@@ -93,7 +93,7 @@ pub fn generate_pdf_content(metrics: &Metrics) -> String {
     content.push_str(&metrics.total_tests.to_string());
     content.push_str(
         "</div>
-                    <div class='metric-label'>Total Tests</div>
+                    <div class='metric-label'>Total Verifications</div>
                 </div>
                 <div class='metric-card'>
                     <div class='metric-value'>",
@@ -109,7 +109,7 @@ pub fn generate_pdf_content(metrics: &Metrics) -> String {
     content.push_str(&format!("{:.1}", metrics.avg_tests_per_requirement));
     content.push_str(
         "</div>
-                    <div class='metric-label'>Avg Tests/Req</div>
+                    <div class='metric-label'>Avg Verifications/Req</div>
                 </div>
             </div>
         </div>
@@ -134,7 +134,7 @@ pub fn generate_pdf_content(metrics: &Metrics) -> String {
         </div>
         
         <div class='section'>
-            <h2>Tests by Status</h2>",
+            <h2>Verifications by Status</h2>",
     );
 
     for (status, count) in metrics.tests_by_status.clone() {
@@ -177,8 +177,8 @@ pub fn generate_pdf_content(metrics: &Metrics) -> String {
             <div class='coverage-bar'>
                 <div class='coverage-fill' style='width: {:.1}%'></div>
             </div>
-            <p><strong>Total Test Links:</strong> {}</p>
-            <p><strong>Average Tests per Requirement:</strong> {:.1}</p>
+            <p><strong>Total Verification Links:</strong> {}</p>
+            <p><strong>Average Verifications per Requirement:</strong> {:.1}</p>
         </div>
         
         <div class='section'>
@@ -382,7 +382,7 @@ pub fn generate_pdf_from_html(_html_content: &str) -> Result<Vec<u8>, Box<dyn st
             "Requirements",
             "Total requirements and their status distribution",
         ),
-        ("Tests", "Total tests and their status distribution"),
+        ("Verifications", "Total verifications and their status distribution"),
         ("Coverage", "Requirements coverage analysis"),
         ("Categories", "Requirements categorized by type"),
     ];
@@ -431,7 +431,7 @@ pub fn generate_pdf_report_data(metrics: &Metrics) -> Result<Vec<u8>, Box<dyn st
 
     let overview_items = vec![
         format!("Total Requirements: {}", metrics.total_requirements),
-        format!("Total Tests: {}", metrics.total_tests),
+        format!("Total Verifications: {}", metrics.total_tests),
         format!("Total Categories: {}", metrics.total_categories),
         format!("Total Users: {}", metrics.users_len),
     ];
@@ -449,9 +449,9 @@ pub fn generate_pdf_report_data(metrics: &Metrics) -> Result<Vec<u8>, Box<dyn st
             "Covered Requirements: {} out of {} ({:.1}%)",
             metrics.covered_requirements, metrics.total_requirements, metrics.coverage_percentage
         ),
-        format!("Total Test Links: {}", metrics.total_links),
+        format!("Total Verification Links: {}", metrics.total_links),
         format!(
-            "Average Tests per Requirement: {:.1}",
+            "Average Verifications per Requirement: {:.1}",
             metrics.avg_tests_per_requirement
         ),
     ];
@@ -476,7 +476,7 @@ pub fn generate_pdf_report_data(metrics: &Metrics) -> Result<Vec<u8>, Box<dyn st
     add_status_section(
         &mut pages,
         &mut current_page,
-        "Tests by Status",
+        "Verifications by Status",
         &metrics.tests_by_status,
         &mut y_position,
         &mut page_number,
@@ -617,7 +617,7 @@ mod tests {
         assert!(html.contains("Total Requirements"));
         assert!(html.contains("Functional"));
         assert!(html.contains("Passed"));
-        assert!(html.contains("Average Tests per Requirement"));
+        assert!(html.contains("Average Verifications per Requirement"));
     }
 
     #[test]

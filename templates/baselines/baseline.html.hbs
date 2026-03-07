@@ -66,13 +66,13 @@
     <div class="col-lg-5">
       <div class="card c-card">
         <div class="card-header c-card__header">
-          <h5 class="mb-0">Traceability (req ↔ test)</h5>
+          <h5 class="mb-0">Traceability (req ↔ verification)</h5>
         </div>
         <div class="card-body c-card__body p-0">
           {{#if traceability.0}}
             <ul class="list-group list-group-flush mb-0">
               {{#each traceability}}
-                <li class="list-group-item"><a href="/p/{{../selected_project_id}}/requirements/show/{{requirement_id}}{{#if version_id}}/version/{{version_id}}{{/if}}">{{requirement_reference}}</a> ↔ <a href="/p/{{../selected_project_id}}/tests/show/{{test_id}}">{{test_reference}}</a></li>
+                <li class="list-group-item"><a href="/p/{{../selected_project_id}}/requirements/show/{{requirement_id}}{{#if version_id}}/version/{{version_id}}{{/if}}">{{requirement_reference}}</a> ↔ <a href="/p/{{../selected_project_id}}/verifications/show/{{verification_id}}">{{test_reference}}</a></li>
               {{/each}}
             </ul>
           {{else}}

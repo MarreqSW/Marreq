@@ -53,7 +53,7 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectId = button.getAttribute('data-project-id');
       const testId = button.getAttribute('data-test-id');
-      return `/p/${projectId}/tests/delete/${testId}`;
+      return `/p/${projectId}/verifications/delete/${testId}`;
     },
     getMessage: (button) => {
       const name = button.getAttribute('data-test-name') || 'Test';

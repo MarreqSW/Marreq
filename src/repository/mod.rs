@@ -316,6 +316,12 @@ pub trait BaselineRepository {
         &self,
         baseline_id: i32,
     ) -> Result<Vec<crate::models::BaselineTraceability>, RepoError>;
+
+    /// Verifications as at baseline time (from snapshot).
+    fn get_verifications_for_baseline(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<crate::models::BaselineVerification>, RepoError>;
 }
 
 pub trait LogRepository {

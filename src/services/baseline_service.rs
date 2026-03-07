@@ -4,7 +4,9 @@
 //! Service for immutable project baselines.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{Baseline, BaselineTraceability, NewBaseline, Requirement};
+use crate::models::{
+    Baseline, BaselineTraceability, BaselineVerification, NewBaseline, Requirement,
+};
 use crate::repository::errors::RepoError;
 use crate::repository::BaselineRepository;
 use serde::Serialize;
@@ -54,6 +56,16 @@ impl<'a> BaselineService<'a> {
         self.state
             .repo_read()
             .get_baseline_traceability(baseline_id)
+    }
+
+    /// Verifications as at baseline time (from snapshot).
+    pub fn get_verifications(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<BaselineVerification>, RepoError> {
+        self.state
+            .repo_read()
+            .get_verifications_for_baseline(baseline_id)
     }
 
     /// Compare two baselines: requirements and traceability only in A, only in B.

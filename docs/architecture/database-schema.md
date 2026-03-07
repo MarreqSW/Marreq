@@ -175,10 +175,12 @@ erDiagram
     users ||--o{ baselines : "created_by"
     baselines ||--o{ baseline_requirements : "has"
     baselines ||--o{ baseline_traceability : "has"
+    baselines ||--o{ baseline_verifications : "has"
     baseline_requirements }o--|| requirements : "requirement_id"
     baseline_requirements }o--|| requirement_versions : "version_id"
     baseline_traceability }o--|| requirements : "requirement_id"
     baseline_traceability }o--|| tests : "test_id"
+    baseline_verifications }o--|| projects : "project_id"
 
     baselines {
         int id PK
@@ -202,6 +204,19 @@ erDiagram
         bool suspect
         timestamp suspect_at "nullable"
         text suspect_reason "nullable"
+    }
+
+    baseline_verifications {
+        int baseline_id PK,FK
+        int verification_id PK
+        varchar name
+        varchar reference_code
+        varchar description
+        varchar source
+        int status_id
+        int parent_id "nullable"
+        int project_id FK
+        int verification_method_id "nullable"
     }
 
     %% ========== Audit ==========

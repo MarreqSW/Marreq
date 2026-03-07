@@ -7,7 +7,9 @@ use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
-use crate::models::{Baseline, BaselineTraceability, NewBaseline, Requirement};
+use crate::models::{
+    Baseline, BaselineTraceability, BaselineVerification, NewBaseline, Requirement,
+};
 use crate::services::baseline_service::BaselineDiff;
 use crate::services::BaselineService;
 
@@ -134,6 +136,31 @@ pub async fn get_traceability(
     Ok(Json(traceability))
 }
 
+/// Retrieve baseline verifications snapshot. Session or Bearer.
+#[get("/projects/<project_id>/baselines/<baseline_id>/verifications")]
+pub async fn get_verifications(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    baseline_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<BaselineVerification>>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let service = BaselineService::new(state.inner());
+    let baseline = service.get_by_id(baseline_id)?;
+    if baseline.project_id != project_id {
+        return Err(ApiError::NotFound(
+            "baseline not found in this project".into(),
+        ));
+    }
+    let verifications = service.get_verifications(baseline_id)?;
+    Ok(Json(verifications))
+}
+
 /// Compare two baselines. Query: baseline_a, baseline_b. Accepts session or Bearer token.
 #[get("/projects/<project_id>/baselines/diff?<baseline_a>&<baseline_b>")]
 pub async fn diff_baselines(
@@ -159,7 +186,10 @@ mod tests {
     use super::*;
     use crate::app::AppState;
     use crate::auth::session::SESSION_COOKIE;
-    use crate::models::{Baseline, BaselineTraceability, Project, Requirement, RequirementVersion};
+    use crate::models::{
+        Baseline, BaselineTraceability, BaselineVerification, Project, Requirement,
+        RequirementVersion, Verification,
+    };
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use crate::status_enums::ProjectStatus;
     use chrono::NaiveDate;
@@ -184,7 +214,14 @@ mod tests {
             .manage(state_from_repo(repo.with_admin_user()))
             .mount(
                 "/api",
-                routes![list, get, create, get_requirements, get_traceability],
+                routes![
+                    list,
+                    get,
+                    create,
+                    get_requirements,
+                    get_traceability,
+                    get_verifications
+                ],
             );
         Client::tracked(rocket).await.unwrap()
     }
@@ -267,6 +304,27 @@ mod tests {
                 approved_by: Some(ADMIN_ID),
                 approved_at: Some(created),
                 custom_fields: None,
+            },
+        );
+        repo
+    }
+
+    /// Repo with one verification so baseline creation snapshots it.
+    fn repo_with_project_and_verification() -> DieselRepoMock {
+        const VERIFICATION_ID: i32 = 10;
+        let mut repo = repo_with_project();
+        repo.verifications.insert(
+            VERIFICATION_ID,
+            Verification {
+                id: VERIFICATION_ID,
+                name: "Snapshot test case".into(),
+                reference_code: "VER-1".into(),
+                description: "Description at baseline time".into(),
+                source: "Manual".into(),
+                status_id: 1,
+                parent_id: None,
+                project_id: PROJECT_ID,
+                verification_method_id: None,
             },
         );
         repo
@@ -451,6 +509,34 @@ mod tests {
         assert_eq!(trace_resp.status(), Status::Ok);
         let traceability: Vec<BaselineTraceability> = trace_resp.into_json().await.unwrap();
         assert!(traceability.is_empty());
+    }
+
+    #[rocket::async_test]
+    async fn get_verifications_returns_snapshot() {
+        let client = client_with_repo(repo_with_project_and_verification()).await;
+        let create_resp = client
+            .post(format!("/api/projects/{PROJECT_ID}/baselines"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie())
+            .body(json!({ "name": "With verifications", "description": null }).to_string())
+            .dispatch()
+            .await;
+        assert_eq!(create_resp.status(), Status::Ok);
+        let created: Baseline = create_resp.into_json().await.unwrap();
+
+        let ver_resp = client
+            .get(format!(
+                "/api/projects/{PROJECT_ID}/baselines/{}/verifications",
+                created.id
+            ))
+            .private_cookie(auth_cookie())
+            .dispatch()
+            .await;
+        assert_eq!(ver_resp.status(), Status::Ok);
+        let verifications: Vec<BaselineVerification> = ver_resp.into_json().await.unwrap();
+        assert_eq!(verifications.len(), 1);
+        assert_eq!(verifications[0].reference_code, "VER-1");
+        assert_eq!(verifications[0].name, "Snapshot test case");
     }
 
     #[rocket::async_test]

@@ -31,6 +31,7 @@ pub fn routes() -> Vec<Route> {
         baselines::create,
         baselines::get_requirements,
         baselines::get_traceability,
+        baselines::get_verifications,
         baselines::diff_baselines,
         requirements::list,
         requirements::list_by_project,

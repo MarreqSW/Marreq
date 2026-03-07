@@ -946,6 +946,13 @@ impl<R: Repository> BaselineRepository for CacheRepository<R> {
     ) -> Result<Vec<crate::models::BaselineTraceability>, RepoError> {
         self.inner.get_baseline_traceability(baseline_id)
     }
+
+    fn get_verifications_for_baseline(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<crate::models::BaselineVerification>, RepoError> {
+        self.inner.get_verifications_for_baseline(baseline_id)
+    }
 }
 
 impl<R: LogRepository> LogRepository for CacheRepository<R> {
@@ -1199,6 +1206,7 @@ mod tests {
             baselines: Vec::new(),
             baseline_requirements: Vec::new(),
             baseline_traceability: Vec::new(),
+            baseline_verifications: Vec::new(),
             next_baseline_id: 1,
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),

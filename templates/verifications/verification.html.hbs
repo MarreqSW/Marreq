@@ -1,6 +1,9 @@
 {{!-- Test detail page - styled to match requirement detail layout --}}
 {{#*inline "page"}}
 <div class="marreq-requirement-detail-page" aria-live="polite">
+  {{#if baseline_view}}
+  <div class="alert alert-info mb-3" role="status">Viewing as at baseline: <a href="/p/{{selected_project_id}}/baselines/{{baseline_id}}">{{baseline_name}}</a></div>
+  {{/if}}
   <header class="marreq-requirement-header card shadow-sm border-0">
     <div class="marreq-requirement-header__body">
       <div class="d-flex flex-column gap-4">
@@ -34,7 +37,7 @@
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li>
                     <button class="dropdown-item" type="button" data-action="copy-requirement-link"
-                      data-requirement-url="/p/{{selected_project_id}}/verifications/show/{{id}}">
+                      data-requirement-url="/p/{{selected_project_id}}/verifications/show/{{id}}{{#if baseline_view}}/version/{{baseline_id}}{{/if}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-link" />
                       </svg>

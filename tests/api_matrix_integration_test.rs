@@ -330,8 +330,8 @@ fn export_csv_generates_correct_header_row() {
 
     let lines: Vec<&str> = csv.lines().collect();
     assert!(lines[0].starts_with("Title,Reference"));
-    assert!(lines[0].contains("Test #1"));
-    assert!(lines[0].contains("Test #2"));
+    assert!(lines[0].contains("Verification #1"));
+    assert!(lines[0].contains("Verification #2"));
 }
 
 #[test]

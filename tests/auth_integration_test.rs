@@ -86,10 +86,9 @@ async fn login_success_redirects_to_dashboard() {
     // Dashboard is at root "/"
     assert_eq!(response.headers().get_one("Location"), Some("/"));
 
-    // Verify session cookie is set
-    let cookie = response
-        .cookies()
-        .get(marreq::auth::session::SESSION_COOKIE);
+    // Verify session cookie is set (name is "session" on HTTP, "__Host-session" on HTTPS)
+    let cookie_name = marreq::auth::session::session_cookie_name_for_request();
+    let cookie = response.cookies().get(cookie_name);
     assert!(cookie.is_some());
 
     // Verify session works by making an authenticated request
@@ -114,11 +113,12 @@ async fn login_failure_redirects_with_error() {
     assert!(location.contains("/login"));
     assert!(location.contains("error=Invalid%20username%20or%20password"));
 
-    // Verify no session cookie
-    let cookie = response
+    // Verify no session cookie (check both possible names)
+    assert!(response
         .cookies()
-        .get(marreq::auth::session::SESSION_COOKIE);
-    assert!(cookie.is_none());
+        .get(marreq::auth::session::SESSION_COOKIE)
+        .is_none());
+    assert!(response.cookies().get("session").is_none());
 }
 
 #[rocket::async_test]

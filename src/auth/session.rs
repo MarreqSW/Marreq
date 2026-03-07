@@ -50,6 +50,17 @@ pub fn clear_session_cookie(cookies: &CookieJar<'_>) {
     }
 }
 
+/// Name of the session cookie used when setting the cookie in the current environment
+/// (HTTP/insecure: "session", HTTPS/secure: "__Host-session"). Use this in tests to
+/// assert the cookie was set.
+pub fn session_cookie_name_for_request() -> &'static str {
+    if use_insecure_session_cookie() {
+        "session"
+    } else {
+        SESSION_COOKIE
+    }
+}
+
 /// Helper used by request guards to fetch the authenticated user's id.
 /// Tries both cookie names so sessions set over HTTP or HTTPS are recognized.
 pub fn read_session_user_id(cookies: &CookieJar<'_>) -> Option<i32> {

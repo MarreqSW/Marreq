@@ -120,7 +120,8 @@ async fn show_tests(
         .map(|t| t.status_id)
         .filter(|id| !test_status_titles.contains_key(id))
         .collect();
-    let mut fallback_titles: std::collections::HashMap<i32, String> = std::collections::HashMap::new();
+    let mut fallback_titles: std::collections::HashMap<i32, String> =
+        std::collections::HashMap::new();
     for id in missing_status_ids {
         if let Ok(s) = repo.get_verification_status_by_id(id) {
             fallback_titles.insert(id, s.title);
@@ -136,25 +137,29 @@ async fn show_tests(
     let passed = all_tests
         .iter()
         .filter(|t| {
-            status_title(t.status_id).and_then(TestStatusEnum::from_title) == Some(TestStatusEnum::Passed)
+            status_title(t.status_id).and_then(TestStatusEnum::from_title)
+                == Some(TestStatusEnum::Passed)
         })
         .count();
     let failed = all_tests
         .iter()
         .filter(|t| {
-            status_title(t.status_id).and_then(TestStatusEnum::from_title) == Some(TestStatusEnum::Failed)
+            status_title(t.status_id).and_then(TestStatusEnum::from_title)
+                == Some(TestStatusEnum::Failed)
         })
         .count();
     let pending = all_tests
         .iter()
         .filter(|t| {
-            status_title(t.status_id).and_then(TestStatusEnum::from_title) == Some(TestStatusEnum::Pending)
+            status_title(t.status_id).and_then(TestStatusEnum::from_title)
+                == Some(TestStatusEnum::Pending)
         })
         .count();
     let in_progress = all_tests
         .iter()
         .filter(|t| {
-            status_title(t.status_id).and_then(TestStatusEnum::from_title) == Some(TestStatusEnum::InProgress)
+            status_title(t.status_id).and_then(TestStatusEnum::from_title)
+                == Some(TestStatusEnum::InProgress)
         })
         .count();
     // Verifications whose status is not one of the canonical four (e.g. custom status) so metrics sum to total

@@ -47,11 +47,11 @@ impl<'a> MatrixService<'a> {
     }
 
     /// Generate CSV export data for the traceability matrix.
-    /// Returns CSV string with headers and all matrix data filtered by project and optional test status.
+    /// Returns CSV string with headers and all matrix data filtered by project and optional verification status.
     pub fn export_matrix_csv(
         &self,
         project_id: i32,
-        test_status_filter: Option<i32>,
+        verification_status_filter: Option<i32>,
     ) -> Result<String, RepoError> {
         let repo = self.state.repo_read();
 
@@ -64,7 +64,7 @@ impl<'a> MatrixService<'a> {
         all_verifications.sort_by_key(|t| t.id);
 
         // Filter verifications by status if specified
-        if let Some(status) = test_status_filter {
+        if let Some(status) = verification_status_filter {
             all_verifications.retain(|t| t.status_id == status);
         }
 

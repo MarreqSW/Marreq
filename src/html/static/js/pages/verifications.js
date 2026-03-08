@@ -72,7 +72,7 @@ function updateParentLinkPreviewsForTest(testId, displayText) {
 }
 
 /**
- * Open inline edit for test status (same pattern as requirements openInlineEdit).
+ * Open inline edit for verification status (same pattern as requirements openInlineEdit).
  * Uses postJson from core/net.js so errors and success are handled like requirements.
  */
 function openInlineEditForTest(cell, row, config) {
@@ -135,7 +135,7 @@ function openInlineEditForTest(cell, row, config) {
       const msg = err?.message || 'Update failed';
       const detail = status ? ` (${status})` : '';
       showNotification(msg + detail, 'error');
-      console.error('Test status update failed:', err?.payload || err);
+      console.error('Verification status update failed:', err?.payload || err);
       window.location.reload();
     }
   };

@@ -449,7 +449,7 @@ function renderVerification(root, view, canonical) {
     displayEl.title = 'Click to change';
     displayEl.setAttribute('role', 'button');
     displayEl.setAttribute('tabindex', '0');
-    displayEl.setAttribute('aria-label', 'Change test status');
+    displayEl.setAttribute('aria-label', 'Change verification status');
     statusWrap.appendChild(displayEl);
     row.appendChild(statusWrap);
 
@@ -507,7 +507,7 @@ function renderVerification(root, view, canonical) {
             const msg = err?.message || 'Update failed';
             const detail = statusCode ? ` (${statusCode})` : '';
             showNotification(msg + detail, 'error');
-            console.error('Test status update failed:', err?.payload || err);
+            console.error('Verification status update failed:', err?.payload || err);
             window.location.reload();
           }
         };

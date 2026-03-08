@@ -501,7 +501,7 @@ fn matrix_view_filters_by_requirement_status() {
 }
 
 #[test]
-fn matrix_view_filters_by_test_status() {
+fn matrix_view_filters_by_verification_status() {
     let mut repo = base_repo();
 
     repo.requirements

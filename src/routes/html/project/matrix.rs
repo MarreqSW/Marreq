@@ -17,7 +17,7 @@ struct ClearSuspectForm {
     verification_id: i32,
 }
 
-#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<test_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<page>&<per_page>&<search>&<suspect_filter>")]
+#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<verification_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<page>&<per_page>&<search>&<suspect_filter>")]
 #[allow(clippy::too_many_arguments)]
 async fn get_matrix(
     project_access: ProjectAccess,
@@ -25,7 +25,7 @@ async fn get_matrix(
     cookies: &CookieJar<'_>,
     sort_by: Option<String>,
     sort_order: Option<String>,
-    test_status_filter: Option<i32>,
+    verification_status_filter: Option<i32>,
     req_status_filter: Option<i32>,
     category_filter: Option<i32>,
     applicability_filter: Option<i32>,
@@ -48,7 +48,7 @@ async fn get_matrix(
 
     // Build filter and pagination parameters
     let filters = MatrixFilters {
-        status_id: test_status_filter,
+        status_id: verification_status_filter,
         req_status: req_status_filter,
         category: category_filter,
         applicability: applicability_filter,
@@ -112,7 +112,7 @@ async fn get_matrix(
     ctx["total_links"] = json!(view.total_links);
     ctx["current_sort_by"] = json!(sort_by_value);
     ctx["current_sort_order"] = json!(if is_desc { "desc" } else { "asc" });
-    ctx["test_status_filter"] = json!(test_status_filter);
+    ctx["verification_status_filter"] = json!(verification_status_filter);
     ctx["req_status_filter"] = json!(req_status_filter);
     ctx["category_filter"] = json!(category_filter);
     ctx["applicability_filter"] = json!(applicability_filter);
@@ -131,7 +131,7 @@ async fn get_matrix(
     ctx["show_last_page"] = json!(pagination_ctx.show_last_page);
     ctx["show_first_ellipsis"] = json!(pagination_ctx.show_first_ellipsis);
     ctx["show_last_ellipsis"] = json!(pagination_ctx.show_last_ellipsis);
-    ctx["test_statuses"] = json!(StatusService::new(state.inner())
+    ctx["verification_statuses"] = json!(StatusService::new(state.inner())
         .list_verification_statuses_by_project(project_id)
         .unwrap_or_default());
     ctx["statuses"] = json!(StatusService::new(state.inner())
@@ -299,23 +299,23 @@ async fn get_matrix_xls(
     Ok((ct, file))
 }
 
-#[get("/<project_id>/matrix.csv?<test_status_filter>")]
+#[get("/<project_id>/matrix.csv?<verification_status_filter>")]
 async fn get_matrix_csv(
     project_access: ProjectAccess,
     project_id: i32,
-    test_status_filter: Option<i32>,
+    verification_status_filter: Option<i32>,
     state: &State<AppState>,
 ) -> Result<(ContentType, String), Redirect> {
     let user = project_access.into_user();
 
     println!(
-        "User {} (id:{}) requested CSV export for project {} with test status filter: {:?}",
-        user.username, user.id, project_id, test_status_filter
+        "User {} (id:{}) requested CSV export for project {} with verification status filter: {:?}",
+        user.username, user.id, project_id, verification_status_filter
     );
 
     let service = MatrixService::new(state.inner());
     let csv_data = service
-        .export_matrix_csv(project_id, test_status_filter)
+        .export_matrix_csv(project_id, verification_status_filter)
         .map_err(|e| {
             eprintln!("Error generating CSV: {e:?}");
             Redirect::to(format!("/p/{}/matrix", project_id))

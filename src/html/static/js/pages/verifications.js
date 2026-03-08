@@ -25,6 +25,94 @@ function testStatusVariant(statusLabel) {
   return 'default';
 }
 
+/** Map status label to metrics bucket (passed, failed, pending, in_progress, other). */
+function testMetricsBucket(statusLabel) {
+  if (!statusLabel) return 'other';
+  const s = String(statusLabel).trim().toLowerCase();
+  if (s === 'passed') return 'passed';
+  if (s === 'failed') return 'failed';
+  if (s === 'pending') return 'pending';
+  if (s === 'in progress') return 'in_progress';
+  return 'other';
+}
+
+/** Read current test metrics from script#test_metrics. */
+function getTestMetrics() {
+  const script = document.getElementById('test_metrics');
+  if (!script?.textContent) return null;
+  try {
+    return JSON.parse(script.textContent.trim());
+  } catch {
+    return null;
+  }
+}
+
+/** Update test metrics in DOM and script after inline status change (oldLabel -> newLabel). */
+function updateTestMetricsAfterStatusChange(oldLabel, newLabel) {
+  const m = getTestMetrics();
+  if (!m) return;
+  const oldBucket = testMetricsBucket(oldLabel);
+  const newBucket = testMetricsBucket(newLabel);
+  if (oldBucket === newBucket) return;
+
+  const next = {
+    total: m.total,
+    passed: m.passed - (oldBucket === 'passed' ? 1 : 0) + (newBucket === 'passed' ? 1 : 0),
+    failed: m.failed - (oldBucket === 'failed' ? 1 : 0) + (newBucket === 'failed' ? 1 : 0),
+    pending: m.pending - (oldBucket === 'pending' ? 1 : 0) + (newBucket === 'pending' ? 1 : 0),
+    in_progress: m.in_progress - (oldBucket === 'in_progress' ? 1 : 0) + (newBucket === 'in_progress' ? 1 : 0),
+    other: m.other - (oldBucket === 'other' ? 1 : 0) + (newBucket === 'other' ? 1 : 0),
+  };
+  next.pass_rate_percent = next.total ? Math.round((next.passed * 100) / next.total) : 0;
+  next.pass_rate_passed = next.passed;
+
+  // DOM uses hyphen in class name: --in-progress not --in_progress
+  const setValue = (cardClass, value) => {
+    const cls = cardClass === 'in_progress' ? 'in-progress' : cardClass;
+    const card = document.querySelector(`.marreq-requirements-metric-card--${cls}`);
+    if (!card) return;
+    const valEl = card.querySelector('.marreq-requirements-metric-card__value');
+    if (valEl) valEl.textContent = value;
+  };
+  setValue('passed', next.passed);
+  setValue('failed', next.failed);
+  setValue('pending', next.pending);
+  setValue('in_progress', next.in_progress);
+  setValue('other', next.other);
+
+  const otherCard = document.querySelector('.marreq-requirements-metric-card--other');
+  if (otherCard) {
+    otherCard.classList.toggle('marreq-requirements-metric-card--hidden', next.other === 0);
+  }
+
+  const coverageCard = document.querySelector('.marreq-requirements-metric-card--coverage');
+  if (coverageCard) {
+    const percentEl = coverageCard.querySelector('.marreq-requirements-metric-card__header .marreq-requirements-metric-card__value');
+    if (percentEl) percentEl.textContent = `${next.pass_rate_percent}%`;
+    const bar = coverageCard.querySelector('.marreq-requirements-metric-card__progress-bar');
+    if (bar) {
+      bar.style.width = `${next.pass_rate_percent}%`;
+      bar.setAttribute('aria-valuenow', String(next.pass_rate_percent));
+    }
+    const hint = coverageCard.querySelector('.marreq-requirements-metric-card__hint');
+    if (hint) hint.textContent = `${next.pass_rate_passed} passed of ${next.total}`;
+  }
+
+  const script = document.getElementById('test_metrics');
+  if (script) {
+    script.textContent = JSON.stringify({
+      total: next.total,
+      passed: next.passed,
+      failed: next.failed,
+      pending: next.pending,
+      in_progress: next.in_progress,
+      other: next.other,
+      pass_rate_percent: next.pass_rate_percent,
+      pass_rate_passed: next.pass_rate_passed,
+    });
+  }
+}
+
 /** Update data-test-preview-status on the row's title link after inline status edit */
 function updateTestPreviewInRow(row, displayText) {
   const titleLink = row.querySelector('a.marreq-requirements-title[data-test-preview]');
@@ -102,6 +190,7 @@ function openInlineEditForTest(cell, row, config) {
     if (Number.isNaN(v)) return;
     const s = (config.statuses || []).find((x) => (typeof x.id === 'number' ? x.id : parseInt(x.id, 10)) === v);
     const displayText = s ? s.title : '—';
+    const oldLabel = row.dataset.statusLabel || displayEl.textContent || '';
     applied = true;
     if (select.parentNode) select.remove();
     displayEl.hidden = false;
@@ -128,6 +217,7 @@ function openInlineEditForTest(cell, row, config) {
       updateTestPreviewInRow(row, displayText);
       updateCardStatusBadge(testId, displayText, variant, tagColor);
       updateParentLinkPreviewsForTest(testId, displayText);
+      updateTestMetricsAfterStatusChange(oldLabel, displayText);
       showNotification('Status updated successfully', 'success');
     } catch (err) {
       applied = false;

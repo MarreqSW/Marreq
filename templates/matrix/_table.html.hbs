@@ -19,7 +19,7 @@
         <tr role="row" class="c-matrix-header-row c-matrix-row">
           <th class="sortable c-table-sortable c-matrix-col c-matrix-col--sticky c-matrix-col--reference" data-sort="reference_code" scope="col" role="columnheader" style="min-width: 200px; left: 0;">
             <a
-              href="/p/{{selected_project_id}}/matrix?sort_by=reference_code&sort_order={{#if (eq current_sort_by "reference_code")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
+              href="/p/{{selected_project_id}}/matrix?sort_by=reference_code&sort_order={{#if (eq current_sort_by "reference_code")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}{{#if verification_status_filter}}&verification_status_filter={{verification_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
               class="text-decoration-none d-flex align-items-center justify-content-between"
               data-matrix-sort-link
               aria-label="Sort by requirement reference"
@@ -37,7 +37,7 @@
           {{#each tests}}
             <th class="text-center sortable c-table-sortable c-matrix-col c-matrix-col--test u-text-center" data-sort="test_{{id}}" data-column-id="test-{{id}}" scope="col" role="columnheader" style="min-width: 120px;">
               <a
-                href="/p/{{@root.selected_project_id}}/matrix?sort_by=test_{{id}}&sort_order=desc{{#if @root.test_status_filter}}&test_status_filter={{@root.test_status_filter}}{{/if}}{{#if @root.search}}&search={{@root.search}}{{/if}}&page={{@root.page}}&per_page={{@root.per_page}}"
+                href="/p/{{@root.selected_project_id}}/matrix?sort_by=test_{{id}}&sort_order=desc{{#if @root.verification_status_filter}}&verification_status_filter={{@root.verification_status_filter}}{{/if}}{{#if @root.search}}&search={{@root.search}}{{/if}}&page={{@root.page}}&per_page={{@root.per_page}}"
                 class="text-decoration-none"
                 data-matrix-sort-link
                 aria-label="Sort by test {{reference_code}} - linked requirements first"
@@ -49,7 +49,7 @@
           {{/each}}
           <th class="text-center sortable c-table-sortable c-matrix-col c-matrix-col--count u-text-center" data-sort="linked_tests_count" scope="col" role="columnheader" style="min-width: 4rem;" title="Number of tests linked to this requirement">
             <a
-              href="/p/{{selected_project_id}}/matrix?sort_by=linked_tests_count&sort_order={{#if (eq current_sort_by "linked_tests_count")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}desc{{/if}}{{#if test_status_filter}}&test_status_filter={{test_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
+              href="/p/{{selected_project_id}}/matrix?sort_by=linked_tests_count&sort_order={{#if (eq current_sort_by "linked_tests_count")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}desc{{/if}}{{#if verification_status_filter}}&verification_status_filter={{verification_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
               class="text-decoration-none d-inline-flex align-items-center justify-content-center gap-1"
               data-matrix-sort-link
               aria-label="Sort by number of linked tests"
@@ -103,11 +103,11 @@
                     {{else if (eq this.status_title "Failed")}}
                       <span class="c-matrix-status-dot status-failed" aria-label="Test failed" title="Failed">✕</span>
                     {{else if (eq this.status_title "Pending")}}
-                      <span class="c-matrix-status-dot status-pending" aria-label="Test pending" title="Pending">○</span>
+                      <span class="c-matrix-status-dot status-pending" aria-label="Verification pending" title="Pending">○</span>
                     {{else if (eq this.status_title "In Progress")}}
-                      <span class="c-matrix-status-dot status-in-progress" aria-label="Test in progress" title="In Progress">◐</span>
+                      <span class="c-matrix-status-dot status-in-progress" aria-label="Verification in progress" title="In Progress">◐</span>
                     {{else}}
-                      <span class="c-matrix-status-dot status-pending" aria-label="Test status" title="{{this.status_title}}">○</span>
+                      <span class="c-matrix-status-dot status-pending" aria-label="Verification status" title="{{this.status_title}}">○</span>
                     {{/if}}
                     {{/if}}
                   </div>
@@ -131,7 +131,7 @@
                 </svg>
                 <h4>No requirements found</h4>
                 <p>No requirements match the current filters.</p>
-                {{#if (or test_status_filter search)}}
+                {{#if (or verification_status_filter search)}}
                   <a href="/p/{{selected_project_id}}/matrix" class="btn btn-outline-primary mt-3">Clear all filters</a>
                 {{/if}}
               </div>

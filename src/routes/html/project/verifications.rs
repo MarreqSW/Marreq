@@ -8,6 +8,7 @@ use rocket::serde::json::Value;
 
 use super::helpers::*;
 use super::prelude::*;
+use super::requirements;
 use crate::helper_functions::decorators::decorate_requirements_with_repo;
 use crate::models::EntityType;
 use crate::services::{
@@ -15,6 +16,31 @@ use crate::services::{
     LabelResolvers, LogService, StatusService, VerificationService,
 };
 use crate::status_enums::TestStatusEnum;
+
+const VERIFICATIONS_PER_PAGE: u64 = 25;
+
+/// Build query string for verifications list (filters), without `page`.
+fn build_verifications_query(
+    status_filter: Option<i32>,
+    verification_filter: Option<i32>,
+    category_filter: Option<i32>,
+    search: Option<&str>,
+) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(id) = status_filter {
+        parts.push(format!("status_filter={}", id));
+    }
+    if let Some(id) = verification_filter {
+        parts.push(format!("verification_filter={}", id));
+    }
+    if let Some(id) = category_filter {
+        parts.push(format!("category_filter={}", id));
+    }
+    if let Some(s) = search.filter(|s| !s.is_empty()) {
+        parts.push(format!("search={}", urlencoding::encode(s)));
+    }
+    parts.join("&")
+}
 
 /// Payload for inline status update (POST from tests list page). Accepts JSON for reliable parsing.
 #[derive(rocket::serde::Deserialize)]
@@ -48,7 +74,7 @@ fn project_test_statuses(
 }
 
 #[get(
-    "/<project_id>/verifications?<status_filter>&<verification_filter>&<category_filter>&<search>"
+    "/<project_id>/verifications?<status_filter>&<verification_filter>&<category_filter>&<search>&<page>"
 )]
 #[allow(clippy::too_many_arguments)]
 async fn show_tests(
@@ -59,6 +85,7 @@ async fn show_tests(
     verification_filter: Option<i32>,
     category_filter: Option<i32>,
     search: Option<String>,
+    page: Option<u32>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
     use serde_json::json;
@@ -145,8 +172,39 @@ async fn show_tests(
         });
     }
 
-    let tests = decorate_tests_cached(state, tests);
+    let total_count = tests.len() as u64;
+    let per_page = VERIFICATIONS_PER_PAGE;
+    let total_pages = if total_count == 0 {
+        1
+    } else {
+        total_count.div_ceil(per_page)
+    };
+    let total_pages_u32 = total_pages.min(u32::MAX as u64) as u32;
+    let current_page = page.unwrap_or(1).max(1).min(total_pages_u32);
+    let offset = ((current_page - 1) as u64 * per_page) as usize;
+    let page_tests: Vec<_> = tests
+        .iter()
+        .skip(offset)
+        .take(per_page as usize)
+        .cloned()
+        .collect();
+    let tests = decorate_tests_cached(state, page_tests);
     ctx["tests"] = json!(tests);
+
+    let query_str = build_verifications_query(
+        status_filter,
+        verification_filter,
+        category_filter,
+        search.as_deref(),
+    );
+    ctx["pagination"] = json!(requirements::build_pagination_ctx(
+        current_page,
+        total_pages,
+        total_count,
+        per_page,
+        &query_str,
+    ));
+    ctx["pagination_path"] = json!("verifications");
 
     // Add metrics
     ctx["test_metrics"] = json!({

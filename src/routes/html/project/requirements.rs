@@ -275,7 +275,8 @@ fn build_requirements_query(
 }
 
 /// Build pagination context for the template (start/end range, prev/next, page numbers).
-fn build_pagination_ctx(
+/// Used by requirements and verifications list pages.
+pub fn build_pagination_ctx(
     current_page: u32,
     total_pages: u64,
     total_count: u64,

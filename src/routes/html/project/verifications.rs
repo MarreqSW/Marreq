@@ -110,48 +110,64 @@ async fn show_tests(
     // Fetch and process tests
     let all_tests = service.list_by_project(project_id).unwrap_or_default();
 
-    // Calculate metrics before filtering
-    // Resolve status IDs to titles for semantic comparison (project-safe)
+    // Calculate metrics before filtering.
+    // Resolve status title like the list decorator: project map first, then fallback to global
+    // get_verification_status_by_id so counts match what is displayed.
     let test_status_titles: std::collections::HashMap<i32, String> =
         StatusService::new(state.inner()).verification_status_id_to_title_map(project_id);
+    let missing_status_ids: std::collections::HashSet<i32> = all_tests
+        .iter()
+        .map(|t| t.status_id)
+        .filter(|id| !test_status_titles.contains_key(id))
+        .collect();
+    let mut fallback_titles: std::collections::HashMap<i32, String> =
+        std::collections::HashMap::new();
+    for id in missing_status_ids {
+        if let Ok(s) = repo.get_verification_status_by_id(id) {
+            fallback_titles.insert(id, s.title);
+        }
+    }
+    let status_title = |status_id: i32| -> Option<&str> {
+        test_status_titles
+            .get(&status_id)
+            .or(fallback_titles.get(&status_id))
+            .map(String::as_str)
+    };
     let total = all_tests.len();
     let passed = all_tests
         .iter()
         .filter(|t| {
-            test_status_titles
-                .get(&t.status_id)
-                .and_then(|title| TestStatusEnum::from_title(title))
+            status_title(t.status_id).and_then(TestStatusEnum::from_title)
                 == Some(TestStatusEnum::Passed)
         })
         .count();
     let failed = all_tests
         .iter()
         .filter(|t| {
-            test_status_titles
-                .get(&t.status_id)
-                .and_then(|title| TestStatusEnum::from_title(title))
+            status_title(t.status_id).and_then(TestStatusEnum::from_title)
                 == Some(TestStatusEnum::Failed)
         })
         .count();
     let pending = all_tests
         .iter()
         .filter(|t| {
-            test_status_titles
-                .get(&t.status_id)
-                .and_then(|title| TestStatusEnum::from_title(title))
+            status_title(t.status_id).and_then(TestStatusEnum::from_title)
                 == Some(TestStatusEnum::Pending)
         })
         .count();
     let in_progress = all_tests
         .iter()
         .filter(|t| {
-            test_status_titles
-                .get(&t.status_id)
-                .and_then(|title| TestStatusEnum::from_title(title))
+            status_title(t.status_id).and_then(TestStatusEnum::from_title)
                 == Some(TestStatusEnum::InProgress)
         })
         .count();
-    //let pass_rate_percent = if total > 0 { (passed * 100) / total } else { 0 };
+    // Verifications whose status is not one of the canonical four (e.g. custom status) so metrics sum to total
+    let other = total
+        .saturating_sub(passed)
+        .saturating_sub(failed)
+        .saturating_sub(pending)
+        .saturating_sub(in_progress);
     let pass_rate_percent = (passed * 100).checked_div(total).unwrap_or(0);
 
     // Apply filters
@@ -206,13 +222,14 @@ async fn show_tests(
     ));
     ctx["pagination_path"] = json!("verifications");
 
-    // Add metrics
+    // Add metrics (passed + failed + pending + in_progress + other = total)
     ctx["test_metrics"] = json!({
         "total": total,
         "passed": passed,
         "failed": failed,
         "pending": pending,
         "in_progress": in_progress,
+        "other": other,
         "pass_rate": {
             "percent": pass_rate_percent,
             "passed": passed

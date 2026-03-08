@@ -57,15 +57,15 @@
       </select>
     </div>
 
-    <!-- Test Status -->
+    <!-- Verification Status -->
     <div class="filter-group c-filter-group" style="margin: 0;">
-      <label for="test_status_filter" class="filter-label c-filter-label" style="font-size: 0.875rem; margin-bottom: 0.25rem;">
-        Test Status
+      <label for="verification_status_filter" class="filter-label c-filter-label" style="font-size: 0.875rem; margin-bottom: 0.25rem;">
+        Verification status
       </label>
-      <select name="test_status_filter" id="test_status_filter" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
+      <select name="verification_status_filter" id="verification_status_filter" class="filter-select c-filter-select c-form-control c-form-control--select" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
         <option value="">All</option>
-        {{#each test_statuses}}
-          <option value="{{id}}" {{#if (eq ../test_status_filter id)}}selected{{/if}}>{{title}}</option>
+        {{#each verification_statuses}}
+          <option value="{{id}}" {{#if (eq ../verification_status_filter id)}}selected{{/if}}>{{title}}</option>
         {{/each}}
       </select>
     </div>
@@ -100,7 +100,7 @@
       <button type="submit" class="btn btn-sm btn-primary" aria-label="Apply filters" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
         Apply
       </button>
-      {{#if (or test_status_filter req_status_filter category_filter applicability_filter search suspect_filter)}}
+      {{#if (or verification_status_filter req_status_filter category_filter applicability_filter search suspect_filter)}}
         <a href="/p/{{selected_project_id}}/matrix" class="btn btn-sm btn-outline-secondary" aria-label="Clear all filters" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
           Clear
         </a>

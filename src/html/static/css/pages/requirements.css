@@ -626,12 +626,6 @@
   text-decoration: underline;
 }
 
-.marreq-requirements-title__reference {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  margin-left: var(--space-1);
-}
-
 .marreq-requirements-status-badge {
   align-items: center;
   background-color: var(--surface-muted);
@@ -767,20 +761,6 @@
   font-weight: 500;
   margin: 0;
   word-break: break-word;
-}
-
-.marreq-requirements-pagination__button {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  color: inherit;
-  cursor: pointer;
-  padding: var(--space-1) var(--space-3);
-}
-
-.marreq-requirements-pagination__button.is-disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
 }
 
 .marreq-requirements-empty-state {

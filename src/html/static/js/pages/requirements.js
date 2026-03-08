@@ -87,6 +87,86 @@ function statusVariant(statusLabel) {
   return 'default';
 }
 
+/** Map requirement status label to metrics bucket (draft, accepted, rejected) or null if not counted. */
+function requirementMetricsBucket(statusLabel) {
+  const label = normalize(statusLabel);
+  if (!label) return null;
+  if (label === 'draft' || label.includes('draft')) return 'draft';
+  if (
+    label === 'accepted' ||
+    label.includes('accept') ||
+    label.includes('approve') ||
+    label.includes('finish') ||
+    label.includes('complete')
+  ) {
+    return 'accepted';
+  }
+  if (label === 'rejected' || label.includes('reject') || label.includes('cancel')) return 'rejected';
+  return null;
+}
+
+/** Read current requirement metrics from script#requirement_metrics. */
+function getRequirementMetrics() {
+  const script = document.getElementById('requirement_metrics');
+  if (!script?.textContent) return null;
+  try {
+    return JSON.parse(script.textContent.trim());
+  } catch {
+    return null;
+  }
+}
+
+/** Update requirement metrics in DOM and script after inline status change (oldLabel -> newLabel). */
+function updateRequirementMetricsAfterStatusChange(oldLabel, newLabel) {
+  const m = getRequirementMetrics();
+  if (!m) return;
+  const oldBucket = requirementMetricsBucket(oldLabel);
+  const newBucket = requirementMetricsBucket(newLabel);
+  if (oldBucket === newBucket) return;
+
+  let draft = m.draft - (oldBucket === 'draft' ? 1 : 0) + (newBucket === 'draft' ? 1 : 0);
+  let accepted = m.accepted - (oldBucket === 'accepted' ? 1 : 0) + (newBucket === 'accepted' ? 1 : 0);
+  const rejected = m.rejected - (oldBucket === 'rejected' ? 1 : 0) + (newBucket === 'rejected' ? 1 : 0);
+  const total = m.total;
+  const coverage_verified = accepted;
+  const coverage_percent = total ? Math.round((accepted * 100) / total) : 0;
+
+  const setValue = (cardClass, value) => {
+    const card = document.querySelector(`.marreq-requirements-metric-card--${cardClass}`);
+    if (!card) return;
+    const valEl = card.querySelector('.marreq-requirements-metric-card__value');
+    if (valEl) valEl.textContent = value;
+  };
+  setValue('draft', draft);
+  setValue('accepted', accepted);
+  setValue('rejected', rejected);
+
+  const coverageCard = document.querySelector('.marreq-requirements-metric-card--coverage');
+  if (coverageCard) {
+    const percentEl = coverageCard.querySelector('.marreq-requirements-metric-card__header .marreq-requirements-metric-card__value');
+    if (percentEl) percentEl.textContent = `${coverage_percent}%`;
+    const bar = coverageCard.querySelector('.marreq-requirements-metric-card__progress-bar');
+    if (bar) {
+      bar.style.width = `${coverage_percent}%`;
+      bar.setAttribute('aria-valuenow', String(coverage_percent));
+    }
+    const hint = coverageCard.querySelector('.marreq-requirements-metric-card__hint');
+    if (hint) hint.textContent = `${coverage_verified} verified of ${total}`;
+  }
+
+  const script = document.getElementById('requirement_metrics');
+  if (script) {
+    script.textContent = JSON.stringify({
+      total: m.total,
+      draft,
+      accepted,
+      rejected,
+      coverage_percent: coverage_percent,
+      coverage_verified,
+    });
+  }
+}
+
 function decorateStatusBadges() {
   const config = getInlineEditConfig();
   const statusIdToTagColor = new Map(
@@ -823,6 +903,7 @@ function openInlineEdit(cell, field, row, config) {
     let statusId;
     let verificationIds;
     let parentId;
+    const oldStatusLabel = field === 'status' ? (row.dataset.statusLabel || displayEl.textContent || '') : '';
     if (field === 'category') {
       const v = parseInt(select.value, 10) || 0;
       categoryId = v;
@@ -875,6 +956,7 @@ function openInlineEdit(cell, field, row, config) {
           displayEl.style.borderColor = '';
         }
         updateRequirementPreviewInRow(row, 'status', displayText, projectId);
+        updateRequirementMetricsAfterStatusChange(oldStatusLabel, displayText);
       } else if (field === 'verification') {
         row.dataset.verificationIds = (verificationIds || []).join(' ');
         displayEl.textContent = displayText;

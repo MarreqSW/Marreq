@@ -215,6 +215,14 @@
   color: #b91c1c;
 }
 
+.marreq-requirements-metric-card--other {
+  background: linear-gradient(135deg, rgb(100 116 139 / 0.12), transparent);
+}
+
+.marreq-requirements-metric-card--hidden {
+  display: none;
+}
+
 .marreq-requirements-metric-card--coverage {
   background: linear-gradient(135deg, rgb(37 99 235 / 0.08), transparent);
 }

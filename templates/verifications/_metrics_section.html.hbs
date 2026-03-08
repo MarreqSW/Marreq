@@ -23,6 +23,11 @@
     <span class="marreq-requirements-metric-card__value">{{test_metrics.in_progress}}</span>
     <span class="marreq-requirements-metric-card__badge">Currently running</span>
   </article>
+  <article class="marreq-requirements-metric-card marreq-requirements-metric-card--other{{#unless test_metrics.other}} marreq-requirements-metric-card--hidden{{/unless}}" data-metric="other">
+    <span class="marreq-requirements-metric-card__label">Other</span>
+    <span class="marreq-requirements-metric-card__value">{{test_metrics.other}}</span>
+    <span class="marreq-requirements-metric-card__badge">Custom or unknown status</span>
+  </article>
   <article class="marreq-requirements-metric-card marreq-requirements-metric-card--coverage">
     <div class="marreq-requirements-metric-card__header">
       <span class="marreq-requirements-metric-card__label">Pass Rate</span>
@@ -46,5 +51,5 @@
 
 {{!-- Expose metrics for tests and client-side initialization --}}
 <script id="test_metrics" type="application/json">
-  {"total": {{test_metrics.total}}, "passed": {{test_metrics.passed}}, "failed": {{test_metrics.failed}}, "pending": {{test_metrics.pending}}, "in_progress": {{test_metrics.in_progress}}, "pass_rate_percent": {{test_metrics.pass_rate.percent}}, "pass_rate_passed": {{test_metrics.pass_rate.passed}}}
+  {"total": {{test_metrics.total}}, "passed": {{test_metrics.passed}}, "failed": {{test_metrics.failed}}, "pending": {{test_metrics.pending}}, "in_progress": {{test_metrics.in_progress}}, "other": {{test_metrics.other}}, "pass_rate_percent": {{test_metrics.pass_rate.percent}}, "pass_rate_passed": {{test_metrics.pass_rate.passed}}}
 </script>

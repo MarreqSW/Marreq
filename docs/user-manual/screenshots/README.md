@@ -14,4 +14,4 @@ The User Manual references these screenshots. To generate them:
 3. **Capture screenshots** (from the repo root):
    - `node docs/user-manual/capture_screenshots.mjs`
 
-Screenshots are saved here as `login.png`, `home.png`, `projects.png`, `project-detail.png`, `requirements-list.png`, `requirement-detail.png`, `tests-list.png`, `matrix.png`, `baselines-list.png`, and `reports.png`. Optional env vars: `MARREQ_URL` (default `http://localhost:8000`), `MARREQ_USER`, `MARREQ_PASS`.
+Screenshots are saved here as `login.png`, `home.png`, `projects.png`, `project-detail.png`, `requirements-list.png`, `requirement-detail.png`, `tests-list.png` (verifications list), `matrix.png`, `baselines-list.png`, and `reports.png`. The script uses `/p/1/verifications` for the verifications list. Optional env vars: `MARREQ_URL` (default `http://localhost:8000`), `MARREQ_USER`, `MARREQ_PASS`.

@@ -14,7 +14,7 @@ For a **typical end-to-end workflow** (project setup → requirements → tests 
 2. [Getting Started](#2-getting-started)
 3. [Projects](#3-projects)
 4. [Requirements](#4-requirements)
-5. [Test Management](#5-test-management)
+5. [Test Management (Verifications)](#5-test-management-verifications)
 6. [Traceability Matrix](#6-traceability-matrix)
 7. [Baselines](#7-baselines)
 8. [Categories, Applicability & Verification](#8-categories-applicability--verification)
@@ -80,11 +80,11 @@ The top navigation bar includes:
 | **Home**                  | Dashboard and project list                                                                                           |
 | **Projects**              | All Projects / New Project (admin only)                                                                              |
 | **Requirements**          | Project requirements (active when a project is selected)                                                             |
-| **Tests**                 | Project tests                                                                                                        |
+| **Verifications**         | Project verifications (test cases and their status)                                                                  |
 | **Reports**               | Project reports & analytics                                                                                          |
 | **Members**               | Project members                                                                                                      |
 | **Baselines**             | Project baselines                                                                                                    |
-| **Quick Actions** (admin) | Shortcuts: New Project, New Requirement/Test/Category/Applicability/Verification/Status, New User, Import File/ReqIF |
+| **Quick Actions** (admin) | Shortcuts: New Project, New Requirement/Verification/Category/Applicability/Verification Method/Verification Status, New User, Import File/ReqIF |
 | **Admin** (admin)         | Dashboard, User Management, Database Backup, Import, System Logs, Log Analytics                                      |
 
 In the top-right:
@@ -92,7 +92,7 @@ In the top-right:
 - **Theme toggle** (sun/moon) for light/dark mode
 - **User menu**: My Profile, Change Password, Logout
 
-Requirements, Tests, Reports, Members, and Baselines are **project-scoped**: select a project first (e.g. by opening it from Home or Projects) so these links apply to that project.
+Requirements, Verifications, Reports, Members, and Baselines are **project-scoped**: select a project first (e.g. by opening it from Home or Projects) so these links apply to that project.
 
 ---
 
@@ -107,7 +107,7 @@ On the project detail page you see:
 
 - Project name, status (e.g. active), description
 - Created/Updated dates and owner
-- **Quick Actions**: View Requirements, View Tests, View Matrix, Baselines, View Reports, View Members
+- **Quick Actions**: View Requirements, View Verifications, View Matrix, Baselines, View Reports, View Members
 - **Project Members** list with names, usernames, roles, and email
 
 ![Projects list](screenshots/projects.png)
@@ -162,8 +162,8 @@ On the detail page you see:
 - **Approval badge**: Draft / Reviewed / Approved, and who approved and when.
 - **Actions** (for project owners/managers): **Mark as Reviewed**, **Approve Requirement** (with confirmation).
 - **Content**: Title, reference code, statement, rationale, category, status, applicability, verification methods, author, reviewer, dates.
-- **Traceability**: Upstream/downstream requirements and **Verified by** — list of linked tests with links to test pages.
-- **Verification** panel: pass/fail/pending counts and overall pass rate; list of linked tests.
+- **Traceability**: Upstream/downstream requirements and **Verified by** — list of linked verifications with links to verification detail pages.
+- **Verification** panel: pass/fail/pending counts and overall pass rate; list of linked verifications.
 - **Version history**: List of versions with approval state; click a version to view that snapshot.
 - **Comments**: Chronological list; form to add a comment (optional version reference). On approved versions, comments may be locked by policy (`LOCK_APPROVED_VERSION_COMMENTS`).
 - **Custom metadata** (if the project uses custom fields).
@@ -226,65 +226,66 @@ If your administrator has enabled semantic search (embeddings/RAG):
 
 ---
 
-## 5. Test Management
+## 5. Test Management (Verifications)
 
-Test management in Marreq covers creating and organizing tests, tracking execution status (e.g. Pass, Fail, Pending), and linking tests to requirements for traceability and coverage. Tests are project-scoped and can be arranged in a **parent/child hierarchy**. Linking is done in the [Traceability Matrix](#6-traceability-matrix); once linked, requirement detail pages show a **Verified by** section and verification pass/fail summary.
+Test management in Marreq covers creating and organizing verifications (test cases), tracking execution status (e.g. Pass, Fail, Pending), and linking them to requirements for traceability and coverage. In the UI, the nav item and pages are named **Verifications**. Verifications are project-scoped and can be arranged in a **parent/child hierarchy**. Linking is done in the [Traceability Matrix](#6-traceability-matrix); once linked, requirement detail pages show a **Verified by** section and verification pass/fail summary.
 
-### 5.1 Tests List
+### 5.1 Verifications List
 
-- Open a project, then **Tests** in the nav or **View Tests** on the project detail page.
-- URL: `/p/<project_id>/tests`.
+- Open a project, then **Verifications** in the nav or **View Verifications** on the project detail page.
+- URL: `/p/<project_id>/verifications`.
 
 You can:
 
 - Switch between **Card** and **Table** view.
-- **Filter** by test status, verification, category, and **search** (e.g. by name or reference).
-- View **metrics** (e.g. total tests, counts by status such as Passed/Failed/Pending).
-- Click **New Test** to create a test (admin/appropriate role).
-- Click a test to open its **Test detail** page.
+- **Filter** by verification status, verification method, category, and **search** (e.g. by name or reference).
+- View **metrics** (e.g. total verifications, counts by status such as Passed/Failed/Pending).
+- **Paginate** through results (pagination controls appear at both top and bottom of the list).
+- Click **New Verification** to create a verification (admin/appropriate role).
+- Click a verification to open its **Verification detail** page.
 
-![Tests list](screenshots/tests-list.png)
+![Verifications list](screenshots/tests-list.png)
 
-- **Update test status** inline in the list (e.g. set Pass/Fail after execution) when the UI offers it.
-- **Export tests to Excel** from the tests list or Reports (see [§9.3 Exporting Tests to Excel](#93-exporting-tests-to-excel)).
+- **Update verification status** inline in the list (e.g. set Pass/Fail after execution) when the UI offers it.
+- **Export verifications to Excel** from the verifications list or Reports (see [§9.3 Exporting Verifications to Excel](#93-exporting-verifications-to-excel)).
 
-### 5.2 Test Detail Page
+### 5.2 Verification Detail Page
 
-- URL: `/p/<project_id>/tests/show/<test_id>`.
+- URL: `/p/<project_id>/verifications/show/<verification_id>`.
 
-Shows: **Name**, **Description**, **Source** (e.g. test file or document reference), **Status**, **Reference code**, **Parent test** (if part of a hierarchy), and **which requirements this test verifies** (traceability links). From here you can **Edit** the test (name, description, source, status, reference, parent) or **update status** (e.g. after running the test). Status updates feed into the requirement **Verification** panel and into [Reports](#9-reports--export) (coverage, pass rate).
+Shows: **Name**, **Description**, **Source** (e.g. test file or document reference), **Status**, **Reference code**, **Parent verification** (if part of a hierarchy), and **which requirements this verification covers** (traceability links). From here you can **Edit** the verification (name, description, source, status, reference, parent) or **update status** (e.g. after running the test). Status updates feed into the requirement **Verification** panel and into [Reports](#9-reports--export) (coverage, pass rate).
 
-### 5.3 Creating a Test
+### 5.3 Creating a Verification
 
-1. From the project’s tests list, click **New Test** (or **Quick Actions → New Test**).
-2. URL: `/p/<project_id>/tests/new`.
-3. Enter **Name**, **Description**, **Source** (e.g. path to test script or doc), **Status** (e.g. Pending, Not Run), **Reference code** (optional; e.g. TEST-PWR-001), and **Parent test** (optional, for hierarchy).
+1. From the project’s verifications list, click **New Verification** (or **Quick Actions → New Verification**).
+2. URL: `/p/<project_id>/verifications/new`.
+3. Enter **Name**, **Description**, **Source** (e.g. path to test script or doc), **Status** (e.g. Pending, Not Run), **Reference code** (optional; e.g. TEST-PWR-001), and **Parent verification** (optional, for hierarchy).
 4. Save.
 
-After creation, link the test to requirements in the [Traceability Matrix](#6-traceability-matrix).
+After creation, link the verification to requirements in the [Traceability Matrix](#6-traceability-matrix).
 
-### 5.4 Editing a Test
+### 5.4 Editing a Verification
 
-1. Open the test detail page.
+1. Open the verification detail page.
 2. Click **Edit**.
-3. URL: `/p/<project_id>/tests/edit/<test_id>`.
-4. Update name, description, source, status, reference code, or parent test; save.
+3. URL: `/p/<project_id>/verifications/edit/<verification_id>`.
+4. Update name, description, source, status, reference code, or parent verification; save.
 
-Linking or unlinking tests to/from requirements is done in the **Traceability Matrix** (add/remove links there).
+Linking or unlinking verifications to/from requirements is done in the **Traceability Matrix** (add/remove links there).
 
-### 5.5 Updating Test Status
+### 5.5 Updating Verification Status
 
 As tests are executed, update their status (e.g. Pass, Fail, Pending, In Progress) so that:
 
 - Requirement detail pages show correct **Verification** counts (passed/failed/pending) and overall pass rate.
 - **Reports** and **Matrix** reflect current coverage and test results.
-- **Matrix** and **Reports** can be filtered by test status (e.g. show only Failed tests).
+- **Matrix** and **Reports** can be filtered by verification status (e.g. show only Failed).
 
-Update status from the **Test detail** page (Edit or dedicated status control) or, when available, **inline from the tests list** or from the matrix. Test statuses are configured per project under [Test statuses](#85-test-statuses).
+Update status from the **Verification detail** page (Edit or dedicated status control) or, when available, **inline from the verifications list** or from the matrix. Verification statuses are configured per project under [Verification statuses](#85-verification-statuses).
 
-### 5.6 Test Hierarchy
+### 5.6 Verification Hierarchy
 
-Tests can have a **parent test** (e.g. a test suite or feature area). Set the parent when creating or editing a test. The tests list and tree views (if available) reflect this hierarchy; reporting and traceability still work at the level of individual tests linked to requirements.
+Verifications can have a **parent verification** (e.g. a test suite or feature area). Set the parent when creating or editing a verification. The verifications list and tree views (if available) reflect this hierarchy; reporting and traceability still work at the level of individual verifications linked to requirements.
 
 ---
 
@@ -301,8 +302,8 @@ The traceability matrix is central to **test management** and coverage: it shows
 
 ### 6.2 Using the Matrix
 
-- **Table**: Rows and columns represent requirements and tests (or the configured layout); cells indicate links.
-- **Filters**: Restrict by test status, requirement status, category, applicability, search, suspect links.
+- **Table**: Rows and columns represent requirements and verifications (or the configured layout); cells indicate links.
+- **Filters**: Restrict by verification status, requirement status, category, applicability, search, suspect links.
 - **Sort** and **paginate** as available.
 - **Sticky headers** and **virtual scrolling** may be used for large matrices.
 - **Clear suspect**: For links marked “suspect” (e.g. after a requirement or test change), you can clear the suspect flag from the matrix (action/button or **Clear suspect** form); the system records user and timestamp.
@@ -334,7 +335,7 @@ You see all baselines for the project and can click **New Baseline** to create o
 3. Enter **Name** and optional **Description**.
 4. Submit.
 
-The system captures the **current** requirement version for each requirement and the **current** traceability matrix. The baseline cannot be edited or deleted.
+The system captures the **current** requirement version for each requirement, the **current** traceability matrix (requirement–verification links), and a **snapshot of verification statuses** at that moment. The baseline cannot be edited or deleted.
 
 ### 7.3 Viewing a Baseline
 
@@ -345,7 +346,7 @@ You see:
 
 - **Metadata**: Name, description, created date, created by.
 - **Requirements in this baseline**: Table with requirement ID, reference, title; links to requirement (and version) pages.
-- **Traceability**: List of requirement–test pairs (with references like REQ-PWR-001, TEST-PWR-001).
+- **Traceability**: List of requirement–verification pairs (with references like REQ-PWR-001, TEST-PWR-001). A **Verifications** snapshot is also stored so you can see which verification status (e.g. Pass/Fail) each linked verification had at baseline time.
 - **Diff vs current**: For each requirement that has changed since the baseline, a **Diff vs current** action opens a **diff modal** comparing the baseline snapshot to the current version. If the requirement is unchanged, this action is hidden.
 - **Export ReqIF**: Button to export **this baseline** as ReqIF 1.2 XML.
 
@@ -392,13 +393,13 @@ Requirement statuses (e.g. Draft, Accepted, Rejected) are configured per project
 - **New**: `/p/<project_id>/requirement_statuses/new`.
 - **Edit**: `/p/<project_id>/requirement_statuses/edit/<status_id>`.
 
-### 8.5 Test Statuses
+### 8.5 Verification Statuses
 
-Test statuses (e.g. Pass, Fail, Not Run) are configured per project.
+Verification statuses (e.g. Pass, Fail, Not Run) are configured per project.
 
-- **List**: `/p/<project_id>/test_statuses`.
-- **New**: `/p/<project_id>/test_statuses/new`.
-- **Edit**: `/p/<project_id>/test_statuses/edit/<status_id>`.
+- **List**: `/p/<project_id>/verification_statuses`.
+- **New**: `/p/<project_id>/verification_statuses/new`.
+- **Edit**: `/p/<project_id>/verification_statuses/edit/<status_id>`.
 
 ---
 
@@ -413,8 +414,8 @@ Test statuses (e.g. Pass, Fail, Not Run) are configured per project.
 
 You see:
 
-- **Executive summary**: Total requirements, total tests, coverage %, average tests per requirement.
-- **Coverage analysis** (test management): Covered vs uncovered requirements, requirements without tests, tests without requirements, suspect links. Test status distribution (e.g. Passed/Failed/Pending) may be shown for test management overview.
+- **Executive summary**: Total requirements, total verifications, coverage %, average verifications per requirement.
+- **Coverage analysis**: Covered vs uncovered requirements, requirements without verifications, verifications without requirements, suspect links. Verification status distribution (e.g. Passed/Failed/Pending) may be shown.
 - **Generate PDF Report**: Button to open/download a full project report PDF.
 - **Download requirements (PDF)**: Link to requirements-only PDF.
 
@@ -424,11 +425,11 @@ You see:
 - URL: `/p/<project_id>/requirements.xls`.
 - Downloads an `.xls` file with requirements and all configured fields (including a **Comments** sheet when applicable).
 
-### 9.3 Exporting Tests to Excel
+### 9.3 Exporting Verifications to Excel
 
-- From the **Tests** list or reports: use **Export Excel** (tests) when available to download all project tests for test management or external reporting.
-- URL: `/p/<project_id>/tests.xls`.
-- The export includes test fields (name, description, source, status, reference code, etc.) so you can share or analyze test data outside Marreq.
+- From the **Verifications** list or reports: use **Export Excel** (verifications) when available to download all project verifications for test management or external reporting.
+- URL: `/p/<project_id>/verifications.xls`.
+- The export includes verification fields (name, description, source, status, reference code, etc.) so you can share or analyze test data outside Marreq.
 
 ### 9.4 Exporting ReqIF
 
@@ -542,7 +543,7 @@ Analytics views over log data (if implemented).
 - **Semantic search**: **Ctrl+K** on the requirements page (when semantic search is enabled) opens the AI search modal; **Enter** runs the search, **Esc** closes.
 - **Requirement diff**: From requirement version history or baseline “Diff vs current”, the diff modal uses **red** for removed, **green** for added, **gray** for unchanged.
 - **Breadcrumbs**: Requirement and test edit/create pages show breadcrumbs (Project → Requirements → …); use them to navigate back.
-- **Project context**: Many links (Requirements, Tests, Matrix, Reports, Members, Baselines) depend on having a project selected; open a project from Home or Projects first.
+- **Project context**: Many links (Requirements, Verifications, Matrix, Reports, Members, Baselines) depend on having a project selected; open a project from Home or Projects first.
 - **Export formats**: Requirements and matrix export as **Excel** (`.xls`); ReqIF export is **XML**. PDF reports are available from the Reports page.
 
 ---

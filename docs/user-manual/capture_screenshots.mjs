@@ -72,8 +72,8 @@ async function main() {
     await page.waitForTimeout(500);
     await shot('requirement-detail');
 
-    // Tests list
-    await page.goto(`${BASE_URL}/p/1/tests`, { waitUntil: 'networkidle' });
+    // Verifications list
+    await page.goto(`${BASE_URL}/p/1/verifications`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
     await shot('tests-list');
 

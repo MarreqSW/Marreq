@@ -1,6 +1,6 @@
 # Typical Workflow with Marreq
 
-This document describes a **typical end-to-end workflow** for using Marreq: from project setup through requirements, **test management**, traceability, approval, baselines, and export. For detailed steps on each screen, see the [User Manual](user-manual.md), in particular [Test Management](user-manual.md#5-test-management) and [Traceability Matrix](user-manual.md#6-traceability-matrix).
+This document describes a **typical end-to-end workflow** for using Marreq: from project setup through requirements, **verification management**, traceability, approval, baselines, and export. For detailed steps on each screen, see the [User Manual](user-manual.md), in particular [Test Management (Verifications)](user-manual.md#5-test-management-verifications) and [Traceability Matrix](user-manual.md#6-traceability-matrix).
 
 ---
 
@@ -8,14 +8,14 @@ This document describes a **typical end-to-end workflow** for using Marreq: from
 
 A common Marreq workflow follows this sequence:
 
-1. **Set up the project** and configuration (categories, applicability, verification, requirement and **test statuses**).
+1. **Set up the project** and configuration (categories, applicability, verification methods, requirement and **verification statuses**).
 2. **Capture requirements** (create, optionally import, organize in hierarchy).
-3. **Test management**: define tests, organize (e.g. hierarchy), link to requirements in the traceability matrix, and track test status (Pass/Fail/Pending) as tests are run.
+3. **Verification management**: define verifications (test cases), organize (e.g. hierarchy), link to requirements in the traceability matrix, and track verification status (Pass/Fail/Pending) as tests are run.
 4. **Review and approve** requirements (draft → reviewed → approved).
 5. **Create baselines** for milestones or releases.
-6. **Export** for audits, documentation, or tooling (requirements Excel, **tests Excel**, matrix Excel/CSV, ReqIF, PDF).
+6. **Export** for audits, documentation, or tooling (requirements Excel, **verifications Excel**, matrix Excel/CSV, ReqIF, PDF).
 
-You can adapt the order (e.g. import requirements first, then configure categories) or iterate (add requirements and tests over time, update test status as you execute tests).
+You can adapt the order (e.g. import requirements first, then configure categories) or iterate (add requirements and verifications over time, update verification status as you execute tests).
 
 ### Workflow diagram
 
@@ -30,8 +30,8 @@ flowchart LR
     D[Create or import requirements]
     E[Refine hierarchy]
   end
-  subgraph test [3. Test management]
-    F[Define tests]
+  subgraph test [3. Verification management]
+    F[Define verifications]
     G[Link in matrix]
     H[Track status]
   end
@@ -61,7 +61,7 @@ flowchart LR
   - **Applicability** (e.g. Product A, Product B, All) — used for product line or scope.
   - **Verification methods** (e.g. Test, Analysis, Review, Inspection) — used to state how each requirement will be verified.
   - **Requirement statuses** (e.g. Draft, Accepted, Rejected) — lifecycle of requirements.
-  - **Test statuses** (e.g. Pass, Fail, Not Run, Blocked) — for test execution.
+  - **Verification statuses** (e.g. Pass, Fail, Not Run, Blocked) — for test execution.
 
 Having these in place before bulk-adding requirements keeps data consistent and makes filtering and reporting more useful.
 
@@ -80,23 +80,23 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 
 ## 3. Test Management and Traceability
 
-### 3.1 Define and Organize Tests
+### 3.1 Define and Organize Verifications
 
-- **Create tests**: **Tests → New Test**. Enter name, description, **Source** (e.g. test file or document), **Status** (e.g. Pending, Not Run), and **Reference code** (e.g. TEST-PWR-001). Use **Parent test** to build a test hierarchy (suites, feature areas) if needed.
-- **Manage tests** from the **Tests** list: filter by status, verification, category, search; switch between card and table view; view metrics (total tests, by status). Edit tests to change name, description, source, or parent.
-- **Export tests**: From the Tests list or Reports, **Export Excel** (tests) to get all tests in `.xls` for external reporting or test management.
+- **Create verifications**: **Verifications → New Verification**. Enter name, description, **Source** (e.g. test file or document), **Status** (e.g. Pending, Not Run), and **Reference code** (e.g. TEST-PWR-001). Use **Parent verification** to build a hierarchy (suites, feature areas) if needed.
+- **Manage verifications** from the **Verifications** list: filter by verification status, verification method, category, search; switch between card and table view; view metrics (total verifications, by status). Edit verifications to change name, description, source, or parent.
+- **Export verifications**: From the Verifications list or Reports, **Export Excel** (verifications) to get all verifications in `.xls` for external reporting or test management.
 
-### 3.2 Link Tests to Requirements (Traceability)
+### 3.2 Link Verifications to Requirements (Traceability)
 
 - Open the **Traceability Matrix** for the project.
-- **Add links** between requirements and tests (via the matrix UI: e.g. select requirement and test, then add link).
-- The matrix shows **coverage**; requirements without tests and tests without requirements are visible in **Reports** (Coverage analysis) and on requirement detail pages (**Verified by** section, **Verification** panel).
+- **Add links** between requirements and verifications (via the matrix UI: e.g. select requirement and verification, then add link).
+- The matrix shows **coverage**; requirements without verifications and verifications without requirements are visible in **Reports** (Coverage analysis) and on requirement detail pages (**Verified by** section, **Verification** panel).
 
-### 3.3 Track Test Execution (Test Status)
+### 3.3 Track Test Execution (Verification Status)
 
-- **Update test status** as tests are run (e.g. Pass, Fail, Pending, In Progress) from the **Test detail** page or, when available, inline from the tests list or matrix.
-- Requirement detail pages then show the **Verification** panel: passed/failed/pending counts and overall pass rate for linked tests.
-- **Reports** and the **Matrix** reflect current coverage and test results; filter the matrix by test status (e.g. show only Failed tests) for test management and defect follow-up.
+- **Update verification status** as tests are run (e.g. Pass, Fail, Pending, In Progress) from the **Verification detail** page or, when available, inline from the verifications list or matrix.
+- Requirement detail pages then show the **Verification** panel: passed/failed/pending counts and overall pass rate for linked verifications.
+- **Reports** and the **Matrix** reflect current coverage and test results; filter the matrix by verification status (e.g. show only Failed) for test management and defect follow-up.
 
 ---
 
@@ -113,7 +113,7 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 
 - When the requirement set (and optionally approvals) are at a **milestone** (e.g. release or audit point), create a **baseline**:
   - **Baselines → New Baseline**. Enter name and optional description, then submit.
-- The baseline is **immutable**: it stores the current requirement version for each requirement and the traceability matrix at that moment. You cannot edit or delete a baseline.
+- The baseline is **immutable**: it stores the current requirement version for each requirement, the traceability matrix, and a snapshot of verification statuses at that moment. You cannot edit or delete a baseline.
 - Use baselines to:
   - **Export ReqIF** for that exact snapshot (e.g. for auditors or downstream tools).
   - **Compare** later: open the baseline and use **Diff vs current** on individual requirements to see what changed since that snapshot.
@@ -123,8 +123,8 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 ## 6. Export for Audits and Documentation
 
 - **Requirements**: From **Requirements** or **Reports**, **Export Excel** to get all requirements (and a Comments sheet) in `.xls`.
-- **Tests** (test management): From **Tests** list or **Reports**, **Export Excel** (tests) to get all tests in `.xls` (name, description, source, status, reference code, etc.).
-- **Traceability matrix**: From **Matrix**, **Export Excel** (or CSV) for the requirement–test mapping; optionally filter by test status before export.
+- **Verifications** (test management): From **Verifications** list or **Reports**, **Export Excel** (verifications) to get all verifications in `.xls` (name, description, source, status, reference code, etc.).
+- **Traceability matrix**: From **Matrix**, **Export Excel** (or CSV) for the requirement–verification mapping; optionally filter by verification status before export.
 - **ReqIF**:
   - **Current project**: **Export → ReqIF (current)** for the latest state.
   - **From a baseline**: Open the baseline and use **Export ReqIF**, or **Export → ReqIF (from baseline…)** and select the baseline — use this for audits or release packages.
@@ -134,9 +134,9 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 
 ## Iteration and Maintenance
 
-- **Ongoing**: Add or edit requirements and tests, update traceability, **run tests and update test status** (Pass/Fail/Pending), and add comments. Create new baselines at each major milestone.
-- **Test management**: Use the Tests list and Matrix to track which tests are passing or failing; use Reports for coverage and test status distribution. Export tests to Excel when you need to share test data or integrate with other test tools.
+- **Ongoing**: Add or edit requirements and verifications, update traceability, **run tests and update verification status** (Pass/Fail/Pending), and add comments. Create new baselines at each major milestone.
+- **Test management**: Use the Verifications list and Matrix to track which verifications are passing or failing; use Reports for coverage and verification status distribution. Export verifications to Excel when you need to share test data or integrate with other test tools.
 - **After changes**: Traceability links may be marked **suspect** when a requirement or test changes; review and **Clear suspect** from the matrix when the link is still valid (user and timestamp are recorded).
 - **History**: Use **Version history** on requirements and **Diff** (between versions or baseline vs current) to see what changed and when.
 
-For detailed instructions on each action, see the [User Manual](user-manual.md), including [Test Management](user-manual.md#5-test-management).
+For detailed instructions on each action, see the [User Manual](user-manual.md), including [Test Management (Verifications)](user-manual.md#5-test-management-verifications).

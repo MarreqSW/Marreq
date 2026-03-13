@@ -1316,7 +1316,123 @@ export function init() {
   initFiltersForm(filtersForm, searchInput);
   initKeyboardShortcuts({ searchInput, newRequirementButton });
   initDuplicateForm();
-  
+  initEditPanel();
+
   // Initialize semantic search
   initSemanticSearch();
+}
+
+function getProjectIdFromPage() {
+  const page = document.querySelector('.marreq-requirements-page[data-project-id]');
+  const id = page?.getAttribute('data-project-id');
+  if (id) return id.trim();
+  const config = document.getElementById('semanticSearchConfig');
+  if (config?.textContent) {
+    try {
+      const data = JSON.parse(config.textContent.trim());
+      if (data.projectId != null) return String(data.projectId);
+    } catch (_) {}
+  }
+  return '';
+}
+
+function initEditPanel() {
+  const panelEl = document.getElementById('requirement-edit-panel');
+  if (!panelEl) return;
+
+  document.addEventListener('click', (e) => {
+    const openBtn = e.target.closest('[data-action="open-edit-panel"]');
+    if (openBtn) {
+      e.preventDefault();
+      const requirementId = openBtn.getAttribute('data-requirement-id');
+      const projectId = openBtn.getAttribute('data-project-id') || getProjectIdFromPage();
+      if (!requirementId || !projectId) return;
+      openEditPanel(panelEl, projectId, requirementId);
+    }
+
+    const closeBtn = e.target.closest('[data-action="close-edit-panel"]');
+    if (closeBtn) {
+      closeEditPanel(panelEl);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && panelEl && !panelEl.hasAttribute('hidden')) {
+      closeEditPanel(panelEl);
+    }
+  });
+
+  panelEl.addEventListener('submit', (e) => {
+    const form = e.target.closest('[data-requirement-edit-panel-form]');
+    if (!form) return;
+    e.preventDefault();
+    syncPanelCustomFieldValues(form);
+    const formData = new FormData(form);
+    const body = new URLSearchParams([...formData.entries()]);
+    fetch(form.action, {
+      method: 'POST',
+      body,
+      redirect: 'manual',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+      .then((res) => {
+        if (res.type === 'opaqueredirect' || res.status === 302 || res.status === 303) {
+          closeEditPanel(panelEl);
+          window.location.reload();
+        } else {
+          return res.text().then((text) => {
+            showNotification('Save failed. Try the full edit page.', 'error');
+            console.error('Edit panel save:', res.status, text);
+          });
+        }
+      })
+      .catch((err) => {
+        showNotification('Save failed. Try the full edit page.', 'error');
+        console.error('Edit panel save error:', err);
+      });
+  });
+}
+
+function syncPanelCustomFieldValues(form) {
+  const hidden = form.querySelector('#panel_custom_field_values');
+  if (!hidden) return;
+  const inputs = form.querySelectorAll('.c-reqform-field__custom-value');
+  const values = [];
+  inputs.forEach((el) => {
+    const fieldId = parseInt(el.getAttribute('data-field-id'), 10);
+    if (Number.isNaN(fieldId)) return;
+    const value = el.value != null ? el.value : '';
+    values.push({ field_id: fieldId, value: value || null });
+  });
+  hidden.value = JSON.stringify(values);
+}
+
+function openEditPanel(panelEl, projectId, requirementId) {
+  const url = `/p/${projectId}/requirements/edit-panel/${requirementId}`;
+  panelEl.innerHTML = '<p class="marreq-requirements-edit-panel__loading">Loading…</p>';
+  panelEl.removeAttribute('hidden');
+  panelEl.setAttribute('aria-hidden', 'false');
+
+  fetch(url, { headers: { Accept: 'text/html' } })
+    .then((res) => {
+      if (!res.ok) throw new Error(res.statusText);
+      return res.text();
+    })
+    .then((html) => {
+      panelEl.innerHTML = html;
+      const firstFocusable = panelEl.querySelector(
+        'button, [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+      );
+      if (firstFocusable) firstFocusable.focus();
+    })
+    .catch(() => {
+      panelEl.innerHTML = '<p class="marreq-requirements-edit-panel__loading">Failed to load. <a href="' + url + '">Open full edit page</a>.</p>';
+    });
+}
+
+function closeEditPanel(panelEl) {
+  if (!panelEl) return;
+  panelEl.setAttribute('hidden', '');
+  panelEl.setAttribute('aria-hidden', 'true');
+  panelEl.innerHTML = '';
 }

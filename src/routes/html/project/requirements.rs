@@ -213,6 +213,213 @@ fn enforce_project_ownership(route_project_id: i32, resource_project_id: i32) ->
     }
 }
 
+/// Build the shared context for both the full edit page and the edit-panel fragment.
+/// Caller must have already checked EditRequirements permission.
+#[allow(clippy::result_large_err)]
+fn build_edit_requirement_context(
+    project_id: i32,
+    requirement_id: i32,
+    user: &User,
+    state: &State<AppState>,
+) -> Result<serde_json::Value, Redirect> {
+    let name = ProjectService::new(state.inner())
+        .get_by_id(project_id)?
+        .name;
+    let service = DecoratedRequirementService::new(state.inner());
+    let req = service.get_by_id(requirement_id)?;
+
+    if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
+        return Err(redir);
+    }
+    // Use requirement's project for all project-scoped data so panel always matches the requirement's project
+    let req_project_id = req.project_id;
+
+    let parent: Option<DecoratedRequirement> = if let Some(parent_id) = req.req_parent_id {
+        if parent_id != 0 {
+            Some(service.get_by_id(parent_id)?)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let history_entries = LogService::new(state.inner())
+        .entity_logs(&EntityType::Requirement.to_string(), requirement_id)
+        .unwrap_or_default();
+
+    let version_counter = history_entries.len().saturating_add(1);
+    let version_label = format!("v1.{}", version_counter.saturating_sub(1));
+    let last_editor_name = history_entries
+        .first()
+        .map(|entry| entry.username.clone())
+        .filter(|name| !name.is_empty())
+        .or_else(|| {
+            if !req.reviewer_id.trim().is_empty() {
+                Some(req.reviewer_id.clone())
+            } else if !req.author_id.trim().is_empty() {
+                Some(req.author_id.clone())
+            } else {
+                None
+            }
+        })
+        .unwrap_or_else(|| "Unknown author".to_string());
+
+    let categories = CategoryService::new(state.inner()).list_by_project(req_project_id)?;
+    let statuses =
+        StatusService::new(state.inner()).list_requirement_statuses_by_project(req_project_id)?;
+    let users = UserService::new(state.inner()).get_by_project(req_project_id)?;
+    let repo = state.repo_read();
+    let verifications: Vec<_> = repo
+        .get_verification_methods_by_project(req_project_id)?
+        .into_iter()
+        .filter(|v| v.project_id == req_project_id)
+        .collect();
+    let applicability = ApplicabilityService::new(state.inner()).list_by_project(req_project_id)?;
+    let custom_field_definitions = CustomFieldService::new(state.inner())
+        .list_by_project(req_project_id)
+        .unwrap_or_default();
+    let custom_field_definitions_with_values: Vec<serde_json::Value> = custom_field_definitions
+        .iter()
+        .map(|def| {
+            let current_value = req
+                .custom_fields
+                .as_ref()
+                .and_then(|cf| cf.iter().find(|v| v.field_id == def.id))
+                .and_then(|v| v.value.clone())
+                .unwrap_or_default();
+            json!({
+                "id": def.id,
+                "label": def.label,
+                "field_type": def.field_type,
+                "enum_values": def.enum_values,
+                "sort_order": def.sort_order,
+                "current_value": current_value,
+            })
+        })
+        .collect();
+
+    let mut candidates: Vec<_> = RequirementService::new(state.inner())
+        .list_by_project(req_project_id)?
+        .into_iter()
+        .filter(|candidate| candidate.id != requirement_id)
+        .collect();
+    candidates.sort_by_key(|c| c.id);
+    let linked_requirement_options: Vec<_> = candidates
+        .iter()
+        .map(|candidate| {
+            json!({
+                "id": candidate.id,
+                "title": candidate.title,
+                "reference": candidate.reference_code,
+            })
+        })
+        .collect();
+
+    let requirement_service = RequirementService::new(state.inner());
+    let parent_links_edit: Vec<serde_json::Value> = req
+        .current_version_id
+        .and_then(|vid| requirement_service.get_parent_links_for_version(vid).ok())
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|link| {
+            let repo = state.repo_read();
+            let target_ver = repo
+                .get_requirement_version_by_id(link.target_version_id)
+                .ok()?;
+            let target_req = repo.get_requirement_by_id(target_ver.requirement_id).ok()?;
+            Some(json!({
+                "target_requirement_id": target_req.id,
+                "reference": target_req.reference_code,
+                "title": target_req.title,
+                "link_type": link.link_type,
+            }))
+        })
+        .collect();
+    let link_types: Vec<String> =
+        crate::services::requirement_service::REQUIREMENT_VERSION_LINK_TYPES
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect();
+
+    let display_reference = if req.reference_code.trim().is_empty() {
+        format!("RM-{:03}", req.id)
+    } else {
+        req.reference_code.clone()
+    };
+
+    let verification_with_selected: Vec<serde_json::Value> = verifications
+        .iter()
+        .map(|v| {
+            json!({
+                "id": v.id,
+                "title": v.title,
+                "description": v.description,
+                "tag": v.tag,
+                "project_id": v.project_id,
+                "selected": req.req_verification_ids.contains(&v.id),
+            })
+        })
+        .collect();
+
+    let parent_links_payload: Vec<serde_json::Value> = parent_links_edit
+        .iter()
+        .filter_map(|v| {
+            let id = v.get("target_requirement_id")?.as_i64()? as i32;
+            let link_type = v.get("link_type")?.as_str()?.to_string();
+            Some((id, link_type))
+        })
+        .map(|(target_requirement_id, link_type)| json!({ "target_requirement_id": target_requirement_id, "link_type": link_type }))
+        .collect();
+    let parent_links_json =
+        serde_json::to_string(&parent_links_payload).unwrap_or_else(|_| "[]".to_string());
+
+    let custom_field_values_payload: Vec<serde_json::Value> = custom_field_definitions_with_values
+        .iter()
+        .map(|v| {
+            json!({
+                "field_id": v.get("id").and_then(|x| x.as_i64()).unwrap_or(0) as i32,
+                "value": v.get("current_value").cloned().unwrap_or(serde_json::Value::Null),
+            })
+        })
+        .collect();
+    let custom_field_values_json =
+        serde_json::to_string(&custom_field_values_payload).unwrap_or_else(|_| "[]".to_string());
+
+    let ctx = json!({
+        "req": req,
+        "categories": categories,
+        "statuses": statuses,
+        "parent": parent,
+        "users": users,
+        "verification": verifications,
+        "verification_with_selected": verification_with_selected,
+        "applicability": applicability,
+        "custom_field_definitions": custom_field_definitions,
+        "custom_field_definitions_with_values": custom_field_definitions_with_values,
+        "linked_requirements": linked_requirement_options,
+        "parent_links_edit": parent_links_edit,
+        "parent_links_json": parent_links_json,
+        "custom_field_values_json": custom_field_values_json,
+        "link_types": link_types,
+        "user": user,
+        "display_reference": display_reference,
+        "name": name,
+        "version": {
+            "label": version_label,
+            "last_editor": last_editor_name,
+            "updated_at": req.update_date,
+        },
+        "autosave": {
+            "enabled": true,
+            "interval_ms": 3_000
+        },
+        "page_title": format!("Edit {} - Requirement", display_reference),
+    });
+
+    Ok(ctx)
+}
+
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
 struct InlineCategoryPayload {
@@ -1141,175 +1348,31 @@ async fn get_edit_requirement(
     ) {
         return Err(requirements_list_redirect(project_id));
     }
-    let name = ProjectService::new(state.inner())
-        .get_by_id(project_id)?
-        .name;
-    let service = DecoratedRequirementService::new(state.inner());
-    let req = service.get_by_id(requirement_id)?;
-
-    // Enforce project ownership; redirect if mismatched
-    if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
-        return Err(redir);
-    }
-
-    let parent: Option<DecoratedRequirement> = if let Some(parent_id) = req.req_parent_id {
-        if parent_id != 0 {
-            Some(service.get_by_id(parent_id)?)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
-    let history_entries = LogService::new(state.inner())
-        .entity_logs(&EntityType::Requirement.to_string(), requirement_id)
-        .unwrap_or_default();
-
-    let version_counter = history_entries.len().saturating_add(1);
-    let version_label = format!("v1.{}", version_counter.saturating_sub(1));
-    let last_editor_name = history_entries
-        .first()
-        .map(|entry| entry.username.clone())
-        .filter(|name| !name.is_empty())
-        .or_else(|| {
-            if !req.reviewer_id.trim().is_empty() {
-                Some(req.reviewer_id.clone())
-            } else if !req.author_id.trim().is_empty() {
-                Some(req.author_id.clone())
-            } else {
-                None
-            }
-        })
-        .unwrap_or_else(|| "Unknown author".to_string());
-
-    let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
-    let statuses =
-        StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
-    let users = UserService::new(state.inner()).get_by_project(project_id)?;
-    let repo = state.repo_read();
-    let verifications = repo.get_verification_methods_by_project(project_id)?;
-    let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
-    let custom_field_definitions = CustomFieldService::new(state.inner())
-        .list_by_project(project_id)
-        .unwrap_or_default();
-    let custom_field_definitions_with_values: Vec<serde_json::Value> = custom_field_definitions
-        .iter()
-        .map(|def| {
-            let current_value = req
-                .custom_fields
-                .as_ref()
-                .and_then(|cf| cf.iter().find(|v| v.field_id == def.id))
-                .and_then(|v| v.value.clone())
-                .unwrap_or_default();
-            json!({
-                "id": def.id,
-                "label": def.label,
-                "field_type": def.field_type,
-                "enum_values": def.enum_values,
-                "sort_order": def.sort_order,
-                "current_value": current_value,
-            })
-        })
-        .collect();
-
-    // Lightweight list of other requirements for linking (excluding current requirement), sorted by ID
-    let mut candidates: Vec<_> = RequirementService::new(state.inner())
-        .list_by_project(project_id)?
-        .into_iter()
-        .filter(|candidate| candidate.id != requirement_id) // Don't allow self-reference
-        .collect();
-    candidates.sort_by_key(|c| c.id);
-    let linked_requirement_options: Vec<_> = candidates
-        .iter()
-        .map(|candidate| {
-            json!({
-                "id": candidate.id,
-                "title": candidate.title,
-                "reference": candidate.reference_code,
-            })
-        })
-        .collect();
-
-    let requirement_service = RequirementService::new(state.inner());
-    let parent_links_edit: Vec<serde_json::Value> = req
-        .current_version_id
-        .and_then(|vid| requirement_service.get_parent_links_for_version(vid).ok())
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|link| {
-            let repo = state.repo_read();
-            let target_ver = repo
-                .get_requirement_version_by_id(link.target_version_id)
-                .ok()?;
-            let target_req = repo.get_requirement_by_id(target_ver.requirement_id).ok()?;
-            Some(json!({
-                "target_requirement_id": target_req.id,
-                "reference": target_req.reference_code,
-                "title": target_req.title,
-                "link_type": link.link_type,
-            }))
-        })
-        .collect();
-    let link_types: Vec<String> =
-        crate::services::requirement_service::REQUIREMENT_VERSION_LINK_TYPES
-            .iter()
-            .map(|s| (*s).to_string())
-            .collect();
-
-    let display_reference = if req.reference_code.trim().is_empty() {
-        format!("RM-{:03}", req.id)
-    } else {
-        req.reference_code.clone()
-    };
-
-    let verification_with_selected: Vec<serde_json::Value> = verifications
-        .iter()
-        .map(|v| {
-            json!({
-                "id": v.id,
-                "title": v.title,
-                "description": v.description,
-                "tag": v.tag,
-                "project_id": v.project_id,
-                "selected": req.req_verification_ids.contains(&v.id),
-            })
-        })
-        .collect();
-
-    let ctx = json!({
-        "req": req,
-        "categories": categories,
-        "statuses": statuses,
-        "parent": parent,
-        "users": users,
-        "verification": verifications,
-        "verification_with_selected": verification_with_selected,
-        "applicability": applicability,
-        "custom_field_definitions": custom_field_definitions,
-        "custom_field_definitions_with_values": custom_field_definitions_with_values,
-        "linked_requirements": linked_requirement_options,
-        "parent_links_edit": parent_links_edit,
-        "link_types": link_types,
-        "user": user,
-        "display_reference": display_reference,
-        "name": name,
-        "version": {
-            "label": version_label,
-            "last_editor": last_editor_name,
-            "updated_at": req.update_date,
-        },
-        "autosave": {
-            "enabled": true,
-            "interval_ms": 3_000
-        },
-        "page_title": format!("Edit {} - Requirement", display_reference),
-    });
-
+    let ctx = build_edit_requirement_context(project_id, requirement_id, &user, state)?;
     #[cfg(debug_assertions)]
     println!("Edit requirement ctx: {:#}", ctx);
-
     Ok(Template::render("requirements/edit_requirement", ctx))
+}
+
+/// Returns only the edit form HTML fragment for the right-side panel (no layout).
+#[get("/<project_id>/requirements/edit-panel/<requirement_id>")]
+async fn get_edit_requirement_panel(
+    project_access: ProjectAccess,
+    project_id: i32,
+    requirement_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user = project_access.into_user();
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::EditRequirements,
+    ) {
+        return Err(requirements_list_redirect(project_id));
+    }
+    let ctx = build_edit_requirement_context(project_id, requirement_id, &user, state)?;
+    Ok(Template::render("requirements/edit_panel", ctx))
 }
 
 #[post("/<project_id>/requirements/edit/<requirement_id>", data = "<form>")]
@@ -1981,6 +2044,7 @@ pub fn routes() -> Vec<Route> {
         show_requirement_id,
         show_requirement_version,
         get_edit_requirement,
+        get_edit_requirement_panel,
         post_edit_requirement,
         delete_requirement_route,
         new_requirement,

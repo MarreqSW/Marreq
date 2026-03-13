@@ -88,7 +88,11 @@ impl<'a> ProjectService<'a> {
 
         // Initialize default verification methods for the new project
         let default_methods = [
-            ("Inspection", "Nondestructive examination of a system or component", "INSP"),
+            (
+                "Inspection",
+                "Nondestructive examination of a system or component",
+                "INSP",
+            ),
             ("Test", "Execution-based verification", "TEST"),
             ("Analysis", "Analysis-based verification", "ANALYSIS"),
             ("Review", "Review-based verification", "REVIEW"),

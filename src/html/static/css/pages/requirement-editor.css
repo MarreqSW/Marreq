@@ -23,13 +23,6 @@
   font-weight: 600;
 }
 
-/* ── Edit-page section spacing ───────────────────────────────────── */
-.c-editor-section__title {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0;
-}
-
 /* ── Edit topbar status group ────────────────────────────────────── */
 .c-editor-topbar__status {
   align-items: center;

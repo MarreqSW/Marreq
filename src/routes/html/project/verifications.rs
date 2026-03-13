@@ -722,6 +722,52 @@ async fn get_edit_test(
     Ok(Template::render("verifications/edit_verification", ctx))
 }
 
+/// Returns only the edit-panel HTML fragment (no layout). Used by the tests list page side panel.
+#[get("/<project_id>/verifications/edit-panel/<test_id>")]
+async fn get_edit_test_panel(
+    project_access: ProjectAccess,
+    project_id: i32,
+    test_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    use serde_json::json;
+
+    let _user = project_access.into_user();
+    let repo = state.repo_read();
+
+    let test = match repo.get_verification_by_id(test_id) {
+        Ok(t) => t,
+        Err(_) => return Err(Redirect::to(format!("/p/{}/verifications", project_id))),
+    };
+
+    if test.project_id != project_id {
+        return Err(Redirect::to(format!(
+            "/p/{}/verifications",
+            test.project_id
+        )));
+    }
+
+    let decorated = decorate_tests_cached(state, vec![test]);
+    let test0 = &decorated[0];
+
+    let linked_requirements = get_requirements_for_test_cached(state, test_id).unwrap_or_default();
+    let linked_req_ids: Vec<i32> = linked_requirements.iter().map(|r| r.id).collect();
+
+    let ctx = json!({
+        "tests": test0,
+        "test_status_id": test0.verification_status_id,
+        "categories": repo.get_categories_by_project(project_id).unwrap_or_default(),
+        "status": project_test_statuses(state.inner(), project_id),
+        "parent": repo.get_verifications_by_project(project_id).unwrap_or_default(),
+        "verification": repo.get_verification_methods_by_project(project_id).unwrap_or_default(),
+        "linked_requirements": linked_requirements,
+        "linked_req_ids": linked_req_ids,
+        "requirements": repo.get_requirements_by_project(project_id).unwrap_or_default(),
+    });
+
+    Ok(Template::render("verifications/edit_panel", ctx))
+}
+
 #[post(
     "/<project_id>/verifications/edit/<test_id>",
     data = "<edit_test_form>"
@@ -925,6 +971,7 @@ pub fn routes() -> Vec<Route> {
         show_verification_version,
         new_test,
         get_edit_test,
+        get_edit_test_panel,
         post_edit_test,
         post_test,
         get_requirements_xls,

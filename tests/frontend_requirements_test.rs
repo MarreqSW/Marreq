@@ -402,6 +402,34 @@ async fn edit_requirement_form_populates_existing_data() {
 }
 
 #[rocket::async_test]
+async fn edit_panel_fragment_returns_form_and_full_edit_link() {
+    let mut repo = base_repo();
+    repo.requirements.insert(1, sample_requirement(1, 1));
+    let client = test_client(repo).await;
+
+    let response = client
+        .get("/p/1/requirements/edit-panel/1")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let html = response.into_string().await.expect("body");
+    assert!(
+        html.contains("Open full edit page"),
+        "Panel should contain link to full edit page"
+    );
+    assert!(
+        html.contains("data-requirement-edit-panel-form"),
+        "Panel should contain edit form"
+    );
+    assert!(
+        html.contains("data-action=\"close-edit-panel\""),
+        "Panel should contain close button"
+    );
+}
+
+#[rocket::async_test]
 async fn requirement_detail_page_shows_relationships() {
     let mut repo = base_repo();
 
@@ -874,6 +902,14 @@ async fn requirement_row_actions_have_correct_links() {
     assert!(
         html.contains("/p/1/requirements/edit/1"),
         "Missing edit link"
+    );
+    assert!(
+        html.contains("data-action=\"open-edit-panel\""),
+        "Edit button should open right-side panel"
+    );
+    assert!(
+        html.contains("id=\"requirement-edit-panel\""),
+        "Page should contain edit panel container"
     );
     assert!(
         html.contains("/p/1/requirements/show/1"),

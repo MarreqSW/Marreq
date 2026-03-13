@@ -135,24 +135,24 @@ export function purpose(description = '') {
   return normalise(firstParagraph);
 }
 
-export function notesAndAttachments(link = '') {
-  const trimmed = normalise(link);
-  if (!trimmed) {
-    return {
-      notes: 'No implementation notes recorded.',
-      attachments: [],
-    };
-  }
+/**
+ * Build notes text and attachment links for the Notes section.
+ * @param {string} [notesText] - Implementation notes / rationale (e.g. requirement.justification).
+ * @param {string} [link] - Optional primary reference URL (e.g. requirement.req_link); used for attachments when present.
+ */
+export function notesAndAttachments(notesText = '', link = '') {
+  const notesTrimmed = normalise(notesText);
+  const linkTrimmed = normalise(link);
 
-  return {
-    notes: `Primary reference available at ${trimmed}`,
-    attachments: [
-      {
-        label: 'Supporting evidence',
-        href: trimmed,
-      },
-    ],
-  };
+  const notes =
+    notesTrimmed ||
+    (linkTrimmed ? `Primary reference available at ${linkTrimmed}` : 'No implementation notes recorded.');
+
+  const attachments = linkTrimmed
+    ? [{ label: 'Supporting evidence', href: linkTrimmed }]
+    : [];
+
+  return { notes, attachments };
 }
 
 function formatDateTime(value) {
@@ -306,7 +306,7 @@ export function buildRequirementViewModel(canonical = {}) {
   const percent = verificationPercent(counts);
   const rationale =
     normalise(requirement.justification) || 'No rationale documented yet.';
-  const notesResult = notesAndAttachments(requirement.req_link);
+  const notesResult = notesAndAttachments(requirement.justification, requirement.req_link);
   const relationshipsView = relationships(canonical.relationships);
   const timelineEntries = timeline({
     requirement,

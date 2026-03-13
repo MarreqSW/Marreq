@@ -86,8 +86,9 @@ impl<'a> ProjectService<'a> {
         let status_service = StatusService::new(self.state);
         status_service.initialize_default_statuses(id)?;
 
-        // Initialize default verification methods for the new project (Test, Analysis, Review)
+        // Initialize default verification methods for the new project
         let default_methods = [
+            ("Inspection", "Nondestructive examination of a system or component", "INSP"),
             ("Test", "Execution-based verification", "TEST"),
             ("Analysis", "Analysis-based verification", "ANALYSIS"),
             ("Review", "Review-based verification", "REVIEW"),

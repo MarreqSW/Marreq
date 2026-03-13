@@ -585,49 +585,6 @@ describe('Requirement Form', () => {
     });
   });
 
-  describe('Attachments', () => {
-    it('should initialize attachment dropzone', async () => {
-      document.body.innerHTML = `
-        <form data-requirement-form>
-          <div data-role="attachments-zone">
-            <input type="file" data-role="attachments-input" multiple hidden />
-            <button type="button" data-role="browse-attachments">Browse</button>
-            <ul data-role="attachment-list"></ul>
-          </div>
-        </form>
-      `;
-
-      const { init: initForm } = await import('@pages/requirementForm.js');
-      initForm();
-
-      const zone = document.querySelector('[data-role="attachments-zone"]');
-      expect(zone).toBeTruthy();
-    });
-
-    it('should trigger file input on browse click', async () => {
-      document.body.innerHTML = `
-        <form data-requirement-form>
-          <div data-role="attachments-zone">
-            <input type="file" data-role="attachments-input" multiple hidden />
-            <button type="button" data-role="browse-attachments">Browse</button>
-            <ul data-role="attachment-list"></ul>
-          </div>
-        </form>
-      `;
-
-      const { init: initForm } = await import('@pages/requirementForm.js');
-      initForm();
-
-      const browse = document.querySelector('[data-role="browse-attachments"]');
-      const input = document.querySelector('[data-role="attachments-input"]');
-      
-      const clickSpy = vi.spyOn(input, 'click');
-      browse.click();
-
-      expect(clickSpy).toHaveBeenCalled();
-    });
-  });
-
   describe('Autosave - Create Form', () => {
     beforeEach(() => {
       localStorage.clear();

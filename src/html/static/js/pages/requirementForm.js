@@ -560,122 +560,6 @@ function initRationale(form) {
   });
 }
 
-function formatFileSize(bytes) {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function initAttachments(form) {
-  const zone = form.querySelector('[data-role="attachments-zone"]');
-  if (!zone) {
-    return;
-  }
-
-  const input = zone.querySelector('[data-role="attachments-input"]');
-  const browse = zone.querySelector('[data-role="browse-attachments"]');
-  const list = zone.querySelector('[data-role="attachment-list"]');
-  const state = [];
-
-  function renderList() {
-    if (!list) {
-      return;
-    }
-
-    if (state.length === 0) {
-      list.innerHTML = '';
-      return;
-    }
-
-    list.innerHTML = state
-      .map(
-        (file) => `
-          <li class="c-editor-dropzone__item">
-            <span class="c-editor-dropzone__icon">${file.icon}</span>
-            <div class="c-editor-dropzone__meta">
-              <strong>${file.name}</strong>
-              <small>${formatFileSize(file.size)} · ${file.status}</small>
-            </div>
-          </li>
-        `,
-      )
-      .join('');
-  }
-
-  function updateFileStatus(id, status) {
-    const file = state.find((item) => item.id === id);
-    if (!file) {
-      return;
-    }
-    file.status = status;
-    renderList();
-  }
-
-  function simulateUpload(id) {
-    updateFileStatus(id, 'uploading…');
-    setTimeout(() => {
-      updateFileStatus(id, 'ready for review');
-    }, 600);
-  }
-
-  function handleFiles(files) {
-    const nextFiles = Array.from(files);
-    nextFiles.forEach((file) => {
-      const id = `${file.name}-${file.lastModified}-${Math.random().toString(16).slice(2)}`;
-      const icon = file.type.startsWith('image')
-        ? '🖼'
-        : file.type === 'application/pdf'
-        ? '📄'
-        : '📎';
-
-      state.push({
-        id,
-        name: file.name,
-        size: file.size,
-        icon,
-        status: 'queued',
-      });
-
-      renderList();
-      simulateUpload(id);
-    });
-  }
-
-  browse?.addEventListener('click', (event) => {
-    event.preventDefault();
-    input?.click();
-  });
-
-  input?.addEventListener('change', () => {
-    if (!input.files) {
-      return;
-    }
-    handleFiles(input.files);
-    input.value = '';
-  });
-
-  zone.addEventListener('dragover', (event) => {
-    event.preventDefault();
-    zone.classList.add('c-editor-dropzone--active');
-  });
-
-  zone.addEventListener('dragleave', () => {
-    zone.classList.remove('c-editor-dropzone--active');
-  });
-
-  zone.addEventListener('drop', (event) => {
-    event.preventDefault();
-    zone.classList.remove('c-editor-dropzone--active');
-    if (event.dataTransfer?.files?.length) {
-      handleFiles(event.dataTransfer.files);
-    }
-  });
-}
-
 function initSuccessToast(form) {
   const message = form.dataset.flashSuccess;
   if (!message) {
@@ -924,6 +808,5 @@ export function init() {
   initStatusControls(form);
   initRichText(form);
   initRationale(form);
-  initAttachments(form);
   initAutosave(form);
 }

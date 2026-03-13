@@ -1079,7 +1079,7 @@ async fn show_requirement_version(
         reference_code: current.reference_code.clone(),
         category_id: version.category_id,
         parent_id: None, // populated from requirement_version_links by decorator layer
-        creation_date: version.created_at,
+        creation_date: current.creation_date,
         update_date: version.created_at,
         deadline_date: version.deadline_date,
         applicability_id: version.applicability_id,

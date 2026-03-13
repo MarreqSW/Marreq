@@ -146,9 +146,22 @@ impl Logger {
         before: &T,
         after: &T,
     ) -> Result<(), LoggerError> {
-        let oldv = Some(Self::to_json_string(before)?);
-        let newv = Some(Self::to_json_string(after)?);
-        Self::log_entity_action(conn, ctx, ActionType::Update, after, None, oldv, newv)
+        let oldv = Self::to_json_string(before)?;
+        let newv = Self::to_json_string(after)?;
+        let old_stripped = Self::strip_timestamps_for_compare(&oldv)?;
+        let new_stripped = Self::strip_timestamps_for_compare(&newv)?;
+        if old_stripped == new_stripped {
+            return Ok(());
+        }
+        Self::log_entity_action(
+            conn,
+            ctx,
+            ActionType::Update,
+            after,
+            None,
+            Some(oldv),
+            Some(newv),
+        )
     }
 
     pub fn deleted<T: serde::Serialize + Loggable>(
@@ -365,6 +378,37 @@ impl Logger {
 
     pub fn to_json_string<T: serde::Serialize>(value: &T) -> Result<String, LoggerError> {
         serde_json::to_string_pretty(value).map_err(LoggerError::from)
+    }
+
+    /// Keys removed from JSON before comparing old vs new so that "no real change" edits
+    /// (e.g. save without changing any field) do not produce a log entry when only
+    /// server-updated timestamps or version ids differ.
+    const COMPARE_IGNORE_KEYS: &[&str] = &[
+        "update_date",
+        "updated_at",
+        "current_version_id", // changes every edit (new version row); not content
+    ];
+
+    fn strip_timestamps_for_compare(json_str: &str) -> Result<serde_json::Value, LoggerError> {
+        let mut v: serde_json::Value = serde_json::from_str(json_str).map_err(LoggerError::from)?;
+        Self::strip_timestamps_from_value(&mut v);
+        Ok(v)
+    }
+
+    fn strip_timestamps_from_value(v: &mut serde_json::Value) {
+        if let Some(obj) = v.as_object_mut() {
+            for key in Self::COMPARE_IGNORE_KEYS {
+                obj.remove(*key);
+            }
+            for (_k, child) in obj.iter_mut() {
+                Self::strip_timestamps_from_value(child);
+            }
+        }
+        if let Some(arr) = v.as_array_mut() {
+            for item in arr.iter_mut() {
+                Self::strip_timestamps_from_value(item);
+            }
+        }
     }
 
     pub fn get_log_count(conn: &mut PgConnection, days: i64) -> Result<i64, LoggerError> {

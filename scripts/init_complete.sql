@@ -28,13 +28,13 @@ BEGIN
         'users',
         'project_members',
         'requirement_status',
-        'test_status',
+        'verification_status',
         'categories',
         'applicability',
-        'verification',
+        'verification_methods',
         'requirements',
         'requirement_versions',
-        'tests',
+        'verifications',
         'matrix',
         'logs',
         'custom_field_definitions',
@@ -44,6 +44,7 @@ BEGIN
         'baselines',
         'baseline_requirements',
         'baseline_traceability',
+        'baseline_verifications',
         'requirement_embeddings',
         'embedding_index_queue'
     ]
@@ -92,8 +93,8 @@ INSERT INTO requirement_status (title, description, tag, project_id, is_system) 
     ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
     ('Finished', 'The requirement is finished and completed', 'Fsh', (SELECT id FROM projects WHERE name = 'Marreq Project'), true);
 
--- Test status definitions (is_system = true: default set, not editable/deletable)
-INSERT INTO test_status (title, description, tag, project_id, is_system) VALUES
+-- Verification status definitions (is_system = true: default set, not editable/deletable)
+INSERT INTO verification_status (title, description, tag, project_id, is_system) VALUES
     ('Passed', 'The test has passed all criteria', 'Pass', (SELECT id FROM projects WHERE name = 'Space Project'), true),
     ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'Space Project'), true),
     ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'Space Project'), true),
@@ -187,14 +188,14 @@ INSERT INTO applicability (title, description, tag, project_id) VALUES
     ('Viewers', 'Applies to read-only viewers', 'VIEW', (SELECT id FROM projects WHERE name = 'Marreq Project'));
 
 -- Verification methods for Space Project
-INSERT INTO verification (title, description, tag, project_id) VALUES
+INSERT INTO verification_methods (title, description, tag, project_id) VALUES
     ('Inspection', 'Nondestructive examination of a system or component', 'INSP', (SELECT id FROM projects WHERE name = 'Space Project')),
     ('Analysis', 'Verification using mathematical models and calculations', 'ANALYSIS', (SELECT id FROM projects WHERE name = 'Space Project')),
     ('Demonstration', 'Manipulation of the product as intended in its operational environment', 'DEMO', (SELECT id FROM projects WHERE name = 'Space Project')),
     ('Test', 'Controlled verification with predefined inputs and expected outputs', 'TEST', (SELECT id FROM projects WHERE name = 'Space Project'));
 
 -- Verification methods for Marreq Project
-INSERT INTO verification (title, description, tag, project_id) VALUES
+INSERT INTO verification_methods (title, description, tag, project_id) VALUES
     ('Code Review', 'Review of source code by peers', 'REVIEW', (SELECT id FROM projects WHERE name = 'Marreq Project')),
     ('Unit Test', 'Automated unit testing', 'UNIT', (SELECT id FROM projects WHERE name = 'Marreq Project')),
     ('Integration Test', 'Testing of integrated components', 'INTEG', (SELECT id FROM projects WHERE name = 'Marreq Project')),
@@ -302,13 +303,13 @@ SET
     )
 WHERE r.current_version_id IS NULL;
 
--- Tests for Space Project
-INSERT INTO tests (reference_code, name, description, status_id, source, project_id) VALUES
+-- Verifications (test cases) for Space Project
+INSERT INTO verifications (reference_code, name, description, status_id, source, project_id) VALUES
     (
         'TEST-PWR-001',
         'Solar Array Power Output Test',
         'Verify solar array generates 500W under AM0 illumination in thermal vacuum chamber',
-        (SELECT id FROM test_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
+        (SELECT id FROM verification_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
         'Solar array testing in thermal vacuum chamber',
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
@@ -316,7 +317,7 @@ INSERT INTO tests (reference_code, name, description, status_id, source, project
         'TEST-PWR-002',
         'Battery Endurance Discharge Test',
         'Verify battery provides 200W for 45 minutes during discharge test cycle',
-        (SELECT id FROM test_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
+        (SELECT id FROM verification_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
         'Battery cycle testing and capacity verification',
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
@@ -324,7 +325,7 @@ INSERT INTO tests (reference_code, name, description, status_id, source, project
         'TEST-COMM-001',
         'S-Band Communication Performance Test',
         'Verify S-band communication link performance and data rate capabilities',
-        (SELECT id FROM test_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
+        (SELECT id FROM verification_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
         'RF testing in anechoic chamber',
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
@@ -332,7 +333,7 @@ INSERT INTO tests (reference_code, name, description, status_id, source, project
         'TEST-ACS-001',
         'Star Tracker Pointing Accuracy Test',
         'Verify star tracker pointing accuracy and attitude determination',
-        (SELECT id FROM test_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
+        (SELECT id FROM verification_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
         'Star tracker calibration and pointing accuracy testing',
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
@@ -340,36 +341,36 @@ INSERT INTO tests (reference_code, name, description, status_id, source, project
         'TEST-THERM-001',
         'Thermal Vacuum Performance Test',
         'Verify thermal control system performance in vacuum environment',
-        (SELECT id FROM test_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
+        (SELECT id FROM verification_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
         'Thermal vacuum testing and temperature cycling',
         (SELECT id FROM projects WHERE name = 'Space Project')
     );
 
--- Traceability matrix (requirements to tests mapping)
-INSERT INTO matrix (req_id, test_id, project_id) VALUES
+-- Traceability matrix (requirements to verifications mapping)
+INSERT INTO matrix (req_id, verification_id, project_id) VALUES
     (
         (SELECT id FROM requirements WHERE stable_code = 'REQ-PWR-001' ORDER BY id LIMIT 1),
-        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM verifications WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
     (
         (SELECT id FROM requirements WHERE stable_code = 'REQ-PWR-002' ORDER BY id LIMIT 1),
-        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-002' ORDER BY id LIMIT 1),
+        (SELECT id FROM verifications WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-002' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
     (
         (SELECT id FROM requirements WHERE stable_code = 'REQ-COMM-001' ORDER BY id LIMIT 1),
-        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-COMM-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM verifications WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-COMM-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
     (
         (SELECT id FROM requirements WHERE stable_code = 'REQ-ACS-001' ORDER BY id LIMIT 1),
-        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-ACS-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM verifications WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-ACS-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project')
     ),
     (
         (SELECT id FROM requirements WHERE stable_code = 'REQ-THERM-001' ORDER BY id LIMIT 1),
-        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-THERM-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM verifications WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-THERM-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project')
     );
 
@@ -377,23 +378,23 @@ INSERT INTO matrix (req_id, test_id, project_id) VALUES
 INSERT INTO requirement_version_verification_methods (requirement_version_id, verification_method_id) VALUES
     (
         (SELECT rv.id FROM requirement_versions rv JOIN requirements r ON r.id = rv.requirement_id WHERE r.stable_code = 'REQ-PWR-001' ORDER BY rv.id LIMIT 1),
-        (SELECT id FROM verification WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'INSP' ORDER BY id LIMIT 1)
+        (SELECT id FROM verification_methods WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'INSP' ORDER BY id LIMIT 1)
     ),
     (
         (SELECT rv.id FROM requirement_versions rv JOIN requirements r ON r.id = rv.requirement_id WHERE r.stable_code = 'REQ-PWR-002' ORDER BY rv.id LIMIT 1),
-        (SELECT id FROM verification WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'ANALYSIS' ORDER BY id LIMIT 1)
+        (SELECT id FROM verification_methods WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'ANALYSIS' ORDER BY id LIMIT 1)
     ),
     (
         (SELECT rv.id FROM requirement_versions rv JOIN requirements r ON r.id = rv.requirement_id WHERE r.stable_code = 'REQ-COMM-001' ORDER BY rv.id LIMIT 1),
-        (SELECT id FROM verification WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'INSP' ORDER BY id LIMIT 1)
+        (SELECT id FROM verification_methods WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'INSP' ORDER BY id LIMIT 1)
     ),
     (
         (SELECT rv.id FROM requirement_versions rv JOIN requirements r ON r.id = rv.requirement_id WHERE r.stable_code = 'REQ-ACS-001' ORDER BY rv.id LIMIT 1),
-        (SELECT id FROM verification WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'ANALYSIS' ORDER BY id LIMIT 1)
+        (SELECT id FROM verification_methods WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'ANALYSIS' ORDER BY id LIMIT 1)
     ),
     (
         (SELECT rv.id FROM requirement_versions rv JOIN requirements r ON r.id = rv.requirement_id WHERE r.stable_code = 'REQ-THERM-001' ORDER BY rv.id LIMIT 1),
-        (SELECT id FROM verification WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'TEST' ORDER BY id LIMIT 1)
+        (SELECT id FROM verification_methods WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'TEST' ORDER BY id LIMIT 1)
     );
 
 -- Custom field definitions (Space Project)
@@ -483,7 +484,7 @@ INSERT INTO logs (user_id, action_type, entity_type, entity_id, project_id, desc
         (SELECT id FROM users WHERE username = 'eng_jones' ORDER BY id LIMIT 1),
         'CREATE',
         'TEST',
-        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM verifications WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project'),
         'Test TEST-PWR-001 created by Engineer Jones',
         NOW() - INTERVAL '4 hours'
@@ -492,7 +493,7 @@ INSERT INTO logs (user_id, action_type, entity_type, entity_id, project_id, desc
         (SELECT id FROM users WHERE username = 'tech_lee' ORDER BY id LIMIT 1),
         'UPDATE',
         'TEST',
-        (SELECT id FROM tests WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
+        (SELECT id FROM verifications WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND reference_code = 'TEST-PWR-001' ORDER BY id LIMIT 1),
         (SELECT id FROM projects WHERE name = 'Space Project'),
         'Test TEST-PWR-001 status updated to Passed by Technician Lee',
         NOW() - INTERVAL '2 hours'

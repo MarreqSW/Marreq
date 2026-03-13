@@ -267,15 +267,7 @@ async fn delete_custom_field_route(
         ))));
     }
 
-    let in_use = service.count_versions_using_field(field_id).unwrap_or(0);
-    if in_use > 0 {
-        return Err(DeleteCustomFieldError::InUse(rocket::serde::json::Json(
-            rocket::serde::json::json!({
-                "message": format!("Cannot delete: field is in use by {} requirement version(s). Remove or update those values first.", in_use)
-            }),
-        )));
-    }
-
+    // Delete the definition; DB ON DELETE CASCADE removes all custom_field_values for this field.
     match service.delete(field_id) {
         Ok(()) => Ok(rocket::http::Status::Ok),
         Err(_e) => {
@@ -289,8 +281,6 @@ async fn delete_custom_field_route(
 #[derive(rocket::response::Responder)]
 pub enum DeleteCustomFieldError {
     Redirect(Box<Redirect>),
-    #[response(status = 400, content_type = "json")]
-    InUse(rocket::serde::json::Json<rocket::serde::json::Value>),
 }
 
 pub fn routes() -> Vec<Route> {

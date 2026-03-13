@@ -94,7 +94,7 @@
                       <span class="c-matrix-status-dot status-suspect" aria-label="Suspect – re-review needed" title="Suspect">⚠</span>
                       <form method="post" action="/p/{{@root.selected_project_id}}/matrix/clear_suspect" class="d-inline ms-1" style="display:inline;">
                         <input type="hidden" name="req_id" value="{{../id}}" />
-                        <input type="hidden" name="test_id" value="{{#with (lookup @root.tests @index)}}{{id}}{{/with}}" />
+                        <input type="hidden" name="verification_id" value="{{#with (lookup @root.tests @index)}}{{id}}{{/with}}" />
                         <button type="submit" class="btn btn-sm btn-outline-secondary" title="Clear suspect flag">Clear</button>
                       </form>
                     {{else}}

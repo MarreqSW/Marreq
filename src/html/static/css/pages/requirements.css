@@ -18,13 +18,13 @@
 .marreq-requirements-page {
   background-color: transparent;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--space-6);
   margin: 0 auto;
+  min-width: 0;
   padding: var(--space-6) var(--space-4);
   width: 100%;
-  flex: 1;
-  min-width: 0;
 }
 
 @media (min-width: 768px) {
@@ -48,24 +48,24 @@
 
 @media (min-width: 1024px) {
   .marreq-requirements-page-wrapper {
-    flex-direction: row;
     align-items: flex-start;
+    flex-direction: row;
   }
 }
 
 .marreq-requirements-edit-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  z-index: 1050;
-  width: 100%;
-  max-width: 480px;
-  height: 100vh;
-  overflow: auto;
   background: var(--surface-color, #fff);
-  box-shadow: -4px 0 1rem rgba(0, 0, 0, 0.1);
+  box-shadow: -4px 0 1rem rgb(0 0 0 / 0.1);
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  max-width: 480px;
+  overflow: auto;
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 100%;
+  z-index: 1050;
 }
 
 .marreq-requirements-edit-panel[hidden] {
@@ -80,14 +80,14 @@
 }
 
 .marreq-requirements-edit-panel__header {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-shrink: 0;
-  padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--border-color, #dee2e6);
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-3);
+  justify-content: space-between;
   margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
 }
 
 .marreq-requirements-edit-panel__title {
@@ -97,8 +97,8 @@
 }
 
 .marreq-requirements-edit-panel__header-actions {
-  display: flex;
   align-items: center;
+  display: flex;
   gap: var(--space-2);
 }
 
@@ -108,15 +108,15 @@
 }
 
 .marreq-requirements-edit-panel__close {
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: none;
   background: transparent;
-  font-size: 1.5rem;
-  line-height: 1;
-  cursor: pointer;
+  border: none;
   border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  font-size: 1.5rem;
+  height: 2rem;
+  line-height: 1;
+  padding: 0;
+  width: 2rem;
 }
 
 .marreq-requirements-edit-panel__close:hover {
@@ -125,17 +125,17 @@
 
 .marreq-requirements-edit-panel__form {
   display: flex;
-  flex-direction: column;
   flex: 1;
+  flex-direction: column;
   min-height: 0;
 }
 
 .marreq-requirements-edit-panel__body {
-  flex: 1;
-  overflow-y: auto;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--space-4);
+  overflow-y: auto;
   padding-right: var(--space-2);
 }
 
@@ -158,31 +158,31 @@
 }
 
 .marreq-requirements-edit-panel__hint {
-  font-size: 0.875rem;
   color: var(--text-muted, #6c757d);
+  font-size: 0.875rem;
   margin: var(--space-2) 0 0;
 }
 
 .marreq-requirements-edit-panel__footer {
-  display: flex;
-  gap: var(--space-2);
-  flex-shrink: 0;
-  padding-top: var(--space-4);
   border-top: 1px solid var(--border-color, #dee2e6);
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
   margin-top: var(--space-4);
+  padding-top: var(--space-4);
 }
 
 .marreq-requirements-edit-panel__loading {
-  padding: var(--space-4);
-  margin: 0;
   color: var(--text-muted, #6c757d);
+  margin: 0;
+  padding: var(--space-4);
 }
 
 .marreq-requirements-main {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--space-6);
-  flex: 1;
   min-width: 0;
 }
 

@@ -215,6 +215,7 @@ fn enforce_project_ownership(route_project_id: i32, resource_project_id: i32) ->
 
 /// Build the shared context for both the full edit page and the edit-panel fragment.
 /// Caller must have already checked EditRequirements permission.
+#[allow(clippy::result_large_err)]
 fn build_edit_requirement_context(
     project_id: i32,
     requirement_id: i32,
@@ -230,6 +231,8 @@ fn build_edit_requirement_context(
     if let Some(redir) = enforce_project_ownership(project_id, req.project_id) {
         return Err(redir);
     }
+    // Use requirement's project for all project-scoped data so panel always matches the requirement's project
+    let req_project_id = req.project_id;
 
     let parent: Option<DecoratedRequirement> = if let Some(parent_id) = req.req_parent_id {
         if parent_id != 0 {
@@ -262,15 +265,19 @@ fn build_edit_requirement_context(
         })
         .unwrap_or_else(|| "Unknown author".to_string());
 
-    let categories = CategoryService::new(state.inner()).list_by_project(project_id)?;
+    let categories = CategoryService::new(state.inner()).list_by_project(req_project_id)?;
     let statuses =
-        StatusService::new(state.inner()).list_requirement_statuses_by_project(project_id)?;
-    let users = UserService::new(state.inner()).get_by_project(project_id)?;
+        StatusService::new(state.inner()).list_requirement_statuses_by_project(req_project_id)?;
+    let users = UserService::new(state.inner()).get_by_project(req_project_id)?;
     let repo = state.repo_read();
-    let verifications = repo.get_verification_methods_by_project(project_id)?;
-    let applicability = ApplicabilityService::new(state.inner()).list_by_project(project_id)?;
+    let verifications: Vec<_> = repo
+        .get_verification_methods_by_project(req_project_id)?
+        .into_iter()
+        .filter(|v| v.project_id == req_project_id)
+        .collect();
+    let applicability = ApplicabilityService::new(state.inner()).list_by_project(req_project_id)?;
     let custom_field_definitions = CustomFieldService::new(state.inner())
-        .list_by_project(project_id)
+        .list_by_project(req_project_id)
         .unwrap_or_default();
     let custom_field_definitions_with_values: Vec<serde_json::Value> = custom_field_definitions
         .iter()
@@ -293,7 +300,7 @@ fn build_edit_requirement_context(
         .collect();
 
     let mut candidates: Vec<_> = RequirementService::new(state.inner())
-        .list_by_project(project_id)?
+        .list_by_project(req_project_id)?
         .into_iter()
         .filter(|candidate| candidate.id != requirement_id)
         .collect();

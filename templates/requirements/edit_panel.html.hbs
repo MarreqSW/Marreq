@@ -1,0 +1,124 @@
+{{!-- Fragment only: no layout. Injected into the requirements list page right-side panel. --}}
+<div class="marreq-requirements-edit-panel__inner" data-requirement-edit-panel-content aria-label="Edit requirement {{display_reference}}">
+  <div class="marreq-requirements-edit-panel__header">
+    <h2 class="marreq-requirements-edit-panel__title">{{display_reference}}</h2>
+    <div class="marreq-requirements-edit-panel__header-actions">
+      <a href="/p/{{req.project_id}}/requirements/edit/{{req.id}}" class="marreq-requirements-edit-panel__full-edit-link">Open full edit page</a>
+      <button type="button" class="marreq-requirements-edit-panel__close" data-action="close-edit-panel" aria-label="Close panel">×</button>
+    </div>
+  </div>
+
+  <form method="post" action="/p/{{req.project_id}}/requirements/edit/{{req.id}}" class="marreq-requirements-edit-panel__form" data-requirement-edit-panel-form data-project-id="{{req.project_id}}">
+    <div class="marreq-requirements-edit-panel__body">
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-title" class="c-reqform-field__label">Title</label>
+        <input type="text" name="title" id="panel-title" value="{{req.title}}" class="c-reqform-field__input" required placeholder="The system shall…">
+      </div>
+
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-description" class="c-reqform-field__label">Requirement statement</label>
+        <textarea name="description" id="panel-description" class="c-reqform-field__textarea" rows="6" required placeholder="The system shall…">{{req.description}}</textarea>
+      </div>
+
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-justification" class="c-reqform-field__label">Rationale / Notes</label>
+        <textarea name="justification" id="panel-justification" class="c-reqform-field__textarea" rows="3" placeholder="Why is this required?">{{req.justification}}</textarea>
+      </div>
+
+      <div class="marreq-requirements-edit-panel__field">
+        <label class="c-reqform-field__label">Reference</label>
+        <input type="text" class="c-reqform-field__input c-reqform-field__input--readonly" value="{{req.reference_code}}" readonly disabled>
+      </div>
+
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-category_id" class="c-reqform-field__label">Category</label>
+        <select name="category_id" id="panel-category_id" class="c-reqform-field__input" required>
+          {{#each categories}}
+          <option value="{{id}}" {{#if (eq id ../req.req_category_id)}}selected{{/if}}>{{title}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-applicability_id" class="c-reqform-field__label">Applicability</label>
+        <select name="applicability_id" id="panel-applicability_id" class="c-reqform-field__input" required>
+          {{#each applicability}}
+          <option value="{{id}}" {{#if (eq id ../req.req_applicability_id)}}selected{{/if}}>{{title}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      {{> partials/verification_pills verification_with_selected=verification_with_selected}}
+
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-status_id" class="c-reqform-field__label">Status</label>
+        <select name="status_id" id="panel-status_id" class="c-reqform-field__input" required>
+          {{#each statuses}}
+          <option value="{{id}}" {{#if (eq id ../req.req_current_status_id)}}selected{{/if}}>{{title}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      <div class="marreq-requirements-edit-panel__field">
+        <label class="c-reqform-field__label">Author</label>
+        <input type="text" class="c-reqform-field__input c-reqform-field__input--readonly" value="{{req.author_id}}" readonly disabled>
+      </div>
+
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-reviewer_id" class="c-reqform-field__label">Reviewer</label>
+        <select name="reviewer_id" id="panel-reviewer_id" class="c-reqform-field__input" required>
+          {{#each users}}
+          <option value="{{id}}" {{#if (eq id ../req.req_reviewer_id)}}selected{{/if}}>{{name}}</option>
+          {{/each}}
+        </select>
+      </div>
+
+      {{#if custom_field_definitions_with_values}}
+      <div class="marreq-requirements-edit-panel__field-group">
+        <h3 class="marreq-requirements-edit-panel__field-group-title">Custom fields</h3>
+        {{#each custom_field_definitions_with_values}}
+        <div class="marreq-requirements-edit-panel__field" data-custom-field-id="{{id}}">
+          <label for="panel_custom_field_{{id}}" class="c-reqform-field__label">{{label}}</label>
+          {{#if (eq field_type "text")}}
+          <input type="text" id="panel_custom_field_{{id}}" class="c-reqform-field__input c-reqform-field__custom-value" data-field-id="{{id}}" value="{{current_value}}">
+          {{else if (eq field_type "number")}}
+          <input type="number" id="panel_custom_field_{{id}}" class="c-reqform-field__input c-reqform-field__custom-value" data-field-id="{{id}}" value="{{current_value}}">
+          {{else if (eq field_type "boolean")}}
+          <select id="panel_custom_field_{{id}}" class="c-reqform-field__input c-reqform-field__custom-value" data-field-id="{{id}}">
+            <option value="">—</option>
+            <option value="true" {{#if (eq current_value "true")}}selected{{/if}}>Yes</option>
+            <option value="false" {{#if (eq current_value "false")}}selected{{/if}}>No</option>
+          </select>
+          {{else if (eq field_type "enum")}}
+          <select id="panel_custom_field_{{id}}" class="c-reqform-field__input c-reqform-field__custom-value" data-field-id="{{id}}">
+            <option value="">—</option>
+            {{#if enum_values}}
+            {{#each enum_values}}
+            <option value="{{this}}" {{#if (eq this ../current_value)}}selected{{/if}}>{{this}}</option>
+            {{/each}}
+            {{/if}}
+          </select>
+          {{else}}
+          <input type="text" id="panel_custom_field_{{id}}" class="c-reqform-field__input c-reqform-field__custom-value" data-field-id="{{id}}" value="{{current_value}}">
+          {{/if}}
+        </div>
+        {{/each}}
+      </div>
+      {{/if}}
+
+      <p class="marreq-requirements-edit-panel__hint">Attachments and upstream trace: <a href="/p/{{req.project_id}}/requirements/edit/{{req.id}}">open full edit page</a>.</p>
+    </div>
+
+    <input type="hidden" name="author_id" value="{{req.req_author_id}}">
+    <input type="hidden" name="id" value="{{req.id}}">
+    <input type="hidden" name="reference_code" value="{{req.reference_code}}">
+    <input type="hidden" name="project_id" value="{{req.project_id}}">
+    <input type="hidden" name="parent_links" value="{{parent_links_json}}">
+    <input type="hidden" name="custom_field_values" id="panel_custom_field_values" value="{{custom_field_values_json}}">
+
+    <div class="marreq-requirements-edit-panel__footer">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <button type="button" class="btn btn-outline-secondary" data-action="close-edit-panel">Cancel</button>
+    </div>
+  </form>
+</div>

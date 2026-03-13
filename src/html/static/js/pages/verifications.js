@@ -489,6 +489,104 @@ function initFilterClear() {
   });
 }
 
+function getProjectIdFromPage() {
+  const page = document.querySelector('.marreq-requirements-page[data-project-id]');
+  const id = page?.getAttribute('data-project-id');
+  return id != null ? id.trim() : '';
+}
+
+function initEditPanel() {
+  const panelEl = document.getElementById('test-edit-panel');
+  if (!panelEl) return;
+
+  document.addEventListener('click', (e) => {
+    const openBtn = e.target.closest('[data-action="open-edit-panel"]');
+    if (openBtn) {
+      e.preventDefault();
+      const testId = openBtn.getAttribute('data-test-id');
+      const projectId = openBtn.getAttribute('data-project-id') || getProjectIdFromPage();
+      if (!testId || !projectId) return;
+      openEditPanel(panelEl, projectId, testId);
+    }
+
+    const closeBtn = e.target.closest('[data-action="close-edit-panel"]');
+    if (closeBtn) {
+      closeEditPanel(panelEl);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && panelEl && !panelEl.hasAttribute('hidden')) {
+      closeEditPanel(panelEl);
+    }
+  });
+
+  panelEl.addEventListener('submit', (e) => {
+    const form = e.target.closest('[data-test-edit-panel-form]');
+    if (!form) return;
+    e.preventDefault();
+    const formData = new FormData(form);
+    const params = new URLSearchParams();
+    for (const [k, v] of formData.entries()) {
+      params.append(k, v);
+    }
+    fetch(form.action, {
+      method: 'POST',
+      body: params,
+      redirect: 'manual',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+      .then((res) => {
+        if (res.type === 'opaqueredirect' || res.status === 302 || res.status === 303) {
+          closeEditPanel(panelEl);
+          window.location.reload();
+        } else {
+          return res.text().then((text) => {
+            showNotification('Save failed. Try the full edit page.', 'error');
+            console.error('Test edit panel save:', res.status, text);
+          });
+        }
+      })
+      .catch((err) => {
+        showNotification('Save failed. Try the full edit page.', 'error');
+        console.error('Test edit panel save error:', err);
+      });
+  });
+}
+
+function openEditPanel(panelEl, projectId, testId) {
+  const url = `/p/${projectId}/verifications/edit-panel/${testId}`;
+  panelEl.innerHTML = '<p class="marreq-requirements-edit-panel__loading">Loading…</p>';
+  panelEl.removeAttribute('hidden');
+  panelEl.setAttribute('aria-hidden', 'false');
+
+  fetch(url, { headers: { Accept: 'text/html' } })
+    .then((res) => {
+      if (!res.ok) throw new Error(res.statusText);
+      return res.text();
+    })
+    .then((html) => {
+      panelEl.innerHTML = html;
+      const firstFocusable = panelEl.querySelector(
+        'button, [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+      );
+      if (firstFocusable) firstFocusable.focus();
+    })
+    .catch(() => {
+      panelEl.innerHTML =
+        '<p class="marreq-requirements-edit-panel__loading">Failed to load. <a href="' +
+        url +
+        '">Open full edit page</a>.</p>';
+    });
+}
+
+function closeEditPanel(panelEl) {
+  if (!panelEl) return;
+  panelEl.setAttribute('hidden', '');
+  panelEl.setAttribute('aria-hidden', 'true');
+  panelEl.innerHTML = '';
+}
+
 export function init() {
   initTestTable();
   initCreateTestModal();
@@ -498,4 +596,5 @@ export function init() {
   initDeleteButtons();
   initRowDetails();
   initFilterClear();
+  initEditPanel();
 }

@@ -8,7 +8,7 @@
     </div>
   </div>
 
-  <form method="post" action="/p/{{req.project_id}}/requirements/edit/{{req.id}}" class="marreq-requirements-edit-panel__form" data-requirement-edit-panel-form>
+  <form method="post" action="/p/{{req.project_id}}/requirements/edit/{{req.id}}" class="marreq-requirements-edit-panel__form" data-requirement-edit-panel-form data-project-id="{{req.project_id}}">
     <div class="marreq-requirements-edit-panel__body">
       <div class="marreq-requirements-edit-panel__field">
         <label for="panel-title" class="c-reqform-field__label">Title</label>
@@ -48,7 +48,7 @@
         </select>
       </div>
 
-      {{> partials/verification_pills}}
+      {{> partials/verification_pills verification_with_selected=verification_with_selected}}
 
       <div class="marreq-requirements-edit-panel__field">
         <label for="panel-status_id" class="c-reqform-field__label">Status</label>
@@ -118,7 +118,7 @@
 
     <div class="marreq-requirements-edit-panel__footer">
       <button type="submit" class="btn btn-primary">Save</button>
-      <a href="/p/{{req.project_id}}/requirements/show/{{req.id}}" class="btn btn-outline-secondary">Cancel</a>
+      <button type="button" class="btn btn-outline-secondary" data-action="close-edit-panel">Cancel</button>
     </div>
   </form>
 </div>

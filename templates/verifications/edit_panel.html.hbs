@@ -1,0 +1,74 @@
+{{!-- Fragment only: no layout. Injected into the tests list page right-side panel. --}}
+<div class="marreq-requirements-edit-panel__inner" data-test-edit-panel-content aria-label="Edit test {{tests.reference_code}}">
+  <div class="marreq-requirements-edit-panel__header">
+    <h2 class="marreq-requirements-edit-panel__title">{{tests.reference_code}}</h2>
+    <div class="marreq-requirements-edit-panel__header-actions">
+      <a href="/p/{{tests.project_id}}/verifications/edit/{{tests.id}}" class="marreq-requirements-edit-panel__full-edit-link">Open full edit page</a>
+      <button type="button" class="marreq-requirements-edit-panel__close" data-action="close-edit-panel" aria-label="Close panel">×</button>
+    </div>
+  </div>
+
+  <form method="post" action="/p/{{tests.project_id}}/verifications/edit/{{tests.id}}" class="marreq-requirements-edit-panel__form" data-test-edit-panel-form>
+    <div class="marreq-requirements-edit-panel__body">
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-name" class="c-reqform-field__label">Verification Name</label>
+        <input type="text" name="name" id="panel-name" value="{{tests.name}}" class="c-reqform-field__input" required>
+      </div>
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-reference_code" class="c-reqform-field__label">Reference</label>
+        <input type="text" name="reference_code" id="panel-reference_code" value="{{tests.reference_code}}" class="c-reqform-field__input" required>
+      </div>
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-description" class="c-reqform-field__label">Description</label>
+        <textarea name="description" id="panel-description" class="c-reqform-field__textarea" rows="4" required>{{tests.description}}</textarea>
+      </div>
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-source" class="c-reqform-field__label">Source</label>
+        <input type="text" name="source" id="panel-source" value="{{tests.source}}" class="c-reqform-field__input">
+      </div>
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-status_id" class="c-reqform-field__label">Status</label>
+        <select name="status_id" id="panel-status_id" class="c-reqform-field__input" required>
+          {{#each status}}
+          <option value="{{id}}" {{#if (eq id ../tests.verification_status_id)}}selected{{/if}}>{{title}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-verification_method_id" class="c-reqform-field__label">Verification Method</label>
+        <select name="verification_method_id" id="panel-verification_method_id" class="c-reqform-field__input">
+          <option value="0" {{#unless tests.verification_method_id}}selected{{/unless}}>None</option>
+          {{#each verification}}
+          <option value="{{id}}" {{#if (eq id ../tests.verification_method_id)}}selected{{/if}}>{{title}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-parent_id" class="c-reqform-field__label">Parent Verification</label>
+        <select name="parent_id" id="panel-parent_id" class="c-reqform-field__input">
+          <option value="0" {{#unless tests.verification_parent_id}}selected{{/unless}}>None</option>
+          {{#each parent}}
+          <option value="{{id}}" {{#if (eq id ../tests.verification_parent_id)}}selected{{/if}}>{{name}}</option>
+          {{/each}}
+        </select>
+      </div>
+      <div class="marreq-requirements-edit-panel__field">
+        <label for="panel-linked_requirements" class="c-reqform-field__label">Linked Requirements</label>
+        <select name="linked_requirements" id="panel-linked_requirements" class="c-reqform-field__input" multiple size="5">
+          {{#each requirements}}
+          <option value="{{id}}" {{#each ../linked_req_ids}}{{#if (eq this ../id)}}selected{{/if}}{{/each}}>REQ-{{id}}: {{title}}</option>
+          {{/each}}
+        </select>
+        <p class="marreq-requirements-edit-panel__hint">Hold Ctrl/Cmd to select multiple.</p>
+      </div>
+
+      <input type="hidden" name="id" value="{{tests.id}}">
+      <input type="hidden" name="project_id" value="{{tests.project_id}}">
+    </div>
+
+    <div class="marreq-requirements-edit-panel__footer">
+      <button type="submit" class="btn btn-primary">Save</button>
+      <button type="button" class="btn btn-outline-secondary" data-action="close-edit-panel">Cancel</button>
+    </div>
+  </form>
+</div>

@@ -148,6 +148,9 @@ Modern card-based layout for test browsing
           </a>
           {{#if ../can_edit_requirements}}
           <a href="/p/{{../project.id}}/verifications/edit/{{id}}" class="marreq-requirement-card__action"
+            data-action="open-edit-panel"
+            data-test-id="{{id}}"
+            data-project-id="{{../project.id}}"
             title="Edit test">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
               <path

@@ -1415,7 +1415,11 @@ impl crate::repository::CustomFieldRepository for DieselRepoMock {
         self.custom_field_definitions
             .remove(&id)
             .map(|_| ())
-            .ok_or(RepoError::NotFound)
+            .ok_or(RepoError::NotFound)?;
+        // Simulate DB ON DELETE CASCADE: remove all values for this field.
+        self.custom_field_values
+            .retain(|(_, field_id, _)| *field_id != id);
+        Ok(())
     }
 
     fn get_custom_field_values_for_version(

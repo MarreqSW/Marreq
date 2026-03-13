@@ -355,6 +355,30 @@ fn build_edit_requirement_context(
         })
         .collect();
 
+    let parent_links_payload: Vec<serde_json::Value> = parent_links_edit
+        .iter()
+        .filter_map(|v| {
+            let id = v.get("target_requirement_id")?.as_i64()? as i32;
+            let link_type = v.get("link_type")?.as_str()?.to_string();
+            Some((id, link_type))
+        })
+        .map(|(target_requirement_id, link_type)| json!({ "target_requirement_id": target_requirement_id, "link_type": link_type }))
+        .collect();
+    let parent_links_json =
+        serde_json::to_string(&parent_links_payload).unwrap_or_else(|_| "[]".to_string());
+
+    let custom_field_values_payload: Vec<serde_json::Value> = custom_field_definitions_with_values
+        .iter()
+        .map(|v| {
+            json!({
+                "field_id": v.get("id").and_then(|x| x.as_i64()).unwrap_or(0) as i32,
+                "value": v.get("current_value").cloned().unwrap_or(serde_json::Value::Null),
+            })
+        })
+        .collect();
+    let custom_field_values_json =
+        serde_json::to_string(&custom_field_values_payload).unwrap_or_else(|_| "[]".to_string());
+
     let ctx = json!({
         "req": req,
         "categories": categories,
@@ -368,6 +392,8 @@ fn build_edit_requirement_context(
         "custom_field_definitions_with_values": custom_field_definitions_with_values,
         "linked_requirements": linked_requirement_options,
         "parent_links_edit": parent_links_edit,
+        "parent_links_json": parent_links_json,
+        "custom_field_values_json": custom_field_values_json,
         "link_types": link_types,
         "user": user,
         "display_reference": display_reference,
@@ -1321,6 +1347,27 @@ async fn get_edit_requirement(
     Ok(Template::render("requirements/edit_requirement", ctx))
 }
 
+/// Returns only the edit form HTML fragment for the right-side panel (no layout).
+#[get("/<project_id>/requirements/edit-panel/<requirement_id>")]
+async fn get_edit_requirement_panel(
+    project_access: ProjectAccess,
+    project_id: i32,
+    requirement_id: i32,
+    state: &State<AppState>,
+) -> Result<Template, Redirect> {
+    let user = project_access.into_user();
+    if !has_permission(
+        &*state.repo_read(),
+        &user,
+        project_id,
+        Permission::EditRequirements,
+    ) {
+        return Err(requirements_list_redirect(project_id));
+    }
+    let ctx = build_edit_requirement_context(project_id, requirement_id, &user, state)?;
+    Ok(Template::render("requirements/edit_panel", ctx))
+}
+
 #[post("/<project_id>/requirements/edit/<requirement_id>", data = "<form>")]
 async fn post_edit_requirement(
     project_access: ProjectAccess,
@@ -1990,6 +2037,7 @@ pub fn routes() -> Vec<Route> {
         show_requirement_id,
         show_requirement_version,
         get_edit_requirement,
+        get_edit_requirement_panel,
         post_edit_requirement,
         delete_requirement_route,
         new_requirement,

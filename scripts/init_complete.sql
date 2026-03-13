@@ -283,15 +283,23 @@ INSERT INTO requirement_versions (
         '2024-07-15'
     );
 
--- Point each requirement container to its current (first) version
+-- Point each requirement container to its current (first) version and set first_created_at
 UPDATE requirements r
-SET current_version_id = (
-    SELECT rv.id
-    FROM requirement_versions rv
-    WHERE rv.requirement_id = r.id
-    ORDER BY rv.id ASC
-    LIMIT 1
-)
+SET
+    current_version_id = (
+        SELECT rv.id
+        FROM requirement_versions rv
+        WHERE rv.requirement_id = r.id
+        ORDER BY rv.id ASC
+        LIMIT 1
+    ),
+    first_created_at = (
+        SELECT rv.created_at
+        FROM requirement_versions rv
+        WHERE rv.requirement_id = r.id
+        ORDER BY rv.id ASC
+        LIMIT 1
+    )
 WHERE r.current_version_id IS NULL;
 
 -- Tests for Space Project

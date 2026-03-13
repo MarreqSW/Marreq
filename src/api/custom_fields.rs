@@ -115,13 +115,7 @@ pub async fn delete(
     if def.project_id != project_id {
         return Err(ApiError::NotFound("custom field not in project".into()));
     }
-    let in_use = service.count_versions_using_field(field_id)?;
-    if in_use > 0 {
-        return Err(ApiError::BadRequest(format!(
-            "Cannot delete: field is in use by {} requirement version(s). Remove or update those values first.",
-            in_use
-        )));
-    }
+    // Delete the definition; DB ON DELETE CASCADE removes all custom_field_values for this field.
     service.delete(field_id)?;
     Ok(json!({
         "status": "ok",
@@ -384,7 +378,7 @@ mod tests {
     }
 
     #[rocket::async_test]
-    async fn delete_returns_400_when_field_in_use() {
+    async fn delete_cascades_when_field_in_use() {
         let mut repo = repo_with_project();
         repo.custom_field_definitions.insert(
             1,
@@ -407,6 +401,8 @@ mod tests {
             .private_cookie(auth_cookie())
             .dispatch()
             .await;
-        assert_eq!(response.status(), Status::BadRequest);
+        assert_eq!(response.status(), Status::Ok);
+        let body: Value = response.into_json().await.unwrap();
+        assert_eq!(body["status"], "ok");
     }
 }

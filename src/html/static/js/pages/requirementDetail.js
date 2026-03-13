@@ -162,6 +162,32 @@ function renderBodySections(root, sections = []) {
   }
 }
 
+function renderAttachments(root, attachments = []) {
+  const container = getSlot(root, 'attachments');
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = '';
+  if (!attachments || attachments.length === 0) {
+    return;
+  }
+
+  const ul = document.createElement('ul');
+  ul.className = 'list-unstyled mb-0 mt-2';
+  attachments.forEach((att) => {
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = att.href || '#';
+    a.rel = 'noopener noreferrer';
+    a.target = '_blank';
+    a.textContent = att.label || 'Link';
+    li.appendChild(a);
+    ul.appendChild(li);
+  });
+  container.appendChild(ul);
+}
+
 function renderComments(root, view, canonical) {
   const listSlot = getSlot(root, 'comments-list');
   const lockedSlot = getSlot(root, 'comments-locked');
@@ -703,6 +729,7 @@ function hydratePage(view, canonical) {
   renderChips(root, view.chips);
   renderMetadata(root, view.metadata);
   renderBodySections(root, view.body_sections);
+  renderAttachments(root, view.attachments);
   renderComments(root, view, canonical);
   renderRelationships(root, view.relationships, canonical.project_id, view.linked_tests);
 }

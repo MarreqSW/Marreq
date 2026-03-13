@@ -22,6 +22,7 @@ pub struct RequirementContainer {
     pub project_id: i32,
     pub stable_code: String,
     pub current_version_id: Option<i32>,
+    pub first_created_at: chrono::NaiveDateTime,
 }
 
 /// A single immutable requirement version (content snapshot).

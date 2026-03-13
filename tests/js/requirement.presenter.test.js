@@ -198,14 +198,14 @@ describe('Requirement Presenter', () => {
 
   describe('notesAndAttachments', () => {
     it('should return notes and attachments when link provided', () => {
-      const result = notesAndAttachments('https://example.com/doc');
+      const result = notesAndAttachments('', 'https://example.com/doc');
       expect(result.notes).toContain('https://example.com/doc');
       expect(result.attachments).toHaveLength(1);
       expect(result.attachments[0].href).toBe('https://example.com/doc');
     });
 
     it('should return default message when no link', () => {
-      const result = notesAndAttachments('');
+      const result = notesAndAttachments('', '');
       expect(result.notes).toBe('No implementation notes recorded.');
       expect(result.attachments).toHaveLength(0);
     });

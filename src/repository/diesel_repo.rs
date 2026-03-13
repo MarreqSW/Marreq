@@ -956,7 +956,7 @@ fn requirement_from_baseline_version(
         reference_code: container.stable_code.clone(),
         category_id: version.category_id,
         parent_id: None, // populated from requirement_version_links by service/decorator layer
-        creation_date: version.created_at,
+        creation_date: container.first_created_at,
         update_date: version.created_at,
         deadline_date: version.deadline_date,
         applicability_id: version.applicability_id,
@@ -985,7 +985,7 @@ fn requirement_from_current(
         reference_code: container.stable_code.clone(),
         category_id: version.category_id,
         parent_id: None, // populated from requirement_version_links by service/decorator layer
-        creation_date: version.created_at,
+        creation_date: container.first_created_at,
         update_date: version.created_at,
         deadline_date: version.deadline_date,
         applicability_id: version.applicability_id,
@@ -1168,12 +1168,16 @@ impl RequirementsRepository for DieselRepo {
                 .returning(requirements::id)
                 .get_result(conn)?;
             let version = new.to_new_version(req_id);
-            let version_id: i32 = diesel::insert_into(requirement_versions::table)
-                .values(&version)
-                .returning(requirement_versions::id)
-                .get_result(conn)?;
+            let (version_id, version_created_at): (i32, chrono::NaiveDateTime) =
+                diesel::insert_into(requirement_versions::table)
+                    .values(&version)
+                    .returning((requirement_versions::id, requirement_versions::created_at))
+                    .get_result(conn)?;
             diesel::update(requirements::table.filter(requirements::id.eq(req_id)))
-                .set(requirements::current_version_id.eq(version_id))
+                .set((
+                    requirements::current_version_id.eq(version_id),
+                    requirements::first_created_at.eq(version_created_at),
+                ))
                 .execute(conn)?;
             Ok(req_id)
         })

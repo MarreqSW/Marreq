@@ -8,17 +8,20 @@ MAIN PAGE COMPOSITION
 Assembles all partials into the complete page structure
 ============================================================ --}}
 {{#*inline "page"}}
-<div class="marreq-requirements-page">
-  {{> requirements/_page_header}}
-  <div class="marreq-requirements-main">
-    {{> requirements/_metrics_section}}
-    {{> requirements/_filter_controls}}
-    {{> requirements/_pagination}}
-    {{> requirements/_card_view}}
-    {{> requirements/_table_view}}
-    {{> requirements/_tree_view}}
-    {{> requirements/_pagination}}
+<div class="marreq-requirements-page-wrapper">
+  <div class="marreq-requirements-page" data-project-id="{{#if project.id}}{{project.id}}{{/if}}">
+    {{> requirements/_page_header}}
+    <div class="marreq-requirements-main">
+      {{> requirements/_metrics_section}}
+      {{> requirements/_filter_controls}}
+      {{> requirements/_pagination}}
+      {{> requirements/_card_view}}
+      {{> requirements/_table_view}}
+      {{> requirements/_tree_view}}
+      {{> requirements/_pagination}}
+    </div>
   </div>
+  <aside id="requirement-edit-panel" class="marreq-requirements-edit-panel" hidden aria-hidden="true" aria-label="Edit requirement panel"></aside>
 </div>
 
 {{!-- Duplicate Requirement Modal --}}

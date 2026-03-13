@@ -1,6 +1,7 @@
 import { jsonFetch, postJson, patchJson } from '../core/net.js';
 import { showNotification } from '../modules/notifications.js';
 import { searchTree, filterTree, initTreeControls } from '../modules/tree.js';
+import { initCustomDropdowns } from '../modules/customDropdown.js';
 import { init as initSemanticSearch } from './semanticSearch.js';
 
 const state = {
@@ -1354,6 +1355,25 @@ function initEditPanel() {
     if (closeBtn) {
       closeEditPanel(panelEl);
     }
+
+    const createVerificationBtn = e.target.closest('[data-action="create-verification"]');
+    if (createVerificationBtn && panelEl.contains(createVerificationBtn)) {
+      e.preventDefault();
+      e.stopPropagation();
+      const dropdown = createVerificationBtn.closest('[data-dropdown="verification"]');
+      if (dropdown) {
+        const menu = dropdown.querySelector('[data-role="dropdown-menu"]');
+        const trigger = dropdown.querySelector('[data-role="dropdown-trigger"]');
+        if (menu) menu.hidden = true;
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      }
+      const modal = document.getElementById('verificationModal');
+      if (modal && window.bootstrap?.Modal) {
+        const inlineForm = document.getElementById('inlineVerificationForm');
+        if (inlineForm) inlineForm.reset();
+        new window.bootstrap.Modal(modal).show();
+      }
+    }
   });
 
   document.addEventListener('keydown', (e) => {
@@ -1391,6 +1411,76 @@ function initEditPanel() {
         console.error('Edit panel save error:', err);
       });
   });
+
+  initPanelInlineVerificationForm(panelEl);
+}
+
+function initPanelInlineVerificationForm(panelEl) {
+  const modalForm = document.getElementById('inlineVerificationForm');
+  const modal = document.getElementById('verificationModal');
+  if (!modalForm || !modal || !window.bootstrap) return;
+
+  modalForm.addEventListener('submit', async (e) => {
+    const form = panelEl.querySelector('[data-requirement-edit-panel-form]');
+    if (!form || panelEl.hasAttribute('hidden')) return;
+    const projectId = form.getAttribute('data-project-id');
+    if (!projectId) return;
+
+    e.preventDefault();
+    const fd = new FormData(modalForm);
+    const payload = {
+      title: (fd.get('title') || '').toString().trim(),
+      description: (fd.get('description') || '').toString().trim(),
+      tag: (fd.get('tag') || '').toString().trim(),
+    };
+
+    const submitBtn = modalForm.querySelector('button[type="submit"]');
+    try {
+      if (submitBtn) submitBtn.setAttribute('disabled', 'disabled');
+      const data = await postJson(`/p/${projectId}/requirements/inline/verification`, payload);
+
+      const select = form.querySelector('#verification_method_ids');
+      const dropdown = form.querySelector('[data-dropdown="verification"]');
+      if (select) {
+        const option = document.createElement('option');
+        option.value = String(data.id);
+        option.textContent = data.label;
+        option.selected = true;
+        select.append(option);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      if (dropdown) {
+        const list = dropdown.querySelector('[data-role="dropdown-list"]');
+        if (list) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'c-custom-dropdown__item c-custom-dropdown__item--selected';
+          button.setAttribute('data-value', String(data.id));
+          button.setAttribute('data-multi-item', '');
+          button.textContent = data.label;
+          list.append(button);
+        }
+        initCustomDropdowns(dropdown);
+        const valueDisplay = dropdown.querySelector('[data-role="dropdown-value"]');
+        if (valueDisplay && select) {
+          const selectedCount = select.selectedOptions.length;
+          valueDisplay.textContent = selectedCount === 1
+            ? select.selectedOptions[0].textContent.trim()
+            : `${selectedCount} selected`;
+          valueDisplay.classList.remove('c-custom-dropdown__value--placeholder');
+        }
+      }
+
+      const bsModal = window.bootstrap.Modal.getInstance(modal);
+      if (bsModal) bsModal.hide();
+      modalForm.reset();
+      showNotification('Verification method created', 'success', { duration: 3500 });
+    } catch (err) {
+      showNotification(err?.message || 'Unable to create verification method', 'error');
+    } finally {
+      if (submitBtn) submitBtn.removeAttribute('disabled');
+    }
+  });
 }
 
 function syncPanelCustomFieldValues(form) {
@@ -1420,6 +1510,7 @@ function openEditPanel(panelEl, projectId, requirementId) {
     })
     .then((html) => {
       panelEl.innerHTML = html;
+      initCustomDropdowns(panelEl);
       const firstFocusable = panelEl.querySelector(
         'button, [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
       );

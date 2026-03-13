@@ -9,16 +9,19 @@
      Assembles all partials into the complete page structure
      ============================================================ --}}
 {{#*inline "page"}}
-<div class="marreq-requirements-page" data-project-id="{{project.id}}">
-  {{> verifications/_page_header}}
-  <div class="marreq-requirements-main">
-    {{> verifications/_metrics_section}}
-    {{> verifications/_filter_controls}}
-    {{> requirements/_pagination}}
-    {{> verifications/_card_view}}
-    {{> verifications/_table_view}}
-    {{> requirements/_pagination}}
+<div class="marreq-requirements-page-wrapper">
+  <div class="marreq-requirements-page" data-project-id="{{project.id}}">
+    {{> verifications/_page_header}}
+    <div class="marreq-requirements-main">
+      {{> verifications/_metrics_section}}
+      {{> verifications/_filter_controls}}
+      {{> requirements/_pagination}}
+      {{> verifications/_card_view}}
+      {{> verifications/_table_view}}
+      {{> requirements/_pagination}}
+    </div>
   </div>
+  <aside id="test-edit-panel" class="marreq-requirements-edit-panel" hidden aria-hidden="true" aria-label="Edit test panel"></aside>
 </div>
 {{!-- Hidden data for JS --}}
 <script type="application/json" id="testsInlineEditConfig">{{{inline_edit_config_json}}}</script>

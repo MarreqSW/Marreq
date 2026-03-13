@@ -59,6 +59,9 @@
         <div class="c-tree__actions">
           <a href="/p/{{requirement.project_id}}/requirements/edit/{{requirement.id}}" 
              class="c-tree__action-button" 
+             data-action="open-edit-panel"
+             data-requirement-id="{{requirement.id}}"
+             data-project-id="{{requirement.project_id}}"
              title="Edit requirement"
              aria-label="Edit requirement">
             <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">

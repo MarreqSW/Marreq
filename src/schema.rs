@@ -314,6 +314,7 @@ diesel::table! {
         project_id -> Int4,
         stable_code -> Varchar,
         current_version_id -> Nullable<Int4>,
+        first_created_at -> Timestamp,
     }
 }
 

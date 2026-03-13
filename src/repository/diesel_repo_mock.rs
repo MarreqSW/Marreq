@@ -1588,7 +1588,7 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
             out.push(Requirement {
                 id: req.id,
                 current_version_id: Some(version.id),
-                same_as_current: None,
+                same_as_current: Some(req.current_version_id == Some(version.id)),
                 title: version.title.clone(),
                 description: version.description.clone(),
                 status_id: version.status_id,
@@ -1597,7 +1597,7 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
                 reference_code: req.reference_code.clone(),
                 category_id: version.category_id,
                 parent_id: None, // populated from requirement_version_links by service/decorator layer
-                creation_date: version.created_at,
+                creation_date: req.creation_date,
                 update_date: version.created_at,
                 deadline_date: version.deadline_date,
                 applicability_id: version.applicability_id,

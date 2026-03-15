@@ -4,6 +4,13 @@ set -euo pipefail
 echo "Waiting for PostgreSQL container to stabilize..."
 sleep 5
 
+# The base compose file references ../.env for the marreq service.
+# In CI we only run db, but docker compose still validates referenced env files.
+if [[ ! -f .env ]]; then
+  echo "No .env found; creating an empty CI placeholder to satisfy compose parsing."
+  touch .env
+fi
+
 COMPOSE_ARGS=(-f docker/docker-compose.yml)
 if [[ -n "${CI_COMPOSE_OVERRIDE_FILE:-}" ]]; then
   COMPOSE_ARGS+=(-f "${CI_COMPOSE_OVERRIDE_FILE}")

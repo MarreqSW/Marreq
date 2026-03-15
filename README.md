@@ -127,11 +127,12 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 
 #### Quick Start (Recommended)
 
-For a fully initialized database with pre-configured users and sample data, use the helper script described in the [scripts README](scripts/README.md), in particular [`setup_database.sh`](scripts/setup_database.sh).
+For a fully initialized database with pre-configured users and sample data, use the helper scripts described in the [scripts README](scripts/README.md), in particular [`db_setup.sh`](scripts/db_setup.sh) (optionally followed by [`db_seed.sh`](scripts/db_seed.sh)).
 
 Typical flow:
-- Start database: `docker compose up -d db`
-- Initialize DB with sample data: `./scripts/setup_database.sh`
+- Start database: `docker compose -f docker/docker-compose.yml up -d db`
+- Initialize DB schema: `./scripts/db_setup.sh`
+- Load sample data (optional): `./scripts/db_seed.sh`
 - Start app: `cargo run --bin marreq`
 
 Then open **http://localhost:8000** in your browser (demo admin user `alice` uses password `ChangeMe123!`).
@@ -158,10 +159,10 @@ For detailed database setup options (automated, manual, reset, verification) see
 
 ### Import Features
 
-- **Excel Parser**: Standalone application to parse exported Excel files and import data via API
+- **Excel Import (Web UI)**: Upload `.xlsx`/`.csv` files in the project import flow with column mapping
 - **ReqIF 1.2 Import**: Import requirements from ReqIF XML into a project (project ReqIF/Import page)
-- **Data Import**: Import requirements, tests, and traceability data from Excel or ReqIF
-- **API Integration**: Seamless integration with the main application's REST API
+- **Data Import**: Import requirements and related metadata from Excel or ReqIF
+- **Indexing integration**: Imported requirements are queued for semantic index refresh when embeddings are enabled
 
 ## 🔌 API Reference
 
@@ -298,7 +299,7 @@ For a full entity-relationship diagram see [docs/architecture/database-schema.md
 
 A comprehensive database initialization system is provided, including SQL files, helper scripts, pre-configured users, and rich sample data.
 
-- For end-to-end database setup and reset via scripts, see the [scripts README](scripts/README.md) (section `setup_database.sh`).
+- For end-to-end database setup and reset via scripts, see the [scripts README](scripts/README.md) (`db_setup.sh`, `db_seed.sh`, `db_reset.sh`).
 - For a full description of the schema, sample projects/users, and manual initialization commands, see the [database setup guide](docs/developer/database-setup.md).
 
 ### Migrations
@@ -322,22 +323,36 @@ diesel migration redo
 ```
 Marreq/
 ├── src/
-│   ├── main.rs              # Application entry point
-│   ├── models.rs            # Data models
-│   ├── schema.rs            # Database schema (auto-generated)
-│   ├── helper_functions.rs  # Database operations
-│   ├── routes/              # Route handlers
-│   ├── generators/          # Report generators
+│   ├── main.rs             # Application entry point
+│   ├── app.rs              # Rocket bootstrap and route mounting
+│   ├── schema.rs           # Diesel schema (generated)
+│   ├── routes/             # HTML + API route handlers
+│   ├── services/           # Business logic and orchestration
+│   ├── repository/         # Data access layer (Diesel + cache)
+│   ├── models/             # Domain entities and forms
+│   ├── importers/          # Excel importer implementation
+│   ├── reqif/              # ReqIF import/export implementation
 │   └── html/               # Static assets
 ├── templates/              # Handlebars templates
 ├── migrations/             # Database migrations
-├── docs/                  # Documentation (developers/architects/users)
-│   ├── README.md          # Documentation index
-├── mcp-server/            # Optional MCP server (Node/TypeScript) for AI assistants
-├── scripts/               # Dev tooling & DB setup
-│   ├── init_complete.sql  # Sample data seed (schema must already exist)
-│   └── setup_database.sh  # Automated database setup
-└── docker-compose.yml     # Docker database configuration
+├── docs/                   # Documentation (developers/architects/users)
+│   ├── README.md           # Documentation index
+│   └── ReqIF/              # ReqIF standards and reference docs
+├── mcp-server/             # Optional MCP server (Node/TypeScript) for AI assistants
+├── docker/                 # Container files (compose, Dockerfile, entrypoint, CI override)
+│   ├── docker-compose.yml  # Main Docker Compose stack
+│   ├── docker-compose.ci.yml # CI compose overrides
+│   ├── Dockerfile          # Application image build
+│   ├── docker-entrypoint.sh # Container startup/migrations
+│   └── README.md           # Docker usage guide
+├── scripts/                # Dev tooling & DB setup
+│   ├── db_setup.sh         # Automated DB setup + migrations
+│   ├── db_seed.sh          # Demo data seeding
+│   ├── db_migrate.sh       # Migration apply/revert helper
+│   ├── db_reset.sh         # Development reset helper
+│   ├── db_backup.sh        # Backup helper
+│   ├── reindex_project.sh  # Semantic index reindex helper
+│   └── init_complete.sql   # Seed data loaded by db_seed.sh
 ```
 
 ### Key Technologies
@@ -378,18 +393,6 @@ This project is open source. See LICENSE file for details.
 
 ### Common Issues
 
-#### Database Connection Issues
-```bash
-# Check if database container is running
-docker ps | grep Marreq_db_1
-
-# Check database connectivity
-docker exec Marreq_db_1 psql -U rust -d marreq -c "SELECT 1;"
-
-# Restart database container
-docker-compose restart
-```
-
 #### Application Startup Issues
 If the app exits immediately with **"Database setup failed"**, set `DATABASE_URL` (e.g. in `.env`) and ensure the database is reachable. The app uses Result-based pool initialization and will not start without a valid pool.
 
@@ -409,26 +412,6 @@ cargo run --bin marreq
 - **Available users**: alice, dr_smith, eng_jones, tech_lee, qa_wilson, admin
 - **Reset passwords**: Update database directly or re-run setup script
 
-#### Database Reset
-```bash
-# Complete database reset
-docker exec Marreq_db_1 psql -U rust -d postgres -c "DROP DATABASE IF EXISTS marreq;"
-./scripts/setup_database.sh
-```
-
-### Verification Commands
-
-```bash
-# Verify database setup
-docker exec Marreq_db_1 psql -U rust -d marreq -c "\dt"
-
-# Check user creation
-docker exec Marreq_db_1 psql -U rust -d marreq -c "SELECT username, name, is_admin FROM users;"
-
-# Verify sample data
-docker exec Marreq_db_1 psql -U rust -d marreq -c "SELECT COUNT(*) as requirements FROM requirements;"
-```
-
 ### Performance Issues
 
 - **Database indexes**: The initialization script includes optimized indexes
@@ -443,6 +426,6 @@ For issues and questions, please open an issue on the project repository.
 
 1. **Check troubleshooting section** above
 2. **Review application logs** for error messages
-3. **Verify database setup** using verification commands
+3. **Run Docker checks/reset** from [docker/README.md](docker/README.md)
 4. **Check Docker container status**
 5. **Open an issue** with detailed error information

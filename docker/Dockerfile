@@ -60,7 +60,7 @@ COPY templates /app/templates
 EXPOSE 8000
 
 # Wait for DB, run migrations, then start the app
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["/app/marreq"]

@@ -8,6 +8,37 @@ Marreq now uses a single database strategy:
 
 `scripts/init_complete.sql` does **not** create tables, indexes, triggers, or extensions.
 
+## Environment variables
+
+All configuration is driven by environment variables. The application loads them
+from a `.env` file in the project root (via `dotenvy`) if the file exists.
+
+**`.env` is gitignored and must never be committed.** Copy the template to get
+started:
+
+```bash
+cp .env.example .env
+```
+
+### Key variables
+
+| Variable | Required | Default in `.env.example` | Description |
+|---|---|---|---|
+| `DATABASE_URL` | Yes | `postgres://rust:rust@127.0.0.1:5432/marreq` | PostgreSQL connection string |
+| `ROCKET_SECRET_KEY` | Production | _(auto-generated in dev)_ | 256-bit base64 key for cookie signing. Generate with `openssl rand -base64 32`. |
+| `EMBEDDINGS_ENABLED` | No | `false` | Enable pgvector semantic search |
+| `EMBEDDING_PROVIDER` | No | `ollama` | `ollama` or `openai` |
+| `EMBEDDING_MODEL` | No | `nomic-embed-text` | Embedding model name |
+| `OLLAMA_URL` | No | `http://localhost:11434` | Ollama API base URL |
+| `RAG_ENABLED` | No | `false` | Enable LLM-assisted search |
+| `RAG_MODEL` | No | `llama3.2` | LLM model for RAG |
+
+> In **development**, `ROCKET_SECRET_KEY` can be omitted — Rocket auto-generates
+> an ephemeral key (sessions expire on restart, which is fine locally). In
+> **production**, always set a stable key so sessions survive restarts.
+
+
+
 ## Quick Start
 
 ### Option 1: Automated Setup (Recommended)
@@ -20,10 +51,13 @@ Marreq now uses a single database strategy:
    ```bash
    cargo install diesel_cli --no-default-features --features postgres
    ```
-3. Create a `.env` file in the project root:
+3. Create a `.env` file in the project root from the provided template:
+   ```bash
+   cp .env.example .env
    ```
-   DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/marreq
-   ```
+   The default values work for a local Docker setup. Edit the file if your
+   database URL or optional services (Ollama, embeddings) differ.
+   **`.env` is gitignored — never commit it.**
 4. Run the setup script:
    ```bash
    ./scripts/db_setup.sh
@@ -42,7 +76,7 @@ Marreq now uses a single database strategy:
 
 1. Create the database:
    ```bash
-   docker compose exec -T db psql -U rust -d postgres -c "CREATE DATABASE marreq;"
+   docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d postgres -c "CREATE DATABASE marreq;"
    ```
 2. Apply migrations (schema):
    ```bash
@@ -50,7 +84,7 @@ Marreq now uses a single database strategy:
    ```
 3. Seed sample data:
    ```bash
-   docker compose exec -T db psql -U rust -d marreq < scripts/init_complete.sql
+   docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq < scripts/init_complete.sql
    ```
 
 > For the full scripts reference, see [scripts/README.md](scripts/README.md).
@@ -152,13 +186,13 @@ Drops the `marreq` database entirely.  Development use only.
 
 ```bash
 # Check tables
-docker compose exec -T db psql -U rust -d marreq -c "\dt"
+docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c "\dt"
 
 # Check users
-docker compose exec -T db psql -U rust -d marreq -c "SELECT username, name, is_admin FROM users ORDER BY id;"
+docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c "SELECT username, name, is_admin FROM users ORDER BY id;"
 
 # Check sample data
-docker compose exec -T db psql -U rust -d marreq -c "SELECT COUNT(*) AS requirements FROM requirements;"
+docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c "SELECT COUNT(*) AS requirements FROM requirements;"
 ```
 
 ## Troubleshooting
@@ -171,7 +205,7 @@ docker compose exec -T db psql -U rust -d marreq -c "SELECT COUNT(*) AS requirem
    ```
 2. DB container not running:
    ```bash
-   docker compose up -d db
+   docker compose -f docker/docker-compose.yml up -d db
    ```
 3. `diesel: command not found`:
    - Install the Diesel CLI:
@@ -209,5 +243,5 @@ docker compose exec -T db psql -U rust -d marreq -c "SELECT COUNT(*) AS requirem
 ### Restore Backup
 ```bash
 gunzip -c backups/marreq_<timestamp>.sql.gz | \
-  docker compose exec -T db psql -U rust -d marreq
+   docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq
 ```

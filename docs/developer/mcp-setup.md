@@ -49,6 +49,21 @@ Set these before starting the MCP server (e.g. in a `.env` file or your shell):
 
 ## 3. Build and run the MCP server
 
+The convenience script `mcp-server/run.sh` reads `MARREQ_API_TOKEN` and
+`MARREQ_PROJECT_ID` from the environment — set them in your shell or in a
+local `.env` file that you source beforehand:
+
+```bash
+# One-time: export your personal values
+export MARREQ_API_TOKEN=<raw-token-from-step-1>
+export MARREQ_PROJECT_ID=1
+
+# Then run the server
+cd mcp-server && ./run.sh
+```
+
+Or build and start manually:
+
 ```bash
 cd mcp-server
 npm install
@@ -57,6 +72,9 @@ npm start
 ```
 
 Or in one step: `npm run dev` (builds then runs). The server uses **stdio** transport: the AI client typically spawns it and communicates over stdin/stdout.
+
+> **Never commit `MARREQ_API_TOKEN` to git.** `run.sh` intentionally has no
+> hardcoded token and will fail with a clear error if the variable is unset.
 
 ## 4. Configure your AI client (e.g. Cursor)
 

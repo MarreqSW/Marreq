@@ -13,10 +13,10 @@ All AI processing runs locally using Ollama, so your requirements stay on your m
 
 ### 1) Start PostgreSQL (with pgvector)
 
-Use the repo’s `docker-compose.yml` (it uses a `pgvector/pgvector` Postgres image):
+Use the repo’s `docker/docker-compose.yml` (it uses a `pgvector/pgvector` Postgres image):
 
 ```bash
-docker compose up -d db
+docker compose -f docker/docker-compose.yml up -d db
 ```
 
 ### 2) Initialize the database schema + sample data
@@ -24,15 +24,15 @@ docker compose up -d db
 This project uses migrations for schema and `init_complete.sql` for sample data:
 
 ```bash
-./scripts/setup_database.sh
+./scripts/db_setup.sh --seed
 ```
 
 Manual equivalent:
 
 ```bash
-docker exec -i $(docker compose ps -q db) psql -U rust -d postgres -c "CREATE DATABASE marreq;"
+docker exec -i $(docker compose -f docker/docker-compose.yml ps -q db) psql -U rust -d postgres -c "CREATE DATABASE marreq;"
 DATABASE_URL='postgres://rust:rust@localhost:5432/Marreq' diesel migration run
-docker exec -i $(docker compose ps -q db) psql -U rust -d marreq < scripts/init_complete.sql
+docker exec -i $(docker compose -f docker/docker-compose.yml ps -q db) psql -U rust -d marreq < scripts/init_complete.sql
 ```
 
 ### 3) Install and run Ollama

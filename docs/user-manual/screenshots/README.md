@@ -3,8 +3,8 @@
 The User Manual references these screenshots. To generate them:
 
 1. **Start Marreq** (database and app):
-   - `docker compose up -d db`
-   - `./scripts/setup_database.sh` (if needed)
+   - `docker compose -f docker/docker-compose.yml up -d db`
+   - `./scripts/db_setup.sh --seed` (if needed)
    - `cargo run --bin marreq`
 
 2. **Install Playwright** (one-time):

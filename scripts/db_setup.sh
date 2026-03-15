@@ -25,6 +25,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+COMPOSE_FILE="${PROJECT_ROOT}/docker/docker-compose.yml"
 SEED=false
 
 for arg in "$@"; do
@@ -54,7 +55,7 @@ if [[ -f "${PROJECT_ROOT}/.env" ]]; then
   set -a; source "${PROJECT_ROOT}/.env"; set +a
 fi
 
-# Default credentials — must match docker-compose.yml
+# Default credentials — must match docker/docker-compose.yml
 DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/marreq}"
 DB_USER="${DATABASE_URL%@*}"           # strip host/port/db
 DB_USER="${DB_USER##*:}"              # strip scheme and name, keep password
@@ -75,9 +76,9 @@ fi
 USE_DOCKER=false
 DC=""
 if docker compose version >/dev/null 2>&1; then
-  DC="docker compose"; USE_DOCKER=true
+  DC="docker compose -f ${COMPOSE_FILE}"; USE_DOCKER=true
 elif docker-compose version >/dev/null 2>&1; then
-  DC="docker-compose"; USE_DOCKER=true
+  DC="docker-compose -f ${COMPOSE_FILE}"; USE_DOCKER=true
 fi
 
 # ── Start db container (Docker path) ────────────────────────────────────────

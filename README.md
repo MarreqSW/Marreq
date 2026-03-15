@@ -374,7 +374,13 @@ cargo build --release
 cargo test
 
 # Run all checks (fmt, clippy, stylelint, purgecss, npm ci, npm test)
-./run_checks.sh
+bash scripts/run_checks.sh
+
+# Run backend test suite with summary output
+bash scripts/run_tests.sh
+
+# Run local CI flow (supports --jobs)
+bash scripts/run_ci.sh local-ci --jobs 2
 ```
 
 ## 📝 License

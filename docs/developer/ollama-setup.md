@@ -185,7 +185,7 @@ RAG_MAX_TOKENS=1024
 
 ### Docker Compose
 
-Add Ollama to your `docker-compose.yml`:
+Add Ollama to your `docker/docker-compose.yml`:
 
 ```yaml
 services:

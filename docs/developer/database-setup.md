@@ -76,7 +76,7 @@ cp .env.example .env
 
 1. Create the database:
    ```bash
-   docker compose exec -T db psql -U rust -d postgres -c "CREATE DATABASE marreq;"
+   docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d postgres -c "CREATE DATABASE marreq;"
    ```
 2. Apply migrations (schema):
    ```bash
@@ -84,7 +84,7 @@ cp .env.example .env
    ```
 3. Seed sample data:
    ```bash
-   docker compose exec -T db psql -U rust -d marreq < scripts/init_complete.sql
+   docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq < scripts/init_complete.sql
    ```
 
 > For the full scripts reference, see [scripts/README.md](scripts/README.md).
@@ -186,13 +186,13 @@ Drops the `marreq` database entirely.  Development use only.
 
 ```bash
 # Check tables
-docker compose exec -T db psql -U rust -d marreq -c "\dt"
+docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c "\dt"
 
 # Check users
-docker compose exec -T db psql -U rust -d marreq -c "SELECT username, name, is_admin FROM users ORDER BY id;"
+docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c "SELECT username, name, is_admin FROM users ORDER BY id;"
 
 # Check sample data
-docker compose exec -T db psql -U rust -d marreq -c "SELECT COUNT(*) AS requirements FROM requirements;"
+docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c "SELECT COUNT(*) AS requirements FROM requirements;"
 ```
 
 ## Troubleshooting
@@ -205,7 +205,7 @@ docker compose exec -T db psql -U rust -d marreq -c "SELECT COUNT(*) AS requirem
    ```
 2. DB container not running:
    ```bash
-   docker compose up -d db
+   docker compose -f docker/docker-compose.yml up -d db
    ```
 3. `diesel: command not found`:
    - Install the Diesel CLI:
@@ -243,5 +243,5 @@ docker compose exec -T db psql -U rust -d marreq -c "SELECT COUNT(*) AS requirem
 ### Restore Backup
 ```bash
 gunzip -c backups/marreq_<timestamp>.sql.gz | \
-  docker compose exec -T db psql -U rust -d marreq
+   docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq
 ```

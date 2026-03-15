@@ -31,7 +31,6 @@ changes go through `migrations/`.
 | `db_reset.sh` | Drop the database entirely (dev resets only) |
 | `lazy_setup.sh` | One-click developer bootstrap (full install) |
 | `reindex_project.sh` | Trigger semantic-search re-indexing via API |
-| `test_excel_parser.sh` | Integration test for the Excel parser binary |
 | `init_complete.sql` | Demo/test seed data (used by `db_seed.sh`) |
 
 ---
@@ -184,13 +183,4 @@ Useful after bulk-importing requirements or if the embedding index is stale.
 ```bash
 ./scripts/reindex_project.sh
 # Prompts for URL, username, password, and project ID
-```
-
-### `test_excel_parser.sh`
-
-Integration test for the Excel parser binary.  Requires a running Marreq
-server at `http://127.0.0.1:8000`.
-
-```bash
-./scripts/test_excel_parser.sh
 ```

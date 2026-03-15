@@ -311,7 +311,7 @@ macro_rules! define_tagged_entity {
     (
         $name:ident
     ) => {
-        #[derive(Serialize, Deserialize, Queryable, Clone)]
+        #[derive(Debug, Serialize, Deserialize, Queryable, Clone)]
         #[diesel(check_for_backend(diesel::pg::Pg))]
         pub struct $name {
             pub id: i32,
@@ -353,7 +353,7 @@ pub struct VerificationStatus {
     pub tag_color: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Queryable, Clone)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone)]
 #[diesel(table_name = crate::schema::verification_methods)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct VerificationMethod {

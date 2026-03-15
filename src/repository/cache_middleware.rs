@@ -35,6 +35,10 @@ impl<R: Repository> CacheRepository<R> {
         &self.inner
     }
 
+    pub fn inner_repo_mut(&mut self) -> &mut R {
+        &mut self.inner
+    }
+
     /// Get a reference to the underlying cache
     pub fn cache(&self) -> Arc<Cache> {
         Arc::clone(&self.cache)

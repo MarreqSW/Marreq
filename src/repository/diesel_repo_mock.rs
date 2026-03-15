@@ -13,6 +13,7 @@ use crate::repository::errors::RepoError;
 use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub struct DieselRepoMock {
     pub users: HashMap<i32, User>,
     pub statuses: HashMap<i32, RequirementStatus>,

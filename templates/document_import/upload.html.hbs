@@ -1,0 +1,52 @@
+{{!--
+Depends on: css/pages/document-import.css
+--}}
+{{#*inline "page"}}
+<section class="marreq-doc-import marreq-doc-import--upload">
+  <header class="marreq-doc-import__hero">
+    <p class="marreq-doc-import__eyebrow">Project-Scoped Import</p>
+    <h1 class="marreq-doc-import__title">Import Requirement Documents</h1>
+    <p class="marreq-doc-import__lede">
+      Upload a PDF or DOCX from within <strong>{{project.name}}</strong>. Marreq will extract candidates,
+      build a dry-run import plan, and wait for explicit confirmation before writing anything.
+    </p>
+  </header>
+
+  {{#if error}}
+  <div class="alert alert-danger marreq-doc-import__alert" role="alert">{{error}}</div>
+  {{/if}}
+
+  <div class="marreq-doc-import__panel">
+    <form action="/p/{{project.id}}/import_document/upload" method="post" enctype="multipart/form-data"
+      class="marreq-doc-import__form">
+      <div class="c-reqform-field">
+        <label for="document-file" class="c-reqform-field__label">
+          Document <span class="c-reqform-field__required">*</span>
+        </label>
+        <input id="document-file" name="file" type="file" accept=".pdf,.docx"
+          class="c-reqform-field__input" required>
+        <p class="marreq-doc-import__hint">Supported formats:
+          {{#each supported_formats}}<span class="marreq-doc-import__format">{{this}}</span>{{/each}}
+        </p>
+      </div>
+
+      <div class="c-reqform-field marreq-doc-import__toggle">
+        <label class="marreq-doc-import__checkbox">
+          <input type="checkbox" name="use_ai" value="1">
+          <span>Use Ollama suggestions when configured</span>
+        </label>
+        <p class="marreq-doc-import__hint">
+          AI is optional. Deterministic extraction and validation always run first.
+        </p>
+      </div>
+
+      <div class="marreq-doc-import__actions">
+        <button type="submit" class="btn btn-primary">Run Dry-Run Import</button>
+        <a href="/p/{{project.id}}/requirements" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+  </div>
+</section>
+{{/inline}}
+
+{{> layout this page_id="document-import-upload"}}

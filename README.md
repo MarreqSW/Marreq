@@ -160,6 +160,7 @@ For detailed database setup options (automated, manual, reset, verification) see
 ### Import Features
 
 - **Excel Import (Web UI)**: Upload `.xlsx`/`.csv` files in the project import flow with column mapping
+- **Document Import (PDF/DOCX)**: Upload `.pdf` or `.docx` inside a project, review a dry-run import session with detected requirements, verifications, and links, then confirm before Marreq writes Draft requirements and related records
 - **ReqIF 1.2 Import**: Import requirements from ReqIF XML into a project (project ReqIF/Import page)
 - **Data Import**: Import requirements and related metadata from Excel or ReqIF
 - **Indexing integration**: Imported requirements are queued for semantic index refresh when embeddings are enabled
@@ -195,6 +196,12 @@ All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or
 - `POST /projects/{project_id}/requirements` - Create requirement (body must include `project_id` matching route)
 - `PATCH /projects/{project_id}/requirements/{id}` - Partially update requirement
 - `PUT /projects/{project_id}/requirements/{req_id}/versions/{version_id}/approval` - Set approval state (body: `state`: "reviewed" | "approved")
+
+#### Document Import
+- `GET /projects/{project_id}/document_imports/{session_id}` - Fetch a dry-run document import session
+- `PATCH /projects/{project_id}/document_imports/{session_id}` - Persist review defaults and candidate edits for a dry-run session
+- `POST /projects/{project_id}/document_imports/{session_id}/commit` - Commit a reviewed dry-run session after explicit confirmation
+- `DELETE /projects/{project_id}/document_imports/{session_id}` - Discard a dry-run document import session
 
 #### Tests
 - `GET /tests` - List all tests

@@ -1,0 +1,66 @@
+{{!--
+Depends on: css/pages/document-import.css, js/pages/documentImport.js
+--}}
+{{#*inline "page"}}
+<section class="marreq-doc-import marreq-doc-import--review" data-project-id="{{project.id}}"
+  data-session-id="{{session_id}}" data-review-root>
+  <header class="marreq-doc-import__hero">
+    <p class="marreq-doc-import__eyebrow">Dry-Run Review</p>
+    <h1 class="marreq-doc-import__title">Review Import Candidates</h1>
+    <p class="marreq-doc-import__lede">
+      Uploaded file: <strong>{{filename}}</strong>. Adjust defaults, exclude noisy candidates, and confirm
+      before Marreq inserts anything into <strong>{{project.name}}</strong>.
+    </p>
+  </header>
+
+  <div class="marreq-doc-import__toolbar">
+    <div class="marreq-doc-import__toolbar-actions">
+      <button type="button" class="btn btn-outline-secondary" data-role="save-review">Save Review</button>
+      <button type="button" class="btn btn-primary" data-role="commit-review" disabled>Commit Import</button>
+      <button type="button" class="btn btn-outline-danger" data-role="discard-review">Discard Session</button>
+    </div>
+    <label class="marreq-doc-import__confirm">
+      <input type="checkbox" data-role="confirm-commit">
+      <span>I confirm this dry-run has been reviewed and can be committed.</span>
+    </label>
+  </div>
+
+  <div class="alert alert-danger marreq-doc-import__alert" data-role="review-error" hidden></div>
+
+  <div class="marreq-doc-import__summary" data-role="summary"></div>
+
+  <div class="marreq-doc-import__grid">
+    <aside class="marreq-doc-import__sidebar">
+      <section class="marreq-doc-import__panel">
+        <h2 class="marreq-doc-import__panel-title">Defaults</h2>
+        <div data-role="defaults"></div>
+      </section>
+      <section class="marreq-doc-import__panel">
+        <h2 class="marreq-doc-import__panel-title">Issues</h2>
+        <div data-role="diagnostics"></div>
+      </section>
+    </aside>
+
+    <div class="marreq-doc-import__content">
+      <section class="marreq-doc-import__panel">
+        <h2 class="marreq-doc-import__panel-title">Requirements</h2>
+        <div data-role="requirements"></div>
+      </section>
+      <section class="marreq-doc-import__panel">
+        <h2 class="marreq-doc-import__panel-title">Verifications</h2>
+        <div data-role="verifications"></div>
+      </section>
+      <section class="marreq-doc-import__panel">
+        <h2 class="marreq-doc-import__panel-title">Trace Links</h2>
+        <div data-role="trace-links"></div>
+      </section>
+      <section class="marreq-doc-import__panel">
+        <h2 class="marreq-doc-import__panel-title">Requirement Links</h2>
+        <div data-role="requirement-links"></div>
+      </section>
+    </div>
+  </div>
+</section>
+{{/inline}}
+
+{{> layout this page_id="document-import-review"}}

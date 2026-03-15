@@ -7,6 +7,7 @@ pub mod cache;
 pub mod categories;
 pub mod comments;
 pub mod custom_fields;
+pub mod document_imports;
 pub mod error;
 pub mod matrix;
 pub mod mcp;
@@ -74,6 +75,10 @@ pub fn routes() -> Vec<Route> {
         custom_fields::create,
         custom_fields::update,
         custom_fields::delete,
+        document_imports::get,
+        document_imports::patch,
+        document_imports::commit,
+        document_imports::delete,
         status::list_requirement_statuses,
         status::get_requirement_status,
         status::create_requirement_status,

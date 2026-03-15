@@ -144,14 +144,27 @@
             <li>
               {{#if project.id}}
               <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/import_excel">Import File</a>
-              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/import_reqif">Import ReqIF</a>
               {{else if selected_project_id}}
-              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_excel">Import
-                File</a>
-              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_reqif">Import
-                ReqIF</a>
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_excel">Import File</a>
               {{else}}
               <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">Import File</span>
+              {{/if}}
+            </li>
+            <li>
+              {{#if project.id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/import_document">Import Document</a>
+              {{else if selected_project_id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_document">Import Document</a>
+              {{else}}
+              <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">Import Document</span>
+              {{/if}}
+            </li>
+            <li>
+              {{#if project.id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/import_reqif">Import ReqIF</a>
+              {{else if selected_project_id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_reqif">Import ReqIF</a>
+              {{else}}
               <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">Import ReqIF</span>
               {{/if}}
             </li>
@@ -172,14 +185,27 @@
             <li>
               {{#if project.id}}
               <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/import_excel">Import File</a>
-              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/import_reqif">Import ReqIF</a>
               {{else if selected_project_id}}
-              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_excel">Import
-                File</a>
-              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_reqif">Import
-                ReqIF</a>
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_excel">Import File</a>
               {{else}}
               <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">Import File</span>
+              {{/if}}
+            </li>
+            <li>
+              {{#if project.id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/import_document">Import Document</a>
+              {{else if selected_project_id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_document">Import Document</a>
+              {{else}}
+              <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">Import Document</span>
+              {{/if}}
+            </li>
+            <li>
+              {{#if project.id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{project.id}}/import_reqif">Import ReqIF</a>
+              {{else if selected_project_id}}
+              <a class="dropdown-item c-navbar__dropdown-item" href="/p/{{selected_project_id}}/import_reqif">Import ReqIF</a>
+              {{else}}
               <span class="dropdown-item disabled c-navbar__dropdown-item" aria-disabled="true">Import ReqIF</span>
               {{/if}}
             </li>

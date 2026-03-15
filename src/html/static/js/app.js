@@ -25,6 +25,7 @@ const pageControllers = {
   logs: () => import('./pages/logs.js'),
   'entity-logs': () => import('./pages/entityLogs.js'),
   'map-columns': () => import('./pages/mapColumns.js'),
+  'document-import-review': () => import('./pages/documentImport.js'),
   'admin-cache-stats': () => import('./pages/adminCacheStats.js'),
   'admin-cache-health': () => import('./pages/adminCacheHealth.js'),
   'admin-backup': () => import('./pages/adminBackup.js'),

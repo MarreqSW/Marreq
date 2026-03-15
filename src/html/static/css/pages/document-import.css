@@ -1,0 +1,239 @@
+.marreq-doc-import {
+  margin: 0 auto;
+  max-width: 1320px;
+  padding: 2rem 1.25rem 3rem;
+}
+
+.marreq-doc-import__hero {
+  background:
+    radial-gradient(circle at top left, rgb(198 226 255 / 0.45), transparent 42%),
+    linear-gradient(135deg, rgb(248 251 255), rgb(242 248 252));
+  border: 1px solid var(--color-border, #d6dde8);
+  border-radius: 1.25rem;
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+}
+
+.marreq-doc-import__eyebrow {
+  color: rgb(24 92 152);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+}
+
+.marreq-doc-import__title {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  margin: 0 0 0.75rem;
+}
+
+.marreq-doc-import__lede {
+  color: rgb(74 89 109);
+  margin: 0;
+  max-width: 58rem;
+}
+
+.marreq-doc-import__panel {
+  background: rgb(255 255 255 / 0.96);
+  border: 1px solid var(--color-border, #d6dde8);
+  border-radius: 1rem;
+  box-shadow: 0 20px 60px rgb(15 23 42 / 0.06);
+  padding: 1.25rem;
+}
+
+.marreq-doc-import__panel + .marreq-doc-import__panel {
+  margin-top: 1rem;
+}
+
+.marreq-doc-import__panel-title {
+  font-size: 1.1rem;
+  margin: 0 0 1rem;
+}
+
+.marreq-doc-import__form {
+  display: grid;
+  gap: 1rem;
+}
+
+.marreq-doc-import__hint {
+  color: rgb(96 110 126);
+  font-size: 0.92rem;
+  margin: 0.35rem 0 0;
+}
+
+.marreq-doc-import__format + .marreq-doc-import__format::before {
+  content: " · ";
+}
+
+.marreq-doc-import__checkbox {
+  align-items: center;
+  display: inline-flex;
+  font-weight: 600;
+  gap: 0.65rem;
+}
+
+.marreq-doc-import__actions,
+.marreq-doc-import__toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.marreq-doc-import__toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.marreq-doc-import__confirm {
+  align-items: center;
+  display: inline-flex;
+  font-size: 0.95rem;
+  gap: 0.6rem;
+}
+
+.marreq-doc-import__summary {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  margin-bottom: 1rem;
+}
+
+.marreq-doc-import__summary-card {
+  background: rgb(248 250 252);
+  border: 1px solid rgb(213 222 232);
+  border-radius: 0.95rem;
+  padding: 1rem;
+}
+
+.marreq-doc-import__summary-label {
+  color: rgb(94 106 121);
+  display: block;
+  font-size: 0.85rem;
+}
+
+.marreq-doc-import__summary-value {
+  display: block;
+  font-size: 1.45rem;
+  font-weight: 700;
+  margin-top: 0.3rem;
+}
+
+.marreq-doc-import__grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(18rem, 24rem) minmax(0, 1fr);
+}
+
+.marreq-doc-import__content {
+  display: grid;
+  gap: 1rem;
+}
+
+.marreq-doc-import__candidate {
+  background: rgb(252 253 255);
+  border: 1px solid rgb(219 227 236);
+  border-radius: 0.95rem;
+  padding: 1rem;
+}
+
+.marreq-doc-import__candidate + .marreq-doc-import__candidate {
+  margin-top: 0.9rem;
+}
+
+.marreq-doc-import__candidate-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.marreq-doc-import__candidate-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+}
+
+.marreq-doc-import__badge {
+  align-items: center;
+  background: rgb(231 238 246);
+  border-radius: 999px;
+  color: rgb(37 52 69);
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+}
+
+.marreq-doc-import__badge--blocker {
+  background: rgb(255 229 229);
+  color: rgb(148 27 27);
+}
+
+.marreq-doc-import__badge--warning {
+  background: rgb(255 244 215);
+  color: rgb(137 84 9);
+}
+
+.marreq-doc-import__candidate-fields {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.marreq-doc-import__field--wide {
+  grid-column: 1 / -1;
+}
+
+.marreq-doc-import__field-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.marreq-doc-import__field-input,
+.marreq-doc-import__field-select,
+.marreq-doc-import__field-textarea {
+  background: rgb(255 255 255);
+  border: 1px solid rgb(200 210 222);
+  border-radius: 0.7rem;
+  padding: 0.65rem 0.8rem;
+  width: 100%;
+}
+
+.marreq-doc-import__field-textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.marreq-doc-import__issues {
+  margin: 0.85rem 0 0;
+  padding: 0 0 0 1.1rem;
+}
+
+.marreq-doc-import__issues li + li {
+  margin-top: 0.3rem;
+}
+
+.marreq-doc-import__lineage {
+  color: rgb(88 101 117);
+  font-size: 0.92rem;
+  margin-top: 0.85rem;
+}
+
+.marreq-doc-import__empty {
+  color: rgb(96 110 126);
+}
+
+@media (max-width: 960px) {
+  .marreq-doc-import__grid {
+    grid-template-columns: 1fr;
+  }
+}

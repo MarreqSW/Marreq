@@ -302,7 +302,7 @@ cargo cov --workspace --all-features --doctests
 Run all checks in sequence:
 
 ```bash
-./local_ci.sh
+bash scripts/run_ci.sh local-ci
 ```
 
 ---

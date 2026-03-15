@@ -203,10 +203,10 @@ print_success "Docker daemon is running"
 
 # Check for Docker Compose
 if docker compose version &> /dev/null; then
-    DC="docker compose"
+    DC="docker compose -f ${PROJECT_ROOT}/docker/docker-compose.yml"
     print_success "Docker Compose (v2) is available"
 elif docker-compose version &> /dev/null; then
-    DC="docker-compose"
+    DC="docker-compose -f ${PROJECT_ROOT}/docker/docker-compose.yml"
     print_success "Docker Compose (v1) is available"
 else
     print_error "Docker Compose not found. Please install it."

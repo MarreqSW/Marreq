@@ -31,6 +31,9 @@ changes go through `migrations/`.
 | `db_reset.sh` | Drop the database entirely (dev resets only) |
 | `lazy_setup.sh` | One-click developer bootstrap (full install) |
 | `reindex_project.sh` | Trigger semantic-search re-indexing via API |
+| `run_checks.sh` | Dedicated checks runner (fmt, clippy, stylelint, purgecss, npm ci, npm test) |
+| `run_tests.sh` | Dedicated backend test runner with summary output |
+| `run_ci.sh` | Centralized quality pipeline (`checks`, `tests`, `local-ci`) |
 | `init_complete.sql` | Demo/test seed data (used by `db_seed.sh`) |
 
 ---

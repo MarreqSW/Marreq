@@ -1,0 +1,36 @@
+services:
+  marreq-dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: builder
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    working_dir: /workspace
+    command: >
+      bash -c
+      "diesel migration run &&
+      cargo run --bin marreq"
+    environment:
+      DATABASE_URL: 'postgres://rust:rust@db:5432/marreq'
+      PATH: "/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      ROCKET_DATABASES: '{my_db={url="postgres://rust:rust@db:5432/marreq"}}'
+      ROCKET_ADDRESS: '0.0.0.0'
+      EMBEDDINGS_ENABLED: "false"
+      RAG_ENABLED: "false"
+    ports:
+      - '8000:8000'
+    volumes:
+      - ..:/workspace
+      - cargo_registry_dev:/usr/local/cargo/registry
+      - cargo_git_dev:/usr/local/cargo/git
+      - marreq_target_dev:/workspace/target
+
+volumes:
+  cargo_registry_dev:
+  cargo_git_dev:
+  marreq_target_dev:

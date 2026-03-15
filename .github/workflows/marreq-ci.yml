@@ -76,6 +76,9 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libclang-dev
 
+      - name: Ensure CI .env placeholder exists
+        run: test -f .env || touch .env
+
       - name: Start database
         run: docker compose -f docker/docker-compose.yml -f docker/docker-compose.ci.yml up -d db
 

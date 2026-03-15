@@ -36,6 +36,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     restart: always
+    env_file:
+      - ../.env
     depends_on:
       db:
         condition: service_healthy
@@ -43,19 +45,9 @@ services:
         condition: service_started
     environment:
       DATABASE_URL: 'postgres://rust:rust@db:5432/marreq'
-      # TOML format (Rocket does not use JSON for config env vars)
       ROCKET_DATABASES: '{my_db={url="postgres://rust:rust@db:5432/marreq"}}'
-      # Listen on all interfaces so the host can reach the app (default 127.0.0.1 is container-only)
       ROCKET_ADDRESS: '0.0.0.0'
-      # Semantic search via Ollama (see docs/developer/ollama-setup.md)
-      EMBEDDINGS_ENABLED: 'true'
-      EMBEDDING_PROVIDER: 'ollama'
-      EMBEDDING_MODEL: 'nomic-embed-text'
       OLLAMA_URL: 'http://ollama:11434'
-      RAG_ENABLED: 'true'
-      RAG_MODEL: 'llama3.2'
-      RAG_MAX_TOKENS: '1024'
-      RAG_TOP_K: '10'
     ports:
       - '8000:8000'
 

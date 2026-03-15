@@ -13,12 +13,10 @@ changes go through `migrations/`.
 |---|---|
 | Docker with Compose | https://docs.docker.com/compose/install/ |
 | `diesel` CLI | `cargo install diesel_cli --no-default-features --features postgres` |
-| `.env` file with `DATABASE_URL` | See example below |
+| `.env` file with `DATABASE_URL` | `cp .env.example .env` (see `.env.example` in the project root) |
 
-Minimum `.env`:
-```
-DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/marreq
-```
+> **`.env` is gitignored.** Copy `.env.example` to `.env` and adjust values for
+> your local setup. Never commit `.env` directly.
 
 ---
 

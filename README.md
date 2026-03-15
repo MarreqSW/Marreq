@@ -331,12 +331,6 @@ Marreq/
 │   └── html/               # Static assets
 ├── templates/              # Handlebars templates
 ├── migrations/             # Database migrations
-├── excel_parser/           # Standalone Excel parser application
-│   ├── src/
-│   │   ├── main.rs         # CLI entry point
-│   │   ├── parser.rs       # Excel parsing logic
-│   │   └── api_client.rs   # API integration
-│   └── README.md           # Parser documentation
 ├── docs/                  # Documentation (developers/architects/users)
 │   ├── README.md          # Documentation index
 ├── mcp-server/            # Optional MCP server (Node/TypeScript) for AI assistants

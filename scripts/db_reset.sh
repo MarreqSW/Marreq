@@ -17,11 +17,15 @@ echo "Marreq — Database Reset (DROP DATABASE)"
 echo "=========================================="
 echo ""
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+COMPOSE_FILE="${PROJECT_ROOT}/docker/docker-compose.yml"
+
 # Pick compose command (v2 'docker compose' or legacy 'docker-compose')
 if docker compose version >/dev/null 2>&1; then
-  DC="docker compose"
+  DC="docker compose -f ${COMPOSE_FILE}"
 elif docker-compose version >/dev/null 2>&1; then
-  DC="docker-compose"
+  DC="docker-compose -f ${COMPOSE_FILE}"
 else
   echo "❌ Error: Neither 'docker compose' nor 'docker-compose' found."
   exit 1

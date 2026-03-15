@@ -183,17 +183,17 @@ Before running checks locally, ensure you have:
 
 2. **Start the database**
    ```bash
-   docker compose up -d db
+   docker compose -f docker/docker-compose.yml up -d db
    ```
 
 3. **Initialize the database**
    ```bash
-   ./setup_database.sh
+   ./scripts/db_setup.sh --seed
    ```
 
 4. **Verify database is ready**
    ```bash
-   docker compose ps
+   docker compose -f docker/docker-compose.yml ps
    # Should show db service as "healthy"
    ```
 
@@ -311,7 +311,7 @@ Run all checks in sequence:
 
 ### docker-compose.ci.yml
 
-**Location:** `.github/docker-compose.ci.yml` (not in workflows/ to avoid GitHub Actions validation)
+**Location:** `docker/docker-compose.ci.yml`
 
 CI-specific Docker Compose overrides:
 - Disables container restart policy for CI runs
@@ -355,16 +355,16 @@ Database health check script used in CI:
 **Solutions:**
 ```bash
 # Check database is running
-docker compose ps
+docker compose -f docker/docker-compose.yml ps
 
 # Check database health
-docker compose exec db pg_isready -U rust
+docker compose -f docker/docker-compose.yml exec db pg_isready -U rust
 
 # Restart database
-docker compose restart db
+docker compose -f docker/docker-compose.yml restart db
 
 # Reinitialize database
-./setup_database.sh
+./scripts/db_setup.sh --seed
 ```
 
 ---
@@ -472,7 +472,7 @@ Common issues:
    ```
 3. **Database state:** CI uses fresh database, local might have stale data
    ```bash
-   ./setup_database.sh  # Reinitialize
+   ./scripts/db_setup.sh --seed  # Reinitialize
    ```
 
 ---

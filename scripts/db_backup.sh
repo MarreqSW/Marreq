@@ -17,6 +17,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+COMPOSE_FILE="${PROJECT_ROOT}/docker/docker-compose.yml"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 DEFAULT_BACKUP_DIR="${PROJECT_ROOT}/backups"
 OUTPUT="${1:-${DEFAULT_BACKUP_DIR}/marreq_${TIMESTAMP}.sql.gz}"
@@ -53,9 +54,9 @@ mkdir -p "$(dirname "${OUTPUT}")"
 USE_DOCKER=false
 DC=""
 if docker compose version >/dev/null 2>&1; then
-  DC="docker compose"; USE_DOCKER=true
+  DC="docker compose -f ${COMPOSE_FILE}"; USE_DOCKER=true
 elif docker-compose version >/dev/null 2>&1; then
-  DC="docker-compose"; USE_DOCKER=true
+  DC="docker-compose -f ${COMPOSE_FILE}"; USE_DOCKER=true
 fi
 
 # ── Run pg_dump ───────────────────────────────────────────────────────────────

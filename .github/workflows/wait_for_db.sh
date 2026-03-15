@@ -4,8 +4,13 @@ set -euo pipefail
 echo "Waiting for PostgreSQL container to stabilize..."
 sleep 5
 
+COMPOSE_ARGS=(-f docker/docker-compose.yml)
+if [[ -n "${CI_COMPOSE_OVERRIDE_FILE:-}" ]]; then
+  COMPOSE_ARGS+=(-f "${CI_COMPOSE_OVERRIDE_FILE}")
+fi
+
 # Get container ID
-DB_CONTAINER=$(docker compose ps -q db)
+DB_CONTAINER=$(docker compose "${COMPOSE_ARGS[@]}" ps -q db)
 
 # Wait for container to be healthy
 for i in {1..30}; do
@@ -14,7 +19,7 @@ for i in {1..30}; do
   # Check if container is running
   if ! docker ps -q --filter "id=$DB_CONTAINER" | grep -q .; then
     echo "Container stopped unexpectedly, showing logs:"
-    docker compose logs db
+    docker compose "${COMPOSE_ARGS[@]}" logs db
     exit 1
   fi
   
@@ -29,11 +34,11 @@ for i in {1..30}; do
     echo "PostgreSQL is starting..."
   elif [ "$HEALTH" = "unhealthy" ]; then
     echo "PostgreSQL is unhealthy, showing logs:"
-    docker compose logs db --tail 50
+    docker compose "${COMPOSE_ARGS[@]}" logs db --tail 50
     exit 1
   else
     # No healthcheck yet, try pg_isready directly
-    if docker compose exec -T db pg_isready -U rust >/dev/null 2>&1; then
+    if docker compose "${COMPOSE_ARGS[@]}" exec -T db pg_isready -U rust >/dev/null 2>&1; then
       echo "PostgreSQL is ready (via pg_isready)!"
       exit 0
     fi
@@ -43,5 +48,5 @@ for i in {1..30}; do
 done
 
 echo "Failed to start database after 30 attempts"
-docker compose logs db
+docker compose "${COMPOSE_ARGS[@]}" logs db
 exit 1

@@ -77,9 +77,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libclang-dev
 
       - name: Start database
-        run: docker compose -f docker-compose.yml -f .github/docker-compose.ci.yml up -d db
+        run: docker compose -f docker/docker-compose.yml -f docker/docker-compose.ci.yml up -d db
 
       - name: Wait for database to be healthy
+        env:
+          CI_COMPOSE_OVERRIDE_FILE: docker/docker-compose.ci.yml
         run: .github/workflows/wait_for_db.sh
 
       - name: Set up Rust (stable + llvm-tools)

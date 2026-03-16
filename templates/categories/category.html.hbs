@@ -16,10 +16,10 @@
     <span class="marreq-list-page__row-id" title="Category ID">#{{id}}</span>
     <div class="marreq-list-page__row-actions">
       <a
-        href="/p/{{@root.selected_project_id}}/requirements?category_filter={{id}}"
+        href="/p/{{@root.selected_project_slug}}/requirements?category_filter={{id}}"
         class="btn btn-secondary btn-sm marreq-list-page__action-btn"
       >View Requirements</a>
-      <a href="/p/{{@root.selected_project_id}}/categories/edit/{{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn">Edit</a>
+      <a href="/p/{{@root.selected_project_slug}}/categories/edit/{{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn">Edit</a>
       <button
         class="btn btn-danger btn-sm marreq-list-page__action-btn"
         type="button"
@@ -27,6 +27,7 @@
         data-category-id="{{id}}"
         data-category-title="category {{tag}}"
         data-project-id="{{@root.selected_project_id}}"
+        data-project-slug="{{@root.selected_project_slug}}"
       >Delete</button>
     </div>
   </div>

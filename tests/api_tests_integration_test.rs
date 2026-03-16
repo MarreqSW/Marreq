@@ -76,6 +76,7 @@ mod test_support {
                 update_date: Some(timestamp()),
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
+                slug: "test-project".into(),
             },
         );
 

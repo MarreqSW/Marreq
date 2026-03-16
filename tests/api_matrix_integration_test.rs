@@ -60,6 +60,7 @@ mod test_support {
                 update_date: Some(timestamp()),
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
+                slug: "test-project".into(),
             },
         );
 
@@ -260,6 +261,7 @@ fn link_sets_correct_project_id() {
             update_date: Some(timestamp()),
             status: ProjectStatus::Active,
             owner_id: Some(1),
+            slug: "other-project".into(),
         },
     );
     repo.requirements

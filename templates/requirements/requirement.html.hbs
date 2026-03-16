@@ -185,10 +185,10 @@
         <li class="d-flex align-items-center justify-content-between gap-2 py-2 border-bottom border-light border-opacity-50">
           <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
             {{#if this.is_current}}
-            <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}"
+            <a href="/p/{{../project_slug}}/requirements/show/{{../requirement_data.requirement.id}}"
               class="text-decoration-none fw-semibold text-truncate">{{this.title}}</a>
             {{else}}
-            <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}/version/{{this.id}}"
+            <a href="/p/{{../project_slug}}/requirements/show/{{../requirement_data.requirement.id}}/version/{{this.id}}"
               class="text-decoration-none text-truncate">{{this.title}}</a>
             {{/if}}
             <span class="badge marreq-approval-badge marreq-approval-badge--{{this.approval_state}} flex-shrink-0" aria-label="Approval: {{this.approval_state}}">{{this.approval_state}}</span>
@@ -197,7 +197,7 @@
           <span class="badge bg-primary flex-shrink-0">Current</span>
           {{else}}
           <div class="d-flex align-items-center gap-2 flex-shrink-0">
-            <a href="/p/{{../project_id}}/requirements/show/{{../requirement_data.requirement.id}}/version/{{this.id}}"
+            <a href="/p/{{../project_slug}}/requirements/show/{{../requirement_data.requirement.id}}/version/{{this.id}}"
               class="small text-muted">View</a>
             <button type="button" class="btn btn-link btn-sm p-0 small text-muted text-decoration-none"
               data-action="show-version-diff"
@@ -307,7 +307,7 @@
   {{#if viewing_past_version}}
   <div class="alert alert-info d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3" role="status">
     <span>You are viewing a past version of this requirement.</span>
-    <a href="/p/{{project_id}}/requirements/show/{{requirement_data.requirement.id}}"
+    <a href="/p/{{project_slug}}/requirements/show/{{requirement_data.requirement.id}}"
       class="btn btn-sm btn-outline-primary">View current version</a>
   </div>
   {{/if}}
@@ -326,10 +326,10 @@
           <nav class="ms-lg-auto" aria-label="Requirement actions">
             <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
               {{#if can_edit_requirements}}
-              <a href="/p/{{project_id}}/requirements/edit/{{requirement_data.requirement.id}}"
+              <a href="/p/{{project_slug}}/requirements/edit/{{requirement_data.requirement.id}}"
                 class="btn btn-primary btn-sm {{#if requirement_data.approval_is_approved}}marreq-edit-approved-link{{/if}}"
                 aria-label="Edit requirement"
-                {{#if requirement_data.approval_is_approved}}data-action="edit-approved-requirement" data-edit-href="/p/{{project_id}}/requirements/edit/{{requirement_data.requirement.id}}"{{/if}}>
+                {{#if requirement_data.approval_is_approved}}data-action="edit-approved-requirement" data-edit-href="/p/{{project_slug}}/requirements/edit/{{requirement_data.requirement.id}}"{{/if}}>
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                   <use href="#icon-pencil" />
                 </svg>
@@ -352,7 +352,7 @@
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li>
                     <a class="dropdown-item"
-                      href="/p/{{project_id}}/requirements/new?parent={{requirement_data.requirement.id}}">
+                      href="/p/{{project_slug}}/requirements/new?parent={{requirement_data.requirement.id}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-plus-circle" />
                       </svg>
@@ -361,7 +361,7 @@
                   </li>
                   <li>
                     <a class="dropdown-item"
-                      href="/p/{{project_id}}/requirements/new?template={{requirement_data.requirement.id}}">
+                      href="/p/{{project_slug}}/requirements/new?template={{requirement_data.requirement.id}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-clipboard" />
                       </svg>
@@ -370,7 +370,7 @@
                   </li>
                   <li>
                     <button class="dropdown-item" type="button" data-action="copy-requirement-link"
-                      data-requirement-url="/p/{{project_id}}/requirements/show/{{requirement_data.requirement.id}}">
+                      data-requirement-url="/p/{{project_slug}}/requirements/show/{{requirement_data.requirement.id}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-link" />
                       </svg>
@@ -382,7 +382,7 @@
                   </li>
                   <li>
                     <button class="dropdown-item text-danger" type="button" data-action="delete-requirement"
-                      data-project-id="{{project_id}}" data-requirement-id="{{requirement_data.requirement.id}}"
+                      data-project-id="{{project_id}}" data-project-slug="{{project_slug}}" data-requirement-id="{{requirement_data.requirement.id}}"
                       data-requirement-title="{{requirement_data.requirement.title}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-trash" />

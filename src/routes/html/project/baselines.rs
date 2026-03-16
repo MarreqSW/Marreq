@@ -5,6 +5,7 @@
 
 use super::helpers;
 use super::prelude::*;
+use crate::routes::html::helpers::get_project_slug_by_id_pooled_safe;
 use crate::services::BaselineService;
 use rocket::form::FromForm;
 
@@ -41,10 +42,12 @@ mod tests {
 
 #[get("/<project_id>/baselines")]
 pub async fn show_baselines(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = helpers::get_accessible_projects(state, &user);
     if !projects.iter().any(|p| p.id == project_id) {
@@ -65,6 +68,7 @@ pub async fn show_baselines(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "baselines": baselines,
         "created_by_names": created_by_names,
         "page_title": "Baselines"
@@ -75,10 +79,12 @@ pub async fn show_baselines(
 
 #[get("/<project_id>/baselines/new")]
 pub async fn new_baseline_form(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = helpers::get_accessible_projects(state, &user);
     if !projects.iter().any(|p| p.id == project_id) {
@@ -89,6 +95,7 @@ pub async fn new_baseline_form(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "page_title": "New Baseline"
     });
 
@@ -97,19 +104,21 @@ pub async fn new_baseline_form(
 
 #[post("/<project_id>/baselines/new", data = "<form>")]
 pub async fn post_baseline(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     form: Form<CreateBaselineForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = helpers::get_accessible_projects(state, &user);
     if !projects.iter().any(|p| p.id == project_id) {
         return Err(Redirect::to("/projects"));
     }
 
-    let list_url = uri!("/p", show_baselines(project_id));
-    let new_url = uri!("/p", new_baseline_form(project_id));
+    let list_url = format!("/p/{project_slug}/baselines");
+    let new_url = format!("/p/{project_slug}/baselines/new");
 
     let description = form.description.as_ref().and_then(|s| {
         if s.trim().is_empty() {
@@ -134,11 +143,13 @@ pub async fn post_baseline(
 
 #[get("/<project_id>/baselines/<baseline_id>", rank = 2)]
 pub async fn show_baseline(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     baseline_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = helpers::get_accessible_projects(state, &user);
     if !projects.iter().any(|p| p.id == project_id) {
@@ -148,9 +159,12 @@ pub async fn show_baseline(
     let service = BaselineService::new(state.inner());
     let baseline = service
         .get_by_id(baseline_id)
-        .map_err(|_| Redirect::to(uri!("/p", show_baselines(project_id))))?;
+        .map_err(|_| Redirect::to(format!("/p/{project_slug}/baselines")))?;
     if baseline.project_id != project_id {
-        return Err(Redirect::to(uri!("/p", show_baselines(project_id))));
+        let baseline_project_slug = get_project_slug_by_id_pooled_safe(state, baseline.project_id);
+        return Err(Redirect::to(format!(
+            "/p/{baseline_project_slug}/baselines"
+        )));
     }
 
     let requirements = service.get_requirements(baseline_id).unwrap_or_default();
@@ -216,6 +230,7 @@ pub async fn show_baseline(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "baseline": baseline,
         "requirements": requirements,
         "traceability": traceability_links,

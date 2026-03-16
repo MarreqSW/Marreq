@@ -3,12 +3,12 @@
   <div class="marreq-requirements-edit-panel__header">
     <h2 class="marreq-requirements-edit-panel__title">{{display_reference}}</h2>
     <div class="marreq-requirements-edit-panel__header-actions">
-      <a href="/p/{{req.project_id}}/requirements/edit/{{req.id}}" class="marreq-requirements-edit-panel__full-edit-link">Open full edit page</a>
+      <a href="/p/{{project.slug}}/requirements/edit/{{req.id}}" class="marreq-requirements-edit-panel__full-edit-link">Open full edit page</a>
       <button type="button" class="marreq-requirements-edit-panel__close" data-action="close-edit-panel" aria-label="Close panel">×</button>
     </div>
   </div>
 
-  <form method="post" action="/p/{{req.project_id}}/requirements/edit/{{req.id}}" class="marreq-requirements-edit-panel__form" data-requirement-edit-panel-form data-project-id="{{req.project_id}}">
+  <form method="post" action="/p/{{project.slug}}/requirements/edit/{{req.id}}" class="marreq-requirements-edit-panel__form" data-requirement-edit-panel-form data-project-id="{{req.project_id}}" data-project-slug="{{project.slug}}">
     <div class="marreq-requirements-edit-panel__body">
       <div class="marreq-requirements-edit-panel__field">
         <label for="panel-title" class="c-reqform-field__label">Title</label>
@@ -106,7 +106,7 @@
       </div>
       {{/if}}
 
-      <p class="marreq-requirements-edit-panel__hint">Upstream trace: <a href="/p/{{req.project_id}}/requirements/edit/{{req.id}}">open full edit page</a>.</p>
+      <p class="marreq-requirements-edit-panel__hint">Upstream trace: <a href="/p/{{project.slug}}/requirements/edit/{{req.id}}">open full edit page</a>.</p>
     </div>
 
     <input type="hidden" name="author_id" value="{{req.req_author_id}}">

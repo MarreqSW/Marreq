@@ -384,6 +384,18 @@ pub struct NewProject {
     pub status: ProjectStatus,
 }
 
+/// Internal insertable row for creating a project with a persisted slug.
+#[derive(Insertable, Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = crate::schema::projects)]
+pub struct NewProjectRow {
+    pub name: String,
+    pub slug: String,
+    pub description: Option<String>,
+    pub owner_id: Option<i32>,
+    pub status: ProjectStatus,
+}
+
 /// Form used to update a project's metadata.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]

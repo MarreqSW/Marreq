@@ -166,8 +166,8 @@ function updateParentLinkPreviewsForTest(testId, displayText) {
 function openInlineEditForTest(cell, row, config) {
   const testId = parseInt(row.dataset.testId, 10);
   if (!testId) return;
-  const projectId = config.projectId;
-  if (!projectId) return;
+  const projectSlug = config.projectSlug;
+  if (!projectSlug) return;
   const displayEl = cell.querySelector('.marreq-requirements-cell__display');
   if (!displayEl || cell.querySelector('.marreq-inline-edit-select')) return;
 
@@ -195,7 +195,9 @@ function openInlineEditForTest(cell, row, config) {
     if (select.parentNode) select.remove();
     displayEl.hidden = false;
     try {
-      await postJson(`/p/${projectId}/verifications/update-status/${testId}`, { status_id: v });
+      await postJson(`/p/${projectSlug}/verifications/update-status/${testId}`, {
+        status_id: v,
+      });
       const variant = testStatusVariant(displayText);
       const tagColor = s?.tag_color || null;
       row.dataset.statusId = String(v);
@@ -260,9 +262,9 @@ function initInlineStatusEdit() {
   if (!config.statuses?.length) return;
 
   const pageEl = document.querySelector('.marreq-requirements-page[data-project-id]');
-  const projectId = pageEl?.getAttribute('data-project-id');
-  if (!projectId) return;
-  const configWithProject = { ...config, projectId };
+  const projectSlug = pageEl?.getAttribute('data-project-slug');
+  if (!projectSlug) return;
+  const configWithProject = { ...config, projectSlug };
 
   table.addEventListener('click', (e) => {
     if (e.target.closest('.marreq-inline-edit-select')) return;
@@ -417,14 +419,14 @@ function initDeleteButtons() {
 
     const testId = deleteBtn.dataset.testId;
     const testName = deleteBtn.dataset.testName;
-    const projectId = deleteBtn.dataset.projectId;
+    const projectSlug = deleteBtn.dataset.projectSlug || deleteBtn.dataset.projectId;
 
     if (!confirm(`Are you sure you want to delete test "${testName}"?`)) {
       return;
     }
 
     try {
-      const response = await fetch(`/p/${projectId}/verifications/delete/${testId}`, {
+      const response = await fetch(`/p/${projectSlug}/verifications/delete/${testId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -495,6 +497,12 @@ function getProjectIdFromPage() {
   return id != null ? id.trim() : '';
 }
 
+function getProjectSlugFromPage() {
+  const page = document.querySelector('.marreq-requirements-page[data-project-slug]');
+  const slug = page?.getAttribute('data-project-slug');
+  return slug != null ? slug.trim() : '';
+}
+
 function initEditPanel() {
   const panelEl = document.getElementById('test-edit-panel');
   if (!panelEl) return;
@@ -504,9 +512,10 @@ function initEditPanel() {
     if (openBtn) {
       e.preventDefault();
       const testId = openBtn.getAttribute('data-test-id');
-      const projectId = openBtn.getAttribute('data-project-id') || getProjectIdFromPage();
-      if (!testId || !projectId) return;
-      openEditPanel(panelEl, projectId, testId);
+      const projectSlug =
+        openBtn.getAttribute('data-project-slug') || getProjectSlugFromPage();
+      if (!testId || !projectSlug) return;
+      openEditPanel(panelEl, projectSlug, testId);
     }
 
     const closeBtn = e.target.closest('[data-action="close-edit-panel"]');
@@ -554,8 +563,8 @@ function initEditPanel() {
   });
 }
 
-function openEditPanel(panelEl, projectId, testId) {
-  const url = `/p/${projectId}/verifications/edit-panel/${testId}`;
+function openEditPanel(panelEl, projectSlug, testId) {
+  const url = `/p/${projectSlug}/verifications/edit-panel/${testId}`;
   panelEl.innerHTML = '<p class="marreq-requirements-edit-panel__loading">Loading…</p>';
   panelEl.removeAttribute('hidden');
   panelEl.setAttribute('aria-hidden', 'false');

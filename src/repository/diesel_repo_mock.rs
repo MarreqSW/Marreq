@@ -1200,12 +1200,21 @@ impl ProjectsRepository for DieselRepoMock {
         self.projects.get(&_id).cloned().ok_or(RepoError::NotFound)
     }
 
-    fn insert_new_project(&mut self, _new: &NewProject) -> Result<i32, RepoError> {
+    fn get_project_by_slug(&self, slug: &str) -> Result<Project, RepoError> {
+        self.projects
+            .values()
+            .find(|project| project.slug == slug)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn insert_new_project(&mut self, _new: &NewProjectRow) -> Result<i32, RepoError> {
         let id = self.projects.keys().max().map(|i| i + 1).unwrap_or(1);
         let now = epoch();
         let proj = Project {
             id,
             name: _new.name.clone(),
+            slug: _new.slug.clone(),
             description: _new.description.clone(),
             creation_date: Some(now),
             update_date: Some(now),

@@ -9,7 +9,7 @@ Assembles all partials into the complete page structure
 ============================================================ --}}
 {{#*inline "page"}}
 <div class="marreq-requirements-page-wrapper">
-  <div class="marreq-requirements-page" data-project-id="{{#if project.id}}{{project.id}}{{/if}}">
+  <div class="marreq-requirements-page" data-project-id="{{#if project.id}}{{project.id}}{{/if}}" data-project-slug="{{#if project.slug}}{{project.slug}}{{/if}}">
     {{> requirements/_page_header}}
     <div class="marreq-requirements-main">
       {{> requirements/_metrics_section}}
@@ -317,7 +317,8 @@ Assembles all partials into the complete page structure
 {{!-- Hidden data for JS --}}
 <script type="application/json" id="semanticSearchConfig">
 {
-  "projectId": {{#if project.id}}{{project.id}}{{else}}null{{/if}}
+  "projectId": {{#if project.id}}{{project.id}}{{else}}null{{/if}},
+  "projectSlug": {{#if project.slug}}"{{project.slug}}"{{else}}null{{/if}}
 }
 </script>
 <script type="application/json" id="requirementsInlineEditConfig">{{{inline_edit_config_json}}}</script>

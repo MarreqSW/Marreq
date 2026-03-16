@@ -79,6 +79,7 @@ mod test_support {
                 update_date: Some(timestamp()),
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
+                slug: "project-1".into(),
             },
         );
 
@@ -93,6 +94,7 @@ mod test_support {
                 update_date: Some(timestamp()),
                 status: ProjectStatus::Active,
                 owner_id: Some(2),
+                slug: "project-2".into(),
             },
         );
 

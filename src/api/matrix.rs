@@ -97,6 +97,7 @@ mod tests {
                 update_date: None,
                 status: ProjectStatus::Active,
                 owner_id: None,
+                slug: "p7".into(),
             },
         );
         repo.matrices.push(MatrixLink {
@@ -134,6 +135,7 @@ mod tests {
                 update_date: None,
                 status: ProjectStatus::Active,
                 owner_id: Some(ADMIN_ID),
+                slug: "p".into(),
             },
         );
         repo.project_members.push(ProjectMember {
@@ -174,6 +176,7 @@ mod tests {
                 update_date: None,
                 status: ProjectStatus::Active,
                 owner_id: Some(ADMIN_ID),
+                slug: "p".into(),
             },
         );
         repo.project_members.push(ProjectMember {

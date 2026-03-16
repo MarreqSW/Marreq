@@ -8,10 +8,12 @@ use rocket::http::Status;
 
 #[get("/<project_id>/applicability")]
 pub async fn show_applicability(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = get_accessible_projects(state, &user);
     let service = ApplicabilityService::new(state.inner());
@@ -21,6 +23,7 @@ pub async fn show_applicability(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "applicability": apps,
         "page_title": "Applicability"
     });
@@ -30,11 +33,13 @@ pub async fn show_applicability(
 
 #[get("/<project_id>/applicability/new?<error>")]
 pub async fn new_applicability(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = get_accessible_projects(state, &user);
 
@@ -42,6 +47,7 @@ pub async fn new_applicability(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "error": error,
         "page_title": "New Applicability"
     });
@@ -51,22 +57,19 @@ pub async fn new_applicability(
 
 #[post("/<project_id>/applicability/new", data = "<form>")]
 pub async fn post_applicability(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     form: Form<NewApplicability>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let service = ApplicabilityService::new(state.inner());
 
-    let new_url = uri!(
-        "/p",
-        new_applicability(
-            project_id = project_id,
-            error = Some("Failed to create applicability".to_string())
-        )
-    );
-    let show_url = uri!("/p", show_applicability(project_id = project_id));
+    let new_url =
+        format!("/p/{project_slug}/applicability/new?error=Failed%20to%20create%20applicability");
+    let show_url = format!("/p/{project_slug}/applicability");
 
     let new_applicability = NewApplicability {
         project_id,
@@ -84,23 +87,26 @@ pub async fn post_applicability(
 
 #[get("/<project_id>/applicability/edit/<applicability_id>?<error>")]
 pub async fn get_edit_applicability(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     applicability_id: i32,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = get_accessible_projects(state, &user);
     let service = ApplicabilityService::new(state.inner());
     let applicability = service
         .get_by_id(applicability_id)
-        .map_err(|_| Redirect::to(uri!("/p", show_applicability(project_id = project_id))))?;
+        .map_err(|_| Redirect::to(format!("/p/{project_slug}/applicability")))?;
 
     if applicability.project_id != project_id {
-        return Err(Redirect::to(uri!(
-            "/p",
-            show_applicability(project_id = applicability.project_id)
+        let applicability_project_slug =
+            get_project_slug_by_id_pooled_safe(state, applicability.project_id);
+        return Err(Redirect::to(format!(
+            "/p/{applicability_project_slug}/applicability"
         )));
     }
 
@@ -109,6 +115,7 @@ pub async fn get_edit_applicability(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "error": error,
         "page_title": format!("Edit {} - Applicability", applicability.title)
     });
@@ -117,33 +124,28 @@ pub async fn get_edit_applicability(
 
 #[post("/<project_id>/applicability/edit/<applicability_id>", data = "<form>")]
 pub async fn post_edit_applicability(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     applicability_id: i32,
     form: Form<NewApplicability>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let service = ApplicabilityService::new(state.inner());
 
-    let edit_url = uri!(
-        "/p",
-        get_edit_applicability(
-            project_id = project_id,
-            applicability_id = applicability_id,
-            error = Some("Failed to update applicability".to_string())
-        )
+    let edit_url = format!(
+        "/p/{project_slug}/applicability/edit/{applicability_id}?error=Failed%20to%20update%20applicability"
     );
-    let show_url = uri!("/p", show_applicability(project_id = project_id));
+    let show_url = format!("/p/{project_slug}/applicability");
 
     let old = service
         .get_by_id(applicability_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
     if old.project_id != project_id {
-        return Err(Redirect::to(uri!(
-            "/p",
-            show_applicability(project_id = old.project_id)
-        )));
+        let old_project_slug = get_project_slug_by_id_pooled_safe(state, old.project_id);
+        return Err(Redirect::to(format!("/p/{old_project_slug}/applicability")));
     }
 
     let new = NewApplicability {
@@ -162,21 +164,24 @@ pub async fn post_edit_applicability(
 
 #[delete("/<project_id>/applicability/delete/<applicability_id>")]
 pub async fn delete_applicability_route(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     applicability_id: i32,
     state: &State<AppState>,
 ) -> Result<Status, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
-    let show_url = uri!("/p", show_applicability(project_id = project_id));
+    let show_url = format!("/p/{project_slug}/applicability");
     let service = ApplicabilityService::new(state.inner());
     let applicability = service
         .get_by_id(applicability_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
     if applicability.project_id != project_id {
-        return Err(Redirect::to(uri!(
-            "/p",
-            show_applicability(project_id = applicability.project_id)
+        let applicability_project_slug =
+            get_project_slug_by_id_pooled_safe(state, applicability.project_id);
+        return Err(Redirect::to(format!(
+            "/p/{applicability_project_slug}/applicability"
         )));
     }
 
@@ -225,6 +230,7 @@ mod tests {
             update_date: Some(timestamp()),
             status: ProjectStatus::Active,
             owner_id: Some(ADMIN_ID),
+            slug: name.to_lowercase().replace(' ', "-"),
         }
     }
 
@@ -275,7 +281,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_applicability_renders_known_items() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/applicability", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/mars/applicability", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("#1"));
@@ -285,7 +291,7 @@ mod tests {
     #[rocket::async_test]
     async fn new_applicability_form_renders() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/applicability/new", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/mars/applicability/new", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("New Applicability"));
@@ -295,7 +301,7 @@ mod tests {
     #[rocket::async_test]
     async fn get_edit_applicability_returns_prefilled_form() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/applicability/edit/1", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/mars/applicability/edit/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Edit Applicability"));
@@ -309,11 +315,11 @@ mod tests {
         repo.applicability
             .insert(2, sample_applicability(2, 2, "Surface"));
         let client = test_client(repo).await;
-        let response = get_with_session(&client, "/p/1/applicability/edit/2", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/mars/applicability/edit/2", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/2/applicability")
+            Some("/p/venus/applicability")
         );
     }
 
@@ -326,7 +332,7 @@ mod tests {
         let client = test_client(repo).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/applicability/edit/2",
+            "/p/mars/applicability/edit/2",
             "id=2&project_id=2&title=Surface&description=Planet&tag=surface",
             ADMIN_ID,
         )
@@ -335,7 +341,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/2/applicability")
+            Some("/p/venus/applicability")
         );
     }
 }

@@ -83,6 +83,7 @@ async fn projects_page_lists_user_projects() {
         update_date: None,
         owner_id: Some(1),
         status: ProjectStatus::Active,
+        slug: "my-project".into(),
     };
     repo.projects.insert(10, project);
 
@@ -139,6 +140,7 @@ async fn access_project_details_as_owner() {
         update_date: None,
         status: ProjectStatus::Active,
         owner_id: Some(1),
+        slug: "owner-project".into(),
     };
     repo.projects.insert(30, project);
 
@@ -153,7 +155,7 @@ async fn access_project_details_as_owner() {
 
     let client = test_client(repo).await;
     let response = client
-        .get("/p/30")
+        .get("/p/owner-project")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -174,13 +176,14 @@ async fn access_project_details_forbidden_for_non_member() {
         update_date: None,
         status: ProjectStatus::Active,
         owner_id: Some(1), // Owned by User 1
+        slug: "private-project".into(),
     };
     repo.projects.insert(40, project);
     // User 2 is NOT a member
 
     let client = test_client(repo).await;
     let response = client
-        .get("/p/40")
+        .get("/p/private-project")
         .private_cookie(session_cookie(2))
         .dispatch()
         .await;

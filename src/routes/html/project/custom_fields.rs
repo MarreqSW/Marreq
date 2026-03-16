@@ -40,18 +40,20 @@ fn form_to_payload(form: CustomFieldForm) -> CustomFieldDefinitionPayload {
     }
 }
 
-fn list_url(project_id: i32) -> String {
-    format!("/p/{}/custom_fields", project_id)
+fn list_url(project_slug: &str) -> String {
+    format!("/p/{project_slug}/custom_fields")
 }
 
 #[get("/<project_id>/custom_fields?<error>&<count>")]
 async fn show_custom_fields(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     error: Option<&str>,
     count: Option<i64>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = get_accessible_projects(state, &user);
     let service = CustomFieldService::new(state.inner());
@@ -76,6 +78,7 @@ async fn show_custom_fields(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "custom_fields": custom_fields,
         "in_use_counts": in_use_counts,
         "delete_error_message": delete_error_message,
@@ -95,10 +98,12 @@ async fn show_custom_fields(
 
 #[get("/<project_id>/custom_fields/new")]
 async fn new_custom_field(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
         &*state.repo_read(),
@@ -106,7 +111,7 @@ async fn new_custom_field(
         project_id,
         Permission::ManageCustomFields,
     ) {
-        return Err(Redirect::to(list_url(project_id)));
+        return Err(Redirect::to(list_url(&project_slug)));
     }
     let projects = get_accessible_projects(state, &user);
 
@@ -114,6 +119,7 @@ async fn new_custom_field(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "page_title": "New Custom Field"
     });
     Ok(Template::render("custom_fields/new_custom_field", ctx))
@@ -121,11 +127,13 @@ async fn new_custom_field(
 
 #[post("/<project_id>/custom_fields/new", data = "<form>")]
 async fn post_custom_field(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     form: Form<CustomFieldForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
         &*state.repo_read(),
@@ -133,12 +141,12 @@ async fn post_custom_field(
         project_id,
         Permission::ManageCustomFields,
     ) {
-        return Ok(Redirect::to(list_url(project_id)));
+        return Ok(Redirect::to(list_url(&project_slug)));
     }
     let service = CustomFieldService::new(state.inner());
 
-    let new_url = uri!("/p", new_custom_field(project_id));
-    let show_url = list_url(project_id);
+    let new_url = format!("/p/{project_slug}/custom_fields/new");
+    let show_url = list_url(&project_slug);
 
     let payload = form_to_payload(form.into_inner());
     if let Err(_e) = service.create(project_id, payload) {
@@ -152,11 +160,13 @@ async fn post_custom_field(
 
 #[get("/<project_id>/custom_fields/edit/<field_id>")]
 async fn get_edit_custom_field(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     field_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
         &*state.repo_read(),
@@ -164,16 +174,18 @@ async fn get_edit_custom_field(
         project_id,
         Permission::ManageCustomFields,
     ) {
-        return Err(Redirect::to(list_url(project_id)));
+        return Err(Redirect::to(list_url(&project_slug)));
     }
     let service = CustomFieldService::new(state.inner());
 
     let custom_field = service
         .get_by_id(field_id)
-        .map_err(|_| Redirect::to(list_url(project_id)))?;
+        .map_err(|_| Redirect::to(list_url(&project_slug)))?;
 
     if custom_field.project_id != project_id {
-        return Err(Redirect::to(list_url(custom_field.project_id)));
+        let custom_field_project_slug =
+            get_project_slug_by_id_pooled_safe(state, custom_field.project_id);
+        return Err(Redirect::to(list_url(&custom_field_project_slug)));
     }
 
     let in_use_count = service.count_versions_using_field(field_id).unwrap_or(0);
@@ -191,6 +203,7 @@ async fn get_edit_custom_field(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "in_use_count": in_use_count,
         "page_title": format!("Edit {} - Custom Field", custom_field.label)
     });
@@ -200,12 +213,14 @@ async fn get_edit_custom_field(
 
 #[post("/<project_id>/custom_fields/edit/<field_id>", data = "<form>")]
 async fn post_edit_custom_field(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     field_id: i32,
     form: Form<CustomFieldForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
         &*state.repo_read(),
@@ -213,19 +228,20 @@ async fn post_edit_custom_field(
         project_id,
         Permission::ManageCustomFields,
     ) {
-        return Ok(Redirect::to(list_url(project_id)));
+        return Ok(Redirect::to(list_url(&project_slug)));
     }
     let service = CustomFieldService::new(state.inner());
 
-    let edit_url = uri!("/p", get_edit_custom_field(project_id, field_id));
-    let show_url = list_url(project_id);
+    let edit_url = format!("/p/{project_slug}/custom_fields/edit/{field_id}");
+    let show_url = list_url(&project_slug);
 
     let old = service
         .get_by_id(field_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
 
     if old.project_id != project_id {
-        return Err(Redirect::to(list_url(old.project_id)));
+        let old_project_slug = get_project_slug_by_id_pooled_safe(state, old.project_id);
+        return Err(Redirect::to(list_url(&old_project_slug)));
     }
 
     let payload = form_to_payload(form.into_inner());
@@ -240,11 +256,13 @@ async fn post_edit_custom_field(
 
 #[delete("/<project_id>/custom_fields/delete/<field_id>")]
 async fn delete_custom_field_route(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     field_id: i32,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, DeleteCustomFieldError> {
+    let _project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
         &*state.repo_read(),
@@ -262,8 +280,9 @@ async fn delete_custom_field_route(
     };
 
     if def.project_id != project_id {
+        let def_project_slug = get_project_slug_by_id_pooled_safe(state, def.project_id);
         return Err(DeleteCustomFieldError::Redirect(Box::new(Redirect::to(
-            list_url(def.project_id),
+            list_url(&def_project_slug),
         ))));
     }
 
@@ -300,8 +319,8 @@ mod tests {
 
     #[test]
     fn list_url_format() {
-        assert_eq!(list_url(1), "/p/1/custom_fields");
-        assert_eq!(list_url(42), "/p/42/custom_fields");
+        assert_eq!(list_url("my-project"), "/p/my-project/custom_fields");
+        assert_eq!(list_url("orbiter"), "/p/orbiter/custom_fields");
     }
 
     #[test]

@@ -16,10 +16,10 @@
     <span class="marreq-list-page__row-id" title="Applicability ID">#{{id}}</span>
     <div class="marreq-list-page__row-actions">
       <a
-        href="/p/{{@root.selected_project_id}}/requirements?applicability_filter={{id}}"
+        href="/p/{{@root.selected_project_slug}}/requirements?applicability_filter={{id}}"
         class="btn btn-secondary btn-sm marreq-list-page__action-btn"
       >View Requirements</a>
-      <a href="/p/{{@root.selected_project_id}}/applicability/edit/{{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn">Edit</a>
+      <a href="/p/{{@root.selected_project_slug}}/applicability/edit/{{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn">Edit</a>
       <button
         class="btn btn-danger btn-sm marreq-list-page__action-btn"
         type="button"
@@ -27,6 +27,7 @@
         data-applicability-id="{{id}}"
         data-applicability-title="applicability {{tag}}"
         data-project-id="{{@root.selected_project_id}}"
+        data-project-slug="{{@root.selected_project_slug}}"
       >Delete</button>
     </div>
   </div>

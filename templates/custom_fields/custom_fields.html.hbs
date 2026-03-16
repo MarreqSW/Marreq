@@ -3,7 +3,7 @@
   <div class="marreq-list-page__header">
     <h1 class="marreq-list-page__title">Custom fields</h1>
     {{#if can_manage_custom_fields}}
-    <a href="/p/{{selected_project_id}}/custom_fields/new" class="btn btn-primary">New custom field</a>
+    <a href="/p/{{selected_project_slug}}/custom_fields/new" class="btn btn-primary">New custom field</a>
     {{/if}}
   </div>
 
@@ -30,7 +30,7 @@
         </div>
         {{#if ../can_manage_custom_fields}}
         <div class="d-flex gap-2">
-          <a href="/p/{{../selected_project_id}}/custom_fields/edit/{{this.id}}" class="btn btn-outline btn-sm">Edit</a>
+          <a href="/p/{{../selected_project_slug}}/custom_fields/edit/{{this.id}}" class="btn btn-outline btn-sm">Edit</a>
           <button
             type="button"
             class="btn btn-danger btn-sm"
@@ -38,6 +38,7 @@
             data-field-id="{{this.id}}"
             data-field-label="{{this.label}}"
             data-project-id="{{../selected_project_id}}"
+            data-project-slug="{{../selected_project_slug}}"
           >Delete</button>
         </div>
         {{/if}}

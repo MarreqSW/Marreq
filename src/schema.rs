@@ -203,6 +203,8 @@ diesel::table! {
         #[max_length = 50]
         status -> Varchar,
         owner_id -> Nullable<Int4>,
+        #[max_length = 255]
+        slug -> Varchar,
     }
 }
 

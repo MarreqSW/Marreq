@@ -30,7 +30,7 @@
       <p class="text-muted small mb-3">
         All requirements in the project are included (current version at creation time). Approval state does not filter baseline contents.
       </p>
-      <form method="post" action="/p/{{selected_project_id}}/baselines/new">
+      <form method="post" action="/p/{{selected_project_slug}}/baselines/new">
         <div class="form-group c-form-group">
           <label for="name" class="form-label c-form-label">Name</label>
           <input type="text" name="name" id="name" class="form-control c-form-control" placeholder="e.g. Release 1.0" required>
@@ -43,7 +43,7 @@
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary" {{#unless selected_project_id}}disabled{{/unless}}>Create Baseline</button>
-          <a href="/p/{{selected_project_id}}/baselines" class="btn btn-outline">Cancel</a>
+          <a href="/p/{{selected_project_slug}}/baselines" class="btn btn-outline">Cancel</a>
         </div>
       </form>
     </div>

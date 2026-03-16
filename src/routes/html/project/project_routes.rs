@@ -8,10 +8,12 @@ use crate::services::{ProjectService, RequirementService, VerificationService};
 
 #[get("/<project_id>")]
 pub fn show_project_id(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
 
     // Get the specific project
@@ -22,7 +24,7 @@ pub fn show_project_id(
             let ctx = json!({
                 "page_title": "Project Not Found",
                 "message": "The project you're looking for could not be found.",
-                "details": format!("Project ID {} does not exist", project_id),
+                "details": format!("Project slug {} could not be resolved", project_slug),
                 "user": user
             });
             return Ok(Template::render("error", ctx));
@@ -47,6 +49,7 @@ pub fn show_project_id(
     let ctx = json!({
         "user": user,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "page_title": format!("{} - Project", selected_project_name),
         "selected_project_name": selected_project_name,
         "requirements_count": requirements_count,
@@ -57,10 +60,10 @@ pub fn show_project_id(
 }
 
 #[get("/<project_id>/edit")]
-pub fn get_edit_project(admin: AdminOnly, project_id: i32, state: &State<AppState>) -> Template {
+pub fn get_edit_project(admin: AdminOnly, project_id: String, state: &State<AppState>) -> Template {
     let user = admin.into_inner();
     let project_service = ProjectService::new(state.inner());
-    let project = match project_service.get_by_id(project_id) {
+    let project = match project_service.get_by_slug(&project_id) {
         Ok(project) => project,
         Err(err) => {
             #[cfg(debug_assertions)]
@@ -88,14 +91,18 @@ pub fn get_edit_project(admin: AdminOnly, project_id: i32, state: &State<AppStat
 #[post("/<project_id>/edit", data = "<project>")]
 pub fn post_edit_project(
     admin: AdminOnly,
-    project_id: i32,
+    project_id: String,
     project: Form<UpdateProject>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
     let user = admin.into_inner();
     let project_service = ProjectService::new(state.inner());
+    let resolved_project_id = match project_service.get_by_slug(&project_id) {
+        Ok(project) => project.id,
+        Err(_) => return Ok(Redirect::to(uri!("/projects"))),
+    };
 
-    match project_service.update(&user, project_id, project.into_inner()) {
+    match project_service.update(&user, resolved_project_id, project.into_inner()) {
         Ok(_) => Ok(Redirect::to(uri!("/projects"))),
         Err(_err) => {
             #[cfg(debug_assertions)]
@@ -108,13 +115,17 @@ pub fn post_edit_project(
 #[delete("/<project_id>/delete")]
 pub fn delete_project_route(
     admin: AdminOnly,
-    project_id: i32,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, Redirect> {
     let user = admin.into_inner();
     let project_service = ProjectService::new(state.inner());
+    let resolved_project_id = match project_service.get_by_slug(&project_id) {
+        Ok(project) => project.id,
+        Err(_) => return Ok(rocket::http::Status::NotFound),
+    };
 
-    match project_service.delete(&user, project_id) {
+    match project_service.delete(&user, resolved_project_id) {
         Ok(_) => Ok(rocket::http::Status::Ok),
         Err(_err) => {
             #[cfg(debug_assertions)]
@@ -159,6 +170,7 @@ mod tests {
             update_date: Some(timestamp()),
             status: ProjectStatus::Active,
             owner_id: Some(ADMIN_ID),
+            slug: name.to_lowercase().replace(' ', "-"),
         }
     }
 
@@ -223,7 +235,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_project_id_renders_for_admin() {
         let client = project_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/orbiter", ADMIN_ID).await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
@@ -235,7 +247,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_project_id_allows_project_member() {
         let client = project_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1", MEMBER_ID).await;
+        let response = get_with_session(&client, "/p/orbiter", MEMBER_ID).await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
@@ -251,7 +263,7 @@ mod tests {
         repo.users.insert(OUTSIDER_ID, outsider);
 
         let client = project_client(repo).await;
-        let response = get_with_session(&client, "/p/1", OUTSIDER_ID).await;
+        let response = get_with_session(&client, "/p/orbiter", OUTSIDER_ID).await;
 
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(response.headers().get_one("Location"), Some("/projects"));
@@ -265,17 +277,15 @@ mod tests {
         repo.users.insert(ADMIN_ID, admin);
 
         let client = project_client(repo).await;
-        let response = get_with_session(&client, "/p/42", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/nonexistent-slug", ADMIN_ID).await;
 
-        assert_eq!(response.status(), Status::Ok);
-        let body = response.into_string().await.expect("body");
-        assert!(body.contains("Project Not Found"));
+        assert_eq!(response.status(), Status::NotFound);
     }
 
     #[rocket::async_test]
     async fn get_edit_project_renders_form() {
         let client = project_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/edit", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/orbiter/edit", ADMIN_ID).await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
@@ -288,7 +298,7 @@ mod tests {
         let client = project_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/edit",
+            "/p/orbiter/edit",
             "name=Orbiter+II&description=Updated+mission+plan&status_id=0&owner_id=1",
             ADMIN_ID,
         )
@@ -313,14 +323,17 @@ mod tests {
         let client = project_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/edit",
+            "/p/orbiter/edit",
             "name=&description=&status_id=1&owner_id=",
             ADMIN_ID,
         )
         .await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/1/edit"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/orbiter/edit")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
@@ -333,7 +346,7 @@ mod tests {
     #[rocket::async_test]
     async fn delete_project_route_removes_project() {
         let client = project_client(base_repo()).await;
-        let response = delete_with_session(&client, "/p/1/delete", ADMIN_ID).await;
+        let response = delete_with_session(&client, "/p/orbiter/delete", ADMIN_ID).await;
 
         assert_eq!(response.status(), Status::Ok);
 
@@ -348,8 +361,8 @@ mod tests {
         repo.projects.remove(&PRIMARY_PROJECT);
 
         let client = project_client(repo).await;
-        let response = delete_with_session(&client, "/p/1/delete", ADMIN_ID).await;
+        let response = delete_with_session(&client, "/p/orbiter/delete", ADMIN_ID).await;
 
-        assert_eq!(response.status(), Status::InternalServerError);
+        assert_eq!(response.status(), Status::NotFound);
     }
 }

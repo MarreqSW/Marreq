@@ -46,11 +46,13 @@ fn can_remove_member(
 
 #[get("/<project_id>/members")]
 async fn show_project_members(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     cookies.add(Cookie::new("selected_project_id", project_id.to_string()));
 
@@ -149,6 +151,7 @@ async fn show_project_members(
         ctx_obj.insert("available_users".to_string(), json!(available_users));
         ctx_obj.insert("role_options".to_string(), json!(role_options));
         ctx_obj.insert("project_id".to_string(), json!(project_id));
+        ctx_obj.insert("project_slug".to_string(), json!(project_slug));
         ctx_obj.insert("current_user_id".to_string(), json!(user.id));
         ctx_obj.insert("owner_count".to_string(), json!(owner_count));
         ctx_obj.insert("member_count".to_string(), json!(member_count));
@@ -157,6 +160,7 @@ async fn show_project_members(
             json!(has_available_users),
         );
         ctx_obj.insert("selected_project_id".to_string(), json!(project_id));
+        ctx_obj.insert("selected_project_slug".to_string(), json!(project_slug));
         ctx_obj.insert(
             "page_title".to_string(),
             json!(format!("{} - Members", project.name)),
@@ -168,15 +172,17 @@ async fn show_project_members(
 
 #[post("/<project_id>/members", data = "<form>")]
 async fn add_project_member(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     form: Form<ProjectMemberForm>,
     state: &State<AppState>,
 ) -> Redirect {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
 
     if !can_manage_members(state, &user, project_id) {
-        return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
+        return Redirect::to(format!("/p/{project_slug}/members"));
     }
 
     let payload = form.into_inner();
@@ -190,20 +196,22 @@ async fn add_project_member(
         eprintln!("Error adding project member: {:?}", error);
     }
 
-    Redirect::to(uri!("/p", show_project_members(project_id = project_id)))
+    Redirect::to(format!("/p/{project_slug}/members"))
 }
 
 #[post("/<project_id>/members/<member_id>/remove")]
 async fn remove_project_member(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     member_id: i32,
     state: &State<AppState>,
 ) -> Redirect {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
 
     if !can_manage_members(state, &user, project_id) {
-        return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
+        return Redirect::to(format!("/p/{project_slug}/members"));
     }
 
     let allow_removal = {
@@ -217,7 +225,7 @@ async fn remove_project_member(
     };
 
     if !allow_removal {
-        return Redirect::to(uri!("/p", show_project_members(project_id = project_id)));
+        return Redirect::to(format!("/p/{project_slug}/members"));
     }
 
     if let Err(error) = state
@@ -227,7 +235,7 @@ async fn remove_project_member(
         eprintln!("Error removing project member: {:?}", error);
     }
 
-    Redirect::to(uri!("/p", show_project_members(project_id = project_id)))
+    Redirect::to(format!("/p/{project_slug}/members"))
 }
 
 pub fn routes() -> Vec<Route> {
@@ -265,6 +273,7 @@ mod tests {
             update_date: Some(timestamp()),
             status: ProjectStatus::Active,
             owner_id: Some(OWNER_ID),
+            slug: "lunar-lander".into(),
         }
     }
 
@@ -349,7 +358,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_project_members_displays_roster_for_owner() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/members", OWNER_ID).await;
+        let response = get_with_session(&client, "/p/lunar-lander/members", OWNER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("body");
@@ -362,7 +371,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_project_members_hides_management_for_non_owner() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/members", MEMBER_ID).await;
+        let response = get_with_session(&client, "/p/lunar-lander/members", MEMBER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("body");
@@ -374,7 +383,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_project_members_displays_management_for_admin() {
         let client = test_client(base_repo_with_admin()).await;
-        let response = get_with_session(&client, "/p/1/members", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/lunar-lander/members", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("body");
@@ -386,10 +395,14 @@ mod tests {
     async fn add_project_member_as_admin_persists_membership() {
         let client = test_client(base_repo_with_admin()).await;
         let response =
-            post_form_with_session(&client, "/p/1/members", "id=3&role=2", ADMIN_ID).await;
+            post_form_with_session(&client, "/p/lunar-lander/members", "id=3&role=2", ADMIN_ID)
+                .await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/1/members"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/lunar-lander/members")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
@@ -403,10 +416,14 @@ mod tests {
     async fn add_project_member_as_owner_persists_membership() {
         let client = test_client(base_repo()).await;
         let response =
-            post_form_with_session(&client, "/p/1/members", "id=3&role=2", OWNER_ID).await;
+            post_form_with_session(&client, "/p/lunar-lander/members", "id=3&role=2", OWNER_ID)
+                .await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/1/members"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/lunar-lander/members")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
@@ -420,10 +437,14 @@ mod tests {
     async fn add_project_member_requires_owner_role() {
         let client = test_client(base_repo()).await;
         let response =
-            post_form_with_session(&client, "/p/1/members", "id=3&role=2", MEMBER_ID).await;
+            post_form_with_session(&client, "/p/lunar-lander/members", "id=3&role=2", MEMBER_ID)
+                .await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/1/members"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/lunar-lander/members")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
@@ -443,10 +464,14 @@ mod tests {
     #[rocket::async_test]
     async fn remove_project_member_removes_non_owner() {
         let client = test_client(base_repo()).await;
-        let response = post_form_with_session(&client, "/p/1/members/2/remove", "", OWNER_ID).await;
+        let response =
+            post_form_with_session(&client, "/p/lunar-lander/members/2/remove", "", OWNER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/1/members"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/lunar-lander/members")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");
@@ -459,10 +484,14 @@ mod tests {
     #[rocket::async_test]
     async fn remove_project_member_prevents_last_owner_removal() {
         let client = test_client(repo_with_single_owner()).await;
-        let response = post_form_with_session(&client, "/p/1/members/1/remove", "", OWNER_ID).await;
+        let response =
+            post_form_with_session(&client, "/p/lunar-lander/members/1/remove", "", OWNER_ID).await;
 
         assert_eq!(response.status(), HttpStatus::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/p/1/members"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/p/lunar-lander/members")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo.read().expect("repo lock");

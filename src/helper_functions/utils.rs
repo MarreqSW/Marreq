@@ -4,6 +4,7 @@
 use crate::repository::errors::RepoError;
 use crate::repository::{LookupRepository, RequirementsRepository};
 use rocket::http::CookieJar;
+use std::collections::HashSet;
 
 pub fn get_selected_project_id(cookies: &CookieJar<'_>) -> Option<i32> {
     cookies
@@ -32,6 +33,62 @@ where
         category.tag.to_uppercase(),
         existing_count + 1
     ))
+}
+
+pub fn slugify_project_name(name: &str) -> String {
+    let mut slug = String::new();
+    let mut last_was_dash = false;
+
+    for ch in name.chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch.to_ascii_lowercase());
+            last_was_dash = false;
+            continue;
+        }
+
+        if !slug.is_empty() && !last_was_dash {
+            slug.push('-');
+            last_was_dash = true;
+        }
+    }
+
+    while slug.ends_with('-') {
+        slug.pop();
+    }
+
+    if slug.is_empty() {
+        "project".to_string()
+    } else {
+        slug
+    }
+}
+
+pub fn generate_unique_project_slug<I, S>(name: &str, existing_slugs: I) -> String
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    let base = slugify_project_name(name);
+    let existing: HashSet<String> = existing_slugs
+        .into_iter()
+        .map(|slug| slug.as_ref().to_string())
+        .collect();
+
+    if !existing.contains(&base) {
+        return base;
+    }
+
+    let mut occurrence = 2;
+    loop {
+        let suffix = format!("-{occurrence}");
+        let candidate = format!("{}{}", &base[..base.len().min(255 - suffix.len())], suffix);
+
+        if !existing.contains(&candidate) {
+            return candidate;
+        }
+
+        occurrence += 1;
+    }
 }
 
 #[cfg(test)]
@@ -103,5 +160,23 @@ mod tests {
         let repo = DieselRepoMock::default();
         let result = generate_requirement_reference(&repo, -1, -1);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn slugify_project_name_normalizes_to_kebab_case() {
+        assert_eq!(slugify_project_name("Flight Control"), "flight-control");
+        assert_eq!(slugify_project_name("My   Project!!!"), "my-project");
+    }
+
+    #[test]
+    fn slugify_project_name_falls_back_for_empty_result() {
+        assert_eq!(slugify_project_name("!!!"), "project");
+    }
+
+    #[test]
+    fn generate_unique_project_slug_adds_collision_suffixes() {
+        let slug =
+            generate_unique_project_slug("Flight Control", ["flight-control", "flight-control-2"]);
+        assert_eq!(slug, "flight-control-3");
     }
 }

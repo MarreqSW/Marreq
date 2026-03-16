@@ -776,21 +776,32 @@ impl<R: Repository> ProjectsRepository for CacheRepository<R> {
         })
     }
 
-    fn insert_new_project(&mut self, new: &NewProject) -> Result<i32, RepoError> {
+    fn get_project_by_slug(&self, project_slug: &str) -> Result<Project, RepoError> {
+        let key = keys::Projects::by_slug(project_slug);
+        self.get_or_fetch(&key, Duration::from_secs(900), || {
+            self.inner.get_project_by_slug(project_slug)
+        })
+    }
+
+    fn insert_new_project(&mut self, new: &NewProjectRow) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_project(new)?;
         self.cache.invalidate_project(id);
+        self.cache.invalidate_project_slug(&new.slug);
         Ok(id)
     }
 
     fn edit_project(&mut self, project_id: i32, update: &UpdateProject) -> Result<bool, RepoError> {
+        let project_slug = self.inner.get_project_by_id(project_id)?.slug;
         let res = self.inner.edit_project(project_id, update)?;
         self.cache.invalidate_project(project_id);
+        self.cache.invalidate_project_slug(&project_slug);
         Ok(res)
     }
 
     fn delete_project(&mut self, project_id: i32) -> Result<Project, RepoError> {
         let proj = self.inner.delete_project(project_id)?;
         self.cache.invalidate_project(project_id);
+        self.cache.invalidate_project_slug(&proj.slug);
         Ok(proj)
     }
 }
@@ -1117,6 +1128,7 @@ mod tests {
             update_date: Some(epoch()),
             status: ProjectStatus::Active,
             owner_id: Some(1),
+            slug: "proj".into(),
         };
         let requirement = Requirement {
             id: 1,
@@ -1599,8 +1611,9 @@ mod tests {
         // Project operations
         repo.get_projects_all().unwrap();
         repo.get_project_by_id(1).unwrap();
-        let np = NewProject {
+        let np = NewProjectRow {
             name: "P2".into(),
+            slug: "p2".into(),
             description: Some("".into()),
             status: ProjectStatus::Active,
             owner_id: Some(1),

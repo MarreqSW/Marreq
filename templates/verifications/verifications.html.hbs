@@ -10,7 +10,7 @@
      ============================================================ --}}
 {{#*inline "page"}}
 <div class="marreq-requirements-page-wrapper">
-  <div class="marreq-requirements-page" data-project-id="{{project.id}}">
+  <div class="marreq-requirements-page" data-project-id="{{project.id}}" data-project-slug="{{project.slug}}">
     {{> verifications/_page_header}}
     <div class="marreq-requirements-main">
       {{> verifications/_metrics_section}}
@@ -28,4 +28,3 @@
 {{/inline}}
 
 {{> layout this page_id="verifications"}}
-

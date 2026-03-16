@@ -107,10 +107,12 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
 
 #[get("/<project_id>/reports")]
 async fn show_reports(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user: User = project_access.into_user();
 
     let (m, name) = compute_metrics(state, project_id);
@@ -118,6 +120,7 @@ async fn show_reports(
     let ctx = serde_json::json!({
         "user": user,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "selected_project_name": name,
         "metrics": {
             "total_requirements": m.total_requirements,
@@ -144,10 +147,12 @@ async fn show_reports(
 
 #[get("/<project_id>/reports/requirements-pdf")]
 async fn generate_requirements_pdf_route(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let _user: User = project_access.into_user();
     let project = ProjectService::new(state.inner()).get_by_id(project_id)?;
     let requirements = RequirementService::new(state.inner())
@@ -190,17 +195,21 @@ async fn generate_requirements_pdf_route(
         Err(_e) => {
             #[cfg(debug_assertions)]
             eprintln!("requirements PDF generation failed: {:?}", _e);
-            Err(Redirect::to(uri!("/p", show_reports(project_id))))
+            Err(Redirect::to(format!("/p/{project_slug}/reports")))
         }
     }
 }
 
 #[get("/<project_id>/reports/pdf")]
 async fn generate_pdf_report(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
+    let project_id = {
+        let _project_slug = project_id;
+        project_access.project_id()
+    };
     let _user: User = project_access.into_user();
 
     let (m, _project_name) = compute_metrics(state, project_id);
@@ -253,6 +262,7 @@ mod tests {
             update_date: Some(timestamp()),
             status: ProjectStatus::Active,
             owner_id: Some(ADMIN_ID),
+            slug: "orbiter".into(),
         }
     }
 
@@ -373,7 +383,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_reports_renders_metrics() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/reports", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/orbiter/reports", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -387,7 +397,7 @@ mod tests {
     #[rocket::async_test]
     async fn generate_pdf_report_returns_pdf_or_fallback_html() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/reports/pdf", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/orbiter/reports/pdf", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let content_type = response.content_type().expect("content type to be set");

@@ -155,7 +155,7 @@ async fn access_project_details_as_owner() {
 
     let client = test_client(repo).await;
     let response = client
-        .get("/p/30")
+        .get("/p/owner-project")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -183,7 +183,7 @@ async fn access_project_details_forbidden_for_non_member() {
 
     let client = test_client(repo).await;
     let response = client
-        .get("/p/40")
+        .get("/p/private-project")
         .private_cookie(session_cookie(2))
         .dispatch()
         .await;

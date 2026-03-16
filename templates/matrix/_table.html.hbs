@@ -19,7 +19,7 @@
         <tr role="row" class="c-matrix-header-row c-matrix-row">
           <th class="sortable c-table-sortable c-matrix-col c-matrix-col--sticky c-matrix-col--reference" data-sort="reference_code" scope="col" role="columnheader" style="min-width: 200px; left: 0;">
             <a
-              href="/p/{{selected_project_id}}/matrix?sort_by=reference_code&sort_order={{#if (eq current_sort_by "reference_code")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}{{#if verification_status_filter}}&verification_status_filter={{verification_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
+              href="/p/{{selected_project_slug}}/matrix?sort_by=reference_code&sort_order={{#if (eq current_sort_by "reference_code")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}asc{{/if}}{{#if verification_status_filter}}&verification_status_filter={{verification_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
               class="text-decoration-none d-flex align-items-center justify-content-between"
               data-matrix-sort-link
               aria-label="Sort by requirement reference"
@@ -37,7 +37,7 @@
           {{#each tests}}
             <th class="text-center sortable c-table-sortable c-matrix-col c-matrix-col--test u-text-center" data-sort="test_{{id}}" data-column-id="test-{{id}}" scope="col" role="columnheader" style="min-width: 120px;">
               <a
-                href="/p/{{@root.selected_project_id}}/matrix?sort_by=test_{{id}}&sort_order=desc{{#if @root.verification_status_filter}}&verification_status_filter={{@root.verification_status_filter}}{{/if}}{{#if @root.search}}&search={{@root.search}}{{/if}}&page={{@root.page}}&per_page={{@root.per_page}}"
+                href="/p/{{@root.selected_project_slug}}/matrix?sort_by=test_{{id}}&sort_order=desc{{#if @root.verification_status_filter}}&verification_status_filter={{@root.verification_status_filter}}{{/if}}{{#if @root.search}}&search={{@root.search}}{{/if}}&page={{@root.page}}&per_page={{@root.per_page}}"
                 class="text-decoration-none"
                 data-matrix-sort-link
                 aria-label="Sort by test {{reference_code}} - linked requirements first"
@@ -49,7 +49,7 @@
           {{/each}}
           <th class="text-center sortable c-table-sortable c-matrix-col c-matrix-col--count u-text-center" data-sort="linked_tests_count" scope="col" role="columnheader" style="min-width: 4rem;" title="Number of tests linked to this requirement">
             <a
-              href="/p/{{selected_project_id}}/matrix?sort_by=linked_tests_count&sort_order={{#if (eq current_sort_by "linked_tests_count")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}desc{{/if}}{{#if verification_status_filter}}&verification_status_filter={{verification_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
+              href="/p/{{selected_project_slug}}/matrix?sort_by=linked_tests_count&sort_order={{#if (eq current_sort_by "linked_tests_count")}}{{#if (eq current_sort_order "asc")}}desc{{else}}asc{{/if}}{{else}}desc{{/if}}{{#if verification_status_filter}}&verification_status_filter={{verification_status_filter}}{{/if}}{{#if search}}&search={{search}}{{/if}}&page={{page}}&per_page={{per_page}}"
               class="text-decoration-none d-inline-flex align-items-center justify-content-center gap-1"
               data-matrix-sort-link
               aria-label="Sort by number of linked tests"
@@ -71,7 +71,7 @@
           <tr role="row" class="c-matrix-body-row c-matrix-row" data-req-id="{{id}}">
             <td role="cell" class="c-matrix-col c-matrix-col--sticky c-matrix-col--reference" style="min-width: 200px; left: 0;">
               <div class="c-matrix-req-cell">
-                <a href="/p/{{@root.selected_project_id}}/requirements/show/{{id}}" 
+                <a href="/p/{{@root.selected_project_slug}}/requirements/show/{{id}}" 
                    class="c-matrix-req-link font-medium u-font-medium" 
                    aria-label="View requirement {{id}}"
                    title="{{title}}">
@@ -92,7 +92,7 @@
                   <div class="c-matrix-link-indicator {{#if this.suspect}}c-matrix-link-indicator--suspect{{/if}}" data-tooltip="{{#if this.suspect}}Suspect – re-review needed{{/if}}{{#unless this.suspect}}Linked – {{this.status_title}}{{/unless}}">
                     {{#if this.suspect}}
                       <span class="c-matrix-status-dot status-suspect" aria-label="Suspect – re-review needed" title="Suspect">⚠</span>
-                      <form method="post" action="/p/{{@root.selected_project_id}}/matrix/clear_suspect" class="d-inline ms-1" style="display:inline;">
+                      <form method="post" action="/p/{{@root.selected_project_slug}}/matrix/clear_suspect" class="d-inline ms-1" style="display:inline;">
                         <input type="hidden" name="req_id" value="{{../id}}" />
                         <input type="hidden" name="verification_id" value="{{#with (lookup @root.tests @index)}}{{id}}{{/with}}" />
                         <button type="submit" class="btn btn-sm btn-outline-secondary" title="Clear suspect flag">Clear</button>
@@ -132,7 +132,7 @@
                 <h4>No requirements found</h4>
                 <p>No requirements match the current filters.</p>
                 {{#if (or verification_status_filter search)}}
-                  <a href="/p/{{selected_project_id}}/matrix" class="btn btn-outline-primary mt-3">Clear all filters</a>
+                  <a href="/p/{{selected_project_slug}}/matrix" class="btn btn-outline-primary mt-3">Clear all filters</a>
                 {{/if}}
               </div>
             </td>

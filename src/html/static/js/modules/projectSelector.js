@@ -4,16 +4,15 @@ function setCookie(name, value) {
   document.cookie = `${name}=${value}; path=/; max-age=86400`;
 }
 
+function getProjectSlugFromPath() {
+  const match = window.location.pathname.match(/^\/p\/([^/]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 function resolveProjectId(explicit) {
   if (explicit) {
     return explicit;
   }
-
-  const match = window.location.pathname.match(/^\/p\/(\d+)/);
-  if (match) {
-    return match[1];
-  }
-
   const cookie = document.cookie
     .split(';')
     .map((part) => part.trim())
@@ -26,14 +25,37 @@ function resolveProjectId(explicit) {
   return null;
 }
 
-function navigateToProject(projectId) {
+function projectSlugForId(selector, projectId) {
+  const option = Array.from(selector?.options || []).find((item) => item.value === projectId);
+  return option?.dataset?.projectSlug || projectId;
+}
+
+function resolveProjectIdFromCurrentPath(selector) {
+  const currentPathSegment = getProjectSlugFromPath();
+  if (!currentPathSegment) {
+    return null;
+  }
+
+  const options = Array.from(selector?.options || []);
+
+  const bySlug = options.find((item) => item.dataset?.projectSlug === currentPathSegment);
+  if (bySlug?.value) {
+    return bySlug.value;
+  }
+
+  return null;
+}
+
+function navigateToProject(projectId, selector) {
   if (!projectId) return;
+  const projectSlug = projectSlugForId(selector, projectId);
+  if (!projectSlug) return;
 
   const path = window.location.pathname;
   const segments = path.split('/').filter(Boolean);
 
   if (segments[0] === 'p' && segments.length >= 2) {
-    segments[1] = projectId;
+    segments[1] = projectSlug;
     const newPath = `/${segments.join('/')}`;
     const suffix = window.location.search + window.location.hash;
     window.location.assign(`${newPath}${suffix}`);
@@ -54,7 +76,7 @@ export function initProjectSelector() {
       return;
     }
     setCookie(COOKIE_NAME, projectId);
-    navigateToProject(projectId);
+    navigateToProject(projectId, selector);
   });
 
   const hasCookie = document.cookie
@@ -67,13 +89,12 @@ export function initProjectSelector() {
     if (firstOption) {
       selector.value = firstOption.value;
       setCookie(COOKIE_NAME, firstOption.value);
-      navigateToProject(firstOption.value);
+      navigateToProject(firstOption.value, selector);
     }
   } else {
-    const activeProject = resolveProjectId();
+    const activeProject = resolveProjectIdFromCurrentPath(selector) || resolveProjectId();
     if (activeProject) {
       selector.value = activeProject;
     }
   }
 }
-

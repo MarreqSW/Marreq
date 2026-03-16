@@ -104,8 +104,8 @@ function initStatusControls(form) {
 }
 
 function initInlineCreation(form) {
-  const projectId = form.dataset.projectId;
-  if (!projectId || !window.bootstrap) {
+  const projectSlug = form.dataset.projectSlug || form.dataset.projectId;
+  if (!projectSlug || !window.bootstrap) {
     return;
   }
 
@@ -116,7 +116,7 @@ function initInlineCreation(form) {
       modal: document.querySelector('#categoryModal'),
       form: document.querySelector('#inlineCategoryForm'),
       dropdown: form.querySelector('[data-dropdown="category"]'),
-      endpoint: `/p/${projectId}/requirements/inline/category`,
+      endpoint: `/p/${projectSlug}/requirements/inline/category`,
       serialize: (fd) => ({
         title: (fd.get('title') || '').toString().trim(),
         description: (fd.get('description') || '').toString().trim(),
@@ -195,7 +195,7 @@ function initInlineCreation(form) {
       modal: document.querySelector('#applicabilityModal'),
       form: document.querySelector('#inlineApplicabilityForm'),
       dropdown: form.querySelector('[data-dropdown="applicability"]'),
-      endpoint: `/p/${projectId}/requirements/inline/applicability`,
+      endpoint: `/p/${projectSlug}/requirements/inline/applicability`,
       serialize: (fd) => ({
         title: (fd.get('title') || '').toString().trim(),
         description: (fd.get('description') || '').toString().trim(),
@@ -265,7 +265,7 @@ function initInlineCreation(form) {
       modal: document.querySelector('#verificationModal'),
       form: document.querySelector('#inlineVerificationForm'),
       dropdown: form.querySelector('[data-dropdown="verification"]'),
-      endpoint: `/p/${projectId}/requirements/inline/verification`,
+      endpoint: `/p/${projectSlug}/requirements/inline/verification`,
       serialize: (fd) => ({
         title: (fd.get('title') || '').toString().trim(),
         description: (fd.get('description') || '').toString().trim(),

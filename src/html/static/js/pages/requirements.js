@@ -1337,6 +1337,12 @@ function getProjectIdFromPage() {
   return '';
 }
 
+function getProjectSlugFromPage() {
+  const page = document.querySelector('.marreq-requirements-page[data-project-slug]');
+  const slug = page?.getAttribute('data-project-slug');
+  return slug != null ? slug.trim() : '';
+}
+
 function initEditPanel() {
   const panelEl = document.getElementById('requirement-edit-panel');
   if (!panelEl) return;
@@ -1346,9 +1352,10 @@ function initEditPanel() {
     if (openBtn) {
       e.preventDefault();
       const requirementId = openBtn.getAttribute('data-requirement-id');
-      const projectId = openBtn.getAttribute('data-project-id') || getProjectIdFromPage();
-      if (!requirementId || !projectId) return;
-      openEditPanel(panelEl, projectId, requirementId);
+      const projectSlug =
+        openBtn.getAttribute('data-project-slug') || getProjectSlugFromPage();
+      if (!requirementId || !projectSlug) return;
+      openEditPanel(panelEl, projectSlug, requirementId);
     }
 
     const closeBtn = e.target.closest('[data-action="close-edit-panel"]');
@@ -1423,8 +1430,9 @@ function initPanelInlineVerificationForm(panelEl) {
   modalForm.addEventListener('submit', async (e) => {
     const form = panelEl.querySelector('[data-requirement-edit-panel-form]');
     if (!form || panelEl.hasAttribute('hidden')) return;
-    const projectId = form.getAttribute('data-project-id');
-    if (!projectId) return;
+    const projectSlug =
+      form.getAttribute('data-project-slug') || form.getAttribute('data-project-id');
+    if (!projectSlug) return;
 
     e.preventDefault();
     const fd = new FormData(modalForm);
@@ -1437,7 +1445,10 @@ function initPanelInlineVerificationForm(panelEl) {
     const submitBtn = modalForm.querySelector('button[type="submit"]');
     try {
       if (submitBtn) submitBtn.setAttribute('disabled', 'disabled');
-      const data = await postJson(`/p/${projectId}/requirements/inline/verification`, payload);
+      const data = await postJson(
+        `/p/${projectSlug}/requirements/inline/verification`,
+        payload
+      );
 
       const select = form.querySelector('#verification_method_ids');
       const dropdown = form.querySelector('[data-dropdown="verification"]');
@@ -1497,8 +1508,8 @@ function syncPanelCustomFieldValues(form) {
   hidden.value = JSON.stringify(values);
 }
 
-function openEditPanel(panelEl, projectId, requirementId) {
-  const url = `/p/${projectId}/requirements/edit-panel/${requirementId}`;
+function openEditPanel(panelEl, projectSlug, requirementId) {
+  const url = `/p/${projectSlug}/requirements/edit-panel/${requirementId}`;
   panelEl.innerHTML = '<p class="marreq-requirements-edit-panel__loading">Loading…</p>';
   panelEl.removeAttribute('hidden');
   panelEl.setAttribute('aria-hidden', 'false');

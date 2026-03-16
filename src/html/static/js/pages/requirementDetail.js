@@ -421,6 +421,7 @@ function renderVerification(root, view, canonical) {
   }
 
   const projectId = canonical.project_id;
+  const projectSlug = canonical.project_slug || canonical.project_id;
   const statuses = canonical.test_statuses || [];
   const updateVerificationSummary = () => {
     const counts = countsFromLinkedTests(view.linked_tests);
@@ -447,7 +448,7 @@ function renderVerification(root, view, canonical) {
     row.setAttribute('data-status-id', String(test.test_status_id ?? test.status_id ?? ''));
 
     const link = document.createElement('a');
-    link.href = `/p/${projectId}/verifications/show/${test.id}`;
+    link.href = `/p/${projectSlug}/verifications/show/${test.id}`;
     link.className = 'text-decoration-none text-body flex-grow-1 me-2';
     link.style.minWidth = '0';
 
@@ -508,7 +509,9 @@ function renderVerification(root, view, canonical) {
           if (select.parentNode) select.remove();
           displayEl.hidden = false;
           try {
-            await postJson(`/p/${projectId}/verifications/update-status/${test.id}`, { status_id: v });
+            await postJson(`/p/${projectSlug}/verifications/update-status/${test.id}`, {
+              status_id: v,
+            });
             const variant = testStatusVariant(displayText);
             const tagColor = status?.tag_color || null;
             test.status_id = displayText;
@@ -731,7 +734,12 @@ function hydratePage(view, canonical) {
   renderBodySections(root, view.body_sections);
   renderAttachments(root, view.attachments);
   renderComments(root, view, canonical);
-  renderRelationships(root, view.relationships, canonical.project_id, view.linked_tests);
+  renderRelationships(
+    root,
+    view.relationships,
+    canonical.project_slug || canonical.project_id,
+    view.linked_tests
+  );
 }
 
 export function init() {

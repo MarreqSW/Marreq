@@ -32,7 +32,7 @@
                 </div>
                 <div class="card-footer c-card__footer">
                     <div class="btn-group" role="group">
-                        <a href="/p/{{project.project_id}}/edit" class="btn btn-outline-primary">
+                        <a href="/p/{{project.slug}}/edit" class="btn btn-outline-primary">
                             <i class="fas fa-edit"></i> Edit Project
                         </a>
                         <a href="/projects" class="btn btn-outline-secondary">
@@ -50,22 +50,22 @@
                 </div>
                 <div class="card-body c-card__body">
                     <div class="d-grid gap-2">
-                        <a href="/p/{{project.project_id}}/requirements" class="btn btn-outline-primary">
+                        <a href="/p/{{project.slug}}/requirements" class="btn btn-outline-primary">
                             <i class="fas fa-list"></i> View Requirements
                         </a>
-                        <a href="/p/{{selected_project_id}}/verifications" class="btn btn-outline-primary">
+                        <a href="/p/{{selected_project_slug}}/verifications" class="btn btn-outline-primary">
                             <i class="fas fa-vial"></i> View Verifications
                         </a>
-                        <a href="/p/{{selected_project_id}}/matrix" class="btn btn-outline-primary">
+                        <a href="/p/{{selected_project_slug}}/matrix" class="btn btn-outline-primary">
                             <i class="fas fa-table"></i> View Matrix
                         </a>
-                        <a href="/p/{{selected_project_id}}/baselines" class="btn btn-outline-primary">
+                        <a href="/p/{{selected_project_slug}}/baselines" class="btn btn-outline-primary">
                             <i class="fas fa-camera"></i> Baselines
                         </a>
-                        <a href="/p/{{selected_project_id}}/reports" class="btn btn-outline-primary">
+                        <a href="/p/{{selected_project_slug}}/reports" class="btn btn-outline-primary">
                             <i class="fas fa-chart-bar"></i> View Reports
                         </a>
-                        <a href="/p/{{selected_project_id}}/members" class="btn btn-outline-primary">
+                        <a href="/p/{{selected_project_slug}}/members" class="btn btn-outline-primary">
                             <i class="fas fa-users"></i> View Members
                         </a>
                     </div>

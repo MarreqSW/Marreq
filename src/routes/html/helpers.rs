@@ -72,6 +72,18 @@ pub(crate) fn resolve_selected_project_id(
     }
 }
 
+pub(crate) fn resolve_selected_project_slug(
+    selected_project_id: Option<i32>,
+    projects: &[Project],
+) -> Option<String> {
+    selected_project_id.and_then(|project_id| {
+        projects
+            .iter()
+            .find(|project| project.id == project_id)
+            .map(|project| project.slug.clone())
+    })
+}
+
 pub(crate) fn get_user_projects_and_selection(
     state: &AppState,
     user: &User,
@@ -89,6 +101,7 @@ pub(crate) fn build_context_with_projects(
     cookies: &CookieJar<'_>,
 ) -> rocket::serde::json::Value {
     let (projects, selected_project_id) = get_user_projects_and_selection(state, &user, cookies);
+    let selected_project_slug = resolve_selected_project_slug(selected_project_id, &projects);
     // Mint / refresh the CSRF token so the template context always carries a
     // valid token for the <meta name="csrf-token"> tag used by AJAX clients.
     let csrf_token = crate::auth::csrf::get_or_create_csrf_token(cookies);
@@ -97,6 +110,7 @@ pub(crate) fn build_context_with_projects(
         "user": user,
         "projects": projects,
         "selected_project_id": selected_project_id,
+        "selected_project_slug": selected_project_slug,
         "csrf_token": csrf_token
     })
 }
@@ -173,6 +187,7 @@ pub(crate) fn decorate_projects_for_listing(
 
         decorated.push(json!({
             "project_id": project.id,
+            "project_slug": project.slug,
             "name": project.name,
             "description": project.description,
             "creation_date": project
@@ -274,12 +289,23 @@ pub(crate) fn get_project_by_id_pooled_safe(state: &State<AppState>, project_id:
         .unwrap_or(Project {
             id: 0,
             name: "Unknown Project".to_string(),
+            slug: "unknown-project".to_string(),
             description: Some("Unknown project".to_string()),
             creation_date: Some(Utc::now().naive_utc()),
             update_date: Some(Utc::now().naive_utc()),
             owner_id: Some(0),
             status: ProjectStatus::Active,
         })
+}
+
+pub(crate) fn get_project_slug_by_id_pooled_safe(
+    state: &State<AppState>,
+    project_id: i32,
+) -> String {
+    ProjectService::new(state.inner())
+        .get_by_id(project_id)
+        .map(|project| project.slug)
+        .unwrap_or_else(|_| "unknown-project".to_string())
 }
 
 #[cfg(test)]
@@ -320,6 +346,7 @@ mod tests {
             update_date: Some(test_datetime()),
             status: ProjectStatus::Active,
             owner_id: Some(1),
+            slug: "test-project".into(),
         }
     }
 

@@ -3,7 +3,7 @@
 <div class="container-fluid mt-3">
   <div class="d-flex justify-content-between align-items-baseline mb-3">
     <h1 class="marreq-list-page__title">Baseline: {{baseline.name}}</h1>
-    <a href="/p/{{selected_project_id}}/export_reqif?baseline_id={{baseline.id}}" class="btn btn-outline-primary btn-sm">Export ReqIF</a>
+    <a href="/p/{{selected_project_slug}}/export_reqif?baseline_id={{baseline.id}}" class="btn btn-outline-primary btn-sm">Export ReqIF</a>
   </div>
 
   <div class="card c-card mb-4">
@@ -39,9 +39,9 @@
                 <tbody>
                   {{#each requirements}}
                     <tr>
-                      <td><a href="/p/{{../selected_project_id}}/requirements/show/{{id}}{{#if current_version_id}}/version/{{current_version_id}}{{/if}}">#{{id}}</a></td>
+                      <td><a href="/p/{{../selected_project_slug}}/requirements/show/{{id}}{{#if current_version_id}}/version/{{current_version_id}}{{/if}}">#{{id}}</a></td>
                       <td><code>{{reference_code}}</code></td>
-                      <td><a href="/p/{{../selected_project_id}}/requirements/show/{{id}}{{#if current_version_id}}/version/{{current_version_id}}{{/if}}">{{title}}</a></td>
+                      <td><a href="/p/{{../selected_project_slug}}/requirements/show/{{id}}{{#if current_version_id}}/version/{{current_version_id}}{{/if}}">{{title}}</a></td>
                       <td class="text-end">
                         {{#unless same_as_current}}
                         <button type="button" class="btn btn-link btn-sm p-0 small text-muted text-decoration-none"
@@ -72,7 +72,7 @@
           {{#if traceability.0}}
             <ul class="list-group list-group-flush mb-0">
               {{#each traceability}}
-                <li class="list-group-item"><a href="/p/{{../selected_project_id}}/requirements/show/{{requirement_id}}{{#if version_id}}/version/{{version_id}}{{/if}}">{{requirement_reference}}</a> ↔ <a href="/p/{{../selected_project_id}}/verifications/show/{{verification_id}}/version/{{../baseline.id}}">{{test_reference}}</a></li>
+                <li class="list-group-item"><a href="/p/{{../selected_project_slug}}/requirements/show/{{requirement_id}}{{#if version_id}}/version/{{version_id}}{{/if}}">{{requirement_reference}}</a> ↔ <a href="/p/{{../selected_project_slug}}/verifications/show/{{verification_id}}/version/{{../baseline.id}}">{{test_reference}}</a></li>
               {{/each}}
             </ul>
           {{else}}
@@ -84,7 +84,7 @@
   </div>
 
   <div class="mt-3">
-    <a href="/p/{{selected_project_id}}/baselines" class="btn btn-outline-secondary">Back to Baselines</a>
+    <a href="/p/{{selected_project_slug}}/baselines" class="btn btn-outline-secondary">Back to Baselines</a>
   </div>
 </div>
 {{/inline}}

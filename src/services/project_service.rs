@@ -4,10 +4,12 @@
 //! Service handling project level operations.
 
 use crate::app::{AppState, DieselCachedRepo};
+use crate::helper_functions::generate_unique_project_slug;
 use crate::logger::{LogCtx, Logger};
 use crate::models::NewVerificationMethod;
 use crate::models::{
-    NewApplicability, NewCategory, NewProject, NewProjectMember, Project, UpdateProject, User,
+    NewApplicability, NewCategory, NewProject, NewProjectMember, NewProjectRow, Project,
+    UpdateProject, User,
 };
 use crate::repository::errors::RepoError;
 use crate::repository::{
@@ -36,6 +38,11 @@ impl<'a> ProjectService<'a> {
     /// Retrieve a project by identifier.
     pub fn get_by_id(&self, id: i32) -> Result<Project, RepoError> {
         self.state.repo_read().get_project_by_id(id)
+    }
+
+    /// Retrieve a project by slug.
+    pub fn get_by_slug(&self, slug: &str) -> Result<Project, RepoError> {
+        self.state.repo_read().get_project_by_slug(slug)
     }
 
     /// Retrieve all projects that the specified user is a member of.
@@ -69,11 +76,18 @@ impl<'a> ProjectService<'a> {
         }
 
         self.prepare_new_payload(&mut payload)?;
+        let slug = self.generate_slug(&payload.name)?;
 
         let owner_id = payload.owner_id.unwrap_or(actor.id);
         let id = {
             let mut repo = self.state.repo_write();
-            let id = repo.insert_new_project(&payload)?;
+            let id = repo.insert_new_project(&NewProjectRow {
+                name: payload.name.clone(),
+                slug,
+                description: payload.description.clone(),
+                owner_id: payload.owner_id,
+                status: payload.status,
+            })?;
             repo.add_project_member(&NewProjectMember {
                 project_id: id,
                 user_id: owner_id,
@@ -201,6 +215,18 @@ impl<'a> ProjectService<'a> {
         self.prepare_new_payload(&mut clone)
     }
 
+    fn generate_slug(&self, name: &str) -> Result<String, RepoError> {
+        let existing = self
+            .state
+            .repo_read()
+            .get_projects_all()?
+            .into_iter()
+            .map(|project| project.slug)
+            .collect::<Vec<_>>();
+
+        Ok(generate_unique_project_slug(name, existing))
+    }
+
     fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
         self.state.repo_read().inner_repo().get_conn()
     }
@@ -275,6 +301,7 @@ mod tests {
             update_date: Some(timestamp()),
             status: ProjectStatus::Active,
             owner_id: Some(1),
+            slug: name.to_lowercase().replace(' ', "-"),
         }
     }
 

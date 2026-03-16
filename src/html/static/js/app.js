@@ -30,46 +30,54 @@ const pageControllers = {
   'admin-backup': () => import('./pages/adminBackup.js'),
 };
 
+function getProjectRouteKey(element) {
+  return (
+    element.getAttribute('data-project-slug') ||
+    element.getAttribute('data-project-id') ||
+    ''
+  );
+}
+
 function initGlobalDeleteHandlers() {
   registerDeleteAction({
     selector: '[data-action="delete-requirement"]',
     getUrl: (button) => {
-      const projectId = button.getAttribute('data-project-id');
+      const projectSlug = getProjectRouteKey(button);
       const requirementId = button.getAttribute('data-requirement-id');
-      return `/p/${projectId}/requirements/delete/${requirementId}`;
+      return `/p/${projectSlug}/requirements/delete/${requirementId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-requirement-title') || 'Requirement';
       return `Are you sure you want to delete requirement "${title}"? This action cannot be undone.`;
     },
     onSuccess: (button) => {
-      const projectId = button.getAttribute('data-project-id');
-      window.location.href = `/p/${projectId}/requirements`;
+      const projectSlug = getProjectRouteKey(button);
+      window.location.href = `/p/${projectSlug}/requirements`;
     },
   });
 
   registerDeleteAction({
     selector: '[data-action="delete-test"]',
     getUrl: (button) => {
-      const projectId = button.getAttribute('data-project-id');
+      const projectSlug = getProjectRouteKey(button);
       const testId = button.getAttribute('data-test-id');
-      return `/p/${projectId}/verifications/delete/${testId}`;
+      return `/p/${projectSlug}/verifications/delete/${testId}`;
     },
     getMessage: (button) => {
       const name = button.getAttribute('data-test-name') || 'Test';
       return `Are you sure you want to delete test "${name}"? This action cannot be undone.`;
     },
     onSuccess: (button) => {
-      const projectId = button.getAttribute('data-project-id');
-      window.location.href = `/p/${projectId}/tests`;
+      const projectSlug = getProjectRouteKey(button);
+      window.location.href = `/p/${projectSlug}/verifications`;
     },
   });
 
   registerDeleteAction({
     selector: '[data-action="delete-project"]',
     getUrl: (button) => {
-      const projectId = button.getAttribute('data-project-id');
-      return `/p/${projectId}/delete`;
+      const projectSlug = getProjectRouteKey(button);
+      return `/p/${projectSlug}/delete`;
     },
     getMessage: (button) => {
       const name = button.getAttribute('data-project-name') || 'this project';
@@ -80,9 +88,9 @@ function initGlobalDeleteHandlers() {
   registerDeleteAction({
     selector: '[data-action="delete-category"]',
     getUrl: (button) => {
-      const projectId = button.getAttribute('data-project-id');
+      const projectSlug = getProjectRouteKey(button);
       const categoryId = button.getAttribute('data-category-id');
-      return `/p/${projectId}/categories/delete/${categoryId}`;
+      return `/p/${projectSlug}/categories/delete/${categoryId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-category-title') || 'this category';
@@ -93,26 +101,26 @@ function initGlobalDeleteHandlers() {
   registerDeleteAction({
     selector: '[data-action="delete-custom-field"]',
     getUrl: (button) => {
-      const projectId = button.getAttribute('data-project-id');
+      const projectSlug = getProjectRouteKey(button);
       const fieldId = button.getAttribute('data-field-id');
-      return `/p/${projectId}/custom_fields/delete/${fieldId}`;
+      return `/p/${projectSlug}/custom_fields/delete/${fieldId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-field-label') || 'this custom field';
       return `Are you sure you want to delete ${title}? This action cannot be undone.`;
     },
     onSuccess: (button) => {
-      const projectId = button.getAttribute('data-project-id');
-      window.location.href = `/p/${projectId}/custom_fields`;
+      const projectSlug = getProjectRouteKey(button);
+      window.location.href = `/p/${projectSlug}/custom_fields`;
     },
   });
 
   registerDeleteAction({
     selector: '[data-action="delete-applicability"]',
     getUrl: (button) => {
-      const projectId = button.getAttribute('data-project-id');
+      const projectSlug = getProjectRouteKey(button);
       const applicabilityId = button.getAttribute('data-applicability-id');
-      return `/p/${projectId}/applicability/delete/${applicabilityId}`;
+      return `/p/${projectSlug}/applicability/delete/${applicabilityId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-applicability-title') || 'this applicability';
@@ -123,9 +131,9 @@ function initGlobalDeleteHandlers() {
   registerDeleteAction({
     selector: '[data-action="delete-requirement-status"]',
     getUrl: (button) => {
-      const projectId = button.getAttribute('data-project-id');
+      const projectSlug = getProjectRouteKey(button);
       const statusId = button.getAttribute('data-status-id');
-      return `/p/${projectId}/requirement_statuses/delete/${statusId}`;
+      return `/p/${projectSlug}/requirement_statuses/delete/${statusId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-status-title') || 'this requirement status';
@@ -136,9 +144,9 @@ function initGlobalDeleteHandlers() {
   registerDeleteAction({
     selector: '[data-action="delete-verification-status"]',
     getUrl: (button) => {
-      const projectId = button.getAttribute('data-project-id');
+      const projectSlug = getProjectRouteKey(button);
       const statusId = button.getAttribute('data-status-id');
-      return `/p/${projectId}/verification_statuses/delete/${statusId}`;
+      return `/p/${projectSlug}/verification_statuses/delete/${statusId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-status-title') || 'this verification status';
@@ -149,17 +157,17 @@ function initGlobalDeleteHandlers() {
   registerDeleteAction({
     selector: '[data-action="delete-verification"]',
     getUrl: (button) => {
-      const projectId = button.getAttribute('data-project-id');
+      const projectSlug = getProjectRouteKey(button);
       const verificationId = button.getAttribute('data-verification-id');
-      return `/p/${projectId}/verification/delete/${verificationId}`;
+      return `/p/${projectSlug}/verification/delete/${verificationId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-verification-title') || 'this verification method';
       return `Are you sure you want to delete ${title}? Requirements linked to it will have that link removed.`;
     },
     onSuccess: (button) => {
-      const projectId = button.getAttribute('data-project-id');
-      window.location.href = `/p/${projectId}/verification`;
+      const projectSlug = getProjectRouteKey(button);
+      window.location.href = `/p/${projectSlug}/verification`;
     },
   });
 

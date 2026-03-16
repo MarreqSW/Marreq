@@ -5,31 +5,31 @@
   {{#if search}}
     <span class="filter-pill" style="background: var(--primary-color); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
       Search: "{{search}}"
-      <a href="/p/{{selected_project_id}}/matrix?{{#if verification_status_filter}}verification_status_filter={{verification_status_filter}}&{{/if}}{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
+      <a href="/p/{{selected_project_slug}}/matrix?{{#if verification_status_filter}}verification_status_filter={{verification_status_filter}}&{{/if}}{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
     </span>
   {{/if}}
   {{#if req_status_filter}}
     <span class="filter-pill" style="background: var(--info-color); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
       Req Status
-      <a href="/p/{{selected_project_id}}/matrix?{{#if verification_status_filter}}verification_status_filter={{verification_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
+      <a href="/p/{{selected_project_slug}}/matrix?{{#if verification_status_filter}}verification_status_filter={{verification_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
     </span>
   {{/if}}
   {{#if category_filter}}
     <span class="filter-pill" style="background: var(--warning-color); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
       Category
-      <a href="/p/{{selected_project_id}}/matrix?{{#if verification_status_filter}}verification_status_filter={{verification_status_filter}}&{{/if}}{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
+      <a href="/p/{{selected_project_slug}}/matrix?{{#if verification_status_filter}}verification_status_filter={{verification_status_filter}}&{{/if}}{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
     </span>
   {{/if}}
   {{#if applicability_filter}}
     <span class="filter-pill" style="background: var(--purple-color, #a855f7); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
       Applicability
-      <a href="/p/{{selected_project_id}}/matrix?{{#if verification_status_filter}}verification_status_filter={{verification_status_filter}}&{{/if}}{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
+      <a href="/p/{{selected_project_slug}}/matrix?{{#if verification_status_filter}}verification_status_filter={{verification_status_filter}}&{{/if}}{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
     </span>
   {{/if}}
   {{#if verification_status_filter}}
     <span class="filter-pill" style="background: var(--success-color); color: white; padding: 0.25rem 0.75rem; border-radius: 1rem; display: inline-flex; align-items: center; gap: 0.5rem;">
       Test Status
-      <a href="/p/{{selected_project_id}}/matrix?{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
+      <a href="/p/{{selected_project_slug}}/matrix?{{#if req_status_filter}}req_status_filter={{req_status_filter}}&{{/if}}{{#if category_filter}}category_filter={{category_filter}}&{{/if}}{{#if applicability_filter}}applicability_filter={{applicability_filter}}&{{/if}}{{#if search}}search={{search}}&{{/if}}per_page={{per_page}}" style="color: white; text-decoration: none;">×</a>
     </span>
   {{/if}}
 </div>

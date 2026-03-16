@@ -73,6 +73,12 @@ pub struct ProjectMembers;
 impl Keyspace for Projects {
     const PREFIX: &'static str = "project";
 }
+
+impl Projects {
+    pub fn by_slug(slug: &str) -> String {
+        format!("{}:slug:{}", Self::PREFIX, slug)
+    }
+}
 impl Keyspace for Status {
     const PREFIX: &'static str = "status";
 }

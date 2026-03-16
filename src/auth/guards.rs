@@ -15,7 +15,7 @@ use crate::models::User;
 use crate::repository::errors::RepoError;
 use crate::repository::ApiTokensRepository;
 use crate::repository::ProjectMembersRepository;
-use crate::repository::UserRepository;
+use crate::repository::{ProjectsRepository, UserRepository};
 
 fn hash_api_token(token: &str) -> String {
     let mut hasher = Sha256::new();
@@ -25,6 +25,51 @@ fn hash_api_token(token: &str) -> String {
         .iter()
         .map(|b| format!("{:02x}", b))
         .collect::<String>()
+}
+
+fn extract_route_param(request: &Request<'_>, placeholder: &str) -> Result<String, Status> {
+    let route = request.route().ok_or(Status::InternalServerError)?;
+
+    let route_segments: Vec<_> = route
+        .uri
+        .path()
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect();
+
+    let request_segments: Vec<_> = request
+        .uri()
+        .path()
+        .segments()
+        .filter(|segment| !segment.is_empty())
+        .collect();
+
+    let project_index = route_segments
+        .iter()
+        .position(|segment| *segment == placeholder)
+        .ok_or(Status::InternalServerError)?;
+
+    request_segments
+        .get(project_index)
+        .copied()
+        .map(|segment| segment.to_string())
+        .ok_or(Status::BadRequest)
+}
+
+fn session_user_has_project_access(
+    state: &AppState,
+    user: &User,
+    project_id: i32,
+) -> Result<bool, RepoError> {
+    if user.is_admin {
+        return Ok(true);
+    }
+
+    let repo = state.try_repo_read()?;
+    let memberships = repo.get_projects_for_user(user.id)?;
+    Ok(memberships
+        .iter()
+        .any(|membership| membership.project_id == project_id))
 }
 
 /// Request guard that ensures the user is authenticated and loaded from the database.
@@ -315,38 +360,9 @@ impl<'r> FromRequest<'r> for ProjectAccess {
     type Error = ();
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let route = match request.route() {
-            Some(route) => route,
-            None => return Outcome::Error((Status::InternalServerError, ())),
-        };
-
-        let route_segments: Vec<_> = route
-            .uri
-            .path()
-            .split('/')
-            .filter(|segment| !segment.is_empty())
-            .collect();
-
-        let request_segments: Vec<_> = request
-            .uri()
-            .path()
-            .segments()
-            .filter(|segment| !segment.is_empty())
-            .collect();
-
-        let project_index = match route_segments
-            .iter()
-            .position(|segment| *segment == "<project_id>")
-        {
-            Some(index) => index,
-            None => return Outcome::Error((Status::InternalServerError, ())),
-        };
-
-        let project_id_segment = match request_segments.get(project_index).copied() {
-            Some(segment) => segment,
-            None => {
-                return Outcome::Error((Status::BadRequest, ()));
-            }
+        let project_id_segment = match extract_route_param(request, "<project_id>") {
+            Ok(segment) => segment,
+            Err(status) => return Outcome::Error((status, ())),
         };
 
         let project_id = match project_id_segment.parse::<i32>() {
@@ -364,23 +380,93 @@ impl<'r> FromRequest<'r> for ProjectAccess {
         match request.guard::<SessionUser>().await {
             Outcome::Success(session_user) => {
                 let user = session_user.into_inner();
-
-                if user.is_admin {
-                    return Outcome::Success(ProjectAccess { user, project_id });
+                match session_user_has_project_access(state, &user, project_id) {
+                    Ok(true) => Outcome::Success(ProjectAccess { user, project_id }),
+                    Ok(false) => Outcome::Error((Status::Forbidden, ())),
+                    Err(_) => Outcome::Error((Status::InternalServerError, ())),
                 }
+            }
+            Outcome::Error((status, ())) => Outcome::Error((status, ())),
+            Outcome::Forward(status) => Outcome::Forward(status),
+        }
+    }
+}
 
-                let repo = state.repo_read();
-                match repo.get_projects_for_user(user.id) {
-                    Ok(memberships) => {
-                        if memberships
-                            .iter()
-                            .any(|membership| membership.project_id == project_id)
-                        {
-                            Outcome::Success(ProjectAccess { user, project_id })
-                        } else {
-                            Outcome::Error((Status::Forbidden, ()))
-                        }
-                    }
+/// Request guard ensuring the authenticated user may access the requested HTML project slug.
+pub struct HtmlProjectAccess {
+    user: User,
+    project_id: i32,
+    project_slug: String,
+}
+
+impl HtmlProjectAccess {
+    pub fn user(&self) -> &User {
+        &self.user
+    }
+
+    pub fn project_id(&self) -> i32 {
+        self.project_id
+    }
+
+    pub fn project_slug(&self) -> &str {
+        &self.project_slug
+    }
+
+    pub fn into_user(self) -> User {
+        self.user
+    }
+
+    pub fn into_parts(self) -> (User, i32, String) {
+        (self.user, self.project_id, self.project_slug)
+    }
+}
+
+impl Deref for HtmlProjectAccess {
+    type Target = User;
+
+    fn deref(&self) -> &Self::Target {
+        &self.user
+    }
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for HtmlProjectAccess {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let project_slug = match extract_route_param(request, "<project_id>") {
+            Ok(segment) => segment,
+            Err(status) => return Outcome::Error((status, ())),
+        };
+
+        let state = match request.rocket().state::<AppState>() {
+            Some(state) => state,
+            None => return Outcome::Error((Status::InternalServerError, ())),
+        };
+
+        let project = {
+            let repo = match state.try_repo_read() {
+                Ok(repo) => repo,
+                Err(_) => return Outcome::Error((Status::InternalServerError, ())),
+            };
+
+            match repo.get_project_by_slug(&project_slug) {
+                Ok(project) => project,
+                Err(RepoError::NotFound) => return Outcome::Error((Status::NotFound, ())),
+                Err(_) => return Outcome::Error((Status::InternalServerError, ())),
+            }
+        };
+
+        match request.guard::<SessionUser>().await {
+            Outcome::Success(session_user) => {
+                let user = session_user.into_inner();
+                match session_user_has_project_access(state, &user, project.id) {
+                    Ok(true) => Outcome::Success(HtmlProjectAccess {
+                        user,
+                        project_id: project.id,
+                        project_slug,
+                    }),
+                    Ok(false) => Outcome::Error((Status::Forbidden, ())),
                     Err(_) => Outcome::Error((Status::InternalServerError, ())),
                 }
             }
@@ -407,39 +493,14 @@ impl<'r> FromRequest<'r> for ProjectAccessOrBearer {
     type Error = ();
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let route = match request.route() {
-            Some(route) => route,
-            None => return Outcome::Error((Status::InternalServerError, ())),
+        let project_id_segment = match extract_route_param(request, "<project_id>") {
+            Ok(segment) => segment,
+            Err(status) => return Outcome::Error((status, ())),
         };
 
-        let route_segments: Vec<_> = route
-            .uri
-            .path()
-            .split('/')
-            .filter(|segment| !segment.is_empty())
-            .collect();
-
-        let request_segments: Vec<_> = request
-            .uri()
-            .path()
-            .segments()
-            .filter(|segment| !segment.is_empty())
-            .collect();
-
-        let project_index = match route_segments
-            .iter()
-            .position(|segment| *segment == "<project_id>")
-        {
-            Some(index) => index,
-            None => return Outcome::Error((Status::InternalServerError, ())),
-        };
-
-        let project_id = match request_segments
-            .get(project_index)
-            .and_then(|s| s.parse::<i32>().ok())
-        {
-            Some(id) => id,
-            None => return Outcome::Error((Status::BadRequest, ())),
+        let project_id = match project_id_segment.parse::<i32>() {
+            Ok(id) => id,
+            Err(_) => return Outcome::Error((Status::BadRequest, ())),
         };
 
         let state = match request.rocket().state::<AppState>() {
@@ -463,19 +524,9 @@ impl<'r> FromRequest<'r> for ProjectAccessOrBearer {
             return Outcome::Success(ProjectAccessOrBearer(ProjectAccess { user, project_id }));
         }
 
-        if user.is_admin {
-            return Outcome::Success(ProjectAccessOrBearer(ProjectAccess { user, project_id }));
-        }
-
-        let repo = state.repo_read();
-        match repo.get_projects_for_user(user.id) {
-            Ok(memberships) => {
-                if memberships.iter().any(|m| m.project_id == project_id) {
-                    Outcome::Success(ProjectAccessOrBearer(ProjectAccess { user, project_id }))
-                } else {
-                    Outcome::Error((Status::Forbidden, ()))
-                }
-            }
+        match session_user_has_project_access(&state, &user, project_id) {
+            Ok(true) => Outcome::Success(ProjectAccessOrBearer(ProjectAccess { user, project_id })),
+            Ok(false) => Outcome::Error((Status::Forbidden, ())),
             Err(_) => Outcome::Error((Status::InternalServerError, ())),
         }
     }

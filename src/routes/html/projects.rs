@@ -150,6 +150,7 @@ mod tests {
             update_date: Some(timestamp()),
             status: ProjectStatus::Active,
             owner_id: Some(owner_id),
+            slug: "test-project".into(),
         }
     }
 

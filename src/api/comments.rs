@@ -205,6 +205,7 @@ mod tests {
                 update_date: None,
                 status: ProjectStatus::Active,
                 owner_id: Some(ADMIN_ID),
+                slug: "test-project".into(),
             },
         );
         repo.project_members.push(ProjectMember {

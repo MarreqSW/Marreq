@@ -158,6 +158,7 @@ mod tests {
             update_date: None,
             status: ProjectStatus::Active,
             owner_id: Some(user.id),
+            slug: "project-phoenix".into(),
         };
         repo.projects.insert(project.id, project);
 
@@ -245,7 +246,7 @@ mod tests {
         let body = response.into_string().await.expect("response body");
         assert!(body.contains("Project Phoenix"));
         assert!(body.contains("Requirements"));
-        assert!(body.contains("href=\"/p/7/requirements\""));
+        assert!(body.contains("href=\"/p/project-phoenix/requirements\""));
     }
 
     #[rocket::async_test]

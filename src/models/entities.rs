@@ -273,6 +273,7 @@ pub struct Project {
     pub update_date: Option<chrono::NaiveDateTime>,
     pub status: ProjectStatus,
     pub owner_id: Option<i32>,
+    pub slug: String,
 }
 
 /// Membership that links a user to a project with a specific role.

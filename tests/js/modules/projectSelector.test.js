@@ -111,12 +111,12 @@ describe('Project Selector', () => {
   });
 
   it('should set selector value from URL path', () => {
-    window.location.pathname = '/p/3/requirements';
+    window.location.pathname = '/p/project-3/requirements';
     document.body.innerHTML = `
       <select id="project-selector">
-        <option value="1">Project 1</option>
-        <option value="2">Project 2</option>
-        <option value="3">Project 3</option>
+        <option value="1" data-project-slug="project-1">Project 1</option>
+        <option value="2" data-project-slug="project-2">Project 2</option>
+        <option value="3" data-project-slug="project-3">Project 3</option>
       </select>
     `;
 
@@ -128,12 +128,12 @@ describe('Project Selector', () => {
 
   it('should prioritize URL path over cookie', () => {
     document.cookie = 'selected_project_id=2';
-    window.location.pathname = '/p/3/requirements';
+    window.location.pathname = '/p/project-3/requirements';
     document.body.innerHTML = `
       <select id="project-selector">
-        <option value="1">Project 1</option>
-        <option value="2">Project 2</option>
-        <option value="3">Project 3</option>
+        <option value="1" data-project-slug="project-1">Project 1</option>
+        <option value="2" data-project-slug="project-2">Project 2</option>
+        <option value="3" data-project-slug="project-3">Project 3</option>
       </select>
     `;
 

@@ -31,14 +31,19 @@ function projectSlugForId(selector, projectId) {
 }
 
 function resolveProjectIdFromCurrentPath(selector) {
-  const currentSlug = getProjectSlugFromPath();
-  if (!currentSlug) {
+  const currentPathSegment = getProjectSlugFromPath();
+  if (!currentPathSegment) {
     return null;
   }
-  const option = Array.from(selector?.options || []).find(
-    (item) => item.dataset?.projectSlug === currentSlug
-  );
-  return option?.value || null;
+
+  const options = Array.from(selector?.options || []);
+
+  const bySlug = options.find((item) => item.dataset?.projectSlug === currentPathSegment);
+  if (bySlug?.value) {
+    return bySlug.value;
+  }
+
+  return null;
 }
 
 function navigateToProject(projectId, selector) {

@@ -211,7 +211,7 @@ async fn complete_requirement_lifecycle() {
 
     // 1. View empty requirements list
     let response = client
-        .get("/p/1/requirements")
+        .get("/p/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -222,7 +222,7 @@ async fn complete_requirement_lifecycle() {
 
     // 2. Navigate to new requirement form
     let response = client
-        .get("/p/1/requirements/new")
+        .get("/p/test-project/requirements/new")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -236,7 +236,7 @@ async fn complete_requirement_lifecycle() {
 
     // 3. Create a new requirement
     let response = client
-        .post("/p/1/requirements/new")
+        .post("/p/test-project/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
@@ -249,7 +249,7 @@ async fn complete_requirement_lifecycle() {
 
     assert_eq!(response.status(), Status::SeeOther);
     let location = response.headers().get_one("Location").expect("redirect");
-    assert!(location.contains("/p/1/requirements/show/"));
+    assert!(location.contains("/p/test-project/requirements/show/"));
 
     // Extract requirement ID from location
     let id = location
@@ -260,7 +260,7 @@ async fn complete_requirement_lifecycle() {
 
     // 4. View created requirement
     let response = client
-        .get(format!("/p/1/requirements/show/{}", id))
+        .get(format!("/p/test-project/requirements/show/{}", id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -272,7 +272,7 @@ async fn complete_requirement_lifecycle() {
 
     // 5. Edit the requirement
     let response = client
-        .get(format!("/p/1/requirements/edit/{}", id))
+        .get(format!("/p/test-project/requirements/edit/{}", id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -286,7 +286,7 @@ async fn complete_requirement_lifecycle() {
 
     // 6. Save edited requirement
     let response = client
-        .post(format!("/p/1/requirements/edit/{}", id))
+        .post(format!("/p/test-project/requirements/edit/{}", id))
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(format!(
@@ -303,7 +303,7 @@ async fn complete_requirement_lifecycle() {
 
     // 7. Verify update
     let response = client
-        .get(format!("/p/1/requirements/show/{}", id))
+        .get(format!("/p/test-project/requirements/show/{}", id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -315,7 +315,7 @@ async fn complete_requirement_lifecycle() {
 
     // 8. Delete the requirement
     let response = client
-        .delete(format!("/p/1/requirements/delete/{}", id))
+        .delete(format!("/p/test-project/requirements/delete/{}", id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -324,7 +324,7 @@ async fn complete_requirement_lifecycle() {
 
     // 9. Verify deletion
     let response = client
-        .get(format!("/p/1/requirements/show/{}", id))
+        .get(format!("/p/test-project/requirements/show/{}", id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -346,7 +346,7 @@ async fn create_requirement_hierarchy() {
 
     // 1. Create parent requirement
     let response = client
-        .post("/p/1/requirements/new")
+        .post("/p/test-project/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
@@ -367,7 +367,7 @@ async fn create_requirement_hierarchy() {
 
     // 2. Create child requirement with parent
     let response = client
-        .post("/p/1/requirements/new")
+        .post("/p/test-project/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(format!(
@@ -389,7 +389,7 @@ async fn create_requirement_hierarchy() {
 
     // 3. View parent - should show child
     let response = client
-        .get(format!("/p/1/requirements/show/{}", parent_id))
+        .get(format!("/p/test-project/requirements/show/{}", parent_id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -401,7 +401,7 @@ async fn create_requirement_hierarchy() {
 
     // 4. View child - should reference parent
     let response = client
-        .get(format!("/p/1/requirements/show/{}", child_id))
+        .get(format!("/p/test-project/requirements/show/{}", child_id))
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -454,7 +454,7 @@ async fn filter_and_search_requirements() {
 
     // 1. View all requirements
     let response = client
-        .get("/p/1/requirements")
+        .get("/p/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -466,7 +466,7 @@ async fn filter_and_search_requirements() {
 
     // 2. Filter by status (Draft)
     let response = client
-        .get("/p/1/requirements?status_filter=1")
+        .get("/p/test-project/requirements?status_filter=1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -480,7 +480,7 @@ async fn filter_and_search_requirements() {
 
     // 3. Filter by category (Network)
     let response = client
-        .get("/p/1/requirements?category_filter=2")
+        .get("/p/test-project/requirements?category_filter=2")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -492,7 +492,7 @@ async fn filter_and_search_requirements() {
 
     // 4. Filter by verification method
     let response = client
-        .get("/p/1/requirements?verification_filter=1")
+        .get("/p/test-project/requirements?verification_filter=1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -504,7 +504,7 @@ async fn filter_and_search_requirements() {
 
     // 5. Combine multiple filters
     let response = client
-        .get("/p/1/requirements?status_filter=1&category_filter=1")
+        .get("/p/test-project/requirements?status_filter=1&category_filter=1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -552,7 +552,7 @@ async fn non_admin_cannot_delete_released_requirement() {
 
     // Regular user (non-admin) attempts to delete
     let response = client
-        .delete("/p/1/requirements/delete/1")
+        .delete("/p/test-project/requirements/delete/1")
         .private_cookie(session_cookie(2))
         .dispatch()
         .await;
@@ -561,7 +561,7 @@ async fn non_admin_cannot_delete_released_requirement() {
 
     // Admin can delete
     let response = client
-        .delete("/p/1/requirements/delete/1")
+        .delete("/p/test-project/requirements/delete/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -579,7 +579,7 @@ async fn create_requirement_with_inline_category() {
 
     // 1. Create category inline
     let response = client
-        .post("/p/1/requirements/inline/category")
+        .post("/p/test-project/requirements/inline/category")
         .header(ContentType::JSON)
         .private_cookie(session_cookie(1))
         .body(r#"{"title":"Performance","description":"Performance requirements","tag":"PERF"}"#)
@@ -593,7 +593,7 @@ async fn create_requirement_with_inline_category() {
 
     // 2. Create requirement with new category
     let response = client
-        .post("/p/1/requirements/new")
+        .post("/p/test-project/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(format!(
@@ -618,7 +618,7 @@ async fn create_multiple_requirements_with_add_another() {
 
     // 1. Create first requirement with "add another"
     let response = client
-        .post("/p/1/requirements/new")
+        .post("/p/test-project/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
@@ -647,7 +647,7 @@ async fn create_multiple_requirements_with_add_another() {
 
     // 3. Create second requirement normally
     let response = client
-        .post("/p/1/requirements/new")
+        .post("/p/test-project/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
@@ -664,7 +664,7 @@ async fn create_multiple_requirements_with_add_another() {
 
     // Verify both requirements exist
     let response = client
-        .get("/p/1/requirements")
+        .get("/p/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -712,7 +712,7 @@ async fn create_requirement_from_template() {
 
     // 1. Open new requirement form with template
     let response = client
-        .get("/p/1/requirements/new?template=1")
+        .get("/p/test-project/requirements/new?template=1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -726,7 +726,7 @@ async fn create_requirement_from_template() {
 
     // 2. Create new requirement (data copied from template)
     let response = client
-        .post("/p/1/requirements/new")
+        .post("/p/test-project/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(

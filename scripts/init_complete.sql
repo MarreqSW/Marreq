@@ -73,10 +73,10 @@ $$;
 -- =============================================================================
 
 -- Projects
-INSERT INTO projects (name, description, creation_date, status) VALUES
-    ('Space Project', 'Space exploration satellite requirements and test management system for advanced satellite missions', NOW(), 'active'),
-    ('Marreq Project', 'Requirements management system development and testing', NOW(), 'active'),
-    ('Empty Project', 'Empty project for testing and demonstration purposes', NOW(), 'active');
+INSERT INTO projects (name, slug, description, creation_date, status) VALUES
+    ('Space Project', 'space-project', 'Space exploration satellite requirements and test management system for advanced satellite missions', NOW(), 'active'),
+    ('Marreq Project', 'marreq-project', 'Requirements management system development and testing', NOW(), 'active'),
+    ('Empty Project', 'empty-project', 'Empty project for testing and demonstration purposes', NOW(), 'active');
 
 -- Requirement status definitions (is_system = true: default set, not editable/deletable)
 INSERT INTO requirement_status (title, description, tag, project_id, is_system) VALUES

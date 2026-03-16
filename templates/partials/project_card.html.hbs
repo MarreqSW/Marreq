@@ -55,21 +55,21 @@
       {{/if}}
     </div>
     <div class="marreq-project-card__actions">
-      <a href="/p/{{project_id}}" class="marreq-btn marreq-btn--primary">
+      <a href="/p/{{project_slug}}" class="marreq-btn marreq-btn--primary">
         <i class="fas fa-eye" aria-hidden="true"></i>
         Open
       </a>
-      <a href="/p/{{project_id}}/requirements" class="marreq-btn marreq-btn--outline">
+      <a href="/p/{{project_slug}}/requirements" class="marreq-btn marreq-btn--outline">
         <i class="fas fa-clipboard-list" aria-hidden="true"></i>
         Requirements
       </a>
       {{#if show_admin_actions}}
       {{#if user.is_admin}}
-      <a href="/p/{{project_id}}/edit" class="marreq-btn marreq-btn--outline">
+      <a href="/p/{{project_slug}}/edit" class="marreq-btn marreq-btn--outline">
         <i class="fas fa-edit" aria-hidden="true"></i>
         Edit
       </a>
-      <button type="button" class="marreq-btn marreq-btn--outline" data-action="delete-project" data-project-id="{{project_id}}" data-project-name="{{name}}">
+      <button type="button" class="marreq-btn marreq-btn--outline" data-action="delete-project" data-project-id="{{project_id}}" data-project-slug="{{project_slug}}" data-project-name="{{name}}">
         <i class="fas fa-trash" aria-hidden="true"></i>
         Delete
       </button>

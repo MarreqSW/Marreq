@@ -7,10 +7,12 @@ use crate::services::CategoryService;
 
 #[get("/<project_id>/categories")]
 async fn show_categories(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = get_accessible_projects(state, &user);
     let service = CategoryService::new(state.inner());
@@ -20,6 +22,7 @@ async fn show_categories(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "categories": categories,
         "page_title": "Categories"
     });
@@ -29,10 +32,12 @@ async fn show_categories(
 
 #[get("/<project_id>/categories/new")]
 async fn new_category(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = get_accessible_projects(state, &user);
 
@@ -40,6 +45,7 @@ async fn new_category(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "page_title": "New Category"
     });
     Ok(Template::render("categories/new_category", ctx))
@@ -47,16 +53,18 @@ async fn new_category(
 
 #[post("/<project_id>/categories/new", data = "<new_category>")]
 async fn post_category(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     new_category: Form<NewCategory>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let service = CategoryService::new(state.inner());
 
-    let new_url = uri!("/p", new_category(project_id));
-    let show_url = uri!("/p", show_categories(project_id));
+    let new_url = format!("/p/{project_slug}/categories/new");
+    let show_url = format!("/p/{project_slug}/categories");
 
     let mut category = new_category.into_inner();
     category.project_id = project_id;
@@ -72,22 +80,24 @@ async fn post_category(
 
 #[get("/<project_id>/categories/edit/<category_id>")]
 async fn get_edit_category(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     category_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let service = CategoryService::new(state.inner());
 
     let category = service
         .get_by_id(category_id)
-        .map_err(|_| Redirect::to(uri!("/p", show_categories(project_id))))?;
+        .map_err(|_| Redirect::to(format!("/p/{project_slug}/categories")))?;
 
     if category.project_id != project_id {
-        return Err(Redirect::to(uri!(
-            "/p",
-            show_categories(project_id = category.project_id)
+        let category_project_slug = get_project_slug_by_id_pooled_safe(state, category.project_id);
+        return Err(Redirect::to(format!(
+            "/p/{category_project_slug}/categories"
         )));
     }
 
@@ -98,6 +108,7 @@ async fn get_edit_category(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "page_title": format!("Edit {} - Category", category.title)
     });
 
@@ -106,27 +117,27 @@ async fn get_edit_category(
 
 #[post("/<project_id>/categories/edit/<category_id>", data = "<category>")]
 async fn post_edit_category(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     category_id: i32,
     category: Form<NewCategory>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let service = CategoryService::new(state.inner());
 
-    let edit_url = uri!("/p", get_edit_category(project_id, category_id));
-    let show_url = uri!("/p", show_categories(project_id));
+    let edit_url = format!("/p/{project_slug}/categories/edit/{category_id}");
+    let show_url = format!("/p/{project_slug}/categories");
 
     let old = service
         .get_by_id(category_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
 
     if old.project_id != project_id {
-        return Err(Redirect::to(uri!(
-            "/p",
-            show_categories(project_id = old.project_id)
-        )));
+        let old_project_slug = get_project_slug_by_id_pooled_safe(state, old.project_id);
+        return Err(Redirect::to(format!("/p/{old_project_slug}/categories")));
     }
 
     let mut edited = category.into_inner();
@@ -144,11 +155,15 @@ async fn post_edit_category(
 
 #[delete("/<project_id>/categories/delete/<category_id>")]
 async fn delete_category_route(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     category_id: i32,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, Redirect> {
+    let project_id = {
+        let _project_slug = project_id;
+        project_access.project_id()
+    };
     let user = project_access.into_user();
     let service = CategoryService::new(state.inner());
 
@@ -158,9 +173,9 @@ async fn delete_category_route(
     };
 
     if category.project_id != project_id {
-        return Err(Redirect::to(uri!(
-            "/p",
-            show_categories(project_id = category.project_id)
+        let category_project_slug = get_project_slug_by_id_pooled_safe(state, category.project_id);
+        return Err(Redirect::to(format!(
+            "/p/{category_project_slug}/categories"
         )));
     }
 
@@ -210,6 +225,7 @@ mod tests {
             update_date: Some(timestamp()),
             status: ProjectStatus::Active,
             owner_id: Some(ADMIN_ID),
+            slug: name.to_lowercase().replace(' ', "-"),
         }
     }
 
@@ -267,7 +283,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_categories_lists_known_items() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/categories", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/orbiter/categories", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Categories"));
@@ -278,7 +294,7 @@ mod tests {
     #[rocket::async_test]
     async fn new_category_form_renders() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/categories/new", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/orbiter/categories/new", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("New Category"));
@@ -290,7 +306,7 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/categories/new",
+            "/p/orbiter/categories/new",
             "title=Avionics&description=Avionics+systems&tag=avionics&project_id=1",
             ADMIN_ID,
         )
@@ -299,7 +315,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/1/categories")
+            Some("/p/orbiter/categories")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -314,7 +330,7 @@ mod tests {
     #[rocket::async_test]
     async fn get_edit_category_renders_existing_data() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/categories/edit/1", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/orbiter/categories/edit/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Edit Category"));
@@ -324,11 +340,11 @@ mod tests {
     #[rocket::async_test]
     async fn get_edit_category_redirects_on_project_mismatch() {
         let client = test_client(repo_with_secondary_category()).await;
-        let response = get_with_session(&client, "/p/1/categories/edit/2", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/orbiter/categories/edit/2", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/2/categories")
+            Some("/p/lander/categories")
         );
     }
 
@@ -337,7 +353,7 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/categories/edit/1",
+            "/p/orbiter/categories/edit/1",
             "id=1&project_id=1&title=Systems+Rev&description=Updated&tag=systems",
             ADMIN_ID,
         )
@@ -346,7 +362,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/1/categories")
+            Some("/p/orbiter/categories")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -361,7 +377,7 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/categories/edit/99",
+            "/p/orbiter/categories/edit/99",
             "id=99&project_id=1&title=Ghost&description=None&tag=ghost",
             ADMIN_ID,
         )
@@ -370,7 +386,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/1/categories")
+            Some("/p/orbiter/categories")
         );
     }
 
@@ -379,7 +395,7 @@ mod tests {
         let client = test_client(repo_with_secondary_category()).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/categories/edit/2",
+            "/p/orbiter/categories/edit/2",
             "id=2&project_id=1&title=Surface&description=Stay&tag=surface",
             ADMIN_ID,
         )
@@ -388,7 +404,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/2/categories")
+            Some("/p/lander/categories")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -400,7 +416,8 @@ mod tests {
     #[rocket::async_test]
     async fn delete_category_route_removes_category() {
         let client = test_client(base_repo()).await;
-        let response = delete_with_session(&client, "/p/1/categories/delete/1", ADMIN_ID).await;
+        let response =
+            delete_with_session(&client, "/p/orbiter/categories/delete/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -414,11 +431,12 @@ mod tests {
     #[rocket::async_test]
     async fn delete_category_route_redirects_on_project_mismatch() {
         let client = test_client(repo_with_secondary_category()).await;
-        let response = delete_with_session(&client, "/p/1/categories/delete/2", ADMIN_ID).await;
+        let response =
+            delete_with_session(&client, "/p/orbiter/categories/delete/2", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/2/categories")
+            Some("/p/lander/categories")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -429,7 +447,8 @@ mod tests {
     #[rocket::async_test]
     async fn delete_category_route_returns_not_found_for_missing() {
         let client = test_client(base_repo()).await;
-        let response = delete_with_session(&client, "/p/1/categories/delete/99", ADMIN_ID).await;
+        let response =
+            delete_with_session(&client, "/p/orbiter/categories/delete/99", ADMIN_ID).await;
         assert_eq!(response.status(), Status::NotFound);
     }
 }

@@ -12,6 +12,7 @@ import { showNotification } from '../modules/notifications.js';
 // State
 const state = {
   projectId: null,
+  projectSlug: null,
   enabled: false,
   lastQuery: '',
   searchDebounceTimer: null,
@@ -30,6 +31,7 @@ export function init() {
     try {
       const config = JSON.parse(configEl.textContent);
       state.projectId = config.projectId;
+      state.projectSlug = config.projectSlug || null;
     } catch (e) {
       console.error('Failed to parse semantic search config:', e);
     }
@@ -346,7 +348,7 @@ function renderResults(results, total) {
  */
 function createResultItem(result, rank) {
   const item = document.createElement('a');
-  item.href = `/p/${state.projectId}/requirements/show/${result.id}`;
+  item.href = `/p/${state.projectSlug || state.projectId}/requirements/show/${result.id}`;
   item.className = 'list-group-item list-group-item-action';
   item.setAttribute('role', 'listitem');
 
@@ -392,7 +394,7 @@ function renderAnswer(answer, citations) {
     elements.citations.innerHTML = `
       <strong>Citations:</strong> 
       ${citations.map(c => 
-        `<a href="/p/${state.projectId}/requirements/show/${c.requirement_id}" class="badge bg-light text-primary text-decoration-none me-1">[${escapeHtml(c.reference_code)}]</a>`
+        `<a href="/p/${state.projectSlug || state.projectId}/requirements/show/${c.requirement_id}" class="badge bg-light text-primary text-decoration-none me-1">[${escapeHtml(c.reference_code)}]</a>`
       ).join('')}
     `;
   } else if (elements.citations) {

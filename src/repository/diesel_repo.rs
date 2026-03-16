@@ -12,9 +12,9 @@ use crate::models::entities::{
 use crate::models::forms::{
     CustomFieldDefinitionPayload, NewApplicability, NewBaselineRequirement, NewBaselineRow,
     NewBaselineTraceability, NewBaselineVerification, NewCategory, NewCustomFieldDefinitionRow,
-    NewLog, NewMatrixLink, NewProject, NewProjectMember, NewRequirement, NewRequirementContainer,
-    NewRequirementStatus, NewUser, NewVerification, NewVerificationMethod, NewVerificationStatus,
-    UpdateProject, UpdateUser,
+    NewLog, NewMatrixLink, NewProjectMember, NewProjectRow, NewRequirement,
+    NewRequirementContainer, NewRequirementStatus, NewUser, NewVerification, NewVerificationMethod,
+    NewVerificationStatus, UpdateProject, UpdateUser,
 };
 use crate::repository::{
     ApiTokensRepository, BaselineRepository, CustomFieldRepository, LookupRepository,
@@ -1845,7 +1845,22 @@ impl ProjectsRepository for DieselRepo {
             })
     }
 
-    fn insert_new_project(&mut self, new: &NewProject) -> Result<i32, RepoError> {
+    fn get_project_by_slug(&self, project_slug: &str) -> Result<Project, RepoError> {
+        use schema::projects::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::projects
+            .filter(dsl::slug.eq(project_slug))
+            .first::<Project>(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })
+    }
+
+    fn insert_new_project(&mut self, new: &NewProjectRow) -> Result<i32, RepoError> {
         use schema::projects::dsl;
         let mut conn = self.get_conn()?;
         let result = diesel::insert_into(dsl::projects)

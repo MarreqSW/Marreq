@@ -16,21 +16,23 @@ use rocket::response::content;
 
 #[get("/<project_id>/export_reqif?<baseline_id>")]
 pub async fn export_reqif(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     baseline_id: Option<i32>,
     state: &State<AppState>,
 ) -> Result<(ContentType, String), Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let _user = project_access.into_user();
     let service = ReqIFService::new(state.inner());
     let xml = match baseline_id {
         Some(bid) => service.export_baseline(project_id, bid).map_err(|e| {
             eprintln!("ReqIF baseline export error: {:?}", e);
-            Redirect::to(format!("/p/{}/requirements", project_id))
+            Redirect::to(format!("/p/{project_slug}/requirements"))
         })?,
         None => service.export_project(project_id).map_err(|e| {
             eprintln!("ReqIF export error: {:?}", e);
-            Redirect::to(format!("/p/{}/requirements", project_id))
+            Redirect::to(format!("/p/{project_slug}/requirements"))
         })?,
     };
     let ct = ContentType::new("application", "xml");
@@ -39,15 +41,17 @@ pub async fn export_reqif(
 
 #[get("/<project_id>/import_reqif?<error>")]
 pub fn import_reqif_page(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<content::RawHtml<String>, Box<Redirect>> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let _user = project_access.into_user();
     let project = crate::services::ProjectService::new(state.inner())
         .get_by_id(project_id)
-        .map_err(|_| Box::new(Redirect::to(format!("/p/{}", project_id))))?;
+        .map_err(|_| Box::new(Redirect::to(format!("/p/{project_slug}"))))?;
     let html = format!(
         r#"<!doctype html>
 <html lang="en">
@@ -93,13 +97,13 @@ pub fn import_reqif_page(
 </body>
 </html>"#,
         project.name,
-        project_id,
+        project_slug,
         error
             .as_ref()
             .map(|m| format!("<div class=\"alert alert-danger\">{}</div>", m))
             .unwrap_or_default(),
-        project_id,
-        project_id
+        project_slug,
+        project_slug
     );
     Ok(content::RawHtml(html))
 }
@@ -111,25 +115,25 @@ pub struct ReqIFUpload<'r> {
 
 #[post("/<project_id>/import_reqif/process", data = "<upload>")]
 pub async fn process_reqif_import(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     upload: Form<ReqIFUpload<'_>>,
     state: &State<AppState>,
 ) -> Result<content::RawHtml<String>, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let temp_path = upload.file.path().ok_or_else(|| {
-        Redirect::to(uri!(import_reqif_page(
-            project_id = project_id,
-            error = Some("No file uploaded.".to_string())
-        )))
+        Redirect::to(format!(
+            "/p/{project_slug}/import_reqif?error=No%20file%20uploaded."
+        ))
     })?;
 
     let xml_bytes = std::fs::read(temp_path).map_err(|e| {
         eprintln!("ReqIF read error: {}", e);
-        Redirect::to(uri!(import_reqif_page(
-            project_id = project_id,
-            error = Some("Could not read uploaded file.".to_string())
-        )))
+        Redirect::to(format!(
+            "/p/{project_slug}/import_reqif?error=Could%20not%20read%20uploaded%20file."
+        ))
     })?;
 
     let status_service = StatusService::new(state.inner());
@@ -188,10 +192,10 @@ pub async fn process_reqif_import(
             r.imported_requirement_ids,
         ),
         Err(e) => {
-            return Err(Redirect::to(uri!(import_reqif_page(
-                project_id = project_id,
-                error = Some(e)
-            ))));
+            return Err(Redirect::to(format!(
+                "/p/{project_slug}/import_reqif?error={}",
+                urlencoding::encode(&e)
+            )));
         }
     };
 
@@ -261,8 +265,8 @@ pub async fn process_reqif_import(
                 errors_html
             )
         },
-        project_id,
-        project_id
+        project_slug,
+        project_slug
     );
     Ok(content::RawHtml(html))
 }

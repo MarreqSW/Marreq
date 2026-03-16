@@ -40,7 +40,12 @@ fn queue_requirements_for_indexing(
     }
 }
 
-fn render_import_page_html(name: &str, project_id: i32, error_html: &str) -> String {
+fn render_import_page_html(
+    name: &str,
+    project_id: i32,
+    project_slug: &str,
+    error_html: &str,
+) -> String {
     format!(
         r#"
     <!doctype html>
@@ -87,18 +92,20 @@ fn render_import_page_html(name: &str, project_id: i32, error_html: &str) -> Str
     </body>
     </html>
     "#,
-        name, project_id, error_html, project_id
+        name, project_id, error_html, project_slug
     )
 }
 
 #[get("/p/<project_id>/import_excel?<error>")]
 pub fn import_excel_page(
-    session_user: SessionUser,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<content::RawHtml<String>, Redirect> {
-    let _user = session_user.into_inner();
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
+    let _user = project_access.into_user();
 
     let project = get_project_by_id_pooled_safe(state, project_id);
     let name = project.name;
@@ -106,17 +113,19 @@ pub fn import_excel_page(
         .as_ref()
         .map(|message| format!("<div class=\"alert alert-danger\">{}</div>", message))
         .unwrap_or_default();
-    let html = render_import_page_html(&name, project_id, &error_html);
+    let html = render_import_page_html(&name, project_id, &project_slug, &error_html);
     Ok(content::RawHtml(html))
 }
 
 #[post("/p/<project_id>/import_excel/upload", data = "<upload>")]
 pub async fn upload_excel_file(
-    session_user: SessionUser,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     mut upload: rocket::form::Form<rocket::fs::TempFile<'_>>,
 ) -> Result<content::RawHtml<String>, Redirect> {
-    let _user = session_user.into_inner();
+    let project_slug = project_id;
+    let _project_id = project_access.project_id();
+    let _user = project_access.into_user();
 
     // Save uploaded file temporarily
     let filename = upload.name().unwrap_or("upload");
@@ -147,10 +156,10 @@ pub async fn upload_excel_file(
 
     let is_supported = matches!(extension.as_str(), "xlsx" | "xls" | "csv");
     if !is_supported {
-        return Err(Redirect::to(uri!(import_excel_page(
-            project_id = project_id,
-            error = Some("Unsupported file type. Use .xlsx, .xls, or .csv".to_string())
-        ))));
+        return Err(Redirect::to(format!(
+            "/p/{project_slug}/import_excel?error={}",
+            urlencoding::encode("Unsupported file type. Use .xlsx, .xls, or .csv")
+        )));
     }
 
     let temp_path = format!(
@@ -159,18 +168,18 @@ pub async fn upload_excel_file(
         extension
     );
     upload.persist_to(&temp_path).await.map_err(|_| {
-        Redirect::to(uri!(import_excel_page(
-            project_id = project_id,
-            error = Some("Failed to store upload. Please try again.".to_string())
-        )))
+        Redirect::to(format!(
+            "/p/{project_slug}/import_excel?error={}",
+            urlencoding::encode("Failed to store upload. Please try again.")
+        ))
     })?;
 
     // Parse Excel file
     let importer = crate::importers::excel::ExcelImporter::new(&temp_path).map_err(|e| {
-        Redirect::to(uri!(import_excel_page(
-            project_id = project_id,
-            error = Some(format!("Failed to parse file: {}", e))
-        )))
+        Redirect::to(format!(
+            "/p/{project_slug}/import_excel?error={}",
+            urlencoding::encode(&format!("Failed to parse file: {}", e))
+        ))
     })?;
 
     // Create HTML for column mapping
@@ -269,7 +278,7 @@ pub async fn upload_excel_file(
     "#,
         importer.import_type,
         importer.data.len(),
-        project_id,
+        project_slug,
         importer.import_type,
         temp_path,
         importer
@@ -296,7 +305,7 @@ pub async fn upload_excel_file(
             })
             .collect::<Vec<_>>()
             .join(""),
-        project_id
+        project_slug
     );
 
     Ok(content::RawHtml(html))
@@ -304,12 +313,14 @@ pub async fn upload_excel_file(
 
 #[post("/p/<project_id>/import_excel/process", data = "<mapping_data>")]
 pub fn process_excel_import(
-    session_user: SessionUser,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     mapping_data: Form<crate::models::ImportMappingForm>,
     state: &State<AppState>,
 ) -> Result<content::RawHtml<String>, Redirect> {
-    let _user = session_user.into_inner();
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
+    let _user = project_access.into_user();
 
     eprintln!("Column mappings string: {}", mapping_data.column_mappings);
 
@@ -317,20 +328,20 @@ pub fn process_excel_import(
     let column_mappings: Vec<crate::importers::excel::ColumnMapping> =
         serde_json::from_str(&mapping_data.column_mappings).map_err(|e| {
             eprintln!("JSON parsing error: {}", e);
-            Redirect::to(uri!(import_excel_page(
-                project_id = project_id,
-                error = Some("Invalid column mapping data.".to_string())
-            )))
+            Redirect::to(format!(
+                "/p/{project_slug}/import_excel?error={}",
+                urlencoding::encode("Invalid column mapping data.")
+            ))
         })?;
 
     // Create importer and import data
     let importer =
         crate::importers::excel::ExcelImporter::new(&mapping_data.temp_file).map_err(|e| {
             eprintln!("Excel importer creation error: {}", e);
-            Redirect::to(uri!(import_excel_page(
-                project_id = project_id,
-                error = Some("Unable to read uploaded file. Please re-upload.".to_string())
-            )))
+            Redirect::to(format!(
+                "/p/{project_slug}/import_excel?error={}",
+                urlencoding::encode("Unable to read uploaded file. Please re-upload.")
+            ))
         })?;
 
     // Create import configuration
@@ -342,10 +353,10 @@ pub fn process_excel_import(
 
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
-        Redirect::to(uri!(import_excel_page(
-            project_id = project_id,
-            error = Some("Database connection failed.".to_string())
-        )))
+        Redirect::to(format!(
+            "/p/{project_slug}/import_excel?error={}",
+            urlencoding::encode("Database connection failed.")
+        ))
     })?;
     let result = importer.import_data(&config, connection);
 
@@ -409,7 +420,7 @@ pub fn process_excel_import(
                 mapping_data.import_type,
                 name,
                 project_id,
-                project_id
+                project_slug
             )
         }
         Err(e) => {
@@ -454,7 +465,7 @@ pub fn process_excel_import(
             </body>
             </html>
             "#,
-                e, name, project_id, project_id
+                e, name, project_id, project_slug
             )
         }
     };
@@ -468,17 +479,18 @@ mod tests {
 
     #[test]
     fn import_page_html_contains_expected_content() {
-        let html = render_import_page_html("Test Project", 1, "");
+        let html = render_import_page_html("Test Project", 1, "test-project", "");
         assert!(html.contains("Import File"));
         assert!(html.contains("Target Project"));
         assert!(html.contains("Test Project"));
-        assert!(html.contains("/p/1/import_excel/upload"));
+        assert!(html.contains("/p/test-project/import_excel/upload"));
         assert!(html.contains(".xlsx,.xls,.csv"));
     }
 
     #[test]
     fn import_page_html_includes_error_when_provided() {
-        let html = render_import_page_html("P", 2, "<div class=\"alert alert-danger\">Oops</div>");
+        let html =
+            render_import_page_html("P", 2, "p", "<div class=\"alert alert-danger\">Oops</div>");
         assert!(html.contains("alert-danger"));
         assert!(html.contains("Oops"));
     }

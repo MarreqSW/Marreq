@@ -284,6 +284,7 @@ mod tests {
             update_date: Some(epoch()),
             status: ProjectStatus::Active,
             owner_id: Some(1),
+            slug: "export-test-project".into(),
         };
         mock.projects.insert(1, proj);
         mock.requirement_statuses.insert(
@@ -360,6 +361,7 @@ mod tests {
                 update_date: Some(epoch()),
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
+                slug: "proj".into(),
             },
         );
         mock.baselines.push(crate::models::Baseline {
@@ -459,6 +461,7 @@ mod tests {
                 update_date: None,
                 status: ProjectStatus::Active,
                 owner_id: None,
+                slug: "p1".into(),
             },
         );
         mock.baselines.push(crate::models::Baseline {

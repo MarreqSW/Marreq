@@ -11,7 +11,7 @@
                     <p class="mb-0">Import Type: <strong>{{import_type}}</strong> | Records to Import: <strong>{{data_count}}</strong></p>
                 </div>
                 <div class="card-body c-card__body">
-                    <form id="mappingForm" action="/p/{{selected_project_id}}/import_excel/process" method="post">
+                    <form id="mappingForm" action="/p/{{selected_project_slug}}/import_excel/process" method="post">
                         <input type="hidden" name="import_type" value="{{import_type}}">
                         <input type="hidden" name="temp_file" value="{{temp_file}}">
                         <input type="hidden" name="column_mappings" id="columnMappings">
@@ -93,7 +93,7 @@
                         
                         <div class="d-grid gap-2">
                             <button type="submit" class="btn btn-success">Import Data</button>
-                            <a href="/p/{{selected_project_id}}/import_excel" class="btn btn-secondary">Back</a>
+                            <a href="/p/{{selected_project_slug}}/import_excel" class="btn btn-secondary">Back</a>
                         </div>
                     </form>
                 </div>

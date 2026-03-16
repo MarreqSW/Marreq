@@ -366,6 +366,7 @@ mod tests {
                 update_date: Some(test_timestamp()),
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
+                slug: "test-project".to_string(),
             };
 
             assert_eq!(Project::entity_type(), EntityType::Project);
@@ -436,6 +437,7 @@ mod tests {
                 update_date: Some(test_timestamp()),
                 status: ProjectStatus::Active,
                 owner_id: Some(10),
+                slug: "project".to_string(),
             };
 
             assert_eq!(project.id, 1);
@@ -566,6 +568,7 @@ mod tests {
                 update_date: Some(test_timestamp()),
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
+                slug: "project".to_string(),
             };
 
             let json = serde_json::to_string(&project).unwrap();
@@ -1401,6 +1404,7 @@ mod tests {
                 update_date: Some(test_timestamp()),
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
+                slug: "project".to_string(),
             };
 
             assert_eq!(project.description, Some("Description".to_string()));
@@ -1417,6 +1421,7 @@ mod tests {
                 update_date: None,
                 status: ProjectStatus::OnHold,
                 owner_id: None,
+                slug: "project".to_string(),
             };
 
             assert_eq!(project.description, None);

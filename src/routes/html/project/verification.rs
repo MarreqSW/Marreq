@@ -7,10 +7,12 @@ use rocket::http::Status;
 
 #[get("/<project_id>/verification")]
 pub async fn show_verification(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = get_accessible_projects(state, &user);
     let verifications = state
@@ -22,6 +24,7 @@ pub async fn show_verification(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "verifications": verifications,
         "page_title": "Verification methods"
     });
@@ -31,11 +34,13 @@ pub async fn show_verification(
 
 #[get("/<project_id>/verification/new?<error>")]
 pub async fn new_verification(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = get_accessible_projects(state, &user);
 
@@ -43,6 +48,7 @@ pub async fn new_verification(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "error": error,
         "page_title": "New Verification Method"
     });
@@ -52,21 +58,19 @@ pub async fn new_verification(
 
 #[post("/<project_id>/verification/new", data = "<form>")]
 pub async fn post_verification(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     form: Form<NewVerificationMethod>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let _user = project_access.into_user();
 
-    let new_url = uri!(
-        "/p",
-        new_verification(
-            project_id = project_id,
-            error = Some("Failed to create verification method".to_string())
-        )
+    let new_url = format!(
+        "/p/{project_slug}/verification/new?error=Failed%20to%20create%20verification%20method"
     );
-    let show_url = uri!("/p", show_verification(project_id = project_id));
+    let show_url = format!("/p/{project_slug}/verification");
 
     let new_verification = NewVerificationMethod {
         project_id,
@@ -87,23 +91,26 @@ pub async fn post_verification(
 
 #[get("/<project_id>/verification/edit/<verification_id>?<error>")]
 pub async fn get_edit_verification(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     verification_id: i32,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<Template, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let projects = get_accessible_projects(state, &user);
     let verification = state
         .repo_read()
         .get_verification_method_by_id(verification_id)
-        .map_err(|_| Redirect::to(uri!("/p", show_verification(project_id = project_id))))?;
+        .map_err(|_| Redirect::to(format!("/p/{project_slug}/verification")))?;
 
     if verification.project_id != project_id {
-        return Err(Redirect::to(uri!(
-            "/p",
-            show_verification(project_id = verification.project_id)
+        let verification_project_slug =
+            get_project_slug_by_id_pooled_safe(state, verification.project_id);
+        return Err(Redirect::to(format!(
+            "/p/{verification_project_slug}/verification"
         )));
     }
 
@@ -112,6 +119,7 @@ pub async fn get_edit_verification(
         "user": user,
         "projects": projects,
         "selected_project_id": project_id,
+        "selected_project_slug": project_slug,
         "error": error,
         "page_title": format!("Edit {} - Verification method", verification.title)
     });
@@ -120,33 +128,28 @@ pub async fn get_edit_verification(
 
 #[post("/<project_id>/verification/edit/<verification_id>", data = "<form>")]
 pub async fn post_edit_verification(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     verification_id: i32,
     form: Form<NewVerificationMethod>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let _user = project_access.into_user();
 
-    let edit_url = uri!(
-        "/p",
-        get_edit_verification(
-            project_id = project_id,
-            verification_id = verification_id,
-            error = Some("Failed to update verification method".to_string())
-        )
+    let edit_url = format!(
+        "/p/{project_slug}/verification/edit/{verification_id}?error=Failed%20to%20update%20verification%20method"
     );
-    let show_url = uri!("/p", show_verification(project_id = project_id));
+    let show_url = format!("/p/{project_slug}/verification");
 
     let old = state
         .repo_read()
         .get_verification_method_by_id(verification_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
     if old.project_id != project_id {
-        return Err(Redirect::to(uri!(
-            "/p",
-            show_verification(project_id = old.project_id)
-        )));
+        let old_project_slug = get_project_slug_by_id_pooled_safe(state, old.project_id);
+        return Err(Redirect::to(format!("/p/{old_project_slug}/verification")));
     }
 
     let mut payload = form.into_inner();
@@ -164,21 +167,24 @@ pub async fn post_edit_verification(
 
 #[delete("/<project_id>/verification/delete/<verification_id>")]
 pub async fn delete_verification_route(
-    project_access: ProjectAccess,
-    project_id: i32,
+    project_access: HtmlProjectAccess,
+    project_id: String,
     verification_id: i32,
     state: &State<AppState>,
 ) -> Result<Status, Redirect> {
+    let project_slug = project_id;
+    let project_id = project_access.project_id();
     let _user = project_access.into_user();
-    let show_url = uri!("/p", show_verification(project_id = project_id));
+    let show_url = format!("/p/{project_slug}/verification");
     let verification = state
         .repo_read()
         .get_verification_method_by_id(verification_id)
         .map_err(|_| Redirect::to(show_url.clone()))?;
     if verification.project_id != project_id {
-        return Err(Redirect::to(uri!(
-            "/p",
-            show_verification(project_id = verification.project_id)
+        let verification_project_slug =
+            get_project_slug_by_id_pooled_safe(state, verification.project_id);
+        return Err(Redirect::to(format!(
+            "/p/{verification_project_slug}/verification"
         )));
     }
 
@@ -231,6 +237,7 @@ mod tests {
             update_date: Some(timestamp()),
             status: ProjectStatus::Active,
             owner_id: Some(ADMIN_ID),
+            slug: name.to_lowercase().replace(' ', "-"),
         }
     }
 
@@ -281,7 +288,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_verification_renders_known_items() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/verification", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/mars/verification", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Verification methods"));
@@ -292,7 +299,7 @@ mod tests {
     #[rocket::async_test]
     async fn new_verification_form_renders() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/verification/new", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/mars/verification/new", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("New Verification Method"));
@@ -305,7 +312,7 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/verification/new",
+            "/p/mars/verification/new",
             "title=Test&description=Test+verification&tag=TEST&project_id=1",
             ADMIN_ID,
         )
@@ -314,7 +321,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/1/verification")
+            Some("/p/mars/verification")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -329,7 +336,7 @@ mod tests {
     #[rocket::async_test]
     async fn get_edit_verification_returns_prefilled_form() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/1/verification/edit/1", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/mars/verification/edit/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Edit Verification"));
@@ -343,11 +350,11 @@ mod tests {
         repo.verification_methods
             .insert(2, sample_verification(2, 2, "Review"));
         let client = test_client(repo).await;
-        let response = get_with_session(&client, "/p/1/verification/edit/2", ADMIN_ID).await;
+        let response = get_with_session(&client, "/p/mars/verification/edit/2", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/2/verification")
+            Some("/p/venus/verification")
         );
     }
 
@@ -356,7 +363,7 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/verification/edit/1",
+            "/p/mars/verification/edit/1",
             "id=1&project_id=1&title=Analysis+Rev&description=Updated+desc&tag=ANALYSIS",
             ADMIN_ID,
         )
@@ -365,7 +372,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/1/verification")
+            Some("/p/mars/verification")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -384,7 +391,7 @@ mod tests {
         let client = test_client(repo).await;
         let response = post_form_with_session(
             &client,
-            "/p/1/verification/edit/2",
+            "/p/mars/verification/edit/2",
             "id=2&project_id=1&title=Review&description=Stay&tag=REVIEW",
             ADMIN_ID,
         )
@@ -393,7 +400,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/2/verification")
+            Some("/p/venus/verification")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -405,7 +412,8 @@ mod tests {
     #[rocket::async_test]
     async fn delete_verification_route_removes_verification() {
         let client = test_client(base_repo()).await;
-        let response = delete_with_session(&client, "/p/1/verification/delete/1", ADMIN_ID).await;
+        let response =
+            delete_with_session(&client, "/p/mars/verification/delete/1", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -423,11 +431,12 @@ mod tests {
         repo.verification_methods
             .insert(2, sample_verification(2, 2, "Review"));
         let client = test_client(repo).await;
-        let response = delete_with_session(&client, "/p/1/verification/delete/2", ADMIN_ID).await;
+        let response =
+            delete_with_session(&client, "/p/mars/verification/delete/2", ADMIN_ID).await;
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/2/verification")
+            Some("/p/venus/verification")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -438,12 +447,13 @@ mod tests {
     #[rocket::async_test]
     async fn delete_verification_route_redirects_when_not_found() {
         let client = test_client(base_repo()).await;
-        let response = delete_with_session(&client, "/p/1/verification/delete/99", ADMIN_ID).await;
+        let response =
+            delete_with_session(&client, "/p/mars/verification/delete/99", ADMIN_ID).await;
         // get_by_id fails -> Redirect to show_url
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/1/verification")
+            Some("/p/mars/verification")
         );
     }
 }

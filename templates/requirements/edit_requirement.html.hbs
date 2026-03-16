@@ -4,16 +4,16 @@
               css/50-components/trace-builder.css, js/pages/requirementForm.js
 --}}
 {{#*inline "page"}}
-<form method="post" data-requirement-form data-allow-soft-mismatch="true" id="requirement-edit-form"
+<form method="post" data-requirement-form data-project-slug="{{project.slug}}" data-allow-soft-mismatch="true" id="requirement-edit-form"
   class="c-reqform c-requirement-editor">
   <header class="c-reqform-topbar c-reqform-topbar--sticky" data-editor-topbar>
     <div class="c-reqform-topbar__context">
       <nav class="c-reqform-breadcrumb" aria-label="Breadcrumb">
-        <a href="/p/{{req.project_id}}/requirements" class="c-reqform-breadcrumb__link">
+        <a href="/p/{{project.slug}}/requirements" class="c-reqform-breadcrumb__link">
           {{#if project}}{{project.name}}{{else}}Project{{/if}}
         </a>
         <span class="c-reqform-breadcrumb__sep">›</span>
-        <a href="/p/{{req.project_id}}/requirements/show/{{req.id}}"
+        <a href="/p/{{project.slug}}/requirements/show/{{req.id}}"
           class="c-reqform-breadcrumb__link">{{display_reference}}</a>
       </nav>
 
@@ -48,7 +48,7 @@
 
         <button type="submit" class="btn btn-primary c-reqform-topbar__save" data-role="submit-requirement">Save</button>
 
-        <a href="/p/{{req.project_id}}/requirements/show/{{req.id}}" class="c-editor-actions__cancel">Cancel</a>
+        <a href="/p/{{project.slug}}/requirements/show/{{req.id}}" class="c-editor-actions__cancel">Cancel</a>
       </div>
     </div>
   </header>

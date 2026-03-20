@@ -159,6 +159,7 @@ mod tests {
             status: ProjectStatus::Active,
             owner_id: Some(user.id),
             slug: "project-phoenix".into(),
+            group_id: None,
         };
         repo.projects.insert(project.id, project);
 

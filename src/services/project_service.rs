@@ -87,6 +87,7 @@ impl<'a> ProjectService<'a> {
                 description: payload.description.clone(),
                 owner_id: payload.owner_id,
                 status: payload.status,
+                group_id: payload.group_id,
             })?;
             repo.add_project_member(&NewProjectMember {
                 project_id: id,
@@ -211,6 +212,7 @@ impl<'a> ProjectService<'a> {
             description: payload.description.clone(),
             status: payload.status.unwrap_or_default(),
             owner_id: payload.owner_id,
+            group_id: payload.group_id,
         };
         self.prepare_new_payload(&mut clone)
     }
@@ -302,6 +304,7 @@ mod tests {
             status: ProjectStatus::Active,
             owner_id: Some(1),
             slug: name.to_lowercase().replace(' ', "-"),
+            group_id: None,
         }
     }
 
@@ -316,6 +319,7 @@ mod tests {
             description: Some("   ".into()),
             status: ProjectStatus::Active,
             owner_id: Some(1),
+            group_id: None,
         };
 
         let id = service.create(&actor(), payload).unwrap();
@@ -337,6 +341,7 @@ mod tests {
             description: None,
             status: ProjectStatus::Completed,
             owner_id: None,
+            group_id: None,
         };
 
         let err = service.create(&actor(), payload).unwrap_err();
@@ -355,6 +360,7 @@ mod tests {
             description: None,
             status: ProjectStatus::Active,
             owner_id: Some(1),
+            group_id: None,
         };
 
         let project_id = service.create(&actor(), payload).unwrap();
@@ -414,6 +420,7 @@ mod tests {
             description: Some("  Updated description  ".into()),
             status: Some(ProjectStatus::OnHold),
             owner_id: Some(2),
+            group_id: None,
         };
 
         let updated = service.update(&actor(), 1, payload).unwrap();
@@ -434,6 +441,7 @@ mod tests {
             description: Some("Desc".into()),
             status: Some(ProjectStatus::Active),
             owner_id: None,
+            group_id: None,
         };
 
         let err = service.update(&actor(), 99, payload).unwrap_err();
@@ -452,6 +460,7 @@ mod tests {
             description: Some("Still around".into()),
             status: Some(ProjectStatus::Active),
             owner_id: None,
+            group_id: None,
         };
 
         let updated = service.update(&actor(), 1, payload).unwrap();
@@ -475,6 +484,7 @@ mod tests {
             description: Some("Needs owner".into()),
             status: Some(ProjectStatus::Active),
             owner_id: None,
+            group_id: None,
         };
 
         let updated = service.update(&editor, 2, payload).unwrap();

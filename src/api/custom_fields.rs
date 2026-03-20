@@ -185,6 +185,7 @@ mod tests {
                 status: ProjectStatus::Active,
                 owner_id: Some(ADMIN_ID),
                 slug: "test-project".into(),
+                group_id: None,
             },
         );
         repo

@@ -295,6 +295,7 @@ pub(crate) fn get_project_by_id_pooled_safe(state: &State<AppState>, project_id:
             update_date: Some(Utc::now().naive_utc()),
             owner_id: Some(0),
             status: ProjectStatus::Active,
+            group_id: None,
         })
 }
 
@@ -347,6 +348,7 @@ mod tests {
             status: ProjectStatus::Active,
             owner_id: Some(1),
             slug: "test-project".into(),
+            group_id: None,
         }
     }
 

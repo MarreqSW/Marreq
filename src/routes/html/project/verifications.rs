@@ -1107,6 +1107,7 @@ mod tests {
             status: ProjectStatus::Active,
             owner_id: Some(ADMIN_ID),
             slug: name.to_lowercase().replace(' ', "-"),
+            group_id: None,
         }
     }
 

@@ -3,6 +3,16 @@
 
 <div class="text-center mb-5 u-text-center">
   <h2>{{selected_project_name}}</h2>
+  {{#if group_name}}
+    <p class="text-muted mb-0">
+      Group:
+      {{#if can_view_group}}
+        <a href="/g/{{group_slug}}">{{group_name}}</a>
+      {{else}}
+        {{group_name}}
+      {{/if}}
+    </p>
+  {{/if}}
 </div>
 
 <div class="o-dashboard-grid">

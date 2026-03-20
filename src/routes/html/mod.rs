@@ -8,6 +8,7 @@ pub mod admin;
 pub mod auth;
 pub mod dashboard;
 pub mod excel;
+pub mod groups;
 pub mod logs;
 pub mod project;
 pub mod projects;
@@ -16,6 +17,7 @@ pub mod user;
 pub use admin::*;
 pub use auth::*;
 pub use excel::*;
+pub use groups::*;
 pub use logs::*;
 pub use projects::*;
 pub use user::*;
@@ -47,7 +49,7 @@ pub(crate) mod prelude {
 use rocket::Route;
 
 pub fn routes() -> Vec<Route> {
-    routes![
+    let mut routes = routes![
         auth::login_page,
         auth::login,
         auth::logout,
@@ -77,7 +79,9 @@ pub fn routes() -> Vec<Route> {
         cache::cache_health_page,
         cache::warm_cache_route,
         dashboard::error_page,
-    ]
+    ];
+    routes.extend(groups::routes());
+    routes
 }
 
 #[cfg(test)]

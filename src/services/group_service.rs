@@ -6,12 +6,10 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::helper_functions::utils::slugify_project_name;
 use crate::logger::{LogCtx, Logger};
-use crate::models::{
-    Group, NewGroup, NewGroupMember, NewGroupRow, UpdateGroup, User,
-};
+use crate::models::{Group, GroupMember, NewGroup, NewGroupMember, NewGroupRow, UpdateGroup, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    GroupMembersRepository, GroupsRepository, PooledConnectionWrapper,
+    GroupMembersRepository, GroupsRepository, PooledConnectionWrapper, UserRepository,
 };
 use crate::validation::{sanitize_optional_string, sanitize_string};
 
@@ -56,6 +54,11 @@ impl<'a> GroupService<'a> {
 
         groups.sort_by_key(|g| g.name.to_lowercase());
         Ok(groups)
+    }
+
+    /// Retrieve all members belonging to a group.
+    pub fn list_members(&self, group_id: i32) -> Result<Vec<GroupMember>, RepoError> {
+        self.state.repo_read().get_members_by_group(group_id)
     }
 
     /// Create a new group and log the action. The actor becomes the owner.
@@ -123,6 +126,13 @@ impl<'a> GroupService<'a> {
     pub fn delete(&self, actor: &User, id: i32) -> Result<Group, RepoError> {
         let removed = {
             let mut repo = self.state.repo_write();
+            let projects = repo.get_projects_by_group(id)?;
+            if !projects.is_empty() {
+                return Err(RepoError::BadInput(
+                    "cannot delete a group that still has projects attached; reassign or detach those projects first"
+                        .into(),
+                ));
+            }
             repo.delete_group(id)?
         };
 
@@ -130,11 +140,65 @@ impl<'a> GroupService<'a> {
         Ok(removed)
     }
 
+    /// Assign or update a member role while preserving the requirement that a group always has at least one Owner.
+    pub fn set_member_role(&self, group_id: i32, user_id: i32, role: i32) -> Result<(), RepoError> {
+        if !(1..=4).contains(&role) {
+            return Err(RepoError::BadInput(
+                "role must be 1 (Owner), 2 (Maintainer), 3 (Contributor), or 4 (Viewer)".into(),
+            ));
+        }
+
+        let mut repo = self.state.repo_write();
+        let _group = repo.get_group_by_id(group_id)?;
+        let _user = repo.get_user_by_id(user_id)?;
+        let members = repo.get_members_by_group(group_id)?;
+
+        let owner_count = members.iter().filter(|member| member.role == 1).count();
+        let existing = members.iter().find(|member| member.user_id == user_id);
+
+        if let Some(member) = existing {
+            let demoting_last_owner = member.role == 1 && role != 1 && owner_count <= 1;
+            if demoting_last_owner {
+                return Err(RepoError::BadInput(
+                    "cannot change the last Owner to a different role; assign another Owner first"
+                        .into(),
+                ));
+            }
+
+            repo.update_group_member_role(group_id, user_id, role)?;
+        } else {
+            repo.add_group_member(&NewGroupMember {
+                group_id,
+                user_id,
+                role,
+            })?;
+        }
+
+        Ok(())
+    }
+
+    /// Remove a group member while preserving the requirement that a group always has at least one Owner.
+    pub fn remove_member(&self, group_id: i32, user_id: i32) -> Result<(), RepoError> {
+        let mut repo = self.state.repo_write();
+        let members = repo.get_members_by_group(group_id)?;
+        let owner_count = members.iter().filter(|member| member.role == 1).count();
+        let target = members.iter().find(|member| member.user_id == user_id);
+
+        match target {
+            Some(member) if member.role == 1 && owner_count <= 1 => Err(RepoError::BadInput(
+                "cannot remove the last Owner; assign another Owner first".into(),
+            )),
+            Some(_) => repo.remove_group_member(group_id, user_id),
+            None => Err(RepoError::NotFound),
+        }
+    }
+
     fn prepare_new_payload(&self, payload: &mut NewGroup) -> Result<(), RepoError> {
         sanitize_string(&mut payload.name);
         sanitize_optional_string(&mut payload.description);
 
-        crate::validation::validate_group(payload).map_err(|err| RepoError::BadInput(err.to_string()))
+        crate::validation::validate_group(payload)
+            .map_err(|err| RepoError::BadInput(err.to_string()))
     }
 
     fn prepare_update_payload(&self, payload: &mut UpdateGroup) -> Result<(), RepoError> {
@@ -146,7 +210,8 @@ impl<'a> GroupService<'a> {
             description: payload.description.clone(),
             owner_id: payload.owner_id,
         };
-        crate::validation::validate_group(&clone).map_err(|err| RepoError::BadInput(err.to_string()))
+        crate::validation::validate_group(&clone)
+            .map_err(|err| RepoError::BadInput(err.to_string()))
     }
 
     fn generate_slug(&self, name: &str) -> Result<String, RepoError> {
@@ -159,8 +224,7 @@ impl<'a> GroupService<'a> {
             .collect::<Vec<_>>();
 
         let base = slugify_project_name(name);
-        let existing_set: std::collections::HashSet<String> =
-            existing.into_iter().collect();
+        let existing_set: std::collections::HashSet<String> = existing.into_iter().collect();
 
         if !existing_set.contains(&base) {
             return Ok(base);
@@ -169,8 +233,7 @@ impl<'a> GroupService<'a> {
         let mut occurrence = 2;
         loop {
             let suffix = format!("-{occurrence}");
-            let candidate =
-                format!("{}{}", &base[..base.len().min(255 - suffix.len())], suffix);
+            let candidate = format!("{}{}", &base[..base.len().min(255 - suffix.len())], suffix);
             if !existing_set.contains(&candidate) {
                 return Ok(candidate);
             }
@@ -401,5 +464,88 @@ mod tests {
         let id = service.create(&actor(), payload).unwrap();
         let stored = service.get_by_id(id).unwrap();
         assert_eq!(stored.slug, "avionics-2");
+    }
+
+    #[test]
+    fn set_member_role_rejects_demoting_last_owner() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(7, actor());
+        repo.groups.insert(1, group(1, "Alpha"));
+        repo.group_members.push(GroupMember {
+            group_id: 1,
+            user_id: 7,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        let state = state_with_repo(repo);
+        let service = GroupService::new(&state);
+
+        let error = service.set_member_role(1, 7, 2).unwrap_err();
+        assert!(matches!(error, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn set_member_role_allows_demoting_owner_after_promoting_another_owner() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(7, actor());
+        repo.users
+            .insert(8, DieselRepoMock::make_user(8, "copilot", ""));
+        repo.groups.insert(1, group(1, "Alpha"));
+        repo.group_members.push(GroupMember {
+            group_id: 1,
+            user_id: 7,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+        repo.group_members.push(GroupMember {
+            group_id: 1,
+            user_id: 8,
+            role: 3,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        let state = state_with_repo(repo);
+        let service = GroupService::new(&state);
+
+        service.set_member_role(1, 8, 1).unwrap();
+        service.set_member_role(1, 7, 2).unwrap();
+
+        let members = service.list_members(1).unwrap();
+        let owner_roles: Vec<(i32, i32)> = members
+            .into_iter()
+            .map(|member| (member.user_id, member.role))
+            .collect();
+        assert!(owner_roles.contains(&(7, 2)));
+        assert!(owner_roles.contains(&(8, 1)));
+    }
+
+    #[test]
+    fn delete_rejects_groups_with_attached_projects() {
+        let mut repo = DieselRepoMock::default();
+        repo.groups.insert(1, group(1, "Alpha"));
+        repo.projects.insert(
+            2,
+            crate::models::Project {
+                id: 2,
+                name: "Orbiter".into(),
+                description: None,
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status: crate::status_enums::ProjectStatus::Active,
+                owner_id: Some(7),
+                slug: "orbiter".into(),
+                group_id: Some(1),
+            },
+        );
+
+        let state = state_with_repo(repo);
+        let service = GroupService::new(&state);
+
+        let error = service.delete(&actor(), 1).unwrap_err();
+        assert!(matches!(error, RepoError::BadInput(_)));
     }
 }

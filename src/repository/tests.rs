@@ -80,6 +80,8 @@ mod tests {
             update_date: Some(test_datetime()),
             status: ProjectStatus::Active,
             owner_id: Some(1),
+            slug: "test-project".to_string(),
+            group_id: None,
         }
     }
 
@@ -946,6 +948,7 @@ mod tests {
             description: Some("New Project Description".to_string()),
             status_id: "Active".to_string(),
             owner_id: Some(1),
+            group_id: None,
         };
 
         let result = repo.insert_new_project(&new_project);
@@ -961,6 +964,7 @@ mod tests {
             description: Some("Updated Project Description".to_string()),
             status_id: "Active".to_string(),
             owner_id: Some(1),
+            group_id: None,
         };
 
         let result = repo.edit_project(1, &update_project);
@@ -2303,6 +2307,7 @@ mod tests {
             description: Some("".to_string()),
             status: Some(crate::status_enums::ProjectStatus::Active),
             owner_id: Some(1),
+            group_id: None,
         };
 
         let result = repo.edit_project(999, &update_project);

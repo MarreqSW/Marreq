@@ -15,6 +15,7 @@ const pageControllers = {
   'requirements-tree': () => import('./pages/requirementsTree.js'),
   categories: () => import('./pages/categories.js'),
   applicability: () => import('./pages/applicability.js'),
+  groups: () => import('./pages/groups.js'),
   verification: () => import('./pages/verification.js'),
   new_verification: () => Promise.resolve({}),
   edit_verification: () => Promise.resolve({}),

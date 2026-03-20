@@ -3,7 +3,7 @@
 
 // This module is deprecated and will be removed in future versions.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chrono::Utc;
 use rocket::http::CookieJar;
@@ -15,12 +15,12 @@ use crate::helper_functions::{
     decorators::decorate_verifications_with_repo, get_selected_project_id,
 };
 use crate::models::{
-    Category, DecoratedVerification, Project, ProjectMember, Requirement, User, Verification,
+    Category, DecoratedVerification, Group, Project, ProjectMember, Requirement, User, Verification,
 };
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
-    LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
-    UserRepository, VerificationsRepository,
+    GroupMembersRepository, GroupsRepository, LookupRepository, ProjectMembersRepository,
+    ProjectsRepository, RequirementsRepository, UserRepository, VerificationsRepository,
 };
 use crate::services::project_service::ProjectService;
 use crate::status_enums::ProjectStatus;
@@ -58,6 +58,51 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
 
     projects.sort_by_key(|a| a.name.to_lowercase());
     projects
+}
+
+pub(crate) fn get_accessible_groups(state: &AppState, user: &User) -> Vec<Group> {
+    let repo = state.repo_read();
+
+    if user.is_admin {
+        let mut groups = repo.get_groups_all().unwrap_or_default();
+        groups.sort_by_key(|group| group.name.to_lowercase());
+        return groups;
+    }
+
+    let memberships = repo.get_groups_for_user(user.id).unwrap_or_default();
+    if memberships.is_empty() {
+        return Vec::new();
+    }
+
+    let mut groups: Vec<Group> = memberships
+        .into_iter()
+        .filter_map(|membership| repo.get_group_by_id(membership.group_id).ok())
+        .collect();
+
+    groups.sort_by_key(|group| group.name.to_lowercase());
+    groups
+}
+
+pub(crate) fn list_all_groups_sorted(state: &AppState) -> Vec<Group> {
+    let mut groups = state.repo_read().get_groups_all().unwrap_or_default();
+    groups.sort_by_key(|group| group.name.to_lowercase());
+    groups
+}
+
+pub(crate) fn can_user_view_group(state: &AppState, user: &User, group_id: i32) -> bool {
+    if user.is_admin {
+        return true;
+    }
+
+    state
+        .repo_read()
+        .get_groups_for_user(user.id)
+        .map(|memberships| {
+            memberships
+                .iter()
+                .any(|membership| membership.group_id == group_id)
+        })
+        .unwrap_or(false)
 }
 
 pub(crate) fn resolve_selected_project_id(
@@ -135,6 +180,21 @@ pub(crate) fn decorate_projects_for_listing(
         .into_iter()
         .map(|u| (u.id, u.name))
         .collect();
+    let group_lookup: HashMap<i32, Group> = repo
+        .get_groups_all()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|group| (group.id, group))
+        .collect();
+    let accessible_group_ids: HashSet<i32> = if user.is_admin {
+        group_lookup.keys().copied().collect()
+    } else {
+        repo.get_groups_for_user(user.id)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|membership| membership.group_id)
+            .collect()
+    };
 
     let mut decorated: Vec<Value> = Vec::with_capacity(projects.len());
 
@@ -171,6 +231,13 @@ pub(crate) fn decorate_projects_for_listing(
         let owner_name = project
             .owner_id
             .and_then(|owner_id| owner_lookup.get(&owner_id).cloned());
+        let group = project
+            .group_id
+            .and_then(|group_id| group_lookup.get(&group_id).cloned());
+        let can_view_group = group
+            .as_ref()
+            .map(|group| accessible_group_ids.contains(&group.id))
+            .unwrap_or(false);
 
         let status = project.status;
 
@@ -201,6 +268,10 @@ pub(crate) fn decorate_projects_for_listing(
             "project_status_badge": status_badge,
             "owner_id": project.owner_id,
             "project_owner_name": owner_name,
+            "group_id": project.group_id,
+            "group_name": group.as_ref().map(|group| group.name.clone()),
+            "group_slug": group.as_ref().map(|group| group.slug.clone()),
+            "can_view_group": can_view_group,
             "role_label": role_label,
             "role_id": role_id,
             "requirements_count": requirements_count,

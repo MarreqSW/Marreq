@@ -8,11 +8,9 @@ use rocket::State;
 
 use crate::api::prelude::*;
 use crate::auth::guards::ApiUserOrBearer;
-use crate::models::{NewGroup, NewGroupMember, UpdateGroup};
-use crate::permissions::{
-    group_role_label, has_group_permission, GroupPermission,
-};
-use crate::repository::{GroupMembersRepository, GroupsRepository, UserRepository};
+use crate::models::{NewGroup, UpdateGroup};
+use crate::permissions::{group_role_label, has_group_permission, GroupPermission};
+use crate::repository::GroupsRepository;
 use crate::services::GroupService;
 
 /// Response for one group.
@@ -70,7 +68,10 @@ fn require_group_permission(
 
 /// GET /api/groups — list all groups (admin) or groups the user is a member of.
 #[get("/groups")]
-pub async fn list(auth: ApiUserOrBearer, state: &State<AppState>) -> ApiResult<Json<Vec<GroupResponse>>> {
+pub async fn list(
+    auth: ApiUserOrBearer,
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<GroupResponse>>> {
     let user = auth.user();
     let service = GroupService::new(state);
     let groups = if user.is_admin {
@@ -158,7 +159,9 @@ pub async fn delete(
         GroupPermission::ManageGroupMembers,
     )?;
     let service = GroupService::new(state);
-    service.delete(auth.user(), group_id).map_err(ApiError::from)?;
+    service
+        .delete(auth.user(), group_id)
+        .map_err(ApiError::from)?;
     Ok(Status::NoContent)
 }
 
@@ -173,7 +176,9 @@ pub async fn list_projects(
 ) -> ApiResult<Json<Vec<crate::models::Project>>> {
     require_group_permission(state, auth.user(), group_id, GroupPermission::ViewGroup)?;
     let repo = state.repo_read();
-    let projects = repo.get_projects_by_group(group_id).map_err(ApiError::from)?;
+    let projects = repo
+        .get_projects_by_group(group_id)
+        .map_err(ApiError::from)?;
     Ok(Json(projects))
 }
 
@@ -187,8 +192,8 @@ pub async fn list_members(
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<GroupMemberResponse>>> {
     require_group_permission(state, auth.user(), group_id, GroupPermission::ViewGroup)?;
-    let repo = state.repo_read();
-    let members = repo.get_members_by_group(group_id).map_err(ApiError::from)?;
+    let service = GroupService::new(state);
+    let members = service.list_members(group_id).map_err(ApiError::from)?;
     let out: Vec<GroupMemberResponse> = members
         .into_iter()
         .map(|m| GroupMemberResponse {
@@ -222,19 +227,10 @@ pub async fn set_member_role(
         GroupPermission::ManageGroupMembers,
     )?;
     let role = body.into_inner().role;
-    if !(1..=4).contains(&role) {
-        return Err(ApiError::BadRequest(
-            "role must be 1 (Owner), 2 (Maintainer), 3 (Contributor), or 4 (Viewer)".into(),
-        ));
-    }
-    let mut repo = state.repo_write();
-    let _user = repo.get_user_by_id(user_id).map_err(ApiError::from)?;
-    let _group = repo.get_group_by_id(group_id).map_err(ApiError::from)?;
-    repo.add_group_member(&NewGroupMember {
-        group_id,
-        user_id,
-        role,
-    })?;
+    let service = GroupService::new(state);
+    service
+        .set_member_role(group_id, user_id, role)
+        .map_err(ApiError::from)?;
     Ok(Json(GroupMemberResponse {
         user_id,
         role,
@@ -256,24 +252,14 @@ pub async fn remove_member(
         group_id,
         GroupPermission::ManageGroupMembers,
     )?;
-    let members = state
-        .repo_read()
-        .get_members_by_group(group_id)
-        .map_err(ApiError::from)?;
-    let owner_count = members.iter().filter(|m| m.role == 1).count();
-    let target = members.iter().find(|m| m.user_id == user_id);
-    if let Some(m) = target {
-        if m.role == 1 && owner_count <= 1 {
-            return Err(ApiError::BadRequest(
-                "cannot remove the last Owner; assign another Owner first".into(),
-            ));
-        }
-    } else {
-        return Err(ApiError::NotFound("member not in group".into()));
-    }
-    state
-        .repo_write()
-        .remove_group_member(group_id, user_id)
-        .map_err(ApiError::from)?;
+    let service = GroupService::new(state);
+    service
+        .remove_member(group_id, user_id)
+        .map_err(|error| match error {
+            crate::repository::errors::RepoError::NotFound => {
+                ApiError::NotFound("member not in group".into())
+            }
+            other => ApiError::from(other),
+        })?;
     Ok(Status::NoContent)
 }

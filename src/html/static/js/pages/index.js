@@ -18,6 +18,7 @@ export { init as initVerifications } from './verifications.js';
 export { init as initMatrix } from './matrix.js';
 export { init as initCategories } from './categories.js';
 export { init as initApplicability } from './applicability.js';
+export { init as initGroups } from './groups.js';
 export { init as initLogs } from './logs.js';
 export { init as initEntityLogs } from './entityLogs.js';
 export { init as initLogAnalytics } from './logAnalytics.js';

@@ -40,6 +40,19 @@
           {{/if}}
         </span>
       </div>
+      {{#if group_name}}
+        <div class="marreq-project-card__meta-item">
+          <i class="fas fa-users" aria-hidden="true"></i>
+          <span>
+            Group:
+            {{#if can_view_group}}
+              <a href="/g/{{group_slug}}">{{group_name}}</a>
+            {{else}}
+              {{group_name}}
+            {{/if}}
+          </span>
+        </div>
+      {{/if}}
       {{#if update_date}}
         <div class="marreq-project-card__meta-item">
           <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>

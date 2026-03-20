@@ -274,6 +274,7 @@ mod tests {
             status: ProjectStatus::Active,
             owner_id: Some(OWNER_ID),
             slug: "lunar-lander".into(),
+            group_id: None,
         }
     }
 

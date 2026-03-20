@@ -76,6 +76,7 @@ mod test_support {
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
                 slug: "test-project".into(),
+                group_id: None,
             },
         );
 

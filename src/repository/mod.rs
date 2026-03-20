@@ -204,6 +204,33 @@ pub trait LookupRepository {
     fn delete_applicability(&mut self, applicability_id: i32) -> Result<Applicability, RepoError>;
 }
 
+pub trait GroupsRepository {
+    fn get_groups_all(&self) -> Result<Vec<Group>, RepoError>;
+    fn get_group_by_id(&self, group_id: i32) -> Result<Group, RepoError>;
+    fn get_group_by_slug(&self, slug: &str) -> Result<Group, RepoError>;
+
+    fn insert_new_group(&mut self, new: &NewGroupRow) -> Result<i32, RepoError>;
+    fn edit_group(&mut self, group_id: i32, update: &UpdateGroup) -> Result<bool, RepoError>;
+    fn delete_group(&mut self, group_id: i32) -> Result<Group, RepoError>;
+
+    /// List all projects belonging to a group.
+    fn get_projects_by_group(&self, group_id: i32) -> Result<Vec<Project>, RepoError>;
+}
+
+pub trait GroupMembersRepository {
+    fn get_members_by_group(&self, group_id: i32) -> Result<Vec<GroupMember>, RepoError>;
+    fn get_groups_for_user(&self, user_id: i32) -> Result<Vec<GroupMember>, RepoError>;
+
+    fn add_group_member(&mut self, new: &NewGroupMember) -> Result<(), RepoError>;
+    fn update_group_member_role(
+        &mut self,
+        group_id: i32,
+        user_id: i32,
+        role: i32,
+    ) -> Result<(), RepoError>;
+    fn remove_group_member(&mut self, group_id: i32, user_id: i32) -> Result<(), RepoError>;
+}
+
 pub trait ProjectsRepository {
     fn get_projects_all(&self) -> Result<Vec<Project>, RepoError>;
     fn get_project_by_id(&self, project_id: i32) -> Result<Project, RepoError>;
@@ -388,6 +415,8 @@ pub trait Repository:
     + RequirementsRepository
     + RequirementVersionLinksRepository
     + VerificationsRepository
+    + GroupsRepository
+    + GroupMembersRepository
     + ProjectsRepository
     + ProjectMembersRepository
     + MatrixRepository
@@ -405,6 +434,8 @@ impl<T> Repository for T where
         + RequirementsRepository
         + RequirementVersionLinksRepository
         + VerificationsRepository
+        + GroupsRepository
+        + GroupMembersRepository
         + ProjectsRepository
         + ProjectMembersRepository
         + MatrixRepository

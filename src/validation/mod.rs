@@ -380,6 +380,46 @@ pub fn validate_user(user: &NewUser) -> Result<(), ValidationError> {
     Ok(())
 }
 
+/// Validate a group before creation or update
+pub fn validate_group(group: &crate::models::NewGroup) -> Result<(), ValidationError> {
+    if group.name.trim().is_empty() {
+        return Err(ValidationError::Required {
+            field: "name".to_string(),
+        });
+    }
+
+    if group.name.len() > 100 {
+        return Err(ValidationError::TooLong {
+            field: "name".to_string(),
+            max: 100,
+        });
+    }
+
+    if group.name.len() < 2 {
+        return Err(ValidationError::TooShort {
+            field: "name".to_string(),
+            min: 2,
+        });
+    }
+
+    if let Some(description) = &group.description {
+        if !description.trim().is_empty() && description.len() > 1000 {
+            return Err(ValidationError::TooLong {
+                field: "description".to_string(),
+                max: 1000,
+            });
+        }
+    }
+
+    if group.owner_id.is_none() {
+        return Err(ValidationError::Required {
+            field: "owner_id".to_string(),
+        });
+    }
+
+    Ok(())
+}
+
 /// Validate a project before creation or update
 pub fn validate_project(project: &NewProject) -> Result<(), ValidationError> {
     // Validate project name

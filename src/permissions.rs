@@ -7,7 +7,7 @@
 //! All checks are fail-closed: no membership, error, or unknown role → denied.
 
 use crate::models::User;
-use crate::repository::ProjectMembersRepository;
+use crate::repository::{GroupMembersRepository, ProjectMembersRepository};
 use std::collections::BTreeSet;
 
 /// Fine-grained permission for project-scoped actions.
@@ -102,6 +102,72 @@ where
         None => return false,
     };
     permissions_for_role(membership.role).contains(&permission)
+}
+
+// ── Group-level permissions ─────────────────────────────────────
+
+/// Fine-grained permission for group-scoped actions.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum GroupPermission {
+    ViewGroup,
+    ManageProjects,
+    ManageGroupMembers,
+}
+
+/// Group role id as stored in `group_members.role`.
+/// 1 = Owner, 2 = Maintainer, 3 = Contributor, 4 = Viewer
+pub const GROUP_ROLE_OWNER: i32 = 1;
+pub const GROUP_ROLE_MAINTAINER: i32 = 2;
+pub const GROUP_ROLE_CONTRIBUTOR: i32 = 3;
+pub const GROUP_ROLE_VIEWER: i32 = 4;
+
+/// Human-readable label for a group role id.
+pub fn group_role_label(role: i32) -> &'static str {
+    match role {
+        GROUP_ROLE_OWNER => "Owner",
+        GROUP_ROLE_MAINTAINER => "Maintainer",
+        GROUP_ROLE_CONTRIBUTOR => "Contributor",
+        GROUP_ROLE_VIEWER => "Viewer",
+        _ => "Member",
+    }
+}
+
+/// Permissions granted by a group role. Unknown role returns empty set (fail-closed).
+fn group_permissions_for_role(role: i32) -> BTreeSet<GroupPermission> {
+    use GroupPermission::*;
+    match role {
+        GROUP_ROLE_OWNER => [ViewGroup, ManageProjects, ManageGroupMembers]
+            .into_iter()
+            .collect(),
+        GROUP_ROLE_MAINTAINER => [ViewGroup, ManageProjects].into_iter().collect(),
+        GROUP_ROLE_CONTRIBUTOR => [ViewGroup].into_iter().collect(),
+        GROUP_ROLE_VIEWER => [ViewGroup].into_iter().collect(),
+        _ => BTreeSet::new(),
+    }
+}
+
+/// Returns true only if the user has the given permission in the group. Fail-closed.
+pub fn has_group_permission<R>(
+    repo: &R,
+    user: &User,
+    group_id: i32,
+    permission: GroupPermission,
+) -> bool
+where
+    R: GroupMembersRepository,
+{
+    if user.is_admin {
+        return true;
+    }
+    let memberships = match repo.get_groups_for_user(user.id) {
+        Ok(m) => m,
+        Err(_) => return false,
+    };
+    let membership = match memberships.iter().find(|m| m.group_id == group_id) {
+        Some(m) => m,
+        None => return false,
+    };
+    group_permissions_for_role(membership.role).contains(&permission)
 }
 
 #[cfg(test)]

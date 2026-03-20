@@ -151,6 +151,7 @@ mod tests {
             status: ProjectStatus::Active,
             owner_id: Some(owner_id),
             slug: "test-project".into(),
+            group_id: None,
         }
     }
 

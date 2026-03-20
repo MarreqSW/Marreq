@@ -26,6 +26,16 @@
                                 {{#if project.owner_id}}
                                     <li class="c-project-info-list__item"><strong>Owner:</strong> {{project.owner_id}}</li>
                                 {{/if}}
+                                {{#if project.group_name}}
+                                    <li class="c-project-info-list__item">
+                                        <strong>Group:</strong>
+                                        {{#if project.can_view_group}}
+                                            <a href="/g/{{project.group_slug}}">{{project.group_name}}</a>
+                                        {{else}}
+                                            {{project.group_name}}
+                                        {{/if}}
+                                    </li>
+                                {{/if}}
                             </ul>
                         </div>
                     </div>

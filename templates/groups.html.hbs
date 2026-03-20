@@ -1,0 +1,65 @@
+{{!--
+  Depends on: css/pages/groups.css, js/pages/groups.js
+  Dynamic classes: marreq-list-page__row (visibility toggled)
+--}}
+{{#*inline "page"}}
+<section class="marreq-list-page marreq-groups-page">
+  <div class="marreq-list-page__header">
+    <div>
+      <h1 class="marreq-list-page__title">Groups</h1>
+      <p class="marreq-group-page__intro">Organize related projects and manage group membership.</p>
+    </div>
+    <a href="/groups/new" class="btn btn-primary">Create Group</a>
+  </div>
+
+  {{#if success}}
+    <div class="alert alert-success c-alert" role="alert">{{success}}</div>
+  {{/if}}
+  {{#if error}}
+    <div class="alert alert-danger c-alert" role="alert">{{error}}</div>
+  {{/if}}
+
+  <div class="marreq-list-page__toolbar">
+    <label for="group-search-input" class="u-sr-only">Search groups</label>
+    <input
+      id="group-search-input"
+      type="search"
+      class="form-control marreq-list-page__search c-form-control"
+      placeholder="Search groups by name, owners, description, or role"
+      autocomplete="off"
+    >
+  </div>
+
+  <div class="marreq-list-page__list" id="group-list">
+    {{#each groups}}
+      <article class="marreq-list-page__row marreq-group-row" data-group-row data-search-text="{{name}} {{owners_label}} {{description}} {{current_role_label}}">
+        <div class="marreq-list-page__row-main">
+          <div class="marreq-list-page__row-headline">
+            <span class="marreq-group-row__badge">{{member_count}} members</span>
+            <h3 class="marreq-list-page__row-title">{{name}}</h3>
+          </div>
+          <p class="marreq-group-row__meta">
+            <span>Role: {{current_role_label}}</span>
+            <span>Projects: {{project_count}}</span>
+            <span>Owners: {{owners_label}}</span>
+          </p>
+          {{#if description}}
+            <p class="marreq-list-page__row-description">{{description}}</p>
+          {{/if}}
+        </div>
+        <div class="marreq-list-page__row-meta">
+          <span class="marreq-list-page__row-id" title="Group ID">#{{id}}</span>
+          <div class="marreq-list-page__row-actions">
+            <a href="/g/{{slug}}" class="btn btn-primary btn-sm marreq-list-page__action-btn">Open</a>
+            <a href="/g/{{slug}}/members" class="btn btn-outline btn-sm marreq-list-page__action-btn">Members</a>
+          </div>
+        </div>
+      </article>
+    {{else}}
+      <p class="marreq-list-page__empty" id="group-empty-state">You do not belong to any groups yet.</p>
+    {{/each}}
+  </div>
+  <p class="marreq-list-page__empty" id="group-empty-filter" hidden>No groups match your search.</p>
+</section>
+{{/inline}}
+{{> layout this page_id="groups"}}

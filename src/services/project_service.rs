@@ -197,6 +197,10 @@ impl<'a> ProjectService<'a> {
     }
 
     fn prepare_new_payload(&self, payload: &mut NewProject) -> Result<(), RepoError> {
+        if matches!(payload.group_id, Some(group_id) if group_id <= 0) {
+            payload.group_id = None;
+        }
+
         sanitize_string(&mut payload.name);
         sanitize_optional_string(&mut payload.description);
 
@@ -204,6 +208,10 @@ impl<'a> ProjectService<'a> {
     }
 
     fn prepare_update_payload(&self, payload: &mut UpdateProject) -> Result<(), RepoError> {
+        if matches!(payload.group_id, Some(group_id) if group_id <= 0) {
+            payload.group_id = None;
+        }
+
         sanitize_string(&mut payload.name);
         sanitize_optional_string(&mut payload.description);
 
@@ -349,6 +357,26 @@ mod tests {
     }
 
     #[test]
+    fn create_treats_non_positive_group_id_as_none() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let payload = NewProject {
+            name: "Grouped Project".into(),
+            description: None,
+            status: ProjectStatus::Active,
+            owner_id: Some(1),
+            group_id: Some(0),
+        };
+
+        let id = service.create(&actor(), payload).unwrap();
+        let stored = service.get_by_id(id).unwrap();
+
+        assert_eq!(stored.group_id, None);
+    }
+
+    #[test]
     fn create_initializes_default_statuses() {
         let repo = DieselRepoMock::default();
         let state = state_with_repo(repo);
@@ -428,6 +456,27 @@ mod tests {
         assert_eq!(updated.description.as_deref(), Some("Updated description"));
         assert_eq!(updated.status, ProjectStatus::OnHold);
         assert_eq!(updated.owner_id, Some(2));
+    }
+
+    #[test]
+    fn update_treats_non_positive_group_id_as_none() {
+        let mut repo = DieselRepoMock::default();
+        let mut existing = project(1, "Legacy");
+        existing.group_id = Some(4);
+        repo.projects.insert(1, existing);
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let payload = UpdateProject {
+            name: "Legacy".into(),
+            description: Some("Still grouped".into()),
+            status: Some(ProjectStatus::Active),
+            owner_id: Some(1),
+            group_id: Some(0),
+        };
+
+        let updated = service.update(&actor(), 1, payload).unwrap();
+        assert_eq!(updated.group_id, None);
     }
 
     #[test]

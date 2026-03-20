@@ -263,6 +263,7 @@ mod tests {
             status: ProjectStatus::Active,
             owner_id: Some(ADMIN_ID),
             slug: "orbiter".into(),
+            group_id: None,
         }
     }
 

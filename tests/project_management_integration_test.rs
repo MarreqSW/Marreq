@@ -84,6 +84,7 @@ async fn projects_page_lists_user_projects() {
         owner_id: Some(1),
         status: ProjectStatus::Active,
         slug: "my-project".into(),
+        group_id: None,
     };
     repo.projects.insert(10, project);
 
@@ -141,6 +142,7 @@ async fn access_project_details_as_owner() {
         status: ProjectStatus::Active,
         owner_id: Some(1),
         slug: "owner-project".into(),
+        group_id: None,
     };
     repo.projects.insert(30, project);
 
@@ -177,6 +179,7 @@ async fn access_project_details_forbidden_for_non_member() {
         status: ProjectStatus::Active,
         owner_id: Some(1), // Owned by User 1
         slug: "private-project".into(),
+        group_id: None,
     };
     repo.projects.insert(40, project);
     // User 2 is NOT a member

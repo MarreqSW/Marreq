@@ -5,9 +5,10 @@
 
 use super::*;
 use crate::models::{
-    CustomFieldDefinition, CustomFieldDefinitionPayload, NewRequirementComment,
-    NewRequirementVersionLink, NewVerification, NewVerificationStatus, RequirementComment,
-    RequirementVersion, RequirementVersionLink, Verification, VerificationStatus,
+    CustomFieldDefinition, CustomFieldDefinitionPayload, Group, GroupMember, NewGroupMember,
+    NewGroupRow, NewRequirementComment, NewRequirementVersionLink, NewVerification,
+    NewVerificationStatus, RequirementComment, RequirementVersion, RequirementVersionLink,
+    UpdateGroup, Verification, VerificationStatus,
 };
 use crate::repository::errors::RepoError;
 use chrono::{NaiveDate, NaiveDateTime};
@@ -29,6 +30,8 @@ pub struct DieselRepoMock {
     /// Next version id when creating versions
     pub next_version_id: i32,
     pub verifications: HashMap<i32, Verification>,
+    pub groups: HashMap<i32, Group>,
+    pub group_members: Vec<GroupMember>,
     pub projects: HashMap<i32, Project>,
     pub matrices: Vec<MatrixLink>,
     pub project_members: Vec<ProjectMember>,
@@ -75,6 +78,8 @@ impl Default for DieselRepoMock {
             requirement_versions: HashMap::new(),
             next_version_id: 1,
             verifications: HashMap::new(),
+            groups: HashMap::new(),
+            group_members: Vec::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
@@ -115,6 +120,8 @@ impl DieselRepoMock {
             requirement_versions: HashMap::new(),
             next_version_id: 1,
             verifications: HashMap::new(),
+            groups: HashMap::new(),
+            group_members: Vec::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
@@ -148,6 +155,8 @@ impl DieselRepoMock {
             requirement_versions: HashMap::new(),
             next_version_id: 1,
             verifications: HashMap::new(),
+            groups: HashMap::new(),
+            group_members: Vec::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
@@ -1191,6 +1200,132 @@ impl VerificationsRepository for DieselRepoMock {
     }
 }
 
+impl GroupsRepository for DieselRepoMock {
+    fn get_groups_all(&self) -> Result<Vec<Group>, RepoError> {
+        Ok(self.groups.values().cloned().collect())
+    }
+
+    fn get_group_by_id(&self, group_id: i32) -> Result<Group, RepoError> {
+        self.groups
+            .get(&group_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn get_group_by_slug(&self, slug: &str) -> Result<Group, RepoError> {
+        self.groups
+            .values()
+            .find(|g| g.slug == slug)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn insert_new_group(&mut self, new: &NewGroupRow) -> Result<i32, RepoError> {
+        let id = self.groups.keys().max().map(|i| i + 1).unwrap_or(1);
+        let now = epoch();
+        let group = Group {
+            id,
+            name: new.name.clone(),
+            slug: new.slug.clone(),
+            description: new.description.clone(),
+            owner_id: new.owner_id,
+            created_at: now,
+            updated_at: now,
+        };
+        self.groups.insert(id, group);
+        Ok(id)
+    }
+
+    fn edit_group(&mut self, group_id: i32, update: &UpdateGroup) -> Result<bool, RepoError> {
+        match self.groups.get_mut(&group_id) {
+            Some(group) => {
+                group.name = update.name.clone();
+                group.description = update.description.clone();
+                group.owner_id = update.owner_id;
+                group.updated_at = epoch();
+                Ok(true)
+            }
+            None => Err(RepoError::NotFound),
+        }
+    }
+
+    fn delete_group(&mut self, group_id: i32) -> Result<Group, RepoError> {
+        self.groups.remove(&group_id).ok_or(RepoError::NotFound)
+    }
+
+    fn get_projects_by_group(&self, group_id: i32) -> Result<Vec<Project>, RepoError> {
+        Ok(self
+            .projects
+            .values()
+            .filter(|p| p.group_id == Some(group_id))
+            .cloned()
+            .collect())
+    }
+}
+
+impl GroupMembersRepository for DieselRepoMock {
+    fn get_members_by_group(&self, group_id: i32) -> Result<Vec<GroupMember>, RepoError> {
+        Ok(self
+            .group_members
+            .iter()
+            .filter(|m| m.group_id == group_id)
+            .cloned()
+            .collect())
+    }
+
+    fn get_groups_for_user(&self, user_id: i32) -> Result<Vec<GroupMember>, RepoError> {
+        Ok(self
+            .group_members
+            .iter()
+            .filter(|m| m.user_id == user_id)
+            .cloned()
+            .collect())
+    }
+
+    fn add_group_member(&mut self, new: &NewGroupMember) -> Result<(), RepoError> {
+        self.group_members
+            .retain(|m| !(m.group_id == new.group_id && m.user_id == new.user_id));
+        self.group_members.push(GroupMember {
+            group_id: new.group_id,
+            user_id: new.user_id,
+            role: new.role,
+            created_at: epoch(),
+            updated_at: epoch(),
+        });
+        Ok(())
+    }
+
+    fn update_group_member_role(
+        &mut self,
+        group_id: i32,
+        user_id: i32,
+        role: i32,
+    ) -> Result<(), RepoError> {
+        if let Some(m) = self
+            .group_members
+            .iter_mut()
+            .find(|m| m.group_id == group_id && m.user_id == user_id)
+        {
+            m.role = role;
+            m.updated_at = epoch();
+            Ok(())
+        } else {
+            Err(RepoError::NotFound)
+        }
+    }
+
+    fn remove_group_member(&mut self, group_id: i32, user_id: i32) -> Result<(), RepoError> {
+        let before = self.group_members.len();
+        self.group_members
+            .retain(|m| !(m.group_id == group_id && m.user_id == user_id));
+        if self.group_members.len() == before {
+            Err(RepoError::NotFound)
+        } else {
+            Ok(())
+        }
+    }
+}
+
 impl ProjectsRepository for DieselRepoMock {
     fn get_projects_all(&self) -> Result<Vec<Project>, RepoError> {
         Ok(self.projects.values().cloned().collect())
@@ -1220,6 +1355,7 @@ impl ProjectsRepository for DieselRepoMock {
             update_date: Some(now),
             owner_id: _new.owner_id,
             status: _new.status,
+            group_id: _new.group_id,
         };
         self.projects.insert(id, proj);
         Ok(id)
@@ -1238,6 +1374,7 @@ impl ProjectsRepository for DieselRepoMock {
                 if let Some(status) = _update.status {
                     proj.status = status;
                 }
+                proj.group_id = _update.group_id;
                 proj.update_date = Some(epoch());
                 Ok(true)
             }

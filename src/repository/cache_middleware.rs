@@ -762,6 +762,63 @@ impl<R: Repository> LookupRepository for CacheRepository<R> {
     }
 }
 
+impl<R: Repository> super::GroupsRepository for CacheRepository<R> {
+    fn get_groups_all(&self) -> Result<Vec<Group>, RepoError> {
+        self.inner.get_groups_all()
+    }
+
+    fn get_group_by_id(&self, group_id: i32) -> Result<Group, RepoError> {
+        self.inner.get_group_by_id(group_id)
+    }
+
+    fn get_group_by_slug(&self, slug: &str) -> Result<Group, RepoError> {
+        self.inner.get_group_by_slug(slug)
+    }
+
+    fn insert_new_group(&mut self, new: &NewGroupRow) -> Result<i32, RepoError> {
+        self.inner.insert_new_group(new)
+    }
+
+    fn edit_group(&mut self, group_id: i32, update: &UpdateGroup) -> Result<bool, RepoError> {
+        self.inner.edit_group(group_id, update)
+    }
+
+    fn delete_group(&mut self, group_id: i32) -> Result<Group, RepoError> {
+        self.inner.delete_group(group_id)
+    }
+
+    fn get_projects_by_group(&self, group_id: i32) -> Result<Vec<Project>, RepoError> {
+        self.inner.get_projects_by_group(group_id)
+    }
+}
+
+impl<R: Repository> super::GroupMembersRepository for CacheRepository<R> {
+    fn get_members_by_group(&self, group_id: i32) -> Result<Vec<GroupMember>, RepoError> {
+        self.inner.get_members_by_group(group_id)
+    }
+
+    fn get_groups_for_user(&self, user_id: i32) -> Result<Vec<GroupMember>, RepoError> {
+        self.inner.get_groups_for_user(user_id)
+    }
+
+    fn add_group_member(&mut self, new: &NewGroupMember) -> Result<(), RepoError> {
+        self.inner.add_group_member(new)
+    }
+
+    fn update_group_member_role(
+        &mut self,
+        group_id: i32,
+        user_id: i32,
+        role: i32,
+    ) -> Result<(), RepoError> {
+        self.inner.update_group_member_role(group_id, user_id, role)
+    }
+
+    fn remove_group_member(&mut self, group_id: i32, user_id: i32) -> Result<(), RepoError> {
+        self.inner.remove_group_member(group_id, user_id)
+    }
+}
+
 impl<R: Repository> ProjectsRepository for CacheRepository<R> {
     fn get_projects_all(&self) -> Result<Vec<Project>, RepoError> {
         self.get_or_fetch(keys::PROJECTS_ALL, Duration::from_secs(600), || {
@@ -1129,6 +1186,7 @@ mod tests {
             status: ProjectStatus::Active,
             owner_id: Some(1),
             slug: "proj".into(),
+            group_id: None,
         };
         let requirement = Requirement {
             id: 1,
@@ -1211,6 +1269,8 @@ mod tests {
             requirement_versions: HashMap::new(),
             next_version_id: 1,
             verifications,
+            groups: HashMap::new(),
+            group_members: Vec::new(),
             projects,
             matrices: vec![matrix],
             project_members: Vec::new(),
@@ -1617,6 +1677,7 @@ mod tests {
             description: Some("".into()),
             status: ProjectStatus::Active,
             owner_id: Some(1),
+            group_id: None,
         };
         let pid = repo.insert_new_project(&np).unwrap();
         let up = UpdateProject {
@@ -1624,6 +1685,7 @@ mod tests {
             description: Some("".into()),
             status: Some(ProjectStatus::Active),
             owner_id: Some(1),
+            group_id: None,
         };
         repo.edit_project(pid, &up).unwrap();
         repo.delete_project(pid).unwrap();

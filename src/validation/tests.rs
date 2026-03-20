@@ -966,6 +966,7 @@ mod tests {
                 description: Some("Valid description".to_string()),
                 owner_id: Some(1),
                 status: ProjectStatus::Active,
+                group_id: None,
             }
         }
 

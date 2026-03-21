@@ -26,7 +26,7 @@ Modern card-based layout for test browsing
       <div class="marreq-requirement-card__body">
         <h3 class="marreq-requirement-card__title">
           <a
-            href="/p/{{../project.slug}}/verifications/show/{{id}}"
+            href="/{{../project.slug}}/verifications/show/{{id}}"
             class="marreq-requirement-card__title-link"
             data-test-preview
             data-test-preview-project-id="{{../project.id}}"
@@ -97,7 +97,7 @@ Modern card-based layout for test browsing
           </span>
           {{/if}}
           {{#if verification_parent_title}}
-          <a href="/p/{{../project.slug}}/verifications/show/{{verification_parent_id}}"
+          <a href="/{{../project.slug}}/verifications/show/{{verification_parent_id}}"
             class="marreq-requirement-card__badge marreq-requirement-card__badge--parent" data-badge
             title="Parent: {{verification_parent_title}}">
             <svg class="marreq-requirement-card__badge-icon" width="10" height="10" fill="currentColor"
@@ -137,7 +137,7 @@ Modern card-based layout for test browsing
         </div>
 
         <div class="marreq-requirement-card__actions">
-          <a href="/p/{{../project.slug}}/verifications/show/{{id}}"
+          <a href="/{{../project.slug}}/verifications/show/{{id}}"
             class="marreq-requirement-card__action marreq-requirement-card__action--primary" title="View details">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
               <path
@@ -147,7 +147,7 @@ Modern card-based layout for test browsing
             <span class="u-visually-hidden">View</span>
           </a>
           {{#if ../can_edit_requirements}}
-          <a href="/p/{{../project.slug}}/verifications/edit/{{id}}" class="marreq-requirement-card__action"
+          <a href="/{{../project.slug}}/verifications/edit/{{id}}" class="marreq-requirement-card__action"
             data-action="open-edit-panel"
             data-test-id="{{id}}"
             data-project-id="{{../project.id}}"

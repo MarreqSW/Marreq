@@ -8,7 +8,7 @@
                 </div>
                 <div class="card-body c-card__body">
                     <p>Upload a file to import requirements or tests into the current project.</p>
-                    <form action="/p/{{selected_project_slug}}/import_excel/upload" method="post" enctype="multipart/form-data">
+                    <form action="/{{selected_project_slug}}/import_excel/upload" method="post" enctype="multipart/form-data">
                         <div class="mb-3">
                             <label for="excel_file" class="form-label c-form-label">Select File</label>
                             <input type="file" class="form-control c-form-control" id="excel_file" name="file" accept=".xlsx,.xls,.csv" required>

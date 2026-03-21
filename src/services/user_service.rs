@@ -8,9 +8,10 @@ use crate::auth::password::hash_password;
 use crate::auth::password_policy::{validate_password, PasswordContext};
 use crate::logger::{LogCtx, Logger};
 use crate::models::{NewUser, UpdateUser, User, UserCreateRequest};
+use crate::namespaces::is_reserved_namespace_segment;
 use crate::repository::errors::RepoError;
-use crate::repository::{PooledConnectionWrapper, UserRepository};
-use crate::validation::sanitize_string;
+use crate::repository::{GroupsRepository, PooledConnectionWrapper, UserRepository};
+use crate::validation::{sanitize_string, validate_user};
 
 /// High level user operations backed by the shared [`AppState`].
 pub struct UserService<'a> {
@@ -79,6 +80,9 @@ impl<'a> UserService<'a> {
         payload.username = payload.username.to_lowercase();
         payload.email = payload.email.to_lowercase();
 
+        validate_user(&payload).map_err(|e| RepoError::BadInput(e.to_string()))?;
+        self.ensure_username_namespace_available(&payload.username)?;
+
         let id = {
             let mut repo = self.state.repo_write();
             repo.insert_user(&payload)?
@@ -121,6 +125,17 @@ impl<'a> UserService<'a> {
             is_admin: payload.is_admin,
         };
 
+        let validation_payload = NewUser {
+            id: normalized.id,
+            username: normalized.username.clone(),
+            name: normalized.name.clone(),
+            email: normalized.email.clone(),
+            password_hash: old.password_hash.clone(),
+            is_admin: normalized.is_admin,
+        };
+        validate_user(&validation_payload).map_err(|e| RepoError::BadInput(e.to_string()))?;
+        self.ensure_username_namespace_available(&normalized.username)?;
+
         let updated = {
             let mut repo = self.state.repo_write();
             repo.update_user_without_password(&normalized)?
@@ -143,6 +158,25 @@ impl<'a> UserService<'a> {
 
     fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
         self.state.repo_read().inner_repo().get_conn()
+    }
+
+    fn ensure_username_namespace_available(&self, username: &str) -> Result<(), RepoError> {
+        if is_reserved_namespace_segment(username) {
+            return Err(RepoError::BadInput(format!(
+                "username '{}' is reserved for system routes",
+                username
+            )));
+        }
+
+        let repo = self.state.repo_read();
+        match repo.get_group_by_slug(username) {
+            Ok(_) => Err(RepoError::BadInput(format!(
+                "username '{}' is already used by a group namespace",
+                username
+            ))),
+            Err(RepoError::NotFound) => Ok(()),
+            Err(error) => Err(error),
+        }
     }
 
     fn log_created(&self, actor: &User, id: i32, entity: &NewUser) {

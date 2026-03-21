@@ -8,6 +8,7 @@
 
 use crate::errors::ValidationError;
 use crate::models::*;
+use crate::namespaces::validate_namespace_segment;
 use regex::Regex;
 
 /// Validate a requirement before creation or update
@@ -344,6 +345,8 @@ pub fn validate_user(user: &NewUser) -> Result<(), ValidationError> {
             message: "Username should contain only letters, numbers, and underscores".to_string(),
         });
     }
+
+    validate_namespace_segment(&user.username, "username")?;
 
     // Validate name
     if user.name.trim().is_empty() {

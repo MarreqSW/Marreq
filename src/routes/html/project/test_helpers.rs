@@ -30,7 +30,7 @@ pub async fn client_with_routes(repo: DieselRepoMock, routes: Vec<Route>) -> Cli
     let rocket = rocket::build()
         .manage(managed_state(repo))
         .attach(Template::fairing())
-        .mount("/p", routes);
+        .mount("/", routes);
 
     Client::tracked(rocket).await.expect("rocket instance")
 }

@@ -7,6 +7,7 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::helper_functions::utils::slugify_project_name;
 use crate::logger::{LogCtx, Logger};
 use crate::models::{Group, GroupMember, NewGroup, NewGroupMember, NewGroupRow, UpdateGroup, User};
+use crate::namespaces::is_reserved_namespace_segment;
 use crate::repository::errors::RepoError;
 use crate::repository::{
     GroupMembersRepository, GroupsRepository, PooledConnectionWrapper, UserRepository,
@@ -215,16 +216,27 @@ impl<'a> GroupService<'a> {
     }
 
     fn generate_slug(&self, name: &str) -> Result<String, RepoError> {
-        let existing = self
-            .state
-            .repo_read()
+        let base = slugify_project_name(name);
+        if is_reserved_namespace_segment(&base) {
+            return Err(RepoError::BadInput(format!(
+                "group namespace '{}' is reserved for system routes",
+                base
+            )));
+        }
+
+        let repo = self.state.repo_read();
+        if repo.get_user_by_username(&base)?.is_some() {
+            return Err(RepoError::BadInput(format!(
+                "group namespace '{}' is already used by a username",
+                base
+            )));
+        }
+
+        let existing_set: std::collections::HashSet<String> = repo
             .get_groups_all()?
             .into_iter()
-            .map(|g| g.slug)
-            .collect::<Vec<_>>();
-
-        let base = slugify_project_name(name);
-        let existing_set: std::collections::HashSet<String> = existing.into_iter().collect();
+            .map(|group| group.slug)
+            .collect();
 
         if !existing_set.contains(&base) {
             return Ok(base);

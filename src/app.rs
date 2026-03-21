@@ -57,10 +57,9 @@ pub struct MyDbConn(rocket_sync_db_pools::diesel::PgConnection);
 
 /// When `MARREQ_UI_MODE=api_only`, HTML routes (`/`, `/p/...`, `/user/...`) are not mounted; use the SPA + `/api`.
 fn marreq_ui_api_only() -> bool {
-    matches!(
-        std::env::var("MARREQ_UI_MODE").as_deref(),
-        Ok("api_only")
-    )
+    std::env::var("MARREQ_UI_MODE")
+        .map(|v| v.trim().eq_ignore_ascii_case("api_only"))
+        .unwrap_or(false)
 }
 
 /// Serve `/static` from the Rust binary. Default: on unless `api_only` (SPA container serves static). Override with `MARREQ_SERVE_STATIC=1|0`.
@@ -96,10 +95,19 @@ pub fn build() -> Rocket<Build> {
     let api_only = marreq_ui_api_only();
     let serve_static = marreq_serve_static();
 
+    let root_routes = if api_only {
+        routes![
+            crate::fairings::csrf_denied,
+            crate::routes::api_info::api_only_index,
+        ]
+    } else {
+        routes![crate::fairings::csrf_denied]
+    };
+
     let mut rocket = rocket::build()
         .manage(AppState { repo })
         .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
-        .mount("/", routes![crate::fairings::csrf_denied])
+        .mount("/", root_routes)
         .mount("/api", crate::api::routes())
         .register(
             "/",

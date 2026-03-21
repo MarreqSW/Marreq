@@ -100,6 +100,21 @@ paths:
                 type: object
         '401':
           $ref: '#/components/responses/ApiError'
+  /dashboard:
+    get:
+      summary: SPA dashboard payload (user + decorated projects + CSRF)
+      operationId: dashboardJson
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Dashboard context for the home view
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/ApiError'
   /projects:
     get:
       summary: List projects for session user

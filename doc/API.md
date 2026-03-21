@@ -30,7 +30,7 @@ State-changing requests are protected by the existing CSRF fairing:
 1. `GET /api/auth/csrf` → JSON `{ "csrf_token": "<token>" }` (also ensures the `csrf` cookie is set).
 2. For `POST`/`PATCH`/`PUT`/`DELETE`, send header `X-CSRF-Token: <same token>`.
 
-Login itself is a `POST` and must include the CSRF header once the cookie exists (call `GET /api/auth/csrf` first on a cold session).
+For **`POST /api/auth/login`** and **`POST /api/auth/logout`**, if the browser sends an **`Origin` or `Referer`** that is on the CSRF allowlist (same host as your SPA, e.g. `http://127.0.0.1:8080` in Docker), the request is accepted **even when** `X-CSRF-Token` and the `csrf` cookie disagree (split-stack / proxy edge cases). Other mutating `/api/*` routes still require a matching `X-CSRF-Token` + `csrf` cookie (or Bearer auth). Sending the header from `GET /api/auth/csrf` remains recommended.
 
 ## Authentication (session JSON)
 
@@ -40,6 +40,12 @@ Login itself is a `POST` and must include the CSRF header once the cookie exists
 | `POST` | `/api/auth/login` | JSON body: `{ "username", "password" }` (same as `LoginForm`). Sets session + CSRF cookies on success. |
 | `POST` | `/api/auth/logout` | Clears session and CSRF. |
 | `GET` | `/api/auth/me` | Current user JSON; **401** if not authenticated (JSON body, not HTML). |
+
+### Dashboard (SPA home)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/dashboard` | Authenticated dashboard payload: `user`, decorated `projects` (same shape as the legacy HTML index), `projects_count`, `selected_project_id`, `selected_project_slug`, `csrf_token`. **401** if not logged in. |
 
 Successful login response (200): `{ "status": "ok", "user": { ... } }` (serialized `User` model).
 

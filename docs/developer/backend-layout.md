@@ -1,6 +1,8 @@
 # Backend layout (Rocket API)
 
-The Marreq **Rust / Rocket application** lives at the **repository root** (`Cargo.toml`, `src/`, `migrations/`, `templates/` for legacy SSR). Docker continues to use the repo root as build context with `docker/Dockerfile`.
+The Marreq **Rust / Rocket application** lives in **`backend/`** at the repository root (`backend/Cargo.toml`, `backend/src/`, `backend/migrations/`, `backend/templates/` for legacy SSR). The repo root **`Cargo.toml`** is a virtual **workspace** with `members = ["backend"]` so you can run `cargo build`, `cargo test -p marreq`, etc. from the monorepo root.
+
+Docker continues to use the **repository root** as build context with `docker/Dockerfile`.
 
 ## API-only mode
 

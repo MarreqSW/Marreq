@@ -348,7 +348,7 @@ function renderResults(results, total) {
  */
 function createResultItem(result, rank) {
   const item = document.createElement('a');
-  item.href = `/p/${state.projectSlug || state.projectId}/requirements/show/${result.id}`;
+  item.href = `/${state.projectSlug || state.projectId}/requirements/show/${result.id}`;
   item.className = 'list-group-item list-group-item-action';
   item.setAttribute('role', 'listitem');
 
@@ -394,7 +394,7 @@ function renderAnswer(answer, citations) {
     elements.citations.innerHTML = `
       <strong>Citations:</strong> 
       ${citations.map(c => 
-        `<a href="/p/${state.projectSlug || state.projectId}/requirements/show/${c.requirement_id}" class="badge bg-light text-primary text-decoration-none me-1">[${escapeHtml(c.reference_code)}]</a>`
+        `<a href="/${state.projectSlug || state.projectId}/requirements/show/${c.requirement_id}" class="badge bg-light text-primary text-decoration-none me-1">[${escapeHtml(c.reference_code)}]</a>`
       ).join('')}
     `;
   } else if (elements.citations) {

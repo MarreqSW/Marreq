@@ -1336,14 +1336,68 @@ impl ProjectsRepository for DieselRepoMock {
     }
 
     fn get_project_by_slug(&self, slug: &str) -> Result<Project, RepoError> {
+        let matches: Vec<Project> = self
+            .projects
+            .values()
+            .filter(|project| project.slug == slug)
+            .cloned()
+            .collect();
+
+        match matches.len() {
+            0 => Err(RepoError::NotFound),
+            1 => Ok(matches.into_iter().next().expect("single project")),
+            _ => Err(RepoError::BadInput(format!(
+                "project slug '{slug}' is ambiguous across namespaces"
+            ))),
+        }
+    }
+
+    fn get_project_by_user_namespace_and_slug(
+        &self,
+        username: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        let user = self
+            .get_user_by_username(username)?
+            .ok_or(RepoError::NotFound)?;
+
         self.projects
             .values()
-            .find(|project| project.slug == slug)
+            .find(|project| {
+                project.group_id.is_none()
+                    && project.owner_id == Some(user.id)
+                    && project.slug == slug
+            })
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn get_project_by_group_namespace_and_slug(
+        &self,
+        group_slug: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        let group = self.get_group_by_slug(group_slug)?;
+
+        self.projects
+            .values()
+            .find(|project| project.group_id == Some(group.id) && project.slug == slug)
             .cloned()
             .ok_or(RepoError::NotFound)
     }
 
     fn insert_new_project(&mut self, _new: &NewProjectRow) -> Result<i32, RepoError> {
+        let duplicate_in_namespace = self.projects.values().any(|project| {
+            project.slug == _new.slug
+                && project.group_id == _new.group_id
+                && (project.group_id.is_some() || project.owner_id == _new.owner_id)
+        });
+        if duplicate_in_namespace {
+            return Err(RepoError::Duplicate(
+                "project slug is already used in this namespace".into(),
+            ));
+        }
+
         let id = self.projects.keys().max().map(|i| i + 1).unwrap_or(1);
         let now = epoch();
         let proj = Project {
@@ -1366,6 +1420,24 @@ impl ProjectsRepository for DieselRepoMock {
         _project_id: i32,
         _update: &UpdateProject,
     ) -> Result<bool, RepoError> {
+        let current_slug = self
+            .projects
+            .get(&_project_id)
+            .map(|project| project.slug.clone())
+            .ok_or(RepoError::NotFound)?;
+        let next_slug = _update.slug.clone().unwrap_or(current_slug);
+        let duplicate_in_namespace = self.projects.values().any(|project| {
+            project.id != _project_id
+                && project.slug == next_slug
+                && project.group_id == _update.group_id
+                && (project.group_id.is_some() || project.owner_id == _update.owner_id)
+        });
+        if duplicate_in_namespace {
+            return Err(RepoError::Duplicate(
+                "project slug is already used in this namespace".into(),
+            ));
+        }
+
         match self.projects.get_mut(&_project_id) {
             Some(proj) => {
                 proj.name = _update.name.clone();
@@ -1374,6 +1446,7 @@ impl ProjectsRepository for DieselRepoMock {
                 if let Some(status) = _update.status {
                     proj.status = status;
                 }
+                proj.slug = next_slug;
                 proj.group_id = _update.group_id;
                 proj.update_date = Some(epoch());
                 Ok(true)

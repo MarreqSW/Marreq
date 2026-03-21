@@ -250,7 +250,7 @@ mod tests {
         assert!(body.contains("Role: Reviewer"));
         assert!(body.contains("Owned by Mission Owner"));
         assert!(body.contains("Launch Org"));
-        assert!(!body.contains("href=\"/g/launch-org\""));
+        assert!(!body.contains("href=\"/launch-org\""));
     }
 
     #[rocket::async_test]

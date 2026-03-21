@@ -101,7 +101,9 @@ Requirements, Verifications, Reports, Members, and Baselines are **project-scope
 ### 3.1 Viewing Projects
 
 - **All Projects**: **Projects → All Projects** or open **Home** and use “View all” under Your Projects.
-- **Project detail**: Click a project card to open **Project Detail** (`/p/<project_id>`).
+- **Project detail**: Click a project card to open **Project Detail** (`/<namespace>/<project-slug>`).
+
+Project URLs are namespace-based. The `<namespace>` part is either the owner’s username or the group slug.
 
 On the project detail page you see:
 
@@ -137,7 +139,7 @@ Requirements are the core artifact. Each requirement can have multiple **version
 ### 4.1 Requirements List
 
 - Open a project, then use **Requirements** in the nav or **View Requirements** on the project detail page.
-- URL: `/p/<project_id>/requirements`.
+- URL: `/<namespace>/<project-slug>/requirements`.
 
 You can:
 
@@ -154,8 +156,8 @@ Metrics (e.g. total count, by status) are shown at the top.
 
 ### 4.2 Requirement Detail Page
 
-- URL: `/p/<project_id>/requirements/show/<requirement_id>`.
-- For a specific version: `/p/<project_id>/requirements/show/<requirement_id>/version/<version_id>`.
+- URL: `/<namespace>/<project-slug>/requirements/show/<requirement_id>`.
+- For a specific version: `/<namespace>/<project-slug>/requirements/show/<requirement_id>/version/<version_id>`.
 
 On the detail page you see:
 
@@ -175,7 +177,7 @@ On the detail page you see:
 ### 4.3 Creating a Requirement
 
 1. From the project’s requirements list, click **New Requirement** (or **Quick Actions → New Requirement** when a project is selected).
-2. URL: `/p/<project_id>/requirements/new`.
+2. URL: `/<namespace>/<project-slug>/requirements/new`.
 3. Fill in:
    - **Title** (required)
    - **Reference** (optional; can be auto-generated)
@@ -192,7 +194,7 @@ You can optionally pass a parent or template via query parameters (`parent`, `te
 
 1. Open the requirement detail page.
 2. Click **Edit**.
-3. URL: `/p/<project_id>/requirements/edit/<requirement_id>`.
+3. URL: `/<namespace>/<project-slug>/requirements/edit/<requirement_id>`.
 4. Change title, statement, rationale, category, status, applicability, verification, reviewer, parent, and custom fields as needed.
 5. Use **Save** to create a new version. **Cancel** returns to the detail view.
 
@@ -201,7 +203,7 @@ The editor supports rich text (bold, italic, list, code, link) and a preview tog
 ### 4.5 Version History & Diff
 
 - On the requirement detail page, the **Version history** section lists all versions (newest first); each shows approval state.
-- Click a version to view that snapshot: `/p/<project_id>/requirements/show/<requirement_id>/version/<version_id>`.
+- Click a version to view that snapshot: `/<namespace>/<project-slug>/requirements/show/<requirement_id>/version/<version_id>`.
 - **Compare two versions**: Use the diff action (e.g. “Compare” or “Diff”) to open a **diff modal** that shows added/removed/unchanged text and metadata (with labels for status, category, applicability, verification where available).
 
 ### 4.6 Comments
@@ -233,7 +235,7 @@ Test management in Marreq covers creating and organizing verifications (test cas
 ### 5.1 Verifications List
 
 - Open a project, then **Verifications** in the nav or **View Verifications** on the project detail page.
-- URL: `/p/<project_id>/verifications`.
+- URL: `/<namespace>/<project-slug>/verifications`.
 
 You can:
 
@@ -251,14 +253,14 @@ You can:
 
 ### 5.2 Verification Detail Page
 
-- URL: `/p/<project_id>/verifications/show/<verification_id>`.
+- URL: `/<namespace>/<project-slug>/verifications/show/<verification_id>`.
 
 Shows: **Name**, **Description**, **Source** (e.g. test file or document reference), **Status**, **Reference code**, **Parent verification** (if part of a hierarchy), and **which requirements this verification covers** (traceability links). From here you can **Edit** the verification (name, description, source, status, reference, parent) or **update status** (e.g. after running the test). Status updates feed into the requirement **Verification** panel and into [Reports](#9-reports--export) (coverage, pass rate).
 
 ### 5.3 Creating a Verification
 
 1. From the project’s verifications list, click **New Verification** (or **Quick Actions → New Verification**).
-2. URL: `/p/<project_id>/verifications/new`.
+2. URL: `/<namespace>/<project-slug>/verifications/new`.
 3. Enter **Name**, **Description**, **Source** (e.g. path to test script or doc), **Status** (e.g. Pending, Not Run), **Reference code** (optional; e.g. TEST-PWR-001), and **Parent verification** (optional, for hierarchy).
 4. Save.
 
@@ -268,7 +270,7 @@ After creation, link the verification to requirements in the [Traceability Matri
 
 1. Open the verification detail page.
 2. Click **Edit**.
-3. URL: `/p/<project_id>/verifications/edit/<verification_id>`.
+3. URL: `/<namespace>/<project-slug>/verifications/edit/<verification_id>`.
 4. Update name, description, source, status, reference code, or parent verification; save.
 
 Linking or unlinking verifications to/from requirements is done in the **Traceability Matrix** (add/remove links there).
@@ -296,7 +298,7 @@ The traceability matrix is central to **test management** and coverage: it shows
 ### 6.1 Opening the Matrix
 
 - From the project: **Matrix** in the nav or **View Matrix** on the project detail page.
-- URL: `/p/<project_id>/matrix`.
+- URL: `/<namespace>/<project-slug>/matrix`.
 
 ![Traceability matrix](screenshots/matrix.png)
 
@@ -311,7 +313,7 @@ The traceability matrix is central to **test management** and coverage: it shows
 ### 6.3 Exporting the Matrix
 
 - **Export Excel**: Use **Export Excel** on the matrix page to download the matrix as `.xls`.
-- **Export CSV**: Use the CSV export link/button when offered (e.g. `/p/<project_id>/matrix.csv`).
+- **Export CSV**: Use the CSV export link/button when offered (e.g. `/<namespace>/<project-slug>/matrix.csv`).
 
 ---
 
@@ -322,7 +324,7 @@ Baselines are **immutable** point-in-time snapshots of requirement versions and 
 ### 7.1 Baselines List
 
 - From the project: **Baselines** in the nav or **View Baselines** on the project detail page.
-- URL: `/p/<project_id>/baselines`.
+- URL: `/<namespace>/<project-slug>/baselines`.
 
 You see all baselines for the project and can click **New Baseline** to create one.
 
@@ -331,7 +333,7 @@ You see all baselines for the project and can click **New Baseline** to create o
 ### 7.2 Creating a Baseline
 
 1. Click **New Baseline**.
-2. URL: `/p/<project_id>/baselines/new`.
+2. URL: `/<namespace>/<project-slug>/baselines/new`.
 3. Enter **Name** and optional **Description**.
 4. Submit.
 
@@ -340,7 +342,7 @@ The system captures the **current** requirement version for each requirement, th
 ### 7.3 Viewing a Baseline
 
 - Click a baseline in the list.
-- URL: `/p/<project_id>/baselines/<baseline_id>`.
+- URL: `/<namespace>/<project-slug>/baselines/<baseline_id>`.
 
 You see:
 
@@ -365,41 +367,41 @@ These are **project-level** configuration entities used to classify and manage r
 
 Categories organize requirements (e.g. “Safety”, “Performance”).
 
-- **List**: `/p/<project_id>/categories`.
-- **New**: **Quick Actions → New Category** or `/p/<project_id>/categories/new` — enter title, description, tag.
-- **Edit**: Open a category → Edit; URL `/p/<project_id>/categories/edit/<category_id>`.
+- **List**: `/<namespace>/<project-slug>/categories`.
+- **New**: **Quick Actions → New Category** or `/<namespace>/<project-slug>/categories/new` — enter title, description, tag.
+- **Edit**: Open a category → Edit; URL `/<namespace>/<project-slug>/categories/edit/<category_id>`.
 
 ### 8.2 Applicability
 
 Applicability represents product lines, system types, or scope (e.g. “Product A”, “All”).
 
-- **List**: `/p/<project_id>/applicability`.
-- **New**: **Quick Actions → New Applicability** or `/p/<project_id>/applicability/new`.
-- **Edit**: `/p/<project_id>/applicability/edit/<applicability_id>`.
+- **List**: `/<namespace>/<project-slug>/applicability`.
+- **New**: **Quick Actions → New Applicability** or `/<namespace>/<project-slug>/applicability/new`.
+- **Edit**: `/<namespace>/<project-slug>/applicability/edit/<applicability_id>`.
 
 ### 8.3 Verification Methods
 
 Verification methods define how requirements are verified (e.g. Test, Analysis, Review).
 
-- **List**: `/p/<project_id>/verification`.
-- **New**: **Quick Actions → New Verification** or `/p/<project_id>/verification/new`.
-- **Edit**: `/p/<project_id>/verification/edit/<verification_id>`.
+- **List**: `/<namespace>/<project-slug>/verification`.
+- **New**: **Quick Actions → New Verification** or `/<namespace>/<project-slug>/verification/new`.
+- **Edit**: `/<namespace>/<project-slug>/verification/edit/<verification_id>`.
 
 ### 8.4 Requirement Statuses
 
 Requirement statuses (e.g. Draft, Accepted, Rejected) are configured per project.
 
-- **List**: `/p/<project_id>/requirement_statuses`.
-- **New**: `/p/<project_id>/requirement_statuses/new`.
-- **Edit**: `/p/<project_id>/requirement_statuses/edit/<status_id>`.
+- **List**: `/<namespace>/<project-slug>/requirement_statuses`.
+- **New**: `/<namespace>/<project-slug>/requirement_statuses/new`.
+- **Edit**: `/<namespace>/<project-slug>/requirement_statuses/edit/<status_id>`.
 
 ### 8.5 Verification Statuses
 
 Verification statuses (e.g. Pass, Fail, Not Run) are configured per project.
 
-- **List**: `/p/<project_id>/verification_statuses`.
-- **New**: `/p/<project_id>/verification_statuses/new`.
-- **Edit**: `/p/<project_id>/verification_statuses/edit/<status_id>`.
+- **List**: `/<namespace>/<project-slug>/verification_statuses`.
+- **New**: `/<namespace>/<project-slug>/verification_statuses/new`.
+- **Edit**: `/<namespace>/<project-slug>/verification_statuses/edit/<status_id>`.
 
 ---
 
@@ -408,7 +410,7 @@ Verification statuses (e.g. Pass, Fail, Not Run) are configured per project.
 ### 9.1 Reports Page
 
 - From the project: **Reports** in the nav or **View Reports** on the project detail page.
-- URL: `/p/<project_id>/reports`.
+- URL: `/<namespace>/<project-slug>/reports`.
 
 ![Reports page](screenshots/reports.png)
 
@@ -422,13 +424,13 @@ You see:
 ### 9.2 Exporting Requirements to Excel
 
 - From the **Requirements** list: **Export Excel** (or use the project-level export link).
-- URL: `/p/<project_id>/requirements.xls`.
+- URL: `/<namespace>/<project-slug>/requirements.xls`.
 - Downloads an `.xls` file with requirements and all configured fields (including a **Comments** sheet when applicable).
 
 ### 9.3 Exporting Verifications to Excel
 
 - From the **Verifications** list or reports: use **Export Excel** (verifications) when available to download all project verifications for test management or external reporting.
-- URL: `/p/<project_id>/verifications.xls`.
+- URL: `/<namespace>/<project-slug>/verifications.xls`.
 - The export includes verification fields (name, description, source, status, reference code, etc.) so you can share or analyze test data outside Marreq.
 
 ### 9.4 Exporting ReqIF
@@ -442,7 +444,7 @@ You see:
 
 ### 10.1 Importing from Excel
 
-1. Open **Import File** for the project: **Quick Actions → Import File** or **Admin → Import File**, or go to `/p/<project_id>/import_excel`.
+1. Open **Import File** for the project: **Quick Actions → Import File** or **Admin → Import File**, or go to `/<namespace>/<project-slug>/import_excel`.
 2. Upload a file (**.xlsx**, **.xls**, or **.csv**).
 3. Click **Upload and Map Columns**.
 4. On the mapping page, map your columns to Marreq fields (requirements, tests, traceability).
@@ -450,7 +452,7 @@ You see:
 
 ### 10.2 Importing ReqIF
 
-1. Open **Import ReqIF**: **Quick Actions → Import ReqIF** or **Admin → Import ReqIF**, or `/p/<project_id>/import_reqif`.
+1. Open **Import ReqIF**: **Quick Actions → Import ReqIF** or **Admin → Import ReqIF**, or `/<namespace>/<project-slug>/import_reqif`.
 2. Upload a **ReqIF 1.2** XML file.
 3. Follow the process flow; requirements (and optionally comments) are imported into the project.
 
@@ -459,7 +461,7 @@ You see:
 ## 11. Project Members
 
 - **View members**: Project detail page → **View Members**, or **Members** in the nav for the selected project.
-- URL: `/p/<project_id>/members`.
+- URL: `/<namespace>/<project-slug>/members`.
 
 You see the list of members with names, usernames, roles (e.g. owner, manager), and email. **Admins** can add/remove members and change roles via **Add member** and member actions (e.g. remove).
 

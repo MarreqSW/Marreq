@@ -3,12 +3,12 @@
   <div class="marreq-requirements-edit-panel__header">
     <h2 class="marreq-requirements-edit-panel__title">{{tests.reference_code}}</h2>
     <div class="marreq-requirements-edit-panel__header-actions">
-      <a href="/p/{{project_slug}}/verifications/edit/{{tests.id}}" class="marreq-requirements-edit-panel__full-edit-link">Open full edit page</a>
+      <a href="/{{project_slug}}/verifications/edit/{{tests.id}}" class="marreq-requirements-edit-panel__full-edit-link">Open full edit page</a>
       <button type="button" class="marreq-requirements-edit-panel__close" data-action="close-edit-panel" aria-label="Close panel">×</button>
     </div>
   </div>
 
-  <form method="post" action="/p/{{project_slug}}/verifications/edit/{{tests.id}}" class="marreq-requirements-edit-panel__form" data-test-edit-panel-form>
+  <form method="post" action="/{{project_slug}}/verifications/edit/{{tests.id}}" class="marreq-requirements-edit-panel__form" data-test-edit-panel-form>
     <div class="marreq-requirements-edit-panel__body">
       <div class="marreq-requirements-edit-panel__field">
         <label for="panel-name" class="c-reqform-field__label">Verification Name</label>

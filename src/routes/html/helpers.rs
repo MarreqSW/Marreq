@@ -17,6 +17,7 @@ use crate::helper_functions::{
 use crate::models::{
     Category, DecoratedVerification, Group, Project, ProjectMember, Requirement, User, Verification,
 };
+use crate::namespaces::{project_base_path, project_route_slug};
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
     GroupMembersRepository, GroupsRepository, LookupRepository, ProjectMembersRepository,
@@ -118,6 +119,7 @@ pub(crate) fn resolve_selected_project_id(
 }
 
 pub(crate) fn resolve_selected_project_slug(
+    state: &AppState,
     selected_project_id: Option<i32>,
     projects: &[Project],
 ) -> Option<String> {
@@ -125,7 +127,7 @@ pub(crate) fn resolve_selected_project_slug(
         projects
             .iter()
             .find(|project| project.id == project_id)
-            .map(|project| project.slug.clone())
+            .map(|project| project_route_slug_safe(state, project))
     })
 }
 
@@ -146,7 +148,15 @@ pub(crate) fn build_context_with_projects(
     cookies: &CookieJar<'_>,
 ) -> rocket::serde::json::Value {
     let (projects, selected_project_id) = get_user_projects_and_selection(state, &user, cookies);
-    let selected_project_slug = resolve_selected_project_slug(selected_project_id, &projects);
+    let selected_project_slug =
+        resolve_selected_project_slug(state, selected_project_id, &projects);
+    let selected_project_base_path = selected_project_slug
+        .as_ref()
+        .map(|route_slug| project_base_path_from_route_slug(route_slug));
+    let projects: Vec<Value> = projects
+        .iter()
+        .map(|project| project_to_template_value(state, project))
+        .collect();
     // Mint / refresh the CSRF token so the template context always carries a
     // valid token for the <meta name="csrf-token"> tag used by AJAX clients.
     let csrf_token = crate::auth::csrf::get_or_create_csrf_token(cookies);
@@ -156,6 +166,7 @@ pub(crate) fn build_context_with_projects(
         "projects": projects,
         "selected_project_id": selected_project_id,
         "selected_project_slug": selected_project_slug,
+        "selected_project_base_path": selected_project_base_path,
         "csrf_token": csrf_token
     })
 }
@@ -254,7 +265,8 @@ pub(crate) fn decorate_projects_for_listing(
 
         decorated.push(json!({
             "project_id": project.id,
-            "project_slug": project.slug,
+            "project_slug": project_route_slug_safe(state, project),
+            "project_base_path": project_base_path_safe(state, project),
             "name": project.name,
             "description": project.description,
             "creation_date": project
@@ -271,6 +283,7 @@ pub(crate) fn decorate_projects_for_listing(
             "group_id": project.group_id,
             "group_name": group.as_ref().map(|group| group.name.clone()),
             "group_slug": group.as_ref().map(|group| group.slug.clone()),
+            "group_path": group.as_ref().map(|group| format!("/{}", group.slug)),
             "can_view_group": can_view_group,
             "role_label": role_label,
             "role_id": role_id,
@@ -376,8 +389,45 @@ pub(crate) fn get_project_slug_by_id_pooled_safe(
 ) -> String {
     ProjectService::new(state.inner())
         .get_by_id(project_id)
-        .map(|project| project.slug)
+        .map(|project| project_route_slug_safe(state.inner(), &project))
         .unwrap_or_else(|_| "unknown-project".to_string())
+}
+
+pub(crate) fn get_project_base_path_by_id_pooled_safe(
+    state: &State<AppState>,
+    project_id: i32,
+) -> String {
+    project_base_path_from_route_slug(&get_project_slug_by_id_pooled_safe(state, project_id))
+}
+
+pub(crate) fn project_base_path_from_route_slug(route_slug: &str) -> String {
+    format!("/{}", route_slug.trim_start_matches('/'))
+}
+
+pub(crate) fn project_route_slug_safe(state: &AppState, project: &Project) -> String {
+    let repo = state.repo_read();
+    project_route_slug(&*repo, project).unwrap_or_else(|_| project.slug.clone())
+}
+
+pub(crate) fn project_base_path_safe(state: &AppState, project: &Project) -> String {
+    let repo = state.repo_read();
+    project_base_path(&*repo, project)
+        .unwrap_or_else(|_| project_base_path_from_route_slug(&project.slug))
+}
+
+pub(crate) fn project_to_template_value(state: &AppState, project: &Project) -> Value {
+    let route_slug = project_route_slug_safe(state, project);
+    let base_path = project_base_path_from_route_slug(&route_slug);
+    let mut value = json!(project);
+
+    if let Some(project_obj) = value.as_object_mut() {
+        project_obj.insert("raw_slug".to_string(), json!(project.slug));
+        project_obj.insert("slug".to_string(), json!(route_slug.clone()));
+        project_obj.insert("route_slug".to_string(), json!(route_slug));
+        project_obj.insert("base_path".to_string(), json!(base_path));
+    }
+
+    value
 }
 
 #[cfg(test)]

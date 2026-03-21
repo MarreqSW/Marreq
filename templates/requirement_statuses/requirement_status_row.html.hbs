@@ -16,7 +16,7 @@
     <span class="marreq-list-page__row-id" title="Status ID">#{{id}}</span>
     <div class="marreq-list-page__row-actions">
       {{#unless is_system}}
-        <a href="/p/{{@root.selected_project_slug}}/requirement_statuses/edit/{{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn">Edit</a>
+        <a href="/{{@root.selected_project_slug}}/requirement_statuses/edit/{{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn">Edit</a>
         <button
           class="btn btn-danger btn-sm marreq-list-page__action-btn"
           type="button"

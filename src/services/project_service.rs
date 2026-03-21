@@ -11,6 +11,7 @@ use crate::models::{
     NewApplicability, NewCategory, NewProject, NewProjectMember, NewProjectRow, Project,
     UpdateProject, User,
 };
+use crate::namespaces::{resolve_namespace_entity, NamespaceEntity};
 use crate::repository::errors::RepoError;
 use crate::repository::{
     LookupRepository, PooledConnectionWrapper, ProjectMembersRepository, ProjectsRepository,
@@ -45,6 +46,42 @@ impl<'a> ProjectService<'a> {
         self.state.repo_read().get_project_by_slug(slug)
     }
 
+    pub fn get_by_user_namespace_and_slug(
+        &self,
+        username: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        self.state
+            .repo_read()
+            .get_project_by_user_namespace_and_slug(username, slug)
+    }
+
+    pub fn get_by_group_namespace_and_slug(
+        &self,
+        group_slug: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        self.state
+            .repo_read()
+            .get_project_by_group_namespace_and_slug(group_slug, slug)
+    }
+
+    pub fn get_by_namespace_and_slug(
+        &self,
+        namespace: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        let repo = self.state.repo_read();
+        match resolve_namespace_entity(&*repo, namespace)? {
+            NamespaceEntity::User(user) => {
+                repo.get_project_by_user_namespace_and_slug(&user.username, slug)
+            }
+            NamespaceEntity::Group(group) => {
+                repo.get_project_by_group_namespace_and_slug(&group.slug, slug)
+            }
+        }
+    }
+
     /// Retrieve all projects that the specified user is a member of.
     pub fn get_by_user_id(&self, id: i32) -> Result<Vec<Project>, RepoError> {
         let repo = self.state.repo_read();
@@ -76,7 +113,7 @@ impl<'a> ProjectService<'a> {
         }
 
         self.prepare_new_payload(&mut payload)?;
-        let slug = self.generate_slug(&payload.name)?;
+        let slug = self.generate_slug(&payload.name, payload.owner_id, payload.group_id, None)?;
 
         let owner_id = payload.owner_id.unwrap_or(actor.id);
         let id = {
@@ -171,6 +208,19 @@ impl<'a> ProjectService<'a> {
         }
 
         self.prepare_update_payload(&mut payload)?;
+        payload.slug = None;
+
+        if self.namespace_changed(&before, &payload) {
+            let next_slug = self.generate_slug(
+                &before.slug,
+                payload.owner_id,
+                payload.group_id,
+                Some(before.id),
+            )?;
+            if next_slug != before.slug {
+                payload.slug = Some(next_slug);
+            }
+        }
 
         {
             let mut repo = self.state.repo_write();
@@ -225,16 +275,49 @@ impl<'a> ProjectService<'a> {
         self.prepare_new_payload(&mut clone)
     }
 
-    fn generate_slug(&self, name: &str) -> Result<String, RepoError> {
-        let existing = self
-            .state
-            .repo_read()
-            .get_projects_all()?
-            .into_iter()
-            .map(|project| project.slug)
-            .collect::<Vec<_>>();
+    fn generate_slug(
+        &self,
+        name_or_slug_seed: &str,
+        owner_id: Option<i32>,
+        group_id: Option<i32>,
+        exclude_project_id: Option<i32>,
+    ) -> Result<String, RepoError> {
+        let existing = self.existing_namespace_slugs(owner_id, group_id, exclude_project_id)?;
 
-        Ok(generate_unique_project_slug(name, existing))
+        Ok(generate_unique_project_slug(name_or_slug_seed, existing))
+    }
+
+    fn existing_namespace_slugs(
+        &self,
+        owner_id: Option<i32>,
+        group_id: Option<i32>,
+        exclude_project_id: Option<i32>,
+    ) -> Result<Vec<String>, RepoError> {
+        let projects = self.state.repo_read().get_projects_all()?;
+        Ok(projects
+            .into_iter()
+            .filter(|project| exclude_project_id != Some(project.id))
+            .filter(|project| self.project_in_namespace(project, owner_id, group_id))
+            .map(|project| project.slug)
+            .collect())
+    }
+
+    fn project_in_namespace(
+        &self,
+        project: &Project,
+        owner_id: Option<i32>,
+        group_id: Option<i32>,
+    ) -> bool {
+        if let Some(group_id) = group_id {
+            return project.group_id == Some(group_id);
+        }
+
+        project.group_id.is_none() && project.owner_id == owner_id
+    }
+
+    fn namespace_changed(&self, before: &Project, payload: &UpdateProject) -> bool {
+        before.group_id != payload.group_id
+            || (payload.group_id.is_none() && before.owner_id != payload.owner_id)
     }
 
     fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
@@ -448,6 +531,7 @@ mod tests {
             description: Some("  Updated description  ".into()),
             status: Some(ProjectStatus::OnHold),
             owner_id: Some(2),
+            slug: None,
             group_id: None,
         };
 
@@ -472,6 +556,7 @@ mod tests {
             description: Some("Still grouped".into()),
             status: Some(ProjectStatus::Active),
             owner_id: Some(1),
+            slug: None,
             group_id: Some(0),
         };
 
@@ -490,6 +575,7 @@ mod tests {
             description: Some("Desc".into()),
             status: Some(ProjectStatus::Active),
             owner_id: None,
+            slug: None,
             group_id: None,
         };
 
@@ -509,6 +595,7 @@ mod tests {
             description: Some("Still around".into()),
             status: Some(ProjectStatus::Active),
             owner_id: None,
+            slug: None,
             group_id: None,
         };
 
@@ -533,6 +620,7 @@ mod tests {
             description: Some("Needs owner".into()),
             status: Some(ProjectStatus::Active),
             owner_id: None,
+            slug: None,
             group_id: None,
         };
 

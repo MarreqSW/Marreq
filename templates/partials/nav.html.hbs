@@ -8,10 +8,12 @@
     <div class="nav-right c-navbar__right">
       <ul class="nav-menu c-navbar__menu">
         <li class="c-navbar__item">
-        {{#if project.id}}
-        <a href="/{{project.slug}}" class="nav-link c-navbar__link">Home</a>
-        {{else if selected_project_id}}
+        {{#if selected_project_slug}}
         <a href="/{{selected_project_slug}}" class="nav-link c-navbar__link">Home</a>
+        {{else if project.route_slug}}
+        <a href="/{{project.route_slug}}" class="nav-link c-navbar__link">Home</a>
+        {{else if project.slug}}
+        <a href="/{{project.slug}}" class="nav-link c-navbar__link">Home</a>
         {{else}}
         <a href="/" class="nav-link c-navbar__link">Home</a>
         {{/if}}
@@ -38,36 +40,36 @@
             <li><a class="dropdown-item c-navbar__dropdown-item" href="/groups/new">New Group</a></li>
           </ul>
         </li>
-        {{#if project.id}}
-        <li class="c-navbar__item"><a href="/{{project.slug}}/requirements"
-            class="nav-link c-navbar__link">Requirements</a></li>
-        {{else if selected_project_id}}
+        {{#if selected_project_slug}}
         <li class="c-navbar__item"><a href="/{{selected_project_slug}}/requirements"
+            class="nav-link c-navbar__link">Requirements</a></li>
+        {{else if project.route_slug}}
+        <li class="c-navbar__item"><a href="/{{project.route_slug}}/requirements"
             class="nav-link c-navbar__link">Requirements</a></li>
         {{else}}
         <li class="c-navbar__item"><span class="nav-link c-navbar__link c-navbar__link--disabled"
             aria-disabled="true">Requirements</span></li>
         {{/if}}
-        {{#if project.id}}
-        <li class="c-navbar__item"><a href="/{{project.slug}}/verifications" class="nav-link c-navbar__link">Verifications</a></li>
-        {{else if selected_project_id}}
+        {{#if selected_project_slug}}
         <li class="c-navbar__item"><a href="/{{selected_project_slug}}/verifications" class="nav-link c-navbar__link">Verifications</a>
         </li>
+        {{else if project.route_slug}}
+        <li class="c-navbar__item"><a href="/{{project.route_slug}}/verifications" class="nav-link c-navbar__link">Verifications</a></li>
         {{else}}
         <li class="c-navbar__item"><span class="nav-link c-navbar__link c-navbar__link--disabled"
             aria-disabled="true">Verifications</span></li>
         {{/if}}
-        {{#if project.id}}
-        <li class="c-navbar__item"><a href="/{{project.slug}}/reports" class="nav-link c-navbar__link">Reports</a></li>
-        <li class="c-navbar__item"><a href="/{{project.slug}}/members" class="nav-link c-navbar__link">Members</a></li>
-        <li class="c-navbar__item"><a href="/{{project.slug}}/baselines" class="nav-link c-navbar__link">Baselines</a></li>
-        {{else if selected_project_id}}
+        {{#if selected_project_slug}}
         <li class="c-navbar__item"><a href="/{{selected_project_slug}}/reports"
             class="nav-link c-navbar__link">Reports</a></li>
         <li class="c-navbar__item"><a href="/{{selected_project_slug}}/members"
             class="nav-link c-navbar__link">Members</a></li>
         <li class="c-navbar__item"><a href="/{{selected_project_slug}}/baselines"
             class="nav-link c-navbar__link">Baselines</a></li>
+        {{else if project.route_slug}}
+        <li class="c-navbar__item"><a href="/{{project.route_slug}}/reports" class="nav-link c-navbar__link">Reports</a></li>
+        <li class="c-navbar__item"><a href="/{{project.route_slug}}/members" class="nav-link c-navbar__link">Members</a></li>
+        <li class="c-navbar__item"><a href="/{{project.route_slug}}/baselines" class="nav-link c-navbar__link">Baselines</a></li>
         {{/if}}
         {{#if user.is_admin}}
         <li class="nav-item dropdown c-navbar__item">
@@ -173,9 +175,9 @@
             Admin
           </a>
           <ul class="dropdown-menu c-navbar__dropdown-menu">
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/admin">Dashboard</a></li>
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/admin/users">User Management</a></li>
-            <li><a class="dropdown-item c-navbar__dropdown-item" href="/admin/backup">Database Backup</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/-/admin">Dashboard</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/-/admin/users">User Management</a></li>
+            <li><a class="dropdown-item c-navbar__dropdown-item" href="/-/admin/backup">Database Backup</a></li>
             <li>
               <hr class="dropdown-divider c-navbar__dropdown-divider">
             </li>

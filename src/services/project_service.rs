@@ -11,7 +11,7 @@ use crate::models::{
     NewApplicability, NewCategory, NewProject, NewProjectMember, NewProjectRow, Project,
     UpdateProject, User,
 };
-use crate::namespaces::{resolve_namespace_entity, NamespaceEntity};
+use crate::namespaces::{resolve_project_namespace_entity, NamespaceEntity};
 use crate::repository::errors::RepoError;
 use crate::repository::{
     LookupRepository, PooledConnectionWrapper, ProjectMembersRepository, ProjectsRepository,
@@ -72,7 +72,7 @@ impl<'a> ProjectService<'a> {
         slug: &str,
     ) -> Result<Project, RepoError> {
         let repo = self.state.repo_read();
-        match resolve_namespace_entity(&*repo, namespace)? {
+        match resolve_project_namespace_entity(&*repo, namespace)? {
             NamespaceEntity::User(user) => {
                 repo.get_project_by_user_namespace_and_slug(&user.username, slug)
             }

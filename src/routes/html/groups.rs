@@ -530,7 +530,7 @@ fn show_namespace(
     }
 }
 
-#[get("/<group_slug>/-/members?<success>&<error>", rank = 10)]
+#[get("/<group_slug>/-/members?<success>&<error>", rank = 30)]
 fn show_group_members(
     group_access: HtmlGroupAccess,
     group_slug: &str,
@@ -553,7 +553,7 @@ fn show_group_members(
     Ok(Template::render("group_members", ctx))
 }
 
-#[get("/<group_slug>/-/settings?<success>&<error>", rank = 10)]
+#[get("/<group_slug>/-/settings?<success>&<error>", rank = 30)]
 fn edit_group(
     manage_access: HtmlGroupManageAccess,
     group_slug: &str,
@@ -603,7 +603,7 @@ fn edit_group(
     Ok(Template::render("edit_group", ctx))
 }
 
-#[post("/<group_slug>/-/settings", data = "<group_form>", rank = 10)]
+#[post("/<group_slug>/-/settings", data = "<group_form>", rank = 30)]
 fn post_edit_group(
     manage_access: HtmlGroupManageAccess,
     group_slug: &str,
@@ -632,7 +632,7 @@ fn post_edit_group(
     }
 }
 
-#[post("/<group_slug>/-/delete", rank = 10)]
+#[post("/<group_slug>/-/delete", rank = 30)]
 fn delete_group(
     manage_access: HtmlGroupManageAccess,
     group_slug: &str,
@@ -657,7 +657,7 @@ fn delete_group(
     }
 }
 
-#[post("/<group_slug>/-/members", data = "<member_form>", rank = 10)]
+#[post("/<group_slug>/-/members", data = "<member_form>", rank = 30)]
 fn add_group_member(
     manage_access: HtmlGroupManageAccess,
     group_slug: &str,
@@ -688,7 +688,7 @@ fn add_group_member(
 #[post(
     "/<group_slug>/-/members/<member_id>/role",
     data = "<role_form>",
-    rank = 10
+    rank = 30
 )]
 fn update_group_member_role(
     manage_access: HtmlGroupManageAccess,
@@ -718,7 +718,7 @@ fn update_group_member_role(
     }
 }
 
-#[post("/<group_slug>/-/members/<member_id>/remove", rank = 10)]
+#[post("/<group_slug>/-/members/<member_id>/remove", rank = 30)]
 fn remove_group_member(
     manage_access: HtmlGroupManageAccess,
     group_slug: &str,
@@ -958,6 +958,30 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         let location = response.headers().get_one("Location").unwrap_or_default();
         assert!(location.contains("/new-org"));
+    }
+
+    #[rocket::async_test]
+    async fn duplicate_group_creation_redirects_back_with_namespace_error() {
+        let client = test_client(base_repo()).await;
+        let response = client
+            .post("/groups")
+            .private_cookie(session_cookie(MEMBER_ID))
+            .header(ContentType::Form)
+            .body("name=Flight+Systems&description=Duplicate")
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        let location = response.headers().get_one("Location").unwrap_or_default();
+        assert!(location.starts_with("/groups/new?error="));
+
+        let page = client
+            .get(location)
+            .private_cookie(session_cookie(MEMBER_ID))
+            .dispatch()
+            .await;
+        let body = page.into_string().await.expect("body");
+        assert!(body.contains(crate::namespaces::TAKEN_NAMESPACE_MESSAGE));
     }
 
     #[rocket::async_test]

@@ -183,7 +183,7 @@ function initGlobalDeleteHandlers() {
       return `Are you sure you want to delete user "${name}"? This action cannot be undone.`;
     },
     onSuccess: () => {
-      window.location.href = '/admin/users';
+      window.location.href = '/-/admin/users';
     },
   });
 }

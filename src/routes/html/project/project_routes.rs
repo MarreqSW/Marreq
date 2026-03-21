@@ -355,6 +355,55 @@ mod tests {
     }
 
     #[rocket::async_test]
+    async fn show_project_id_allows_reserved_owner_namespace() {
+        let mut repo = DieselRepoMock::default();
+
+        let mut reserved_owner = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        reserved_owner.name = "System Administrator".into();
+        reserved_owner.is_admin = true;
+        repo.users.insert(ADMIN_ID, reserved_owner);
+
+        let mut member = DieselRepoMock::make_user(MEMBER_ID, "alice", "");
+        member.name = "Alice Johnson".into();
+        repo.users.insert(MEMBER_ID, member);
+
+        let project = Project {
+            id: PRIMARY_PROJECT,
+            name: "Empty Project".into(),
+            description: Some("Reserved-owner project".into()),
+            creation_date: Some(timestamp()),
+            update_date: Some(timestamp()),
+            status: ProjectStatus::Active,
+            owner_id: Some(ADMIN_ID),
+            slug: "empty-project".into(),
+            group_id: None,
+        };
+        repo.projects.insert(PRIMARY_PROJECT, project);
+        repo.project_members.push(ProjectMember {
+            project_id: PRIMARY_PROJECT,
+            user_id: ADMIN_ID,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+        repo.project_members.push(ProjectMember {
+            project_id: PRIMARY_PROJECT,
+            user_id: MEMBER_ID,
+            role: 2,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+
+        let client = project_client(repo).await;
+        let response = get_with_session(&client, "/admin/empty-project", MEMBER_ID).await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let body = response.into_string().await.expect("body");
+        assert!(body.contains("Empty Project"));
+        assert!(body.contains("href=\"/admin/empty-project\""));
+    }
+
+    #[rocket::async_test]
     async fn get_edit_project_renders_form() {
         let mut repo = base_repo();
         repo.groups

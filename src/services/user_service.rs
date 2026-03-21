@@ -8,9 +8,9 @@ use crate::auth::password::hash_password;
 use crate::auth::password_policy::{validate_password, PasswordContext};
 use crate::logger::{LogCtx, Logger};
 use crate::models::{NewUser, UpdateUser, User, UserCreateRequest};
-use crate::namespaces::is_reserved_namespace_segment;
+use crate::namespaces::{ensure_namespace_segment_available, NamespaceAvailabilityOptions};
 use crate::repository::errors::RepoError;
-use crate::repository::{GroupsRepository, PooledConnectionWrapper, UserRepository};
+use crate::repository::{PooledConnectionWrapper, UserRepository};
 use crate::validation::{sanitize_string, validate_user};
 
 /// High level user operations backed by the shared [`AppState`].
@@ -81,7 +81,7 @@ impl<'a> UserService<'a> {
         payload.email = payload.email.to_lowercase();
 
         validate_user(&payload).map_err(|e| RepoError::BadInput(e.to_string()))?;
-        self.ensure_username_namespace_available(&payload.username)?;
+        self.ensure_username_namespace_available(&payload.username, None)?;
 
         let id = {
             let mut repo = self.state.repo_write();
@@ -134,7 +134,7 @@ impl<'a> UserService<'a> {
             is_admin: normalized.is_admin,
         };
         validate_user(&validation_payload).map_err(|e| RepoError::BadInput(e.to_string()))?;
-        self.ensure_username_namespace_available(&normalized.username)?;
+        self.ensure_username_namespace_available(&normalized.username, Some(id))?;
 
         let updated = {
             let mut repo = self.state.repo_write();
@@ -160,23 +160,20 @@ impl<'a> UserService<'a> {
         self.state.repo_read().inner_repo().get_conn()
     }
 
-    fn ensure_username_namespace_available(&self, username: &str) -> Result<(), RepoError> {
-        if is_reserved_namespace_segment(username) {
-            return Err(RepoError::BadInput(format!(
-                "username '{}' is reserved for system routes",
-                username
-            )));
-        }
-
+    fn ensure_username_namespace_available(
+        &self,
+        username: &str,
+        exclude_user_id: Option<i32>,
+    ) -> Result<(), RepoError> {
         let repo = self.state.repo_read();
-        match repo.get_group_by_slug(username) {
-            Ok(_) => Err(RepoError::BadInput(format!(
-                "username '{}' is already used by a group namespace",
-                username
-            ))),
-            Err(RepoError::NotFound) => Ok(()),
-            Err(error) => Err(error),
-        }
+        ensure_namespace_segment_available(
+            &*repo,
+            username,
+            NamespaceAvailabilityOptions {
+                exclude_user_id,
+                exclude_group_id: None,
+            },
+        )
     }
 
     fn log_created(&self, actor: &User, id: i32, entity: &NewUser) {
@@ -352,6 +349,183 @@ mod tests {
         // Password should be hashed (argon2 hashes start with $argon2)
         assert!(stored.password_hash.starts_with("$argon2"));
         assert_ne!(stored.password_hash, "Skyline!Current_2026");
+    }
+
+    #[test]
+    fn create_rejects_username_taken_by_other_user() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, sample_user(1, "alice"));
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let err = service
+            .create(
+                &actor(),
+                UserCreateRequest {
+                    username: "alice".into(),
+                    name: "Alice Two".into(),
+                    email: "alice2@example.com".into(),
+                    password: "Turbine!Signal_2026".into(),
+                    is_admin: false,
+                },
+            )
+            .unwrap_err();
+
+        assert!(matches!(
+            err,
+            RepoError::Duplicate(message)
+                if message == crate::namespaces::TAKEN_NAMESPACE_MESSAGE
+        ));
+    }
+
+    #[test]
+    fn create_rejects_username_taken_by_group_namespace() {
+        let mut repo = DieselRepoMock::default();
+        repo.groups.insert(
+            1,
+            crate::models::Group {
+                id: 1,
+                name: "FlightSystems".into(),
+                slug: "flightsystems".into(),
+                description: None,
+                owner_id: Some(1),
+                created_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+                updated_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let err = service
+            .create(
+                &actor(),
+                UserCreateRequest {
+                    username: "flightsystems".into(),
+                    name: "Pilot".into(),
+                    email: "pilot@example.com".into(),
+                    password: "Turbine!Signal_2026".into(),
+                    is_admin: false,
+                },
+            )
+            .unwrap_err();
+
+        assert!(matches!(
+            err,
+            RepoError::Duplicate(message)
+                if message == crate::namespaces::TAKEN_NAMESPACE_MESSAGE
+        ));
+    }
+
+    #[test]
+    fn update_rejects_username_taken_by_other_user() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, sample_user(1, "alice"));
+        repo.users.insert(2, sample_user(2, "bob"));
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let mut admin = sample_user(1, "alice");
+        admin.is_admin = true;
+
+        let err = service
+            .update_without_password(
+                &admin,
+                &UpdateUser {
+                    id: Some(2),
+                    username: "alice".into(),
+                    name: "Bob".into(),
+                    email: "bob@example.com".into(),
+                    is_admin: false,
+                },
+            )
+            .unwrap_err();
+
+        assert!(matches!(
+            err,
+            RepoError::Duplicate(message)
+                if message == crate::namespaces::TAKEN_NAMESPACE_MESSAGE
+        ));
+    }
+
+    #[test]
+    fn update_rejects_username_taken_by_group_namespace() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, sample_user(1, "alice"));
+        repo.users.insert(2, sample_user(2, "bob"));
+        repo.groups.insert(
+            3,
+            crate::models::Group {
+                id: 3,
+                name: "MissionOps".into(),
+                slug: "missionops".into(),
+                description: None,
+                owner_id: Some(1),
+                created_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+                updated_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let mut admin = sample_user(1, "alice");
+        admin.is_admin = true;
+
+        let err = service
+            .update_without_password(
+                &admin,
+                &UpdateUser {
+                    id: Some(2),
+                    username: "missionops".into(),
+                    name: "Bob".into(),
+                    email: "bob@example.com".into(),
+                    is_admin: false,
+                },
+            )
+            .unwrap_err();
+
+        assert!(matches!(
+            err,
+            RepoError::Duplicate(message)
+                if message == crate::namespaces::TAKEN_NAMESPACE_MESSAGE
+        ));
+    }
+
+    #[test]
+    fn update_allows_keeping_current_username() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, sample_user(1, "alice"));
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let updated = service
+            .update_without_password(
+                &sample_user(1, "alice"),
+                &UpdateUser {
+                    id: Some(1),
+                    username: "alice".into(),
+                    name: "Alice Updated".into(),
+                    email: "alice.updated@example.com".into(),
+                    is_admin: false,
+                },
+            )
+            .unwrap();
+
+        assert!(updated);
+        let stored = service.get_by_id(1).unwrap();
+        assert_eq!(stored.username, "alice");
+        assert_eq!(stored.name, "Alice Updated");
     }
 
     #[test]

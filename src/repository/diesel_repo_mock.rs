@@ -10,6 +10,7 @@ use crate::models::{
     NewVerificationStatus, RequirementComment, RequirementVersion, RequirementVersionLink,
     UpdateGroup, Verification, VerificationStatus,
 };
+use crate::namespaces::TAKEN_NAMESPACE_MESSAGE;
 use crate::repository::errors::RepoError;
 use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
@@ -257,7 +258,7 @@ impl UserRepository for DieselRepoMock {
             .values()
             .any(|u| u.username.to_lowercase() == lower_username)
         {
-            return Err(RepoError::Duplicate("username is already taken".into()));
+            return Err(RepoError::Duplicate(TAKEN_NAMESPACE_MESSAGE.into()));
         }
         if self
             .users
@@ -300,6 +301,22 @@ impl UserRepository for DieselRepoMock {
 
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError> {
         let id = user_data.id.ok_or(RepoError::NotFound)?;
+        let lower_username = user_data.username.to_lowercase();
+        let lower_email = user_data.email.to_lowercase();
+        if self
+            .users
+            .values()
+            .any(|u| u.id != id && u.username.to_lowercase() == lower_username)
+        {
+            return Err(RepoError::Duplicate(TAKEN_NAMESPACE_MESSAGE.into()));
+        }
+        if self
+            .users
+            .values()
+            .any(|u| u.id != id && u.email.to_lowercase() == lower_email)
+        {
+            return Err(RepoError::Duplicate("email is already in use".into()));
+        }
         match self.users.get_mut(&id) {
             Some(user) => {
                 user.username = user_data.username.clone();
@@ -1221,6 +1238,9 @@ impl GroupsRepository for DieselRepoMock {
     }
 
     fn insert_new_group(&mut self, new: &NewGroupRow) -> Result<i32, RepoError> {
+        if self.groups.values().any(|group| group.slug == new.slug) {
+            return Err(RepoError::Duplicate(TAKEN_NAMESPACE_MESSAGE.into()));
+        }
         let id = self.groups.keys().max().map(|i| i + 1).unwrap_or(1);
         let now = epoch();
         let group = Group {

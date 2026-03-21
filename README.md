@@ -139,6 +139,12 @@ Then open **http://localhost:8000** in your browser (demo admin user `alice` use
 
 For detailed database setup options (automated, manual, reset, verification) see the [database setup guide](docs/developer/database-setup.md).
 
+### Docker: API backend + SPA frontend
+
+The default [docker/docker-compose.yml](docker/docker-compose.yml) stack runs **two app containers**: **backend** (Rocket, JSON API only) and **frontend** (nginx + Vite-built SPA). Use the UI at **http://localhost:8080**; `/api` is proxied to Rocket on the Docker network. **Adminer** is on **http://localhost:8081**. See [docker/README.md](docker/README.md) and [doc/API.md](doc/API.md) (auth, CSRF, cookies, OpenAPI sketch).
+
+Local classic SSR (`cargo run` without `MARREQ_UI_MODE=api_only`) remains available for development; backend layout notes: [docs/developer/backend-layout.md](docs/developer/backend-layout.md). The SPA package lives in [frontend/](frontend/) (`npm run dev` with Vite proxy to Rocket).
+
 ## 📖 Usage
 
 ### Web Interface
@@ -166,14 +172,23 @@ For detailed database setup options (automated, manual, reset, verification) see
 
 ## 🔌 API Reference
 
+**Interchangeable clients:** session auth, CSRF, and Docker/nginx notes are documented in [doc/API.md](doc/API.md). A partial [doc/openapi.yaml](doc/openapi.yaml) covers auth and session-scoped project listing.
+
 ### Base URL
 ```
 http://localhost:8000/api
 ```
 
-All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or changing API endpoints, update this section so the list stays in sync.
+Behind the split Docker frontend, use the **same origin** as the SPA (e.g. `http://localhost:8080/api/...`). All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or changing API endpoints, update this section so the list stays in sync.
 
 ### Endpoints
+
+#### Auth & session (JSON / SPA)
+- `GET /auth/csrf` — JSON `{ "csrf_token" }` for mutating requests (`X-CSRF-Token` header)
+- `POST /auth/login` — JSON body `username`, `password`; sets session + CSRF cookies
+- `POST /auth/logout` — clears session
+- `GET /auth/me` — current user or **401** JSON (not HTML login page)
+- `GET /projects` — projects for logged-in user (admin: all; others: memberships)
 
 #### Requirements
 - `GET /requirements` - List all requirements

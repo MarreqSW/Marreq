@@ -24,7 +24,7 @@ docker compose -f docker/docker-compose.yml up -d db
 This project uses migrations for schema and `init_complete.sql` for sample data:
 
 ```bash
-./scripts/db_setup.sh --seed
+./backend/scripts/db_setup.sh --seed
 ```
 
 Manual equivalent:
@@ -32,7 +32,7 @@ Manual equivalent:
 ```bash
 docker exec -i $(docker compose -f docker/docker-compose.yml ps -q db) psql -U rust -d postgres -c "CREATE DATABASE marreq;"
 DATABASE_URL='postgres://rust:rust@localhost:5432/Marreq' diesel migration run
-docker exec -i $(docker compose -f docker/docker-compose.yml ps -q db) psql -U rust -d marreq < scripts/init_complete.sql
+docker exec -i $(docker compose -f docker/docker-compose.yml ps -q db) psql -U rust -d marreq < backend/scripts/init_complete.sql
 ```
 
 ### 3) Install and run Ollama

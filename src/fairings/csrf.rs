@@ -175,6 +175,16 @@ impl Fairing for CsrfFairing {
                 origins.insert(format!("{}://localhost:{}", scheme, port));
                 origins.insert(format!("{}://127.0.0.1:{}", scheme, port));
             }
+
+            // Split-stack SPA: browser `Origin` is the public UI (e.g. nginx :8080), not Rocket’s bind port.
+            for extra in [
+                "http://127.0.0.1:8080",
+                "http://localhost:8080",
+                "http://127.0.0.1:8000",
+                "http://localhost:8000",
+            ] {
+                origins.insert(extra.to_string());
+            }
         }
 
         Ok(rocket)
@@ -204,6 +214,26 @@ impl Fairing for CsrfFairing {
             .unwrap_or(false)
         {
             return;
+        }
+
+        // SPA auth endpoints: allow allowlisted `Origin` / `Referer` before double-submit checks.
+        // Scoped to login/logout only so other `/api/*` mutating calls still require a matching
+        // `X-CSRF-Token` + `csrf` cookie (non-browser clients cannot forge a browser `Origin`).
+        let path = req.uri().path().as_str();
+        let api_auth_origin_only = matches!(path, "/api/auth/login" | "/api/auth/logout");
+        if api_auth_origin_only {
+            if let Some(origin) = req.headers().get_one("Origin") {
+                if self.is_allowed(origin) {
+                    return;
+                }
+            }
+            if let Some(referer) = req.headers().get_one("Referer") {
+                if let Some(ro) = extract_origin_from_url(referer) {
+                    if self.is_allowed(&ro) {
+                        return;
+                    }
+                }
+            }
         }
 
         // --- Defense 2: X-CSRF-Token header vs csrf cookie ---

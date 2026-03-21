@@ -100,7 +100,7 @@ async fn admin_dashboard_accessible_by_admin() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/admin")
+        .get("/-/admin")
         .private_cookie(session_cookie(1)) // Admin
         .dispatch()
         .await;
@@ -115,7 +115,7 @@ async fn admin_dashboard_forbidden_for_non_admin() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/admin")
+        .get("/-/admin")
         .private_cookie(session_cookie(2)) // Non-admin
         .dispatch()
         .await;
@@ -143,7 +143,7 @@ async fn admin_users_list_accessible() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/admin/users")
+        .get("/-/admin/users")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -219,7 +219,7 @@ async fn backup_page_accessible() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/admin/backup")
+        .get("/-/admin/backup")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;

@@ -41,7 +41,7 @@ jobs:
         run: npm install --no-save stylelint stylelint-config-standard
 
       - name: Stylelint CSS files
-        run: npx stylelint "src/html/static/**/*.css" --config .stylelintrc.json
+        run: npx stylelint "backend/src/html/static/**/*.css" --config .stylelintrc.json
 
       - name: Install PurgeCSS
         run: npm install --no-save purgecss
@@ -108,12 +108,12 @@ jobs:
         run: cargo install diesel_cli --no-default-features --features postgres
 
       - name: Initialize database
-        run: ./scripts/db_setup.sh
+        run: ./backend/scripts/db_setup.sh
 
       - name: Generate coverage reports
         run: |
-          cargo cov --workspace --all-features --cobertura --output-path coverage.xml
-          cargo cov report --html --output-dir coverage_html
+          cargo cov -p marreq --all-features --cobertura --output-path coverage.xml
+          cargo cov -p marreq report --html --output-dir coverage_html
 
       - name: Build coverage summary (Markdown)
         uses: irongut/CodeCoverageSummary@v1.3.0
@@ -134,7 +134,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Coverage gate
-        run: cargo cov --workspace --all-features --no-run --fail-under-lines 70
+        run: cargo cov -p marreq --all-features --no-run --fail-under-lines 70
 
       - name: Upload coverage HTML
         if: always()

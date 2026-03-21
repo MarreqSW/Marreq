@@ -4,7 +4,11 @@ The Marreq **Rust / Rocket application** lives at the **repository root** (`Carg
 
 ## API-only mode
 
-Set `MARREQ_UI_MODE=api_only` to **omit** HTML routes (`/`, `/p/...`, `/user/...`) and use only `/api` (+ shared fairings/catchers). Intended for the split stack where the SPA is served by the **frontend** container.
+Set `MARREQ_UI_MODE=api_only` to **omit** HTML routes (`/`, `/p/...`, `/user/...`) and use only `/api` (+ shared fairings/catchers). Intended for a split stack where **every** UI path is handled by the SPA.
+
+## Hybrid Docker split (default compose)
+
+`docker/docker-compose.yml` sets **`MARREQ_DOCKER_SSR_PROXY=1`** so the backend entrypoint does **not** force `api_only`. Nginx on **:8080** serves the Vite SPA for **`/`** only and **reverse-proxies** `/p/…`, `/static/…`, `/projects`, etc. to Rocket. Session cookies stay on one origin; project pages remain server-rendered until the SPA grows a client router.
 
 ## Static files
 

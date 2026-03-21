@@ -500,27 +500,27 @@ Available only to **administrators** (`is_admin`).
 ### 13.1 Admin Dashboard
 
 - **Admin → Dashboard**.
-- URL: `/admin`.
+- URL: `/-/admin`.
 
 Overview of system status and links to user management, backup, cache, logs.
 
 ### 13.2 User Management
 
 - **Admin → User Management**.
-- URL: `/admin/users`.
+- URL: `/-/admin/users`.
 
 List all users. Create **New User** (`/user/new`), or open a user to view/edit (`/user/<user_id>/show`, `/user/<user_id>/edit`). You can set username, name, email, password, and admin flag.
 
 ### 13.3 Database Backup
 
 - **Admin → Database Backup**.
-- URL: `/admin/backup`.
+- URL: `/-/admin/backup`.
 
 Generate a backup file; download or save as configured.
 
 ### 13.4 Cache (if exposed)
 
-- **Admin → Cache** (or `/admin/cache` when available).
+- **Admin → Cache** (or `/-/admin/cache` when available).
 - Options may include: view cache stats, **Clear cache**, **Cleanup** expired entries, health check, warm cache. Use for tuning or troubleshooting.
 
 ### 13.5 System Logs

@@ -18,7 +18,7 @@ export function init() {
     backupButton.addEventListener('click', (event) => {
       event.preventDefault();
       const filename = `marreq-backup_${timestamp()}.sql`;
-      backupForm.action = `/admin/backup/generate/${filename}`;
+      backupForm.action = `/-/admin/backup/generate/${filename}`;
       backupForm.submit();
     });
   }
@@ -30,4 +30,3 @@ export function init() {
     });
   }
 }
-

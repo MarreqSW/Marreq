@@ -144,7 +144,7 @@ pub async fn post_baseline(
     Ok(Redirect::to(list_url))
 }
 
-#[get("/<namespace>/<project_id>/baselines/<baseline_id>", rank = 2)]
+#[get("/<namespace>/<project_id>/baselines/<baseline_id>", rank = 21)]
 pub async fn show_baseline(
     project_access: HtmlProjectAccess,
     namespace: String,

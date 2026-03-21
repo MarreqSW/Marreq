@@ -82,6 +82,16 @@ pub fn routes() -> Vec<Route> {
     ];
     routes.extend(project::routes());
     routes.extend(groups::routes());
+    for route in &mut routes {
+        if route
+            .uri
+            .to_string()
+            .starts_with("/<namespace>/<project_id>")
+            && route.rank < 20
+        {
+            route.rank = 20;
+        }
+    }
     routes
 }
 

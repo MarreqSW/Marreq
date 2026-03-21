@@ -16,6 +16,7 @@ use crate::models::forms::{
     NewRequirement, NewRequirementContainer, NewRequirementStatus, NewUser, NewVerification,
     NewVerificationMethod, NewVerificationStatus, UpdateGroup, UpdateProject, UpdateUser,
 };
+use crate::namespaces::TAKEN_NAMESPACE_MESSAGE;
 use crate::repository::{
     ApiTokensRepository, BaselineRepository, CustomFieldRepository, GroupMembersRepository,
     GroupsRepository, LookupRepository, MatrixRepository, ProjectMembersRepository,
@@ -49,7 +50,9 @@ fn map_db_error(e: diesel::result::Error) -> RepoError {
         match kind {
             DatabaseErrorKind::UniqueViolation => {
                 let msg = match info.constraint_name().unwrap_or("") {
-                    c if c.contains("username") => "username is already taken".to_string(),
+                    c if c.contains("username") || c.contains("groups_slug") => {
+                        TAKEN_NAMESPACE_MESSAGE.to_string()
+                    }
                     c if c.contains("email") => "email is already taken".to_string(),
                     c if c.contains("tests_project_id_reference_code") => {
                         "reference_code is already used in this project".to_string()
@@ -1870,7 +1873,8 @@ impl GroupsRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         let result = diesel::insert_into(dsl::groups)
             .values(new)
-            .get_result::<Group>(conn.as_mut())?;
+            .get_result::<Group>(conn.as_mut())
+            .map_err(map_unique_violation)?;
         Ok(result.id)
     }
 

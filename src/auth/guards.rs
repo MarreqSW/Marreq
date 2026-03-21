@@ -12,7 +12,9 @@ use crate::app::AppState;
 use crate::auth::{clear_session_cookie, read_session_user_id};
 use crate::logger::LogCtx;
 use crate::models::User;
-use crate::namespaces::{project_namespace_segment, resolve_namespace_entity, NamespaceEntity};
+use crate::namespaces::{
+    project_namespace_segment, resolve_project_namespace_entity, NamespaceEntity,
+};
 use crate::permissions::{has_group_permission, GroupPermission};
 use crate::repository::errors::RepoError;
 use crate::repository::ApiTokensRepository;
@@ -490,7 +492,7 @@ impl<'r> FromRequest<'r> for HtmlProjectAccess {
                 Err(_) => return Outcome::Error((Status::InternalServerError, ())),
             };
 
-            let namespace_entity = match resolve_namespace_entity(&*repo, &namespace) {
+            let namespace_entity = match resolve_project_namespace_entity(&*repo, &namespace) {
                 Ok(entity) => entity,
                 Err(RepoError::NotFound) => return Outcome::Error((Status::NotFound, ())),
                 Err(_) => return Outcome::Error((Status::InternalServerError, ())),
